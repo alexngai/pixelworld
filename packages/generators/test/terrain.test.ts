@@ -1,4 +1,4 @@
-import { TerrainGrid } from "@pixelworld/grid";
+import { TerrainGrid, packShape } from "@pixelworld/grid";
 import { describe, expect, it } from "vitest";
 import { FACE_CLIFF, FACE_SKIRT, buildBoxesMesh, buildTerrainMesh, type MeshData } from "../src/index";
 
@@ -48,7 +48,7 @@ describe("terrain mesh", () => {
     const g = new TerrainGrid(2, 1);
     // left cell: c1 raised (NE up), right cell: c3 raised (SW up) → shared edge crosses
     g.base.set([2, 2]);
-    g.slope.set([0b0010, 0b1000]);
+    g.shape.set([packShape(0, 1, 0, 0), packShape(0, 0, 0, 1)]);
     const m = buildTerrainMesh(g, { x0: 0, y0: 0, x1: 2, y1: 1 }, { floor: 0 });
     expect(cliffArea(m)).toBeCloseTo(0.5, 9); // two triangles of 0.25
   });
@@ -56,7 +56,7 @@ describe("terrain mesh", () => {
   it("uses upward normals for top faces and outward normals for cliffs", () => {
     const g = new TerrainGrid(2, 1);
     g.base.set([4, 1]);
-    g.slope.set([0b0110, 0]);
+    g.shape.set([packShape(0, 1, 1, 0), 0]);
     const m = buildTerrainMesh(g, { x0: 0, y0: 0, x1: 2, y1: 1 }, { floor: 0 });
     for (let v = 0; v < m.vertexCount; v++) {
       const kind = m.material[v * 3 + 1];
@@ -79,6 +79,17 @@ describe("terrain mesh", () => {
       if (x === 4 && y === 2 && h === 0) open = Math.max(open, ao);
     }
     expect(foot).toBeLessThan(open);
+  });
+});
+
+describe("multi-step slopes", () => {
+  it("joins a 3-step ramp to its neighbours without cliffs", () => {
+    const g = new TerrainGrid(3, 1);
+    g.base.set([0, 0, 3]);
+    g.shape.set([0, packShape(0, 3, 3, 0), 0]); // flat → 3-step ramp → flat
+    const m = buildTerrainMesh(g, { x0: 0, y0: 0, x1: 3, y1: 1 }, { floor: 0 });
+    expect(facesOfKind(m, FACE_CLIFF)).toBe(0);
+    expect(facesOfKind(m, 1)).toBe(2); // the ramp's two sloped triangles
   });
 });
 

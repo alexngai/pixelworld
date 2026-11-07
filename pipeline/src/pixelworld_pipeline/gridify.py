@@ -11,6 +11,8 @@ import math
 
 import numpy as np
 
+from .world_format import MAX_CORNER_OFFSET, pack_shape, unpack_shape
+
 # Height of one step in cell units at true proportions (packages/grid STEP_WORLD).
 STEP_WORLD = 1 / math.sqrt(6)
 
@@ -81,58 +83,55 @@ def bilateral(a: np.ndarray, sigma_space: float, sigma_range: float, radius: int
     return num / den
 
 
-def gridify_heights(corner_steps: np.ndarray, steep: str = "flat") -> tuple[np.ndarray, np.ndarray]:
-    """Quantize continuous corner heights (in steps) to (base, slope) per cell.
+def gridify_heights(
+    corner_steps: np.ndarray, steep: str = "flat", max_offset: int = 1
+) -> tuple[np.ndarray, np.ndarray]:
+    """Quantize continuous corner heights (in steps) to (base, shape) per cell.
 
-    Cells whose rounded corners span at most one step become slopes, matching
-    their neighbours along shared corners. Steeper cells can't match all
-    neighbours; mismatches render as cliffs. For those, `steep` chooses:
+    Cells whose rounded corners span at most `max_offset` steps become slope
+    tiles that share corner heights with their neighbours, so slopes are
+    continuous. Steeper cells can't match all neighbours; mismatches render as
+    cliffs. For those, `steep` chooses:
 
       "flat":  flat at the rounded mean height (stepped terraces), or
-      "slope": a one-step slope clamped around the mean, so the cell still
-               shows which way is downhill and walls read as slope-then-cliff.
+      "slope": a slope of at most `max_offset` steps clamped around the mean.
+
+    Returns (base int16 = lowest corner, shape uint8 = packed corner offsets).
     """
+    if not 1 <= max_offset <= MAX_CORNER_OFFSET:
+        raise ValueError(f"max_offset must be 1..{MAX_CORNER_OFFSET}")
     q = round_half_up(corner_steps)
     cs = corner_stack(q)  # (4, H, W)
     lo = cs.min(axis=0)
     hi = cs.max(axis=0)
-    representable = (hi - lo) <= 1
-
-    slope = np.zeros(lo.shape, dtype=np.uint8)
-    for i in range(4):
-        slope |= ((cs[i] > lo).astype(np.uint8) << i).astype(np.uint8)
-    base = lo.copy()
-    all_raised = slope == 15
-    base[all_raised] += 1
-    slope[all_raised] = 0
+    representable = (hi - lo) <= max_offset
+    offsets = cs - lo
 
     mean_f = corner_stack(corner_steps).mean(axis=0)
     if steep == "flat":
         steep_base = round_half_up(mean_f)
-        steep_slope = np.zeros_like(slope)
+        steep_offsets = np.zeros_like(offsets)
     elif steep == "slope":
-        steep_base = round_half_up(mean_f - 0.5)
-        steep_slope = np.zeros_like(slope)
-        for i in range(4):
-            steep_slope |= ((cs[i] > steep_base).astype(np.uint8) << i).astype(np.uint8)
-        all_up = steep_slope == 15
-        steep_base = np.where(all_up, steep_base + 1, steep_base)
-        steep_slope[all_up] = 0
+        clamp_base = round_half_up(mean_f - max_offset / 2)
+        steep_offsets = np.clip(cs - clamp_base, 0, max_offset)
+        rise = steep_offsets.min(axis=0)  # renormalize so the lowest corner is 0
+        steep_offsets = steep_offsets - rise
+        steep_base = clamp_base + rise
     else:
         raise ValueError(f"unknown steep mode {steep!r}")
-    base = np.where(representable, base, steep_base)
-    slope = np.where(representable, slope, steep_slope).astype(np.uint8)
-    return base.astype(np.int16), slope
+    base = np.where(representable, lo, steep_base)
+    offsets = np.where(representable, offsets, steep_offsets)
+    return base.astype(np.int16), pack_shape(offsets)
 
 
-def cell_corner_heights(base: np.ndarray, slope: np.ndarray) -> np.ndarray:
-    """(H, W) base/slope -> (4, H, W) integer corner heights."""
-    return np.stack([base.astype(np.int32) + ((slope >> i) & 1) for i in range(4)])
+def cell_corner_heights(base: np.ndarray, shape: np.ndarray) -> np.ndarray:
+    """(H, W) base/shape -> (4, H, W) integer corner heights."""
+    return base.astype(np.int32) + unpack_shape(shape).astype(np.int32)
 
 
-def cliff_mask(base: np.ndarray, slope: np.ndarray, min_drop: int = 2) -> np.ndarray:
+def cliff_mask(base: np.ndarray, shape: np.ndarray, min_drop: int = 2) -> np.ndarray:
     """Cells with at least one edge dropping by >= min_drop steps to a neighbour."""
-    c = cell_corner_heights(base, slope)
+    c = cell_corner_heights(base, shape)
     h, w = base.shape
     out = np.zeros((h, w), dtype=bool)
     # edges: (corner pair in this cell, neighbour offset, neighbour corner pair)

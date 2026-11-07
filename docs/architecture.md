@@ -72,7 +72,7 @@ Because of this, the same real building can take up more or fewer cells dependin
 
 - **Cell:** a square footprint. It is the unit of placement, collision and building.
 - **Height step:** the vertical unit. Terrain and object heights are whole steps.
-- **Terrain model:** RCT-style. Each cell has a base height and a slope shape, where corner heights may rise by at most 1 step above the base. Where neighboring cells don't match, the edge becomes a vertical cliff face. This gives readable terraces (canyons, mesas), ramps that roads can climb, and clean edges.
+- **Terrain model:** RCT-style, extended to steep slope tiles. Each cell has a base height (its lowest corner) and a corner shape: each corner sits 0–3 steps above the base. Neighbouring cells share corner heights, so slopes are continuous. Where they don't match, the edge becomes a vertical cliff face. The pipeline caps the rise per cell (`max_slope`, default 2); anything steeper becomes a terrace with cliffs. This gives gradual slopes on gentle ground, readable terraces and cliffs on canyon walls and mesas, and ramps that roads can climb. Rises of 1–3 steps per cell keep cell edges on clean pixel angles (horizontal, 2:1 or 1:1 going up).
 - **Directions:** 8. A world-axis edge projects to an exact 2:1 pixel staircase. A world diagonal projects to a perfectly horizontal or vertical screen line, so 45° roads and building cuts are also pixel-clean. Curves become 8-direction polylines.
 - **Chunk:** 64×64 cells, the unit of streaming and storage. Bake tiles, the unit of client baking, may be smaller (to be tuned in M0).
 
@@ -137,7 +137,7 @@ Stages run in order. Each one caches its outputs (GeoParquet / GeoTIFF / Zarr), 
 4. **importance:** score features and areas by fame and interest (Wikidata sitelinks, Wikipedia pageviews, OSM tags), combine with the hand-painted focus areas, and produce a target **scale field**.
 5. **warp:** solve the map deformation (§6), producing forward and inverse maps.
 6. **gridify:**
-   - Resample the DEM into cells (base height + slope shape + cliffs) and land cover into surface materials.
+   - Resample the DEM into cells (base height + corner shape + cliffs) and land cover into surface materials.
    - Snap networks to 8-direction cell paths, with cut-and-fill so road grades are drivable.
    - Turn building footprints into cell polygons and quantize heights to steps.
 7. **generalize & caricature:**
@@ -218,7 +218,7 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 
 ## 9. Gameplay and simulation
 
-- **Cell model:** each cell has a terrain layer (height, slope, surface), a network layer (road/rail mask) and occupants (building parts, props). Player edits are a delta layer on top of the baked chunk, which triggers local re-bakes.
+- **Cell model:** each cell has a terrain layer (height, corner shape, surface), a network layer (road/rail mask) and occupants (building parts, props). Player edits are a delta layer on top of the baked chunk, which triggers local re-bakes.
 - **Vehicles:** kinematic controllers on the grid. They follow road connectivity and terrain slopes and collide with cell occupants. A general physics engine (e.g. Rapier) is deferred until full 3D mode needs one.
 - **Flight:** an arcade flight model moving freely in 3D above the grid. Altitude is shown by a drop shadow; collision is checked against cell heights and occupant heights.
 - **Building:** place and remove on the grid using the same generators. Valid placement is checked against slope and occupancy.
@@ -228,7 +228,7 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 
 - **Manifest:** region metadata, grid bounds, chunk index, LOD levels, palette/style pack versions, attribution list and content hashes.
 - **Chunk (64×64 cells), in binary sections:**
-  - terrain: base height `i16`, slope shape `u8`, surface `u8`, water `u8`/`i16`
+  - terrain: base height `i16`, corner shape `u8`, surface `u8`, water `i16`
   - networks: connectivity mask `u8` + class `u8`
   - instances: kind, stable ID, anchor, footprint, height, parameters, seed
   - landmark stamps

@@ -1,17 +1,22 @@
 /**
  * Cell terrain model (RCT-style). See docs/architecture.md §3.3.
  *
- * Each cell has a base height (steps) and a slope mask: bit i set means
- * corner i is raised one step above the base. Corners, in grid space:
+ * Each cell has a base height (steps) and a shape: the height of each of its
+ * four corners above the base, 0..MAX_CORNER_OFFSET steps, packed two bits per
+ * corner (corner i in bits 2i..2i+1). The base is the lowest corner, so at
+ * least one offset is 0. Corners, in grid space:
  *
  *   c0 = (x,   y)    north-west
  *   c1 = (x+1, y)    north-east
  *   c2 = (x+1, y+1)  south-east
  *   c3 = (x,   y+1)  south-west
  *
- * Mask 15 (all raised) is never stored; it normalizes to base+1, mask 0.
- * Where neighbouring cells disagree along a shared edge, the edge renders as
- * a vertical cliff face owned by the higher side.
+ * Neighbouring cells normally share corner heights, giving continuous slopes.
+ * Where they disagree along a shared edge, the edge renders as a vertical
+ * cliff face owned by the higher side.
+ *
+ * Offsets up to 3 keep edges on clean pixel angles: a cell edge rising 1, 2 or
+ * 3 steps projects to a horizontal, 2:1 or 1:1 screen line.
  */
 
 export const CORNER_OFFSETS: readonly (readonly [number, number])[] = [
@@ -53,69 +58,90 @@ export const EDGE_NORMAL: readonly (readonly [number, number])[] = [
   [-1, 0],
 ];
 
-export const MAX_SLOPE = 14;
+/** Largest corner offset a shape can encode (2 bits per corner). */
+export const MAX_CORNER_OFFSET = 3;
 /** Sentinel for "no water" in the water layer. */
 export const NO_WATER = -32768;
 
-export function isValidSlope(slope: number): boolean {
-  return Number.isInteger(slope) && slope >= 0 && slope <= MAX_SLOPE;
+export type Corners = [number, number, number, number];
+
+export function cornerOffset(shape: number, corner: number): number {
+  return (shape >> (2 * corner)) & 3;
 }
 
-export function cornerRaise(slope: number, corner: number): number {
-  return (slope >> corner) & 1;
+export function packShape(o0: number, o1: number, o2: number, o3: number): number {
+  return (o0 & 3) | ((o1 & 3) << 2) | ((o2 & 3) << 4) | ((o3 & 3) << 6);
 }
 
-export function cornerHeights(base: number, slope: number): [number, number, number, number] {
+/** A shape is valid when it is a byte and its lowest corner offset is 0. */
+export function isValidShape(shape: number): boolean {
+  if (!Number.isInteger(shape) || shape < 0 || shape > 255) return false;
+  return Math.min(
+    cornerOffset(shape, 0),
+    cornerOffset(shape, 1),
+    cornerOffset(shape, 2),
+    cornerOffset(shape, 3),
+  ) === 0;
+}
+
+/** Largest corner offset of a shape (0 = flat). */
+export function shapeRise(shape: number): number {
+  return Math.max(
+    cornerOffset(shape, 0),
+    cornerOffset(shape, 1),
+    cornerOffset(shape, 2),
+    cornerOffset(shape, 3),
+  );
+}
+
+export function cornerHeights(base: number, shape: number): Corners {
   return [
-    base + cornerRaise(slope, 0),
-    base + cornerRaise(slope, 1),
-    base + cornerRaise(slope, 2),
-    base + cornerRaise(slope, 3),
+    base + cornerOffset(shape, 0),
+    base + cornerOffset(shape, 1),
+    base + cornerOffset(shape, 2),
+    base + cornerOffset(shape, 3),
   ];
 }
 
 /**
- * Encode four integer corner heights as base + slope mask, or null when they
- * span more than one step (not representable as a single sloped cell).
+ * Encode four integer corner heights as base + shape, or null when they span
+ * more than `maxOffset` steps (not representable as one sloped cell).
  */
-export function slopeFromCorners(
+export function shapeFromCorners(
   corners: readonly [number, number, number, number],
-): { base: number; slope: number } | null {
+  maxOffset = MAX_CORNER_OFFSET,
+): { base: number; shape: number } | null {
   const lo = Math.min(...corners);
   const hi = Math.max(...corners);
-  if (hi - lo > 1) return null;
-  let slope = 0;
-  for (let i = 0; i < 4; i++) if (corners[i]! > lo) slope |= 1 << i;
-  if (slope === 15) return { base: lo + 1, slope: 0 };
-  return { base: lo, slope };
+  if (hi - lo > Math.min(maxOffset, MAX_CORNER_OFFSET)) return null;
+  return {
+    base: lo,
+    shape: packShape(corners[0] - lo, corners[1] - lo, corners[2] - lo, corners[3] - lo),
+  };
+}
+
+/** Convert a v0 slope mask (bit i = corner i raised one step) to a shape. */
+export function shapeFromV0Mask(mask: number): number {
+  return packShape(mask & 1, (mask >> 1) & 1, (mask >> 2) & 1, (mask >> 3) & 1);
 }
 
 /**
  * Which diagonal splits the cell's top into two triangles: 0 = c0–c2, 1 = c1–c3.
- * With one raised (or one lowered) corner, split along the diagonal that
- * excludes the odd corner, so one triangle stays flat (RCT look). With two
- * opposite corners raised, split through them (a ridge).
+ * Split along the diagonal whose ends differ least, so the fold follows the
+ * terrain (with one odd corner this keeps the other triangle flat, the RCT
+ * look). On a tie, split through the higher pair (a ridge), else c0–c2.
  */
-export function splitDiagonal(slope: number): 0 | 1 {
-  const bits = popcount4(slope);
-  if (bits === 1 || bits === 3) {
-    const odd = bits === 1 ? slope : ~slope & 15;
-    // odd corner is c0 or c2 → exclude it → split along c1–c3
-    return odd === 1 || odd === 4 ? 1 : 0;
-  }
-  if (slope === 5) return 0; // c0 and c2 raised: ridge along c0–c2
-  if (slope === 10) return 1; // c1 and c3 raised: ridge along c1–c3
-  return 0;
-}
-
-function popcount4(v: number): number {
-  return (v & 1) + ((v >> 1) & 1) + ((v >> 2) & 1) + ((v >> 3) & 1);
+export function splitDiagonal(h: readonly [number, number, number, number]): 0 | 1 {
+  const d02 = Math.abs(h[0] - h[2]);
+  const d13 = Math.abs(h[1] - h[3]);
+  if (d02 !== d13) return d02 < d13 ? 0 : 1;
+  return h[1] + h[3] > h[0] + h[2] ? 1 : 0;
 }
 
 /** Dense terrain layers for a rectangular block of cells (row-major, y then x). */
 export class TerrainGrid {
   readonly base: Int16Array;
-  readonly slope: Uint8Array;
+  readonly shape: Uint8Array;
   readonly surface: Uint8Array;
   readonly water: Int16Array;
 
@@ -124,19 +150,19 @@ export class TerrainGrid {
     readonly height: number,
     layers?: {
       base?: Int16Array;
-      slope?: Uint8Array;
+      shape?: Uint8Array;
       surface?: Uint8Array;
       water?: Int16Array;
     },
   ) {
     const n = width * height;
     this.base = layers?.base ?? new Int16Array(n);
-    this.slope = layers?.slope ?? new Uint8Array(n);
+    this.shape = layers?.shape ?? new Uint8Array(n);
     this.surface = layers?.surface ?? new Uint8Array(n);
     this.water = layers?.water ?? new Int16Array(n).fill(NO_WATER);
     for (const [name, arr] of Object.entries({
       base: this.base,
-      slope: this.slope,
+      shape: this.shape,
       surface: this.surface,
       water: this.water,
     })) {
@@ -154,12 +180,18 @@ export class TerrainGrid {
 
   cornerHeight(x: number, y: number, corner: number): number {
     const i = this.index(x, y);
-    return this.base[i]! + cornerRaise(this.slope[i]!, corner);
+    return this.base[i]! + cornerOffset(this.shape[i]!, corner);
   }
 
-  corners(x: number, y: number): [number, number, number, number] {
+  corners(x: number, y: number): Corners {
     const i = this.index(x, y);
-    return cornerHeights(this.base[i]!, this.slope[i]!);
+    return cornerHeights(this.base[i]!, this.shape[i]!);
+  }
+
+  /** Lowest and highest corner height of one cell. */
+  cellRange(i: number): [number, number] {
+    const b = this.base[i]!;
+    return [b, b + shapeRise(this.shape[i]!)];
   }
 
   /** Minimum and maximum corner height over the whole grid. */
@@ -167,11 +199,9 @@ export class TerrainGrid {
     let lo = Infinity;
     let hi = -Infinity;
     for (let i = 0; i < this.base.length; i++) {
-      const b = this.base[i]!;
-      const s = this.slope[i]!;
-      if (b < lo) lo = b;
-      const top = b + (s ? 1 : 0);
-      if (top > hi) hi = top;
+      const [a, b] = this.cellRange(i);
+      if (a < lo) lo = a;
+      if (b > hi) hi = b;
     }
     return [lo, hi];
   }
@@ -185,9 +215,9 @@ export class TerrainGrid {
     const cy = Math.min(this.height - 1, Math.max(0, Math.floor(y)));
     const fx = Math.min(1, Math.max(0, x - cx));
     const fy = Math.min(1, Math.max(0, y - cy));
-    const [h0, h1, h2, h3] = this.corners(cx, cy);
-    const i = this.index(cx, cy);
-    if (splitDiagonal(this.slope[i]!) === 0) {
+    const h = this.corners(cx, cy);
+    const [h0, h1, h2, h3] = h;
+    if (splitDiagonal(h) === 0) {
       // diagonal c0–c2: triangles (c0,c1,c2) where fx >= fy, else (c0,c2,c3)
       return fx >= fy
         ? h0 + (h1 - h0) * fx + (h2 - h1) * fy
@@ -197,6 +227,20 @@ export class TerrainGrid {
     return fx + fy <= 1
       ? h0 + (h1 - h0) * fx + (h3 - h0) * fy
       : h2 + (h3 - h2) * (1 - fx) + (h1 - h2) * (1 - fy);
+  }
+
+  /**
+   * Steepest rise across the cell's top in steps per cell (0 = flat), the
+   * largest height change along any cell edge or diagonal triangle edge.
+   */
+  steepness(x: number, y: number): number {
+    const [h0, h1, h2, h3] = this.corners(x, y);
+    return Math.max(
+      Math.abs(h1 - h0),
+      Math.abs(h2 - h1),
+      Math.abs(h3 - h2),
+      Math.abs(h0 - h3),
+    );
   }
 
   /** Copy a sub-rectangle (clipped to bounds) into a new grid. */
@@ -210,7 +254,7 @@ export class TerrainGrid {
         const si = this.index(sx, sy);
         const di = out.index(x, y);
         out.base[di] = this.base[si]!;
-        out.slope[di] = this.slope[si]!;
+        out.shape[di] = this.shape[si]!;
         out.surface[di] = this.surface[si]!;
         out.water[di] = this.water[si]!;
       }

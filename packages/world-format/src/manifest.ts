@@ -94,7 +94,7 @@ export function assembleTerrain(manifest: WorldManifest, chunks: Chunk[]): Terra
         const si = t.index(x, y);
         const di = grid.index(gx, gy);
         grid.base[di] = t.base[si]!;
-        grid.slope[di] = t.slope[si]!;
+        grid.shape[di] = t.shape[si]!;
         grid.surface[di] = t.surface[si]!;
         grid.water[di] = t.water[si]!;
       }

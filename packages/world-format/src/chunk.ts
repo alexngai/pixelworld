@@ -1,9 +1,11 @@
-import { MAX_SLOPE, NO_WATER, TerrainGrid } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, isValidShape, shapeFromV0Mask } from "@pixelworld/grid";
 
-/** Chunk binary codec, format v0. Spec: docs/world-format.md. */
+/** Chunk binary codec, format v1 (reads v0). Spec: docs/world-format.md. */
 
 export const CHUNK_MAGIC = "PXWC";
-export const CHUNK_FORMAT_VERSION = 0;
+export const CHUNK_FORMAT_VERSION = 1;
+/** Versions decodeChunk accepts. v0 stored a 1-bit-per-corner slope mask (SLOP). */
+export const READABLE_CHUNK_VERSIONS: readonly number[] = [0, 1];
 const HEADER_BYTES = 20;
 const SECTION_ENTRY_BYTES = 12;
 
@@ -32,7 +34,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   if (buffer.byteLength < HEADER_BYTES) throw new ChunkFormatError("truncated header");
   if (readTag(view, 0) !== CHUNK_MAGIC) throw new ChunkFormatError("bad magic");
   const version = view.getUint16(4, true);
-  if (version !== CHUNK_FORMAT_VERSION)
+  if (!READABLE_CHUNK_VERSIONS.includes(version))
     throw new ChunkFormatError(`unsupported chunk version ${version}`);
   const x = view.getInt32(8, true);
   const y = view.getInt32(12, true);
@@ -65,7 +67,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   }
 
   const baseS = section("BASE", 2, true)!;
-  const slopS = section("SLOP", 1, true)!;
+  const shapeS = version === 0 ? section("SLOP", 1, true)! : section("CRNR", 1, true)!;
   const surfS = section("SURF", 1, true)!;
   const watrS = section("WATR", 2, false);
 
@@ -73,12 +75,19 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const water = new Int16Array(n).fill(NO_WATER);
   for (let i = 0; i < n; i++) base[i] = view.getInt16(baseS.offset + i * 2, true);
   if (watrS) for (let i = 0; i < n; i++) water[i] = view.getInt16(watrS.offset + i * 2, true);
-  const slope = new Uint8Array(buffer.slice(slopS.offset, slopS.offset + n));
+  const shape = new Uint8Array(buffer.slice(shapeS.offset, shapeS.offset + n));
   const surface = new Uint8Array(buffer.slice(surfS.offset, surfS.offset + n));
-  for (let i = 0; i < n; i++)
-    if (slope[i]! > MAX_SLOPE) throw new ChunkFormatError(`invalid slope ${slope[i]} at ${i}`);
+  if (version === 0) {
+    for (let i = 0; i < n; i++) {
+      if (shape[i]! > 14) throw new ChunkFormatError(`invalid v0 slope ${shape[i]} at ${i}`);
+      shape[i] = shapeFromV0Mask(shape[i]!);
+    }
+  } else {
+    for (let i = 0; i < n; i++)
+      if (!isValidShape(shape[i]!)) throw new ChunkFormatError(`invalid shape ${shape[i]} at ${i}`);
+  }
 
-  return { x, y, size, terrain: new TerrainGrid(size, size, { base, slope, surface, water }) };
+  return { x, y, size, terrain: new TerrainGrid(size, size, { base, shape, surface, water }) };
 }
 
 export function encodeChunk(chunk: Chunk): ArrayBuffer {
@@ -95,7 +104,7 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
     return out;
   };
   payloads.push(["BASE", i16(terrain.base)]);
-  payloads.push(["SLOP", terrain.slope.slice()]);
+  payloads.push(["CRNR", terrain.shape.slice()]);
   payloads.push(["SURF", terrain.surface.slice()]);
   if (hasWater) payloads.push(["WATR", i16(terrain.water)]);
 

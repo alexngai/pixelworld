@@ -18,7 +18,7 @@ pnpm dev            # http://localhost:5173
 | Input | Action |
 |---|---|
 | WASD / drag | pan |
-| arrow keys | drive the rover (it can't climb cliffs or enter water) |
+| arrow keys | drive the rover (it can't climb cliffs or steep slopes, or enter water) |
 | Q / E | rotate the view 90° |
 | 1–6 | zoom |
 | F | toggle camera follow |
@@ -41,7 +41,7 @@ To regenerate the fixture world (it fetches the USGS DEM and the OSM river; resu
 cd pipeline && uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0
 ```
 
-To make the terrain more or less dramatic, pass `--exaggeration E`. E is vertical exaggeration relative to true proportions: 1.0 is real slopes and the default is 2.5. See [fixtures/README.md](fixtures/README.md) to try a value without overwriting the committed fixture.
+To make the terrain more or less dramatic, pass `--exaggeration E`. E is vertical exaggeration relative to true proportions: 1.0 is real slopes and the default is 2.5. `--max-slope K` (1–3, default 2) sets how steep a continuous slope tile can be before terrain turns into terraces and cliffs. See [fixtures/README.md](fixtures/README.md) to try a value without overwriting the committed fixture.
 
 ## Docs
 

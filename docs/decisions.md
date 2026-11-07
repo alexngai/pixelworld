@@ -31,6 +31,7 @@ Status values:
 | D-020 | Terrain quantization: bilateral smoothing + flat terraces for steep cells | Proposed (M0) |
 | D-021 | Bake tiles of 32×32 cells with a 16-cell context margin; ownership per cell | Proposed (M0) |
 | D-022 | Vertical scale set as exaggeration relative to true proportions, applied before quantization; fixture default 2.5× | Proposed |
+| D-023 | Multi-step slope tiles: corners 0–3 steps above base (chunk format v1), pipeline cap default 2 | Proposed |
 
 ---
 
@@ -110,3 +111,11 @@ Corner heights are bilateral-filtered (1.5 cells spatial, 1.2 steps range) befor
 - **What stays in real metres:** smoothing, surface classification and strata colours, so changing E changes only height.
 - **Default:** 2.5×, chosen from a visual comparison of 1.63×, 2.5×, 3.5× and 5× (see [style-guide.md](style-guide.md) §8).
 - **Manifest and safety:** the manifest records `verticalExaggeration`. The baker warns if a tile's depth span overflows its 16-bit local range, which only happens at exaggerations well above 10.
+
+### D-023: Multi-step slope tiles (proposed)
+- **What changed:** cells now store each corner's height above the base, 0–3 steps (two bits per corner, chunk format v1), instead of a one-step slope mask. Neighbours share corners, so slopes up to the cap are continuous instead of becoming terraces.
+- **Cap:** the pipeline caps the rise per cell with `max_slope`; anything steeper still becomes terrace plus cliff (D-020).
+- **Why at most 3:** rising edges stay on clean pixel angles.
+- **Default:** 2, chosen from a visual comparison of 1, 2 and 3 at 2.5× exaggeration (see [style-guide.md](style-guide.md) §8). With `max_slope` 1, the pipeline produces exactly the previous terrain.
+- **Compatibility:** readers still accept v0 chunks.
+- **Gameplay:** the rover now has a grade limit (2 steps per cell travelled) rather than a fixed climb height, so steep slope tiles block it like cliffs do.

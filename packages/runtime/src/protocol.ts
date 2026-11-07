@@ -9,7 +9,7 @@ export interface InitMessage {
   cellsX: number;
   cellsY: number;
   base: Int16Array;
-  slope: Uint8Array;
+  shape: Uint8Array;
   surface: Uint8Array;
   water: Int16Array;
   style: StyleParams;

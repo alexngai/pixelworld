@@ -47,13 +47,13 @@ export function buildTerrainMesh(
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = grid.index(x, y);
-      const slope = grid.slope[i]!;
+      const shape = grid.shape[i]!;
       const surface = grid.surface[i]!;
       const h = grid.corners(x, y);
       const p: V3[] = CORNER_OFFSETS.map(([dx, dy], k) => [x + dx, y + dy, h[k]!]);
-      const kind = slope === 0 ? FACE_TOP : FACE_SLOPE;
+      const kind = shape === 0 ? FACE_TOP : FACE_SLOPE;
       const tris: [number, number, number][] =
-        splitDiagonal(slope) === 0
+        splitDiagonal(h) === 0
           ? [
               [0, 1, 2],
               [0, 2, 3],

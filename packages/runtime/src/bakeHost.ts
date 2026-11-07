@@ -31,7 +31,7 @@ export class BakeHost {
           this.init = msg;
           this.grid = new TerrainGrid(msg.cellsX, msg.cellsY, {
             base: msg.base,
-            slope: msg.slope,
+            shape: msg.shape,
             surface: msg.surface,
             water: msg.water,
           });

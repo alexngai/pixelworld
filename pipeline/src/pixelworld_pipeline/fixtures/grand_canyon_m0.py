@@ -6,7 +6,7 @@ Throwaway for M0 (the real staged pipeline arrives in M1). It:
   1. reads a window of the USGS 3DEP 1/3 arc-second DEM over HTTP range requests,
   2. averages it onto a 129x129 grid of cell corners in a local transverse
      Mercator projection (uniform 160 m per cell, no warp),
-  3. gridifies to height steps (base + slope, cliffs where steep),
+  3. gridifies to height steps (base + corner shape, cliffs where too steep),
   4. burns in the Colorado River from OpenStreetMap (Overpass),
   5. classifies surfaces from elevation and steepness, and
   6. writes fixtures/grand-canyon-m0/ in world format v0.
@@ -57,7 +57,8 @@ CHUNK_SIZE = 64
 SMOOTH_SIGMA = 0.0  # cells; Gaussian smoothing of corner heights before quantizing
 BILATERAL = (1.5, 48.0)  # (cells, metres): edge-preserving smoothing; (0, 0) disables
 CLIFF_DROP_METERS = 80.0  # real drop that makes a cell "cliffy" for surface classes
-STEEP_MODE = "flat"  # how cells steeper than one step are represented (see gridify)
+MAX_SLOPE = 2  # steepest slope tile, in steps of rise per cell (1..3); steeper → terrace + cliff
+STEEP_MODE = "flat"  # how cells steeper than MAX_SLOPE are represented (see gridify)
 
 DEM_URL = (
     "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/"
@@ -167,7 +168,7 @@ def rasterize_lines(lines: list[list[tuple[float, float]]]) -> np.ndarray:
 def classify(
     corner_m: np.ndarray,
     base: np.ndarray,
-    slope: np.ndarray,
+    shape: np.ndarray,
     river: np.ndarray,
     step_m: float,
 ) -> np.ndarray:
@@ -178,7 +179,7 @@ def classify(
     cs = corner_stack(corner_m)
     elev = cs.mean(axis=0)
     relief = cs.max(axis=0) - cs.min(axis=0)
-    cliff = cliff_mask(base, slope, min_drop=max(1, round(CLIFF_DROP_METERS / step_m)))
+    cliff = cliff_mask(base, shape, min_drop=max(1, round(CLIFF_DROP_METERS / step_m)))
     gentle = ~cliff & (relief < 60)
 
     surface = np.full(base.shape, S["rock"], dtype=np.uint8)
@@ -202,28 +203,29 @@ def build(
     steep: str = STEEP_MODE,
     bilateral_params: tuple[float, float] = BILATERAL,
     exaggeration: float = VERTICAL_EXAGGERATION,
+    max_slope: int = MAX_SLOPE,
 ) -> dict:
     step_m = meters_per_step(METERS_PER_CELL, exaggeration)
     corner_m = smooth(fetch_corner_heights(), sigma)
     if bilateral_params[0] > 0:
         corner_m = bilateral(corner_m, *bilateral_params)
-    base, slope = gridify_heights(corner_m / step_m, steep=steep)
+    base, shape = gridify_heights(corner_m / step_m, steep=steep, max_offset=max_slope)
 
     river = rasterize_lines(fetch_river())
     # River cells become flat water at their lowest corner.
-    lowest = cell_corner_heights(base, slope).min(axis=0)
+    lowest = cell_corner_heights(base, shape).min(axis=0)
     base = np.where(river, lowest, base).astype(np.int16)
-    slope = np.where(river, 0, slope).astype(np.uint8)
+    shape = np.where(river, 0, shape).astype(np.uint8)
     water = np.where(river, base, NO_WATER).astype(np.int16)
 
-    surface = classify(corner_m, base, slope, river, step_m)
+    surface = classify(corner_m, base, shape, river, step_m)
     w, s, e, n = bounds_lonlat()
     return write_package(
         out_dir,
         world_id="grand-canyon-m0",
         name="Grand Canyon (M0 slice)",
         base=base,
-        slope=slope,
+        shape=shape,
         surface=surface,
         water=water,
         chunk_size=CHUNK_SIZE,
@@ -265,6 +267,7 @@ def build(
                     "sigmaMeters": bilateral_params[1],
                 },
                 "steepMode": steep,
+                "maxSlopeSteps": max_slope,
             },
         },
     )
@@ -282,8 +285,22 @@ def main() -> None:
         default=VERTICAL_EXAGGERATION,
         help="vertical exaggeration relative to true proportions (1.0 = real slopes)",
     )
+    parser.add_argument(
+        "--max-slope",
+        type=int,
+        choices=[1, 2, 3],
+        default=MAX_SLOPE,
+        help="steepest slope tile in steps of rise per cell; steeper terrain becomes cliffs",
+    )
     args = parser.parse_args()
-    manifest = build(args.out, args.sigma, args.steep, tuple(args.bilateral), args.exaggeration)
+    manifest = build(
+        args.out,
+        args.sigma,
+        args.steep,
+        tuple(args.bilateral),
+        args.exaggeration,
+        args.max_slope,
+    )
     print(f"wrote {args.out} ({manifest['cellsX']}x{manifest['cellsY']} cells)")
 
 

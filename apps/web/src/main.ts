@@ -19,7 +19,10 @@ const TILE_SIZE = 32;
 const MARGIN = 16;
 const PAN_SPEED = 220; // internal px / s
 const DRIVE_SPEED = 3; // cells / s
-const MAX_CLIMB = 1.05; // steps the rover can climb between samples
+// Steepest grade the rover can drive, in height steps per cell travelled. Gentle
+// slopes (1 step per cell, up to 1.41 across a diagonal fold) are drivable;
+// steep slope tiles and cliffs are not.
+const MAX_GRADE = 2;
 
 /** Test/debug hooks (used by the Playwright suite in e2e/). */
 interface PixelworldDebug {
@@ -70,7 +73,7 @@ async function main() {
     cellsX: terrain.width,
     cellsY: terrain.height,
     base: terrain.base.slice(),
-    slope: terrain.slope.slice(),
+    shape: terrain.shape.slice(),
     surface: terrain.surface.slice(),
     water: terrain.water.slice(),
     style: {
@@ -93,9 +96,9 @@ async function main() {
       let hi = -Infinity;
       for (let y = ty * TILE_SIZE; y < Math.min(terrain.height, (ty + 1) * TILE_SIZE); y++)
         for (let x = tx * TILE_SIZE; x < Math.min(terrain.width, (tx + 1) * TILE_SIZE); x++) {
-          const b = terrain.base[terrain.index(x, y)]!;
-          lo = Math.min(lo, b);
-          hi = Math.max(hi, b + 1);
+          const [a, b] = terrain.cellRange(terrain.index(x, y));
+          lo = Math.min(lo, a);
+          hi = Math.max(hi, b);
         }
       // edge tiles include skirts down to the floor
       const edge = tx === 0 || ty === 0 || tx === tilesX - 1 || ty === tilesY - 1;
@@ -240,8 +243,9 @@ async function main() {
         if (nx < 0.3 || ny < 0.3 || nx > terrain.width - 0.3 || ny > terrain.height - 0.3) return false;
         const cell = terrain.index(Math.floor(nx), Math.floor(ny));
         const nh = terrain.surfaceHeightAt(nx, ny);
-        if (!noclip && (terrain.water[cell] !== NO_WATER || Math.abs(nh - rover.h) > MAX_CLIMB))
-          return false;
+        const dist = Math.hypot(nx - rover.x, ny - rover.y);
+        const tooSteep = Math.abs(nh - rover.h) > MAX_GRADE * dist + 0.01;
+        if (!noclip && (terrain.water[cell] !== NO_WATER || tooSteep)) return false;
         rover.x = nx;
         rover.y = ny;
         rover.h = nh;

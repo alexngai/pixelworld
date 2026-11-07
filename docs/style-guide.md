@@ -53,7 +53,7 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 
 - **Silhouettes:** a pixel gets shade 0 of its own ramp when a neighbour is more than **2.0 depth units** farther away. That outlines cliffs of 2 steps or more where they stand in front of farther terrain.
   - 1-step terraces aren't outlined.
-  - A slope triangle seen edge-on (a 1-step drop over half a cell) also produces a 1.33-unit jump, which is why the threshold sits above it.
+  - A slope triangle seen edge-on (a 1-step drop over half a cell) also produces a 1.33-unit jump, which is why the threshold sits above it. Steeper slope tiles that face away from the camera can exceed 2.0. They then get a silhouette line along their ridge, which is correct: they really do hide terrain behind them.
 - **World edge:** pixels next to empty background are outlined, which frames the diorama.
 - **No black:** outlines use the darkest shade of the pixel's own ramp, never pure black.
 
@@ -70,6 +70,12 @@ These choices live in the gridify stage and the fixture script, but they're styl
 - **Bilateral smoothing** (1.5 cells, 1.2 steps) runs before quantizing. It flattens noisy benches into coherent terraces and leaves cliffs sharp.
 - **Steep cells become flat terraces** at their mean height (`steep="flat"`), which gives the stepped "temple" look of canyon buttes. The alternative `"slope"` mode was rejected in the M0 review: it made walls into sawtooth triangle facets.
 - **Vertical exaggeration:** 2.5× true proportions (26.1 m per step at 160 m per cell). In the comparison, 1.63× (M0's original 40 m/step) looked flat, 2.5× made cliffs and strata bands bold while walls stayed coherent, and 3.5× and 5× broke walls into one-cell pillars, because noise in the elevation data becomes several steps. Going above about 3× needs more smoothing to match.
+- **Slope tiles rise at most 2 steps per cell** (`--max-slope`, 1–3). In the comparison:
+  - 1 (the original one-step model) made gentle benches stepped.
+  - 2 made benches, the Tonto Platform and lower butte flanks continuous while the walls kept crisp stepped cliffs.
+  - 3 smoothed further but gave a faceted low-poly look, with contrasting triangles and spiky folds.
+
+  Walls steeper than the limit still become terraces and cliffs. Going up, rises of 1–3 steps per cell keep edges horizontal, 2:1 or 1:1. Going down, a 2-step rise gives slightly uneven 2:3 lines, which is acceptable at play zoom.
 - **Smoothing and surface classes use real metres** (bilateral range σ = 48 m; cliff threshold 80 m), so changing the exaggeration doesn't change which cells are woodland or rock.
 
 ## 9. Player sprites

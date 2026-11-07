@@ -1,6 +1,6 @@
-# World package format (v0)
+# World package format (v1)
 
-Status: v0, introduced in M0. It covers terrain only. Instances, networks, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
+Status: chunk format v1, which replaced v0's one-step slope mask with multi-step corner shapes; readers still accept v0. Manifest format v0. It covers terrain only. Instances, networks, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
 
 A world package is a directory, or later an archive, containing:
 
@@ -54,7 +54,7 @@ All integers are little-endian.
 | Offset | Type | Field |
 |---|---|---|
 | 0 | `char[4]` | magic `PXWC` |
-| 4 | `u16` | format version (`0`) |
+| 4 | `u16` | format version (`1`; readers also accept `0`) |
 | 6 | `u16` | flags (reserved, `0`) |
 | 8 | `i32` | chunk x |
 | 12 | `i32` | chunk y |
@@ -73,18 +73,20 @@ Starts at offset 20. There is one 12-byte entry per section:
 
 Section payloads follow the table, each starting on a 4-byte boundary.
 
-### Sections (v0)
+### Sections (v1)
 
 All per-cell arrays are `size × size` and row-major: `y` (south) is the outer loop and `x` (east) the inner loop.
 
 | Tag | Type | Required | Meaning |
 |---|---|---|---|
 | `BASE` | `i16[]` | yes | base height in steps |
-| `SLOP` | `u8[]` | yes | slope corner mask, 0–14 (bit i = corner i raised one step; see `packages/grid/src/terrain.ts`) |
+| `CRNR` | `u8[]` | yes | corner shape: each corner's height above `BASE`, 0–3 steps, packed two bits per corner (corner i in bits 2i..2i+1; see `packages/grid/src/terrain.ts`). At least one corner is 0, because `BASE` is the lowest corner. |
 | `SURF` | `u8[]` | yes | surface ID (see `manifest.surfaces`) |
 | `WATR` | `i16[]` | no | water surface height in steps; `-32768` = no water |
 
 Readers must ignore unknown tags. Writers must not emit duplicate tags.
+
+**v0 chunks** have a `SLOP` section instead of `CRNR`: a 4-bit mask, 0–14, where bit i means corner i is one step above `BASE`. Readers convert it to a shape where each set bit becomes an offset of 1.
 
 ## Versioning
 

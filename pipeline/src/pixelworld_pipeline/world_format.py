@@ -1,4 +1,4 @@
-"""World package codec, format v0. Spec: docs/world-format.md.
+"""World package codec, format v1 (reads v0). Spec: docs/world-format.md.
 
 Mirrors packages/world-format (TypeScript). Both are tested against the shared
 golden files in testdata/world-format/.
@@ -16,11 +16,30 @@ from typing import Any
 import numpy as np
 
 CHUNK_MAGIC = b"PXWC"
-CHUNK_FORMAT_VERSION = 0
+CHUNK_FORMAT_VERSION = 1
+READABLE_CHUNK_VERSIONS = (0, 1)  # v0 stored a 1-bit-per-corner slope mask (SLOP)
 WORLD_FORMAT = "pixelworld-world"
 WORLD_FORMAT_VERSION = 0
 NO_WATER = -32768
-MAX_SLOPE = 14
+MAX_CORNER_OFFSET = 3
+
+
+def pack_shape(offsets: np.ndarray) -> np.ndarray:
+    """(4, ...) corner offsets 0..3 -> packed uint8 shape (corner i in bits 2i..2i+1)."""
+    o = np.asarray(offsets).astype(np.uint8)
+    return (o[0] | (o[1] << 2) | (o[2] << 4) | (o[3] << 6)).astype(np.uint8)
+
+
+def unpack_shape(shape: np.ndarray) -> np.ndarray:
+    """Packed shape -> (4, ...) corner offsets."""
+    s = np.asarray(shape).astype(np.uint8)
+    return np.stack([(s >> (2 * i)) & 3 for i in range(4)])
+
+
+def shape_from_v0_mask(mask: np.ndarray) -> np.ndarray:
+    m = np.asarray(mask).astype(np.uint8)
+    return pack_shape(np.stack([(m >> i) & 1 for i in range(4)]))
+
 
 _HEADER = struct.Struct("<4sHHiiHH")  # magic, version, flags, x, y, size, section count
 _ENTRY = struct.Struct("<4sII")  # tag, offset, length
@@ -36,8 +55,8 @@ class Chunk:
 
     x: int
     y: int
-    base: np.ndarray  # int16 height steps
-    slope: np.ndarray  # uint8 corner mask 0..14
+    base: np.ndarray  # int16 height steps (lowest corner)
+    shape: np.ndarray  # uint8 packed corner offsets 0..3 (see pack_shape)
     surface: np.ndarray  # uint8 surface id
     water: np.ndarray = field(default=None)  # int16 water height, NO_WATER = none
 
@@ -45,16 +64,16 @@ class Chunk:
         size = self.base.shape[0]
         if self.water is None:
             self.water = np.full((size, size), NO_WATER, dtype=np.int16)
-        for name in ("base", "slope", "surface", "water"):
+        for name in ("base", "shape", "surface", "water"):
             arr = getattr(self, name)
             if arr.shape != (size, size):
                 raise ChunkFormatError(f"{name} has shape {arr.shape}, expected {(size, size)}")
         self.base = self.base.astype(np.int16, copy=False)
-        self.slope = self.slope.astype(np.uint8, copy=False)
+        self.shape = self.shape.astype(np.uint8, copy=False)
         self.surface = self.surface.astype(np.uint8, copy=False)
         self.water = self.water.astype(np.int16, copy=False)
-        if int(self.slope.max(initial=0)) > MAX_SLOPE:
-            raise ChunkFormatError("slope mask out of range")
+        if self.shape.size and int(unpack_shape(self.shape).min(axis=0).max()) != 0:
+            raise ChunkFormatError("shape must have its lowest corner offset at 0")
 
     @property
     def size(self) -> int:
@@ -68,7 +87,7 @@ def _align4(n: int) -> int:
 def encode_chunk(chunk: Chunk) -> bytes:
     payloads: list[tuple[bytes, bytes]] = [
         (b"BASE", chunk.base.astype("<i2").tobytes()),
-        (b"SLOP", chunk.slope.astype("u1").tobytes()),
+        (b"CRNR", chunk.shape.astype("u1").tobytes()),
         (b"SURF", chunk.surface.astype("u1").tobytes()),
     ]
     if np.any(chunk.water != NO_WATER):
@@ -97,7 +116,7 @@ def decode_chunk(data: bytes) -> Chunk:
     magic, version, _flags, x, y, size, count = _HEADER.unpack_from(data, 0)
     if magic != CHUNK_MAGIC:
         raise ChunkFormatError("bad magic")
-    if version != CHUNK_FORMAT_VERSION:
+    if version not in READABLE_CHUNK_VERSIONS:
         raise ChunkFormatError(f"unsupported chunk version {version}")
     n = size * size
     sections: dict[bytes, tuple[int, int]] = {}
@@ -124,10 +143,20 @@ def decode_chunk(data: bytes) -> Chunk:
         x=x,
         y=y,
         base=section(b"BASE", "<i2", True),
-        slope=section(b"SLOP", "u1", True),
+        shape=(
+            shape_from_v0_mask(_v0_mask(section(b"SLOP", "u1", True)))
+            if version == 0
+            else section(b"CRNR", "u1", True)
+        ),
         surface=section(b"SURF", "u1", True),
         water=section(b"WATR", "<i2", False),
     )
+
+
+def _v0_mask(mask: np.ndarray) -> np.ndarray:
+    if int(mask.max(initial=0)) > 14:
+        raise ChunkFormatError("v0 slope mask out of range")
+    return mask
 
 
 def write_package(
@@ -136,7 +165,7 @@ def write_package(
     world_id: str,
     name: str,
     base: np.ndarray,
-    slope: np.ndarray,
+    shape: np.ndarray,
     surface: np.ndarray,
     water: np.ndarray,
     chunk_size: int,
@@ -167,7 +196,7 @@ def write_package(
                 x=cx,
                 y=cy,
                 base=pad(base, 0),
-                slope=pad(slope, 0),
+                shape=pad(shape, 0),
                 surface=pad(surface, 0),
                 water=pad(water, NO_WATER),
             )

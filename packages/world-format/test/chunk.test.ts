@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { NO_WATER, TerrainGrid } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, packShape, shapeFromV0Mask, shapeRise } from "@pixelworld/grid";
 import { describe, expect, it } from "vitest";
 import {
   ChunkFormatError,
@@ -14,36 +14,47 @@ import {
 
 const goldenDir = fileURLToPath(new URL("../../../testdata/world-format/", import.meta.url));
 
-function loadGolden() {
-  const bin = readFileSync(goldenDir + "chunk-v0-small.pxwc");
+interface GoldenExpected {
+  x: number;
+  y: number;
+  size: number;
+  base: number[];
+  shape?: number[];
+  slope?: number[];
+  surface: number[];
+  water: number[];
+}
+
+function loadGolden(name: string) {
+  const bin = readFileSync(goldenDir + `${name}.pxwc`);
   const buffer = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
-  const expected = JSON.parse(readFileSync(goldenDir + "chunk-v0-small.json", "utf8")) as {
-    x: number;
-    y: number;
-    size: number;
-    base: number[];
-    slope: number[];
-    surface: number[];
-    water: number[];
-  };
+  const expected = JSON.parse(readFileSync(goldenDir + `${name}.json`, "utf8")) as GoldenExpected;
   return { buffer, expected };
 }
 
-describe("chunk codec v0", () => {
-  it("decodes the Python-written golden file", () => {
-    const { buffer, expected } = loadGolden();
+describe("chunk codec", () => {
+  it("decodes the Python-written v1 golden file", () => {
+    const { buffer, expected } = loadGolden("chunk-v1-small");
     const c = decodeChunk(buffer);
     expect([c.x, c.y, c.size]).toEqual([expected.x, expected.y, expected.size]);
     expect(Array.from(c.terrain.base)).toEqual(expected.base);
-    expect(Array.from(c.terrain.slope)).toEqual(expected.slope);
+    expect(Array.from(c.terrain.shape)).toEqual(expected.shape);
     expect(Array.from(c.terrain.surface)).toEqual(expected.surface);
     expect(Array.from(c.terrain.water)).toEqual(expected.water);
+    expect(Math.max(...Array.from(c.terrain.shape, shapeRise))).toBe(3);
   });
 
-  it("re-encodes the golden file byte for byte", () => {
-    const { buffer } = loadGolden();
+  it("re-encodes the v1 golden file byte for byte", () => {
+    const { buffer } = loadGolden("chunk-v1-small");
     const again = encodeChunk(decodeChunk(buffer));
     expect(new Uint8Array(again)).toEqual(new Uint8Array(buffer));
+  });
+
+  it("still decodes v0 files, converting slope masks to shapes", () => {
+    const { buffer, expected } = loadGolden("chunk-v0-small");
+    const c = decodeChunk(buffer);
+    expect(Array.from(c.terrain.base)).toEqual(expected.base);
+    expect(Array.from(c.terrain.shape)).toEqual(expected.slope!.map(shapeFromV0Mask));
   });
 
   it("omits the water section when there is no water", () => {
@@ -53,7 +64,7 @@ describe("chunk codec v0", () => {
   });
 
   it("rejects corrupt input", () => {
-    const { buffer } = loadGolden();
+    const { buffer } = loadGolden("chunk-v1-small");
     const bad = buffer.slice(0);
     new Uint8Array(bad)[0] = 0x58;
     expect(() => decodeChunk(bad)).toThrow(ChunkFormatError);
@@ -61,6 +72,13 @@ describe("chunk codec v0", () => {
     new DataView(badVersion).setUint16(4, 9, true);
     expect(() => decodeChunk(badVersion)).toThrow(ChunkFormatError);
     expect(() => decodeChunk(buffer.slice(0, 40))).toThrow(ChunkFormatError);
+  });
+
+  it("rejects shapes whose lowest corner isn't 0", () => {
+    const t = new TerrainGrid(1, 1, { shape: new Uint8Array([packShape(1, 1, 2, 1)]) });
+    expect(() => decodeChunk(encodeChunk({ x: 0, y: 0, size: 1, terrain: t }))).toThrow(
+      ChunkFormatError,
+    );
   });
 });
 

@@ -11,25 +11,25 @@
       "x": 0,
       "y": 0,
       "path": "chunks/0_0.pxwc",
-      "sha256": "23a749426ab4aa9d109c815a2afea39e2ce201ed24fa08ef6a12a8b5e9360f4b"
+      "sha256": "ccfa67917d3fc5da1a08c903484461f16b0c8a1afdae0a22658848bd1fc5ac43"
     },
     {
       "x": 1,
       "y": 0,
       "path": "chunks/1_0.pxwc",
-      "sha256": "0d50474bc91ca838ebe07bad74f1e8c127e90d09e0d23e4b51f72dc55c10c0c5"
+      "sha256": "32e9f9341b39904f0acbb31487080e952a8559d47b7c1ccc8897c7cb982f156b"
     },
     {
       "x": 0,
       "y": 1,
       "path": "chunks/0_1.pxwc",
-      "sha256": "4a0b4b4ac1885b4314fb5409fb2c8c03b52e4f372426f8c7dc4ec7eafc5c95ad"
+      "sha256": "f0de6edd7c9e514c80c57f2a43710337d339d7f8c1a7406fd1dd187105c1b382"
     },
     {
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc",
-      "sha256": "b89bb85f6387512df8719e5834b752fb0b78a659036224ed8fc2aa508e3990d5"
+      "sha256": "096f9a5d25114830963337da840f75037f30a361af37c311ac452b215f0e7c3f"
     }
   ],
   "scale": {
@@ -82,7 +82,8 @@
         "sigmaCells": 1.5,
         "sigmaMeters": 48.0
       },
-      "steepMode": "flat"
+      "steepMode": "flat",
+      "maxSlopeSteps": 2
     }
   }
 }
