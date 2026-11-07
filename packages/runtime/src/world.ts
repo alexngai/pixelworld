@@ -2,6 +2,7 @@ import type { TerrainGrid } from "@pixelworld/grid";
 import {
   assembleTerrain,
   decodeChunk,
+  maybeGunzip,
   parseManifest,
   type WorldManifest,
 } from "@pixelworld/world-format";
@@ -21,7 +22,7 @@ export async function loadWorld(baseUrl: string): Promise<LoadedWorld> {
     manifest.chunks.map(async (ref) => {
       const r = await fetch(base + ref.path);
       if (!r.ok) throw new Error(`${ref.path}: HTTP ${r.status}`);
-      return decodeChunk(await r.arrayBuffer());
+      return decodeChunk(await maybeGunzip(await r.arrayBuffer()));
     }),
   );
   return { manifest, terrain: assembleTerrain(manifest, chunks) };

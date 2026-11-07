@@ -70,11 +70,20 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const shapeS = version === 0 ? section("SLOP", 1, true)! : section("CRNR", 1, true)!;
   const surfS = section("SURF", 1, true)!;
   const watrS = section("WATR", 2, false);
+  const roadS = section("ROAD", 2, false);
+  const rclsS = section("RCLS", 1, false);
+  const geolS = section("GEOL", 1, false);
 
   const base = new Int16Array(n);
   const water = new Int16Array(n).fill(NO_WATER);
   for (let i = 0; i < n; i++) base[i] = view.getInt16(baseS.offset + i * 2, true);
   if (watrS) for (let i = 0; i < n; i++) water[i] = view.getInt16(watrS.offset + i * 2, true);
+  const road = new Uint16Array(n);
+  if (roadS) for (let i = 0; i < n; i++) road[i] = view.getUint16(roadS.offset + i * 2, true);
+  const bytesOf = (s: { offset: number } | null) =>
+    s ? new Uint8Array(buffer.slice(s.offset, s.offset + n)) : new Uint8Array(n);
+  const roadClass = bytesOf(rclsS);
+  const geology = bytesOf(geolS);
   const shape = new Uint8Array(buffer.slice(shapeS.offset, shapeS.offset + n));
   const surface = new Uint8Array(buffer.slice(surfS.offset, surfS.offset + n));
   if (version === 0) {
@@ -87,7 +96,12 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
       if (!isValidShape(shape[i]!)) throw new ChunkFormatError(`invalid shape ${shape[i]} at ${i}`);
   }
 
-  return { x, y, size, terrain: new TerrainGrid(size, size, { base, shape, surface, water }) };
+  return {
+    x,
+    y,
+    size,
+    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology }),
+  };
 }
 
 export function encodeChunk(chunk: Chunk): ArrayBuffer {
@@ -103,10 +117,20 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
     for (let i = 0; i < n; i++) v.setInt16(i * 2, arr[i]!, true);
     return out;
   };
+  const u16 = (arr: Uint16Array) => {
+    const out = new Uint8Array(n * 2);
+    const v = new DataView(out.buffer);
+    for (let i = 0; i < n; i++) v.setUint16(i * 2, arr[i]!, true);
+    return out;
+  };
+  const any = (arr: ArrayLike<number>) => Array.prototype.some.call(arr, (v: number) => v !== 0);
   payloads.push(["BASE", i16(terrain.base)]);
   payloads.push(["CRNR", terrain.shape.slice()]);
   payloads.push(["SURF", terrain.surface.slice()]);
   if (hasWater) payloads.push(["WATR", i16(terrain.water)]);
+  if (any(terrain.road)) payloads.push(["ROAD", u16(terrain.road)]);
+  if (any(terrain.roadClass)) payloads.push(["RCLS", terrain.roadClass.slice()]);
+  if (any(terrain.geology)) payloads.push(["GEOL", terrain.geology.slice()]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;
   const placed = payloads.map(([tag, data]) => {
@@ -137,4 +161,19 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
 
 function align4(n: number): number {
   return (n + 3) & ~3;
+}
+
+/** True when bytes start with the gzip magic number. */
+export function isGzip(bytes: Uint8Array): boolean {
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+}
+
+/**
+ * Chunk files may be stored gzip-compressed (`.pxwc.gz`). Decompress if
+ * needed using the platform DecompressionStream (browsers, Node 18+).
+ */
+export async function maybeGunzip(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+  if (!isGzip(new Uint8Array(buffer))) return buffer;
+  const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
 }

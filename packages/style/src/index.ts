@@ -1,7 +1,7 @@
 /**
- * Style packs: palette ramps, strata and surface materials. A style pack is
- * data (worlds/_styles/<id>/style.json); this module validates it and turns it
- * into the palette and lookup tables the baker and compositor use.
+ * Style packs: palette ramps, strata, surface materials and roads. A style pack
+ * is data (worlds/_styles/<id>/style.json); this module validates it and turns
+ * it into the palette and lookup tables the baker and compositor use.
  *
  * Palette layout (256 entries, indexed color — see docs/architecture.md §8):
  *   0                      background / empty
@@ -14,11 +14,14 @@ export const MAX_RAMPS = 42; // ramp 41, shade 5 → index 252, below the specia
 export const INDEX_BACKGROUND = 0;
 export const INDEX_SILHOUETTE = 253;
 export const MAX_SURFACES = 16;
-export const MAX_STRATA = 16;
+export const MAX_STRATA = 16; // bands per strata set
+export const MAX_STRATA_SETS = 4;
+export const MAX_PROVINCES = 16;
+export const MAX_ROAD_CLASSES = 16;
 /** Surface ramp value meaning "pick the ramp from the strata table by elevation". */
 export const RAMP_STRATA = -1;
 
-export const PATTERNS = { none: 0, trees: 1, speckle: 2, sparkle: 3 } as const;
+export const PATTERNS = { none: 0, trees: 1, speckle: 2, sparkle: 3, fields: 4, blocks: 5 } as const;
 export type PatternName = keyof typeof PATTERNS;
 
 export interface SurfaceStyle {
@@ -33,6 +36,11 @@ export interface StrataBand {
   ramp: string;
 }
 
+export interface RoadClassStyle {
+  halfWidth: number; // in cells
+  centerLine: boolean;
+}
+
 export interface StylePack {
   id: string;
   name: string;
@@ -42,8 +50,13 @@ export interface StylePack {
   outline: { depthThreshold: number };
   ao: { strength: number };
   ramps: Record<string, string[]>;
-  strata: StrataBand[];
+  strataSets: Record<string, StrataBand[]>;
+  /** Strata set for worlds or provinces without a mapping. */
+  defaultStrata: string;
+  /** Geology province name → strata set name. */
+  provinces?: Record<string, string>;
   surfaces: Record<string, SurfaceStyle>;
+  roads?: { asphalt: string; marking: string; classes: Record<string, RoadClassStyle> };
 }
 
 export class StyleError extends Error {}
@@ -65,18 +78,30 @@ export function validateStyle(style: StylePack): StylePack {
   }
   parseHex(style.background);
   parseHex(style.silhouette);
-  if (style.strata.length === 0 || style.strata.length > MAX_STRATA)
-    throw new StyleError("strata must have 1..16 bands");
-  for (let i = 0; i < style.strata.length; i++) {
-    const band = style.strata[i]!;
-    if (!(band.ramp in style.ramps)) throw new StyleError(`strata ramp ${band.ramp} not defined`);
-    if (i > 0 && band.aboveMeters >= style.strata[i - 1]!.aboveMeters)
-      throw new StyleError("strata must be ordered from highest to lowest");
+  const sets = Object.entries(style.strataSets ?? {});
+  if (sets.length === 0 || sets.length > MAX_STRATA_SETS)
+    throw new StyleError(`strataSets must have 1..${MAX_STRATA_SETS} sets`);
+  for (const [setName, bands] of sets) {
+    if (bands.length === 0 || bands.length > MAX_STRATA)
+      throw new StyleError(`strata set ${setName} must have 1..${MAX_STRATA} bands`);
+    bands.forEach((band, i) => {
+      if (!(band.ramp in style.ramps)) throw new StyleError(`strata ramp ${band.ramp} not defined`);
+      if (i > 0 && band.aboveMeters >= bands[i - 1]!.aboveMeters)
+        throw new StyleError(`strata set ${setName} must be ordered from highest to lowest`);
+    });
   }
+  if (!(style.defaultStrata in style.strataSets))
+    throw new StyleError(`defaultStrata ${style.defaultStrata} is not a strata set`);
+  for (const [province, set] of Object.entries(style.provinces ?? {}))
+    if (!(set in style.strataSets)) throw new StyleError(`province ${province} uses unknown set ${set}`);
   for (const [name, s] of Object.entries(style.surfaces)) {
     if (s.ramp !== "strata" && !(s.ramp in style.ramps))
       throw new StyleError(`surface ${name} uses undefined ramp ${s.ramp}`);
     if (!(s.pattern in PATTERNS)) throw new StyleError(`surface ${name}: unknown pattern`);
+  }
+  if (style.roads) {
+    for (const r of [style.roads.asphalt, style.roads.marking])
+      if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
   }
   return style;
 }
@@ -108,41 +133,82 @@ export function buildPalette(style: StylePack): Palette {
   return { rgba, rampIds };
 }
 
-/** Shader lookup tables for one world (its surface ids) under one style. */
+/** What a world declares (manifest fields) that the tables depend on. */
+export interface WorldVocabulary {
+  /** Surface id (string key) → name. */
+  surfaces: Record<string, string>;
+  /** Road class id → name. */
+  roadClasses?: Record<string, string>;
+  /** Geology province id → name. */
+  geology?: Record<string, string>;
+}
+
+/**
+ * Shader lookup tables for one world under one style, packed for vec4/ivec4
+ * uniform arrays (an array of scalars costs a whole vector slot per element).
+ */
 export interface MaterialTables {
-  surfRamp: Int32Array; // per surface id; RAMP_STRATA for strata
-  surfPattern: Int32Array;
-  surfDensity: Float32Array;
-  strataMinStep: Float32Array; // band lower bound, in height steps
+  /** Per surface id: (ramp or RAMP_STRATA, pattern, density, 0). */
+  surfaces: Float32Array;
+  /** Strata band lower bounds in steps, set s band i at s*MAX_STRATA + i. */
+  strataMin: Float32Array;
   strataRamp: Int32Array;
-  strataCount: number;
+  strataCount: Int32Array;
+  /** Geology province id → strata set index. */
+  provinceSet: Int32Array;
+  /** Per road class id: (half width in cells, centre line 0/1, 0, 0). */
+  roads: Float32Array;
+  asphaltRamp: number;
+  markingRamp: number;
 }
 
 export function materialTables(
   style: StylePack,
   palette: Palette,
-  surfaces: Record<string, string>,
-  scale: { metersPerStep: number; elevationDatumMeters: number },
+  world: WorldVocabulary,
+  metersToSteps: (meters: number) => number,
 ): MaterialTables {
   const t: MaterialTables = {
-    surfRamp: new Int32Array(MAX_SURFACES),
-    surfPattern: new Int32Array(MAX_SURFACES),
-    surfDensity: new Float32Array(MAX_SURFACES),
-    strataMinStep: new Float32Array(MAX_STRATA),
-    strataRamp: new Int32Array(MAX_STRATA),
-    strataCount: style.strata.length,
+    surfaces: new Float32Array(MAX_SURFACES * 4),
+    strataMin: new Float32Array(MAX_STRATA_SETS * MAX_STRATA),
+    strataRamp: new Int32Array(MAX_STRATA_SETS * MAX_STRATA),
+    strataCount: new Int32Array(MAX_STRATA_SETS),
+    provinceSet: new Int32Array(MAX_PROVINCES),
+    roads: new Float32Array(MAX_ROAD_CLASSES * 4),
+    asphaltRamp: palette.rampIds.get(style.roads?.asphalt ?? "") ?? 0,
+    markingRamp: palette.rampIds.get(style.roads?.marking ?? "") ?? 0,
   };
+  const ramp = (name: string) => palette.rampIds.get(name)!;
+
   const fallback = style.surfaces["none"] ?? { ramp: "strata", pattern: "none" as const };
   for (let id = 0; id < MAX_SURFACES; id++) {
-    const name = surfaces[String(id)];
+    const name = world.surfaces[String(id)];
     const s = (name !== undefined ? style.surfaces[name] : undefined) ?? fallback;
-    t.surfRamp[id] = s.ramp === "strata" ? RAMP_STRATA : palette.rampIds.get(s.ramp)!;
-    t.surfPattern[id] = PATTERNS[s.pattern];
-    t.surfDensity[id] = s.density ?? 0;
+    t.surfaces.set(
+      [s.ramp === "strata" ? RAMP_STRATA : ramp(s.ramp), PATTERNS[s.pattern], s.density ?? 0, 0],
+      id * 4,
+    );
   }
-  style.strata.forEach((band, i) => {
-    t.strataMinStep[i] = (band.aboveMeters - scale.elevationDatumMeters) / scale.metersPerStep;
-    t.strataRamp[i] = palette.rampIds.get(band.ramp)!;
+
+  const setNames = Object.keys(style.strataSets);
+  setNames.forEach((setName, s) => {
+    const bands = style.strataSets[setName]!;
+    t.strataCount[s] = bands.length;
+    bands.forEach((band, i) => {
+      t.strataMin[s * MAX_STRATA + i] = metersToSteps(band.aboveMeters);
+      t.strataRamp[s * MAX_STRATA + i] = ramp(band.ramp);
+    });
   });
+  const defaultSet = setNames.indexOf(style.defaultStrata);
+  t.provinceSet.fill(defaultSet);
+  for (const [id, province] of Object.entries(world.geology ?? {})) {
+    const set = style.provinces?.[province];
+    if (set !== undefined) t.provinceSet[Number(id)] = setNames.indexOf(set);
+  }
+
+  for (const [id, cls] of Object.entries(world.roadClasses ?? {})) {
+    const r = style.roads?.classes[cls];
+    if (r) t.roads.set([r.halfWidth, r.centerLine ? 1 : 0, 0, 0], Number(id) * 4);
+  }
   return t;
 }

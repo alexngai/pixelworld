@@ -1,7 +1,7 @@
 import { TerrainGrid } from "@pixelworld/grid";
 import { Baker } from "@pixelworld/bake";
 import { buildBoxesMesh, buildTerrainMesh, type MeshData } from "@pixelworld/generators";
-import type { FromWorker, ToWorker } from "./protocol";
+import type { BakeTileMessage, FromWorker, InitMessage, ToWorker } from "./protocol";
 
 /**
  * Executes bake requests against a WebGL2 context. Used inside the bake
@@ -9,8 +9,7 @@ import type { FromWorker, ToWorker } from "./protocol";
  */
 export class BakeHost {
   private baker: Baker;
-  private grid: TerrainGrid | null = null;
-  private init: Extract<ToWorker, { type: "init" }> | null = null;
+  private init: InitMessage | null = null;
   private meshCache = new Map<string, MeshData>();
   private static readonly MESH_CACHE = 6;
 
@@ -29,17 +28,12 @@ export class BakeHost {
       switch (msg.type) {
         case "init":
           this.init = msg;
-          this.grid = new TerrainGrid(msg.cellsX, msg.cellsY, {
-            base: msg.base,
-            shape: msg.shape,
-            surface: msg.surface,
-            water: msg.water,
-          });
           this.baker.setStyle(msg.style);
+          for (const m of this.meshCache.values()) this.baker.release(m);
           this.meshCache.clear();
           break;
         case "bakeTile":
-          this.bakeTile(msg.id, msg.rotation, msg.tx, msg.ty);
+          this.bakeTile(msg);
           break;
         case "bakeSprite": {
           const t0 = performance.now();
@@ -56,21 +50,25 @@ export class BakeHost {
     }
   }
 
-  private bakeTile(id: number, rotation: 0 | 1 | 2 | 3, tx: number, ty: number): void {
+  private bakeTile(msg: BakeTileMessage): void {
     const init = this.init;
-    const grid = this.grid;
-    if (!init || !grid) throw new Error("bake host not initialised");
+    if (!init) throw new Error("bake host not initialised");
     const s = init.tileSize;
-    const owned = { x0: tx * s, y0: ty * s, x1: (tx + 1) * s, y1: (ty + 1) * s };
-    const key = `${tx},${ty}`;
+    const owned = { x0: msg.tx * s, y0: msg.ty * s, x1: (msg.tx + 1) * s, y1: (msg.ty + 1) * s };
+    const { slice } = msg;
+    const key = `${msg.tx},${msg.ty}`;
     const t0 = performance.now();
     let mesh = this.meshCache.get(key);
     if (!mesh) {
-      const m = init.margin;
+      const grid = new TerrainGrid(slice.width, slice.height, slice.layers);
       mesh = buildTerrainMesh(
         grid,
-        { x0: owned.x0 - m, y0: owned.y0 - m, x1: owned.x1 + m, y1: owned.y1 + m },
-        { floor: init.floor },
+        { x0: 0, y0: 0, x1: slice.width, y1: slice.height },
+        {
+          floor: init.floor,
+          offset: [slice.x0, slice.y0],
+          world: { width: init.worldWidth, height: init.worldHeight },
+        },
       );
       this.meshCache.set(key, mesh);
       if (this.meshCache.size > BakeHost.MESH_CACHE) {
@@ -80,16 +78,11 @@ export class BakeHost {
       }
     }
     const meshMs = performance.now() - t0;
-    const res = this.baker.bake(mesh, rotation, owned, { shadows: true });
-    this.reply(id, res, meshMs, mesh.vertexCount);
+    const res = this.baker.bake(mesh, msg.rotation, owned, { shadows: true });
+    this.reply(msg.id, res, meshMs, mesh.vertexCount);
   }
 
-  private reply(
-    id: number,
-    res: ReturnType<Baker["bake"]>,
-    meshMs: number,
-    vertices: number,
-  ): void {
+  private reply(id: number, res: ReturnType<Baker["bake"]>, meshMs: number, vertices: number): void {
     const stats = {
       meshMs,
       bakeMs: res?.timings.totalMs ?? 0,

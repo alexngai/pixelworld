@@ -6,6 +6,8 @@
  * normal:   (nx, ny, nz)    true 3D (z up, height scaled by STEP_WORLD)
  * material: (mat, kind, ao) mat < 100: surface id; mat >= 100: direct ramp id + 100
  * cell:     (cx, cy)        owning cell, for bake-tile ownership
+ * road:     (mask, class)   the owning cell's road layer (top faces only)
+ * geology:  province id     selects the strata set for rock and cliffs
  */
 
 export const FACE_TOP = 0;
@@ -22,6 +24,15 @@ export interface MeshData {
   normal: Float32Array;
   material: Float32Array;
   cell: Float32Array;
+  road: Float32Array;
+  geology: Float32Array;
+}
+
+/** Per-vertex extras that most faces leave at zero. */
+export interface VertexExtras {
+  roadMask?: number;
+  roadClass?: number;
+  geology?: number;
 }
 
 export class MeshBuilder {
@@ -29,6 +40,8 @@ export class MeshBuilder {
   private nrm: number[] = [];
   private mat: number[] = [];
   private cel: number[] = [];
+  private rd: number[] = [];
+  private geo: number[] = [];
 
   get vertexCount(): number {
     return this.pos.length / 3;
@@ -42,11 +55,14 @@ export class MeshBuilder {
     ao: number,
     cx: number,
     cy: number,
+    extras?: VertexExtras,
   ): void {
     this.pos.push(p[0], p[1], p[2]);
     this.nrm.push(n[0], n[1], n[2]);
     this.mat.push(material, kind, ao);
     this.cel.push(cx, cy);
+    this.rd.push(extras?.roadMask ?? 0, extras?.roadClass ?? 0);
+    this.geo.push(extras?.geology ?? 0);
   }
 
   build(): MeshData {
@@ -56,6 +72,8 @@ export class MeshBuilder {
       normal: new Float32Array(this.nrm),
       material: new Float32Array(this.mat),
       cell: new Float32Array(this.cel),
+      road: new Float32Array(this.rd),
+      geology: new Float32Array(this.geo),
     };
   }
 }

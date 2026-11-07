@@ -1,12 +1,13 @@
 # World package format (v1)
 
-Status: chunk format v1, which replaced v0's one-step slope mask with multi-step corner shapes; readers still accept v0. Manifest format v0. It covers terrain only. Instances, networks, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
+Status: chunk format v1, which replaced v0's one-step slope mask with multi-step corner shapes; readers still accept v0. Manifest format v0. It covers terrain, roads and geology (M1). Instances, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
 
 A world package is a directory, or later an archive, containing:
 
 ```
 manifest.json
-chunks/<cx>_<cy>.pxwc
+chunks/<cx>_<cy>.pxwc      (or .pxwc.gz)
+build-report.json           (optional, written by the pipeline; not read by clients)
 ```
 
 The geo pipeline (Python) writes packages and the client (TypeScript) reads them. The codecs live in `pipeline/src/pixelworld_pipeline/world_format.py` and `packages/world-format/`. Both are tested against the shared golden files in `testdata/world-format/`.
@@ -23,7 +24,8 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "cellsX": 128,                    // grid extent in cells
   "cellsY": 128,
   "chunks": [
-    { "x": 0, "y": 0, "path": "chunks/0_0.pxwc", "sha256": "…" }
+    { "x": 0, "y": 0, "path": "chunks/0_0.pxwc.gz", "sha256": "…",
+      "heightRange": [2, 31] }      // lowest/highest corner height in the chunk (steps)
   ],
   "scale": {
     "metersPerCell": 160,           // layout scale (uniform in v0; warped from M2)
@@ -31,23 +33,30 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
     "elevationDatumMeters": 0,      // elevation at height step 0
     "verticalExaggeration": 2.5     // optional; relative to true proportions, already applied
   },
+  "heightRange": [2, 57],           // lowest/highest corner height in the world (steps)
   "surfaces": { "0": "none", "1": "rock", "5": "water" },   // id → name
+  "roadClasses": { "1": "secondary", "4": "motorway" },      // id → name (RCLS)
+  "geology": { "0": "basin-and-range", "1": "colorado-plateau" }, // id → province (GEOL)
+  "start": { "x": 193, "y": 388 },  // suggested starting cell
   "style": "desert-southwest",      // default style pack
   "source": { "crs": "+proj=tmerc …", "bounds": [w, s, e, n] },
   "attribution": [
     { "name": "USGS 3D Elevation Program", "license": "Public domain", "url": "…" }
   ],
-  "generator": { "name": "…", "version": "…", "params": { } }
+  "generator": { "name": "…", "version": "…", "params": { } },
+  "packageHash": "…"                // SHA-256 of this manifest without the field
 }
 ```
 
 - **Converting steps to metres:** `metres = step × metersPerStep + elevationDatumMeters`. `verticalExaggeration` is informational, since the pipeline already applied it when choosing `metersPerStep`. If it's missing, it's implied as `metersPerCell / √6 / metersPerStep`.
-- **Surface IDs are local to a package.** The contract between the pipeline and the client is the surface **name**. Style packs map surface names to materials.
+- **Optional fields:** `heightRange`, the chunk `heightRange`s, `roadClasses`, `geology`, `start` and `packageHash` are all optional, so M0 manifests stay valid. Clients use the height ranges to place and depth-sort tiles before any chunk is loaded. Without them, a client has to load every chunk first.
+- **Package hash:** `packageHash` is the SHA-256 of the manifest's canonical JSON (sorted keys, without `packageHash`). The manifest already lists every chunk's SHA-256, so identical inputs and code give an identical hash. Clients key their baked-tile caches on it.
+- **Surface IDs are local to a package.** The contract between the pipeline and the client is the surface **name**. Style packs map surface names to materials. Road classes and geology provinces work the same way.
 - **Chunk coordinates:** chunk `(cx, cy)` covers cells `[cx·chunkSize, (cx+1)·chunkSize) × [cy·chunkSize, (cy+1)·chunkSize)`.
 
 ## Chunk file (`.pxwc`)
 
-All integers are little-endian.
+All integers are little-endian. A chunk file may be stored gzip-compressed (`.pxwc.gz`). Readers detect the gzip magic bytes (`1f 8b`), so the suffix is informational. The pipeline writes deterministic gzip (mtime 0), and `sha256` covers the compressed bytes.
 
 ### Header (20 bytes)
 
@@ -83,8 +92,11 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `CRNR` | `u8[]` | yes | corner shape: each corner's height above `BASE`, 0–3 steps, packed two bits per corner (corner i in bits 2i..2i+1; see `packages/grid/src/terrain.ts`). At least one corner is 0, because `BASE` is the lowest corner. |
 | `SURF` | `u8[]` | yes | surface ID (see `manifest.surfaces`) |
 | `WATR` | `i16[]` | no | water surface height in steps; `-32768` = no water |
+| `ROAD` | `u16[]` | no | road network. Bits 0–7: the road continues to the neighbour in direction i (N, NE, E, SE, S, SW, W, NW; see `ROAD_DIRS`). Bits 8–11: a diagonal road between two other cells passes through corner i of this cell. |
+| `RCLS` | `u8[]` | no | road class ID (see `manifest.roadClasses`); 0 = none |
+| `GEOL` | `u8[]` | no | geology province ID (see `manifest.geology`); picks the strata set for rock and cliffs |
 
-Readers must ignore unknown tags. Writers must not emit duplicate tags.
+Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 
 **v0 chunks** have a `SLOP` section instead of `CRNR`: a 4-bit mask, 0–14, where bit i means corner i is one step above `BASE`. Readers convert it to a shape where each set bit becomes an offset of 1.
 

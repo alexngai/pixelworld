@@ -8,7 +8,15 @@ import {
   TerrainGrid,
   splitDiagonal,
 } from "@pixelworld/grid";
-import { FACE_CLIFF, FACE_SKIRT, FACE_SLOPE, FACE_TOP, MeshBuilder, triangleNormal, type MeshData } from "./mesh";
+import {
+  FACE_CLIFF,
+  FACE_SKIRT,
+  FACE_SLOPE,
+  FACE_TOP,
+  MeshBuilder,
+  triangleNormal,
+  type MeshData,
+} from "./mesh";
 
 export interface CellRect {
   x0: number;
@@ -22,6 +30,17 @@ export interface TerrainMeshOptions {
   floor?: number;
   /** Ambient-occlusion sample radius in cells. */
   aoRadius?: number;
+  /**
+   * World position of this grid's cell (0, 0) when the grid is a slice of a
+   * larger world. Output positions and owning cells are in world coordinates.
+   */
+  offset?: [number, number];
+  /**
+   * World size in cells. Skirts are drawn only at real world edges; a slice
+   * edge inside the world gets no face (its neighbour belongs to another slice).
+   * Defaults to the grid itself.
+   */
+  world?: { width: number; height: number };
 }
 
 type V3 = [number, number, number];
@@ -39,6 +58,9 @@ export function buildTerrainMesh(
   const floor = options.floor ?? grid.heightRange()[0] - 2;
   const ao = new AoSampler(grid, options.aoRadius ?? 3);
   const mb = new MeshBuilder();
+  const [ox, oy] = options.offset ?? [0, 0];
+  const world = options.world ?? { width: grid.width, height: grid.height };
+  const g = (v: V3): V3 => [v[0] + ox, v[1] + oy, v[2]];
   const x0 = Math.max(0, rect.x0);
   const y0 = Math.max(0, rect.y0);
   const x1 = Math.min(grid.width, rect.x1);
@@ -52,6 +74,9 @@ export function buildTerrainMesh(
       const h = grid.corners(x, y);
       const p: V3[] = CORNER_OFFSETS.map(([dx, dy], k) => [x + dx, y + dy, h[k]!]);
       const kind = shape === 0 ? FACE_TOP : FACE_SLOPE;
+      const geology = grid.geology[i]!;
+      const top = { roadMask: grid.road[i]!, roadClass: grid.roadClass[i]!, geology };
+      const side = { geology };
       const tris: [number, number, number][] =
         splitDiagonal(h) === 0
           ? [
@@ -64,13 +89,20 @@ export function buildTerrainMesh(
             ];
       for (const [a, b, c] of tris) {
         const n = triangleNormal(p[a]!, p[b]!, p[c]!, STEP_WORLD, [0, 0, 1]);
-        for (const k of [a, b, c]) mb.vertex(p[k]!, n, surface, kind, ao.at(p[k]!), x, y);
+        for (const k of [a, b, c])
+          mb.vertex(g(p[k]!), n, surface, kind, ao.at(p[k]!), x + ox, y + oy, top);
       }
 
       for (let e = 0; e < 4; e++) {
         const [ca, cb] = EDGE_CORNERS[e]!;
         const [nx, ny] = EDGE_NEIGHBOR[e]!;
         const hasNeighbor = grid.inBounds(x + nx, y + ny);
+        if (!hasNeighbor) {
+          const wx = x + nx + ox;
+          const wy = y + ny + oy;
+          const insideWorld = wx >= 0 && wy >= 0 && wx < world.width && wy < world.height;
+          if (insideWorld) continue; // edge of a slice, not of the world
+        }
         let ba: number;
         let bb: number;
         if (hasNeighbor) {
@@ -83,13 +115,13 @@ export function buildTerrainMesh(
         }
         const ta = h[ca]!;
         const tb = h[cb]!;
-        const [ox, oy] = EDGE_NORMAL[e]!;
-        const normal: V3 = [ox, oy, 0];
+        const [enx, eny] = EDGE_NORMAL[e]!;
+        const normal: V3 = [enx, eny, 0];
         const faceKind = hasNeighbor ? FACE_CLIFF : FACE_SKIRT;
         const pa = p[ca]!;
         const pb = p[cb]!;
         const emit = (tri: V3[]) => {
-          for (const v of tri) mb.vertex(v, normal, surface, faceKind, ao.at(v), x, y);
+          for (const v of tri) mb.vertex(g(v), normal, surface, faceKind, ao.at(v), x + ox, y + oy, side);
         };
         const da = ta - ba;
         const db = tb - bb;

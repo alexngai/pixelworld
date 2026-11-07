@@ -1,0 +1,47 @@
+# US Southwest — the M1 region (uniform scale, no warp yet).
+# Build: cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+id: southwest
+name: US Southwest
+bounds: [-116.0, 35.0, -111.5, 37.5] # lon/lat: west, south, east, north
+
+# Layout and vertical scale (docs/architecture.md §3.2, D-022, D-023).
+metersPerCell: 400 # the planned "base" scale; M2 enlarges focus areas
+verticalExaggeration: 2.5
+maxSlope: 2
+chunkSize: 64
+smoothing:
+  bilateralCells: 1.5
+  bilateralMeters: 48
+
+style: desert-southwest
+start: { lon: -115.1728, lat: 36.1147 } # Las Vegas Strip
+
+sources:
+  dem:
+    kind: usgs-3dep-1arcsec
+    overview: 4 # read the 120 m overview of the 30 m DEM
+  landcover:
+    kind: esa-worldcover-2021
+    overview: 16 # 160 m overview, mode-resampled per cell
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary]
+  rivers:
+    subtypes: [river]
+
+# Geology provinces pick the strata set for cliffs (style pack `provinces`).
+# Rough hand-drawn outline of the Colorado Plateau inside this region; the
+# Grand Wash Cliffs and the Mogollon Rim are its western and southern edges.
+geology:
+  default: basin-and-range
+  provinces:
+    - name: colorado-plateau
+      polygon:
+        - [-113.95, 37.6]
+        - [-113.95, 36.05]
+        - [-113.55, 35.75]
+        - [-112.9, 35.45]
+        - [-112.2, 35.3]
+        - [-111.4, 35.15]
+        - [-111.4, 37.6]

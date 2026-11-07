@@ -1,4 +1,4 @@
-import type { Rotation } from "@pixelworld/grid";
+import type { Rotation, TerrainLayers } from "@pixelworld/grid";
 import type { BakedImage, StyleParams } from "@pixelworld/bake";
 import type { Box } from "@pixelworld/generators";
 
@@ -6,16 +6,22 @@ import type { Box } from "@pixelworld/generators";
 
 export interface InitMessage {
   type: "init";
-  cellsX: number;
-  cellsY: number;
-  base: Int16Array;
-  shape: Uint8Array;
-  surface: Uint8Array;
-  water: Int16Array;
   style: StyleParams;
   tileSize: number;
   margin: number;
+  /** Height (steps) of world-edge skirts. */
   floor: number;
+  worldWidth: number;
+  worldHeight: number;
+}
+
+/** A block of terrain cut from the world, with its world-space origin. */
+export interface TerrainSlice {
+  x0: number;
+  y0: number;
+  width: number;
+  height: number;
+  layers: TerrainLayers;
 }
 
 export interface BakeTileMessage {
@@ -24,6 +30,8 @@ export interface BakeTileMessage {
   rotation: Rotation;
   tx: number;
   ty: number;
+  /** The tile's cells plus a context margin, clipped to the world. */
+  slice: TerrainSlice;
 }
 
 export interface BakeSpriteMessage {
@@ -61,3 +69,8 @@ export interface ErrorMessage {
 }
 
 export type FromWorker = BakedMessage | ReadyMessage | ErrorMessage;
+
+/** Typed arrays of a slice, for transferring to the worker without copying. */
+export function sliceTransferables(slice: TerrainSlice): Transferable[] {
+  return Object.values(slice.layers).map((a: ArrayBufferView) => a.buffer as ArrayBuffer);
+}

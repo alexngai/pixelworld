@@ -7,6 +7,8 @@ import {
   assembleTerrain,
   decodeChunk,
   encodeChunk,
+  isGzip,
+  maybeGunzip,
   parseManifest,
   verticalExaggeration,
   type WorldManifest,
@@ -23,6 +25,9 @@ interface GoldenExpected {
   slope?: number[];
   surface: number[];
   water: number[];
+  road?: number[];
+  roadClass?: number[];
+  geology?: number[];
 }
 
 function loadGolden(name: string) {
@@ -41,7 +46,21 @@ describe("chunk codec", () => {
     expect(Array.from(c.terrain.shape)).toEqual(expected.shape);
     expect(Array.from(c.terrain.surface)).toEqual(expected.surface);
     expect(Array.from(c.terrain.water)).toEqual(expected.water);
+    expect(Array.from(c.terrain.road)).toEqual(expected.road);
+    expect(Array.from(c.terrain.roadClass)).toEqual(expected.roadClass);
+    expect(Array.from(c.terrain.geology)).toEqual(expected.geology);
     expect(Math.max(...Array.from(c.terrain.shape, shapeRise))).toBe(3);
+  });
+
+  it("decodes gzip-compressed chunk files", async () => {
+    const { buffer, expected } = loadGolden("chunk-v1-small");
+    const gz = await new Response(
+      new Blob([buffer]).stream().pipeThrough(new CompressionStream("gzip")),
+    ).arrayBuffer();
+    expect(isGzip(new Uint8Array(gz))).toBe(true);
+    const c = decodeChunk(await maybeGunzip(gz));
+    expect(Array.from(c.terrain.base)).toEqual(expected.base);
+    expect(await maybeGunzip(buffer)).toBe(buffer); // uncompressed passes through
   });
 
   it("re-encodes the v1 golden file byte for byte", () => {

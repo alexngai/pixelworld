@@ -62,6 +62,46 @@ canvas#view.fixed {
   text-align: right;
 }
 
+.attribution button {
+  pointer-events: auto;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 12px 16px;
+  white-space: normal;
+}
+
+.modal h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.modal a {
+  color: var(--fg);
+}
+
+.modal .license,
+.modal .muted {
+  color: var(--muted);
+}
+
 .hidden {
   display: none;
 }

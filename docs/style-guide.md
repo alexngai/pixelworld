@@ -43,6 +43,34 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 
 - **Anchoring and density.** Patterns are anchored to absolute screen pixels for each rotation, so they're stable across tiles and re-bakes. Densities live in the style pack. Keep them low: texture should read as material, not noise.
 
+### Strata sets and geology provinces (M1)
+
+- **Strata sets:** a style pack defines several (`strataSets`). Each cell's geology province (`GEOL`, from the region spec's province polygons) picks one through `provinces`, and worlds without geology use `defaultStrata`.
+- **Desert Southwest pack:**
+  - `colorado-plateau` uses the Grand Canyon bands.
+  - `basin-and-range` uses `desert-ranges`: basalt below 800 m, ochre volcanics, red sandstone from 1300 m, grey limestone from 1700 m, dolomite above 2600 m.
+
+  Without this split, Vegas's ranges would wear Grand Canyon colours.
+
+### Surfaces added in M1
+
+| Surface | Ramp | Pattern |
+|---|---|---|
+| desert | `desert` (pale tan) | sparse speckle |
+| grass | `grass` (dry olive) | speckle |
+| farmland | `farmland` | `fields`: world-anchored patchwork, a third of a cell per field |
+| urban | `urban` (blue-grey concrete) | `blocks`: world-anchored streets every third of a cell, with sparse lit roofs |
+| snow | `snow` | sparkle |
+
+World-anchored patterns follow the terrain through rotations and slopes. Screen-anchored ones (speckle, trees) are stable for each rotation.
+
+### Roads (M1)
+
+- **Drawn as decals** in the bake: a top-face pixel is road when it's within the class's half-width of the cell's road centre lines. These run from the cell centre to the edge midpoint or corner of each connected neighbour, plus diagonal roads crossing the cell's corners.
+- **Pixel-clean:** roads follow the same 8 directions as the grid, so their edges are 2:1, horizontal or vertical lines.
+- **Widths** (half-widths in cells): motorway 0.2, trunk 0.17, primary 0.1, secondary 0.07. Narrowing primary and secondary was needed to stop Las Vegas's arterial grid from overpowering the city.
+- **Colours:** `asphalt` ramp; motorways and trunks get a one-pixel `marking` centre line. Roads are lit like the terrain under them.
+
 ## 5. Ambient occlusion and dithering
 
 - **How AO is calculated:** per vertex, from the horizon angle of nearby terrain in 8 directions. It darkens cliff feet and canyon floors.

@@ -32,6 +32,11 @@ Status values:
 | D-021 | Bake tiles of 32×32 cells with a 16-cell context margin; ownership per cell | Proposed (M0) |
 | D-022 | Vertical scale set as exaggeration relative to true proportions, applied before quantization; fixture default 2.5× | Proposed |
 | D-023 | Multi-step slope tiles: corners 0–3 steps above base (chunk format v1), pipeline cap default 2 | Proposed |
+| D-024 | M1 base scale 400 m per cell; region packages committed as gzipped chunks | Proposed (M1) |
+| D-025 | Vectors from pinned Overture releases via bbox-pruned GeoParquet range reads; land cover from ESA WorldCover | Proposed (M1) |
+| D-026 | Roads: 8-direction snapping with corner-crossing bits; cut-and-fill on the shared corner-height field | Proposed (M1) |
+| D-027 | Geology provinces select strata sets per cell | Proposed (M1) |
+| D-028 | Client streams chunks and caches baked tiles in IndexedDB, keyed by package hash, style hash and bake version | Proposed (M1) |
 
 ---
 
@@ -119,3 +124,33 @@ Corner heights are bilateral-filtered (1.5 cells spatial, 1.2 steps range) befor
 - **Default:** 2, chosen from a visual comparison of 1, 2 and 3 at 2.5× exaggeration (see [style-guide.md](style-guide.md) §8). With `max_slope` 1, the pipeline produces exactly the previous terrain.
 - **Compatibility:** readers still accept v0 chunks.
 - **Gameplay:** the rover now has a grade limit (2 steps per cell travelled) rather than a fixed climb height, so steep slope tiles block it like cliffs do.
+
+### D-024: Base scale and committed packages (proposed, M1)
+- **Scale:** M1 builds the Southwest at a uniform 400 m per cell, the "base" scale from the architecture's region example. M2's warp will enlarge focus areas.
+- **Committing packages:** at this scale the package is 187 deterministic-gzip chunks (about 1 MB), so it's committed under `fixtures/southwest/`. The app and CI then work without running the pipeline.
+- **When to revisit:** for larger regions, packages move to release assets or a CDN.
+
+### D-025: Data access (proposed, M1)
+- **Vectors:** roads and rivers come from Overture, an OSM-derived dataset under the ODbL, with the release pinned in the region spec. Each GeoParquet file's row-group bounding boxes are indexed once from its footer and cached. After that, only intersecting row groups and columns are downloaded (about 20 s for the Southwest). This gives reproducible inputs without downloading OSM extracts.
+- **Rasters:** elevation and land cover are read from COG overviews at roughly the target resolution.
+- **Land cover:** ESA WorldCover is the M1 source because it's global. NLCD remains an option for US-only detail.
+
+### D-026: Roads on the grid (proposed, M1)
+- **Snapping:** polylines become thin 8-connected cell paths, with staircase corners replaced by diagonal moves. Cells store connection bits for 8 directions, plus 4 bits for diagonal roads crossing their corners, so road strips are drawn without notches.
+- **Cut-and-fill:**
+  1. Road heights are smoothed along the network.
+  2. They're relaxed until connected cells differ by at most 1 step.
+  3. They're written into the shared corner field before gridify.
+
+  Connected road cells therefore always meet without cliffs. The build validates this and fails if it doesn't hold.
+- **Known gap:** dual carriageways (see the M1 results).
+
+### D-027: Geology provinces (proposed, M1)
+- **Mechanism:** a per-cell `GEOL` layer, from polygons in the region spec, picks the strata set used for rock and cliffs.
+- **Why:** it keeps the Grand Canyon bands on the Colorado Plateau and gives basin-and-range mountains their own palette.
+- **Next step:** polygons are hand-drawn for now; a geologic map could replace them later.
+
+### D-028: Streaming and the tile cache (proposed, M1)
+- **Streaming:** the client fetches chunks around the view and gives the worker per-tile slices.
+- **Cache:** baked tiles persist in IndexedDB, gzip-compressed and pruned least-recently-used. Keys include the package hash, a hash of the style pack and `BAKE_VERSION`, so stale tiles are never shown after a change; bump `BAKE_VERSION` whenever bake output changes for the same inputs.
+- **GPU memory:** tile textures stay on the GPU up to a 192 MB budget.

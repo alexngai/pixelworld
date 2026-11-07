@@ -1,6 +1,6 @@
-# Fixture world packages
+# Committed world packages
 
-Small committed world packages used by M0 development and tests. They are served as static files by the web app (`apps/web/vite.config.ts` sets this directory as Vite's `publicDir`).
+World packages the dev app serves and the tests use. They are served as static files by the web app (`apps/web/vite.config.ts` sets this directory as Vite's `publicDir`).
 
 ## grand-canyon-m0
 
@@ -22,3 +22,18 @@ Sources and licenses:
 - Colorado River centerline: © OpenStreetMap contributors, ODbL 1.0. Because of this, the package is a derivative database under the ODbL; see `docs/data-sources.md` §6.
 
 Surface classes (woodland, forest, scrub, rock, sand) are generated from elevation and steepness for M0. Real land cover arrives in M1.
+
+## southwest
+
+The M1 region: the US Southwest at a uniform 400 m per cell, 2.5× vertical exaggeration and slope tiles up to 2 steps per cell. It's 1028×700 cells in 187 gzipped chunks. It's built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml):
+
+```sh
+cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+```
+
+`build-report.json` records the package hash, the road validation and the surface counts.
+
+Sources and licenses:
+- Elevation: USGS 3DEP 1 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads and rivers: © OpenStreetMap contributors via Overture Maps (release 2026-10-21.0). ODbL 1.0, so this package is a derivative database under the ODbL.

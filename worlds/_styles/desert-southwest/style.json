@@ -26,20 +26,45 @@
     "scrub": ["#26232b", "#3d3a3c", "#57534c", "#736c5c", "#908769", "#ada27a"],
     "water": ["#0f2230", "#12333f", "#17474f", "#1f5d5e", "#2c746b", "#4a8e7a"],
     "sand": ["#352a33", "#57463f", "#7d644f", "#a38563", "#c4a57a", "#ddc497"],
-    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+    "desert": ["#3a2f36", "#5e4c4a", "#87705f", "#ad9377", "#cbb293", "#e4cfae"],
+    "grass": ["#2a2a28", "#45443a", "#64624a", "#83805a", "#a29d6b", "#bfb983"],
+    "farmland": ["#1c2a24", "#2c4130", "#3f5a38", "#567540", "#719046", "#8faa55"],
+    "urban": ["#24232e", "#3b3b48", "#565766", "#737586", "#9294a3", "#b4b5c0"],
+    "snow": ["#3d4559", "#5d6880", "#8290a6", "#a8b5c8", "#cdd7e3", "#eef3f7"],
+    "asphalt": ["#16151d", "#22212b", "#2f2e39", "#3e3d49", "#4f4e5a", "#62616d"],
+    "marking": ["#3f3a2e", "#6b6040", "#978652", "#bfa960", "#dcc677", "#f2e29a"],
+    "basalt": ["#16131b", "#231e26", "#332a31", "#45383d", "#58484a", "#6d5a59"],
+    "ochre": ["#30232b", "#523b3a", "#795646", "#9c7253", "#ba8f63", "#d4ad7a"],
+    "limestone": ["#262833", "#3e4250", "#5b606d", "#7b8089", "#9ba0a6", "#bcc0c2"],
+    "dolomite": ["#33343e", "#545661", "#7b7d86", "#a1a2a8", "#c3c3c6", "#e1e0de"]
   },
-  "strata": [
-    { "name": "Kaibab limestone", "aboveMeters": 2050, "ramp": "kaibab" },
-    { "name": "Toroweap formation", "aboveMeters": 1950, "ramp": "toroweap" },
-    { "name": "Coconino sandstone", "aboveMeters": 1850, "ramp": "coconino" },
-    { "name": "Hermit shale", "aboveMeters": 1750, "ramp": "hermit" },
-    { "name": "Supai group", "aboveMeters": 1450, "ramp": "supai" },
-    { "name": "Redwall limestone", "aboveMeters": 1250, "ramp": "redwall" },
-    { "name": "Muav limestone", "aboveMeters": 1150, "ramp": "muav" },
-    { "name": "Bright Angel shale", "aboveMeters": 1000, "ramp": "tonto" },
-    { "name": "Tapeats sandstone", "aboveMeters": 950, "ramp": "tapeats" },
-    { "name": "Vishnu schist", "aboveMeters": -100000, "ramp": "vishnu" }
-  ],
+  "strataSets": {
+    "grand-canyon": [
+      { "name": "Kaibab limestone", "aboveMeters": 2050, "ramp": "kaibab" },
+      { "name": "Toroweap formation", "aboveMeters": 1950, "ramp": "toroweap" },
+      { "name": "Coconino sandstone", "aboveMeters": 1850, "ramp": "coconino" },
+      { "name": "Hermit shale", "aboveMeters": 1750, "ramp": "hermit" },
+      { "name": "Supai group", "aboveMeters": 1450, "ramp": "supai" },
+      { "name": "Redwall limestone", "aboveMeters": 1250, "ramp": "redwall" },
+      { "name": "Muav limestone", "aboveMeters": 1150, "ramp": "muav" },
+      { "name": "Bright Angel shale", "aboveMeters": 1000, "ramp": "tonto" },
+      { "name": "Tapeats sandstone", "aboveMeters": 950, "ramp": "tapeats" },
+      { "name": "Vishnu schist", "aboveMeters": -100000, "ramp": "vishnu" }
+    ],
+    "desert-ranges": [
+      { "name": "High dolomite", "aboveMeters": 2600, "ramp": "dolomite" },
+      { "name": "Grey limestone", "aboveMeters": 1700, "ramp": "limestone" },
+      { "name": "Red sandstone", "aboveMeters": 1300, "ramp": "supai" },
+      { "name": "Ochre volcanics", "aboveMeters": 800, "ramp": "ochre" },
+      { "name": "Basalt", "aboveMeters": -100000, "ramp": "basalt" }
+    ]
+  },
+  "defaultStrata": "grand-canyon",
+  "provinces": {
+    "colorado-plateau": "grand-canyon",
+    "basin-and-range": "desert-ranges"
+  },
   "surfaces": {
     "none": { "ramp": "vishnu", "pattern": "none" },
     "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
@@ -47,6 +72,21 @@
     "forest": { "ramp": "conifer", "pattern": "trees", "density": 0.2 },
     "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
     "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
-    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.05 }
+    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.05 },
+    "desert": { "ramp": "desert", "pattern": "speckle", "density": 0.04 },
+    "grass": { "ramp": "grass", "pattern": "speckle", "density": 0.05 },
+    "farmland": { "ramp": "farmland", "pattern": "fields", "density": 0.5 },
+    "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
+    "snow": { "ramp": "snow", "pattern": "sparkle", "density": 0.02 }
+  },
+  "roads": {
+    "asphalt": "asphalt",
+    "marking": "marking",
+    "classes": {
+      "motorway": { "halfWidth": 0.2, "centerLine": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true },
+      "primary": { "halfWidth": 0.1, "centerLine": false },
+      "secondary": { "halfWidth": 0.07, "centerLine": false }
+    }
   }
 }

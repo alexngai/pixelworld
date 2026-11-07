@@ -60,7 +60,7 @@ Status: living document. Milestones are ordered and each has exit criteria. The 
 If phones miss the bake budget, the first step is profiling mesh generation (per-vertex AO sampling is a likely cost). After that, try smaller tiles or a smaller context margin.
 
 
-### M1: Real region at uniform scale
+### M1: Real region at uniform scale — done
 
 **Goal:** the Southwest region from real data, end to end, without warping.
 
@@ -74,6 +74,33 @@ If phones miss the bake budget, the first step is profiling mesh generation (per
 - The whole region is explorable at one uniform scale.
 - Re-running the pipeline produces an identical package hash.
 - Roads stay connected and drivable after snapping.
+
+#### M1 results
+
+![Las Vegas at 2×: roads, urban blocks, I-15](images/m1-vegas-r0.png)
+
+![Hoover Dam and Lake Mead at 2×: US-93, Black Canyon basalt](images/m1-hoover-r0.png)
+
+![Grand Canyon South Rim at 2×, rotation 2: Colorado Plateau strata, AZ-64](images/m1-grand-canyon-r2.png)
+
+| Exit criterion | Result |
+|---|---|
+| Whole region explorable at one uniform scale | Done. 1028×700 cells at 400 m (about 410 × 280 km, from the Mojave west of Las Vegas to Flagstaff), 2.5× vertical exaggeration, 187 chunks, 0.97 MB gzipped. Chunks stream on demand; an e2e test checks that a view 680 cells from the start loads under a quarter of the chunks and has no holes. |
+| Identical package hash on re-run | Verified: two builds from the same spec and cached inputs give the same `packageHash` (`bccd07e9…`). A pytest covers the hash for synthetic packages. |
+| Roads connected and drivable after snapping | Verified by the build's validation report: 26,298 Overture segments became 13,453 road cells and 15,156 edges, with 0 discontinuous edges, 0 over-steep edges, 0 segments split and 0 junctions disconnected. The rover drives the network within its grade limit. |
+
+Also delivered:
+- Region spec, `pixelworld build` CLI, pinned and cached sources.
+- Geology provinces with per-province strata sets.
+- Road decals (motorway and trunk centre lines).
+- Desert, urban, grass, farmland and snow surfaces.
+- An IndexedDB baked-tile cache (verified by an e2e test across a reload: every tile comes from the cache and the image is pixel-identical).
+- A sources screen built from the manifest.
+
+**Known issues** (carried into M2's generalize stage):
+- **Dual carriageways show up as "ladders".** OSM maps divided highways as two one-way ways; where they straddle a cell boundary they snap to adjacent cells (e.g. I-15, US-93). Merging them needs vector-level generalization.
+- **Busy, spiky mountains.** At 400 m per cell and 2.5× exaggeration, mountain ranges are busy with one-cell pillars. Focus-area scales in M2 change this anyway.
+- **Rough geology boundary.** The Colorado Plateau outline is hand-drawn, and strata colour by elevation alone (no dip).
 
 ### M2: Elastic map and editor v0
 

@@ -93,10 +93,10 @@ This is exactly a standard orthographic camera at **45° yaw and 30° pitch**, p
 
 ## 4. World definition (source of truth)
 
-A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code:
+A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code. The M1 spec is [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml). It holds bounds, a uniform `metersPerCell`, `verticalExaggeration`, `maxSlope`, smoothing, a start point, pinned data sources and geology provinces. The fields below for focus areas, pins, landmarks and overrides arrive with M2–M3:
 
 ```yaml
-# worlds/southwest/region.yaml (illustrative)
+# worlds/southwest/region.yaml (target shape, M2+)
 region: southwest
 bounds: [-116.0, 35.0, -111.5, 37.5]      # lon/lat
 projection: auto-tmerc
@@ -129,7 +129,17 @@ Supporting files:
 
 ## 5. Geo pipeline (offline, Python)
 
-Stages run in order. Each one caches its outputs (GeoParquet / GeoTIFF / Zarr), keyed by the hash of its inputs, so editing a region only re-runs what changed.
+Stages run in order. Each one caches its outputs, keyed by the hash of its inputs, so editing a region only re-runs what changed. In M1 this means downloads cached as `.npy`/JSON under `pipeline/.cache/`, plus a fast in-memory rest of the build (about 20 s for the Southwest). Entry point: `uv run pixelworld build worlds/<id>/region.yaml`.
+
+**M1 implementation** (`pipeline/src/pixelworld_pipeline/`):
+- **Sources** (`sources/`): rasters are read from cloud-optimized GeoTIFF overviews over HTTP range requests, mean-resampled for elevation and mode-resampled for land cover. Overture GeoParquet is read the same way: a one-time index of every file's row-group bounding boxes (footers only), then only the intersecting row groups and columns.
+- **Corner field:** every height decision works on one integer corner-height grid before cells are formed:
+  1. Elevation is converted to steps.
+  2. Lakes are flattened per water body.
+  3. River corners are lowered.
+  4. Roads are cut and filled (`roads.py`).
+  5. Gridify turns corners into cell shapes. Connected road cells share their corners, so they meet without cliffs by construction.
+- **Validation:** the build writes `build-report.json`, which checks that every road edge is continuous and not over-steep, that no segment is split by snapping, and that no junction comes apart. The CLI exits non-zero if not.
 
 1. **fetch:** download the raw sources clipped to the region bounding box. The raw cache stays outside the repo.
 2. **normalize:** reproject to the region CRS, unify schemas, and assign stable feature IDs.
@@ -198,7 +208,10 @@ Bake tiles are 32×32 cells. Each bake renders the tile plus a 16-cell margin of
 
 Bakes run in two places with the same code:
 
-- **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. If a worker can't create WebGL2, baking falls back to the main thread. Results are cached in memory (M0) and persistently in IndexedDB/OPFS (M1). When a player edits the grid, only the affected bake tiles are re-baked.
+- **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. If a worker can't create WebGL2, baking falls back to the main thread. When a player edits the grid, only the affected bake tiles are re-baked.
+  - **Streaming (M1):** a `ChunkStore` fetches gzipped chunks around the view, deduplicated, with URLs carrying the chunk hash. For each tile it slices the tile plus margin across chunk boundaries and hands the slice to the worker. The mesh builder only adds skirts at real world edges, not slice edges.
+  - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed and pruned least-recently-used. Cache keys include the package hash, style hash and `BAKE_VERSION`, so any change to the world, the style or the baker makes old tiles unreachable.
+  - **GPU budget:** tile textures stay on the GPU within a memory budget (192 MB), evicting least-recently-drawn tiles.
 - **Offline**, in headless Chromium via Playwright, for hero assets, building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
 
 ### 8.2 Runtime compositor
@@ -233,9 +246,10 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
   - instances: kind, stable ID, anchor, footprint, height, parameters, seed
   - landmark stamps
   - labels
-- **Compression:** uses HTTP compression (brotli) at the CDN.
+- **Compression:** chunk files are stored as deterministic gzip (`.pxwc.gz`) and decompressed in the client with `DecompressionStream`. A CDN may also apply brotli.
 - **Codecs:** a TypeScript reader and a Python writer, kept in sync by shared golden test files.
-- **Hosting:** the full specification, `docs/world-format.md`, will be written in M0. Packages are static files on any CDN, possibly bundled as one archive the client reads with HTTP range requests.
+- **Spec:** [world-format.md](world-format.md).
+- **Hosting:** packages are static files on any CDN, possibly bundled as one archive the client reads with HTTP range requests.
 
 ## 11. Repository layout
 
@@ -243,9 +257,9 @@ Entries marked † don't exist yet.
 
 ```
 docs/                     architecture, roadmap, data sources, decisions, format + style specs
-worlds/                   region specs†, style packs, landmark registry†, overrides†
+worlds/                   region specs, style packs, landmark registry†, overrides†
 assets/†                  hero models (.vox), painted sprite overrides, palettes
-fixtures/                 small committed world packages (served by the dev app)
+fixtures/                 committed world packages served by the dev app (M0 slice, Southwest)
 testdata/                 cross-language golden files
 pipeline/                 Python geo pipeline (uv-managed package + CLI)
 packages/grid/            coordinates, projection, rotations, cell model
@@ -253,7 +267,7 @@ packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables
 packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks†)
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
-packages/runtime/         bake worker + service, compositor, camera, world loading
+packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
 packages/sim/†            vehicles, flight, building, cell occupancy
 apps/web/                 player app
 apps/editor/†             editor (warp tools, overrides, landmark placement)

@@ -1,18 +1,24 @@
-import { NO_WATER, project, type Rotation } from "@pixelworld/grid";
+import { project, type Rotation } from "@pixelworld/grid";
+import { BAKE_VERSION } from "@pixelworld/bake";
 import { roverBoxes } from "@pixelworld/generators";
 import {
   BakeService,
   Camera,
+  ChunkStore,
   Compositor,
+  TileCache,
   cellsScreenRect,
-  loadWorld,
+  hashString,
+  loadManifest,
   tileKey,
   worldDepthRange,
   type GpuImage,
+  type PreparedTile,
   type TileKey,
+  type TileRequest,
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
-import { verticalExaggeration } from "@pixelworld/world-format";
+import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
 import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
 const TILE_SIZE = 32;
@@ -23,6 +29,8 @@ const DRIVE_SPEED = 3; // cells / s
 // slopes (1 step per cell, up to 1.41 across a diagonal fold) are drivable;
 // steep slope tiles and cliffs are not.
 const MAX_GRADE = 2;
+const PREFETCH_PX = 96; // bake tiles this far outside the view
+const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the GPU
 
 /** Test/debug hooks (used by the Playwright suite in e2e/). */
 interface PixelworldDebug {
@@ -43,77 +51,170 @@ const num = (key: string, fallback: number) => {
   return v === null || v === "" || Number.isNaN(Number(v)) ? fallback : Number(v);
 };
 
+function renderSources(manifest: WorldManifest, el: HTMLElement): void {
+  el.replaceChildren();
+  const h = document.createElement("h2");
+  h.textContent = `Data sources · ${manifest.name}`;
+  el.append(h);
+  const list = document.createElement("ul");
+  for (const a of manifest.attribution) {
+    const li = document.createElement("li");
+    const name = document.createElement(a.url ? "a" : "span");
+    name.textContent = a.name;
+    if (a.url && name instanceof HTMLAnchorElement) {
+      name.href = a.url;
+      name.target = "_blank";
+      name.rel = "noopener";
+    }
+    const lic = document.createElement("span");
+    lic.className = "license";
+    lic.textContent = ` — ${a.license}`;
+    li.append(name, lic);
+    list.append(li);
+  }
+  el.append(list);
+  const note = document.createElement("p");
+  note.className = "muted";
+  note.textContent =
+    "World data derived from OpenStreetMap is available under the ODbL. " +
+    `Package ${manifest.packageHash?.slice(0, 12) ?? "(unhashed)"} · press I or Esc to close.`;
+  el.append(note);
+}
+
 async function main() {
   const canvas = document.getElementById("view") as HTMLCanvasElement;
   const hud = document.getElementById("hud")!;
   const help = document.getElementById("help")!;
   const attribution = document.getElementById("attribution")!;
+  const sources = document.getElementById("sources")!;
   const fixedSize = params.has("w") && params.has("h");
   if (params.get("hud") === "0") {
-    hud.classList.add("hidden");
-    help.classList.add("hidden");
-    attribution.classList.add("hidden");
+    for (const el of [hud, help, attribution]) el.classList.add("hidden");
   }
 
-  const world = await loadWorld(params.get("world") ?? "/grand-canyon-m0/");
-  const { manifest, terrain } = world;
-  attribution.textContent = manifest.attribution.map((a) => a.name).join(" · ");
+  const worldUrl = params.get("world") ?? "/southwest/";
+  const manifest = await loadManifest(worldUrl);
+  const store = new ChunkStore(manifest, worldUrl);
+  const sourcesButton = document.createElement("button");
+  sourcesButton.textContent = "Sources (I)";
+  sourcesButton.onclick = () => sources.classList.toggle("hidden");
+  const short = document.createElement("span");
+  short.textContent = manifest.attribution.map((a) => a.name.split(" (")[0]).join(" · ") + " ";
+  attribution.replaceChildren(short, sourcesButton);
+  renderSources(manifest, sources);
 
   const style = validateStyle(styleJson as StylePack);
   const palette = buildPalette(style);
-  const tables = materialTables(style, palette, manifest.surfaces, manifest.scale);
-  const [minH, maxH] = terrain.heightRange();
+  const { metersPerStep, elevationDatumMeters } = manifest.scale;
+  const tables = materialTables(
+    style,
+    palette,
+    manifest,
+    (m) => (m - elevationDatumMeters) / metersPerStep,
+  );
+  if (!manifest.heightRange) await store.ensureRect(0, 0, manifest.cellsX, manifest.cellsY);
+  const [minH, maxH] =
+    manifest.heightRange ?? store.slice(0, 0, manifest.cellsX, manifest.cellsY).grid.heightRange();
   const floor = minH - 2;
 
   const compositor = new Compositor(canvas);
   compositor.setPalette(palette.rgba);
 
-  const service = await BakeService.create({
-    type: "init",
-    cellsX: terrain.width,
-    cellsY: terrain.height,
-    base: terrain.base.slice(),
-    shape: terrain.shape.slice(),
-    surface: terrain.surface.slice(),
-    water: terrain.water.slice(),
-    style: {
-      tables,
-      aoStrength: style.ao.strength,
-      outlineThreshold: style.outline.depthThreshold,
-    },
-    tileSize: TILE_SIZE,
-    margin: MARGIN,
-    floor,
-  });
+  const styleHash = hashString(JSON.stringify(styleJson));
+  const cache = params.get("cache") === "0" ? null : await TileCache.open();
+  const cacheKey = (t: TileRequest) =>
+    [
+      manifest.id,
+      manifest.packageHash ?? "nohash",
+      styleHash,
+      BAKE_VERSION,
+      tileKey(t.rotation, t.tx, t.ty),
+    ].join("|");
 
-  // Tiles and their height ranges (for screen-rect estimates before baking).
-  const tilesX = Math.ceil(terrain.width / TILE_SIZE);
-  const tilesY = Math.ceil(terrain.height / TILE_SIZE);
+  const prepare = async (t: TileRequest): Promise<PreparedTile> => {
+    if (cache) {
+      const hit = await cache.get(cacheKey(t));
+      if (hit) return { cached: hit };
+    }
+    const x0 = t.tx * TILE_SIZE - MARGIN;
+    const y0 = t.ty * TILE_SIZE - MARGIN;
+    const x1 = (t.tx + 1) * TILE_SIZE + MARGIN;
+    const y1 = (t.ty + 1) * TILE_SIZE + MARGIN;
+    await store.ensureRect(x0, y0, x1, y1);
+    const s = store.slice(x0, y0, x1, y1);
+    return {
+      slice: { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers() },
+    };
+  };
+
+  const service = await BakeService.create(
+    {
+      type: "init",
+      style: {
+        tables,
+        aoStrength: style.ao.strength,
+        outlineThreshold: style.outline.depthThreshold,
+      },
+      tileSize: TILE_SIZE,
+      margin: MARGIN,
+      floor,
+      worldWidth: manifest.cellsX,
+      worldHeight: manifest.cellsY,
+    },
+    prepare,
+  );
+
+  // Tile height ranges (for screen-rect estimates before baking), from the manifest.
+  const tilesX = Math.ceil(manifest.cellsX / TILE_SIZE);
+  const tilesY = Math.ceil(manifest.cellsY / TILE_SIZE);
   const tileHeights: [number, number][] = [];
   for (let ty = 0; ty < tilesY; ty++)
     for (let tx = 0; tx < tilesX; tx++) {
-      let lo = Infinity;
-      let hi = -Infinity;
-      for (let y = ty * TILE_SIZE; y < Math.min(terrain.height, (ty + 1) * TILE_SIZE); y++)
-        for (let x = tx * TILE_SIZE; x < Math.min(terrain.width, (tx + 1) * TILE_SIZE); x++) {
-          const [a, b] = terrain.cellRange(terrain.index(x, y));
-          lo = Math.min(lo, a);
-          hi = Math.max(hi, b);
-        }
-      // edge tiles include skirts down to the floor
+      const x0 = tx * TILE_SIZE;
+      const y0 = ty * TILE_SIZE;
+      const [lo, hi] = store.heightRangeFor(x0, y0, x0 + TILE_SIZE, y0 + TILE_SIZE);
       const edge = tx === 0 || ty === 0 || tx === tilesX - 1 || ty === tilesY - 1;
       tileHeights.push([edge ? floor : lo, hi]);
     }
 
-  const tiles = new Map<TileKey, GpuImage | null>();
+  // Baked tiles on the GPU, evicted least-recently-drawn beyond a memory budget.
+  interface TileEntry {
+    img: GpuImage | null;
+    bytes: number;
+    lastDrawn: number;
+  }
+  const tiles = new Map<TileKey, TileEntry>();
+  let gpuBytes = 0;
+  let frameNo = 0;
   service.onTile = (res) => {
-    tiles.set(res.key, res.image ? compositor.upload(res.image) : null);
+    if (res.image) {
+      const img = compositor.upload(res.image);
+      const bytes = res.image.width * res.image.height * 4;
+      gpuBytes += bytes;
+      tiles.set(res.key, { img, bytes, lastDrawn: frameNo });
+      if (!res.fromCache && cache) void cache.put(cacheKey(res), res.image);
+    } else {
+      tiles.set(res.key, { img: null, bytes: 0, lastDrawn: frameNo });
+    }
     dirty = true;
   };
   service.onError = (m) => {
     console.error(m);
     hud.textContent = `bake error: ${m}`;
   };
+  function evict() {
+    if (gpuBytes <= GPU_BUDGET_BYTES) return;
+    const old = [...tiles.entries()]
+      .filter(([, e]) => e.img && e.lastDrawn < frameNo)
+      .sort((a, b) => a[1].lastDrawn - b[1].lastDrawn);
+    for (const [key, e] of old) {
+      if (gpuBytes <= GPU_BUDGET_BYTES * 0.8) break;
+      compositor.release(e.img!);
+      gpuBytes -= e.bytes;
+      tiles.delete(key);
+      service.forget(key);
+    }
+  }
 
   const sprites = new Map<Rotation, GpuImage | null>();
   const roverRamp = palette.rampIds.get("marker")!;
@@ -127,39 +228,34 @@ async function main() {
     });
   };
 
-  // Rover starts on dry land next to the river nearest the centre, unless given.
-  const rover = { x: terrain.width / 2, y: terrain.height / 2, h: 0 };
+  // Rover: start from the URL, the manifest's start cell, or the world centre.
+  const start = manifest.start ?? {
+    x: Math.floor(manifest.cellsX / 2),
+    y: Math.floor(manifest.cellsY / 2),
+  };
+  const rover = { x: start.x + 0.5, y: start.y + 0.5, h: 0 };
   const roverParam = params.get("rover");
   if (roverParam) {
     const [rx, ry] = roverParam.split(",").map(Number);
     rover.x = rx ?? rover.x;
     rover.y = ry ?? rover.y;
-  } else {
-    let best = Infinity;
-    for (let y = 1; y < terrain.height - 1; y++)
-      for (let x = 1; x < terrain.width - 1; x++) {
-        if (terrain.water[terrain.index(x, y)] === NO_WATER) continue;
-        const below = terrain.index(x, y + 1);
-        if (terrain.water[below] !== NO_WATER) continue;
-        const d = Math.hypot(x - terrain.width / 2, y - terrain.height / 2);
-        if (d < best) {
-          best = d;
-          rover.x = x + 0.5;
-          rover.y = y + 1.5;
-        }
-      }
   }
-  rover.h = terrain.surfaceHeightAt(rover.x, rover.y);
+  const ensureAt = (x: number, y: number) =>
+    store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1);
+  await ensureAt(rover.x, rover.y);
+  rover.h = store.surfaceHeightAt(rover.x, rover.y) ?? 0;
 
   const camera = new Camera(1, 1);
   camera.rotation = (num("rot", 0) & 3) as Rotation;
   let follow = !(params.has("fx") || params.has("fy"));
   camera.fx = num("fx", rover.x);
   camera.fy = num("fy", rover.y);
-  camera.fh = follow ? rover.h : terrain.surfaceHeightAt(camera.fx, camera.fy);
+  if (!follow) await ensureAt(camera.fx, camera.fy);
+  camera.fh = follow ? rover.h : (store.surfaceHeightAt(camera.fx, camera.fy) ?? rover.h);
   let noclip = false;
   let zoomFromParams = params.has("zoom");
 
+  let dirty = true;
   function resize() {
     const dpr = fixedSize ? 1 : window.devicePixelRatio || 1;
     const w = fixedSize ? num("w", 640) : Math.round(window.innerWidth * dpr);
@@ -177,22 +273,23 @@ async function main() {
     else camera.zoom = Math.max(1, Math.round(w / 640));
     dirty = true;
   }
-  let dirty = true;
   resize();
   window.addEventListener("resize", resize);
 
-  const depthRange = worldDepthRange(terrain.width, terrain.height, floor, maxH);
+  const depthRange = worldDepthRange(manifest.cellsX, manifest.cellsY, floor, maxH);
 
   // ---- input ----
   const keys = new Set<string>();
   window.addEventListener("keydown", (e) => {
-    keys.add(e.key.toLowerCase());
     const k = e.key.toLowerCase();
+    keys.add(k);
     if (k === "q") camera.rotate(-1);
     else if (k === "e") camera.rotate(1);
     else if (k === "f") follow = !follow;
     else if (k === "n") noclip = !noclip;
     else if (k === "h") [hud, help].forEach((el) => el.classList.toggle("hidden"));
+    else if (k === "i") sources.classList.toggle("hidden");
+    else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
       camera.zoom = Number(k);
       zoomFromParams = true;
@@ -240,12 +337,13 @@ async function main() {
       const [gx, gy] = camera.screenDirToGrid(mx, my);
       const step = DRIVE_SPEED * dt;
       const tryMove = (nx: number, ny: number) => {
-        if (nx < 0.3 || ny < 0.3 || nx > terrain.width - 0.3 || ny > terrain.height - 0.3) return false;
-        const cell = terrain.index(Math.floor(nx), Math.floor(ny));
-        const nh = terrain.surfaceHeightAt(nx, ny);
+        if (nx < 0.3 || ny < 0.3 || nx > manifest.cellsX - 0.3 || ny > manifest.cellsY - 0.3)
+          return false;
+        const nh = store.surfaceHeightAt(nx, ny);
+        if (nh === null) return false; // terrain not loaded yet
         const dist = Math.hypot(nx - rover.x, ny - rover.y);
         const tooSteep = Math.abs(nh - rover.h) > MAX_GRADE * dist + 0.01;
-        if (!noclip && (terrain.water[cell] !== NO_WATER || tooSteep)) return false;
+        if (!noclip && (store.isWater(nx, ny) || tooSteep)) return false;
         rover.x = nx;
         rover.y = ny;
         rover.h = nh;
@@ -255,7 +353,8 @@ async function main() {
       if (!tryMove(rover.x + gx * step, rover.y + gy * step)) {
         if (!tryMove(rover.x + gx * step, rover.y)) tryMove(rover.x, rover.y + gy * step);
       }
-      if (!follow && !keys.has("w") && !keys.has("a") && !keys.has("s") && !keys.has("d")) follow = true;
+      if (!follow && !keys.has("w") && !keys.has("a") && !keys.has("s") && !keys.has("d"))
+        follow = true;
       dirty = true;
     }
     if (follow) {
@@ -273,28 +372,35 @@ async function main() {
   let renderedComplete = false;
   const readyResolvers: (() => void)[] = [];
 
-  function visibleTiles(snap: ReturnType<Camera["snapped"]>) {
+  function tilesInView(snap: ReturnType<Camera["snapped"]>) {
     const r = camera.rotation;
-    const viewL = snap.left - 64;
-    const viewT = snap.top - 64;
-    const viewR = snap.left + camera.internalWidth + 64;
-    const viewB = snap.top + camera.internalHeight + 64;
+    const viewL = snap.left;
+    const viewT = snap.top;
+    const viewR = snap.left + camera.internalWidth;
+    const viewB = snap.top + camera.internalHeight;
     const cx = (viewL + viewR) / 2;
     const cy = (viewT + viewB) / 2;
-    const list: { rotation: Rotation; tx: number; ty: number; visible: boolean; dist: number }[] = [];
+    const list: (TileRequest & { visible: boolean; dist: number })[] = [];
     for (let ty = 0; ty < tilesY; ty++)
       for (let tx = 0; tx < tilesX; tx++) {
         const [lo, hi] = tileHeights[ty * tilesX + tx]!;
         const rect = cellsScreenRect(
           tx * TILE_SIZE,
           ty * TILE_SIZE,
-          Math.min(terrain.width, (tx + 1) * TILE_SIZE),
-          Math.min(terrain.height, (ty + 1) * TILE_SIZE),
+          Math.min(manifest.cellsX, (tx + 1) * TILE_SIZE),
+          Math.min(manifest.cellsY, (ty + 1) * TILE_SIZE),
           lo,
           hi,
           r,
         );
-        const visible = rect.right >= viewL && rect.left <= viewR && rect.bottom >= viewT && rect.top <= viewB;
+        const near =
+          rect.right >= viewL - PREFETCH_PX &&
+          rect.left <= viewR + PREFETCH_PX &&
+          rect.bottom >= viewT - PREFETCH_PX &&
+          rect.top <= viewB + PREFETCH_PX;
+        if (!near) continue;
+        const visible =
+          rect.right >= viewL && rect.left <= viewR && rect.bottom >= viewT && rect.top <= viewB;
         const dist = Math.hypot((rect.left + rect.right) / 2 - cx, (rect.top + rect.bottom) / 2 - cy);
         list.push({ rotation: r, tx, ty, visible, dist });
       }
@@ -303,22 +409,25 @@ async function main() {
   }
 
   function frame(now: number) {
+    frameNo++;
     const dt = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
     update(dt);
     requestSprite(camera.rotation);
 
     const snap = camera.snapped();
-    const order = visibleTiles(snap);
+    const order = tilesInView(snap);
     service.want(order);
 
     const r = camera.rotation;
     const drawTiles: GpuImage[] = [];
     let complete = true;
     for (const t of order) {
-      const img = tiles.get(tileKey(r, t.tx, t.ty));
-      if (img) drawTiles.push(img);
-      else if (img === undefined && t.visible) complete = false;
+      const entry = tiles.get(tileKey(r, t.tx, t.ty));
+      if (entry) {
+        entry.lastDrawn = frameNo;
+        if (entry.img) drawTiles.push(entry.img);
+      } else if (t.visible) complete = false;
     }
     const sprite = sprites.get(r);
     if (!sprite) complete = false;
@@ -337,12 +446,15 @@ async function main() {
           depthRange,
         },
         drawTiles,
-        sprite ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }] : [],
+        sprite
+          ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
+          : [],
       );
       dirty = !complete; // keep redrawing while tiles stream in
       renderedComplete = complete;
-      if (complete) readyResolvers.splice(0).forEach((f) => f());
+      if (complete && service.idle) readyResolvers.splice(0).forEach((f) => f());
     }
+    evict();
 
     frames++;
     if (now - fpsT > 500) {
@@ -360,24 +472,33 @@ async function main() {
       renderer: service.renderer,
       bakeMode: service.mode,
       tilesBaked: t.tiles,
+      tilesFromCache: t.fromCache,
       tilesPerRotation: tilesX * tilesY,
+      chunksLoaded: store.loadedCount,
+      chunksTotal: manifest.chunks.length,
+      gpuTiles: [...tiles.values()].filter((e) => e.img).length,
+      gpuMB: gpuBytes / (1024 * 1024),
       avgMeshMs: t.tiles ? t.meshMs / t.tiles : 0,
       avgBakeMs: t.tiles ? t.bakeMs / t.tiles : 0,
       maxTileMs: t.maxTileMs,
       fps,
       rotation: camera.rotation,
       rover: { x: rover.x, y: rover.y, h: rover.h },
+      cache: cache ? "indexeddb" : "off",
+      cacheWrites: cache?.writes ?? 0,
     };
   }
 
   function updateHud() {
     const s = stats();
-    const meters = Math.round(rover.h * manifest.scale.metersPerStep + manifest.scale.elevationDatumMeters);
+    const meters = Math.round(rover.h * metersPerStep + elevationDatumMeters);
+    const ve = verticalExaggeration(manifest.scale).toFixed(2);
     hud.textContent = [
-      `${manifest.name} · vertical ×${verticalExaggeration(manifest.scale).toFixed(2)} (${manifest.scale.metersPerStep.toFixed(1)} m/step)`,
+      `${manifest.name} · ${manifest.scale.metersPerCell} m/cell · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
       `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
       `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
-      `bake  ${s.tilesBaked} tiles · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
+      `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,
+      `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
       `      ${s.bakeMode} · ${s.renderer}`,
       `fps   ${fps.toFixed(0)}`,
     ].join("\n");
@@ -401,7 +522,7 @@ async function main() {
     setRover: (x, y) => {
       rover.x = x;
       rover.y = y;
-      rover.h = terrain.surfaceHeightAt(x, y);
+      rover.h = store.surfaceHeightAt(x, y) ?? rover.h;
       renderedComplete = false;
       dirty = true;
     },

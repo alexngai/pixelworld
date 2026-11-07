@@ -43,6 +43,12 @@ export interface StyleParams {
   outlineThreshold: number;
 }
 
+/**
+ * Bump whenever bake output changes for the same inputs (shaders, passes,
+ * generators). Persistent tile caches key on it.
+ */
+export const BAKE_VERSION = "m1.1";
+
 const PAD = 2;
 const MAX_SHADOW = 4096;
 
@@ -97,6 +103,8 @@ export class Baker {
     attrib(1, mesh.normal, 3);
     attrib(2, mesh.material, 3);
     attrib(3, mesh.cell, 2);
+    attrib(4, mesh.road, 2);
+    attrib(5, mesh.geology, 1);
     gl.bindVertexArray(null);
     const up = { vao, buffers, count: mesh.vertexCount };
     this.meshes.set(mesh, up);
@@ -205,12 +213,14 @@ export class Baker {
       const o = owned === "all" ? [-1e9, -1e9, 1e9, 1e9] : [owned.x0, owned.y0, owned.x1, owned.y1];
       gl.uniform4fv(u.loc("uOwned"), o);
       gl.uniform1f(u.loc("uAoStrength"), style.aoStrength);
-      gl.uniform1iv(u.loc("uSurfRamp"), t.surfRamp);
-      gl.uniform1iv(u.loc("uSurfPattern"), t.surfPattern);
-      gl.uniform1fv(u.loc("uSurfDensity"), t.surfDensity);
-      gl.uniform1fv(u.loc("uStrataMin"), t.strataMinStep);
-      gl.uniform1iv(u.loc("uStrataRamp"), t.strataRamp);
-      gl.uniform1i(u.loc("uStrataCount"), t.strataCount);
+      gl.uniform4fv(u.loc("uSurfaces"), t.surfaces);
+      gl.uniform4fv(u.loc("uStrataMin"), t.strataMin);
+      gl.uniform4iv(u.loc("uStrataRamp"), t.strataRamp);
+      gl.uniform4iv(u.loc("uStrataCount"), t.strataCount);
+      gl.uniform4iv(u.loc("uProvinceSet"), t.provinceSet);
+      gl.uniform4fv(u.loc("uRoads"), t.roads);
+      gl.uniform1i(u.loc("uAsphaltRamp"), t.asphaltRamp);
+      gl.uniform1i(u.loc("uMarkingRamp"), t.markingRamp);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);

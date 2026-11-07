@@ -2,25 +2,44 @@ import type { Rotation } from "@pixelworld/grid";
 import type { BakedImage } from "@pixelworld/bake";
 import type { Box } from "@pixelworld/generators";
 import { BakeHost } from "./bakeHost";
-import type { BakeStats, FromWorker, InitMessage, ToWorker } from "./protocol";
+import {
+  sliceTransferables,
+  type BakeStats,
+  type FromWorker,
+  type InitMessage,
+  type TerrainSlice,
+  type ToWorker,
+} from "./protocol";
 
 export type TileKey = string;
 export const tileKey = (r: Rotation, tx: number, ty: number): TileKey => `${r}:${tx},${ty}`;
 
-export interface TileResult {
-  key: TileKey;
+export interface TileRequest {
   rotation: Rotation;
   tx: number;
   ty: number;
+}
+
+/** What `prepare` hands back: a cached image, or a terrain slice to bake. */
+export type PreparedTile = { cached: BakedImage | null } | { slice: TerrainSlice };
+
+export interface TileResult extends TileRequest {
+  key: TileKey;
   image: BakedImage | null;
-  stats: BakeStats;
+  stats: BakeStats | null;
+  fromCache: boolean;
 }
 
 export interface BakeTotals {
   tiles: number;
+  fromCache: number;
   meshMs: number;
   bakeMs: number;
   maxTileMs: number;
+}
+
+interface Transport {
+  send(msg: ToWorker, transfer?: Transferable[]): void;
 }
 
 /** Literal `new Worker(new URL(...))` so Vite bundles the worker in builds. */
@@ -28,41 +47,38 @@ export function defaultWorkerFactory(): Worker {
   return new Worker(new URL("./bake.worker.ts", import.meta.url), { type: "module" });
 }
 
-interface Transport {
-  send(msg: ToWorker, transfer?: Transferable[]): void;
-}
-
 /**
- * Main-thread side of baking. Keeps a priority list of wanted tiles, sends
- * one job at a time to the worker (or an in-thread fallback) and reports
- * results. Call `want()` every frame with tiles ordered by priority.
+ * Main-thread side of baking. Keeps a priority list of wanted tiles and works
+ * through it one at a time: `prepare` either finds a cached image or loads the
+ * terrain the tile needs, which is then baked in the worker (or an in-thread
+ * fallback). Call `want()` every frame with tiles ordered by priority.
  */
 export class BakeService {
   private transport: Transport;
   private nextId = 1;
   private busy = false;
-  private wanted: { rotation: Rotation; tx: number; ty: number }[] = [];
+  private wanted: TileRequest[] = [];
   private done = new Set<TileKey>();
-  private pendingTile: { id: number; key: TileKey; rotation: Rotation; tx: number; ty: number } | null =
-    null;
+  private pendingTile: (TileRequest & { id: number; key: TileKey }) | null = null;
   private spriteJobs = new Map<number, (img: BakedImage | null) => void>();
   private spriteQueue: { id: number; rotation: Rotation; boxes: Box[] }[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
-  readonly totals: BakeTotals = { tiles: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
+  readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
   onTile: (r: TileResult) => void = () => {};
   onError: (message: string) => void = (m) => console.error(m);
 
-  private constructor(transport: Transport | null) {
-    this.transport = transport ?? { send: () => {} };
+  private constructor(private readonly prepare: (t: TileRequest) => Promise<PreparedTile>) {
+    this.transport = { send: () => {} };
   }
 
   /** Create a service backed by a worker; falls back to baking on the main thread. */
   static async create(
     init: InitMessage,
+    prepare: (t: TileRequest) => Promise<PreparedTile>,
     workerFactory: (() => Worker) | null = defaultWorkerFactory,
   ): Promise<BakeService> {
-    const svc = new BakeService(null);
+    const svc = new BakeService(prepare);
     const viaWorker = workerFactory ? await svc.tryWorker(workerFactory) : false;
     if (!viaWorker) svc.useInline();
     svc.transport.send(init);
@@ -105,9 +121,8 @@ export class BakeService {
     const gl = canvas.getContext("webgl2", { antialias: false, depth: false, alpha: false });
     if (!gl) throw new Error("WebGL2 is required");
     this.mode = "inline";
-    let host: BakeHost | null = null;
     const queue: FromWorker[] = [];
-    host = new BakeHost(gl, (msg) => {
+    const host = new BakeHost(gl, (msg) => {
       if (msg.type === "ready") this.renderer = msg.renderer;
       else queue.push(msg);
     });
@@ -115,7 +130,7 @@ export class BakeService {
       send: (m) => {
         // Defer so callers see the same async behaviour as with a worker.
         setTimeout(() => {
-          host!.handle(m);
+          host.handle(m);
           for (const out of queue.splice(0)) this.receive(out);
         }, 0);
       },
@@ -123,13 +138,18 @@ export class BakeService {
   }
 
   /** Replace the wanted list (highest priority first). */
-  want(tiles: { rotation: Rotation; tx: number; ty: number }[]): void {
+  want(tiles: TileRequest[]): void {
     this.wanted = tiles;
     this.pump();
   }
 
   isDone(key: TileKey): boolean {
     return this.done.has(key);
+  }
+
+  /** Forget a finished tile so it can be requested again (e.g. after eviction). */
+  forget(key: TileKey): void {
+    this.done.delete(key);
   }
 
   bakeSprite(rotation: Rotation, boxes: Box[]): Promise<BakedImage | null> {
@@ -145,7 +165,7 @@ export class BakeService {
     return !this.busy && this.spriteQueue.length === 0 && this.nextWanted() === null;
   }
 
-  private nextWanted() {
+  private nextWanted(): TileRequest | null {
     for (const t of this.wanted) if (!this.done.has(tileKey(t.rotation, t.tx, t.ty))) return t;
     return null;
   }
@@ -160,23 +180,39 @@ export class BakeService {
     }
     const t = this.nextWanted();
     if (!t) return;
-    const id = this.nextId++;
     this.busy = true;
-    this.pendingTile = { id, key: tileKey(t.rotation, t.tx, t.ty), ...t };
-    this.transport.send({ type: "bakeTile", id, ...t });
+    const id = this.nextId++;
+    const key = tileKey(t.rotation, t.tx, t.ty);
+    this.pendingTile = { ...t, id, key };
+    this.prepare(t).then(
+      (prepared) => {
+        if ("cached" in prepared) {
+          this.finish(id, prepared.cached, null, true);
+        } else {
+          this.transport.send(
+            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, slice: prepared.slice },
+            sliceTransferables(prepared.slice),
+          );
+        }
+      },
+      (err: unknown) => {
+        this.onError(`prepare ${key}: ${String(err)}`);
+        this.finish(id, null, null, false);
+      },
+    );
   }
 
   private receive(msg: FromWorker): void {
     if (msg.type === "ready") return;
     if (msg.type === "error") {
       this.onError(msg.message);
-      if (msg.id !== undefined) this.finish(msg.id, null, null);
+      if (msg.id !== undefined) this.finish(msg.id, null, null, false);
       return;
     }
-    this.finish(msg.id, msg.image, msg.stats);
+    this.finish(msg.id, msg.image, msg.stats, false);
   }
 
-  private finish(id: number, image: BakedImage | null, stats: BakeStats | null): void {
+  private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean): void {
     this.busy = false;
     const sprite = this.spriteJobs.get(id);
     if (sprite) {
@@ -186,12 +222,14 @@ export class BakeService {
       const p = this.pendingTile;
       this.pendingTile = null;
       this.done.add(p.key);
-      const s = stats ?? { meshMs: 0, bakeMs: 0, vertices: 0, shadowMapSize: [0, 0] as [number, number] };
-      this.totals.tiles++;
-      this.totals.meshMs += s.meshMs;
-      this.totals.bakeMs += s.bakeMs;
-      this.totals.maxTileMs = Math.max(this.totals.maxTileMs, s.meshMs + s.bakeMs);
-      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats: s });
+      if (fromCache) this.totals.fromCache++;
+      else if (stats) {
+        this.totals.tiles++;
+        this.totals.meshMs += stats.meshMs;
+        this.totals.bakeMs += stats.bakeMs;
+        this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
+      }
+      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache });
     }
     this.pump();
   }

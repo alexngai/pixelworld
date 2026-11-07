@@ -5,6 +5,8 @@ layout(location = 0) in vec3 aPos;     // grid x, y, height steps
 layout(location = 1) in vec3 aNormal;  // true 3D, z up
 layout(location = 2) in vec3 aMat;     // material, face kind, ambient occlusion
 layout(location = 3) in vec2 aCell;    // owning cell
+layout(location = 4) in vec2 aRoad;    // road mask, road class (top faces)
+layout(location = 5) in float aGeol;   // geology province id
 `;
 
 export const SHADOW_VS = /* glsl */ `#version 300 es
@@ -51,8 +53,11 @@ out vec3 vNormal;
 out vec3 vLight;
 out float vH;
 out float vAo;
+out vec2 vGrid;
 flat out vec2 vMat;
 flat out vec2 vCell;
+flat out vec2 vRoad;
+flat out float vGeol;
 
 void main() {
   vec2 uv = uRot * aPos.xy;
@@ -70,8 +75,11 @@ void main() {
   vLight = vec3(dot(P, uLightRight), dot(P, uLightUp), dot(P, uSun));
   vH = h;
   vAo = aMat.z;
+  vGrid = aPos.xy;
   vMat = aMat.xy;
   vCell = aCell;
+  vRoad = aRoad;
+  vGeol = aGeol;
 }
 `;
 
@@ -84,8 +92,11 @@ in vec3 vNormal;
 in vec3 vLight;
 in float vH;
 in float vAo;
+in vec2 vGrid;
 flat in vec2 vMat;
 flat in vec2 vCell;
+flat in vec2 vRoad;
+flat in float vGeol;
 
 uniform vec2 uOrigin;
 uniform vec3 uSun;
@@ -97,18 +108,23 @@ uniform vec2 uLightDepth;
 uniform vec4 uOwned;         // x0, y0, x1, y1 (cells)
 uniform float uAoStrength;
 
-uniform int uSurfRamp[16];
-uniform int uSurfPattern[16];
-uniform float uSurfDensity[16];
-uniform float uStrataMin[16];
-uniform int uStrataRamp[16];
-uniform int uStrataCount;
+// Packed tables (see packages/style MaterialTables).
+uniform vec4 uSurfaces[16];      // ramp (-1 = strata), pattern, density, -
+uniform vec4 uStrataMin[16];     // 4 sets × 16 bands of lower bounds (steps)
+uniform ivec4 uStrataRamp[16];
+uniform ivec4 uStrataCount;
+uniform ivec4 uProvinceSet[4];   // geology id → strata set
+uniform vec4 uRoads[16];         // per road class: half width (cells), centre line
+uniform int uAsphaltRamp;
+uniform int uMarkingRamp;
 
 out vec4 oG;
 
 const int PATTERN_TREES = 1;
 const int PATTERN_SPECKLE = 2;
 const int PATTERN_SPARKLE = 3;
+const int PATTERN_FIELDS = 4;
+const int PATTERN_BLOCKS = 5;
 
 uint hash3(uint x, uint y, uint z) {
   uint h = x * 0x8da6b343u ^ y * 0xd8163841u ^ z * 0xcb1ab31fu;
@@ -119,10 +135,53 @@ float rnd(int x, int y, int salt) {
   return float(hash3(uint(x), uint(y), uint(salt)) & 0xffffffu) / 16777216.0;
 }
 
+float segDist(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+  return length(p - a - ab * t);
+}
+
+// Distance from a point in the cell (0..1) to the road strip centre lines:
+// centre → neighbour for each connection bit, plus diagonal roads of other
+// cells that pass through this cell's corners.
+float roadDistance(vec2 local, int mask) {
+  const vec2 ENDS[8] = vec2[8](
+    vec2(0.5, 0.0), vec2(1.0, 0.0), vec2(1.0, 0.5), vec2(1.0, 1.0),
+    vec2(0.5, 1.0), vec2(0.0, 1.0), vec2(0.0, 0.5), vec2(0.0, 0.0));
+  const vec2 CORNERS[4] = vec2[4](vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0));
+  float d = 1e9;
+  for (int i = 0; i < 8; i++)
+    if (((mask >> i) & 1) == 1) d = min(d, segDist(local, vec2(0.5), ENDS[i]));
+  for (int k = 0; k < 4; k++) {
+    if (((mask >> (8 + k)) & 1) == 0) continue;
+    vec2 P = CORNERS[k];
+    vec2 u = normalize(vec2(0.5 - P.y, P.x - 0.5));  // perpendicular to the cell diagonal
+    vec2 q = local - P;
+    d = min(d, abs(q.x * u.y - q.y * u.x));
+  }
+  return d;
+}
+
+int strataRampAt(int set, float h, out float above) {
+  int count = uStrataCount[set];
+  int last = set * 16 + count - 1;
+  int ramp = uStrataRamp[last >> 2][last & 3];
+  above = 99.0;
+  for (int i = 0; i < 16; i++) {
+    if (i >= count) break;
+    int k = set * 16 + i;
+    float m = uStrataMin[k >> 2][k & 3];
+    if (h >= m) { ramp = uStrataRamp[k >> 2][k & 3]; above = h - m; break; }
+  }
+  return ramp;
+}
+
 void main() {
   int mat = int(vMat.x + 0.5);
   int kind = int(vMat.y + 0.5);
   bool vertical = kind == 2 || kind == 3;
+  int geol = int(vGeol + 0.5);
+  int strataSet = uProvinceSet[geol >> 2][geol & 3];
 
   int ramp;
   int pattern;
@@ -130,15 +189,23 @@ void main() {
   if (mat >= 100) {
     ramp = mat - 100; pattern = 0; density = 0.0;
   } else {
-    ramp = uSurfRamp[mat]; pattern = uSurfPattern[mat]; density = uSurfDensity[mat];
+    vec4 surf = uSurfaces[mat];
+    ramp = int(surf.x); pattern = int(surf.y + 0.5); density = surf.z;
     if (vertical) { ramp = -1; pattern = PATTERN_SPECKLE; density = 0.025; }
   }
   float aboveBand = 99.0;
-  if (ramp < 0) {
-    ramp = uStrataRamp[uStrataCount - 1];
-    for (int i = 0; i < 16; i++) {
-      if (i >= uStrataCount) break;
-      if (vH >= uStrataMin[i]) { ramp = uStrataRamp[i]; aboveBand = vH - uStrataMin[i]; break; }
+  if (ramp < 0) ramp = strataRampAt(strataSet, vH, aboveBand);
+
+  // Road decal on top faces.
+  int roadMask = int(vRoad.x + 0.5);
+  if (roadMask != 0 && !vertical && mat < 100) {
+    vec4 rc = uRoads[int(vRoad.y + 0.5)];
+    if (rc.x > 0.0) {
+      float d = roadDistance(vGrid - vCell, roadMask);
+      if (d <= rc.x) {
+        ramp = (rc.y > 0.5 && d < 0.022) ? uMarkingRamp : uAsphaltRamp;
+        pattern = 0;
+      }
     }
   }
 
@@ -168,6 +235,17 @@ void main() {
     if (rnd(col, row, 2) < density) level -= 1.0;
   } else if (pattern == PATTERN_SPARKLE && !vertical) {
     if (rnd(col, row, 3) < density) level += 1.0;
+  } else if (pattern == PATTERN_FIELDS && !vertical) {
+    // world-anchored patchwork: each third of a cell is a field of its own shade
+    ivec2 parcel = ivec2(floor(vGrid * 3.0));
+    float r = rnd(parcel.x, parcel.y, 4);
+    level += r < density * 0.5 ? -1.0 : (r > 1.0 - density * 0.5 ? 1.0 : 0.0);
+  } else if (pattern == PATTERN_BLOCKS && !vertical) {
+    // world-anchored city blocks: streets every third of a cell, lit roofs
+    vec2 f = fract(vGrid * 3.0);
+    ivec2 block = ivec2(floor(vGrid * 3.0));
+    if (min(f.x, f.y) < 0.14) level -= 1.0;
+    else if (rnd(block.x * 7 + col, block.y * 5 + row, 5) < density) level += 1.0;
   }
   if (vertical && aboveBand < 0.14) level -= 1.0;  // strata bedding line
   level = clamp(level, 1.0, 5.0);

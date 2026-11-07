@@ -2,7 +2,7 @@
 
 An interactive world built from real places and drawn as isometric pixel art in the browser. Geography is compressed and rearranged around recognizable landmarks, so you can drive from the Las Vegas Strip past Hoover Dam to the Grand Canyon in minutes, then fly through it.
 
-**Status:** M0 (grid and bake slice) is done. A 20 km slice of the Grand Canyon, made from real USGS elevation data and the OpenStreetMap river, is baked into pixel art in the browser and can be explored in 4 rotations with a placeholder rover.
+**Status:** M1 (real region at uniform scale) is done. The whole US Southwest, about 410 × 280 km from Las Vegas to the Grand Canyon, is built from real elevation, land-cover and road data. It streams into the browser and is baked into isometric pixel art you can explore in 4 rotations with a placeholder rover. The M0 Grand Canyon slice is still available at `?world=/grand-canyon-m0/`.
 
 ![Grand Canyon South Rim, rotation 1](docs/images/m0-south-rim-r1.png)
 
@@ -25,7 +25,9 @@ pnpm dev            # http://localhost:5173
 | N | toggle no-clip |
 | H | hide or show the HUD |
 
-URL parameters, useful for repeatable views: `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`.
+Press **I** for the data sources and licenses.
+
+URL parameters, useful for repeatable views: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache).
 
 ## Checks
 
@@ -35,7 +37,13 @@ pnpm test:e2e       # Playwright golden images + behaviour tests (headless Chrom
 cd pipeline && uv run ruff check . && uv run pytest
 ```
 
-To regenerate the fixture world (it fetches the USGS DEM and the OSM river; results are cached in `pipeline/.cache/`):
+To rebuild the Southwest from its region spec (downloads are cached in `pipeline/.cache/`; about 20 s once cached):
+
+```sh
+cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+```
+
+To regenerate the M0 fixture (it fetches the USGS DEM and the OSM river):
 
 ```sh
 cd pipeline && uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0

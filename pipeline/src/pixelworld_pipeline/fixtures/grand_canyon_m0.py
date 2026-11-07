@@ -197,6 +197,20 @@ def classify(
     return surface
 
 
+def default_start(water: np.ndarray) -> tuple[int, int]:
+    """Dry cell just south of the river, nearest the centre (the rover's start)."""
+    h, w = water.shape
+    best, start = np.inf, (w // 2, h // 2)
+    for y in range(1, h - 1):
+        for x in range(1, w - 1):
+            if water[y, x] == NO_WATER or water[y + 1, x] != NO_WATER:
+                continue
+            d = np.hypot(x - w / 2, y - h / 2)
+            if d < best:
+                best, start = d, (x, y + 1)
+    return start
+
+
 def build(
     out_dir: Path,
     sigma: float = SMOOTH_SIGMA,
@@ -220,6 +234,7 @@ def build(
 
     surface = classify(corner_m, base, shape, river, step_m)
     w, s, e, n = bounds_lonlat()
+    start = default_start(water)
     return write_package(
         out_dir,
         world_id="grand-canyon-m0",
@@ -236,6 +251,7 @@ def build(
             "verticalExaggeration": exaggeration,
         },
         surfaces=SURFACES,
+        start=start,
         style="desert-southwest",
         attribution=[
             {

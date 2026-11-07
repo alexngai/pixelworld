@@ -33,7 +33,24 @@ def golden_chunk() -> Chunk:
     water = np.full((size, size), NO_WATER, dtype=np.int16)
     water[1, 2] = 5
     water[2, 1] = -4
-    return Chunk(x=-2, y=7, base=base, shape=shape, surface=surface, water=water)
+    road = np.zeros((size, size), dtype=np.uint16)
+    road[1, 1] = 0b0000_0001_0001_0100  # E + S, crossing at corner 0
+    road[3, 0] = 0xFFFF & 0x0FFF  # every direction and every crossing
+    road_class = np.zeros((size, size), dtype=np.uint8)
+    road_class[1, 1] = 2
+    road_class[3, 0] = 255
+    geology = (np.arange(size * size) % 3).astype(np.uint8).reshape(size, size)
+    return Chunk(
+        x=-2,
+        y=7,
+        base=base,
+        shape=shape,
+        surface=surface,
+        water=water,
+        road=road,
+        road_class=road_class,
+        geology=geology,
+    )
 
 
 def main() -> None:
@@ -48,6 +65,9 @@ def main() -> None:
         "shape": chunk.shape.flatten().tolist(),
         "surface": chunk.surface.flatten().tolist(),
         "water": chunk.water.flatten().tolist(),
+        "road": chunk.road.flatten().tolist(),
+        "roadClass": chunk.road_class.flatten().tolist(),
+        "geology": chunk.geology.flatten().tolist(),
     }
     (GOLDEN_DIR / "chunk-v1-small.json").write_text(json.dumps(expected) + "\n")
     print(f"wrote golden files to {GOLDEN_DIR}")

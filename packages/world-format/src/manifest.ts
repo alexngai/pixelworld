@@ -1,4 +1,4 @@
-import { TerrainGrid } from "@pixelworld/grid";
+import { TerrainGrid, copyCells } from "@pixelworld/grid";
 import type { Chunk } from "./chunk";
 
 /** World package manifest, format v0. Spec: docs/world-format.md. */
@@ -11,6 +11,8 @@ export interface ChunkRef {
   y: number;
   path: string;
   sha256?: string;
+  /** Lowest and highest corner height in the chunk (steps). */
+  heightRange?: [number, number];
 }
 
 export interface Attribution {
@@ -42,6 +44,16 @@ export interface WorldManifest {
   /** Surface id (as string key) → surface name. */
   surfaces: Record<string, string>;
   style: string;
+  /** Lowest and highest corner height in the world (steps). */
+  heightRange?: [number, number];
+  /** Suggested starting cell for the camera and player. */
+  start?: { x: number; y: number };
+  /** Road class id (as string key) → class name, for the RCLS layer. */
+  roadClasses?: Record<string, string>;
+  /** Geology province id (as string key) → province name, for the GEOL layer. */
+  geology?: Record<string, string>;
+  /** SHA-256 over the manifest content and every chunk; identical for identical builds. */
+  packageHash?: string;
   source?: { crs?: string; bounds?: [number, number, number, number] };
   attribution: Attribution[];
   generator?: { name: string; version?: string; params?: Record<string, unknown> };
@@ -82,23 +94,8 @@ export function surfaceIds(manifest: WorldManifest): Map<string, number> {
 export function assembleTerrain(manifest: WorldManifest, chunks: Chunk[]): TerrainGrid {
   const grid = new TerrainGrid(manifest.cellsX, manifest.cellsY);
   for (const c of chunks) {
-    const ox = c.x * manifest.chunkSize;
-    const oy = c.y * manifest.chunkSize;
     const t = c.terrain;
-    for (let y = 0; y < t.height; y++) {
-      const gy = oy + y;
-      if (gy < 0 || gy >= grid.height) continue;
-      for (let x = 0; x < t.width; x++) {
-        const gx = ox + x;
-        if (gx < 0 || gx >= grid.width) continue;
-        const si = t.index(x, y);
-        const di = grid.index(gx, gy);
-        grid.base[di] = t.base[si]!;
-        grid.shape[di] = t.shape[si]!;
-        grid.surface[di] = t.surface[si]!;
-        grid.water[di] = t.water[si]!;
-      }
-    }
+    copyCells(t, 0, 0, grid, c.x * manifest.chunkSize, c.y * manifest.chunkSize, t.width, t.height);
   }
   return grid;
 }

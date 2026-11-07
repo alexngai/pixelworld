@@ -27,6 +27,19 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 
 ## 3. Semantic layer fusion
 
+**In use as of M1** (US Southwest; the full matrix below is the target):
+
+| Layer | Source | How it's read |
+|---|---|---|
+| Elevation | USGS 3DEP 1 arc-second (30 m) | the 120 m overview of each COG tile, over HTTP range requests, averaged per cell corner |
+| Land cover | ESA WorldCover 2021 (10 m) | the 160 m overview, mode-resampled per cell |
+| Roads | Overture `transportation/segment` (from OSM), release pinned in the region spec | GeoParquet row groups pruned by bounding box from a cached footer index |
+| Rivers | Overture `base/water` lines | same |
+| Lakes | WorldCover water class, flattened per water body | — |
+
+- **Why Overture rather than OSM extracts:** releases are versioned, so builds are reproducible from the spec alone, and GeoParquet supports bounding-box range reads. (Geofabrik and Overpass were also unreachable from the build environment at the time.)
+- **NLCD isn't used yet:** WorldCover is global, so the same code serves non-US regions in M5.
+
 The pipeline's `semantics` stage fills each layer from the first available source in this order, falling back to procedural defaults.
 
 | Layer | Primary | Gap fill | Fallback |

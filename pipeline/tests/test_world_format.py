@@ -20,7 +20,7 @@ def test_round_trip():
     chunk = golden_chunk()
     out = decode_chunk(encode_chunk(chunk))
     assert (out.x, out.y, out.size) == (chunk.x, chunk.y, chunk.size)
-    for name in ("base", "shape", "surface", "water"):
+    for name in ("base", "shape", "surface", "water", "road", "road_class", "geology"):
         np.testing.assert_array_equal(getattr(out, name), getattr(chunk, name))
 
 
@@ -29,8 +29,16 @@ def test_golden_v1_file_matches_expected():
     expected = json.loads((GOLDEN_DIR / "chunk-v1-small.json").read_text())
     chunk = decode_chunk(data)
     assert (chunk.x, chunk.y, chunk.size) == (expected["x"], expected["y"], expected["size"])
-    for name in ("base", "shape", "surface", "water"):
-        assert getattr(chunk, name).flatten().tolist() == expected[name]
+    for name, key in (
+        ("base", "base"),
+        ("shape", "shape"),
+        ("surface", "surface"),
+        ("water", "water"),
+        ("road", "road"),
+        ("road_class", "roadClass"),
+        ("geology", "geology"),
+    ):
+        assert getattr(chunk, name).flatten().tolist() == expected[key]
     assert unpack_shape(chunk.shape).max() == 3  # exercises multi-step offsets
 
 
@@ -86,3 +94,38 @@ def test_rejects_bad_magic_and_version():
     blob[4] = 9
     with pytest.raises(ChunkFormatError):
         decode_chunk(bytes(blob))
+
+
+def test_gzip_chunks_decode_and_package_hash_is_stable(tmp_path):
+    from pixelworld_pipeline.world_format import write_package
+
+    size = 8
+    rng = np.random.default_rng(5)
+    base = rng.integers(0, 20, size=(size, 10)).astype(np.int16)
+    args = dict(
+        world_id="t",
+        name="t",
+        base=base,
+        shape=np.zeros_like(base, dtype=np.uint8),
+        surface=np.ones_like(base, dtype=np.uint8),
+        water=np.full_like(base, NO_WATER),
+        road=np.where(base > 15, 4, 0).astype(np.uint16),
+        chunk_size=4,
+        scale={"metersPerCell": 1, "metersPerStep": 1, "elevationDatumMeters": 0},
+        surfaces={1: "rock"},
+        style="s",
+        attribution=[],
+        start=(3, 2),
+        compress=True,
+    )
+    a = write_package(tmp_path / "a", **args)
+    b = write_package(tmp_path / "b", **args)
+    assert a["packageHash"] == b["packageHash"]
+    assert a["heightRange"] == [int(base.min()), int(base.max())]
+    ref = a["chunks"][0]
+    assert ref["path"].endswith(".pxwc.gz")
+    chunk = decode_chunk((tmp_path / "a" / ref["path"]).read_bytes())
+    np.testing.assert_array_equal(chunk.base, base[:4, :4])
+    args["road"] = np.zeros_like(base, dtype=np.uint16)
+    c = write_package(tmp_path / "c", **args)
+    assert c["packageHash"] != a["packageHash"]

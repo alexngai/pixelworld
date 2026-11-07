@@ -58,6 +58,37 @@ export const EDGE_NORMAL: readonly (readonly [number, number])[] = [
   [-1, 0],
 ];
 
+/**
+ * Road network layer (u16 per cell). Bits 0–7: the cell's road connects to the
+ * neighbour in direction ROAD_DIRS[i]. Bits 8–11: a diagonal road between two
+ * other cells passes through corner i of this cell (so the road strip can be
+ * drawn across the corner without gaps).
+ */
+export const ROAD_DIRS: readonly (readonly [number, number])[] = [
+  [0, -1], // 0 N
+  [1, -1], // 1 NE
+  [1, 0], // 2 E
+  [1, 1], // 3 SE
+  [0, 1], // 4 S
+  [-1, 1], // 5 SW
+  [-1, 0], // 6 W
+  [-1, -1], // 7 NW
+];
+export const ROAD_CROSSING_SHIFT = 8;
+
+export function roadConnects(mask: number, dir: number): boolean {
+  return ((mask >> dir) & 1) === 1;
+}
+
+export function roadCrossesCorner(mask: number, corner: number): boolean {
+  return ((mask >> (ROAD_CROSSING_SHIFT + corner)) & 1) === 1;
+}
+
+/** Direction index from (dx, dy) in −1..1, or −1 for (0, 0). */
+export function roadDirIndex(dx: number, dy: number): number {
+  return ROAD_DIRS.findIndex(([x, y]) => x === dx && y === dy);
+}
+
 /** Largest corner offset a shape can encode (2 bits per corner). */
 export const MAX_CORNER_OFFSET = 3;
 /** Sentinel for "no water" in the water layer. */
@@ -138,36 +169,89 @@ export function splitDiagonal(h: readonly [number, number, number, number]): 0 |
   return h[1] + h[3] > h[0] + h[2] ? 1 : 0;
 }
 
+export interface TerrainLayers {
+  base: Int16Array;
+  shape: Uint8Array;
+  surface: Uint8Array;
+  water: Int16Array;
+  road: Uint16Array;
+  roadClass: Uint8Array;
+  geology: Uint8Array;
+}
+
+/**
+ * Copy a w×h block of cells from src (at sx, sy) to dst (at dx, dy), skipping
+ * cells outside either grid.
+ */
+export function copyCells(
+  src: TerrainGrid,
+  sx: number,
+  sy: number,
+  dst: TerrainGrid,
+  dx: number,
+  dy: number,
+  w: number,
+  h: number,
+): void {
+  const a = src.layers();
+  const b = dst.layers();
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!src.inBounds(sx + x, sy + y) || !dst.inBounds(dx + x, dy + y)) continue;
+      const si = src.index(sx + x, sy + y);
+      const di = dst.index(dx + x, dy + y);
+      b.base[di] = a.base[si]!;
+      b.shape[di] = a.shape[si]!;
+      b.surface[di] = a.surface[si]!;
+      b.water[di] = a.water[si]!;
+      b.road[di] = a.road[si]!;
+      b.roadClass[di] = a.roadClass[si]!;
+      b.geology[di] = a.geology[si]!;
+    }
+  }
+}
+
 /** Dense terrain layers for a rectangular block of cells (row-major, y then x). */
 export class TerrainGrid {
   readonly base: Int16Array;
   readonly shape: Uint8Array;
   readonly surface: Uint8Array;
   readonly water: Int16Array;
+  /** Road connectivity + corner crossings (see ROAD_DIRS). */
+  readonly road: Uint16Array;
+  /** Road class id (manifest roadClasses), 0 = none. */
+  readonly roadClass: Uint8Array;
+  /** Geology province id (manifest geology), selects the cliff strata set. */
+  readonly geology: Uint8Array;
 
   constructor(
     readonly width: number,
     readonly height: number,
-    layers?: {
-      base?: Int16Array;
-      shape?: Uint8Array;
-      surface?: Uint8Array;
-      water?: Int16Array;
-    },
+    layers?: Partial<TerrainLayers>,
   ) {
     const n = width * height;
     this.base = layers?.base ?? new Int16Array(n);
     this.shape = layers?.shape ?? new Uint8Array(n);
     this.surface = layers?.surface ?? new Uint8Array(n);
     this.water = layers?.water ?? new Int16Array(n).fill(NO_WATER);
-    for (const [name, arr] of Object.entries({
+    this.road = layers?.road ?? new Uint16Array(n);
+    this.roadClass = layers?.roadClass ?? new Uint8Array(n);
+    this.geology = layers?.geology ?? new Uint8Array(n);
+    for (const [name, arr] of Object.entries(this.layers())) {
+      if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
+    }
+  }
+
+  layers(): TerrainLayers {
+    return {
       base: this.base,
       shape: this.shape,
       surface: this.surface,
       water: this.water,
-    })) {
-      if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
-    }
+      road: this.road,
+      roadClass: this.roadClass,
+      geology: this.geology,
+    };
   }
 
   inBounds(x: number, y: number): boolean {
@@ -246,19 +330,7 @@ export class TerrainGrid {
   /** Copy a sub-rectangle (clipped to bounds) into a new grid. */
   slice(x0: number, y0: number, w: number, h: number): TerrainGrid {
     const out = new TerrainGrid(w, h);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const sx = x0 + x;
-        const sy = y0 + y;
-        if (!this.inBounds(sx, sy)) continue;
-        const si = this.index(sx, sy);
-        const di = out.index(x, y);
-        out.base[di] = this.base[si]!;
-        out.shape[di] = this.shape[si]!;
-        out.surface[di] = this.surface[si]!;
-        out.water[di] = this.water[si]!;
-      }
-    }
+    copyCells(this, x0, y0, out, 0, 0, w, h);
     return out;
   }
 }
