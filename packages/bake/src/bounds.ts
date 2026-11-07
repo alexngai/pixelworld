@@ -1,5 +1,42 @@
 import { DEPTH_PER_STEP, HALF_H, HALF_W, STEP_PX, STEP_WORLD, rotateXY, type Rotation } from "@pixelworld/grid";
-import type { CellRect, MeshData } from "@pixelworld/generators";
+import type { CellRect, InstancedBatch, MeshData } from "@pixelworld/generators";
+
+/** What a bake draws: plain meshes plus instanced batches of repeated objects. */
+export interface BakeScene {
+  meshes: MeshData[];
+  batches: InstancedBatch[];
+}
+
+export function asScene(s: MeshData | BakeScene): BakeScene {
+  return "meshes" in s ? s : { meshes: [s], batches: [] };
+}
+
+/**
+ * Visit every point that bounds the scene: mesh vertices, and the bounding-box
+ * corners of each instance. fn receives (x, y, h, cellX, cellY).
+ */
+export function forEachScenePoint(
+  scene: BakeScene,
+  fn: (x: number, y: number, h: number, cx: number, cy: number) => void,
+): void {
+  for (const mesh of scene.meshes)
+    for (let v = 0; v < mesh.vertexCount; v++)
+      fn(mesh.position[v * 3]!, mesh.position[v * 3 + 1]!, mesh.position[v * 3 + 2]!, mesh.cell[v * 2]!, mesh.cell[v * 2 + 1]!);
+  for (const b of scene.batches) {
+    const p = b.mesh.position;
+    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let i = 0; i < p.length; i += 3) {
+      x0 = Math.min(x0, p[i]!); x1 = Math.max(x1, p[i]!);
+      y0 = Math.min(y0, p[i + 1]!); y1 = Math.max(y1, p[i + 1]!);
+      z0 = Math.min(z0, p[i + 2]!); z1 = Math.max(z1, p[i + 2]!);
+    }
+    for (let k = 0; k < b.offsets.length / 3; k++) {
+      const ox = b.offsets[k * 3]!, oy = b.offsets[k * 3 + 1]!, oz = b.offsets[k * 3 + 2]!;
+      const cx = b.cells[k * 2]!, cy = b.cells[k * 2 + 1]!;
+      for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) fn(ox + x, oy + y, oz + z, cx, cy);
+    }
+  }
+}
 
 export interface ScreenBounds {
   minSx: number;
@@ -12,15 +49,16 @@ export interface ScreenBounds {
 
 export type Ownership = CellRect | "all";
 
-function isOwned(mesh: MeshData, v: number, owned: Ownership): boolean {
-  if (owned === "all") return true;
-  const cx = mesh.cell[v * 2]!;
-  const cy = mesh.cell[v * 2 + 1]!;
-  return cx >= owned.x0 && cx < owned.x1 && cy >= owned.y0 && cy < owned.y1;
+function owns(owned: Ownership, cx: number, cy: number): boolean {
+  return owned === "all" || (cx >= owned.x0 && cx < owned.x1 && cy >= owned.y0 && cy < owned.y1);
 }
 
-/** Screen-space bounds and depth range of the vertices selected by `owned`. */
-export function screenBounds(mesh: MeshData, r: Rotation, owned: Ownership): ScreenBounds | null {
+/** Screen-space bounds and depth range of the scene points selected by `owned`. */
+export function screenBounds(
+  scene: MeshData | BakeScene,
+  r: Rotation,
+  owned: Ownership,
+): ScreenBounds | null {
   const b: ScreenBounds = {
     minSx: Infinity,
     maxSx: -Infinity,
@@ -30,11 +68,10 @@ export function screenBounds(mesh: MeshData, r: Rotation, owned: Ownership): Scr
     maxDepth: -Infinity,
   };
   let any = false;
-  for (let v = 0; v < mesh.vertexCount; v++) {
-    if (!isOwned(mesh, v, owned)) continue;
+  forEachScenePoint(asScene(scene), (x, y, h, cx, cy) => {
+    if (!owns(owned, cx, cy)) return;
     any = true;
-    const [u, w] = rotateXY(mesh.position[v * 3]!, mesh.position[v * 3 + 1]!, r);
-    const h = mesh.position[v * 3 + 2]!;
+    const [u, w] = rotateXY(x, y, r);
     const sx = HALF_W * (u - w);
     const sy = HALF_H * (u + w) - STEP_PX * h;
     const d = u + w + h * DEPTH_PER_STEP;
@@ -44,7 +81,7 @@ export function screenBounds(mesh: MeshData, r: Rotation, owned: Ownership): Scr
     if (sy > b.maxSy) b.maxSy = sy;
     if (d < b.minDepth) b.minDepth = d;
     if (d > b.maxDepth) b.maxDepth = d;
-  }
+  });
   return any ? b : null;
 }
 
@@ -91,7 +128,7 @@ export interface LightBounds {
  * can shadow them; the depth range must include every caster.
  */
 export function lightBounds(
-  mesh: MeshData,
+  scene: MeshData | BakeScene,
   r: Rotation,
   owned: Ownership,
   basis: LightBasis,
@@ -103,20 +140,20 @@ export function lightBounds(
   let maxY = -Infinity;
   let minT = Infinity;
   let maxT = -Infinity;
-  for (let v = 0; v < mesh.vertexCount; v++) {
-    const [u, w] = rotateXY(mesh.position[v * 3]!, mesh.position[v * 3 + 1]!, r);
-    const z = mesh.position[v * 3 + 2]! * STEP_WORLD;
+  forEachScenePoint(asScene(scene), (x, y, h, cx, cy) => {
+    const [u, w] = rotateXY(x, y, r);
+    const z = h * STEP_WORLD;
     const t = u * basis.sun[0] + w * basis.sun[1] + z * basis.sun[2];
     if (t < minT) minT = t;
     if (t > maxT) maxT = t;
-    if (!isOwned(mesh, v, owned)) continue;
+    if (!owns(owned, cx, cy)) return;
     const lx = u * basis.right[0] + w * basis.right[1] + z * basis.right[2];
     const ly = u * basis.up[0] + w * basis.up[1] + z * basis.up[2];
     if (lx < minX) minX = lx;
     if (lx > maxX) maxX = lx;
     if (ly < minY) minY = ly;
     if (ly > maxY) maxY = ly;
-  }
+  });
   return {
     rect: [minX - pad, minY - pad, maxX + pad, maxY + pad],
     depth: [minT - 0.5, maxT + 0.5],

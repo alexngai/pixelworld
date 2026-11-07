@@ -7,6 +7,8 @@ layout(location = 2) in vec3 aMat;     // material, face kind, ambient occlusion
 layout(location = 3) in vec2 aCell;    // owning cell
 layout(location = 4) in vec2 aRoad;    // road mask, road class (top faces)
 layout(location = 5) in float aGeol;   // geology province id
+layout(location = 6) in vec3 aInstOffset; // instanced objects: position offset (0 otherwise)
+layout(location = 7) in vec2 aInstCell;   // instanced objects: owning cell (0 otherwise)
 `;
 
 export const SHADOW_VS = /* glsl */ `#version 300 es
@@ -20,7 +22,8 @@ uniform vec3 uLightUp;
 uniform vec4 uLightRect;   // minX, minY, maxX, maxY
 uniform vec2 uLightDepth;  // min/max distance toward the sun
 void main() {
-  vec3 P = vec3(uRot * aPos.xy, aPos.z * uStepWorld);
+  vec3 pos = aPos + aInstOffset;
+  vec3 P = vec3(uRot * pos.xy, pos.z * uStepWorld);
   float lx = dot(P, uLightRight);
   float ly = dot(P, uLightUp);
   float t = dot(P, uSun);
@@ -48,6 +51,7 @@ uniform float uStepWorld;
 uniform vec3 uSun;
 uniform vec3 uLightRight;
 uniform vec3 uLightUp;
+uniform float uScale;      // render units per world cell (1, or < 1 for fine worlds)
 
 out vec3 vNormal;
 out vec3 vLight;
@@ -60,8 +64,9 @@ flat out vec2 vRoad;
 flat out float vGeol;
 
 void main() {
-  vec2 uv = uRot * aPos.xy;
-  float h = aPos.z;
+  vec3 pos = aPos + aInstOffset;
+  vec2 uv = uRot * pos.xy;
+  float h = pos.z;
   float sx = 16.0 * (uv.x - uv.y);
   float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
   float d = uv.x + uv.y + h / 3.0;
@@ -71,13 +76,13 @@ void main() {
     1.0 - 2.0 * (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x),
     1.0);
   vNormal = vec3(uRot * aNormal.xy, aNormal.z);
-  vec3 P = vec3(uv, h * uStepWorld) + vNormal * 0.04;  // normal offset against acne
+  vec3 P = vec3(uv, h * uStepWorld) + vNormal * 0.04 * uScale;  // normal offset against acne
   vLight = vec3(dot(P, uLightRight), dot(P, uLightUp), dot(P, uSun));
   vH = h;
   vAo = aMat.z;
-  vGrid = aPos.xy;
+  vGrid = pos.xy / uScale;  // world cell coordinates
   vMat = aMat.xy;
-  vCell = aCell;
+  vCell = aCell + aInstCell;
   vRoad = aRoad;
   vGeol = aGeol;
 }
@@ -107,6 +112,7 @@ uniform vec4 uLightRect;
 uniform vec2 uLightDepth;
 uniform vec4 uOwned;         // x0, y0, x1, y1 (cells)
 uniform float uAoStrength;
+uniform float uScale;
 
 // Packed tables (see packages/style MaterialTables).
 uniform vec4 uSurfaces[16];      // ramp (-1 = strata), pattern, density, -
@@ -217,7 +223,7 @@ void main() {
     if (all(greaterThanEqual(luv, vec2(0.0))) && all(lessThanEqual(luv, vec2(1.0)))) {
       float z = texture(uShadowMap, luv).r;
       float occluder = uLightDepth.x + (1.0 - z) * (uLightDepth.y - uLightDepth.x);
-      shadowed = occluder > vLight.z + 0.02;
+      shadowed = occluder > vLight.z + 0.02 * uScale;
     }
   }
   float level = 4.0 + (ndl - uLightLevels.x) / uLightLevels.y;

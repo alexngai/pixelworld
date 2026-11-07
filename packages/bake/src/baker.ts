@@ -1,7 +1,7 @@
 import { STEP_WORLD, SUN_DIR, rotationMat2, type Rotation } from "@pixelworld/grid";
-import type { MeshData } from "@pixelworld/generators";
+import type { InstancedBatch, MeshData } from "@pixelworld/generators";
 import { SHADES, type MaterialTables } from "@pixelworld/style";
-import { lightBasis, lightBounds, pixelRect, screenBounds, type Ownership } from "./bounds";
+import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
 import { Uniforms, compileProgram, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
 import {
   COMPOSITE_FS,
@@ -33,7 +33,7 @@ export interface BakeTimings {
 
 export interface BakeOptions {
   shadows: boolean;
-  /** Shadow-map texel size in cells. */
+  /** Shadow-map texel size in render units (default 0.03 × render scale). */
   shadowTexel?: number;
 }
 
@@ -41,13 +41,19 @@ export interface StyleParams {
   tables: MaterialTables;
   aoStrength: number;
   outlineThreshold: number;
+  /**
+   * Render units per world cell. 1 for normal worlds; below 1 for fine worlds
+   * whose cells are drawn smaller than a 32 px tile (mesh positions are then
+   * already scaled; patterns and road decals still work in world cells).
+   */
+  renderScale?: number;
 }
 
 /**
  * Bump whenever bake output changes for the same inputs (shaders, passes,
  * generators). Persistent tile caches key on it.
  */
-export const BAKE_VERSION = "m1.1";
+export const BAKE_VERSION = "m1.2";
 
 const PAD = 2;
 const MAX_SHADOW = 4096;
@@ -56,6 +62,8 @@ interface UploadedMesh {
   vao: WebGLVertexArrayObject;
   buffers: WebGLBuffer[];
   count: number;
+  /** Instance count for instanced batches; 0 for plain meshes. */
+  instances: number;
 }
 
 /** Bakes meshes into indexed pixel art with depth. Runs in a worker or on the main thread. */
@@ -67,6 +75,7 @@ export class Baker {
   private gU: Uniforms;
   private compU: Uniforms;
   private meshes = new WeakMap<MeshData, UploadedMesh>();
+  private batches = new WeakMap<InstancedBatch, UploadedMesh>();
   private style: StyleParams | null = null;
   private emptyVao: WebGLVertexArrayObject;
 
@@ -87,16 +96,31 @@ export class Baker {
   upload(mesh: MeshData): UploadedMesh {
     const existing = this.meshes.get(mesh);
     if (existing) return existing;
+    const up = this.createVao(mesh, null);
+    this.meshes.set(mesh, up);
+    return up;
+  }
+
+  uploadBatch(batch: InstancedBatch): UploadedMesh {
+    const existing = this.batches.get(batch);
+    if (existing) return existing;
+    const up = this.createVao(batch.mesh, batch);
+    this.batches.set(batch, up);
+    return up;
+  }
+
+  private createVao(mesh: MeshData, batch: InstancedBatch | null): UploadedMesh {
     const gl = this.gl;
     const vao = gl.createVertexArray()!;
     gl.bindVertexArray(vao);
     const buffers: WebGLBuffer[] = [];
-    const attrib = (loc: number, data: Float32Array, size: number) => {
+    const attrib = (loc: number, data: Float32Array, size: number, divisor = 0) => {
       const b = gl.createBuffer()!;
       gl.bindBuffer(gl.ARRAY_BUFFER, b);
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(loc, divisor);
       buffers.push(b);
     };
     attrib(0, mesh.position, 3);
@@ -105,27 +129,56 @@ export class Baker {
     attrib(3, mesh.cell, 2);
     attrib(4, mesh.road, 2);
     attrib(5, mesh.geology, 1);
+    // Plain meshes leave 6/7 disabled: the generic value (0, 0, 0) applies.
+    if (batch) {
+      attrib(6, batch.offsets, 3, 1);
+      attrib(7, batch.cells, 2, 1);
+    }
     gl.bindVertexArray(null);
-    const up = { vao, buffers, count: mesh.vertexCount };
-    this.meshes.set(mesh, up);
-    return up;
+    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0 };
+  }
+
+  private free(up: UploadedMesh): void {
+    this.gl.deleteVertexArray(up.vao);
+    up.buffers.forEach((b) => this.gl.deleteBuffer(b));
   }
 
   release(mesh: MeshData): void {
     const up = this.meshes.get(mesh);
     if (!up) return;
-    this.gl.deleteVertexArray(up.vao);
-    up.buffers.forEach((b) => this.gl.deleteBuffer(b));
+    this.free(up);
     this.meshes.delete(mesh);
   }
 
+  /** Release GPU buffers of everything in a scene. */
+  releaseScene(scene: MeshData | BakeScene): void {
+    const sc = asScene(scene);
+    for (const m of sc.meshes) this.release(m);
+    for (const b of sc.batches) {
+      const up = this.batches.get(b);
+      if (!up) continue;
+      this.free(up);
+      this.batches.delete(b);
+    }
+  }
+
+  private drawScene(draws: UploadedMesh[]): void {
+    const gl = this.gl;
+    for (const d of draws) {
+      if (!d.count) continue;
+      gl.bindVertexArray(d.vao);
+      if (d.instances) gl.drawArraysInstanced(gl.TRIANGLES, 0, d.count, d.instances);
+      else gl.drawArrays(gl.TRIANGLES, 0, d.count);
+    }
+  }
+
   /**
-   * Bake the parts of `mesh` owned by `owned` (a cell rectangle, or "all").
-   * The rest of the mesh is context: it casts shadows and occludes, and is
+   * Bake the parts of `scene` owned by `owned` (a cell rectangle, or "all").
+   * The rest of the scene is context: it casts shadows and occludes, and is
    * used for outlines, but its pixels are left empty for its own tile.
    */
   bake(
-    mesh: MeshData,
+    input: MeshData | BakeScene,
     rotation: Rotation,
     owned: Ownership,
     options: BakeOptions,
@@ -134,9 +187,10 @@ export class Baker {
     if (!style) throw new Error("Baker.setStyle must be called before bake");
     const t0 = performance.now();
     const gl = this.gl;
-    const ownedBounds = screenBounds(mesh, rotation, owned);
+    const scene = asScene(input);
+    const ownedBounds = screenBounds(scene, rotation, owned);
     if (!ownedBounds) return null;
-    const all = screenBounds(mesh, rotation, "all")!;
+    const all = screenBounds(scene, rotation, "all")!;
     const rect = pixelRect(ownedBounds);
     const gw = rect.width + 2 * PAD;
     const gh = rect.height + 2 * PAD;
@@ -150,7 +204,8 @@ export class Baker {
       );
     const rot = rotationMat2(rotation);
     const basis = lightBasis(SUN_DIR);
-    const up = this.upload(mesh);
+    const draws = [...scene.meshes.map((m) => this.upload(m)), ...scene.batches.map((b) => this.uploadBatch(b))];
+    const scale = style.renderScale ?? 1;
 
     gl.disable(gl.CULL_FACE);
     gl.disable(gl.BLEND);
@@ -159,8 +214,8 @@ export class Baker {
     gl.depthMask(true);
 
     // 1. Shadow map
-    const lb = lightBounds(mesh, rotation, owned, basis);
-    const texel = options.shadowTexel ?? 0.03;
+    const lb = lightBounds(scene, rotation, owned, basis, 0.5 * scale);
+    const texel = options.shadowTexel ?? 0.03 * scale;
     const sw = Math.min(MAX_SHADOW, Math.max(1, Math.ceil((lb.rect[2] - lb.rect[0]) / texel)));
     const sh = Math.min(MAX_SHADOW, Math.max(1, Math.ceil((lb.rect[3] - lb.rect[1]) / texel)));
     let shadowTex: WebGLTexture | null = null;
@@ -180,8 +235,7 @@ export class Baker {
       gl.uniform3fv(u.loc("uLightUp"), basis.up);
       gl.uniform4fv(u.loc("uLightRect"), lb.rect);
       gl.uniform2fv(u.loc("uLightDepth"), lb.depth);
-      gl.bindVertexArray(up.vao);
-      gl.drawArrays(gl.TRIANGLES, 0, up.count);
+      this.drawScene(draws);
     }
 
     // 2. G-buffer: ramp, light level, AO, flags + depth
@@ -201,6 +255,7 @@ export class Baker {
       gl.uniform2f(u.loc("uSize"), gw, gh);
       gl.uniform2fv(u.loc("uDepthRange"), depthRange);
       gl.uniform1f(u.loc("uStepWorld"), STEP_WORLD);
+      gl.uniform1f(u.loc("uScale"), scale);
       gl.uniform3fv(u.loc("uSun"), basis.sun);
       gl.uniform3fv(u.loc("uLightRight"), basis.right);
       gl.uniform3fv(u.loc("uLightUp"), basis.up);
@@ -225,8 +280,7 @@ export class Baker {
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);
     }
-    gl.bindVertexArray(up.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, up.count);
+    this.drawScene(draws);
 
     // 3. Composite: cleanup, AO dither, outlines → palette index + local depth
     const outTex = rgba8Texture(gl, rect.width, rect.height);
@@ -246,7 +300,7 @@ export class Baker {
       gl.uniform2i(u.loc("uOrigin"), rect.left, rect.top);
       gl.uniform2fv(u.loc("uDepthRange"), depthRange);
       gl.uniform1f(u.loc("uDepthBase"), depthBase);
-      gl.uniform1f(u.loc("uOutlineThreshold"), style.outlineThreshold);
+      gl.uniform1f(u.loc("uOutlineThreshold"), style.outlineThreshold * scale);
       gl.uniform1i(u.loc("uShades"), SHADES);
     }
     gl.bindVertexArray(this.emptyVao);

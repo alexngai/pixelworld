@@ -29,7 +29,7 @@ export class BakeHost {
         case "init":
           this.init = msg;
           this.baker.setStyle(msg.style);
-          for (const m of this.meshCache.values()) this.baker.release(m);
+          for (const m of this.meshCache.values()) this.baker.releaseScene(m);
           this.meshCache.clear();
           break;
         case "bakeTile":
@@ -40,7 +40,7 @@ export class BakeHost {
           const mesh = buildBoxesMesh(msg.boxes);
           const meshMs = performance.now() - t0;
           const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: false });
-          this.baker.release(mesh);
+          this.baker.releaseScene(mesh);
           this.reply(msg.id, res, meshMs, mesh.vertexCount);
           break;
         }
@@ -73,7 +73,7 @@ export class BakeHost {
       this.meshCache.set(key, mesh);
       if (this.meshCache.size > BakeHost.MESH_CACHE) {
         const oldest = this.meshCache.keys().next().value!;
-        this.baker.release(this.meshCache.get(oldest)!);
+        this.baker.releaseScene(this.meshCache.get(oldest)!);
         this.meshCache.delete(oldest);
       }
     }
