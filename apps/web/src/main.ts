@@ -10,6 +10,7 @@ import {
   cellsScreenRect,
   hashString,
   loadManifest,
+  loadObjects,
   tileKey,
   worldDepthRange,
   type GpuImage,
@@ -21,8 +22,8 @@ import { buildPalette, materialTables, validateStyle, type StylePack } from "@pi
 import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
 import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
-const TILE_SIZE = 32;
-const MARGIN = 16;
+const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
+const MARGIN = 16; // context around a tile, in render units (cells at scale 1)
 const PAN_SPEED = 220; // internal px / s
 const DRIVE_SPEED = 3; // cells / s
 // Steepest grade the rover can drive, in height steps per cell travelled. Gentle
@@ -103,22 +104,31 @@ async function main() {
   attribution.replaceChildren(short, sourcesButton);
   renderSources(manifest, sources);
 
-  const style = validateStyle(styleJson as StylePack);
+  // Render scale: fine worlds draw each cell smaller (render units = cells × RS).
+  const RS = manifest.render?.scale ?? 1;
+  const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
+  const margin = Math.ceil(MARGIN / RS);
+
+  const style = validateStyle(styleJson as unknown as StylePack);
   const palette = buildPalette(style);
+  let night = params.get("palette") === "night" && !!style.night;
   const { metersPerStep, elevationDatumMeters } = manifest.scale;
+  // Strata are compared with render-unit heights in the shader.
   const tables = materialTables(
     style,
     palette,
     manifest,
-    (m) => (m - elevationDatumMeters) / metersPerStep,
+    (m) => ((m - elevationDatumMeters) / metersPerStep) * RS,
   );
+  const objectsFile = params.get("objects") === "0" ? null : await loadObjects(worldUrl, manifest);
   if (!manifest.heightRange) await store.ensureRect(0, 0, manifest.cellsX, manifest.cellsY);
   const [minH, maxH] =
     manifest.heightRange ?? store.slice(0, 0, manifest.cellsX, manifest.cellsY).grid.heightRange();
   const floor = minH - 2;
 
   const compositor = new Compositor(canvas);
-  compositor.setPalette(palette.rgba);
+  const applyPalette = () => compositor.setPalette(night ? buildPalette(style, "night").rgba : palette.rgba);
+  applyPalette();
 
   const styleHash = hashString(JSON.stringify(styleJson));
   const cache = params.get("cache") === "0" ? null : await TileCache.open();
@@ -128,6 +138,7 @@ async function main() {
       manifest.packageHash ?? "nohash",
       styleHash,
       BAKE_VERSION,
+      objectsFile ? "objects" : "terrain",
       tileKey(t.rotation, t.tx, t.ty),
     ].join("|");
 
@@ -136,10 +147,10 @@ async function main() {
       const hit = await cache.get(cacheKey(t));
       if (hit) return { cached: hit };
     }
-    const x0 = t.tx * TILE_SIZE - MARGIN;
-    const y0 = t.ty * TILE_SIZE - MARGIN;
-    const x1 = (t.tx + 1) * TILE_SIZE + MARGIN;
-    const y1 = (t.ty + 1) * TILE_SIZE + MARGIN;
+    const x0 = Math.max(0, t.tx * tileSize - margin);
+    const y0 = Math.max(0, t.ty * tileSize - margin);
+    const x1 = Math.min(manifest.cellsX, (t.tx + 1) * tileSize + margin);
+    const y1 = Math.min(manifest.cellsY, (t.ty + 1) * tileSize + margin);
     await store.ensureRect(x0, y0, x1, y1);
     const s = store.slice(x0, y0, x1, y1);
     return {
@@ -154,25 +165,38 @@ async function main() {
         tables,
         aoStrength: style.ao.strength,
         outlineThreshold: style.outline.depthThreshold,
+        renderScale: RS,
       },
-      tileSize: TILE_SIZE,
-      margin: MARGIN,
+      tileSize,
+      margin,
       floor,
       worldWidth: manifest.cellsX,
       worldHeight: manifest.cellsY,
+      renderScale: RS,
+      objects:
+        objectsFile && style.assets
+          ? {
+              instances: objectsFile.instances,
+              catalog: style.assets,
+              rampIds: [...palette.rampIds],
+              metersPerCell: manifest.scale.metersPerCell,
+              heightStretch: style.objects?.heightStretch ?? 1,
+              variants: style.objects?.variants ?? 6,
+            }
+          : undefined,
     },
     prepare,
   );
 
   // Tile height ranges (for screen-rect estimates before baking), from the manifest.
-  const tilesX = Math.ceil(manifest.cellsX / TILE_SIZE);
-  const tilesY = Math.ceil(manifest.cellsY / TILE_SIZE);
+  const tilesX = Math.ceil(manifest.cellsX / tileSize);
+  const tilesY = Math.ceil(manifest.cellsY / tileSize);
   const tileHeights: [number, number][] = [];
   for (let ty = 0; ty < tilesY; ty++)
     for (let tx = 0; tx < tilesX; tx++) {
-      const x0 = tx * TILE_SIZE;
-      const y0 = ty * TILE_SIZE;
-      const [lo, hi] = store.heightRangeFor(x0, y0, x0 + TILE_SIZE, y0 + TILE_SIZE);
+      const x0 = tx * tileSize;
+      const y0 = ty * tileSize;
+      const [lo, hi] = store.heightRangeFor(x0, y0, x0 + tileSize, y0 + tileSize);
       const edge = tx === 0 || ty === 0 || tx === tilesX - 1 || ty === tilesY - 1;
       tileHeights.push([edge ? floor : lo, hi]);
     }
@@ -248,10 +272,13 @@ async function main() {
   const camera = new Camera(1, 1);
   camera.rotation = (num("rot", 0) & 3) as Rotation;
   let follow = !(params.has("fx") || params.has("fy"));
-  camera.fx = num("fx", rover.x);
-  camera.fy = num("fy", rover.y);
-  if (!follow) await ensureAt(camera.fx, camera.fy);
-  camera.fh = follow ? rover.h : (store.surfaceHeightAt(camera.fx, camera.fy) ?? rover.h);
+  // The camera works in render units; fx/fy in the URL are world cells.
+  const focusX = num("fx", rover.x);
+  const focusY = num("fy", rover.y);
+  if (!follow) await ensureAt(focusX, focusY);
+  camera.fx = focusX * RS;
+  camera.fy = focusY * RS;
+  camera.fh = (follow ? rover.h : (store.surfaceHeightAt(focusX, focusY) ?? rover.h)) * RS;
   let noclip = false;
   let zoomFromParams = params.has("zoom");
 
@@ -276,7 +303,7 @@ async function main() {
   resize();
   window.addEventListener("resize", resize);
 
-  const depthRange = worldDepthRange(manifest.cellsX, manifest.cellsY, floor, maxH);
+  const depthRange = worldDepthRange(manifest.cellsX * RS, manifest.cellsY * RS, floor * RS, maxH * RS);
 
   // ---- input ----
   const keys = new Set<string>();
@@ -287,6 +314,10 @@ async function main() {
     else if (k === "e") camera.rotate(1);
     else if (k === "f") follow = !follow;
     else if (k === "n") noclip = !noclip;
+    else if (k === "t" && style.night) {
+      night = !night;
+      applyPalette();
+    }
     else if (k === "h") [hud, help].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "escape") sources.classList.add("hidden");
@@ -335,7 +366,7 @@ async function main() {
     if (keys.has("arrowdown")) my += 1;
     if (mx || my) {
       const [gx, gy] = camera.screenDirToGrid(mx, my);
-      const step = DRIVE_SPEED * dt;
+      const step = (DRIVE_SPEED * dt) / RS; // same on-screen speed at any render scale
       const tryMove = (nx: number, ny: number) => {
         if (nx < 0.3 || ny < 0.3 || nx > manifest.cellsX - 0.3 || ny > manifest.cellsY - 0.3)
           return false;
@@ -358,9 +389,9 @@ async function main() {
       dirty = true;
     }
     if (follow) {
-      camera.fx = rover.x;
-      camera.fy = rover.y;
-      camera.fh = rover.h;
+      camera.fx = rover.x * RS;
+      camera.fy = rover.y * RS;
+      camera.fh = rover.h * RS;
     }
   }
 
@@ -385,12 +416,12 @@ async function main() {
       for (let tx = 0; tx < tilesX; tx++) {
         const [lo, hi] = tileHeights[ty * tilesX + tx]!;
         const rect = cellsScreenRect(
-          tx * TILE_SIZE,
-          ty * TILE_SIZE,
-          Math.min(manifest.cellsX, (tx + 1) * TILE_SIZE),
-          Math.min(manifest.cellsY, (ty + 1) * TILE_SIZE),
-          lo,
-          hi,
+          tx * tileSize * RS,
+          ty * tileSize * RS,
+          Math.min(manifest.cellsX, (tx + 1) * tileSize) * RS,
+          Math.min(manifest.cellsY, (ty + 1) * tileSize) * RS,
+          lo * RS,
+          hi * RS + (objectsFile ? 12 : 0), // tall objects rise up to ~96 px above the terrain
           r,
         );
         const near =
@@ -433,7 +464,7 @@ async function main() {
     if (!sprite) complete = false;
 
     if (dirty) {
-      const p = project(rover.x, rover.y, rover.h, r);
+      const p = project(rover.x * RS, rover.y * RS, rover.h * RS, r);
       compositor.render(
         {
           left: snap.left,
@@ -485,6 +516,9 @@ async function main() {
       rotation: camera.rotation,
       rover: { x: rover.x, y: rover.y, h: rover.h },
       cache: cache ? "indexeddb" : "off",
+      renderScale: RS,
+      objects: objectsFile?.instances.length ?? 0,
+      palette: night ? "night" : "day",
       cacheWrites: cache?.writes ?? 0,
     };
   }
@@ -494,7 +528,8 @@ async function main() {
     const meters = Math.round(rover.h * metersPerStep + elevationDatumMeters);
     const ve = verticalExaggeration(manifest.scale).toFixed(2);
     hud.textContent = [
-      `${manifest.name} · ${manifest.scale.metersPerCell} m/cell · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
+      `${manifest.name} · ${manifest.scale.metersPerCell} m/cell${RS !== 1 ? ` drawn at ×${RS}` : ""} · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
+      `      ${s.objects} objects · ${s.palette} palette${style.night ? " (T toggles)" : ""}`,
       `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
       `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
       `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,

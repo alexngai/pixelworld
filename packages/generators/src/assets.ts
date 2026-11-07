@@ -46,8 +46,9 @@ export function resolveAsset(catalog: AssetCatalog, group: string): AssetSpec | 
 interface GenContext {
   rand: () => number;
   ramp: (role: string) => number;
+  /** Ramp ids of every role named `role` or `role.<variant>` (e.g. wall, wall.gold). */
+  ramps: (role: string) => number[];
   param: (name: string, fallback: number) => number;
-  list: (name: string) => number[];
   /** Footprint mask in voxels (buildings). */
   mask?: { sx: number; sy: number; on: Uint8Array };
   /** Target height in voxels (buildings, landmarks). */
@@ -125,17 +126,24 @@ const GENERATORS: Record<string, Generator> = {
   },
 
   /** Extruded footprint; `style` picks roof and facade treatment. */
-  building: ({ rand, ramp, param, list, mask, heightVox }) => {
+  building: ({ rand, ramp, ramps, param, mask, heightVox }) => {
     if (!mask) throw new Error("building generator needs a footprint");
     const style = param("style", 0); // 0 residential, 1 low-rise, 2 tower
     const H = Math.max(1, Math.round(heightVox ?? param("defaultHeight", 2)));
     const roofExtra = style === 0 ? Math.ceil(Math.min(mask.sx, mask.sy) / 2) : 2;
     const m = new VoxelModel(mask.sx, mask.sy, H + roofExtra + 1);
-    const facades = list("facades");
-    const wallRamp = facades.length ? facades[Math.floor(rand() * facades.length)]! : ramp("wall");
-    const wall = m.material(wallRamp);
+    const walls = ramps("wall");
+    const wall = m.material(walls[Math.floor(rand() * walls.length)]!);
     const roof = m.material(ramp("roof"));
     const window = m.material(ramp("window"));
+    // Lit windows look like glass by day and glow at night (emissive ramp).
+    const litRamps = ramps("lit");
+    const lit = litRamps.length ? m.material(litRamps[Math.floor(rand() * litRamps.length)]!) : window;
+    const litFraction = param("litFraction", 0.35);
+    const pane = () => (rand() < litFraction ? lit : window);
+    // Optional neon trim along the top of the walls (signature lighting).
+    const trims = ramps("trim");
+    const trim = trims.length ? m.material(trims[Math.floor(rand() * trims.length)]!) : wall;
     const on = (x: number, y: number) => x >= 0 && y >= 0 && x < mask.sx && y < mask.sy && mask.on[y * mask.sx + x] === 1;
     const edge = (x: number, y: number) => !on(x - 1, y) || !on(x + 1, y) || !on(x, y - 1) || !on(x, y + 1);
     for (let y = 0; y < mask.sy; y++)
@@ -144,15 +152,15 @@ const GENERATORS: Record<string, Generator> = {
         for (let z = 0; z < H; z++) {
           let mat = wall;
           if (edge(x, y) && z > 0) {
-            if (style === 2 && z % 2 === 1 && (x + y) % 2 === 0) mat = window;
-            if (style === 1 && z === Math.max(1, Math.floor(H / 2)) && (x + y) % 2 === 0) mat = window;
+            if (style === 2 && z % 2 === 1 && (x + y) % 2 === 0) mat = pane();
+            if (style === 1 && z === Math.max(1, Math.floor(H / 2)) && (x + y) % 2 === 0) mat = pane();
             if (style === 0 && z === 0) mat = wall;
           }
           m.set(x, y, z, mat);
         }
-        if (style === 1 && edge(x, y)) m.set(x, y, H, wall); // parapet
+        if (style === 1 && edge(x, y)) m.set(x, y, H, trim); // parapet
         else if (style === 1) m.set(x, y, H - 1, roof);
-        if (style === 2) m.set(x, y, H - 1, edge(x, y) ? wall : roof);
+        if (style === 2) m.set(x, y, H - 1, edge(x, y) ? trim : roof);
       }
     if (style === 0) {
       // hip roof: inset one voxel per layer
@@ -266,6 +274,14 @@ export function rotateModel(model: VoxelModel, quarters: number): VoxelModel {
   return m;
 }
 
+/**
+ * Voxel size in world units for a render scale: objects keep a fixed pixel
+ * size (2×1 px voxel tops, 1 px tall) however large a world cell is drawn.
+ */
+export function objectVoxelScale(renderScale: number): VoxelScale {
+  return { h: 1 / (16 * renderScale), v: 1 / (8 * renderScale) };
+}
+
 export interface ObjectBuildOptions {
   catalog: AssetCatalog;
   rampIds: Map<string, number>;
@@ -307,14 +323,18 @@ function makeContext(spec: AssetSpec, opts: ObjectBuildOptions, seed: number): G
       if (id === undefined) throw new Error(`asset ramp '${role}' (${name}) is not in the palette`);
       return id;
     },
+    ramps: (role) =>
+      Object.keys(spec.ramps)
+        .filter((k) => k === role || k.startsWith(role + "."))
+        .sort()
+        .map((k) => {
+          const id = opts.rampIds.get(spec.ramps[k]!);
+          if (id === undefined) throw new Error(`asset ramp '${k}' (${spec.ramps[k]}) is not in the palette`);
+          return id;
+        }),
     param: (name, fallback) => {
       const v = spec.params?.[name];
       return typeof v === "number" ? v : fallback;
-    },
-    list: (name) => {
-      const v = spec.params?.[name];
-      if (!Array.isArray(v)) return [];
-      return v;
     },
   };
 }
@@ -371,7 +391,10 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     const gen = GENERATORS[spec.generator];
     if (!gen) throw new Error(`unknown generator ${spec.generator}`);
     const cell: [number, number] = [Math.floor(inst.x), Math.floor(inst.y)];
-    const base = opts.heightAt(inst.x, inst.y);
+    // Footprints sit on their lowest corner so slopes don't leave them floating.
+    const base = inst.fp
+      ? Math.min(...inst.fp.map(([x, y]) => opts.heightAt(x, y)))
+      : opts.heightAt(inst.x, inst.y);
     if (inst.fp || inst.hm !== undefined) {
       // unique object: footprint building or landmark
       const ctx = makeContext(spec, opts, inst.s);

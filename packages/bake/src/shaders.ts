@@ -242,14 +242,14 @@ void main() {
   } else if (pattern == PATTERN_SPARKLE && !vertical) {
     if (rnd(col, row, 3) < density) level += 1.0;
   } else if (pattern == PATTERN_FIELDS && !vertical) {
-    // world-anchored patchwork: each third of a cell is a field of its own shade
-    ivec2 parcel = ivec2(floor(vGrid * 3.0));
+    // world-anchored patchwork: each third of a render cell is a field of its own shade
+    ivec2 parcel = ivec2(floor(vGrid * uScale * 3.0));
     float r = rnd(parcel.x, parcel.y, 4);
     level += r < density * 0.5 ? -1.0 : (r > 1.0 - density * 0.5 ? 1.0 : 0.0);
   } else if (pattern == PATTERN_BLOCKS && !vertical) {
-    // world-anchored city blocks: streets every third of a cell, lit roofs
-    vec2 f = fract(vGrid * 3.0);
-    ivec2 block = ivec2(floor(vGrid * 3.0));
+    // world-anchored city blocks: streets every third of a render cell, lit roofs
+    vec2 f = fract(vGrid * uScale * 3.0);
+    ivec2 block = ivec2(floor(vGrid * uScale * 3.0));
     if (min(f.x, f.y) < 0.14) level -= 1.0;
     else if (rnd(block.x * 7 + col, block.y * 5 + row, 5) < density) level += 1.0;
   }

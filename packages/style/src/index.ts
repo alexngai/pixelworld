@@ -57,7 +57,33 @@ export interface StylePack {
   provinces?: Record<string, string>;
   surfaces: Record<string, SurfaceStyle>;
   roads?: { asphalt: string; marking: string; classes: Record<string, RoadClassStyle> };
+  /** Semantic asset groups → generator, role ramps and parameters (D-030). */
+  assets?: Record<string, AssetStyle>;
+  /** Object look shared by every asset group. */
+  objects?: { heightStretch: number; variants: number };
+  /** Night palette variant: everything darkens except emissive ramps. */
+  night?: NightStyle;
 }
+
+export interface AssetStyle {
+  generator: string;
+  ramps: Record<string, string>;
+  params?: Record<string, number | number[]>;
+}
+
+export interface NightStyle {
+  background: string;
+  /** 0 = greyscale, 1 = day saturation (applied before tinting). */
+  saturation: number;
+  /** Per-channel (r, g, b) multiplier for non-emissive ramps. */
+  multiply: number[];
+  /** Per-channel (r, g, b) offset (0–255) added after multiplying. */
+  add: number[];
+  /** Ramps that glow at night: their night colors (same shade count). */
+  emissive: Record<string, string[]>;
+}
+
+export type PaletteVariant = "day" | "night";
 
 export class StyleError extends Error {}
 
@@ -103,6 +129,19 @@ export function validateStyle(style: StylePack): StylePack {
     for (const r of [style.roads.asphalt, style.roads.marking])
       if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
   }
+  for (const [group, a] of Object.entries(style.assets ?? {}))
+    for (const [role, ramp] of Object.entries(a.ramps))
+      if (!(ramp in style.ramps)) throw new StyleError(`asset ${group} role ${role} uses undefined ramp ${ramp}`);
+  if (style.night) {
+    parseHex(style.night.background);
+    if (style.night.multiply.length !== 3 || style.night.add.length !== 3)
+      throw new StyleError("night multiply and add need 3 channels");
+    for (const [name, colors] of Object.entries(style.night.emissive)) {
+      if (!(name in style.ramps)) throw new StyleError(`night emissive ramp ${name} not defined`);
+      if (colors.length !== SHADES) throw new StyleError(`night ramp ${name} needs ${SHADES} colors`);
+      colors.forEach(parseHex);
+    }
+  }
   return style;
 }
 
@@ -116,18 +155,34 @@ export function paletteIndex(rampId: number, shade: number): number {
   return 1 + rampId * SHADES + shade;
 }
 
-export function buildPalette(style: StylePack): Palette {
+/**
+ * The 256-entry palette. Indices never change between variants, so a baked
+ * tile can be shown by day or by night by swapping the palette alone.
+ */
+export function buildPalette(style: StylePack, variant: PaletteVariant = "day"): Palette {
   validateStyle(style);
+  const night = variant === "night" ? style.night : undefined;
+  if (variant === "night" && !night) throw new StyleError(`style ${style.id} has no night palette`);
   const rgba = new Uint8Array(256 * 4);
-  const put = (i: number, hex: string) => {
-    const [r, g, b] = parseHex(hex);
+  const put = (i: number, hex: string, dim = false) => {
+    let [r, g, b] = parseHex(hex);
+    if (dim && night) {
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
+      const sat = night.saturation;
+      const c = [l + (r - l) * sat, l + (g - l) * sat, l + (b - l) * sat].map((v, k) =>
+        Math.round(Math.min(255, Math.max(0, v * night.multiply[k]! + night.add[k]!))),
+      );
+      [r, g, b] = c as [number, number, number];
+    }
     rgba.set([r, g, b, 255], i * 4);
   };
-  put(INDEX_BACKGROUND, style.background);
+  put(INDEX_BACKGROUND, night ? night.background : style.background);
   const rampIds = new Map<string, number>();
   Object.entries(style.ramps).forEach(([name, colors], rampId) => {
     rampIds.set(name, rampId);
-    colors.forEach((hex, s) => put(paletteIndex(rampId, s), hex));
+    const glow = night?.emissive[name];
+    if (glow) glow.forEach((hex, s) => put(paletteIndex(rampId, s), hex));
+    else colors.forEach((hex, s) => put(paletteIndex(rampId, s), hex, true));
   });
   put(INDEX_SILHOUETTE, style.silhouette);
   return { rgba, rampIds };

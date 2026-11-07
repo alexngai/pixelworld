@@ -1,7 +1,14 @@
 import { TerrainGrid } from "@pixelworld/grid";
-import { Baker } from "@pixelworld/bake";
-import { buildBoxesMesh, buildTerrainMesh, type MeshData } from "@pixelworld/generators";
-import type { BakeTileMessage, FromWorker, InitMessage, ToWorker } from "./protocol";
+import { Baker, type BakeScene } from "@pixelworld/bake";
+import {
+  buildBoxesMesh,
+  buildObjects,
+  buildTerrainMesh,
+  objectVoxelScale,
+  scaleMesh,
+  type ObjectInstance,
+} from "@pixelworld/generators";
+import type { BakeTileMessage, FromWorker, InitMessage, TerrainSlice, ToWorker, WorldObjects } from "./protocol";
 
 /**
  * Executes bake requests against a WebGL2 context. Used inside the bake
@@ -10,7 +17,7 @@ import type { BakeTileMessage, FromWorker, InitMessage, ToWorker } from "./proto
 export class BakeHost {
   private baker: Baker;
   private init: InitMessage | null = null;
-  private meshCache = new Map<string, MeshData>();
+  private meshCache = new Map<string, BakeScene>();
   private static readonly MESH_CACHE = 6;
 
   constructor(
@@ -58,10 +65,10 @@ export class BakeHost {
     const { slice } = msg;
     const key = `${msg.tx},${msg.ty}`;
     const t0 = performance.now();
-    let mesh = this.meshCache.get(key);
-    if (!mesh) {
+    let scene = this.meshCache.get(key);
+    if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, slice.layers);
-      mesh = buildTerrainMesh(
+      const terrain = buildTerrainMesh(
         grid,
         { x0: 0, y0: 0, x1: slice.width, y1: slice.height },
         {
@@ -70,7 +77,21 @@ export class BakeHost {
           world: { width: init.worldWidth, height: init.worldHeight },
         },
       );
-      this.meshCache.set(key, mesh);
+      scene = { meshes: [terrain], batches: [] };
+      if (init.objects) {
+        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1);
+        scene.meshes.push(objects.merged);
+        scene.batches.push(...objects.batches);
+      }
+      const s = init.renderScale ?? 1;
+      if (s !== 1) {
+        for (const m of scene.meshes) scaleMesh(m, s);
+        for (const b of scene.batches) {
+          scaleMesh(b.mesh, s);
+          for (let i = 0; i < b.offsets.length; i++) b.offsets[i]! *= s;
+        }
+      }
+      this.meshCache.set(key, scene);
       if (this.meshCache.size > BakeHost.MESH_CACHE) {
         const oldest = this.meshCache.keys().next().value!;
         this.baker.releaseScene(this.meshCache.get(oldest)!);
@@ -78,8 +99,27 @@ export class BakeHost {
       }
     }
     const meshMs = performance.now() - t0;
-    const res = this.baker.bake(mesh, msg.rotation, owned, { shadows: true });
-    this.reply(msg.id, res, meshMs, mesh.vertexCount);
+    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true });
+    const vertices =
+      scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
+      scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0);
+    this.reply(msg.id, res, meshMs, vertices);
+  }
+
+  /** Objects whose base point lies in the slice, built in world units. */
+  private objectsFor(objects: WorldObjects, slice: TerrainSlice, grid: TerrainGrid, renderScale: number) {
+    const inSlice = (o: ObjectInstance) =>
+      o.x >= slice.x0 && o.y >= slice.y0 && o.x < slice.x0 + slice.width && o.y < slice.y0 + slice.height;
+    const voxel = objectVoxelScale(renderScale);
+    return buildObjects(objects.instances.filter(inSlice), {
+      catalog: objects.catalog,
+      rampIds: new Map(objects.rampIds),
+      voxel,
+      voxelMeters: voxel.h * objects.metersPerCell,
+      heightStretch: objects.heightStretch,
+      variants: objects.variants,
+      heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0), // clamps to the slice
+    });
   }
 
   private reply(id: number, res: ReturnType<Baker["bake"]>, meshMs: number, vertices: number): void {

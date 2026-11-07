@@ -1,6 +1,6 @@
 import type { Rotation, TerrainLayers } from "@pixelworld/grid";
 import type { BakedImage, StyleParams } from "@pixelworld/bake";
-import type { Box } from "@pixelworld/generators";
+import type { AssetCatalog, Box, ObjectInstance } from "@pixelworld/generators";
 
 /** Messages between the main thread and the bake worker. */
 
@@ -13,6 +13,22 @@ export interface InitMessage {
   floor: number;
   worldWidth: number;
   worldHeight: number;
+  /** Render units per world cell (manifest render.scale); 1 if absent. */
+  renderScale?: number;
+  /** Placed objects for the whole world (experiment worlds are small). */
+  objects?: WorldObjects;
+}
+
+export interface WorldObjects {
+  instances: ObjectInstance[];
+  catalog: AssetCatalog;
+  /** Ramp name → palette ramp id. */
+  rampIds: [string, number][];
+  metersPerCell: number;
+  /** Building and landmark height multiplier. */
+  heightStretch: number;
+  /** Generated variants per group for repeated objects. */
+  variants: number;
 }
 
 /** A block of terrain cut from the world, with its world-space origin. */

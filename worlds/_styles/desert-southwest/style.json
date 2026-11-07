@@ -37,7 +37,20 @@
     "basalt": ["#16131b", "#231e26", "#332a31", "#45383d", "#58484a", "#6d5a59"],
     "ochre": ["#30232b", "#523b3a", "#795646", "#9c7253", "#ba8f63", "#d4ad7a"],
     "limestone": ["#262833", "#3e4250", "#5b606d", "#7b8089", "#9ba0a6", "#bcc0c2"],
-    "dolomite": ["#33343e", "#545661", "#7b7d86", "#a1a2a8", "#c3c3c6", "#e1e0de"]
+    "dolomite": ["#33343e", "#545661", "#7b7d86", "#a1a2a8", "#c3c3c6", "#e1e0de"],
+    "bark": ["#1c1418", "#2e1f1f", "#432c26", "#5a3b2e", "#714b37", "#8a5e43"],
+    "palm": ["#10201c", "#1a3324", "#284a2b", "#3a6430", "#527f37", "#6f9a43"],
+    "stucco": ["#3a2f35", "#5f4d4b", "#8a7266", "#b39a85", "#d4bea2", "#ecdcc0"],
+    "roof-tile": ["#2b1520", "#4a2027", "#70302e", "#954436", "#b65b40", "#cf7a52"],
+    "roof-flat": ["#28272f", "#403f48", "#5c5b63", "#7b7a80", "#9a999c", "#b9b8b8"],
+    "glass": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "lit": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "lit-cool": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "tower-white": ["#2e2f3c", "#4f5262", "#7a7e8c", "#a4a8b3", "#cbced3", "#ecedee"],
+    "tower-gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
+    "concrete": ["#2a2a31", "#45444b", "#64626a", "#86838a", "#a7a3a7", "#c6c2c2"],
+    "neon-pink": ["#2a1023", "#4d1836", "#7a2148", "#a62c5b", "#cc4171", "#e8638c"],
+    "neon-cyan": ["#0e2028", "#14363d", "#1b5052", "#226b68", "#2e8780", "#46a39a"]
   },
   "strataSets": {
     "grand-canyon": [
@@ -87,6 +100,90 @@
       "trunk": { "halfWidth": 0.17, "centerLine": true },
       "primary": { "halfWidth": 0.1, "centerLine": false },
       "secondary": { "halfWidth": 0.07, "centerLine": false }
+    }
+  },
+  "objects": { "heightStretch": 2.5, "variants": 6 },
+  "assets": {
+    "tree": { "generator": "blob", "ramps": { "body": "farmland", "trunk": "bark" } },
+    "tree.conifer": { "generator": "conifer", "ramps": { "crown": "conifer", "trunk": "bark" } },
+    "tree.pinyon-juniper": {
+      "generator": "blob",
+      "ramps": { "body": "pine", "trunk": "bark" },
+      "params": { "radius": 1, "radiusJitter": 0.6, "height": 1.1, "trunk": 1, "holes": 0.15 }
+    },
+    "tree.palm": { "generator": "palm", "ramps": { "trunk": "bark", "fronds": "palm" } },
+    "shrub": {
+      "generator": "blob",
+      "ramps": { "body": "scrub" },
+      "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "rock.boulder": { "generator": "boulder", "ramps": { "rock": "coconino" } },
+    "building.residential": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "roof": "roof-tile", "window": "glass" },
+      "params": { "style": 0 }
+    },
+    "building.commercial": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "wall.white": "tower-white", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "params": { "style": 1, "litFraction": 0.5 }
+    },
+    "building.parking": {
+      "generator": "building",
+      "ramps": { "wall": "concrete", "roof": "concrete", "window": "glass" },
+      "params": { "style": 1, "litFraction": 0 }
+    },
+    "building.tower": {
+      "generator": "building",
+      "ramps": {
+        "wall": "tower-white",
+        "wall.gold": "tower-gold",
+        "wall.concrete": "concrete",
+        "roof": "roof-flat",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "style": 2, "litFraction": 0.45 }
+    },
+    "building.tower.hotel": {
+      "generator": "building",
+      "ramps": {
+        "wall": "tower-white",
+        "wall.gold": "tower-gold",
+        "roof": "roof-flat",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool",
+        "trim": "neon-pink",
+        "trim.cyan": "neon-cyan"
+      },
+      "params": { "style": 2, "litFraction": 0.6 }
+    },
+    "landmark.tower.observation": {
+      "generator": "observationTower",
+      "ramps": { "structure": "concrete", "window": "lit-cool", "accent": "neon-pink" }
+    },
+    "landmark.tower.lookout": {
+      "generator": "lookoutTower",
+      "ramps": { "stone": "toroweap", "detail": "vishnu" }
+    },
+    "landmark.sign": {
+      "generator": "sign",
+      "ramps": { "panel": "tower-white", "neon": "neon-pink", "post": "concrete" }
+    }
+  },
+  "night": {
+    "background": "#0b0b16",
+    "saturation": 0.55,
+    "multiply": [0.3, 0.34, 0.52],
+    "add": [4, 6, 16],
+    "emissive": {
+      "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
+      "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
+      "neon-pink": ["#3a0d2a", "#9a1a5e", "#e02a85", "#ff4fa3", "#ff86c0", "#ffc1dd"],
+      "neon-cyan": ["#06303a", "#0e7a8a", "#1fc4d6", "#4fe6f0", "#93f4f8", "#d0fcfd"],
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
     }
   }
 }

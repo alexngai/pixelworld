@@ -102,3 +102,9 @@ export function triangleNormal(
   if (nx * hint[0] + ny * hint[1] + nz * hint[2] < 0) return [-nx, -ny, -nz];
   return [nx, ny, nz];
 }
+
+/** Scale a mesh's positions in place (world units → render units). */
+export function scaleMesh(mesh: MeshData, s: number): MeshData {
+  for (let i = 0; i < mesh.position.length; i++) mesh.position[i]! *= s;
+  return mesh;
+}

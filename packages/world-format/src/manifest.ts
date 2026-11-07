@@ -57,6 +57,28 @@ export interface WorldManifest {
   source?: { crs?: string; bounds?: [number, number, number, number] };
   attribution: Attribution[];
   generator?: { name: string; version?: string; params?: Record<string, unknown> };
+  /**
+   * How the world is drawn (optional; defaults to 1 render unit per cell).
+   * Fine worlds set scale < 1 so a cell covers fewer pixels; tileSize is the
+   * bake tile edge in cells.
+   */
+  render?: { scale: number; tileSize?: number };
+  /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
+  objects?: { path: string; sha256?: string; count?: number };
+}
+
+/** Objects file: semantic-group instances placed by the pipeline. */
+export interface ObjectsFile {
+  version: 1;
+  instances: {
+    g: string;
+    x: number;
+    y: number;
+    s: number;
+    r?: number;
+    fp?: [number, number][];
+    hm?: number;
+  }[];
 }
 
 export class ManifestError extends Error {}
@@ -75,6 +97,12 @@ export function parseManifest(json: unknown): WorldManifest {
   if (!Array.isArray(m.chunks)) throw new ManifestError("missing chunks");
   if (!m.scale || typeof m.scale.metersPerStep !== "number")
     throw new ManifestError("missing scale");
+  if (m.render !== undefined) {
+    const sc = m.render.scale;
+    if (!(typeof sc === "number" && sc > 0 && sc <= 1)) throw new ManifestError("render.scale must be in (0, 1]");
+    const ts = m.render.tileSize;
+    if (ts !== undefined && !(Number.isInteger(ts) && ts > 0)) throw new ManifestError("invalid render.tileSize");
+  }
   const ve = m.scale.verticalExaggeration;
   if (ve !== undefined && !(typeof ve === "number" && ve > 0))
     throw new ManifestError("verticalExaggeration must be a positive number");
