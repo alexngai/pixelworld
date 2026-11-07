@@ -44,18 +44,19 @@ canvas#view.fixed {
   left: 8px;
 }
 
+/* Help and attribution share the bottom edge, half each, so they never overlap. */
 .help {
   bottom: 8px;
   left: 8px;
   color: var(--muted);
   white-space: normal;
-  max-width: calc(100vw - 32px);
+  max-width: calc(50vw - 28px);
 }
 
 .attribution {
-  top: 8px;
+  bottom: 8px;
   right: 8px;
-  max-width: 40vw;
+  max-width: calc(50vw - 28px);
   color: var(--muted);
   white-space: normal;
   text-align: right;

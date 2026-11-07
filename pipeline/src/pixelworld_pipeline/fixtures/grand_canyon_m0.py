@@ -35,6 +35,7 @@ from ..gridify import (
     cliff_mask,
     corner_stack,
     gridify_heights,
+    meters_per_step,
     smooth,
 )
 from ..world_format import NO_WATER, write_package
@@ -49,10 +50,13 @@ CENTER_LAT = 36.115
 CENTER_LON = -112.12
 CELLS = 128
 METERS_PER_CELL = 160.0
-METERS_PER_STEP = 40.0
+# Vertical exaggeration relative to true proportions (1.0 = real slopes). Every
+# height difference is multiplied by this; metres per step are derived from it.
+VERTICAL_EXAGGERATION = 2.5  # ≈ 26.1 m per step at 160 m per cell (M0 used 1.63 = 40 m)
 CHUNK_SIZE = 64
 SMOOTH_SIGMA = 0.0  # cells; Gaussian smoothing of corner heights before quantizing
-BILATERAL = (1.5, 1.2)  # (cells, steps): edge-preserving smoothing; (0, 0) disables
+BILATERAL = (1.5, 48.0)  # (cells, metres): edge-preserving smoothing; (0, 0) disables
+CLIFF_DROP_METERS = 80.0  # real drop that makes a cell "cliffy" for surface classes
 STEEP_MODE = "flat"  # how cells steeper than one step are represented (see gridify)
 
 DEM_URL = (
@@ -161,13 +165,20 @@ def rasterize_lines(lines: list[list[tuple[float, float]]]) -> np.ndarray:
 
 
 def classify(
-    corner_m: np.ndarray, base: np.ndarray, slope: np.ndarray, river: np.ndarray
+    corner_m: np.ndarray,
+    base: np.ndarray,
+    slope: np.ndarray,
+    river: np.ndarray,
+    step_m: float,
 ) -> np.ndarray:
-    """Procedural surface classes for M0 (real land cover arrives in M1)."""
+    """Procedural surface classes for M0 (real land cover arrives in M1).
+
+    Thresholds are in real metres so the classes don't change with exaggeration.
+    """
     cs = corner_stack(corner_m)
     elev = cs.mean(axis=0)
     relief = cs.max(axis=0) - cs.min(axis=0)
-    cliff = cliff_mask(base, slope, min_drop=2)
+    cliff = cliff_mask(base, slope, min_drop=max(1, round(CLIFF_DROP_METERS / step_m)))
     gentle = ~cliff & (relief < 60)
 
     surface = np.full(base.shape, S["rock"], dtype=np.uint8)
@@ -190,13 +201,13 @@ def build(
     sigma: float = SMOOTH_SIGMA,
     steep: str = STEEP_MODE,
     bilateral_params: tuple[float, float] = BILATERAL,
+    exaggeration: float = VERTICAL_EXAGGERATION,
 ) -> dict:
+    step_m = meters_per_step(METERS_PER_CELL, exaggeration)
     corner_m = smooth(fetch_corner_heights(), sigma)
-    corner_steps = corner_m / METERS_PER_STEP
     if bilateral_params[0] > 0:
-        corner_steps = bilateral(corner_steps, *bilateral_params)
-        corner_m = corner_steps * METERS_PER_STEP
-    base, slope = gridify_heights(corner_steps, steep=steep)
+        corner_m = bilateral(corner_m, *bilateral_params)
+    base, slope = gridify_heights(corner_m / step_m, steep=steep)
 
     river = rasterize_lines(fetch_river())
     # River cells become flat water at their lowest corner.
@@ -205,7 +216,7 @@ def build(
     slope = np.where(river, 0, slope).astype(np.uint8)
     water = np.where(river, base, NO_WATER).astype(np.int16)
 
-    surface = classify(corner_m, base, slope, river)
+    surface = classify(corner_m, base, slope, river, step_m)
     w, s, e, n = bounds_lonlat()
     return write_package(
         out_dir,
@@ -218,8 +229,9 @@ def build(
         chunk_size=CHUNK_SIZE,
         scale={
             "metersPerCell": METERS_PER_CELL,
-            "metersPerStep": METERS_PER_STEP,
+            "metersPerStep": round(step_m, 6),
             "elevationDatumMeters": 0,
+            "verticalExaggeration": exaggeration,
         },
         surfaces=SURFACES,
         style="desert-southwest",
@@ -248,7 +260,10 @@ def build(
                 "cells": CELLS,
                 "resampling": "average",
                 "smoothSigmaCells": sigma,
-                "bilateral": {"sigmaCells": bilateral_params[0], "sigmaSteps": bilateral_params[1]},
+                "bilateral": {
+                    "sigmaCells": bilateral_params[0],
+                    "sigmaMeters": bilateral_params[1],
+                },
                 "steepMode": steep,
             },
         },
@@ -261,8 +276,14 @@ def main() -> None:
     parser.add_argument("--sigma", type=float, default=SMOOTH_SIGMA)
     parser.add_argument("--steep", choices=["flat", "slope"], default=STEEP_MODE)
     parser.add_argument("--bilateral", type=float, nargs=2, default=BILATERAL)
+    parser.add_argument(
+        "--exaggeration",
+        type=float,
+        default=VERTICAL_EXAGGERATION,
+        help="vertical exaggeration relative to true proportions (1.0 = real slopes)",
+    )
     args = parser.parse_args()
-    manifest = build(args.out, args.sigma, args.steep, tuple(args.bilateral))
+    manifest = build(args.out, args.sigma, args.steep, tuple(args.bilateral), args.exaggeration)
     print(f"wrote {args.out} ({manifest['cellsX']}x{manifest['cellsY']} cells)")
 
 

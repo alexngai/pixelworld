@@ -30,6 +30,7 @@ Status values:
 | D-019 | Raw WebGL2 for baking and compositing; Three.js only for the later 3D mode | Proposed (M0) |
 | D-020 | Terrain quantization: bilateral smoothing + flat terraces for steep cells | Proposed (M0) |
 | D-021 | Bake tiles of 32×32 cells with a 16-cell context margin; ownership per cell | Proposed (M0) |
+| D-022 | Vertical scale set as exaggeration relative to true proportions, applied before quantization; fixture default 2.5× | Proposed |
 
 ---
 
@@ -101,3 +102,11 @@ Corner heights are bilateral-filtered (1.5 cells spatial, 1.2 steps range) befor
 - **Tiles:** clients bake 32×32-cell tiles per rotation. Each bake renders the tile plus a 16-cell margin of context, so shadows, AO and outlines cross tile seams correctly.
 - **Ownership:** every face carries its owning cell. Pixels whose front-most surface belongs to another tile are left empty and filled by that tile.
 - **Compositing:** the runtime composites tiles with per-pixel depth, so draw order never matters. An e2e test checks that all 4 rotations are hole-free.
+
+### D-022: Vertical exaggeration (proposed)
+- **What it is:** one factor E that multiplies every height difference, expressed relative to true proportions (E = 1 means real slopes, the usual cartographic sense). Metres per step are derived from it: `metersPerCell × (1/√6) / E`.
+- **Why it's set in the pipeline:** steps are integers, so exaggeration has to happen before quantization, not at render time.
+- **Why it's relative to true proportions:** that keeps it meaningful when the warp makes metres per cell vary (M2).
+- **What stays in real metres:** smoothing, surface classification and strata colours, so changing E changes only height.
+- **Default:** 2.5×, chosen from a visual comparison of 1.63×, 2.5×, 3.5× and 5× (see [style-guide.md](style-guide.md) §8).
+- **Manifest and safety:** the manifest records `verticalExaggeration`. The baker warns if a tile's depth span overflows its 16-bit local range, which only happens at exaggerations well above 10.

@@ -32,6 +32,12 @@ export interface WorldManifest {
     metersPerCell: number;
     metersPerStep: number;
     elevationDatumMeters: number;
+    /**
+     * Vertical exaggeration relative to true proportions (1 = real slopes),
+     * already applied when the pipeline quantized heights. Informational:
+     * metersPerStep is what converts steps to real metres.
+     */
+    verticalExaggeration?: number;
   };
   /** Surface id (as string key) → surface name. */
   surfaces: Record<string, string>;
@@ -57,6 +63,9 @@ export function parseManifest(json: unknown): WorldManifest {
   if (!Array.isArray(m.chunks)) throw new ManifestError("missing chunks");
   if (!m.scale || typeof m.scale.metersPerStep !== "number")
     throw new ManifestError("missing scale");
+  const ve = m.scale.verticalExaggeration;
+  if (ve !== undefined && !(typeof ve === "number" && ve > 0))
+    throw new ManifestError("verticalExaggeration must be a positive number");
   if (!m.surfaces || typeof m.surfaces !== "object") throw new ManifestError("missing surfaces");
   if (!Array.isArray(m.attribution)) throw new ManifestError("missing attribution");
   return m as WorldManifest;
@@ -92,4 +101,9 @@ export function assembleTerrain(manifest: WorldManifest, chunks: Chunk[]): Terra
     }
   }
   return grid;
+}
+
+/** Exaggeration implied by the scale: true step height (cell · 1/√6) over metres per step. */
+export function verticalExaggeration(scale: WorldManifest["scale"]): number {
+  return scale.verticalExaggeration ?? (scale.metersPerCell / Math.sqrt(6)) / scale.metersPerStep;
 }

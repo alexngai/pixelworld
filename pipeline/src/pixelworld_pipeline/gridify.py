@@ -7,7 +7,29 @@ c2=(x+1,y+1) SE, c3=(x,y+1) SW, with y growing south.
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
+
+# Height of one step in cell units at true proportions (packages/grid STEP_WORLD).
+STEP_WORLD = 1 / math.sqrt(6)
+
+
+def meters_per_step(meters_per_cell: float, vertical_exaggeration: float) -> float:
+    """Vertical resolution for a given exaggeration.
+
+    At exaggeration 1 a step is as tall, relative to a cell's width, as the real
+    terrain (meters_per_cell * STEP_WORLD). Exaggeration E divides that, so
+    every height difference spans E times as many steps.
+    """
+    if vertical_exaggeration <= 0:
+        raise ValueError("vertical exaggeration must be positive")
+    return meters_per_cell * STEP_WORLD / vertical_exaggeration
+
+
+def vertical_exaggeration(meters_per_cell: float, meters_per_step: float) -> float:
+    """Inverse of meters_per_step."""
+    return meters_per_cell * STEP_WORLD / meters_per_step
 
 
 def round_half_up(a: np.ndarray) -> np.ndarray:

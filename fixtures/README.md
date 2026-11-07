@@ -4,13 +4,18 @@ Small committed world packages used by M0 development and tests. They are served
 
 ## grand-canyon-m0
 
-128×128 cells at a uniform 160 m per cell (no warp) and 40 m per height step. Covers the South Rim at Grand Canyon Village, the Colorado River near Phantom Ranch, and the North Rim near Bright Angel Point.
+128×128 cells at a uniform 160 m per cell (no warp), with 2.5× vertical exaggeration (26.1 m per height step). Covers the South Rim at Grand Canyon Village, the Colorado River near Phantom Ranch, and the North Rim near Bright Angel Point.
 
 Regenerate:
 
 ```sh
 cd pipeline && uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0
+# try other exaggerations (1.0 = real slopes) into a scratch directory, then open
+# http://localhost:5173/?world=/_try/
+uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0 --exaggeration 3.5 --out ../fixtures/_try
 ```
+
+`fixtures/_try/` is git-ignored.
 
 Sources and licenses:
 - Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.

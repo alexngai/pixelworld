@@ -12,6 +12,7 @@ import {
   type TileKey,
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
+import { verticalExaggeration } from "@pixelworld/world-format";
 import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
 const TILE_SIZE = 32;
@@ -369,7 +370,7 @@ async function main() {
     const s = stats();
     const meters = Math.round(rover.h * manifest.scale.metersPerStep + manifest.scale.elevationDatumMeters);
     hud.textContent = [
-      `${manifest.name}`,
+      `${manifest.name} · vertical ×${verticalExaggeration(manifest.scale).toFixed(2)} (${manifest.scale.metersPerStep.toFixed(1)} m/step)`,
       `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
       `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
       `bake  ${s.tilesBaked} tiles · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,

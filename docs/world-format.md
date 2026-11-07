@@ -27,8 +27,9 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   ],
   "scale": {
     "metersPerCell": 160,           // layout scale (uniform in v0; warped from M2)
-    "metersPerStep": 40,            // vertical scale
-    "elevationDatumMeters": 0       // elevation at height step 0
+    "metersPerStep": 26.13,         // real metres per height step
+    "elevationDatumMeters": 0,      // elevation at height step 0
+    "verticalExaggeration": 2.5     // optional; relative to true proportions, already applied
   },
   "surfaces": { "0": "none", "1": "rock", "5": "water" },   // id → name
   "style": "desert-southwest",      // default style pack
@@ -40,6 +41,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
 }
 ```
 
+- **Converting steps to metres:** `metres = step × metersPerStep + elevationDatumMeters`. `verticalExaggeration` is informational, since the pipeline already applied it when choosing `metersPerStep`. If it's missing, it's implied as `metersPerCell / √6 / metersPerStep`.
 - **Surface IDs are local to a package.** The contract between the pipeline and the client is the surface **name**. Style packs map surface names to materials.
 - **Chunk coordinates:** chunk `(cx, cy)` covers cells `[cx·chunkSize, (cx+1)·chunkSize) × [cy·chunkSize, (cy+1)·chunkSize)`.
 

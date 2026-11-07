@@ -1,11 +1,14 @@
 import numpy as np
+import pytest
 
 from pixelworld_pipeline.gridify import (
     bilateral,
     cell_corner_heights,
     cliff_mask,
     gridify_heights,
+    meters_per_step,
     smooth,
+    vertical_exaggeration,
 )
 
 
@@ -68,3 +71,15 @@ def test_bilateral_keeps_cliffs_and_flattens_benches():
     assert out[:, :9].std() < noisy[:, :9].std() / 2  # bench flattened
     assert np.abs(out[:, 11:] - 10).max() < 0.8  # cliff top not pulled down
     assert np.abs(out[:, :9]).max() < 0.8
+
+
+def test_exaggeration_multiplies_height_differences():
+    real = np.array([[700.0, 740.0], [900.0, 2100.0]])
+    for e in (1.0, 1.633, 2.5, 4.0):
+        steps = real / meters_per_step(160, e)
+        base_diff = (real - real[0, 0]) / meters_per_step(160, 1.0)
+        np.testing.assert_allclose(steps - steps[0, 0], base_diff * e)
+    assert abs(meters_per_step(160, 1.633) - 40.0) < 0.01
+    assert abs(vertical_exaggeration(160, meters_per_step(160, 2.7)) - 2.7) < 1e-12
+    with pytest.raises(ValueError):
+        meters_per_step(160, 0)

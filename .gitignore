@@ -19,3 +19,7 @@ __pycache__/
 .cache/
 
 .DS_Store
+
+# Scratch world packages for trying pipeline parameters
+fixtures/_try/
+fixtures/_variants/

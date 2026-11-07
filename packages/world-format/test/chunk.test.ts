@@ -8,6 +8,7 @@ import {
   decodeChunk,
   encodeChunk,
   parseManifest,
+  verticalExaggeration,
   type WorldManifest,
 } from "../src/index";
 
@@ -83,6 +84,15 @@ describe("manifest", () => {
     expect(parseManifest(structuredClone(manifest)).id).toBe("t");
     expect(() => parseManifest({ ...manifest, formatVersion: 3 })).toThrow();
     expect(() => parseManifest({ ...manifest, cellsX: 0 })).toThrow();
+    expect(() =>
+      parseManifest({ ...manifest, scale: { ...manifest.scale, verticalExaggeration: 0 } }),
+    ).toThrow();
+  });
+
+  it("reports vertical exaggeration, explicit or implied by the scale", () => {
+    const scale = { metersPerCell: 160, metersPerStep: 40, elevationDatumMeters: 0 };
+    expect(verticalExaggeration(scale)).toBeCloseTo(1.633, 3);
+    expect(verticalExaggeration({ ...scale, verticalExaggeration: 3 })).toBe(3);
   });
 
   it("assembles chunks into one grid, clipping padding", () => {

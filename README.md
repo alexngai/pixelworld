@@ -41,6 +41,8 @@ To regenerate the fixture world (it fetches the USGS DEM and the OSM river; resu
 cd pipeline && uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0
 ```
 
+To make the terrain more or less dramatic, pass `--exaggeration E`. E is vertical exaggeration relative to true proportions: 1.0 is real slopes and the default is 2.5. See [fixtures/README.md](fixtures/README.md) to try a value without overwriting the committed fixture.
+
 ## Docs
 
 Start with the [docs index](docs/README.md):

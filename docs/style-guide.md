@@ -69,7 +69,8 @@ These choices live in the gridify stage and the fixture script, but they're styl
 
 - **Bilateral smoothing** (1.5 cells, 1.2 steps) runs before quantizing. It flattens noisy benches into coherent terraces and leaves cliffs sharp.
 - **Steep cells become flat terraces** at their mean height (`steep="flat"`), which gives the stepped "temple" look of canyon buttes. The alternative `"slope"` mode was rejected in the M0 review: it made walls into sawtooth triangle facets.
-- **Vertical scale:** 40 m per step at 160 m per cell (about 1.6× vertical exaggeration).
+- **Vertical exaggeration:** 2.5× true proportions (26.1 m per step at 160 m per cell). In the comparison, 1.63× (M0's original 40 m/step) looked flat, 2.5× made cliffs and strata bands bold while walls stayed coherent, and 3.5× and 5× broke walls into one-cell pillars, because noise in the elevation data becomes several steps. Going above about 3× needs more smoothing to match.
+- **Smoothing and surface classes use real metres** (bilateral range σ = 48 m; cliff threshold 80 m), so changing the exaggeration doesn't change which cells are woodland or rock.
 
 ## 9. Player sprites
 

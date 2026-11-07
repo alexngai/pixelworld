@@ -11,31 +11,32 @@
       "x": 0,
       "y": 0,
       "path": "chunks/0_0.pxwc",
-      "sha256": "206d8ed1bfbe2aa0864e64fd25216dc2973c086a6cd00b57f91c5c7d07b6593c"
+      "sha256": "23a749426ab4aa9d109c815a2afea39e2ce201ed24fa08ef6a12a8b5e9360f4b"
     },
     {
       "x": 1,
       "y": 0,
       "path": "chunks/1_0.pxwc",
-      "sha256": "383264d6fb16819588a48b45adb7d4b293529850fd75963da3667013834f2740"
+      "sha256": "0d50474bc91ca838ebe07bad74f1e8c127e90d09e0d23e4b51f72dc55c10c0c5"
     },
     {
       "x": 0,
       "y": 1,
       "path": "chunks/0_1.pxwc",
-      "sha256": "d453e19c9e89b683558c0ec290d89df2a74f80443dbab85777e1baef63eb363d"
+      "sha256": "4a0b4b4ac1885b4314fb5409fb2c8c03b52e4f372426f8c7dc4ec7eafc5c95ad"
     },
     {
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc",
-      "sha256": "2672da44cdde5c85b6cf6f96701e662acd61b55314dca37cafcf25ba13c5029e"
+      "sha256": "b89bb85f6387512df8719e5834b752fb0b78a659036224ed8fc2aa508e3990d5"
     }
   ],
   "scale": {
     "metersPerCell": 160.0,
-    "metersPerStep": 40.0,
-    "elevationDatumMeters": 0
+    "metersPerStep": 26.127891,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
   },
   "surfaces": {
     "0": "none",
@@ -79,7 +80,7 @@
       "smoothSigmaCells": 0.0,
       "bilateral": {
         "sigmaCells": 1.5,
-        "sigmaSteps": 1.2
+        "sigmaMeters": 48.0
       },
       "steepMode": "flat"
     }

@@ -135,6 +135,11 @@ export class Baker {
     const origin: [number, number] = [rect.left - PAD, rect.top - PAD];
     const depthRange: [number, number] = [all.minDepth - 1, all.maxDepth + 1];
     const depthBase = Math.floor(ownedBounds.minDepth);
+    if (ownedBounds.maxDepth - depthBase >= 256)
+      console.warn(
+        `bake: tile depth span ${(ownedBounds.maxDepth - depthBase).toFixed(1)} exceeds the 16-bit local range; ` +
+          "occlusion will clamp (reduce vertical exaggeration or tile size)",
+      );
     const rot = rotationMat2(rotation);
     const basis = lightBasis(SUN_DIR);
     const up = this.upload(mesh);

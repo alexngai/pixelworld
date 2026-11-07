@@ -64,7 +64,7 @@ This split keeps chunks small. It also means that changing the art style never r
 
 1. **Layout scale (meters per cell)** comes from the warp and varies across the map. It is fine in places like the Vegas Strip (around 15 m/cell) and coarse in empty desert (around 400 m/cell). It decides *how much real geography fits*.
 2. **Object scale** is fixed game-wide: road widths, vehicle sizes, a floor height, a tree. A car is the same size everywhere. Style packs define object sizes in cells and steps. Landmarks may set their own exaggerated scale.
-3. **Vertical scale (meters per height step)** is set per region, with optional per-feature caricature (e.g. deepen the canyon). It is capped so that driving stays possible.
+3. **Vertical scale** is set per region as a **vertical exaggeration** E relative to true proportions (1 = real slopes). Every height difference spans E times as many steps, and meters per step = meters per cell × (1/√6) / E. It's applied before quantization, because steps are integers, so it can't be changed at render time. Per-feature caricature (e.g. deepen the canyon) comes on top. Exaggeration is capped so that driving stays possible.
 
 Because of this, the same real building can take up more or fewer cells depending on the local layout scale. When it would fall below the minimum footprint, it is merged into a block or dropped. Only landmarks are protected from this, by their rigid stamps.
 
