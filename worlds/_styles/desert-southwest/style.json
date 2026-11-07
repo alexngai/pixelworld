@@ -1,0 +1,52 @@
+{
+  "id": "desert-southwest",
+  "name": "Desert Southwest",
+  "shades": 6,
+  "background": "#1e1c2b",
+  "silhouette": "#ffe36e",
+  "outline": {
+    "depthThreshold": 2.0
+  },
+  "ao": {
+    "strength": 2.4
+  },
+  "ramps": {
+    "kaibab": ["#2f2a3a", "#4f4652", "#7a6c6c", "#a29384", "#c8b89e", "#e8dcbc"],
+    "toroweap": ["#33283a", "#574046", "#80604f", "#a6825f", "#c6a274", "#e2c08f"],
+    "coconino": ["#3a3446", "#615a63", "#8e8479", "#b8ac94", "#dbd0b0", "#f4ecd2"],
+    "hermit": ["#2a1626", "#4a1f2b", "#6e2c2f", "#92402f", "#b05a3a", "#c9774a"],
+    "supai": ["#2e1b29", "#52282d", "#7a3a32", "#a1513a", "#c16b44", "#d98b54"],
+    "redwall": ["#2b1f2c", "#48303a", "#6a4446", "#8c5b52", "#aa7563", "#c39278"],
+    "muav": ["#24222f", "#3d3a46", "#5a5560", "#79727a", "#978f92", "#b3abaa"],
+    "tonto": ["#1f232b", "#343d3d", "#4d5a4f", "#687763", "#849379", "#a2ae90"],
+    "tapeats": ["#241a24", "#3c2b30", "#573d3c", "#73514a", "#8f685a", "#a9826c"],
+    "vishnu": ["#141320", "#201e2c", "#2e2b39", "#3d3947", "#4e4956", "#625b66"],
+    "pine": ["#142126", "#1d332d", "#284634", "#385b3b", "#4d7243", "#69894c"],
+    "conifer": ["#0e1a22", "#152821", "#1d3828", "#284a2f", "#355d36", "#46713f"],
+    "scrub": ["#26232b", "#3d3a3c", "#57534c", "#736c5c", "#908769", "#ada27a"],
+    "water": ["#0f2230", "#12333f", "#17474f", "#1f5d5e", "#2c746b", "#4a8e7a"],
+    "sand": ["#352a33", "#57463f", "#7d644f", "#a38563", "#c4a57a", "#ddc497"],
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+  },
+  "strata": [
+    { "name": "Kaibab limestone", "aboveMeters": 2050, "ramp": "kaibab" },
+    { "name": "Toroweap formation", "aboveMeters": 1950, "ramp": "toroweap" },
+    { "name": "Coconino sandstone", "aboveMeters": 1850, "ramp": "coconino" },
+    { "name": "Hermit shale", "aboveMeters": 1750, "ramp": "hermit" },
+    { "name": "Supai group", "aboveMeters": 1450, "ramp": "supai" },
+    { "name": "Redwall limestone", "aboveMeters": 1250, "ramp": "redwall" },
+    { "name": "Muav limestone", "aboveMeters": 1150, "ramp": "muav" },
+    { "name": "Bright Angel shale", "aboveMeters": 1000, "ramp": "tonto" },
+    { "name": "Tapeats sandstone", "aboveMeters": 950, "ramp": "tapeats" },
+    { "name": "Vishnu schist", "aboveMeters": -100000, "ramp": "vishnu" }
+  ],
+  "surfaces": {
+    "none": { "ramp": "vishnu", "pattern": "none" },
+    "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
+    "woodland": { "ramp": "pine", "pattern": "trees", "density": 0.09 },
+    "forest": { "ramp": "conifer", "pattern": "trees", "density": 0.2 },
+    "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
+    "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
+    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.05 }
+  }
+}

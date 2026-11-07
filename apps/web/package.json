@@ -1,0 +1,19 @@
+{
+  "name": "@pixelworld/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@pixelworld/bake": "workspace:*",
+    "@pixelworld/generators": "workspace:*",
+    "@pixelworld/grid": "workspace:*",
+    "@pixelworld/runtime": "workspace:*",
+    "@pixelworld/style": "workspace:*",
+    "@pixelworld/world-format": "workspace:*"
+  }
+}

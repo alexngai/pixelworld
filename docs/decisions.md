@@ -19,14 +19,17 @@ Status values:
 | D-008 | Facts → rules → overrides, deterministic and seeded | Accepted |
 | D-009 | Pipeline decides what and where; client generators decide how it looks | Proposed |
 | D-010 | Three independent scales: layout, object, vertical | Proposed |
-| D-011 | Integer projection: 32×16 px cell, 8 px height step | Proposed (tune in M0) |
+| D-011 | Integer projection: 32×16 px cell, 8 px height step | Proposed (validated in M0 review) |
 | D-012 | Bake indexed color + depth; palette LUT applied at runtime | Proposed |
 | D-013 | Client bakes generated content; hero assets are baked offline | Accepted |
-| D-014 | WebGL2 baseline; Three.js for bake scenes; custom compositor | Proposed |
+| D-014 | WebGL2 baseline; Three.js for bake scenes; custom compositor | Superseded by D-019 |
 | D-015 | Custom grid kinematics for gameplay; physics engine deferred | Proposed |
 | D-016 | Python geo pipeline, TypeScript client | Accepted |
 | D-017 | Depiction variants for compliance; generic signage by default | Accepted |
 | D-018 | First region: US Southwest (Las Vegas, Hoover Dam, Grand Canyon) | Proposed |
+| D-019 | Raw WebGL2 for baking and compositing; Three.js only for the later 3D mode | Proposed (M0) |
+| D-020 | Terrain quantization: bilateral smoothing + flat terraces for steep cells | Proposed (M0) |
+| D-021 | Bake tiles of 32×32 cells with a 16-cell context margin; ownership per cell | Proposed (M0) |
 
 ---
 
@@ -73,7 +76,7 @@ Bakes store u8 palette indices plus u16 depth. A runtime LUT maps indices to RGB
 ### D-013: Where baking happens
 Terrain and generated content are baked on the client, in workers, as chunks stream in, and cached. Pre-baking whole regions at 4 rotations would be gigapixels. Hero assets, building kits and vehicle sprite sheets are baked offline with the same code in headless Chromium, and can be painted over.
 
-### D-014: Rendering technology (proposed)
+### D-014: Rendering technology (superseded by D-019)
 WebGL2 is the baseline: universal support, and headless CI baking via SwiftShader. Three.js builds the bake scenes, with our own shaders and multiple render targets. A small custom WebGL2 compositor does the runtime work. WebGPU comes later.
 
 ### D-015: Gameplay physics (proposed)
@@ -87,3 +90,14 @@ Landmarks have canonical, stylized and generic variants, chosen per release targ
 
 ### D-018: First region (proposed)
 The US Southwest: dramatic elevation, a few unmistakable landmarks, low building counts, coverage tier 2 data (lidar + NAIP + OSM). It shows off both driving and flying.
+
+### D-019: Raw WebGL2 for baking and compositing (proposed, M0)
+Supersedes D-014. The bake projection is a fixed integer formula (`sx = 16(x−y)`, `sy = 8(x+y) − 8h`), written directly in the vertex shader. A camera library would only add floating-point round trips. The baker also needs precise control of render targets, depth textures and shadow maps. Building on raw WebGL2 kept the baker small (about 750 lines, shaders included), exact, and runnable headless via SwiftShader. Three.js stays the plan for the later live 3D mode, where it can consume the same generator meshes.
+
+### D-020: Terrain quantization (proposed, M0)
+Corner heights are bilateral-filtered (1.5 cells spatial, 1.2 steps range) before quantizing. Steep cells become flat terraces at their mean height. In the M0 review, Gaussian smoothing and "slope-clamped" steep cells were tried and rejected. Both turned canyon walls into sawtooth triangle facets, while flat terraces read as the canyon's stepped buttes. See [style-guide.md](style-guide.md) §8.
+
+### D-021: Bake tiling and ownership (proposed, M0)
+- **Tiles:** clients bake 32×32-cell tiles per rotation. Each bake renders the tile plus a 16-cell margin of context, so shadows, AO and outlines cross tile seams correctly.
+- **Ownership:** every face carries its owning cell. Pixels whose front-most surface belongs to another tile are left empty and filled by that tile.
+- **Compositing:** the runtime composites tiles with per-pixel depth, so draw order never matters. An e2e test checks that all 4 rotations are hole-free.

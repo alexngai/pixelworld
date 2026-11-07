@@ -1,0 +1,16 @@
+{
+  "name": "@pixelworld/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pixelworld/grid": "workspace:*",
+    "@pixelworld/style": "workspace:*",
+    "@pixelworld/world-format": "workspace:*",
+    "@pixelworld/generators": "workspace:*",
+    "@pixelworld/bake": "workspace:*"
+  }
+}

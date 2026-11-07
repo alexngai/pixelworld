@@ -1,0 +1,72 @@
+:root {
+  --bg: #1e1c2b;
+  --fg: #e8dcbc;
+  --muted: #a29384;
+  --panel: rgba(20, 19, 32, 0.78);
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font: 12px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+canvas#view {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  cursor: grab;
+}
+
+canvas#view.fixed {
+  width: auto;
+  height: auto;
+}
+
+.hud,
+.help,
+.attribution {
+  position: fixed;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.hud {
+  top: 8px;
+  left: 8px;
+}
+
+.help {
+  bottom: 8px;
+  left: 8px;
+  color: var(--muted);
+  white-space: normal;
+  max-width: calc(100vw - 32px);
+}
+
+.attribution {
+  top: 8px;
+  right: 8px;
+  max-width: 40vw;
+  color: var(--muted);
+  white-space: normal;
+  text-align: right;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .help {
+    display: none;
+  }
+}

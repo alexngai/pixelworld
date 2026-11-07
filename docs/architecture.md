@@ -86,7 +86,7 @@ screen_y =  8 · (x + y) − 8 · h          (x, y in cells; h in steps; y-down 
 depth    ∝ x + y + h / 3                  (larger = closer to the camera)
 ```
 
-This is exactly a standard orthographic camera at **45° yaw and 30° pitch**, provided that in true 3D one height step = **1/√6 cell (≈ 0.408)**. The baker therefore uses a normal orthographic camera, and lighting uses true geometry, yet every grid vertex still lands on an integer pixel.
+This is exactly a standard orthographic camera at **45° yaw and 30° pitch**, provided that in true 3D one height step = **1/√6 cell (≈ 0.408)**. The baker writes the integer formula directly in its vertex shader (no camera matrix), while normals and shadows use true geometry. Every grid vertex lands exactly on an integer pixel.
 
 - **View rotations:** r ∈ {0, 1, 2, 3}. World (x, y) is rotated by r·90° before projection. Each rotation is a separate bake.
 - **Lighting is view-relative:** the sun always comes from the same screen direction, as in classic isometric games, so all 4 rotations look equally good.
@@ -180,16 +180,17 @@ Hero assets are baked offline and can be painted over. A painted-over sprite rep
 
 ### 8.1 Bake (3D → indexed pixel art)
 
-For each bake tile and view rotation:
+Bake tiles are 32×32 cells. Each bake renders the tile plus a 16-cell margin of context, and every face carries its owning cell, so shadows, AO and outlines cross seams correctly. Pixels whose front-most surface belongs to another tile are left empty for that tile to fill (D-021). The exact rules are in [style-guide.md](style-guide.md). For each bake tile and view rotation:
 
 1. **Scene:** build the 3D geometry for the cells from the generators.
-2. **Raster passes** (orthographic camera, no anti-aliasing): material ID, normal, depth, shadow (from a shadow map) and ambient occlusion.
-3. **Downsample by vote:** shapes that aren't on the grid (domes, organic forms) are rendered at a higher resolution and reduced by majority vote on material ID, never by averaging colors.
-4. **Composite to palette indices:** material ramp + light band (N·L, shadow, AO) → palette index.
-5. **Cleanup:**
-   - Remove stray single pixels.
-   - Apply outline rules: a dark outer outline and a lighter inner "selout", both taken from the material's own ramp.
-   - Straighten uneven line runs.
+2. **Shadow map:** an orthographic light view. Its XY extent covers the receivers (owned cells) and its depth range covers every caster.
+3. **G-buffer pass** (integer projection, no anti-aliasing): ramp, quantized light level (N·L and shadow), material pattern, AO darkness, ownership and face kind, plus depth.
+4. **Downsample by vote:** shapes that aren't on the grid (domes, organic forms) will be rendered at a higher resolution and reduced by majority vote on material ID, never by averaging colors. This is needed from M3; terrain doesn't use it.
+5. **Composite to palette indices**, with cleanup:
+   - Remove lone pixels.
+   - Dither AO with a 4×4 ordered pattern.
+   - Outline depth jumps of 2 or more units and the world edge with the ramp's shade 0.
+   - Straighten uneven line runs (from M3, for geometry that isn't on the grid).
 6. **Output:**
    - **Indexed color:** u8 palette index per pixel.
    - **Depth:** u16 per pixel.
@@ -197,7 +198,7 @@ For each bake tile and view rotation:
 
 Bakes run in two places with the same code:
 
-- **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. Results are cached in memory and persistently in IndexedDB/OPFS. When a player edits the grid, only the affected bake tiles are re-baked.
+- **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. If a worker can't create WebGL2, baking falls back to the main thread. Results are cached in memory (M0) and persistently in IndexedDB/OPFS (M1). When a player edits the grid, only the affected bake tiles are re-baked.
 - **Offline**, in headless Chromium via Playwright, for hero assets, building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
 
 ### 8.2 Runtime compositor
@@ -236,28 +237,34 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 - **Codecs:** a TypeScript reader and a Python writer, kept in sync by shared golden test files.
 - **Hosting:** the full specification, `docs/world-format.md`, will be written in M0. Packages are static files on any CDN, possibly bundled as one archive the client reads with HTTP range requests.
 
-## 11. Repository layout (target)
+## 11. Repository layout
+
+Entries marked † don't exist yet.
 
 ```
-docs/                     architecture, roadmap, data sources, decisions, format specs
-worlds/                   region specs, style packs, landmark registry, overrides
-assets/                   hero models (.vox), painted sprite overrides, palettes
+docs/                     architecture, roadmap, data sources, decisions, format + style specs
+worlds/                   region specs†, style packs, landmark registry†, overrides†
+assets/†                  hero models (.vox), painted sprite overrides, palettes
+fixtures/                 small committed world packages (served by the dev app)
+testdata/                 cross-language golden files
 pipeline/                 Python geo pipeline (uv-managed package + CLI)
 packages/grid/            coordinates, projection, rotations, cell model
 packages/world-format/    chunk + manifest codecs (TS)
-packages/generators/      terrain, building, network, vegetation, landmark generators
-packages/bake/            scene builder, raster passes, composite, cleanup
-packages/runtime/         streaming, cache, compositor, camera, input
-packages/sim/             vehicles, flight, building, cell occupancy
+packages/style/           style-pack validation, palette, material tables
+packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks†)
+packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
+packages/runtime/         bake worker + service, compositor, camera, world loading
+packages/sim/†            vehicles, flight, building, cell occupancy
 apps/web/                 player app
-apps/editor/              editor (warp tools, overrides, landmark placement)
-tools/bake-cli/           headless offline baking (Playwright)
+apps/editor/†             editor (warp tools, overrides, landmark placement)
+tools/bake-cli/†          headless offline baking (Playwright)
+e2e/                      Playwright golden-image and behaviour tests
 ```
 
 ## 12. Testing and quality
 
 - **Pipeline:** pytest on small fixture regions. Stage outputs are checked against snapshots.
 - **Format:** cross-language round-trip tests on golden chunk files.
-- **Bake:** golden-image tests in headless Chromium, with tolerance. GPU rasterization is not guaranteed to be bit-identical across devices, so the tests compare palette indices with a small allowed difference. Hero assets are baked offline only, so they are pixel-exact.
+- **Bake:** golden-image tests in headless Chromium on SwiftShader, with a small tolerance (`e2e/`). Behaviour tests check that every rotation is hole-free, that sub-pixel scrolling moves the image rigidly (no shimmer), and that occluded players show a silhouette. GPU rasterization isn't guaranteed to be bit-identical across devices, so goldens come from software rendering only. Hero assets are baked offline only, so they are pixel-exact.
 - **Art review:** each milestone ends with a screenshot review at 1× zoom against a style reference sheet.
-- **Performance budgets:** set in M0 after measuring. Targets: 60 fps compositing on a mid-range laptop and recent phones, and chunk bake time low enough that streaming never shows holes at normal driving speed.
+- **Performance budgets:** targets are 60 fps compositing on a mid-range laptop and recent phones, and tile bake time low enough that streaming never shows holes at normal driving speed. M0 measurements are in [roadmap.md](roadmap.md#m0-results).

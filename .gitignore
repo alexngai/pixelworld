@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Pipeline raw-data cache (never committed)
+.cache/
+
+.DS_Store

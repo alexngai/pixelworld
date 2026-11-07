@@ -8,7 +8,7 @@ Status: living document. Milestones are ordered and each has exit criteria. The 
 |---|---|---|
 | Client language | TypeScript (strict) | Shared by player app, editor and offline baker. |
 | Monorepo / build | pnpm workspaces + Vite | |
-| Bake renderer | Three.js on WebGL2, with our own shaders and multiple render targets | WebGL2 is the baseline because it runs headless in CI via SwiftShader. Three.js also carries over to full 3D mode. |
+| Bake renderer | Raw WebGL2 with the integer projection in the vertex shader (D-019) | WebGL2 is the baseline because it runs headless in CI via SwiftShader. Three.js is reserved for the later live 3D mode. |
 | Runtime compositor | Small custom WebGL2 renderer | Draws indexed + depth quads, applies the palette LUT, upscales by integer factors. |
 | Background baking | Web workers with OffscreenCanvas + WebGL2 | |
 | Client cache | Memory, plus IndexedDB / OPFS | Keyed by chunk hash + rotation + style version. |
@@ -22,7 +22,7 @@ Status: living document. Milestones are ordered and each has exit criteria. The 
 
 ## 2. Milestones
 
-### M0: Grid and bake slice
+### M0: Grid and bake slice — done
 
 **Goal:** prove the look and the grid on one hardcoded piece of the Grand Canyon, before investing in data.
 
@@ -40,6 +40,25 @@ Status: living document. Milestones are ordered and each has exit criteria. The 
 - Scrolling doesn't shimmer, and all 4 rotations work.
 - The sprite hides correctly behind cliffs.
 - Bake time per tile has been measured on desktop and on a phone, and budgets are recorded.
+
+#### M0 results
+
+![M0 overview, rotation 0 at 1×](images/m0-overview-r0.png)
+
+| Exit criterion | Result |
+|---|---|
+| Screenshots pass review at 1× against the style sheet | Done. Reviewed over several iterations (outline threshold, AO dead zone, terrain smoothing); see [style-guide.md](style-guide.md). |
+| No shimmer while scrolling | Verified by an e2e test: a ¼-pixel pan at 4× shifts the output by exactly one device pixel. |
+| All 4 rotations work | Verified: an e2e test finds zero holes or seams in every rotation. |
+| Sprite hides correctly behind cliffs | Verified: the e2e test finds the silhouette when the rover is hidden and none when it's in the open. |
+| Bake time measured on desktop and phone | **Partly.** Measured only on software rendering (SwiftShader, headless): about 45 ms mesh generation in JS (about 53k vertices for a tile plus margin) + 105 ms bake per 32×32 tile, max 235 ms; compositing ran at about 30 fps at 1280×720. No GPU desktop or phone has been measured yet. |
+
+**Proposed budgets** (to confirm on real hardware):
+- ≤ 50 ms per tile on a desktop GPU and ≤ 150 ms on a recent phone.
+- Compositing at 60 fps on both.
+
+If phones miss the bake budget, the first step is profiling mesh generation (per-vertex AO sampling is a likely cost). After that, try smaller tiles or a smaller context margin.
+
 
 ### M1: Real region at uniform scale
 
