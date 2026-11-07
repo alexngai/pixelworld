@@ -102,6 +102,36 @@ Also delivered:
 - **Busy, spiky mountains.** At 400 m per cell and 2.5× exaggeration, mountain ranges are busy with one-cell pillars. Focus-area scales in M2 change this anyway.
 - **Rough geology boundary.** The Colorado Plateau outline is hand-drawn, and strata colour by elevation alone (no dip).
 
+### M1.5: Pixel detail experiment — in progress
+
+**Goal:** decide how pixel-level detail should look before building it properly. Two small areas, the Desert View area of the Grand Canyon and a stretch of the Las Vegas Strip, are rendered three ways:
+1. today's coarse cells
+2. pixel-scale terrain: fine cells drawn at reduced pixel size, standing in for micro-terrain
+3. pixel-scale terrain plus procedural objects: vegetation, buildings from footprints, 2–3 landmarks, and a night palette with lit windows and neon
+
+**Deliverables:**
+- comparison screenshots
+- a first set of procedural generators for semantic asset groups (see M3)
+- decisions on micro-terrain resolution (K), object pixel scale and outline rules
+
+The experiment code may be throwaway where it doesn't fit the production design.
+
+**Exit criteria:** the look is chosen and recorded in the style guide and decision log; micro-terrain and M3 can start from it.
+
+### M1.6: Micro-terrain
+
+**Goal:** pixel-resolution terrain everywhere, without changing the gameplay grid.
+
+- **Data:** a K×K grid of fine heights per cell (K from the experiment, likely 8), with 1 px vertical resolution, stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary.
+- **Pipeline:** builds micro-heights from finer elevation sources. Roads and pads are cut and filled at micro resolution, and water stays flat.
+- **Rendering:** terrain moves to the GPU, as a heightfield ray-march or a GPU-built grid mesh, so bake cost scales with pixels rather than with geometry. JavaScript mesh building can't handle 64× the vertices.
+- **Gameplay:** vehicles sample micro-heights.
+
+**Exit criteria:**
+- The Southwest renders with micro-terrain at every zoom.
+- Bake time per tile is within the budget on desktop.
+- The package size increase is understood and acceptable (estimate: about 3× for K=4, about 10× for K=8, gzipped).
+
 ### M2: Elastic map and editor v0
 
 **Goal:** demonstrate the core idea: Las Vegas, Hoover Dam and the Grand Canyon within a short drive.
@@ -118,10 +148,15 @@ Also delivered:
 - Each focus area hits its target scale within tolerance.
 - An editor change shows up in the preview within seconds for the affected area.
 
-### M3: Components and landmarks
+### M3: Detail pass — components and landmarks
 
 **Goal:** the world looks inhabited and the landmarks read instantly.
 
+- **Semantic asset groups.** Every object belongs to a named group, such as `building.residential.colonial`, `building.tower.brutalist`, `tree.conifer`, `tree.coastal-cypress` or `shrub.desert`. A style pack maps each group to an asset source:
+  - a **procedural generator** with parameters (the first route)
+  - **hand-drawn** sprites or voxel models (supported, and added as needed)
+
+  New groups get new assets as regions need them, and the pipeline only names groups.
 - Building generator (massing, roofs, facades) and the `desert-southwest` style pack.
 - 3DEP lidar heights and canopy data integrated.
 - Vegetation and props, with gameplay-relevant ones placed by the pipeline and decorative scatter added by the client.
@@ -171,6 +206,8 @@ Also delivered:
 - Seasons.
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
+
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5.
 
 ## 3. Technology tracks
 

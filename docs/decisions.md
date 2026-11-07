@@ -37,6 +37,9 @@ Status values:
 | D-026 | Roads: 8-direction snapping with corner-crossing bits; cut-and-fill on the shared corner-height field | Proposed (M1) |
 | D-027 | Geology provinces select strata sets per cell | Proposed (M1) |
 | D-028 | Client streams chunks and caches baked tiles in IndexedDB, keyed by package hash, style hash and bake version | Proposed (M1) |
+| D-029 | Pixel-resolution visuals decoupled from the gameplay grid: micro-terrain (M1.6) plus an object layer | Accepted |
+| D-030 | Objects come from semantic asset groups; procedural generators first, hand-drawn assets supported per group | Accepted |
+| D-031 | Order of work: pixel experiment → micro-terrain → M2 → detail pass | Accepted |
 
 ---
 
@@ -154,3 +157,19 @@ Corner heights are bilateral-filtered (1.5 cells spatial, 1.2 steps range) befor
 - **Streaming:** the client fetches chunks around the view and gives the worker per-tile slices.
 - **Cache:** baked tiles persist in IndexedDB, gzip-compressed and pruned least-recently-used. Keys include the package hash, a hash of the style pack and `BAKE_VERSION`, so stale tiles are never shown after a change; bump `BAKE_VERSION` whenever bake output changes for the same inputs.
 - **GPU memory:** tile textures stay on the GPU up to a 192 MB budget.
+
+### D-029: Pixel-resolution visuals (accepted)
+The coarse look has two causes: one height per cell, and no objects. Visuals get pixel-level detail on top of the gameplay grid, which stays the unit for roads, placement, collision and chunks:
+- **micro-terrain:** a K×K grid of fine heights per cell (M1.6)
+- **an object layer:** vegetation, buildings, landmarks and life (M3)
+
+The point is more room for visual interest; both halves are wanted.
+
+### D-030: Semantic asset groups (accepted)
+- **Groups:** objects are named by semantic group (`tree.conifer`, `building.tower.brutalist`, `building.residential.colonial`, `tree.coastal-cypress`, …). The pipeline decides which group goes where from data.
+- **Sources:** a style pack maps each group to an asset source, either a procedural generator with parameters or hand-authored assets (sprites or voxel models). Generators come first; hand-drawn assets can replace or add variants to any group later.
+- **Growth:** new groups are added as regions need them.
+
+### D-031: Order of work (accepted)
+- **Sequence:** the M1.5 pixel detail experiment comes first, to choose the look, then M1.6 micro-terrain, then the M2 elastic map, then the M3 detail pass.
+- **Why:** micro-terrain and the warp change the canvas the detail pass draws on.
