@@ -187,3 +187,179 @@ def test_roads_along_the_world_edge_stay_inside_it():
     junctions = {"j1": ["edge-a", "edge-b"], "j2": ["edge-b", "side"]}
     report = R.validate(layer, np.zeros((4, 30, 30), dtype=np.int16), junctions)
     assert report.disconnected_junctions == 0 and report.split_segments == 0
+
+
+def _crooked_block():
+    """Two streets 12 cells apart joined by a straight cross street and by a
+    crooked one whose hairpins swing two cells either side of its line
+    (Lombard Street's block between Hyde and Leavenworth)."""
+    zig_x = np.linspace(10.3, 22.3, 13)
+    zig_y = 20.3 + np.array([0, 2, -2, 2, -2, 2, -2, 2, -2, 2, -2, 2, 0], dtype=np.float64)
+    return [
+        ("west-n", 1, [(np.array([10.3, 10.3]), np.array([8.3, 20.3]))]),
+        ("west-s", 1, [(np.array([10.3, 10.3]), np.array([20.3, 32.3]))]),
+        ("east-n", 1, [(np.array([22.3, 22.3]), np.array([8.3, 20.3]))]),
+        ("east-s", 1, [(np.array([22.3, 22.3]), np.array([20.3, 32.3]))]),
+        ("cross", 1, [(np.array([10.3, 22.3]), np.array([8.3, 8.3]))]),
+        ("crooked", 1, [(zig_x, zig_y)]),
+    ]
+
+
+def test_kept_ways_keep_their_hairpins_while_the_grid_straightens():
+    lines = _crooked_block()
+    shape = (40, 40)
+    plain = R.straighten(lines, angle=16, simplify=0.75)
+    kept = R.straighten(lines, angle=16, simplify=0.75, keep={"crooked"})
+    (pxs, _pys) = {seg: parts for seg, _, parts in plain.lines}["crooked"][0]
+    (kxs, kys) = {seg: parts for seg, _, parts in kept.lines}["crooked"][0]
+    # straightened, the steep hairpin legs are pulled upright and bunch together
+    assert not np.allclose(pxs, np.linspace(10.3, 22.3, 13), atol=0.5)
+    # kept, every vertex stays where it was (the ends are junctions with
+    # streets that already run along the grid)
+    assert len(kxs) == 13
+    assert np.allclose(kxs, np.linspace(10.3, 22.3, 13), atol=1e-6)
+    assert np.allclose(kys[1:-1], 20.3 + np.array([2, -2] * 5 + [2]), atol=1e-6)
+    # the streets around it are still made octilinear, the hairpins aren't
+    assert kept.constrained == 5 < plain.constrained
+    # drawn, the hairpins swing across five rows and stay one connected street
+    layer = R.rasterize(kept.lines, shape, deviation=1.0)
+    rows = {y for x, y in layer.segment_cells["crooked"]}
+    assert len(rows) >= 5
+    report = R.validate(layer, np.zeros((4, *shape), dtype=np.int16), {})
+    assert report.split_segments == 0 and report.components == 1
+
+
+def test_street_tracks_run_on_their_road_and_trains_keep_their_own_way():
+    shape = (12, 20)
+    on_road = np.zeros(shape, dtype=bool)
+    on_road[5, :] = True  # an east-west street along row 5
+    street = R.RAIL_KINDS["street"]
+    cable = R.RAIL_KINDS["cable"]
+    train = R.RAIL_KINDS["train"]
+    lines = [
+        # the street's two tracks, a little either side of its line
+        ("t1", street, [(np.array([1.0, 18.0]), np.array([5.3, 5.3]))]),
+        ("t2", cable, [(np.array([1.0, 10.0]), np.array([6.2, 6.2]))]),
+        # a train two rows south, nowhere near the street
+        ("rail", train, [(np.array([1.0, 18.0]), np.array([8.5, 8.5]))]),
+    ]
+    rail = R.rail_layer(lines, shape, deviation=1.0, on_road=on_road)
+    kinds = rail >> R.RAIL_KIND_SHIFT
+    # both tracks merged onto the street's cells; cable wins where they share one
+    assert (kinds[5, 1:19] > 0).all() and not kinds[6].any()
+    assert (kinds[5, 1:11] == cable).all() and (kinds[5, 11:19] == street).all()
+    # one connected line along the street: east-west connections, no others
+    e, w = 1 << R.DIR_INDEX[(1, 0)], 1 << R.DIR_INDEX[(-1, 0)]
+    assert all(int(v) & R.CONNECT_MASK == e | w for v in rail[5, 2:18])
+    # the train keeps its own row
+    assert (kinds[8, 1:19] == train).all()
+
+
+def test_rungs_between_parallel_tracks_go_but_crossings_stay():
+    rail = np.zeros((6, 6), dtype=np.uint16)
+    n, e, s, w = (1 << R.DIR_INDEX[d] for d in ((0, -1), (1, 0), (0, 1), (-1, 0)))
+    # two north-south tracks in columns 1 and 2, with a rung between them in row 2
+    rail[0:5, 1] = n | s
+    rail[0:5, 2] = n | s
+    rail[2, 1] |= e
+    rail[2, 2] |= w
+    # an east-west track crossing a north-south one at (4, 3)
+    rail[3, 3:6] |= e | w
+    rail[2:5, 4] |= n | s
+    out = R.drop_rungs(rail)
+    assert not out[2, 1] & e and not out[2, 2] & w
+    assert out[3, 3] & e and out[3, 4] & w and out[3, 4] & e  # the crossing keeps its line
+    assert (out[0:5, 1] & (n | s)).all()
+
+
+def test_rail_rules_pick_segments_and_tunnels_are_left_out():
+    from pixelworld_pipeline.build import rail_lines
+    from pixelworld_pipeline.layout import UniformLayout
+    from pixelworld_pipeline.sources import overture
+
+    def line(coords):
+        return f"LINESTRING ({', '.join(f'{x} {y}' for x, y in coords)})"
+
+    lon0, lat0 = -115.199, 36.002
+    rows = [
+        # named, its middle third in a tunnel
+        {
+            "id": "a",
+            "class": "tram",
+            "names": {"primary": "Muni F"},
+            "rail_flags": [{"values": ["is_tunnel"], "between": [1 / 3, 2 / 3]}],
+            "geometry": line([(lon0, lat0), (lon0 + 0.006, lat0)]),
+        },
+        # unnamed, inside the box
+        {
+            "id": "b",
+            "class": "tram",
+            "names": None,
+            "geometry": line([(lon0, lat0 + 0.002), (lon0 + 0.003, lat0 + 0.002)]),
+        },
+        # a train
+        {
+            "id": "c",
+            "class": "standard_gauge",
+            "names": None,
+            "geometry": line([(lon0, lat0 + 0.004), (lon0 + 0.006, lat0 + 0.004)]),
+        },
+        # light rail matches no rule
+        {
+            "id": "d",
+            "class": "light_rail",
+            "names": None,
+            "geometry": line([(lon0, lat0 + 0.006), (lon0 + 0.006, lat0 + 0.006)]),
+        },
+    ]
+    box = [lon0 - 0.001, lat0 + 0.001, lon0 + 0.004, lat0 + 0.003]
+    rules = [
+        {"draw": "cable", "rail": ["tram"], "unnamed": True, "bounds": box},
+        {"draw": "street", "rail": ["tram"]},
+        {"draw": "train", "rail": ["standard_gauge"]},
+    ]
+    assert overture.rail_matches(rules[0], rows[1]) and not overture.rail_matches(rules[0], rows[0])
+    assert len(overture.rail_open_parts(rows[0])) == 2  # either side of the tunnel
+    region = Region.from_dict(
+        {
+            "id": "s",
+            "name": "S",
+            "bounds": [-115.2, 36.0, -115.19, 36.01],
+            "metersPerCell": 20,
+            "style": "s",
+            "start": {"lon": -115.195, "lat": 36.005},
+            "sources": {},
+        }
+    )
+    got = {
+        seg: (kind, parts) for seg, kind, parts in rail_lines(UniformLayout(region), rows, rules)
+    }
+    assert {seg: k for seg, (k, _) in got.items()} == {
+        "a": R.RAIL_KINDS["street"],
+        "b": R.RAIL_KINDS["cable"],
+        "c": R.RAIL_KINDS["train"],
+    }
+    # the tunnel's third is missing: two parts with a gap between them
+    (axs, _), (bxs, _) = got["a"][1]
+    assert bxs[0] - axs[-1] > 5  # about 180 m at 20 m cells
+    # a straight track comes out as one run, whatever the vertices it was bent with
+    assert len(got["c"][1][0][0]) == 2
+    # with the roads' shift, it moves with its street
+    moved = rail_lines(UniformLayout(region), rows, rules, lambda x, y: (x * 0 + 0.5, y * 0))
+    assert np.allclose(moved[2][2][0][0], got["c"][1][0][0] + 0.5)
+
+
+def test_kept_ways_are_those_inside_a_keep_box():
+    from pixelworld_pipeline.build import kept_ways
+
+    def row(i, coords):
+        return {"id": i, "geometry": f"LINESTRING ({', '.join(f'{x} {y}' for x, y in coords)})"}
+
+    rows = [
+        row("crooked", [(-122.4196, 37.8020), (-122.4190, 37.8022), (-122.4180, 37.8021)]),
+        row("cross", [(-122.4196, 37.8010), (-122.4196, 37.8030)]),  # leaves the box
+        row("elsewhere", [(-122.40, 37.79), (-122.39, 37.79)]),
+    ]
+    box = {"bounds": [-122.4197, 37.8019, -122.4179, 37.8023], "width": 5}
+    assert kept_ways(rows, [box]) == {"crooked": box}
+    assert kept_ways(rows, []) == {}
