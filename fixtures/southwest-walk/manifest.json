@@ -1,0 +1,343 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "southwest-walk",
+  "name": "Las Vegas Strip (walking)",
+  "chunkSize": 64,
+  "cellsX": 182,
+  "cellsY": 412,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "6c3a312e08dfcc4166a9e95bc0578b64a7f72e6f69fec996b88d9b944aa847a3",
+      "heightRange": [
+        193,
+        201
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "05a09aa1369e20d9e49a7acda27003ae959fee181b0313447c84ae7a648bbbf7",
+      "heightRange": [
+        190,
+        196
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "cfa276a14f342a27bbfebd37a9b10fc48e902ffeebee68f8c4595da06066e9bb",
+      "heightRange": [
+        188,
+        192
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "b58305131f45d7a426d4ed19d445dd30905b360e524f40dbc6b82e8ceaca1100",
+      "heightRange": [
+        194,
+        201
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "74a3db0c7ecfdf494926bcaac9801d7a749660950899f99a320b86c9ec8b08ec",
+      "heightRange": [
+        190,
+        198
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "7e7ad5c6c0d730ae9fc499fcccc2d993ecd1b617613aba43b79e32b17b216b92",
+      "heightRange": [
+        187,
+        193
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "176f7672664a21bebe17aafab687143e91ccd9870cd07941a6da2b52b6a802c4",
+      "heightRange": [
+        194,
+        202
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "f3b99c64b5b37cfa76a44588153d4280b7794821140945efce53fb515bc9b063",
+      "heightRange": [
+        191,
+        198
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "26a628799476d1700360931feb72b76c06e1d8fb89089670b93755f8eab6c2c1",
+      "heightRange": [
+        189,
+        194
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "869ad019e5233ed279e19afa35789f423d041d0653b15d4ecf4fc7f9695fffe0",
+      "heightRange": [
+        196,
+        205
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "d29a3e4c02a4654d871b5e5f8e32fa93f01a3defd34409c0701de7b6aaf77627",
+      "heightRange": [
+        192,
+        199
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "5cb8f3bf24684fc3527251b84981f7efb7ea711d80374d5f01928381d0221161",
+      "heightRange": [
+        188,
+        194
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "e8fd20da0774549025e058f88bd1b47c26f973a0f5853af7e9817855d910771c",
+      "heightRange": [
+        198,
+        205
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "3df4b92d10cd79a029fd3e44b4febb5a6bf9be167517ba8b74629aa52a2a6e3f",
+      "heightRange": [
+        193,
+        202
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "4ca1a9eaab40555f142e358af652f9cac7d06a923eb941606ba778e4af3199b1",
+      "heightRange": [
+        190,
+        196
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "1fb9556186202c6fb12e83e2a9b2a86b2a4283e9b54bc34c1bc953312b0aa50a",
+      "heightRange": [
+        199,
+        208
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "5440d9add521cb3428dfbfb5c29508826ed69ad6b56d00da71caed091e90ca3d",
+      "heightRange": [
+        195,
+        204
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "18c8c3167bc4bce6e9b8ae021c3ff365e48ede86f4a2357bf4da1d9bb8bd37c8",
+      "heightRange": [
+        192,
+        199
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "673145916a38ce9e6b78984290a3ef525800e04a86be167fdf2f0cd99b7caba9",
+      "heightRange": [
+        202,
+        210
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "e626be88e2d77a7d7b9217a2d4d6e02746229e6b705230d126297a4c461120f8",
+      "heightRange": [
+        198,
+        207
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "99aa2d15376864477f95bbf5dff1f58385e55b6c965aeb1b435fad0aff8ec93c",
+      "heightRange": [
+        195,
+        200
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 20.0,
+    "metersPerStep": 3.265986,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    187,
+    210
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "basin-and-range",
+    "1": "colorado-plateau"
+  },
+  "start": {
+    "x": 69,
+    "y": 207
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.115 +lon_0=-115.168 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -115.188,
+      36.078,
+      -115.148,
+      36.152
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "f545e134522385b2",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "03ac0817b092ae063dc1c1c6ae8c16be6d94c9d1ae9fa7443d9be71650d1049e",
+    "count": 8918
+  },
+  "depiction": {
+    "heightStretch": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "southwest-fly",
+      "label": "Flying"
+    },
+    {
+      "name": "drive",
+      "world": "southwest",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "southwest-walk",
+      "label": "Walking the Strip"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      13,
+      27
+    ],
+    "sha256": "6ebd18be6a34c66ad3335e7ef5832d63228ccd5911ffce709a3da33a14865af3"
+  },
+  "packageHash": "e9089765d20169a12493293c0a13b29eb94b1c871973beabbbf87a5fedef2319"
+}

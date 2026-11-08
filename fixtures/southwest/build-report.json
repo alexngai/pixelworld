@@ -1,5 +1,5 @@
 {
-  "packageHash": "b6f454f3b3a324d55950622859f4c745a03eb9d55852e363a801538243595514",
+  "packageHash": "57f36109fe5ead9f5e6dccf02f539ebe4275fd9c8fa5ab46d4cc49d6e711fed2",
   "cells": [
     1155,
     709
@@ -54,7 +54,7 @@
       }
     ],
     "pins": [],
-    "solveSeconds": 17.159
+    "solveSeconds": 18.407
   },
   "objects": {
     "building.commercial": 2656,

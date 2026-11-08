@@ -1,0 +1,438 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "southwest-fly",
+  "name": "US Southwest (flying)",
+  "chunkSize": 64,
+  "cellsX": 339,
+  "cellsY": 219,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "3f534d2162e1d25a46783dff313e7038709d7131c67fdce1f9d705264f098f13",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1342.7
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "e59012d2a680f5b325f5c1c237742fb9e8f9740b8e21ad1491cea0fe4e33cc48",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1328.8
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "b1afab6c912629627dd14e79a1952c293f95cb215910207cef124f5867230850",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1328.1
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "43224f25bca1748bd8fd325e154ed60cb9d27102e008e5db95280bf018dd4997",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1304.1
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "cb61f05bf7e3ac40b51e3694672a1c00e148dc52545bfcd4d81804cb82cc8608",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1321.0
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "df206dd4a9c5c0be151b6402c442787d0f19978e3073adb52b6429e457519082",
+      "heightRange": [
+        0,
+        11
+      ],
+      "metersPerCell": 1299.5
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "bf3060cd453ceab0a840985c107741e8dc48e3f0bfce6ac64b0cba6006b2ab00",
+      "heightRange": [
+        0,
+        16
+      ],
+      "metersPerCell": 1035.6
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "ffc3c8d312fe2125e420fe5597c2fda6f7fa6c40c4c1c20bb3f343b71cd56404",
+      "heightRange": [
+        0,
+        17
+      ],
+      "metersPerCell": 943.7
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "48d1ce84983ec9507dcc167151153cce2e439126e79a08a667c7a4f5657cf0da",
+      "heightRange": [
+        0,
+        11
+      ],
+      "metersPerCell": 1333.5
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "5d7b33068a809d1132626c19a7d0a38f588a2ed1273240d217a1f8b245e3f626",
+      "heightRange": [
+        0,
+        21
+      ],
+      "metersPerCell": 1309.3
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "b9e8352b31ff18c4a6f9e83747ef30f5e98147e4c5e399807481dddc93838988",
+      "heightRange": [
+        0,
+        26
+      ],
+      "metersPerCell": 894.5
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "68e4ba28b49d42692cb804c0016fc11460b21228ae3ce142605c47120fd8899b",
+      "heightRange": [
+        0,
+        23
+      ],
+      "metersPerCell": 1173.5
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "5b1347205c7ced21ce623f8ac42ea0d6e360d1ce66b3e923825fa83324abab73",
+      "heightRange": [
+        0,
+        12
+      ],
+      "metersPerCell": 1181.1
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "de3e84884edb5438fdfb5692f086f10d95ff74e125044cc47fb6a54ab5c716fb",
+      "heightRange": [
+        0,
+        16
+      ],
+      "metersPerCell": 1004.0
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "82e627d03ab661f6a1526974d7d551adc29df4835f996defdb994508ff419567",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1347.3
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "b00f9f4b4b62671a7c98a7177f5be9ec95e7db8cd7cdf54553e6fcd850bdd5d2",
+      "heightRange": [
+        0,
+        20
+      ],
+      "metersPerCell": 1325.1
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "1ae151b2f42e985d58432f69d89dcfb5e493164de25c60bbd656b986a11180f8",
+      "heightRange": [
+        0,
+        24
+      ],
+      "metersPerCell": 992.3
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "65f2671f50308e9eda06cd575e2f59ecf79cd0e80b7f7eff79ebd19b35b59a6b",
+      "heightRange": [
+        0,
+        23
+      ],
+      "metersPerCell": 1234.6
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "5931007f2d678f54b01b0e57428609b7e31ae325a15aa29344d2726c689f21cd",
+      "heightRange": [
+        0,
+        11
+      ],
+      "metersPerCell": 1327.9
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "323bf695c64ab150c07ada2d295a9ef47115d794bc719d21c95cb02660192091",
+      "heightRange": [
+        0,
+        8
+      ],
+      "metersPerCell": 1294.3
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "a1d7bcdbf1507f60d4351eae50133c0246de451db597b710c78fc538c8384165",
+      "heightRange": [
+        0,
+        11
+      ],
+      "metersPerCell": 1335.0
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "b1044c3069028257dbbe4761e21dfa2241c302b35233de4a699fc076d5659e65",
+      "heightRange": [
+        0,
+        10
+      ],
+      "metersPerCell": 1360.6
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "db73311700350c02e7cca9026d16efaa6a5f8dd3429f2782a6e5c964a57922c9",
+      "heightRange": [
+        0,
+        14
+      ],
+      "metersPerCell": 1288.9
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "9ddb786ee50c4aba119ba89f9589b5b9ed2dd9249ee5d91822e9cbc5a23c0150",
+      "heightRange": [
+        0,
+        16
+      ],
+      "metersPerCell": 1161.8
+    }
+  ],
+  "scale": {
+    "metersPerCell": 1500.0,
+    "metersPerStep": 244.948974,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    0,
+    26
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "basin-and-range",
+    "1": "colorado-plateau"
+  },
+  "start": {
+    "x": 59,
+    "y": 117
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.25 +lon_0=-113.75 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -116.0,
+      35.0,
+      -111.5,
+      37.5
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "9226352390160e1a",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 2,
+      "bilateral": [
+        1.5,
+        48.0
+      ],
+      "warp": "00d228502a733b3d"
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "warp": {
+    "method": "v2",
+    "background": 1500.0,
+    "focus": [
+      {
+        "name": "las-vegas-strip",
+        "target": 400.0,
+        "achieved": 398.3,
+        "error": -0.004
+      },
+      {
+        "name": "hoover-dam",
+        "target": 400.0,
+        "achieved": 397.8,
+        "error": -0.005
+      },
+      {
+        "name": "lake-mead",
+        "target": 1000.0,
+        "achieved": 989.8,
+        "error": -0.01
+      },
+      {
+        "name": "grand-canyon-village",
+        "target": 600.0,
+        "achieved": 599.5,
+        "error": -0.001
+      },
+      {
+        "name": "desert-view",
+        "target": 600.0,
+        "achieved": 601.3,
+        "error": 0.002
+      }
+    ],
+    "pins": 0,
+    "vertical": {
+      "gamma": 1.0,
+      "referenceSigmaKm": 6,
+      "min": 0.6,
+      "max": 4.0
+    }
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "70881897ed6107da3e58e9eece86ef3ebf9e97158d1a4e621a27ec47cc7fe5b7",
+    "count": 57
+  },
+  "level": "fly",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "southwest-fly",
+      "label": "Flying"
+    },
+    {
+      "name": "drive",
+      "world": "southwest",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "southwest-walk",
+      "label": "Walking the Strip"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 4,
+    "size": [
+      86,
+      56
+    ],
+    "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
+  },
+  "packageHash": "7a017c5e5930e8f3fe309358e1ca36158dd498017ed118997253bfc065de5276"
+}

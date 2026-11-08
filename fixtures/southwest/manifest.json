@@ -2590,7 +2590,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "dd23c9d1aaacd057",
+      "region": "2afe390d5d7b27ee",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 2,
       "bilateral": [
@@ -2651,5 +2651,32 @@
     "sha256": "6a57462e463a5daf07431c89c22e9eb50bfc14d50e298bfaffa012008abbe1a3",
     "count": 5639
   },
-  "packageHash": "b6f454f3b3a324d55950622859f4c745a03eb9d55852e363a801538243595514"
+  "level": "drive",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "southwest-fly",
+      "label": "Flying"
+    },
+    {
+      "name": "drive",
+      "world": "southwest",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "southwest-walk",
+      "label": "Walking the Strip"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 4,
+    "size": [
+      290,
+      179
+    ],
+    "sha256": "b1ff4e45e94b03cd9b55769569b2eb204e2446407c278a38ae6638077c461a59"
+  },
+  "packageHash": "57f36109fe5ead9f5e6dccf02f539ebe4275fd9c8fa5ab46d4cc49d6e711fed2"
 }

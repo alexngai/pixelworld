@@ -1,8 +1,17 @@
-# US Southwest — the M1 region (uniform scale, no warp yet).
+# US Southwest, driving level: the whole region on the M2 elastic map.
 # Build: cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
 id: southwest
 name: US Southwest
 bounds: [-116.0, 35.0, -111.5, 37.5] # lon/lat: west, south, east, north
+
+# Scale levels (D-046): the region is drawn for flying, driving and walking,
+# each its own world package. Level specs extend this file and override its
+# parameters (fly.yaml, walk.yaml); the client moves between them by lon/lat.
+level: drive
+levels:
+  - { name: fly, world: southwest-fly, label: Flying }
+  - { name: drive, world: southwest, label: Driving }
+  - { name: walk, world: southwest-walk, label: Walking the Strip }
 
 # Layout and vertical scale (docs/architecture.md §3.2, D-022, D-023).
 metersPerCell: 400 # the planned "base" scale; M2 enlarges focus areas

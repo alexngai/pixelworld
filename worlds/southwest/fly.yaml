@@ -1,0 +1,28 @@
+# US Southwest, flying level (D-046): the whole region at about 1.5 km per
+# cell, so a flight from Las Vegas to the Grand Canyon is short, with the
+# landmarks drawn oversized so they still read from the air.
+# Build: cd pipeline && uv run pixelworld build ../worlds/southwest/fly.yaml
+extends: region.yaml
+id: southwest-fly
+name: US Southwest (flying)
+level: fly
+
+# Base scale: sets the height step and the relief caricature's reference.
+metersPerCell: 1500
+verticalExaggeration: 2.5
+
+# The driving level's focus areas and importance, coarser: the open desert at
+# 1.5 km per cell and every focus area 4× coarser than when driving (the Strip
+# and Hoover Dam at 400 m, the canyon rim at 600 m).
+warp: { background: 1500, focusScale: 4 }
+
+# Generalization: only the main roads.
+sources:
+  roads: { classes: [motorway, trunk] }
+
+# Depiction: oversized landmarks and the tallest towers only, drawn bigger;
+# where enlarged towers would overlap, the taller one stays.
+objects:
+  depiction:
+    buildings: { scale: 3, minHeightMeters: 80 }
+    landmarks: { scale: 5 }

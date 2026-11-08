@@ -225,3 +225,45 @@ test.describe("Pixel detail experiment (M1.5)", () => {
     expect(glowing).toBeGreaterThan(50);
   });
 });
+
+test.describe("Scale levels (D-046)", () => {
+  const lonLat = (page: Page) => page.evaluate(() => window.__pixelworld!.lonLat()) as Promise<[number, number]>;
+  const level = (page: Page) =>
+    page.evaluate(() => (window.__pixelworld!.stats() as { level: string | null }).level);
+  /** Metres between two lon/lat points (short distances). */
+  const metres = (a: [number, number], b: [number, number]) =>
+    Math.hypot((a[0] - b[0]) * 111_320 * Math.cos((a[1] * Math.PI) / 180), (a[1] - b[1]) * 110_540);
+  async function switchTo(page: Page, name: string) {
+    await page.evaluate((n) => setTimeout(() => window.__pixelworld!.switchLevel(n), 0), name);
+    await page.waitForURL(new RegExp(`world=%2Fsouthwest-${name}%2F|world=%2Fsouthwest%2F`));
+    await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
+    await page.evaluate(() => window.__pixelworld!.ready());
+  }
+
+  test("the flying level draws the Strip as an oversized skyline", async ({ page }) => {
+    await open(page, "world=/southwest-fly/&zoom=1&rot=0");
+    expect(await level(page)).toBe("fly");
+    await expect(page.locator("#view")).toHaveScreenshot("southwest-fly-strip-r0.png");
+  });
+
+  test("switching levels keeps the rover at the same place", async ({ page }) => {
+    await open(page, "zoom=1&rot=0"); // driving, at the Strip
+    expect(await level(page)).toBe("drive");
+    const strip = await lonLat(page);
+    await switchTo(page, "fly");
+    expect(await level(page)).toBe("fly");
+    expect(metres(await lonLat(page), strip)).toBeLessThan(400); // a fly cell here is ~400 m
+    await switchTo(page, "walk");
+    expect(await level(page)).toBe("walk");
+    expect(metres(await lonLat(page), strip)).toBeLessThan(400);
+    expect(await page.evaluate(() => (window.__pixelworld!.stats() as { rotation: number }).rotation)).toBe(0);
+  });
+
+  test("a place outside the walking level starts at its start instead", async ({ page }) => {
+    await open(page, "zoom=1&rot=2&rover=913.8,401.6"); // Grand Canyon Village
+    await switchTo(page, "walk");
+    expect(await level(page)).toBe("walk");
+    const start = await lonLat(page);
+    expect(metres(start, [-115.1728, 36.1147])).toBeLessThan(50); // the Strip start
+  });
+});

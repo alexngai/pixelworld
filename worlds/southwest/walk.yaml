@@ -1,0 +1,38 @@
+# US Southwest, walking level (D-046): the Las Vegas Strip at 20 m per cell,
+# uniform (no warp), from the Welcome sign to the observation tower. Built
+# from the M1.5 pixel experiment's Strip (worlds/experiment/strip-k8.yaml),
+# drawn at full cell size with micro-terrain instead of a render scale.
+# Build: cd pipeline && uv run pixelworld build ../worlds/southwest/walk.yaml
+extends: region.yaml
+id: southwest-walk
+name: Las Vegas Strip (walking)
+level: walk
+bounds: [-115.188, 36.078, -115.148, 36.152]
+
+metersPerCell: 20
+verticalExaggeration: 2.5
+maxSlope: 3
+warp: null
+smoothing: null
+
+# 5 m micro-cells from the 10 m DEM
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+micro: { k: 4, dem: { overview: 1 } }
+
+# keep lakes and big pools (the fountain lake), drop specks
+terrain: { minLakeArea: 4000, maxLakeRelief: 6 }
+
+objects:
+  buildings: { minArea: 40, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  vegetation:
+    - { group: tree, landcover: [tree], spacing: 16, density: 0.8 }
+    - { group: shrub, landcover: [shrub], spacing: 40, density: 0.2 }
+  streetTrees:
+    - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 70, offset: 24 }
+  landmarks:
+    - { group: landmark.tower.observation, lon: -115.1555, lat: 36.1474, hm: 350, clear: 45 }
+    - { group: landmark.sign, lon: -115.17282, lat: 36.08208, clear: 10 }
+  # at walking scale true proportions read best: no extra height stretch
+  depiction: { heightStretch: 1.0 }
