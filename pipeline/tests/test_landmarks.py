@@ -151,3 +151,62 @@ def test_canopy_rule_keeps_points_where_trees_stand():
     assert out and all(i["x"] * p.m < 450.0 + 15 for i in out)
     none = objects.scatter(p, rule, lambda xs, ys: np.zeros(len(xs), bool), "t", None)
     assert none == []
+
+
+def test_hero_bakes_and_paints_are_packaged_and_refreshed(registry, tmp_path):
+    import json
+
+    from pixelworld_pipeline.build import refresh_heroes
+    from pixelworld_pipeline.world_format import package_hash
+
+    lm_root = registry / "_landmarks"
+    text = (lm_root / "tower.yaml").read_text()
+    (lm_root / "tower.yaml").write_text(text + "hero: true\n")
+    hero = lm_root / "tower" / "hero" / "lm"
+    paint = lm_root / "tower" / "paint" / "lm"
+    hero.mkdir(parents=True)
+    paint.mkdir(parents=True)
+    meta = {"left": -12, "top": 40, "width": 3, "height": 9, "depthBase": 81.5}
+    for r in (0, 1):
+        (hero / f"r{r}.png").write_bytes(b"bake%d" % r)
+        (hero / f"r{r}.json").write_text(json.dumps(meta))
+    (paint / "r0.png").write_bytes(b"paint0")  # r1 has no paint yet: not packaged
+
+    region = _region(registry, {"landmarks": ["tower"]})
+    assert region.objects["landmarks"][0]["hero"] is True
+    spec_path = registry / "r" / "region.yaml"
+    out = tmp_path / "pkg"
+    out.mkdir()
+    (out / "manifest.json").write_text(json.dumps({"id": "lm", "packageHash": "old"}))
+    (out / "build-report.json").write_text(json.dumps({"packageHash": "old"}))
+
+    heroes = refresh_heroes(spec_path, out)
+    assert heroes == [
+        {
+            "id": "tower",
+            "rotation": 0,
+            "left": -12,
+            "top": 40,
+            "width": 3,
+            "height": 9,
+            "depthBase": 81.5,
+            "bake": "heroes/tower/bake-r0.png",
+            "paint": "heroes/tower/paint-r0.png",
+            "sha256": heroes[0]["sha256"],
+        }
+    ]
+    assert (out / "heroes" / "tower" / "paint-r0.png").read_bytes() == b"paint0"
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["heroes"] == heroes
+    assert manifest["packageHash"] == package_hash(manifest) != "old"
+    report = json.loads((out / "build-report.json").read_text())
+    assert report["packageHash"] == manifest["packageHash"]
+
+    # an artist's new paint changes the package hash; removing the files unpackages the hero
+    (paint / "r0.png").write_bytes(b"paint0, touched up")
+    assert refresh_heroes(spec_path, out)[0]["sha256"] != heroes[0]["sha256"]
+    for f in [*hero.iterdir(), *paint.iterdir()]:
+        f.unlink()
+    assert refresh_heroes(spec_path, out) == []
+    assert "heroes" not in json.loads((out / "manifest.json").read_text())
+    assert not (out / "heroes").exists()

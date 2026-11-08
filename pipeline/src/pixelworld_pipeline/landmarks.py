@@ -17,6 +17,7 @@ objects.place uses. A landmark file holds:
     replaces: [Stratosphere Tower]  # Overture building names or ids it stands in for
     parts:                          # sub-objects placed along a line landmark
       - { group: landmark.dam.intake, along: 0.15, offset: 70, aboveCrest: 12 }  # offset: left
+    hero: true                      # baked offline and painted over (D-053): files in <id>/
     depictions:                     # variant → group (+ params); `generic` is required
       generic: { group: landmark.tower.observation }
       stylized: { group: landmark.tower.observation.stylized }
@@ -94,6 +95,8 @@ def resolve(entry: Any, root: Path | None, variant: str) -> dict[str, Any]:
         out["replaces"] = [str(r) for r in raw["replaces"]]
     if raw.get("parts"):
         out["parts"] = [dict(p) for p in raw["parts"]]
+    if raw.get("hero"):
+        out["hero"] = True  # baked offline and painted over (D-053)
     # the region's entry can override anything (e.g. scale for one level)
     out |= {k: v for k, v in ref.items() if k != "id"}
     return out
@@ -108,3 +111,21 @@ def expand(spec: dict[str, Any], spec_path: Path) -> dict[str, Any]:
     root = registry_dir(spec_path)
     landmarks = [resolve(e, root, variant) for e in objects["landmarks"]]
     return {**spec, "objects": {**objects, "landmarks": landmarks}}
+
+
+def hero_files(root: Path, landmark_id: str, world_id: str) -> list[dict[str, Any]]:
+    """The offline bakes and paint-overs of a hero landmark for one world:
+    <id>/hero/<world>/r<n>.png + .json and <id>/paint/<world>/r<n>.png. Rotations
+    without both files are skipped (not baked yet)."""
+    import json
+
+    out = []
+    for r in range(4):
+        bake = root / landmark_id / "hero" / world_id / f"r{r}.png"
+        meta = bake.with_suffix(".json")
+        paint = root / landmark_id / "paint" / world_id / f"r{r}.png"
+        if bake.exists() and meta.exists() and paint.exists():
+            out.append(
+                {"rotation": r, "bake": bake, "paint": paint, "meta": json.loads(meta.read_text())}
+            )
+    return out

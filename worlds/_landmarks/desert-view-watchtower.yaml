@@ -3,5 +3,6 @@ wikidata: Q2062022
 anchor: { lon: -111.8261, lat: 36.0441 }
 height: 80          # depicted: about 4× its real 21 m so it reads from the rim
 clear: 30
+hero: true          # baked offline and painted over (D-053)
 depictions:
   generic: { group: landmark.tower.lookout }

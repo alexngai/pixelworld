@@ -89,6 +89,74 @@ PATH_WIDTH_M = {
 }
 
 
+def package_heroes(region: Region, region_path: Path | None, out_dir: Path) -> list[dict] | None:
+    """Copy hero landmarks' offline bakes and paint-overs into the package
+    (heroes/<id>/), one manifest entry per landmark and rotation (D-053)."""
+    import hashlib
+    import shutil
+
+    from . import landmarks as registry
+
+    heroes = [lm for lm in (region.objects or {}).get("landmarks", []) if lm.get("hero")]
+    if not heroes or region_path is None:
+        return None
+    root = registry.registry_dir(Path(region_path))
+    out: list[dict] = []
+    if root is not None:
+        for lm in heroes:
+            for f in registry.hero_files(root, lm["id"], region.id):
+                r = f["rotation"]
+                dest = out_dir / "heroes" / lm["id"]
+                dest.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(f["bake"], dest / f"bake-r{r}.png")
+                shutil.copyfile(f["paint"], dest / f"paint-r{r}.png")
+                digest = hashlib.sha256(
+                    f["bake"].read_bytes() + f["paint"].read_bytes()
+                ).hexdigest()
+                m = f["meta"]
+                out.append(
+                    {
+                        "id": lm["id"],
+                        "rotation": r,
+                        "left": int(m["left"]),
+                        "top": int(m["top"]),
+                        "width": int(m["width"]),
+                        "height": int(m["height"]),
+                        "depthBase": float(m["depthBase"]),
+                        "bake": f"heroes/{lm['id']}/bake-r{r}.png",
+                        "paint": f"heroes/{lm['id']}/paint-r{r}.png",
+                        "sha256": digest,
+                    }
+                )
+    stale = out_dir / "heroes"
+    if not out and stale.exists():
+        shutil.rmtree(stale)
+    return out or None
+
+
+def refresh_heroes(region_path: Path, out_dir: Path) -> list[dict]:
+    """Re-package hero bakes and paint-overs into a built package, without a
+    rebuild: the step after an artist edits a paint file (D-053)."""
+    from .world_format import package_hash
+
+    region = Region.load(region_path)
+    manifest_path = out_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    heroes = package_heroes(region, region_path, out_dir)
+    if heroes:
+        manifest["heroes"] = heroes
+    else:
+        manifest.pop("heroes", None)
+    manifest["packageHash"] = package_hash(manifest)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    report_path = out_dir / "build-report.json"
+    if report_path.exists():
+        report = json.loads(report_path.read_text())
+        report["packageHash"] = manifest["packageHash"]
+        report_path.write_text(json.dumps(report, indent=2) + "\n")
+    return heroes or []
+
+
 def paved_band(on_road: np.ndarray, half_width: np.ndarray) -> np.ndarray:
     """Cells whose centre lies within the half-width (cells) of the nearest road
     cell's centre: the pavement of a road wider than its own cells."""
@@ -574,6 +642,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         if dep.get("scatter"):
             # the client scatters vegetation by surface at this density (M3)
             depiction["scatter"] = float(dep["scatter"])
+    heroes = package_heroes(region, region_path, out_dir)
     manifest = write_package(
         out_dir,
         world_id=region.id,
@@ -626,6 +695,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         level=region.level,
         levels=region.levels,
         depiction=depiction,
+        heroes=heroes,
         compress=compress,
         clean=True,
     )

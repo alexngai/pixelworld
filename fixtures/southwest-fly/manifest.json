@@ -349,7 +349,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "c82e83b64d0a7942",
+      "region": "8fc812ece7e1a4c4",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 2,
       "bilateral": [
@@ -407,7 +407,7 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "168ab047c1c51916d24332c05177cf951eb9f516806650fe8f6eb10891119c18",
+    "sha256": "1ef82418505ef27d27b28758ed78895e274ffa97289ebee765f3905558491a09",
     "count": 59
   },
   "depiction": {
@@ -440,5 +440,151 @@
     ],
     "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
   },
-  "packageHash": "0857c53227eb0344766b0aa5f945bd810f8a8d9abd5930ff98ca7961e2ac3656"
+  "packageHash": "e8b90fa21665ecca027c260a2b0073546438fcd240539bd0bd7ecf9ace9ceceb",
+  "heroes": [
+    {
+      "id": "strat-tower",
+      "rotation": 0,
+      "left": -727,
+      "top": 1120,
+      "width": 17,
+      "height": 187,
+      "depthBase": 175.0,
+      "bake": "heroes/strat-tower/bake-r0.png",
+      "paint": "heroes/strat-tower/paint-r0.png",
+      "sha256": "12a5958796a4a79e90c1aaee7ff0baacee1afbbd50a7cbd6d28de165afe16574"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 1,
+      "left": -2767,
+      "top": -618,
+      "width": 17,
+      "height": 186,
+      "depthBase": -43.0,
+      "bake": "heroes/strat-tower/bake-r1.png",
+      "paint": "heroes/strat-tower/paint-r1.png",
+      "sha256": "5d04d3b2133ada0be100d823747d4c0c3e9c90b3cfd258d4c741ad1b0af07ece"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 2,
+      "left": 710,
+      "top": -1638,
+      "width": 17,
+      "height": 186,
+      "depthBase": -170.0,
+      "bake": "heroes/strat-tower/bake-r2.png",
+      "paint": "heroes/strat-tower/paint-r2.png",
+      "sha256": "8f9288b5498ed04027a058fd1684a99ca7ae9d785327540e0b5fd2839faabbbd"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 3,
+      "left": 2750,
+      "top": 100,
+      "width": 17,
+      "height": 187,
+      "depthBase": 47.0,
+      "bake": "heroes/strat-tower/bake-r3.png",
+      "paint": "heroes/strat-tower/paint-r3.png",
+      "sha256": "2781fcce1ddfeae1f4e27b7da9f00815fa9abc81319aec5fc7b61b2c727db8c1"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 0,
+      "left": -415,
+      "top": 1915,
+      "width": 14,
+      "height": 52,
+      "depthBase": 245.0,
+      "bake": "heroes/hoover-dam/bake-r0.png",
+      "paint": "heroes/hoover-dam/paint-r0.png",
+      "sha256": "57c80c4d67ce02e588002d80c625d8ecb916770c0f869a7447c48fc65135e9de"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 1,
+      "left": -3950,
+      "top": -255,
+      "width": 24,
+      "height": 46,
+      "depthBase": -26.0,
+      "bake": "heroes/hoover-dam/bake-r1.png",
+      "paint": "heroes/hoover-dam/paint-r1.png",
+      "sha256": "ad7cddbc37b11c3f5447a233ee0b4df20d6bec3d16acdc56da059d77f436465c"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 2,
+      "left": 401,
+      "top": -2023,
+      "width": 14,
+      "height": 52,
+      "depthBase": -247.0,
+      "bake": "heroes/hoover-dam/bake-r2.png",
+      "paint": "heroes/hoover-dam/paint-r2.png",
+      "sha256": "6983d45a661d553611bb884b4bc3070b97a5186a6998502d2e94f0ed9b4bc442"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 3,
+      "left": 3926,
+      "top": 153,
+      "width": 24,
+      "height": 47,
+      "depthBase": 25.0,
+      "bake": "heroes/hoover-dam/bake-r3.png",
+      "paint": "heroes/hoover-dam/paint-r3.png",
+      "sha256": "f2b1e27dc0d802184310d000a712047f7915fe8a7b41c620928671556667ad7a"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 0,
+      "left": 3067,
+      "top": 3339,
+      "width": 15,
+      "height": 36,
+      "depthBase": 450.0,
+      "bake": "heroes/desert-view-watchtower/bake-r0.png",
+      "paint": "heroes/desert-view-watchtower/paint-r0.png",
+      "sha256": "7a4220baff5e58016b5a06a3f53e6ceea6efa43b3cda5ab16221b22216badaa0"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 1,
+      "left": -7109,
+      "top": 1325,
+      "width": 15,
+      "height": 36,
+      "depthBase": 199.0,
+      "bake": "heroes/desert-view-watchtower/bake-r1.png",
+      "paint": "heroes/desert-view-watchtower/paint-r1.png",
+      "sha256": "eec4130f85ae603991d0e1f097721ad018a9a0ed34f9051021e00d692c89bd5a"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 2,
+      "left": -3082,
+      "top": -3761,
+      "width": 15,
+      "height": 34,
+      "depthBase": -437.0,
+      "bake": "heroes/desert-view-watchtower/bake-r2.png",
+      "paint": "heroes/desert-view-watchtower/paint-r2.png",
+      "sha256": "de032c25e731c80c443a84f4a5703f0955368f1c495857df106b474da2a8f079"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 3,
+      "left": 7094,
+      "top": -1747,
+      "width": 15,
+      "height": 33,
+      "depthBase": -186.0,
+      "bake": "heroes/desert-view-watchtower/bake-r3.png",
+      "paint": "heroes/desert-view-watchtower/paint-r3.png",
+      "sha256": "11e626fdee1c8721d9dfe1b45e5a39ccc518e7eeebaa9908f9f1d1957ff19f5f"
+    }
+  ]
 }

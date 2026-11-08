@@ -87,6 +87,24 @@ export interface WorldManifest {
   levels?: LevelRef[];
   /** Lon/lat of cell corners every `step` cells (geo.ts), for moving between levels. */
   geo?: { path: string; step: number; size: [number, number]; sha256?: string };
+  /** Painted-over hero landmarks (M3, D-053): one entry per landmark and rotation. */
+  heroes?: HeroRef[];
+}
+
+export interface HeroRef {
+  id: string;
+  rotation: 0 | 1 | 2 | 3;
+  /** Absolute screen pixels of the bake's top-left corner in this rotation. */
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  depthBase: number;
+  /** The offline bake (RGBA PNG: index, depth hi, depth lo, coverage). */
+  bake: string;
+  /** The paint-over (indexed PNG, 0 = keep the bake). */
+  paint: string;
+  sha256?: string;
 }
 
 export interface LevelRef {
@@ -106,6 +124,15 @@ export interface ObjectsFile {
     r?: number;
     fp?: [number, number][];
     hm?: number;
+    /** Real metres per cell at the instance (warped worlds). */
+    m?: number;
+    /** Absolute top height in steps (dam crests, bridge decks). */
+    top?: number;
+    /** Landmark registry id (M3). */
+    id?: string;
+    /** Overture roof shape and facade material hints (M3). */
+    rs?: string;
+    fm?: string;
   }[];
 }
 

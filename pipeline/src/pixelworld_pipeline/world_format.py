@@ -333,6 +333,7 @@ def write_package(
     level: str | None = None,
     levels: list[dict[str, Any]] | None = None,
     depiction: dict[str, Any] | None = None,
+    heroes: list[dict[str, Any]] | None = None,
     compress: bool = False,
     clean: bool = False,
 ) -> dict[str, Any]:
@@ -467,6 +468,8 @@ def write_package(
         objects_path.unlink()
     if depiction is not None:
         manifest["depiction"] = depiction
+    if heroes:
+        manifest["heroes"] = heroes
     if level is not None:
         manifest["level"] = level
     if levels is not None:

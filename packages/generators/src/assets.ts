@@ -27,6 +27,8 @@ export interface ObjectInstance {
   m?: number;
   /** Absolute top height in steps (dam crests), overriding hm. */
   top?: number;
+  /** Landmark registry id (landmarks, M3). */
+  id?: string;
   /** Overture roof shape (buildings, M3): flat, pyramidal, dome, hipped, gabled, … */
   rs?: string;
   /** Overture facade material, e.g. glass (buildings, M3). */

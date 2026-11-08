@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { decodePng } from "../packages/world-format/src/png";
 
 /** Open a fixed-size view and wait until every visible tile is baked and drawn. */
 async function open(page: Page, query: string, width = 640, height = 360) {
@@ -272,5 +274,39 @@ test.describe("Scale levels (D-046)", () => {
     expect(await level(page)).toBe("walk");
     const start = await lonLat(page);
     expect(metres(start, [-115.1728, 36.1147])).toBeLessThan(50); // the Strip start
+  });
+});
+
+test.describe("Hero landmarks (D-053)", () => {
+  /** Hoover Dam from downstream: the bypass bridge in front, the intake towers and Lake Mead behind. */
+  async function openDam(page: Page, extra = "") {
+    await open(page, "zoom=2&rot=3&rover=383.5,452" + extra);
+    await page.evaluate(() => window.__pixelworld!.pan(0, -120));
+    await page.evaluate(() => window.__pixelworld!.ready());
+  }
+
+  test("painted-over heroes survive a full re-bake", async ({ page }) => {
+    // every tile baked fresh (cache=0) with the paint-overs, then without them
+    await openDam(page);
+    const painted = await pixels(page);
+    await expect(page.locator("#view")).toHaveScreenshot("southwest-hoover-hero-r3.png");
+    await openDam(page, "&paint=0");
+    const plain = await pixels(page);
+    let changed = 0;
+    for (let i = 0; i < painted.data.length; i += 4)
+      if (painted.data.slice(i, i + 3).some((v, k) => v !== plain.data[i + k])) changed++;
+    expect(changed).toBeGreaterThan(200);
+    expect(changed).toBeLessThan(5000); // the dam only
+
+    // the offline bake still matches a fresh one, so the paint stays registered
+    const manifest = JSON.parse(readFileSync("fixtures/southwest/manifest.json", "utf8"));
+    const ref = manifest.heroes.find((h: { id: string; rotation: number }) => h.id === "hoover-dam" && h.rotation === 3);
+    const stored = await decodePng(new Uint8Array(readFileSync(`fixtures/southwest/${ref.bake}`)).buffer);
+    const fresh = (await page.evaluate(() => window.__pixelworld!.bakeHero("hoover-dam")))[3]!;
+    expect([fresh.left, fresh.top, fresh.width, fresh.height]).toEqual([ref.left, ref.top, ref.width, ref.height]);
+    expect(fresh.depthBase).toBeCloseTo(ref.depthBase, 6);
+    let same = 0;
+    for (let i = 0; i < fresh.pixels.length; i++) if (fresh.pixels[i] === stored.data[i]) same++;
+    expect(same / fresh.pixels.length).toBeGreaterThan(0.999);
   });
 });

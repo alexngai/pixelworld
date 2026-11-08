@@ -1,5 +1,6 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworld/grid";
 import type { BakedImage, StyleParams } from "@pixelworld/bake";
+import type { HeroPaint } from "./heroPaint";
 import type { AssetCatalog, Box, ObjectInstance, ScatterRules } from "@pixelworld/generators";
 
 /** Messages between the main thread and the bake worker. */
@@ -17,6 +18,8 @@ export interface InitMessage {
   renderScale?: number;
   /** Placed objects for the whole world (experiment worlds are small). */
   objects?: WorldObjects;
+  /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */
+  heroes?: HeroPaint[];
 }
 
 export interface WorldObjects {
@@ -61,7 +64,16 @@ export interface BakeSpriteMessage {
   boxes: Box[];
 }
 
-export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage;
+/** Bake object instances alone (a hero landmark, offline), on the slice's terrain heights. */
+export interface BakeObjectsMessage {
+  type: "bakeObjects";
+  id: number;
+  rotation: Rotation;
+  instances: ObjectInstance[];
+  slice: TerrainSlice;
+}
+
+export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage;
 
 export interface BakeStats {
   meshMs: number;

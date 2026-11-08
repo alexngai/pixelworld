@@ -12,5 +12,6 @@ parts:              # the four intake towers in the lake, two by each abutment
   - { group: landmark.dam.intake, along: 0.27, offset: 130, aboveCrest: 8 }
   - { group: landmark.dam.intake, along: 0.73, offset: 130, aboveCrest: 8 }
   - { group: landmark.dam.intake, along: 0.88, offset: 110, aboveCrest: 8 }
+hero: true          # baked offline and painted over (D-053)
 depictions:
   generic: { group: landmark.dam }

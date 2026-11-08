@@ -1,5 +1,6 @@
 import { TerrainGrid } from "@pixelworld/grid";
 import { Baker, type BakeScene } from "@pixelworld/bake";
+import { applyHeroPaint } from "./heroPaint";
 import {
   buildBoxesMesh,
   buildObjects,
@@ -45,6 +46,29 @@ export class BakeHost {
         case "bakeTile":
           this.bakeTile(msg);
           break;
+        case "bakeObjects": {
+          const t0 = performance.now();
+          const { slice } = msg;
+          const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
+          const objects = this.init?.objects;
+          if (!objects) throw new Error("bakeObjects needs a world with objects");
+          const voxel = objectVoxelScale(this.init?.renderScale ?? 1);
+          const built = buildObjects(msg.instances, {
+            catalog: objects.catalog,
+            rampIds: new Map(objects.rampIds),
+            voxel,
+            voxelMeters: voxel.h * objects.metersPerCell,
+            heightStretch: objects.heightStretch,
+            variants: objects.variants,
+            heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0),
+          });
+          const scene = { meshes: [built.merged], batches: built.batches };
+          const meshMs = performance.now() - t0;
+          const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
+          this.baker.releaseScene(scene);
+          this.reply(msg.id, res, meshMs, built.merged.vertexCount);
+          break;
+        }
         case "bakeSprite": {
           const t0 = performance.now();
           const mesh = buildBoxesMesh(msg.boxes);
@@ -106,6 +130,8 @@ export class BakeHost {
     }
     const meshMs = performance.now() - t0;
     const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true });
+    // painted-over hero landmarks go on after every bake, so they survive re-bakes
+    if (res?.image && init.heroes?.length) applyHeroPaint(res.image, msg.rotation, init.heroes);
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +

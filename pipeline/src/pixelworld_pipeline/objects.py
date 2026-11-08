@@ -677,6 +677,8 @@ def line_parts(p: Placement, lm: dict, k: int, heights, mid: tuple[float, float]
             + n * float(part.get("offset", 0.0)) / per_cell
         )
         inst = {"g": part["group"], "x": float(c[0]), "y": float(c[1]), "s": k * 100 + j + 1}
+        if "id" in lm:
+            inst["id"] = lm["id"]  # a hero bake takes the landmark with all its parts
         if p.layout is not None:
             inst["m"] = round(per_cell, 2)
         if heights is not None and "crestMeters" in lm:
@@ -803,6 +805,8 @@ def place(
         lx, ly, _ = clear_zones[k]
         cx, cy = p.to_cells(np.array([lx]), np.array([ly]), shift="line" not in lm)
         inst = {"g": lm["group"], "x": round(float(cx[0]), 3), "y": round(float(cy[0]), 3), "s": k}
+        if "id" in lm:
+            inst["id"] = lm["id"]  # registry id: hero bakes find their landmark by it
         if "hm" in lm:
             inst["hm"] = float(lm["hm"])
         if p.layout is not None or lm_scale[k] != 1.0:

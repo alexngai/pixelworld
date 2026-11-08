@@ -1,6 +1,6 @@
 import type { Rotation } from "@pixelworld/grid";
 import type { BakedImage } from "@pixelworld/bake";
-import type { Box } from "@pixelworld/generators";
+import type { Box, ObjectInstance } from "@pixelworld/generators";
 import { BakeHost } from "./bakeHost";
 import {
   sliceTransferables,
@@ -61,7 +61,10 @@ export class BakeService {
   private done = new Set<TileKey>();
   private pendingTile: (TileRequest & { id: number; key: TileKey }) | null = null;
   private spriteJobs = new Map<number, (img: BakedImage | null) => void>();
-  private spriteQueue: { id: number; rotation: Rotation; boxes: Box[] }[] = [];
+  private spriteQueue: (
+    | { id: number; rotation: Rotation; boxes: Box[] }
+    | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
+  )[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
   readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
@@ -161,6 +164,16 @@ export class BakeService {
     });
   }
 
+  /** Bake object instances alone (hero landmarks, offline) on a terrain slice. */
+  bakeObjects(rotation: Rotation, instances: ObjectInstance[], slice: TerrainSlice): Promise<BakedImage | null> {
+    return new Promise((resolve) => {
+      const id = this.nextId++;
+      this.spriteJobs.set(id, resolve);
+      this.spriteQueue.push({ id, rotation, instances, slice });
+      this.pump();
+    });
+  }
+
   get idle(): boolean {
     return !this.busy && this.spriteQueue.length === 0 && this.nextWanted() === null;
   }
@@ -175,7 +188,8 @@ export class BakeService {
     const sprite = this.spriteQueue.shift();
     if (sprite) {
       this.busy = true;
-      this.transport.send({ type: "bakeSprite", ...sprite });
+      if ("boxes" in sprite) this.transport.send({ type: "bakeSprite", ...sprite });
+      else this.transport.send({ type: "bakeObjects", ...sprite });
       return;
     }
     const t = this.nextWanted();

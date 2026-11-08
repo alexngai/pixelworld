@@ -26,7 +26,21 @@ def main(argv: list[str] | None = None) -> int:
     imp = sub.add_parser("importance", help="refresh the region's Wikidata importance snapshot")
     imp.add_argument("region", type=Path)
     imp.add_argument("--min-sitelinks", type=int, default=20)
+    her = sub.add_parser(
+        "heroes", help="re-package hero bakes and paint-overs into a built package (D-053)"
+    )
+    her.add_argument("region", type=Path)
+    her.add_argument("--out", type=Path, help="package directory (default: fixtures/<id>)")
     args = parser.parse_args(argv)
+
+    if args.command == "heroes":
+        from .build import refresh_heroes
+
+        region = Region.load(args.region)
+        out = args.out or REPO / "fixtures" / region.id
+        heroes = refresh_heroes(args.region, out)
+        print(f"{len(heroes)} hero bakes in {out}")
+        return 0
 
     if args.command == "serve":
         from .server import serve

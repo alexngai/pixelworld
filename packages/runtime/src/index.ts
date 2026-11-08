@@ -5,3 +5,4 @@ export * from "./compositor";
 export * from "./protocol";
 export * from "./tileCache";
 export * from "./world";
+export * from "./heroPaint";

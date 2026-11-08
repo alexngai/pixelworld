@@ -27,14 +27,18 @@ Surface classes (woodland, forest, scrub, rock, sand) are generated from elevati
 
 The US Southwest on the M2 elastic map, built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml) and its warp, [`warp.yaml`](../worlds/southwest/warp.yaml).
 
-- **Size:** 1155×709 cells in 228 gzipped chunks. The chunks are 5.62 MB and `objects.json.gz` is 0.30 MB.
+- **Size:** 1155×709 cells in 228 gzipped chunks. The chunks are 5.63 MB, `objects.json.gz` is 0.30 MB and the hero bakes and paints are 61 KB.
 - **Scale:** cells are about 500 m in the open desert. Focus areas are finer: 100 m on the Las Vegas Strip and at Hoover Dam, 250 m on Lake Mead, 150 m at Grand Canyon Village and Desert View. The manifest records each focus area's achieved scale and every chunk's metres per cell.
 - **Relief:** 2.5× vertical exaggeration (65.3 m per height step), with local relief exaggerated where cells are magnified (D-041). The `VREF`/`VFAC` layers keep strata at real elevations.
 - **Micro-terrain:** 4×4 micro-cells per cell (`MHGT`, D-038).
-- **Objects:** buildings around the Strip, plus four landmarks: the Strat, the Welcome to Fabulous Las Vegas sign, Hoover Dam and the Desert View Watchtower.
+- **Objects:** 5,830 buildings around the Strip and in Grand Canyon Village, with heights and tower parts from 3DEP lidar where Overture's are missing or too low (D-052). Seven registry landmarks (D-051): the Strat, the Welcome to Fabulous Las Vegas sign, the Paris Eiffel Tower replica, the High Roller, Hoover Dam with its intake towers, the bypass bridge and the Desert View Watchtower, all as generic depictions. The client adds shrubs and rocks by surface (D-054).
+- **Hero landmarks:** the Strat, Hoover Dam and the Desert View Watchtower are baked offline and painted over in all four rotations (`heroes/`, D-053). The paints are the tool's demo touch-ups.
 
 ```sh
 cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+# hero landmarks: re-bake (keeps and re-registers the paint-overs), then re-package without a rebuild
+(cd .. && node tools/hero-bake.mjs --world southwest)
+uv run pixelworld heroes ../worlds/southwest/region.yaml
 # or edit the warp interactively: http://localhost:5180 (pnpm --filter @pixelworld/editor dev)
 uv run pixelworld serve ../worlds/southwest/region.yaml
 ```
@@ -52,13 +56,17 @@ This is the driving level of the region's three scale levels (D-046). Its manife
 The Southwest's other scale levels, built from [`fly.yaml`](../worlds/southwest/fly.yaml) and [`walk.yaml`](../worlds/southwest/walk.yaml). Both extend `region.yaml`.
 
 - **southwest-fly:** the whole region at 1.5 km per cell in open desert, with every focus area 4× coarser than driving: the Strip and Hoover Dam at 400 m, the canyon rim at 600 m.
-  - **Size:** 339×219 cells, 0.51 MB.
+  - **Size:** 339×219 cells, 0.50 MB with the hero bakes.
   - **Generalization:** motorways and trunks only.
-  - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam).
+  - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam). The three hero landmarks are painted over as on the driving level.
 - **southwest-walk:** the Las Vegas Strip at a uniform 20 m per cell, with 4×4 micro-cells from the 10 m DEM.
-  - **Size:** 182×412 cells, 0.60 MB.
+  - **Size:** 182×412 cells, 0.68 MB with the hero bakes.
   - **Ways:** every street class (no parking aisles or driveways) plus the pedestrian network (sidewalks, crosswalks, footways and more), drawn at real width (D-050).
-  - **Objects:** every building footprint, trees, palms and the two Strip landmarks, at true proportions (`heightStretch` 1).
+  - **Objects:** at true proportions (`heightStretch` 1):
+    - 5,090 building footprints, with lidar heights and tower parts (D-052)
+    - 5,109 trees where the WRI/Meta canopy height map shows 3 m or more, plus palms on Las Vegas Boulevard
+    - 2,257 street lights and traffic signals
+    - four landmarks: the Strat (painted over, D-053), the Welcome sign, the Eiffel Tower replica and the High Roller
   - **Roads:** snapping (D-049) gives a clean road report: one network, no split segments, no disconnected junctions. The M1.5 Strip experiment it's built from has one split segment and two disconnected junctions at 20 m cells.
 
 ```sh
@@ -66,13 +74,14 @@ cd pipeline
 for f in fly region walk; do uv run pixelworld build ../worlds/southwest/$f.yaml; done
 ```
 
-Sources and licenses: as for `southwest`. The walking level also uses the USGS 3DEP 1/3 arc-second DEM (public domain).
+Sources and licenses: as for `southwest`. The walking level also uses the USGS 3DEP 1/3 arc-second DEM (public domain) and the High Resolution Canopy Height Maps by WRI and Meta (CC BY 4.0).
 
 Sources and licenses:
 - Elevation: USGS 3DEP 1 arc-second DEM. Public domain.
 - Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads and rivers: © OpenStreetMap contributors via Overture Maps (release 2026-10-21.0). ODbL 1.0, so this package is a derivative database under the ODbL.
 - Buildings: Overture Maps buildings (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints). ODbL 1.0.
+- Building heights: USGS 3DEP lidar point clouds (Las Vegas 2016 survey). Public domain.
 - Importance (`worlds/southwest/importance.json`, used to build the warp, not shipped in the package): Wikidata. CC0.
 
 ## exp-* (M1.5 pixel detail experiment)

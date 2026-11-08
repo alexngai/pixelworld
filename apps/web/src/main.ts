@@ -16,10 +16,11 @@ import {
   type GpuImage,
   type PreparedTile,
   type TileKey,
+  type HeroPaint,
   type TileRequest,
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
-import { GeoGrid, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+import { GeoGrid, decodePng, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
 import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
 const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
@@ -44,6 +45,12 @@ interface PixelworldDebug {
   lonLat: () => [number, number] | null;
   /** Reload at the same place in another scale level (the next one if no name). */
   switchLevel: (name?: string) => void;
+  /** Bake a landmark alone in all four rotations (the offline hero tool, D-053). */
+  bakeHero: (
+    id: string,
+  ) => Promise<({ rotation: number; left: number; top: number; width: number; height: number; depthBase: number; pixels: number[] } | null)[]>;
+  /** The day palette, RGBA per index. */
+  palette: () => number[];
 }
 declare global {
   interface Window {
@@ -190,6 +197,16 @@ async function main() {
     };
   };
 
+  // Painted-over hero landmarks (M3, D-053): stamped into every tile bake.
+  const heroes: HeroPaint[] = [];
+  if (manifest.heroes?.length && params.get("paint") !== "0") {
+    const png = async (path: string) => decodePng(await (await fetch(new URL(path, worldBase))).arrayBuffer());
+    for (const h of manifest.heroes) {
+      const [bake, paint] = await Promise.all([png(h.bake), png(h.paint)]);
+      heroes.push({ ...h, bake: bake.data, paint: paint.data });
+    }
+  }
+
   const service = await BakeService.create(
     {
       type: "init",
@@ -206,6 +223,7 @@ async function main() {
       worldWidth: manifest.cellsX,
       worldHeight: manifest.cellsY,
       renderScale: RS,
+      heroes,
       objects:
         objectsFile && style.assets
           ? {
@@ -216,6 +234,16 @@ async function main() {
               // a scale level may draw objects with other proportions (D-047)
               heightStretch: manifest.depiction?.heightStretch ?? style.objects?.heightStretch ?? 1,
               variants: style.objects?.variants ?? 6,
+              // decorative vegetation and rocks by surface, where the level asks (M3)
+              scatter:
+                manifest.depiction?.scatter && params.get("scatter") !== "0"
+                  ? {
+                      density: manifest.depiction.scatter,
+                      bySurface: Object.fromEntries(
+                        Object.entries(manifest.surfaces).map(([id, name]) => [Number(id), style.scatter?.[name] ?? []]),
+                      ),
+                    }
+                  : undefined,
             }
           : undefined,
     },
@@ -632,6 +660,27 @@ async function main() {
     },
     lonLat: () => (geo ? geo.cellToLonLat(rover.x, rover.y) : null),
     switchLevel,
+    bakeHero: async (id) => {
+      // the landmark and its parts (a dam's intake towers)
+      const insts = objectsFile?.instances.filter((o) => o.id === id) ?? [];
+      if (!insts.length) throw new Error(`no landmark ${id} in this world`);
+      // a slice around it, so it stands on the same terrain heights as in the world
+      const pts = insts.flatMap((o) => o.fp ?? [[o.x, o.y] as [number, number]]);
+      const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0]))) - 2);
+      const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1]))) - 2);
+      const x1 = Math.min(manifest.cellsX, Math.ceil(Math.max(...pts.map((p) => p[0]))) + 3);
+      const y1 = Math.min(manifest.cellsY, Math.ceil(Math.max(...pts.map((p) => p[1]))) + 3);
+      await store.ensureRect(x0, y0, x1, y1);
+      const s = store.slice(x0, y0, x1, y1);
+      const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+      const out = [];
+      for (const r of [0, 1, 2, 3] as const) {
+        const img = await service.bakeObjects(r, insts, slice);
+        out.push(img ? { rotation: r, ...img, pixels: Array.from(img.pixels) } : null);
+      }
+      return out;
+    },
+    palette: () => Array.from(palette.rgba),
   };
 
   requestAnimationFrame(frame);
