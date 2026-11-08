@@ -39,6 +39,8 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 | Land cover | ESA WorldCover 2021 (10 m) | the 160 m overview, mode-resampled per cell |
 | Roads | Overture `transportation/segment` (from OSM), release pinned in the region spec | GeoParquet row groups pruned by bounding box from a cached footer index |
 | Rivers | Overture `base/water` lines | same |
+| Rail and ferry lines (M3.5) | Overture `transportation/segment`, subtypes rail and water | rails drawn in the street (D-061) and traffic routes (D-060) |
+| Parks and natural land (M3.5) | Overture `base/land_use` (park, golf, pitch, garden, cemetery, …) and `base/land` (grassland, scrub, heath, beach) | polygons moved with the straightened roads; lawn surfaces where the spec's `ground` section asks (D-062) |
 | Lakes | WorldCover water class, flattened per water body | — |
 
 - **Why Overture rather than OSM extracts:** releases are versioned, so builds are reproducible from the spec alone, and GeoParquet supports bounding-box range reads. (Geofabrik and Overpass were also unreachable from the build environment at the time.)

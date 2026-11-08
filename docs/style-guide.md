@@ -62,6 +62,15 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 | urban | `urban` (blue-grey concrete) | `blocks`: world-anchored streets every third of a cell, with sparse lit roofs |
 | snow | `snow` | sparkle |
 
+**Added in M3.5** (D-062), where a region spec's `ground` section asks for them:
+
+| Surface | Ramp (`bay-area`) | Pattern |
+|---|---|---|
+| lawn | `lawn` | speckle: park lawns, golf courses, pitches, gardens and cemeteries |
+| yard | `lawn` | a world-anchored patchwork with paved squares: backyards and front gardens beside houses, with garden shrubs and trees scattered on them |
+
+In the `bay-area` pack, `desert` (WorldCover's bare land) draws in `sand`, so beaches are pale sand; `grass` stays the dry gold of wild hills.
+
 World-anchored patterns follow the terrain through rotations and slopes. Screen-anchored ones (speckle, trees) are stable for each rotation.
 
 ### Roads (M1)
@@ -242,6 +251,7 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
   Objects keep a fixed pixel size, so a density reads the same on every level. `depiction.scatter` scales it per level.
 - **Kept clear:** water, roads, paths, a band beside wide roads, cliffs and cells under placed objects.
 - **Canopy trees** (pipeline): a region spec can place trees where a canopy height map shows them (`objects.vegetation` with `canopy`), and `byLandcover` picks species by land cover, so San Francisco's tree-covered parks get cypress and eucalyptus.
+- **Round street trees** (`roundTree`, generators/trees.ts): a lobed crown wider than it is tall, on a one- or two-voxel trunk, in the `leaf` ramp a shade deeper than lawn. A blob on a tall trunk read as a palm from the driving level.
 - **Sidewalk trees** (`objects.streetTrees` with `canopy`, group `tree.street`): road cells are kept clear of everything else, so sidewalk trees stand on the verge just past the drawn asphalt, in rows along straight road cells, where the canopy map shows trees beside the real road. This is the one exception to keeping a band beside roads clear.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
 

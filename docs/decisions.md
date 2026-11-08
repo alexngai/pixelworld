@@ -437,3 +437,15 @@ The point is more room for visual interest; both halves are wanted.
 - **Two readers of Overture rail:** the traffic layer reads rail segments for routes (`sources/transit.py`, which keeps route names), and this layer reads them for drawing (`overture.rails`, which keeps tunnel ranges). They are separate queries and caches; the routes for street-running lines are matched onto the drawn road graph, so the moving cars run on the tracks.
 - **Known limits:** curving streets (the Embarcadero) draw stepped tracks with short crossing pieces.
 - **Rejected alternative:** parked cable cars and streetcars as props. They would double up with the traffic layer's moving ones. The voxel models made for them (`generators/vehicles.ts`: a cable car with riders on its running boards, a heritage streetcar in paired liveries, an articulated light-rail car) stay registered as `prop.*` groups in the `bay-area` pack, placed by no world, for the traffic layer to adopt in place of its box models (M4).
+
+### D-062: Ground surfaces from land use: park lawns and yards (accepted, M3.5)
+- **Why:** WorldCover sees an irrigated park lawn and a dry hillside as the same grassland, and a block of houses with green backyards as built-up land. Blind judges read San Francisco's parks as "bare, dry ochre hillside" and its avenues as arid ("dusty grey-beige ground, very little green").
+- **Lawns:** a region spec's optional `ground.lawn` names Overture `base/land_use` classes (park, golf, pitch, garden, cemetery, …). Their cells become a `lawn` surface where they were grass, bare, built-up or cropland.
+  - **Kept wild:** natural land from `base/land` (grassland, scrub, heath, beach) stays as it is, and a park whose median slope is over `maxSlope` (0.2) stays golden (Bernal Heights, Glen Canyon).
+  - **Wooded parks:** tree-covered park cells become lawn where the canopy map shows the ground mostly open, so a park's trees stand on lawn rather than in a solid wood.
+  - **Edges:** lawn spreads a little into the open grass around it, so no strips are left between a park and its streets.
+  - The polygons move with the straightened roads (D-049), as buildings do.
+- **Yards:** `ground.yard` turns open cells within `reachMeters` of house footprints into a `yard` surface (green patchwork with paved squares, a share paved by seed), after objects are placed. Roads, wide-road pavement and water are excluded.
+- **Smooth lawns:** `micro.smooth: {surface: metres}` smooths micro-terrain on those surfaces before roads and water are cut in, so the walking level's 2× hills don't carve parks into gullies.
+- **Neutral by default:** without a `ground` section nothing changes; the Southwest builds to the same package hash.
+- **Rejected alternative:** recolouring all grass green. San Francisco's wild hills (Twin Peaks, the Presidio bluffs) are golden in summer, and the Southwest shares the surface.
