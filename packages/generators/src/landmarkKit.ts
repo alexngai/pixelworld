@@ -86,11 +86,22 @@ function bandAxis(mask: { sx: number; sy: number; on: Uint8Array }, frame?: GenC
  *   the base, over the band's half-width (0.3, 0.4)
  * - taper: the legs' setback at each strut, a fraction of their base size
  *   (0.12 portal towers, 0.05 braced)
+ * - sideBrace: 1 to brace braced towers' legs along the bridge too, so they read
+ *   as X-braced side-on, where the bracing between the legs is seen edge-on (0)
+ * - sideDepth: a side-braced leg's least half-depth along the bridge, in voxels,
+ *   so its panels stay legible at small scales (3)
  * - decks: 1, or 2 for a double deck inside its truss
  * - truss: the stiffening truss's depth over the deck height (0.08)
  * - pierTop: the piers' top over the deck height (0.15)
+ * - sag: the main cables' low point above the deck, over the towers' height
+ *   above it (0: they come down to the railings at mid-span)
+ * - anchorTop: where the cables land on a central anchorage, the same way (0)
+ * The side spans' cables hang with the main span's curvature (as under the same
+ * load and pull), eased so they still meet their anchorages at a slope.
  * roles: structure (towers, cables), truss (truss, railings; structure if
- * absent), deck (road decks), pier (piers, anchorages).
+ * absent), deck (road decks), pier (piers, anchorages), plate (optional: fills
+ * side-braced panels behind their diagonals, so the far leg's bracing doesn't
+ * show through and blur the near one's).
  */
 const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, frame }) => {
   if (!mask) throw new Error("suspension bridge needs a footprint");
@@ -109,6 +120,8 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
   const truss = m.material(ramps("truss")[0] ?? ramp("structure"));
   const deck = m.material(ramp("deck"));
   const pier = m.material(ramp("pier"));
+  const plateRamp = ramps("plate")[0];
+  const plate = plateRamp !== undefined ? m.material(plateRamp) : 0;
   const b = bandAxis(mask, frame);
   if (!b.cells.length) return m;
   // across the band: legs at its edges, the cable plane through their middles at ±cp
@@ -125,21 +138,29 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
     if (k > 0) anchors.push(s0);
   }
   const towerHalf = 1.2 / Math.max(1, b.length); // about a voxel either side of each tower
+  // the cables: a parabola between each bridge's towers; down each side span a parabola
+  // of the same curvature, at most 3/4 of the one that would meet its anchorage level
+  const top = T - 1;
+  const low = Math.min(top - 2, H + 2 + Math.round((T - H) * param("sag", 0)));
+  const zCentral = Math.min(top - 2, H + 2 + Math.round((T - H) * param("anchorTop", 0)));
   const cableZ = (t: number): number => {
-    // within one bridge: hang between its towers, run straight down to its anchorages
     const k = Math.min(spans - 1, Math.floor(t * spans));
     const s0 = k / spans;
     const s1 = (k + 1) / spans;
     const ta = s0 + side * (s1 - s0);
     const tb = s1 - side * (s1 - s0);
-    const top = T - 1;
-    const low = H + 2;
     if (t >= ta && t <= tb) {
       const u = (2 * (t - ta)) / (tb - ta) - 1;
       return Math.round(low + (top - low) * u * u);
     }
-    const u = t < ta ? (t - s0) / (ta - s0) : (s1 - t) / (s1 - tb);
-    return Math.round(H + 1 + (top - H - 1) * Math.pow(Math.max(0, u), 1.3));
+    // s along the side span from its anchorage (voxels), Ls its length
+    const Ls = (ta - s0) * b.length;
+    const s = Math.max(0, t < ta ? t - s0 : s1 - t) * b.length;
+    const central = t < ta ? k > 0 : k + 1 < spans; // or at an end of the whole line
+    const za = central ? zCentral : H + 1;
+    const Lm = ((tb - ta) / 2) * b.length;
+    const curve = Math.min((top - low) / Math.max(1, Lm * Lm), (0.75 * (top - za)) / Math.max(1, Ls * Ls));
+    return Math.round(za + ((top - za) * s) / Math.max(1, Ls) - curve * s * (Ls - s));
   };
   const zb = H - D; // the truss's bottom chord (and a double deck's lower deck)
   // deck, truss, railings, cables, hangers
@@ -184,12 +205,39 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
     const x = inner * Math.abs(1 - (2 * (z - lo)) / (hi - lo - 1));
     return Math.abs(ac - x) <= Math.max(0.6, inner / (hi - lo) + 0.35);
   };
+  // braced towers seen from the side (sideBrace): each leg a braced frame along the
+  // bridge, at least sideDepth voxels either side of its middle, so the X-bracing reads
+  // side-on too; the bracing between the legs then sits in the legs' front plane,
+  // hidden side-on behind their posts
+  const sideBrace = braced && param("sideBrace", 0) >= 1;
+  const legDs = sideBrace ? Math.max(legD, param("sideDepth", 3)) : legD;
+  // the side panels: under the deck from the pier, split so none is much taller than wide;
+  // over it between the struts
+  const sidePanels: [number, number][] = [];
+  if (sideBrace) {
+    const lo = zPier + 1;
+    const hi = zb - sh;
+    const n = Math.max(1, Math.round((hi - lo) / Math.max(4, 3 * legDs)));
+    for (let k = 0; k < n; k++) sidePanels.push([Math.round(lo + ((hi - lo) * k) / n) + (k ? 1 : 0), Math.round(lo + ((hi - lo) * (k + 1)) / n)]);
+    for (let k = 1; k < portals; k++) sidePanels.push([tops[k - 1]!, tops[k]! - strutH[k]!]);
+  }
+  /** A braced leg's side face at da along its middle (half-depth ds), height z. */
+  const sideFace = (ada: number, z: number, ds: number): boolean => {
+    const pw = Math.max(1, ds * 0.2); // the posts at its front and back
+    if (ada > ds - pw) return true;
+    const p = sidePanels.find(([lo, hi]) => z >= lo && z < hi);
+    if (!p) return true; // struts, the deck's band
+    const [lo, hi] = p;
+    if (hi - lo < 3) return true;
+    const x = (ds - pw) * Math.abs(1 - (2 * (z - lo)) / (hi - lo - 1));
+    return Math.abs(ada - x) <= Math.max(0.6, (ds - pw) / (hi - lo) + 0.35);
+  };
   /** A tower's voxel at da along from its centre, ac across from the axis, height z. */
   const towerVoxel = (da: number, ac: number, z: number): number => {
     const ada = Math.abs(da);
     if (z < zPier) {
       // a pier with chamfered corners, the width of the band
-      const pa = legD + 1.5;
+      const pa = legDs + 1.5;
       const c = Math.min(2.5, pa / 2);
       return ada <= pa && ada - (pa - c) + (ac - (b.half - c)) <= c ? pier : 0;
     }
@@ -198,9 +246,11 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
     const f = 1 - stage * taper;
     const w = Math.max(0.5, (legW * f) / 2); // a leg's half-width across
     const d = Math.max(0.5, legD * f); // and half-depth along
+    const ds = sideBrace ? Math.max(d, legDs * f) : d;
     const off = Math.abs(ac - cp);
-    if (off <= w && ada <= d) {
-      if (z >= T) return off <= w - 1 && ada <= d - 1 ? steel : 0; // a cap a step in
+    if (off <= w && ada <= ds) {
+      if (z >= T) return off <= w - 1 && ada <= ds - 1 ? steel : 0; // a cap a step in
+      if (sideBrace) return sideFace(ada, z, ds) ? steel : plate;
       if (!braced && w >= 1.5 && d >= 1.5 && z > zPier + 1 && (z < zb - 2 || z > H + 2) && !nearStrut(z)) {
         // recessed vertical panels: grooves down the legs' faces
         if (ada > d - 1 && off < w - 1 && Math.abs(Math.round(ac - cp)) % 2 === 1) return 0;
@@ -209,7 +259,9 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
       return steel;
     }
     const inner = cp - w; // the opening between the legs, half its width
-    if (ac > inner + 0.5 || ada > Math.max(0.5, d - 1)) return 0; // struts and braces sit back from the legs' faces
+    if (ac > inner + 0.5) return 0;
+    // struts and braces sit back from the legs' faces, or in their front plane
+    if (sideBrace ? da < ds - Math.max(1, ds * 0.2) || da > ds : ada > Math.max(0.5, d - 1)) return 0;
     for (let k = 0; k < portals; k++) {
       let h = strutH[k]!;
       if (!braced) {
@@ -228,7 +280,7 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
     return 0;
   };
   const towerAl = towers.map((tt) => tt * b.length);
-  const reach = legD + 2;
+  const reach = legDs + 2;
   b.cells.forEach(([x, y], i) => {
     const al = b.along[i]!;
     const ac = Math.abs(b.across[i]!);
@@ -239,11 +291,13 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
         if (v) m.set(x, y, z, v);
       }
     }
-    // anchorages where the cables come down: a central one a block through the deck; at
-    // the ends a block under the deck and a housing over each cable beside the road
+    // anchorages where the cables come down: at the ends a block under the deck and a
+    // housing over each cable beside the road; a central one a block up to the deck,
+    // its housings rising to where the cables land
     const k = anchors.findIndex((ta) => Math.abs(b.t[i]! - ta) <= 2 * towerHalf + 0.012);
     if (k < 0) return;
-    const top = k >= 2 ? H + 2 : Math.abs(ac - cp) <= Math.max(1, legW / 2) ? H + 3 : zb - 1;
+    const housing = Math.abs(ac - cp) <= Math.max(1, legW / 2);
+    const top = k >= 2 ? (housing ? zCentral + 1 : ac >= cp - 0.6 ? H + 2 : H - 1) : housing ? H + 3 : zb - 1;
     for (let z = 0; z <= top; z++) m.set(x, y, z, pier);
   });
   return m;

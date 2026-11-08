@@ -358,8 +358,8 @@
     },
     "landmark.bridge.suspension.double": {
       "generator": "suspensionBridge",
-      "ramps": { "structure": "bridge-grey", "truss": "bridge-grey", "deck": "roof-flat", "pier": "concrete" },
-      "params": { "spans": 2, "side": 0.25, "towerRatio": 2.7, "hangers": 8, "tower": 1, "portals": 4, "leg": 0.3, "legDepth": 0.36, "taper": 0.08, "decks": 2, "truss": 0.12, "pierTop": 0.12 }
+      "ramps": { "structure": "bridge-grey", "truss": "bridge-grey", "deck": "roof-flat", "pier": "concrete", "plate": "asphalt" },
+      "params": { "spans": 2, "side": 0.25, "towerRatio": 2.7, "hangers": 8, "tower": 1, "portals": 4, "leg": 0.3, "legDepth": 0.36, "taper": 0.08, "decks": 2, "truss": 0.12, "pierTop": 0.12, "sideBrace": 1, "sideDepth": 5, "sag": 0.06, "anchorTop": 0.2 }
     },
     "landmark.tower.pyramid": {
       "generator": "pyramidTower",

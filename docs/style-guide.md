@@ -291,7 +291,7 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | Group | Generator | Landmark |
 |---|---|---|
 | `landmark.bridge.suspension` | `suspensionBridge` (portal towers, stepped struts, grooved legs) | the Golden Gate Bridge: orange towers, truss and railings |
-| `landmark.bridge.suspension.double` | `suspensionBridge` (X-braced towers, double deck) | the Bay Bridge's west span, grey |
+| `landmark.bridge.suspension.double` | `suspensionBridge` (X-braced towers, braced on their sides too over dark plates so they read side-on; cables sagging clear of the deck and onto a raised central anchorage; double deck) | the Bay Bridge's west span, grey |
 | `landmark.tower.pyramid` | `pyramidTower` | the Transamerica Pyramid: a spire, wings on two faces, an arcade at the foot |
 | `landmark.tower.obelisk.diagonal` | `obeliskTower` | Salesforce Tower: corners rounding as it rises, a lattice crown |
 | `landmark.tower.column` | `column` | Coit Tower |
