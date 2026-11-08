@@ -109,7 +109,12 @@ async function main() {
   const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
   const margin = Math.ceil(MARGIN / RS);
 
-  const style = validateStyle(styleJson as unknown as StylePack);
+  const objectsFile = params.get("objects") === "0" ? null : await loadObjects(worldUrl, manifest);
+  const baseStyle = validateStyle(styleJson as unknown as StylePack);
+  const style =
+    objectsFile && baseStyle.objects?.surfaces
+      ? validateStyle({ ...baseStyle, surfaces: { ...baseStyle.surfaces, ...baseStyle.objects.surfaces } })
+      : baseStyle;
   const palette = buildPalette(style);
   let night = params.get("palette") === "night" && !!style.night;
   const { metersPerStep, elevationDatumMeters } = manifest.scale;
@@ -119,8 +124,8 @@ async function main() {
     palette,
     manifest,
     (m) => ((m - elevationDatumMeters) / metersPerStep) * RS,
+    RS,
   );
-  const objectsFile = params.get("objects") === "0" ? null : await loadObjects(worldUrl, manifest);
   if (!manifest.heightRange) await store.ensureRect(0, 0, manifest.cellsX, manifest.cellsY);
   const [minH, maxH] =
     manifest.heightRange ?? store.slice(0, 0, manifest.cellsX, manifest.cellsY).grid.heightRange();

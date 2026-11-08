@@ -4,6 +4,7 @@ import {
   buildObjects,
   footprintMask,
   meshVoxels,
+  objectVoxelScale,
   resolveAsset,
   rotateModel,
   type AssetCatalog,
@@ -45,15 +46,22 @@ describe("assets", () => {
     tree: { generator: "blob", ramps: { body: "pine", trunk: "bark" } },
     "tree.conifer": { generator: "conifer", ramps: { crown: "pine", trunk: "bark" } },
     "building.lowrise": { generator: "building", ramps: { wall: "bark", roof: "pine", window: "pine" }, params: { style: 1 } },
+    "building.tower": {
+      generator: "building",
+      ramps: { wall: "bark", "wall.alt": "pine", roof: "pine", window: "pine", lit: "glow", trim: "glow" },
+      params: { style: 2, litFraction: 1 },
+    },
+    "tree.palm": { generator: "palm", ramps: { trunk: "bark", fronds: "pine" }, params: { reach: 2 } },
   };
   const rampIds = new Map([
     ["pine", 3],
     ["bark", 5],
+    ["glow", 9],
   ]);
 
   it("resolves groups by longest prefix", () => {
     expect(resolveAsset(catalog, "tree.conifer.ponderosa")?.generator).toBe("conifer");
-    expect(resolveAsset(catalog, "tree.palm")?.generator).toBe("blob");
+    expect(resolveAsset(catalog, "tree.oak")?.generator).toBe("blob");
     expect(resolveAsset(catalog, "rock.boulder")).toBeNull();
   });
 
@@ -89,5 +97,41 @@ describe("assets", () => {
     expect(out.batches[0]!.offsets[2]).toBe(10); // base height from heightAt
     expect(out.merged.vertexCount).toBeGreaterThan(0);
     expect(Math.min(...Array.from(out.merged.cell))).toBe(6);
+  });
+
+  const opts = { catalog, rampIds, voxel: { h: 0.25, v: 0.5 }, voxelMeters: 4, heightStretch: 1, heightAt: () => 0 };
+  const rampsUsed = (mesh: { material: Float32Array; vertexCount: number }) =>
+    new Set(Array.from({ length: mesh.vertexCount }, (_, v) => mesh.material[v * 3]! - 100));
+
+  it("lights tower windows and trims the roof with the emissive roles", () => {
+    const fp: [number, number][] = [[0, 0], [2, 0], [2, 2], [0, 2]];
+    const out = buildObjects([{ g: "building.tower", x: 1, y: 1, s: 4, hm: 40, fp }], opts);
+    const used = rampsUsed(out.merged);
+    expect(used.has(9)).toBe(true); // lit windows and neon trim
+    expect(used.has(3) || used.has(5)).toBe(true); // a wall variant
+  });
+
+  it("sits footprints on their lowest corner", () => {
+    const fp: [number, number][] = [[0, 0], [2, 0], [2, 2], [0, 2]];
+    const slope = { ...opts, heightAt: (x: number) => 10 + x };
+    const out = buildObjects([{ g: "building.lowrise", x: 1, y: 1, s: 1, hm: 8, fp }], slope);
+    let minZ = Infinity;
+    for (let v = 0; v < out.merged.vertexCount; v++) minZ = Math.min(minZ, out.merged.position[v * 3 + 2]!);
+    expect(minZ).toBe(10);
+  });
+
+  it("sizes palms by their reach parameter", () => {
+    const out = buildObjects([{ g: "tree.palm", x: 0, y: 0, s: 0 }], opts);
+    const xs = Array.from({ length: out.batches[0]!.mesh.vertexCount }, (_, v) => out.batches[0]!.mesh.position[v * 3]!);
+    const span = (Math.max(...xs) - Math.min(...xs)) / 0.25;
+    expect(span).toBeGreaterThanOrEqual(5); // fronds reach 2 voxels each side of the trunk
+    expect(span).toBeLessThanOrEqual(6); // plus one for a leaning crown
+  });
+
+  it("keeps objects at a fixed pixel size at any render scale", () => {
+    expect(objectVoxelScale(1)).toEqual({ h: 1 / 16, v: 1 / 8 });
+    const fine = objectVoxelScale(0.125);
+    expect(fine.h * 0.125).toBeCloseTo(1 / 16);
+    expect(fine.v * 0.125).toBeCloseTo(1 / 8);
   });
 });

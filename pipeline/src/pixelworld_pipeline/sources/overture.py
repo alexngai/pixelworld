@@ -156,3 +156,31 @@ def rivers(
         return geom_type in ("LineString", "MultiLineString")
 
     return query(release, "base", "water", bbox, ["id", "subtype", "class", "geometry"], keep)
+
+
+BUILDING_COLUMNS = ["id", "class", "subtype", "height", "num_floors", "is_underground", "has_parts"]
+PART_COLUMNS = ["id", "building_id", "height", "min_height", "num_floors", "is_underground"]
+
+
+def buildings(release: str, bbox: tuple[float, float, float, float]) -> list[dict]:
+    """Building footprints (above ground) with class and height where known."""
+    return query(
+        release,
+        "buildings",
+        "building",
+        bbox,
+        BUILDING_COLUMNS,
+        lambda r: not r.get("is_underground"),
+    )
+
+
+def building_parts(release: str, bbox: tuple[float, float, float, float]) -> list[dict]:
+    """Building parts (towers, wings) of buildings that have them, with their heights."""
+    return query(
+        release,
+        "buildings",
+        "building_part",
+        bbox,
+        PART_COLUMNS,
+        lambda r: not r.get("is_underground"),
+    )

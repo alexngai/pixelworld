@@ -150,3 +150,54 @@ test.describe("US Southwest (M1)", () => {
     await expect(modal).toBeHidden();
   });
 });
+
+test.describe("Pixel detail experiment (M1.5)", () => {
+  interface ExpStats {
+    tilesBaked: number;
+    tilesPerRotation: number;
+    renderScale: number;
+    objects: number;
+    palette: string;
+  }
+  const stats = (page: Page) =>
+    page.evaluate(() => window.__pixelworld!.stats()) as Promise<unknown> as Promise<ExpStats>;
+  const STRIP = "world=/exp-strip-k4/&zoom=2&rot=0";
+
+  test("a fine world bakes as one tile at its render scale, with objects", async ({ page }) => {
+    await open(page, STRIP);
+    const s = await stats(page);
+    expect(s.renderScale).toBe(0.25);
+    expect(s.tilesPerRotation).toBe(1);
+    expect(s.tilesBaked).toBe(1);
+    expect(s.objects).toBeGreaterThan(1000);
+    await expect(page.locator("#view")).toHaveScreenshot("exp-strip-k4-r0.png");
+    const withObjects = await pixels(page);
+    await open(page, STRIP + "&objects=0");
+    expect((await stats(page)).objects).toBe(0);
+    const terrainOnly = await pixels(page);
+    let changed = 0;
+    for (let i = 0; i < withObjects.data.length; i += 4) if (hex(withObjects.data, i) !== hex(terrainOnly.data, i)) changed++;
+    expect(changed).toBeGreaterThan(withObjects.data.length / 4 / 5); // objects cover a good part of the view
+  });
+
+  test("night swaps the palette without rebaking", async ({ page }) => {
+    await open(page, STRIP);
+    const day = await pixels(page);
+    await page.keyboard.press("t");
+    await page.waitForFunction(() => (window.__pixelworld!.stats() as { palette: string }).palette === "night");
+    await page.evaluate(() => window.__pixelworld!.pan(0, 0)); // force a redraw
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const s = await stats(page);
+    expect(s.tilesBaked).toBe(1);
+    const night = await pixels(page);
+    let darker = 0;
+    let glowing = 0;
+    const lum = (d: number[], i: number) => 0.299 * d[i]! + 0.587 * d[i + 1]! + 0.114 * d[i + 2]!;
+    for (let i = 0; i < day.data.length; i += 4) {
+      if (lum(night.data, i) < lum(day.data, i) * 0.6) darker++;
+      if (lum(night.data, i) > lum(day.data, i) + 40) glowing++; // lit windows and neon
+    }
+    expect(darker).toBeGreaterThan(day.data.length / 4 / 2);
+    expect(glowing).toBeGreaterThan(50);
+  });
+});

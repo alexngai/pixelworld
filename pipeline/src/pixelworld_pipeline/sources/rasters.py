@@ -28,8 +28,10 @@ GDAL_ENV = dict(
 )
 
 
-def _overview_level(factor: int) -> int:
-    """rasterio overview_level for a decimation factor (0 → 2×, 1 → 4×, ...)."""
+def _overview_level(factor: int) -> int | None:
+    """rasterio overview_level for a decimation factor (1 → full resolution, 2 → 0, 4 → 1, ...)."""
+    if factor == 1:
+        return None
     level = int(round(math.log2(factor))) - 1
     if level < 0 or 2 ** (level + 1) != factor:
         raise ValueError(f"overview factor must be a power of two ≥ 2, got {factor}")
@@ -55,7 +57,8 @@ def _warp_tiles(
     with rasterio.Env(**GDAL_ENV):
         for url in urls:
             try:
-                src = rasterio.open("/vsicurl/" + url, overview_level=level)
+                kwargs = {} if level is None else {"overview_level": level}
+                src = rasterio.open("/vsicurl/" + url, **kwargs)
             except RasterioIOError:
                 missing.append(url)
                 continue
@@ -75,15 +78,23 @@ def _warp_tiles(
     return missing
 
 
-def usgs_3dep_1arcsec_tiles(bounds: tuple[float, float, float, float]) -> list[str]:
+# 3DEP DEM products: region-spec kind → (product directory, file prefix).
+USGS_3DEP = {
+    "usgs-3dep-1arcsec": ("1", "USGS_1_"),  # ~30 m
+    "usgs-3dep-13arcsec": ("13", "USGS_13_"),  # ~10 m
+}
+
+
+def usgs_3dep_tiles(bounds: tuple[float, float, float, float], kind: str) -> list[str]:
+    product, prefix = USGS_3DEP[kind]
     w, s, e, n = bounds
     urls = []
     for top in range(math.floor(s) + 1, math.ceil(n) + 1):
         for left in range(math.floor(w), math.ceil(e)):
             name = f"n{top:02d}w{-left:03d}"
             urls.append(
-                "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/"
-                f"{name}/USGS_1_{name}.tif"
+                f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/{product}/TIFF/current/"
+                f"{name}/{prefix}{name}.tif"
             )
     return urls
 
@@ -107,17 +118,22 @@ def fill_nan_nearest(a: np.ndarray, max_iter: int = 64) -> np.ndarray:
 def dem_corners(region: Region) -> np.ndarray:
     """Elevation (m) at every cell corner, shape (cells_y + 1, cells_x + 1)."""
     spec = region.sources["dem"]
-    if spec["kind"] != "usgs-3dep-1arcsec":
+    if spec["kind"] not in USGS_3DEP:
         raise ValueError(f"unsupported DEM source {spec['kind']}")
     overview = int(spec.get("overview", 4))
-    path = _cache_path(region, "dem", f"{spec['kind']}|{overview}")
+    # average when shrinking the source; bilinear when cells are finer than it
+    resampling = Resampling[spec.get("resampling", "average")]
+    params = f"{spec['kind']}|{overview}"
+    if resampling != Resampling.average:
+        params += f"|{resampling.name}"
+    path = _cache_path(region, "dem", params)
     if path.exists():
         return np.load(path)
     cx, cy = region.cells
     dst = np.full((cy + 1, cx + 1), np.nan, dtype=np.float32)
-    urls = usgs_3dep_1arcsec_tiles(region.lonlat_envelope())
+    urls = usgs_3dep_tiles(region.lonlat_envelope(), spec["kind"])
     missing = _warp_tiles(
-        urls, dst, region.corner_transform(), region, overview, Resampling.average, np.nan
+        urls, dst, region.corner_transform(), region, overview, resampling, np.nan
     )
     if missing:
         print(f"  dem: {len(missing)} tiles missing (outside coverage?)")
@@ -178,3 +194,37 @@ def landcover_cells(region: Region) -> np.ndarray:
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, dst)
     return dst
+
+
+def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, float]:
+    """ESA WorldCover classes on a finer grid aligned with the region grid.
+
+    Returns (classes, meters per pixel); pixel (j, i) covers cell coordinates
+    [i·f, (i+1)·f) × [j·f, (j+1)·f) with f = meters / metersPerCell. Used to
+    place objects at the source's own resolution, whatever the cell size.
+    """
+    spec = region.sources["landcover"]
+    m = region.meters_per_cell
+    factor = max(1, round(m / meters))
+    px = m / factor
+    path = _cache_path(region, "landcover-fine", f"{spec['kind']}|{px}")
+    if path.exists():
+        return np.load(path), px
+    cx, cy = region.cells
+    dst = np.zeros((cy * factor, cx * factor), dtype=np.uint8)
+    west, north, _, _ = region.grid
+    transform = rasterio.Affine(px, 0, west, 0, -px, north)
+    missing = _warp_tiles(
+        esa_worldcover_tiles(region.lonlat_envelope()),
+        dst,
+        transform,
+        region,
+        1,
+        Resampling.nearest,
+        0,
+    )
+    if missing:
+        print(f"  landcover (fine): {len(missing)} tiles missing")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(path, dst)
+    return dst, px

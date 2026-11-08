@@ -13,7 +13,7 @@ import {
   type StylePack,
 } from "../src/index";
 
-const style = styleJson as StylePack;
+const style = styleJson as unknown as StylePack;
 
 describe("desert-southwest style pack", () => {
   it("validates", () => {
@@ -56,6 +56,45 @@ describe("desert-southwest style pack", () => {
     expect(t.roads[1 * 4 + 1]).toBe(0);
     expect(t.roads[2 * 4]).toBe(0); // undeclared class → no road
     expect(t.asphaltRamp).toBe(p.rampIds.get("asphalt"));
+  });
+
+  it("keeps road widths in pixels on fine worlds, at most a cell wide", () => {
+    const p = buildPalette(style);
+    const vocab = { surfaces: {}, roadClasses: { "4": "motorway", "1": "secondary" } };
+    const t = materialTables(style, p, vocab, (m) => m, 0.25);
+    expect(t.roads[1 * 4]).toBeCloseTo(0.28); // 0.07 render units = 0.28 cells at 1/4
+    expect(t.roads[4 * 4]).toBe(0.5); // 0.8 clamps to the cell
+  });
+
+  it("builds a night palette: same indices, dimmed ramps, glowing emissive ramps", () => {
+    const day = buildPalette(style);
+    const night = buildPalette(style, "night");
+    expect([...night.rampIds]).toEqual([...day.rampIds]);
+    const rgb = (pal: typeof day, ramp: string, shade: number) => {
+      const i = paletteIndex(pal.rampIds.get(ramp)!, shade) * 4;
+      return Array.from(pal.rgba.slice(i, i + 3));
+    };
+    const lum = ([r, g, b]: number[]) => 0.299 * r! + 0.587 * g! + 0.114 * b!;
+    // ordinary ramps get darker and bluer
+    const dDay = rgb(day, "desert", 4);
+    const dNight = rgb(night, "desert", 4);
+    expect(lum(dNight)).toBeLessThan(lum(dDay) * 0.5);
+    expect(dNight[2]!).toBeGreaterThan(dNight[0]!);
+    // lit windows look like glass by day and glow at night
+    expect(rgb(day, "lit", 3)).toEqual(rgb(day, "glass", 3));
+    expect(lum(rgb(night, "lit", 3))).toBeGreaterThan(lum(rgb(day, "lit", 3)));
+    expect(rgb(night, "lit", 3)).toEqual([0xf2, 0xb7, 0x48]);
+  });
+
+  it("validates asset roles and night ramps", () => {
+    expect(() =>
+      validateStyle({ ...style, assets: { x: { generator: "blob", ramps: { body: "nope" } } } }),
+    ).toThrow(StyleError);
+    expect(() =>
+      validateStyle({ ...style, night: { ...style.night!, emissive: { nope: style.ramps.lit! } } }),
+    ).toThrow(StyleError);
+    const { night: _night, ...dayOnly } = style;
+    expect(() => buildPalette(dayOnly, "night")).toThrow(StyleError);
   });
 
   it("rejects broken packs", () => {

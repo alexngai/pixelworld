@@ -37,7 +37,7 @@ export interface StrataBand {
 }
 
 export interface RoadClassStyle {
-  halfWidth: number; // in cells
+  halfWidth: number; // in render units (cells at render scale 1)
   centerLine: boolean;
 }
 
@@ -59,8 +59,11 @@ export interface StylePack {
   roads?: { asphalt: string; marking: string; classes: Record<string, RoadClassStyle> };
   /** Semantic asset groups → generator, role ramps and parameters (D-030). */
   assets?: Record<string, AssetStyle>;
-  /** Object look shared by every asset group. */
-  objects?: { heightStretch: number; variants: number };
+  /**
+   * Object look shared by every asset group. `surfaces` replaces surface
+   * styles when a world has objects (real buildings make the block pattern redundant).
+   */
+  objects?: { heightStretch: number; variants: number; surfaces?: Record<string, SurfaceStyle> };
   /** Night palette variant: everything darkens except emissive ramps. */
   night?: NightStyle;
 }
@@ -222,6 +225,8 @@ export function materialTables(
   palette: Palette,
   world: WorldVocabulary,
   metersToSteps: (meters: number) => number,
+  /** Render units per cell: road widths are in render units and keep their pixel size. */
+  renderScale = 1,
 ): MaterialTables {
   const t: MaterialTables = {
     surfaces: new Float32Array(MAX_SURFACES * 4),
@@ -263,7 +268,8 @@ export function materialTables(
 
   for (const [id, cls] of Object.entries(world.roadClasses ?? {})) {
     const r = style.roads?.classes[cls];
-    if (r) t.roads.set([r.halfWidth, r.centerLine ? 1 : 0, 0, 0], Number(id) * 4);
+    // Widths are in render units; on fine worlds a road fills at most its own cells.
+    if (r) t.roads.set([Math.min(0.5, r.halfWidth / renderScale), r.centerLine ? 1 : 0, 0, 0], Number(id) * 4);
   }
   return t;
 }

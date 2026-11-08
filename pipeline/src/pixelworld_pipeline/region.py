@@ -20,6 +20,23 @@ class RegionError(ValueError):
     pass
 
 
+def _merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def load_spec(path: Path) -> dict[str, Any]:
+    """Read a region spec; `extends: other.yaml` merges this file over another
+    (mappings merge key by key, anything else replaces; null removes a section)."""
+    raw = yaml.safe_load(path.read_text())
+    parent = raw.pop("extends", None)
+    if parent is None:
+        return raw
+    return _merge(load_spec(path.parent / parent), raw)
+
+
 @dataclass(frozen=True)
 class Province:
     name: str
@@ -42,13 +59,19 @@ class Region:
     sources: dict[str, Any]
     default_province: str
     provinces: tuple[Province, ...] = field(default_factory=tuple)
+    # How the world is drawn: {"scale": render units per cell, "tileSize": cells}.
+    render: dict[str, Any] | None = None
+    # Object placement rules (vegetation, buildings, landmarks); see objects.py.
+    objects: dict[str, Any] | None = None
+    # Terrain rules for fine cells: {cliffSlope, minLakeArea (m²), maxLakeRelief (m),
+    # riverWidthMeters}.
+    terrain: dict[str, Any] | None = None
 
     # ---- loading -------------------------------------------------------------
 
     @staticmethod
     def load(path: Path) -> Region:
-        raw = yaml.safe_load(Path(path).read_text())
-        return Region.from_dict(raw)
+        return Region.from_dict(load_spec(Path(path)))
 
     @staticmethod
     def from_dict(raw: dict[str, Any]) -> Region:
@@ -81,6 +104,9 @@ class Region:
                 Province(str(p["name"]), tuple((float(a), float(b)) for a, b in p["polygon"]))
                 for p in geology.get("provinces", [])
             ),
+            render=dict(raw["render"]) if raw.get("render") else None,
+            objects=dict(raw["objects"]) if raw.get("objects") else None,
+            terrain=dict(raw["terrain"]) if raw.get("terrain") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")
@@ -88,11 +114,20 @@ class Region:
             raise RegionError("maxSlope must be 1..3")
         if not (w <= region.start[0] <= e and s <= region.start[1] <= n):
             raise RegionError("start must lie inside bounds")
+        if region.render is not None:
+            scale = region.render.get("scale")
+            if not (isinstance(scale, (int, float)) and 0 < scale <= 1):
+                raise RegionError("render.scale must be in (0, 1]")
         return region
 
     def digest(self) -> str:
-        """Stable hash of the spec, for cache keys and the manifest."""
-        return hashlib.sha256(json.dumps(asdict(self), sort_keys=True).encode()).hexdigest()[:16]
+        """Stable hash of the spec, for cache keys and the manifest.
+
+        Optional sections that are absent are left out, so adding new optional
+        fields doesn't change the digest (and cached inputs) of older specs.
+        """
+        body = {k: v for k, v in asdict(self).items() if v is not None}
+        return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
 
     # ---- grid geometry ----------------------------------------------------------
 

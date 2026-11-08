@@ -1,0 +1,403 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "exp-desert-view-k8",
+  "name": "Desert View (experiment, K=8)",
+  "chunkSize": 64,
+  "cellsX": 280,
+  "cellsY": 345,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "673d85318fce9cfeb3e05e2a48e5cc94658b827efd5f26ecf99c969a82bd6434",
+      "heightRange": [
+        245,
+        343
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "3ef1536d73aca3a148adbfc66c4e524a5289deccdec597df2a547556910d7a60",
+      "heightRange": [
+        245,
+        300
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "2f1acd57829bbe8a5dcbe9ae73fdb6e945bea643e87ba51ba13c42c239601313",
+      "heightRange": [
+        246,
+        302
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "f1956eb0ac3e7df99bd2ded62ace0546bc411c1a268809e8aa917b9cb27f31c4",
+      "heightRange": [
+        247,
+        353
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "d2139b2fc0f509ed40267e099208fbb16dea142885f9e7bde9007fed6ccf52e9",
+      "heightRange": [
+        286,
+        387
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "4d1c82212311bbbb428632cefd7b4b987f89b53c5af8e3176e152a9c0f06f09f",
+      "heightRange": [
+        243,
+        314
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "a1c8931600349e5ba1004a51b55847cb11affa4a0ce44ab110677b29f5927e76",
+      "heightRange": [
+        246,
+        365
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "6e493728a221c9c309d56b9a9d395aaffc5e5b412717fafcdd7cac921056405f",
+      "heightRange": [
+        263,
+        418
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "90b8e7c849e00cd7ee13847d9671d93546635d10b596e33a01c157e86474fa52",
+      "heightRange": [
+        289,
+        405
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "b3057fc0f42c720c44ca8f8f2b189a56b6885cfd1c34b3395f9be2e6d2b921cf",
+      "heightRange": [
+        298,
+        392
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "1e773cdc1f142b086ad2ce26136b38c1b4886e9079802aa044f92d742a60fe9b",
+      "heightRange": [
+        242,
+        338
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "5181b5a36290dfbc4264a4c932616ca76717b494b90dbd45fee5f23e81999f56",
+      "heightRange": [
+        288,
+        448
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "d1a0500063475d9ef95394477578221f36cf142bb07e141e4ee532c17ec395fb",
+      "heightRange": [
+        322,
+        539
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "edb3633ac37e74af4439e1439868077d852affb9cb37df780846a595ee88435d",
+      "heightRange": [
+        321,
+        532
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "1ae1249d587a370a0db9076bd67b6f7347ed2fef40fcf41a7ba311589d49a9d5",
+      "heightRange": [
+        326,
+        481
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "ddbd2567571c4144ffaf830d770140ddb3d2bd0123e7e93ecdb1fdfa796a2b7e",
+      "heightRange": [
+        301,
+        411
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "807d09a2bae7b5c4fbd8b98d6d47d86853af972c2b46ed95ea2c7de99acb2048",
+      "heightRange": [
+        306,
+        535
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "b59c6e49562e13d64542187af76c72453d1394c8994c0cf02b5cd63be07474e2",
+      "heightRange": [
+        367,
+        584
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "e90a6877595ebd0e249186e66c932d7cc7960481f0d4e9ba36be058f1e14afc2",
+      "heightRange": [
+        379,
+        567
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "6b2b34a34fd6895ac71bd31a0d2e52565b68ce9a23438071a4e93df105827976",
+      "heightRange": [
+        374,
+        517
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "f920a86136978ce288a41931740e4a1c338290b6c3eb4aae61ec5575ad8a9f0e",
+      "heightRange": [
+        331,
+        510
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "f4f6d65139efc65eb350832d79766b87f62b5bce1b1e083c691b494b8ec7785d",
+      "heightRange": [
+        353,
+        585
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "02ee001147bb9b0835f50847ed6569975cbdebf28f1c53d2dd43be106d2a2905",
+      "heightRange": [
+        436,
+        650
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "43320ab5e3669e39741d5296695257ab34b62cdba0e5290da16b1fc198432845",
+      "heightRange": [
+        432,
+        700
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "7f14a5f101367184360f15af97af4ed858833349c4c313d18943c9a0a19807d8",
+      "heightRange": [
+        482,
+        696
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "8c4f4bda30d6dc29e2e393a3277bbc42d7d00511b4bb4a6ff0898d3f5f1254f6",
+      "heightRange": [
+        320,
+        473
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "8c90537a405592036ba5b4fb8631986f365215f869d56bf83f34f2c6b694cc5e",
+      "heightRange": [
+        358,
+        653
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "c9c87740da070e9627f12fd167b300dcf6f09089c4753ec0a036c786d6b24c2c",
+      "heightRange": [
+        540,
+        696
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "6f0f3e6bdd1379da7d6060c431fe37c6daa6c0397be212f6782e987b63897262",
+      "heightRange": [
+        596,
+        700
+      ]
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "path": "chunks/4_5.pxwc.gz",
+      "sha256": "abe7988feab96175eac7134025dfc559496958627a63b9e06f33beae55db75b7",
+      "heightRange": [
+        682,
+        697
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 20.0,
+    "metersPerStep": 3.265986,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    242,
+    700
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "colorado-plateau"
+  },
+  "start": {
+    "x": 252,
+    "y": 305
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.067 +lon_0=-111.849 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -111.88,
+      36.036,
+      -111.818,
+      36.098
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "00df4cfd9e13e905",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "render": {
+    "scale": 0.125,
+    "tileSize": 512
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "6e48f72f1626213b3a29ff880d03846b4f13cfbf7dd8ad7568903d7725515802",
+    "count": 6808
+  },
+  "packageHash": "be1a114a1e39b5cbf841e6527cea5fa14157c4bfb33535c4613b61751418ef50"
+}

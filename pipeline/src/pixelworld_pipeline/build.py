@@ -16,8 +16,10 @@ from pathlib import Path
 import numpy as np
 import shapely
 
+from . import objects as object_stage
 from . import roads as road_stage
 from .gridify import (
+    STEP_WORLD,
     bilateral,
     cell_corner_heights,
     cliff_mask,
@@ -56,6 +58,11 @@ ATTRIBUTION = {
         "license": "Public domain",
         "url": "https://www.usgs.gov/3d-elevation-program",
     },
+    "usgs-3dep-13arcsec": {
+        "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+        "license": "Public domain",
+        "url": "https://www.usgs.gov/3d-elevation-program",
+    },
     "esa-worldcover-2021": {
         "name": "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data "
         "(2021) processed by ESA WorldCover consortium",
@@ -68,7 +75,15 @@ ATTRIBUTION = {
         "license": "ODbL 1.0",
         "url": "https://overturemaps.org",
     },
+    "overture-buildings": {
+        "name": "Overture Maps Foundation buildings theme: © OpenStreetMap contributors, "
+        "Esri Community Maps contributors, Microsoft, Google Open Buildings",
+        "license": "ODbL 1.0",
+        "url": "https://docs.overturemaps.org/attribution/",
+    },
 }
+# Objects avoid cells steeper than this (rise over run), whatever the cell size.
+OBJECT_MAX_SLOPE = 0.6
 
 
 def label_components(mask: np.ndarray) -> tuple[np.ndarray, int]:
@@ -91,6 +106,51 @@ def label_components(mask: np.ndarray) -> tuple[np.ndarray, int]:
                         labels[ny, nx] = count
                         queue.append((ny, nx))
     return labels, count
+
+
+def drop_small(mask: np.ndarray, min_cells: int) -> np.ndarray:
+    """Remove 8-connected components smaller than min_cells (e.g. shadows read as water)."""
+    if min_cells <= 1 or not mask.any():
+        return mask
+    labels, n = label_components(mask)
+    sizes = np.bincount(labels.ravel(), minlength=n + 1)
+    keep = sizes >= min_cells
+    keep[0] = False
+    return keep[labels]
+
+
+def drop_sloped(mask: np.ndarray, corner_m: np.ndarray, max_relief: float) -> np.ndarray:
+    """Remove water bodies whose ground spans more than max_relief metres.
+
+    Lakes are flat; "water" on a canyon wall is a shadow misread by land cover.
+    """
+    if not mask.any():
+        return mask
+    labels, n = label_components(mask)
+    cells = corner_stack(corner_m)
+    lo = np.full(n + 1, np.inf)
+    hi = np.full(n + 1, -np.inf)
+    np.minimum.at(lo, labels.ravel(), cells.min(axis=0).ravel())
+    np.maximum.at(hi, labels.ravel(), cells.max(axis=0).ravel())
+    keep = (hi - lo) <= max_relief
+    keep[0] = False
+    return keep[labels]
+
+
+def buffered_lines(lines: list, radius_cells: float, shape: tuple[int, int]) -> np.ndarray:
+    """Cells whose centre lies within radius_cells of any line (wide rivers)."""
+    cy, cx = shape
+    geoms = [
+        shapely.LineString(np.column_stack([xs, ys]))
+        for _id, _rank, parts in lines
+        for xs, ys in parts
+        if len(xs) >= 2
+    ]
+    if not geoms:
+        return np.zeros(shape, dtype=bool)
+    area = shapely.union_all([g.buffer(radius_cells) for g in geoms])
+    gx, gy = np.meshgrid(np.arange(cx) + 0.5, np.arange(cy) + 0.5)
+    return shapely.contains_xy(area, gx, gy)
 
 
 def _cell_corner_view(q: np.ndarray):
@@ -133,10 +193,19 @@ def classify(
     shape: np.ndarray,
     water: np.ndarray,
     step_m: float,
+    cliff_slope: float | None = None,
+    meters_per_cell: float = 0.0,
 ) -> np.ndarray:
-    """Surface classes from ESA WorldCover, elevation and steepness."""
+    """Surface classes from ESA WorldCover, elevation and steepness.
+
+    By default cliffs are drops of CLIFF_DROP_METERS and only bare-looking
+    cover turns to rock. With cliff_slope (rise over run) every cell that
+    steep becomes rock whatever its cover, which suits fine cells where the
+    canyon walls are many cells wide.
+    """
     elev = corner_stack(corner_m).mean(axis=0)
-    cliff = cliff_mask(base, shape, min_drop=max(1, round(CLIFF_DROP_METERS / step_m)))
+    drop_m = CLIFF_DROP_METERS if cliff_slope is None else cliff_slope * meters_per_cell
+    cliff = cliff_mask(base, shape, min_drop=max(1, round(drop_m / step_m)))
     lc = landcover
     out = np.full(lc.shape, S["desert"], dtype=np.uint8)
     out[lc == 10] = S["woodland"]
@@ -147,7 +216,7 @@ def classify(
     out[lc == 50] = S["urban"]
     out[lc == 60] = S["desert"]
     out[lc == 70] = S["snow"]
-    bare_like = np.isin(lc, (0, 20, 30, 60))
+    bare_like = np.isin(lc, (0, 20, 30, 60)) if cliff_slope is None else lc != 70
     out[cliff & bare_like] = S["rock"]
     out[water != NO_WATER] = S["water"]
     return out
@@ -202,9 +271,18 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     q = round_half_up(corner_m / step_m).astype(np.int64)
 
     # water
-    lake = landcover == 80
-    river_layer = road_stage.rasterize(_lines_in_cells(region, river_rows, lambda r: 1), (cy, cx))
+    terrain = region.terrain or {}
+    min_lake_cells = round(terrain.get("minLakeArea", 0) / region.meters_per_cell**2)
+    lake = drop_small(landcover == 80, min_lake_cells)
+    if "maxLakeRelief" in terrain:
+        lake = drop_sloped(lake, dem, terrain["maxLakeRelief"])
+    river_lines = _lines_in_cells(region, river_rows, lambda r: 1)
+    river_layer = road_stage.rasterize(river_lines, (cy, cx))
     river = (river_layer.mask & road_stage.CONNECT_MASK) != 0
+    if "riverWidthMeters" in terrain:
+        river |= buffered_lines(
+            river_lines, terrain["riverWidthMeters"] / 2 / region.meters_per_cell, (cy, cx)
+        )
     q, water_level = apply_water(q, lake, river)
 
     # roads: snap, cut-and-fill on the corner field
@@ -223,7 +301,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     shape = np.where(is_water, 0, shape).astype(np.uint8)
     water = np.where(is_water, base, NO_WATER).astype(np.int16)
 
-    surface = classify(landcover, corner_m, base, shape, water, step_m)
+    surface = classify(
+        landcover,
+        corner_m,
+        base,
+        shape,
+        water,
+        step_m,
+        cliff_slope=terrain.get("cliffSlope"),
+        meters_per_cell=region.meters_per_cell,
+    )
     geology, province_names = provinces(region)
     report = road_stage.validate(
         road_layer,
@@ -231,6 +318,22 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         road_stage.junction_index(road_rows),
     )
     print(f"roads: {asdict(report)}")
+
+    # objects (optional): vegetation, buildings, landmarks as semantic groups
+    instances = None
+    object_counts: dict[str, int] = {}
+    if region.objects is not None:
+        steep_steps = max(1, round(OBJECT_MAX_SLOPE * region.vertical_exaggeration / STEP_WORLD))
+        blocked = on_road | is_water | cliff_mask(base, shape, min_drop=steep_steps)
+        instances, object_counts = object_stage.place(region, blocked, road_rows)
+        print(f"objects: {object_counts}")
+    attribution = [
+        ATTRIBUTION[region.sources["dem"]["kind"]],
+        ATTRIBUTION[region.sources["landcover"]["kind"]],
+        ATTRIBUTION["overture"],
+    ]
+    if region.objects and "buildings" in region.objects:
+        attribution.append(ATTRIBUTION["overture-buildings"])
 
     sx, sy = region.lonlat_to_cell([region.start[0]], [region.start[1]])
     manifest = write_package(
@@ -256,11 +359,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         provinces=province_names,
         start=(int(sx[0]), int(sy[0])),
         style=region.style,
-        attribution=[
-            ATTRIBUTION[region.sources["dem"]["kind"]],
-            ATTRIBUTION[region.sources["landcover"]["kind"]],
-            ATTRIBUTION["overture"],
-        ],
+        attribution=attribution,
         source={"crs": region.crs.to_proj4(), "bounds": list(region.bounds)},
         generator={
             "name": "pixelworld_pipeline.build",
@@ -272,6 +371,8 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
                 "bilateral": [region.bilateral_cells, region.bilateral_meters],
             },
         },
+        render=region.render,
+        objects=instances,
         compress=compress,
         clean=True,
     )
@@ -281,6 +382,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         "chunks": len(manifest["chunks"]),
         "heightRange": manifest["heightRange"],
         "inputs": {"roadSegments": len(road_rows), "riverLines": len(river_rows)},
+        **({"objects": object_counts} if instances is not None else {}),
         "roads": asdict(report) | {"ok": report.ok()},
         "surfaces": {
             SURFACES[int(k)]: int(v)

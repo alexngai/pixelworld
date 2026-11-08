@@ -1,0 +1,9 @@
+# Desert View at K=4: 40 m cells drawn at 1/4 size (8×4 px, 2 px per step).
+extends: desert-view-k8.yaml
+id: exp-desert-view-k4
+name: Desert View (experiment, K=4)
+metersPerCell: 40
+render: { scale: 0.25 }
+sources:
+  dem: { overview: 2 }
+  landcover: { overview: 2 }

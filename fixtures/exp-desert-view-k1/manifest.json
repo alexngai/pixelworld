@@ -1,0 +1,113 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "exp-desert-view-k1",
+  "name": "Desert View (experiment, coarse)",
+  "chunkSize": 64,
+  "cellsX": 36,
+  "cellsY": 44,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "e050dc255a7ed4b3879c7f5821c9fe15b5d7931b1027a6ed6c577e1f632c8ea1",
+      "heightRange": [
+        31,
+        87
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 160.0,
+    "metersPerStep": 26.127891,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    31,
+    87
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "colorado-plateau"
+  },
+  "start": {
+    "x": 32,
+    "y": 38
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.067 +lon_0=-111.849 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -111.88,
+      36.036,
+      -111.818,
+      36.098
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "5b009dac9866edc2",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 2,
+      "bilateral": [
+        1.5,
+        48.0
+      ]
+    }
+  },
+  "render": {
+    "scale": 1,
+    "tileSize": 512
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "8f96f7e8c4b087593bf4fb8006aabd4970ccd2e4a82d0210ffeb3663ea3d5390",
+    "count": 8299
+  },
+  "packageHash": "d93eb48823795d4f8f8d96f068d3bdeede6acdeb2b2af002f58d49c0983941b7"
+}

@@ -37,3 +37,24 @@ Sources and licenses:
 - Elevation: USGS 3DEP 1 arc-second DEM. Public domain.
 - Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads and rivers: © OpenStreetMap contributors via Overture Maps (release 2026-10-21.0). ODbL 1.0, so this package is a derivative database under the ODbL.
+
+## exp-* (M1.5 pixel detail experiment)
+
+Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.
+
+| World | Cells | Drawn at | Cell on screen | Height step |
+|---|---|---|---|---|
+| `exp-desert-view-k1`, `exp-strip-k1` | 160 m | 1 | 32×16 px | 8 px |
+| `exp-desert-view-k4`, `exp-strip-k4` | 40 m | 1/4 | 8×4 px | 2 px |
+| `exp-desert-view-k8`, `exp-strip-k8` | 20 m | 1/8 | 4×2 px | 1 px |
+
+Each package also has `objects.json.gz`: vegetation, buildings and landmarks as semantic-group instances (`docs/world-format.md`). Open one with `?world=/exp-strip-k8/`; add `&objects=0` for terrain only, `&palette=night` (or press T) for the night palette.
+
+```sh
+cd pipeline
+for f in ../worlds/experiment/*.yaml; do uv run pixelworld build "$f"; done
+```
+
+`exp-strip-k8` reports one split road segment and two disconnected junctions at 20 m cells, so the build exits with status 1; the package is still written.
+
+Sources and licenses: as for `southwest`, plus the USGS 3DEP 1/3 arc-second DEM (public domain) and Overture Maps buildings (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints; ODbL 1.0).

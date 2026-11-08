@@ -209,7 +209,7 @@ void main() {
     if (rc.x > 0.0) {
       float d = roadDistance(vGrid - vCell, roadMask);
       if (d <= rc.x) {
-        ramp = (rc.y > 0.5 && d < 0.022) ? uMarkingRamp : uAsphaltRamp;
+        ramp = (rc.y > 0.5 && d * uScale < 0.022) ? uMarkingRamp : uAsphaltRamp;
         pattern = 0;
       }
     }

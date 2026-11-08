@@ -97,7 +97,7 @@ const GENERATORS: Record<string, Generator> = {
 
   palm: ({ rand, ramp, param }) => {
     const h = Math.round(param("minHeight", 8) + rand() * param("heightJitter", 3));
-    const reach = 3;
+    const reach = Math.round(param("reach", 3));
     const size = 2 * reach + 3;
     const m = new VoxelModel(size, size, h + 2);
     const trunk = m.material(ramp("trunk"));
@@ -109,7 +109,7 @@ const GENERATORS: Record<string, Generator> = {
     m.set(tx, c, h, frond);
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]] as const;
     for (const [dx, dy] of dirs) {
-      const len = dx && dy ? 2 : 3;
+      const len = dx && dy ? reach - 1 : reach;
       for (let k = 1; k <= len; k++) m.set(tx + dx * k, c + dy * k, h - (k === len ? 1 : 0), frond);
     }
     return m;
@@ -215,29 +215,45 @@ const GENERATORS: Record<string, Generator> = {
     return m;
   },
 
+  /** Round stone tower with crenellations and slit windows; optional low round room at its foot. */
   lookoutTower: ({ rand, ramp, param, heightVox }) => {
     const H = Math.round(heightVox ?? param("height", 16));
-    const R = 3;
-    const size = 2 * R + 1;
-    const m = new VoxelModel(size, size, H + 2);
+    const R = param("radius", 2.5);
+    const KR = param("roomRadius", 0); // 0 = no room
+    const KH = Math.max(1, Math.round(H * 0.2));
+    const tr = Math.ceil(R);
+    const kr = Math.ceil(KR);
+    const sx = 2 * tr + 1 + (KR > 0 ? kr + 1 : 0);
+    const sy = Math.max(2 * tr + 1, 2 * kr + 1);
+    const m = new VoxelModel(sx, sy, H + 2);
     const stone = m.material(ramp("stone"));
     const dark = m.material(ramp("detail"));
-    const c = R;
+    const cx = tr;
+    const cy = Math.floor(sy / 2);
     for (let z = 0; z < H; z++) {
-      const r = R - (z > H * 0.6 ? 0.5 : 0);
-      for (let y = -R; y <= R; y++)
-        for (let x = -R; x <= R; x++) {
+      const r = z > H * 0.75 ? R + 0.4 : R; // slight flare under the parapet
+      for (let y = -tr - 1; y <= tr + 1; y++)
+        for (let x = -tr - 1; x <= tr + 1; x++) {
           const d = Math.hypot(x, y);
           if (d > r + 0.2) continue;
-          const slit = d > r - 1 && z % 5 === 3 && (x === 0 || y === 0);
-          m.set(c + x, c + y, z, slit ? dark : rand() < 0.08 ? dark : stone);
+          const shell = d > r - 1;
+          const slit = shell && z % 4 === 2 && z > 1 && (x === 0 || y === 0);
+          const band = shell && z === Math.round(H * 0.8);
+          m.set(cx + x, cy + y, z, slit || band ? dark : rand() < 0.06 ? dark : stone);
         }
     }
-    for (let y = -R; y <= R; y++)
-      for (let x = -R; x <= R; x++) {
+    for (let y = -tr - 1; y <= tr + 1; y++)
+      for (let x = -tr - 1; x <= tr + 1; x++) {
         const d = Math.hypot(x, y);
-        if (d <= R - 0.3 && d > R - 1.3 && (x + y) % 2 === 0) m.set(c + x, c + y, H, stone); // crenellation
+        if (d <= R + 0.6 && d > R - 0.6 && (x + y) % 2 === 0) m.set(cx + x, cy + y, H, stone); // crenellation
       }
+    if (KR > 0) {
+      const kx = cx + tr + 1;
+      for (let z = 0; z < KH; z++)
+        for (let y = -kr; y <= kr; y++)
+          for (let x = -kr; x <= kr; x++)
+            if (Math.hypot(x, y) <= KR + 0.2) m.set(kx + x, cy + y, z, z === KH - 1 && Math.hypot(x, y) > KR - 1 ? dark : stone);
+    }
     return m;
   },
 

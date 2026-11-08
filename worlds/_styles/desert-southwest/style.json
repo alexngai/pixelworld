@@ -102,7 +102,13 @@
       "secondary": { "halfWidth": 0.07, "centerLine": false }
     }
   },
-  "objects": { "heightStretch": 2.5, "variants": 6 },
+  "objects": {
+    "heightStretch": 2.5,
+    "variants": 6,
+    "surfaces": {
+      "urban": { "ramp": "urban", "pattern": "speckle", "density": 0.04 }
+    }
+  },
   "assets": {
     "tree": { "generator": "blob", "ramps": { "body": "farmland", "trunk": "bark" } },
     "tree.conifer": { "generator": "conifer", "ramps": { "crown": "conifer", "trunk": "bark" } },
@@ -111,7 +117,11 @@
       "ramps": { "body": "pine", "trunk": "bark" },
       "params": { "radius": 1, "radiusJitter": 0.6, "height": 1.1, "trunk": 1, "holes": 0.15 }
     },
-    "tree.palm": { "generator": "palm", "ramps": { "trunk": "bark", "fronds": "palm" } },
+    "tree.palm": {
+      "generator": "palm",
+      "ramps": { "trunk": "bark", "fronds": "palm" },
+      "params": { "reach": 2, "minHeight": 7, "heightJitter": 2 }
+    },
     "shrub": {
       "generator": "blob",
       "ramps": { "body": "scrub" },
@@ -166,7 +176,8 @@
     },
     "landmark.tower.lookout": {
       "generator": "lookoutTower",
-      "ramps": { "stone": "toroweap", "detail": "vishnu" }
+      "ramps": { "stone": "toroweap", "detail": "vishnu" },
+      "params": { "radius": 2.5, "roomRadius": 3 }
     },
     "landmark.sign": {
       "generator": "sign",

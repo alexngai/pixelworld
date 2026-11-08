@@ -209,6 +209,8 @@ def write_package(
     start: tuple[int, int] | None = None,
     source: dict[str, Any] | None = None,
     generator: dict[str, Any] | None = None,
+    render: dict[str, Any] | None = None,
+    objects: list[dict[str, Any]] | None = None,
     compress: bool = False,
     clean: bool = False,
 ) -> dict[str, Any]:
@@ -297,6 +299,20 @@ def write_package(
         manifest["source"] = source
     if generator is not None:
         manifest["generator"] = generator
+    if render is not None:
+        manifest["render"] = render
+    objects_path = out_dir / "objects.json.gz"
+    if objects is not None:
+        blob = json.dumps({"version": 1, "instances": objects}, separators=(",", ":")).encode()
+        blob = gzip.compress(blob, compresslevel=9, mtime=0)
+        objects_path.write_bytes(blob)
+        manifest["objects"] = {
+            "path": objects_path.name,
+            "sha256": hashlib.sha256(blob).hexdigest(),
+            "count": len(objects),
+        }
+    elif clean and objects_path.exists():
+        objects_path.unlink()
     manifest["packageHash"] = package_hash(manifest)
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return manifest

@@ -1,0 +1,12 @@
+# Desert View baseline: today's coarse cells at the 160 m/cell layout.
+extends: desert-view-k8.yaml
+id: exp-desert-view-k1
+name: Desert View (experiment, coarse)
+metersPerCell: 160
+maxSlope: 2
+render: { scale: 1 }
+smoothing: { bilateralCells: 1.5, bilateralMeters: 48 }
+terrain: null # today's rules
+sources:
+  dem: { overview: 8 }
+  landcover: { overview: 16 }

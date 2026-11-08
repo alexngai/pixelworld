@@ -1,0 +1,42 @@
+{
+  "packageHash": "be1a114a1e39b5cbf841e6527cea5fa14157c4bfb33535c4613b61751418ef50",
+  "cells": [
+    280,
+    345
+  ],
+  "chunks": 30,
+  "heightRange": [
+    242,
+    700
+  ],
+  "inputs": {
+    "roadSegments": 11,
+    "riverLines": 1
+  },
+  "objects": {
+    "building.commercial": 49,
+    "landmark.tower.lookout": 1,
+    "rock.boulder": 470,
+    "shrub": 3915,
+    "tree.pinyon-juniper": 2373
+  },
+  "roads": {
+    "cells": 80,
+    "edges": 82,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 1,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "surfaces": {
+    "rock": 30907,
+    "woodland": 3265,
+    "scrub": 6561,
+    "water": 1406,
+    "desert": 30490,
+    "grass": 23787,
+    "urban": 184
+  }
+}
