@@ -193,6 +193,47 @@ def bridge_decks_over_water(
     return out
 
 
+def water_under_decks(
+    under: np.ndarray,
+    base: np.ndarray,
+    shape: np.ndarray,
+    water: np.ndarray,
+    surface: np.ndarray,
+    low: np.ndarray,
+    road: road_stage.RoadLayer,
+    road_hw: np.ndarray | None = None,
+    micro: tuple[np.ndarray, int] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, tuple[np.ndarray, int] | None]:
+    """Over water a bridge's deck is the road (D-056): the cells `under` it
+    lose their road (mask, class and width, changed in place) and turn back
+    into water at the level of the water around them: their own, else the
+    highest within three cells, else `low` (their lowest corner). Micro-terrain
+    was built with a road bed cut along the old road; it is flattened there to
+    the new level, like every other water cell's, so the bed doesn't show
+    through the water as streaks.
+
+    Returns the new base, shape, water, surface and micro-terrain."""
+    from scipy import ndimage
+
+    road.mask[under] = 0
+    road.cls[under] = 0
+    if road_hw is not None:
+        road_hw[under] = 0
+    # the level of the water around (cells land cover took for land have none)
+    lvl = np.where(water != NO_WATER, water, np.iinfo(np.int16).min).astype(np.int32)
+    around = ndimage.grey_dilation(lvl, size=(7, 7))
+    level = np.where(water != NO_WATER, water, around)
+    level = np.where(level > np.iinfo(np.int16).min, level, low)
+    base = np.where(under, level, base).astype(np.int16)
+    shape = np.where(under, 0, shape).astype(np.uint8)
+    water = np.where(under, base, water).astype(np.int16)
+    surface = np.where(under, S["water"], surface).astype(surface.dtype)
+    if micro is not None:
+        mc, k = micro
+        micro = (micro_stage.reflood(mc, water, k), k)
+    return base, shape, water, surface, micro
+
+
 def paved_band(on_road: np.ndarray, half_width: np.ndarray) -> np.ndarray:
     """Cells whose centre lies within the half-width (cells) of the nearest road
     cell's centre: the pavement of a road wider than its own cells."""
@@ -649,21 +690,9 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road
         )
         if under.any():
-            from scipy import ndimage
-
-            road_layer.mask[under] = 0
-            road_layer.cls[under] = 0
-            if road_hw is not None:
-                road_hw[under] = 0
-            # the level of the water around (cells land cover took for land have none)
-            lvl = np.where(water != NO_WATER, water, np.iinfo(np.int16).min).astype(np.int32)
-            around = ndimage.grey_dilation(lvl, size=(7, 7))
-            level = np.where(water != NO_WATER, water, around)
-            level = np.where(level > np.iinfo(np.int16).min, level, low)
-            base = np.where(under, level, base).astype(np.int16)
-            shape = np.where(under, 0, shape).astype(np.uint8)
-            water = np.where(under, base, water).astype(np.int16)
-            surface = np.where(under, S["water"], surface).astype(surface.dtype)
+            base, shape, water, surface, micro = water_under_decks(
+                under, base, shape, water, surface, low, road_layer, road_hw, micro
+            )
             print(f"bridges: {int(under.sum())} cells of water under their decks")
     attribution = [
         ATTRIBUTION[region.sources["dem"]["kind"]],

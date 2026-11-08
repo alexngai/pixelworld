@@ -1,15 +1,18 @@
+import gzip
 import json
 
 import numpy as np
 import pytest
 
-from pixelworld_pipeline.golden import GOLDEN_DIR, golden_chunk
+from pixelworld_pipeline.golden import GOLDEN_DIR, golden_chunk, golden_objects
 from pixelworld_pipeline.world_format import (
     NO_WATER,
     Chunk,
     ChunkFormatError,
     decode_chunk,
+    decode_objects,
     encode_chunk,
+    encode_objects,
     pack_shape,
     shape_from_v0_mask,
     unpack_shape,
@@ -129,3 +132,42 @@ def test_gzip_chunks_decode_and_package_hash_is_stable(tmp_path):
     args["road"] = np.zeros_like(base, dtype=np.uint16)
     c = write_package(tmp_path / "c", **args)
     assert c["packageHash"] != a["packageHash"]
+
+
+def _footprint_bits(instances):
+    return [[[v.hex() for v in p] for p in inst.get("fp", [])] for inst in instances]
+
+
+def test_objects_v2_round_trips_to_the_same_instances():
+    rng = np.random.default_rng(11)
+    instances = []
+    for i in range(500):
+        # anchors with three decimals and footprints with two, as placement writes them
+        x, y = (round(float(v), 3) for v in rng.uniform(-2, 600, size=2))
+        offsets = rng.normal(0, 3, size=(5, 2))
+        fp = [[round(x + float(dx), 2), round(y + float(dy), 2)] for dx, dy in offsets]
+        instances.append({"g": "building", "x": x, "y": y, "s": i, "fp": fp, "hm": 6.0})
+    instances.append({"g": "tree", "x": 1.0, "y": 2.0, "s": 1, "r": 3})
+    for version in (1, 2):
+        blob = encode_objects(instances, version)
+        assert blob == encode_objects(instances, version)  # deterministic
+        back = decode_objects(blob)
+        assert back == instances
+        assert _footprint_bits(back) == _footprint_bits(instances)  # float for float
+    assert len(encode_objects(instances, 2)) < 0.85 * len(encode_objects(instances, 1))
+    with pytest.raises(ValueError):
+        encode_objects(instances, 3)
+    with pytest.raises(ValueError):
+        decode_objects(json.dumps({"version": 3, "instances": []}).encode())
+
+
+def test_objects_golden_files_hold_the_same_instances():
+    expected = golden_objects()
+    for version in (1, 2):
+        blob = (GOLDEN_DIR / f"objects-v{version}.json").read_bytes()
+        assert blob == gzip.decompress(encode_objects(expected, version)) + b"\n"
+        assert decode_objects(blob) == expected
+        assert _footprint_bits(decode_objects(blob)) == _footprint_bits(expected)
+    v2 = json.loads((GOLDEN_DIR / "objects-v2.json").read_text())
+    # 245.125 sits on a rounding boundary: the anchor rounds half up, to 245.13
+    assert v2["version"] == 2 and v2["instances"][0]["fp"][0] == [-23, -28]

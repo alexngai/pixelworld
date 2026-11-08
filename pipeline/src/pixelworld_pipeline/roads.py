@@ -270,6 +270,51 @@ def straighten(
     return Straightened(new_lines, p0, p, int(active.sum()), len(edge_set))
 
 
+def along_edge(path: list[tuple[int, int]], shape: tuple[int, int]) -> list[tuple[int, int]]:
+    """A cell path whose brief excursions outside the grid run along its edge.
+
+    A line that hugs the world's edge can stray less than a cell outside it
+    between two inside cells (a vertex mapped just past the edge). Steps
+    through outside cells aren't drawn, so the road would end on both sides of
+    the excursion and come apart inside the grid. A run of outside cells that
+    starts and ends inside and stays within one cell of the edge moves onto the
+    edge cells instead. Paths that leave the grid, or stray further, keep their
+    outside cells (and stay undrawn there).
+    """
+    cy, cx = shape
+
+    def inside(c: tuple[int, int]) -> bool:
+        return 0 <= c[0] < cx and 0 <= c[1] < cy
+
+    def near(c: tuple[int, int]) -> bool:
+        return -1 <= c[0] <= cx and -1 <= c[1] <= cy
+
+    out: list[tuple[int, int]] = []
+    i, n = 0, len(path)
+    while i < n:
+        if inside(path[i]):
+            out.append(path[i])
+            i += 1
+            continue
+        j = i
+        while j < n and not inside(path[j]):
+            j += 1
+        run = path[i:j]
+        if i > 0 and j < n and all(near(c) for c in run):
+            # clamping moves each step by at most one cell per axis, so the
+            # path stays 8-connected; repeated cells are dropped
+            for x, y in run:
+                c = (min(max(x, 0), cx - 1), min(max(y, 0), cy - 1))
+                if c != out[-1]:
+                    out.append(c)
+            if path[j] == out[-1]:
+                out.pop()
+        else:
+            out.extend(run)
+        i = j
+    return out
+
+
 @dataclass
 class RoadLayer:
     mask: np.ndarray  # uint16 (cy, cx)
@@ -291,7 +336,8 @@ def rasterize(
 
     With `deviation`, each polyline edge becomes long octilinear runs
     (octilinear_path) between the cells of its vertices; otherwise the line is
-    traced cell by cell (trace_cells). `widths` (segment id → metres) records the
+    traced cell by cell (trace_cells). A line straying just past the grid's edge
+    and back runs along the edge (along_edge). `widths` (segment id → metres) records the
     widest way in each cell. The class number written to a cell is the line's
     class; with `rank_of` (class → priority) the higher-priority class wins,
     else the larger number does."""
@@ -326,6 +372,7 @@ def rasterize(
                 for va, vb in zip(verts, verts[1:], strict=False):
                     if va != vb:
                         path += octilinear_path(va, vb, deviation)[1:]
+            path = along_edge(path, shape)
             for a, b in zip(path, path[1:], strict=False):
                 dx, dy = b[0] - a[0], b[1] - a[1]
                 if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):

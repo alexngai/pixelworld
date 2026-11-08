@@ -46,6 +46,15 @@ def flatten_water(q: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
     return np.where(np.isfinite(at), at, q)
 
 
+def reflood(micro_corners: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
+    """Finished micro-corners (int16) flattened again to the water's level, for
+    cells that turned to water after micro-terrain was built (bridge decks over
+    water, D-056): the road bed cut there must not show through the water.
+    Idempotent where the water hasn't changed."""
+    q = flatten_water(micro_corners.astype(np.float64), water, k)
+    return round_half_up(q).astype(np.int16)
+
+
 def road_segments(
     mask: np.ndarray, centre_h: np.ndarray, half_width: np.ndarray | None = None
 ) -> list[tuple[float, ...]]:

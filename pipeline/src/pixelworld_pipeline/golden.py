@@ -5,17 +5,20 @@
 The TypeScript and Python codec tests both decode these files and compare
 against the expected values in the JSON sidecar. Only the current format
 (v1) is regenerated; chunk-v0-small.* is a frozen fixture that checks old
-files still decode.
+files still decode. objects-v1.json and objects-v2.json hold the same
+instances in both objects-file versions, so readers can check that they decode
+alike.
 """
 
 from __future__ import annotations
 
+import gzip
 import json
 from pathlib import Path
 
 import numpy as np
 
-from .world_format import NO_WATER, Chunk, encode_chunk, pack_shape
+from .world_format import NO_WATER, Chunk, encode_chunk, encode_objects, pack_shape
 
 REPO = Path(__file__).resolve().parents[3]
 GOLDEN_DIR = REPO / "testdata" / "world-format"
@@ -70,8 +73,55 @@ def golden_micro_chunk() -> Chunk:
     )
 
 
+def golden_objects() -> list[dict]:
+    """Instances for objects-v1.json and objects-v2.json, the same instances in
+    both versions: anchors on a rounding boundary (245.125 is exact in binary)
+    and just below one (-1.005 isn't), footprints reaching past the grid's
+    edge, an instance without a footprint and a bridge piece."""
+    return [
+        {
+            "g": "building.rowhouse.victorian",
+            "x": 245.125,
+            "y": 12.875,
+            "s": 3141592653,
+            "fp": [[244.9, 12.6], [245.37, 12.6], [245.37, 13.15], [244.9, 13.15]],
+            "hm": 9.5,
+            "rs": "gabled",
+            "fr": 2,
+            "cn": 1,
+            "yr": 1895,
+            "fl": 3,
+        },
+        {"g": "tree", "x": 3.5, "y": 7.25, "s": 7, "r": 2},
+        {
+            "g": "building.tower",
+            "x": -1.005,
+            "y": 0.004,
+            "s": 42,
+            "fp": [[-1.71, -0.5], [-0.33, -0.5], [-0.33, 0.51], [-1.71, 0.51]],
+            "hm": 120.0,
+            "m": 3.5,
+        },
+        {
+            "g": "landmark.bridge.suspension",
+            "x": 100.333,
+            "y": 50.667,
+            "s": 0,
+            "id": "golden-gate-bridge",
+            "fp": [[95.07, 49.73], [105.6, 50.4], [105.47, 52.39], [94.94, 51.72]],
+            "ln": [90.0, 50.0, 110.5, 51.25],
+            "lw": 1.2,
+            "z0": 0.5,
+        },
+    ]
+
+
 def main() -> None:
     GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
+    for version in (1, 2):
+        # the JSON the pipeline gzips, kept plain so the files read as text
+        blob = gzip.decompress(encode_objects(golden_objects(), version))
+        (GOLDEN_DIR / f"objects-v{version}.json").write_bytes(blob + b"\n")
     chunk = golden_chunk()
     (GOLDEN_DIR / "chunk-v1-small.pxwc").write_bytes(encode_chunk(chunk))
     expected = {

@@ -73,6 +73,39 @@ def test_cut_and_fill_makes_connected_road_cells_continuous():
     assert report.ok()
 
 
+def _flat_report(layer, junctions):
+    h, w = layer.mask.shape
+    return validate(layer, np.zeros((4, h, w), dtype=np.int64), junctions)
+
+
+def test_roads_straying_just_past_the_edge_stay_in_one_piece():
+    # a street along the north edge with one vertex mapped a tenth of a cell
+    # past it (sf-walk): its steps through row -1 used to be dropped, which
+    # left two dead ends inside the grid and split the street
+    street = line((1.4, 0.0), (6.2, -0.11), (6.2, 5.0), (9.3, 8.4))
+    side = line((3.5, -0.8), (3.8, 0.0))  # a service road joining it at the edge
+    for deviation in (1.0, None):
+        layer = rasterize([("s", 1, street), ("t", 1, side)], (10, 12), deviation=deviation)
+        cells = layer.segment_cells["s"]
+        assert all(0 <= x < 12 and 0 <= y < 10 for x, y in cells)
+        for a, b in zip(cells, cells[1:], strict=False):
+            assert max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1
+        report = _flat_report(layer, {"j": ["s", "t"]})
+        assert report.split_segments == 0 and report.disconnected_junctions == 0
+        assert report.components == 1 and report.ok()
+
+
+def test_roads_leaving_the_grid_are_not_drawn_along_its_edge():
+    # out and back through rows -1 to -3: a real excursion, not a stray vertex
+    layer = rasterize([("r", 1, line((0.5, 0.5), (4.5, -2.5), (8.5, 0.5)))], (4, 10), deviation=1.0)
+    assert not layer.mask[0, 2:7].any()
+    # out across the edge: no stub along it
+    exit_ = rasterize(
+        [("e", 1, line((2.5, 2.5), (5.5, -0.5), (9.5, -0.5)))], (4, 10), deviation=1.0
+    )
+    assert not exit_.mask[0, 6:].any()
+
+
 def test_junction_index_keeps_shared_connectors_only():
     segs = [
         {"id": "a", "connectors": [{"connector_id": "x"}, {"connector_id": "y"}]},
