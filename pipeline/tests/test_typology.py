@@ -105,3 +105,32 @@ def test_rules_only_replace_generic_groups_unless_told():
     assert insts[0]["g"] == "building.tower.deco"
     assert typology.use_group("Commercial Office") == "commercial"
     assert typology.use_group("Miscellaneous/Mixed-Use") == "mixed"
+
+
+def test_parts_take_their_buildings_year_and_only_explicit_rules():
+    # a podium and two tower parts of one building; only the podium's centroid is on a lot
+    insts = _row(1.0, 3)
+    for k, inst in enumerate(insts):
+        inst["_grp"] = "russ"
+        inst["g"] = "building.commercial" if k == 0 else "building.tower"
+        inst["hm"] = 15.0 if k == 0 else 80.0 + 40 * k
+    facts = [{"year": 1927, "stories": 31, "use": "Commercial Office", "hood": "FiDi"}, None, None]
+    f = typology.features(insts, STREET, None, 25.0, facts)
+    assert all(g["parts"] and g["year"] == 1927 for g in f)
+    assert [g["floors"] for g in f] == [5, 38, 50]
+    assert "width" not in f[1] and "front" not in f[1]
+    spec = {
+        "rules": [
+            {"group": "building.commercial.historic", "year": [1880, 1950]},
+            {"group": "building.tower.deco", "from": ["building.tower"], "year": [1906, 1950]},
+        ]
+    }
+    counts = typology.classify(insts, spec, f)
+    # the podium matches no generic rule; both towers are deco, with their own storeys
+    assert [i["g"] for i in insts] == [
+        "building.commercial",
+        "building.tower.deco",
+        "building.tower.deco",
+    ]
+    assert counts == {"building.tower.deco": 2}
+    assert insts[1]["yr"] == 1927 and insts[2]["fl"] == 50 and "fr" not in insts[1]

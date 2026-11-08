@@ -23,6 +23,12 @@ maxWidth / minDepth (metres) · minParty / maxParty (share of the outline) ·
 floors [min, max] · minHeight / maxHeight (metres) · onWater · corner · from
 (groups the rule may replace; default: the generic building groups).
 
+Buildings drawn in parts (Overture's parts, lidar's tower parts) share their
+building's facts, and each part has its own height and storeys but no
+geometry features. They match only rules with an explicit `from`, such as
+towers by year: generic rules would draw a podium or a roof part as a whole
+building of its own.
+
 Typed buildings carry hints for their generator: `fr`, the direction their
 front faces (0-7, in 45° steps from +x, clockwise on screen as y grows),
 `cn` (1 on corner lots), `yr` (year built) and `fl` (storeys).
@@ -68,10 +74,15 @@ def features(
     m_per_cell: float,
     facts: list[dict | None] | None = None,
 ) -> list[dict]:
-    """Features of each building root (`_grp` groups of one instance; others get {})."""
+    """Features of each building: whole buildings (`_grp` groups of one
+    instance) get geometry, street and facts features; parts of a building get
+    its facts and their own height (`parts`); instances without a footprint get {}."""
     groups = Counter(inst.get("_grp") for inst in instances)
     roots = [
         i for i, inst in enumerate(instances) if inst.get("fp") and groups[inst.get("_grp")] == 1
+    ]
+    in_parts = [
+        i for i, inst in enumerate(instances) if inst.get("fp") and groups[inst.get("_grp")] > 1
     ]
     polys = {i: shapely.Polygon(instances[i]["fp"]) for i in roots}
     tree = shapely.STRtree([polys[i] for i in roots]) if roots else None
@@ -151,6 +162,21 @@ def features(
             else max(1, int(round(f["height"] / FLOOR_METERS)))
         )
         out[i] = f
+    # parts share the facts of whichever part stands on a lot (one with a year first)
+    shared: dict[Any, dict] = {}
+    for i in in_parts if facts is not None else []:
+        fact, g = facts[i], instances[i].get("_grp")
+        if fact and (g not in shared or (fact.get("year") and not shared[g].get("year"))):
+            shared[g] = fact
+    for i in in_parts:
+        f = {"height": float(instances[i].get("hm") or 0.0), "parts": True}
+        fact = shared.get(instances[i].get("_grp"))
+        if fact:
+            f["year"] = fact.get("year")
+            f["use"] = use_group(fact.get("use", ""))
+            f["hood"] = fact.get("hood") or ""
+        f["floors"] = max(1, int(round(f["height"] / FLOOR_METERS)))
+        out[i] = f
     return out
 
 
@@ -158,6 +184,8 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     if not f:
         return False
     if group not in rule.get("from", GENERIC):
+        return False
+    if f.get("parts") and "from" not in rule:
         return False
     if "year" in rule:
         y = f.get("year")

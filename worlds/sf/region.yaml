@@ -72,7 +72,8 @@ objects:
       # Russ Building: a taller tower on an old lot is a later one); the white
       # and granite slabs of the 1960s and 70s; the stone towers with sculpted
       # tops of the 1985 Downtown Plan; the glass towers south of Market.
-      # Towers with no record, or in parts, take a kind by seed.
+      # A tower in parts takes its building's year; towers with no record take
+      # a kind by seed.
       - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1906, 1950], maxHeight: 140 }
       - { group: building.tower.slab, from: [building.tower, building.tower.hotel], year: [1950, 1983] }
       - { group: building.tower.postmodern, from: [building.tower, building.tower.hotel], year: [1983, 2000] }
