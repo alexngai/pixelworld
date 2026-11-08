@@ -43,6 +43,28 @@ uv run pixelworld serve ../worlds/southwest/region.yaml
 
 Before M2 this package was uniform: 1028×700 cells at 400 m (M1, 0.63 MB), then with micro-terrain (M1.6, 3.97 MB).
 
+This is the driving level of the region's three scale levels (D-046). Its manifest lists them, and `geo.i32.gz` holds the lon/lat of every 4th cell corner, so the client (L key) can move to the same place in another level.
+
+## southwest-fly, southwest-walk
+
+The Southwest's other scale levels, built from [`fly.yaml`](../worlds/southwest/fly.yaml) and [`walk.yaml`](../worlds/southwest/walk.yaml). Both extend `region.yaml`.
+
+- **southwest-fly:** the whole region at 1.5 km per cell in open desert, with every focus area 4× coarser than driving: the Strip and Hoover Dam at 400 m, the canyon rim at 600 m.
+  - **Size:** 339×219 cells, 0.51 MB.
+  - **Generalization:** motorways and trunks only.
+  - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam).
+- **southwest-walk:** the Las Vegas Strip at a uniform 20 m per cell, with 4×4 micro-cells from the 10 m DEM.
+  - **Size:** 182×412 cells, 0.52 MB.
+  - **Objects:** every building footprint, trees, palms and the two Strip landmarks, at true proportions (`heightStretch` 1).
+  - **Roads:** the build exits with status 1 because of the road report it shares with the M1.5 Strip experiment (one split segment, two disconnected junctions at 20 m cells). The package is still written.
+
+```sh
+cd pipeline
+for f in fly region walk; do uv run pixelworld build ../worlds/southwest/$f.yaml; done
+```
+
+Sources and licenses: as for `southwest`. The walking level also uses the USGS 3DEP 1/3 arc-second DEM (public domain).
+
 Sources and licenses:
 - Elevation: USGS 3DEP 1 arc-second DEM. Public domain.
 - Land cover: ESA WorldCover 2021. CC BY 4.0.

@@ -262,3 +262,26 @@ The point is more room for visual interest; both halves are wanted.
 - **Rule:** each cell takes 9 samples spread over it. The most common class wins, with ties going to the centre sample, and water wins from 3 samples.
 - **Result:** a channel wider than a third of the cell, measured across the channel, stays connected. Lake Mead and the Colorado are one water body again.
 - **Cost:** water cells grew 6% and land-cover sampling takes about 10 s more per build.
+
+### D-046: Scale levels are separate world packages (accepted)
+- **What:** a region is built once per way of moving through it: flying, driving, walking. Each level is its own package with its own grid, warp, generalization and depiction, so each can be recognizable and interesting at its own pace.
+- **Specs:** a level spec `extends:` the region's base spec and overrides parameters (architecture §3.5). The base lists the levels by name and package id, and every manifest carries that list.
+- **Moving between levels:** the client reloads at the same lon/lat in the other package, through each package's geo grid (D-048). The baked-tile cache makes returning to a level cheap.
+- **Rejected alternatives:**
+  - Zooming out the driving map: shrunken pixels lose legibility, and the map gets no generalization or oversized landmarks.
+  - One package holding all levels: the levels share nothing at the chunk level, and a walking level covers a different extent. It can come later if packaging them together helps.
+
+### D-047: Depiction scale and selection (accepted)
+- **Rule:** a depiction scale s draws an object as if its local metres per cell were m / s. Footprint and height grow by s about the object's anchor, and parts move with their building.
+- **Selection:**
+  - Scaled-up buildings are placed tallest first; one that would overlap a building already placed is left out.
+  - `minHeightMeters` drops low buildings, so a coarse level keeps the skyline rather than a smear of boxes.
+- **Exceptions:** dams keep their real size, because they're shaped to their canyon.
+- **Heights:** a level can set its own object height stretch (`depiction.heightStretch`). The walking level uses 1.0, true proportions.
+- **Neutral by default:** with no depiction settings, output is unchanged.
+
+### D-048: Geo grid for moving between levels (accepted)
+- **What:** each level package stores the lon/lat of cell corners every 4 cells (warped) or 16 cells (uniform), as gzipped int32 microdegrees delta-coded along rows. That's 228 KB for the driving Southwest.
+- **Accuracy:** bilinear interpolation of the warped Southwest is off by 0.005 cells (median) and 2.5 cells at worst, in stretched transition rings. A grid point every 8 cells would be 7 cells off at worst.
+- **Inverse:** lon/lat → cell is Newton's method from the nearest grid point. A residual over half a cell means "outside this world".
+- **Rejected alternative:** shipping the warp mesh is exact, but the client would need the projection, and inverting the warp needs point location.

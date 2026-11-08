@@ -303,6 +303,52 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
   - Buildings are only placed around the Strip.
   - The dam is a plain procedural wedge.
 
+### M2.5: Scale levels — first cut done
+
+**Goal:** recognizable and interesting maps at different scales (walking the streets, driving the roads, flying over the region), each tuned through parameters rather than code. The design is in architecture §3.5 (D-046 to D-048).
+
+![The Las Vegas Strip and Grand Canyon Village at the three scale levels, 1×](images/levels-southwest.png)
+
+**What was built:**
+- **Level specs:** level specs extend the region's spec and override its parameters. The base lists the levels; each level builds its own package with `level`, `levels` and a geo grid in its manifest.
+- **New parameters:**
+  - `warp.focusScale` coarsens or refines every focus area at once.
+  - `objects.depiction` sets buildings' and landmarks' scale, a minimum building height, and the object height stretch.
+- **Depiction:** oversized buildings are placed tallest first and skipped where they'd overlap a taller one.
+- **Client:**
+  - The L key reloads at the same lon/lat in the next level; `at=lon,lat` in the URL does the same.
+  - The HUD shows the level and the rover's lon/lat.
+  - Arriving outside a level's area lands at that level's start.
+- **Southwest levels:** `fly.yaml`, `region.yaml` (driving) and `walk.yaml` (the Strip, from the M1.5 experiment's spec).
+
+| | Flying | Driving | Walking |
+|---|---|---|---|
+| Cells | 339×219 | 1155×709 | 182×412 (the Strip only) |
+| Open desert | 1,500 m/cell | 500 m/cell | — |
+| Strip / Hoover Dam / canyon rim | 400 / 400 / 600 m | 100 / 100 / 150 m | 20 m |
+| Strip → Grand Canyon Village | 216 cells | 718 cells | — |
+| Roads | motorway, trunk | down to secondary | down to secondary |
+| Buildings | towers ≥ 80 m, drawn 3×; 53 placed | all footprints ≥ 200 m² on the Strip | all ≥ 40 m², true proportions |
+| Landmarks | drawn 5× (not the dam) | true size, rigid stamps | true size |
+| Package, gzipped | 0.51 MB | 6.2 MB | 0.52 MB |
+| Build, with cached sources | 57 s (including a 15 s warp solve) | 80 s | 12 s |
+
+**Tests:**
+- The pipeline tests cover level validation, focus scale, depiction and selection, the geo grid both ways and the editor's save rule.
+- A unit test covers the client's geo grid.
+- E2e tests check a flying-level golden, that drive → fly → walk keeps the rover within 400 m of where it was, and that a place outside the walking area lands at its start.
+
+**Known issues and next steps:**
+- **Walking level:**
+  - Roads are one cell (20 m) wide, but Las Vegas Boulevard is about 50 m. Roads need real widths, sidewalks and crossings at this scale.
+  - It inherits the M1.5 Strip's road report: 1 split segment and 2 disconnected junctions, so its build exits with status 1.
+- **Flying level:**
+  - There's no vegetation or land-cover scatter yet (warped layouts don't support it).
+  - The dam is at real size, so it's tiny.
+  - The heights of oversized towers want tuning against the terrain's relief.
+- **Moving between levels** is a page reload. A seamless transition (take-off and landing) belongs with M4's vehicles.
+- **Editor:** it previews any level's warp (`pixelworld serve worlds/southwest/fly.yaml`). It only saves a warp file the spec owns, so a level that inherits its warp is tuned in its spec file. Depiction and generalization sliders would make tuning faster.
+
 ### M3: Detail pass — components and landmarks
 
 **Goal:** the world looks inhabited and the landmarks read instantly.
@@ -328,7 +374,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 **Goal:** make the world playable.
 
 - Car on the road network and terrain slopes, with grid collision.
-- Plane with an arcade flight model, drop shadow and canyon collision.
+- Plane with an arcade flight model, drop shadow and canyon collision, on the flying level (M2.5), with take-off and landing moving between levels.
 - Occlusion silhouettes.
 - Speeds tuned to the compressed layout.
 - Grid building mode (place and remove) with local re-bake.

@@ -49,6 +49,10 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "objects": { "path": "objects.json.gz", "sha256": "…", "count": 9401 },  // optional (M1.5)
   "micro": { "k": 4 },              // optional (M1.6): every chunk has an MHGT section
   "warp": { "method": "v2", "background": 500, "focus": [ … ], "pins": 0, "vertical": { … } },  // optional (M2), informational
+  "depiction": { "heightStretch": 1.0 },  // optional (D-047): how objects are drawn at this level
+  "level": "drive",                 // optional (D-046): this package's scale level
+  "levels": [ { "name": "fly", "world": "southwest-fly", "label": "Flying" }, … ],  // optional: every level of the region
+  "geo": { "path": "geo.i32.gz", "step": 4, "size": [290, 179], "sha256": "…" },  // optional (D-048)
   "packageHash": "…"                // SHA-256 of this manifest without the field
 }
 ```
@@ -73,6 +77,15 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - optional `hm`: real or depicted height in metres
 
   Objects with `fp` or `hm` are unique; the rest are instanced per variant. Groups resolve through the style pack (D-030).
+- **Scale levels (optional, D-046):**
+  - `level` names this package's level.
+  - `levels` lists every level of the region, this one included. `world` is a sibling package's id, which is also its directory next to this one.
+  - `depiction.heightStretch` overrides the style pack's object height stretch for this level (D-047).
+  - Instances drawn bigger than real carry a smaller `m`: an object is drawn as if its local metres per cell were `m`.
+- **Geo grid (optional, D-048):** `geo.path` is a gzipped file of little-endian int32 microdegrees, shape `(ny, nx, 2)` as (lon, lat), where `size` is `[nx, ny]`.
+  - **Points:** they sit at cell corners `x = min(i·step, cellsX)` and `y = min(j·step, cellsY)`; positions in between are bilinear.
+  - **Coding:** each row is delta-coded along x, with the first point absolute.
+  - **Use:** clients convert between cells and lon/lat with it, both ways, to carry a place from one level to another.
 - **Chunk coordinates:** chunk `(cx, cy)` covers cells `[cx·chunkSize, (cx+1)·chunkSize) × [cy·chunkSize, (cy+1)·chunkSize)`.
 
 ## Chunk file (`.pxwc`)

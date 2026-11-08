@@ -62,8 +62,8 @@ This split keeps chunks small. It also means that changing the art style never r
 
 ### 3.2 Three independent scales
 
-1. **Layout scale (meters per cell)** comes from the warp and varies across the map. It is fine in places like the Vegas Strip (around 15 m/cell) and coarse in empty desert (around 400 m/cell). It decides *how much real geography fits*.
-2. **Object scale** is fixed game-wide: road widths, vehicle sizes, a floor height, a tree. A car is the same size everywhere. Style packs define object sizes in cells and steps. Landmarks may set their own exaggerated scale.
+1. **Layout scale (meters per cell)** comes from the warp and varies across the map. When driving it is fine where places matter (100 m/cell on the Vegas Strip) and coarse in empty desert (500 m/cell). It decides *how much real geography fits*. Each scale level (§3.5) has its own.
+2. **Object scale** is fixed within a scale level: road widths, vehicle sizes, a floor height, a tree. A car is the same size everywhere. Style packs define object sizes in cells and steps. A level can draw objects bigger than real (depiction scale, D-047), and landmarks may set their own.
 3. **Vertical scale** is set per region as a **vertical exaggeration** E relative to true proportions (1 = real slopes). Every height difference spans E times as many steps, and meters per step = meters per cell × (1/√6) / E. It's applied before quantization, because steps are integers, so it can't be changed at render time. Per-feature caricature (e.g. deepen the canyon) comes on top. Exaggeration is capped so that driving stays possible.
 
 Because of this, the same real building can take up more or fewer cells depending on the local layout scale. When it would fall below the minimum footprint, it is merged into a block or dropped. Only landmarks are protected from this, by their rigid stamps.
@@ -92,9 +92,36 @@ This is exactly a standard orthographic camera at **45° yaw and 30° pitch**, p
 - **View rotations:** r ∈ {0, 1, 2, 3}. World (x, y) is rotated by r·90° before projection. Each rotation is a separate bake.
 - **Lighting is view-relative:** the sun always comes from the same screen direction, as in classic isometric games, so all 4 rotations look equally good.
 
+### 3.5 Scale levels (D-046, D-047, D-048)
+
+A region is built as several world packages, one per way of moving through it. Each is tuned to be recognizable and interesting at its own pace:
+
+| Level | Southwest spec | Cells | For |
+|---|---|---|---|
+| fly | `worlds/southwest/fly.yaml` | 1.5 km in open desert; 400–600 m in focus areas | short flights between landmarks, which are drawn oversized |
+| drive | `worlds/southwest/region.yaml` | 500 m in open desert; 100–250 m in focus areas | the road trip |
+| walk | `worlds/southwest/walk.yaml` | 20 m, uniform, the Strip only | street level |
+
+- **Specs:**
+  - A level spec `extends:` the base spec and overrides its parameters. Mappings merge key by key, anything else replaces, and `null` removes a section.
+  - The base spec lists every level as `levels: [{name, world, label}]`, where `world` is the sibling package's id.
+- **What a level tunes:**
+
+  | Aspect | Parameters |
+  |---|---|
+  | Extent | `bounds`; a walking level covers one district |
+  | Layout | `metersPerCell` (the base scale: height step and relief reference), `warp.background`, `warp.focusScale` (multiplies every focus area's target), a warp file of its own, or `warp: null` for a uniform grid |
+  | Relief | `verticalExaggeration`, `warp.vertical` (caricature), `maxSlope`, `micro.k`, `smoothing` |
+  | Generalization | `sources.roads.classes`, `terrain` rules (e.g. minimum lake area), `objects.buildings` (`minArea`, `bounds`), `objects.depiction.buildings.minHeightMeters` |
+  | Depiction | `objects.depiction.buildings.scale`, `objects.depiction.landmarks.scale` (or `scale` on one landmark), `objects.depiction.heightStretch` |
+  | Data | `sources.dem` and `sources.landcover`: kind and overview |
+
+- **Moving between levels:** every level package has a geo grid, the lon/lat of cell corners (D-048). The client turns the rover's cell into lon/lat in one level and back into a cell in the next (the L key). A place outside the next level's area lands at that level's start.
+- **Not a zoom:** zoom enlarges the same baked pixels. A level is a different world, with its own cells, generalization and depiction.
+
 ## 4. World definition (source of truth)
 
-A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code. The M1 spec is [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml). It holds bounds, a uniform `metersPerCell`, `verticalExaggeration`, `maxSlope`, smoothing, a start point, pinned data sources and geology provinces. The fields below for focus areas, pins, landmarks and overrides arrive with M2–M3:
+A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code. A region can be built at several scale levels (§3.5), each from a level spec that extends the region's. The M1 spec is [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml). It holds bounds, a uniform `metersPerCell`, `verticalExaggeration`, `maxSlope`, smoothing, a start point, pinned data sources and geology provinces. The fields below for focus areas, pins, landmarks and overrides arrive with M2–M3:
 
 ```yaml
 # worlds/southwest/region.yaml (target shape, M2+)
@@ -243,7 +270,7 @@ Bakes run in two places with the same code:
 5. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
 
 - **Internal resolution:** chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270).
-- **Zoom:** integer zooms only. Zoomed-out levels use separate **semantic LOD bakes**, not shrunken images: blocks → city silhouettes → oversized landmark icons.
+- **Zoom:** integer zooms only. Coarser views are separate scale levels (§3.5) with their own generalization and oversized landmarks, not shrunken images.
 
 ### 8.3 Full 3D mode (later)
 
