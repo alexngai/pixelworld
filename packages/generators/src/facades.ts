@@ -452,8 +452,10 @@ export const rowhouse: Generator = (ctx) => {
   const year = hints?.year ?? (type === 3 ? 1965 : type === 2 ? 1935 : 1900);
   const f = facadeOf(mask, frontDir(mask, hints?.front));
   const W = f.width;
-  // neighbours differ by a voxel or so, so a row reads as separate lots
-  const H = Math.max(3, Math.min(60, Math.round((ctx.heightVox ?? 8) + (rand() - 0.5) * 2.2)));
+  // neighbours differ by a voxel or so, so a row reads as separate lots; a
+  // stucco row was built as one, so its roof line stays even (parapets vary)
+  const jitter = type >= 2 ? 1.2 : 2.2;
+  const H = Math.max(3, Math.min(60, Math.round((ctx.heightVox ?? 8) + (rand() - 0.5) * jitter)));
   let floors = Math.max(1, Math.min(6, hints?.floors ?? Math.round(H / 4)));
   // the roll counts storeys over a garage or a raised basement
   if (floors < 2 && H >= (type >= 2 ? 5 : 6)) floors = 2;
