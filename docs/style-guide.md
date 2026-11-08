@@ -316,3 +316,18 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | `landmark.lighthouse` | `lighthouse` | the Alcatraz light: a tapering tower, a gallery, a lantern lit at night |
 | `landmark.cellhouse` | `cellhouse` (a line landmark) | the Alcatraz cellhouse: a long hall of barred windows, a skylight monitor, a taller head block |
 | `landmark.gate` | `gate` (generators/chinatown.ts) | the Dragon Gate at Grant Avenue and Bush Street: a three-opening gate with stone piers, red beams, a blank gold plaque, jade hipped roofs with upturned corners |
+
+## 16. Atmosphere: fog (D-063)
+
+- **Look:** fog is dithered, never blended. Each palette colour has a lookup per veil level (0.3, 0.55, 0.8, 1) that moves it toward the fog's colour: the nearest palette colour no more saturated and no farther in lightness from the fog. Levels are dithered on the 4×4 Bayer pattern of absolute screen pixels, so panning doesn't make it swim.
+- **Shape:** coverage is the area's density times how far a pixel lies below the ceiling, times drifting patches (noise on a plane inside the fog). Low ground is buried; hills, towers and the bridges' towers rise out.
+- **Night:** fog draws at 0.8 of its day coverage, and the night palette turns it into a dim blue veil; lit windows and glowing ramps show through.
+- **`bay-area`:** fog in `tower-white` shade 5; a ceiling of 220 m (drawn metres) with a 150 m fade under it; patches about 450 m across drifting east-south-east.
+
+  | Area | Density | Soft edge |
+  |---|---|---|
+  | the Pacific, with Ocean Beach | 0.85 | 800 m |
+  | the Golden Gate | 0.85 | 1,500 m |
+  | the outer avenues: the Sunset, the Richmond, Golden Gate Park's west end, thinning toward Twin Peaks | 0.45 | 2,500 m |
+
+  Walking levels get none.

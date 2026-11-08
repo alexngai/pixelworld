@@ -273,8 +273,9 @@ Bakes run in two places with the same code:
 1. Draw bake tiles into an **index + depth** framebuffer at the internal resolution. Each tile writes its baked depth.
 2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth. Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test.
 3. Draw the player's silhouette where they are hidden: pixels that fail the depth test are drawn with a dither pattern.
-4. **Palette pass:** index → RGB through a palette LUT. Swapping LUTs gives time of day, seasons, style variants and **palette cycling** (water, lights) almost for free.
-5. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
+4. **Atmosphere (fog, D-063):** where a fog layer is in view, a pass recovers each pixel's ground position and height from its screen position and depth (tiles write their depth beside the index), and veils its colour index toward the fog's through per-level lookup tables, dithered on the screen's Bayer pattern. It is skipped when no fog is in view.
+5. **Palette pass:** index → RGB through a palette LUT. Swapping LUTs gives time of day, seasons, style variants and **palette cycling** (water, lights) almost for free.
+6. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
 
 - **Internal resolution:** chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270).
 - **Zoom:** integer zooms only. Coarser views are separate scale levels (§3.5) with their own generalization and oversized landmarks, not shrunken images.

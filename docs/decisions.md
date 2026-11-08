@@ -455,3 +455,18 @@ The point is more room for visual interest; both halves are wanted.
 - **Smooth lawns:** `micro.smooth: {surface: metres}` smooths micro-terrain on those surfaces before roads and water are cut in, so the walking level's 2× hills don't carve parks into gullies.
 - **Neutral by default:** without a `ground` section nothing changes; the Southwest builds to the same package hash.
 - **Rejected alternative:** recolouring all grass green. San Francisco's wild hills (Twin Peaks, the Presidio bluffs) are golden in summer, and the Southwest shares the surface.
+
+### D-063: Fog as an atmosphere layer over the baked world (accepted, M3.5)
+- **Why:** the marine layer over the western avenues and through the Golden Gate is one of San Francisco's signatures. Blind judges reading the Sunset and the Richmond as a Gulf city and Havana named the absence of "hills, fog or the ocean".
+- **Where it's defined:** a style pack's `atmosphere.fog`: lon/lat areas, each with a density and a soft edge in metres, a height ceiling and a fade under it, drift, a multiplier per level (`levels`) and at night. Each world turns the areas into a coverage grid over its cells through its geo grid (D-048) at load: no pipeline step, no manifest field.
+- **How it draws:** a compositor pass between the scene and the palette pass (architecture §8.2). Tiles now write their depth beside the index, so the pass recovers each pixel's ground and height. The bake is unchanged, and the atmosphere is left out of the tile cache key.
+- **A layer like traffic (D-060):** `fog=0/1`, the G key and the layer panel; `fogTime` and `fogPause` fix a scene for tests; the e2e helper turns it off unless a test asks for it, so earlier goldens hold. With fog off, frames are pixel-identical to before.
+- **Cost (SwiftShader, 1280×720):** the frame stays at 16.7 ms with traffic moving. Measured per frame waiting on the GPU, the Sunset at 3× goes from 7.9 to 10.1 ms and the Golden Gate at 1× from 18.1 to 37.0 ms; no fog in view costs nothing. With the camera still, drifting fog redraws at 12 Hz.
+- **Rejected alternatives:**
+  - A flat fog colour dithered over the scene: a screen door at 3×.
+  - Snapping to the nearest colour of the pixel's own ramp: shadowed water came out brighter than lit water.
+  - Greys only: drained the avenues' colour past a third of coverage.
+  - Sampling the depth buffer as a texture: three times the cost in software.
+  - Fog computed in the palette pass: zoom² more work.
+  - Areas in the region spec, exported through the manifest: needs a pipeline export and rebuilt manifests. A world could carry its own areas later.
+- **Known limits:** the ceiling is in drawn metres, so landmarks drawn taller per level rise further out of it; from the driving level, Twin Peaks shows little fog because the fog sits west of and below its summits.

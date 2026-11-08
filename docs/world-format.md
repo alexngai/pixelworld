@@ -182,7 +182,11 @@ A layer is extra content on top of the world that the world doesn't need: its ow
 - **Drawn on top:** clients draw a layer as a dynamic overlay in the compositor, depth-tested against the baked tiles (architecture §8.2). Baked tiles never contain it and nothing is re-baked when it changes.
 - **Switchable:** each layer, and each of its sublayers, turns on and off on its own (a URL parameter, a key, a toggle in the layer panel).
 
-Layers so far: `routes` (ambient traffic, D-060). People, boats or aircraft would follow the same pattern.
+Layers so far:
+- `routes`: ambient traffic (D-060).
+- **Fog (D-063):** a layer with no package file. Its areas come from the style pack's `atmosphere.fog` in lon/lat, and each world places them through its own geo grid at load, so a package needs nothing new. The viewer takes `fog=0/1`, `fogTime`, `fogPause`, the G key and the layer panel.
+
+People, boats or aircraft would follow the same pattern.
 
 ## Routes file (`routes.json.gz`)
 
