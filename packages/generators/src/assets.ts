@@ -1,4 +1,5 @@
 import { MeshBuilder, type MeshData } from "./mesh";
+import { FACADE_GENERATORS } from "./facades";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
 
 /**
@@ -36,6 +37,11 @@ export interface ObjectInstance {
   /** Overture facade / roof colour (#rrggbb), kept for later use. */
   fc?: string;
   rc?: string;
+  /** Typology hints (D-055): the direction the front faces (0-7, 45° steps from +x), a corner lot, year built, storeys. */
+  fr?: number;
+  cn?: number;
+  yr?: number;
+  fl?: number;
 }
 
 /** Style-pack entry for a group: generator name, role → ramp name, parameters. */
@@ -56,7 +62,7 @@ export function resolveAsset(catalog: AssetCatalog, group: string): AssetSpec | 
   return null;
 }
 
-interface GenContext {
+export interface GenContext {
   rand: () => number;
   ramp: (role: string) => number;
   /** Ramp ids of every role named `role` or `role.<variant>` (e.g. wall, wall.gold). */
@@ -66,11 +72,14 @@ interface GenContext {
   mask?: { sx: number; sy: number; on: Uint8Array };
   /** Target height in voxels (buildings, landmarks). */
   heightVox?: number;
-  /** Shape hints from the data (buildings): Overture roof shape and facade material. */
-  hints?: { roof?: string; facade?: string };
+  /**
+   * Hints from the data (buildings): Overture roof shape and facade material,
+   * and the typology's street front, corner lot, year built and storeys (D-055).
+   */
+  hints?: { roof?: string; facade?: string; front?: number; corner?: boolean; year?: number; floors?: number };
 }
 
-type Generator = (ctx: GenContext) => VoxelModel;
+export type Generator = (ctx: GenContext) => VoxelModel;
 
 const GENERATORS: Record<string, Generator> = {
   conifer: ({ rand, ramp, param }) => {
@@ -616,7 +625,7 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
     return m;
   },
 };
-Object.assign(GENERATORS, LANDMARK_GENERATORS);
+Object.assign(GENERATORS, LANDMARK_GENERATORS, FACADE_GENERATORS);
 
 /**
  * Generate one model for a group, as buildObjects would (used by tests and
@@ -626,7 +635,7 @@ export function generateModel(
   catalog: AssetCatalog,
   rampIds: Map<string, number>,
   group: string,
-  opts: { seed: number; mask?: { sx: number; sy: number; on: Uint8Array }; heightVox?: number; hints?: { roof?: string; facade?: string } },
+  opts: { seed: number; mask?: { sx: number; sy: number; on: Uint8Array }; heightVox?: number; hints?: GenContext["hints"] },
 ): VoxelModel {
   const spec = resolveAsset(catalog, group);
   if (!spec) throw new Error(`no asset for group ${group}`);
@@ -775,7 +784,15 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     if (inst.fp || inst.hm !== undefined || inst.top !== undefined) {
       // unique object: footprint building or landmark
       const ctx = makeContext(spec, opts, inst.s);
-      if (inst.rs || inst.fm) ctx.hints = { roof: inst.rs, facade: inst.fm };
+      if (inst.rs || inst.fm || inst.fr !== undefined || inst.fl !== undefined)
+        ctx.hints = {
+          roof: inst.rs,
+          facade: inst.fm,
+          front: inst.fr,
+          corner: inst.cn === 1,
+          year: inst.yr,
+          floors: inst.fl,
+        };
       // voxel metres follow the local scale on warped worlds
       const voxelMeters = inst.m !== undefined ? opts.voxel.h * inst.m : opts.voxelMeters;
       if (inst.hm !== undefined) ctx.heightVox = (inst.hm / voxelMeters) * opts.heightStretch;

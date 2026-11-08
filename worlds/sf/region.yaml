@@ -1,0 +1,88 @@
+# San Francisco, driving level: the whole city at 25 m per cell (uniform),
+# from Ocean Beach to the Embarcadero and from the Golden Gate to the county
+# line. What should make it recognizable is the ordinary fabric, not only the
+# landmarks: rowhouses on 25-foot lots stepping up the hills, the stucco rows
+# of the Sunset and Richmond, the street grids meeting at Market Street, the
+# piers, Chinatown and the downtown towers.
+# Build: cd pipeline && uv run pixelworld build ../worlds/sf/region.yaml
+id: sf
+name: San Francisco
+bounds: [-122.52, 37.70, -122.355, 37.845] # lon/lat: west, south, east, north
+
+level: drive
+levels:
+  - { name: fly, world: sf-fly, label: Flying over the Bay }
+  - { name: drive, world: sf, label: Driving }
+  - { name: walk, world: sf-walk, label: Walking the hills }
+
+# 25 m cells: a 25-foot lot is a third of a cell, about five object voxels
+# wide, so rows of houses read as rows. Hills at 1.5x: Twin Peaks is about
+# 40 steps above the Bay, and a 30% street climbs about one step per cell.
+metersPerCell: 25
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# The grid north of Market and the grid south of it meet at about 45 degrees,
+# so both snap to grid directions (D-049).
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+
+# streets at 1.5x their real width, so a 10 m residential street reads
+widths: { scale: 1.5, minCells: 0.1 }
+
+# 6.25 m micro-cells from the 10 m DEM
+micro: { k: 4, dem: { overview: 1 } }
+
+# WorldCover water is reliable at 10 m; no relief limit (the Bay and the ocean are
+# one water body whose shore corners climb the coastal cliffs)
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 25
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055): what each footprint is, from its shape, its
+  # street and the assessor's roll (year built, storeys, use, neighbourhood,
+  # DataSF). First match wins; anything unmatched keeps its generic group.
+  typology:
+    facts: datasf
+    rules:
+      # pier sheds along the Embarcadero
+      - { group: building.pier, onWater: true }
+      - { group: building.chinatown, hoods: [Chinatown], floors: [2, 8] }
+      # 25-foot lots: Victorian rows before the 1906 earthquake, Edwardian
+      # flats after it, then the stucco rows of the Sunset and the Richmond
+      - { group: building.rowhouse.victorian, year: [1840, 1906], uses: [residential, mixed], maxWidth: 12, floors: [1, 4] }
+      - { group: building.rowhouse.edwardian, year: [1906, 1920], uses: [residential, mixed], maxWidth: 12, floors: [1, 4] }
+      - { group: building.rowhouse.stucco, year: [1920, 1960], uses: [residential], maxWidth: 12, floors: [1, 3] }
+      # apartment blocks: bay-windowed and corniced before 1950, plain after
+      - { group: building.apartment.bay, year: [1890, 1950], uses: [residential, mixed], floors: [3, 14] }
+      - { group: building.apartment.modern, year: [1950, 2100], uses: [residential, mixed], floors: [3, 30] }
+      - { group: building.house, uses: [residential], floors: [1, 3] }
+      - { group: building.commercial.historic, year: [1880, 1950], uses: [commercial, mixed, civic], floors: [1, 16] }
+      - { group: building.industrial, uses: [industrial] }
+      # towers of the 1920s and 30s: setbacks, terracotta and granite
+      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1910, 1950] }
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.5, scatter: 1.0 }
+
+style: bay-area
+start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
+  rivers:
+    subtypes: [river]
+
+geology: null

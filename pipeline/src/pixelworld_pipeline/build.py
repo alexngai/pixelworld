@@ -598,7 +598,14 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             return metres / step_m
 
         instances, object_counts = object_stage.place(
-            region, blocked, road_rows, layout, drawn_steps, shift=road_shift
+            region,
+            blocked,
+            road_rows,
+            layout,
+            drawn_steps,
+            shift=road_shift,
+            streets=road_lines,
+            water=is_water,
         )
         print(f"objects: {object_counts}")
     attribution = [
@@ -610,6 +617,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         attribution.append(ATTRIBUTION["overture-buildings"])
         if region.objects["buildings"].get("lidar"):
             attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
+    if region.objects and (region.objects.get("typology") or {}).get("facts") == "datasf":
+        from .sources.datasf import ATTRIBUTION as DATASF_ATTRIBUTION
+
+        attribution.append(DATASF_ATTRIBUTION)
     if region.objects and any("canopy" in r for r in region.objects.get("vegetation", [])):
         from .sources.canopy import ATTRIBUTION as CANOPY_ATTRIBUTION
 

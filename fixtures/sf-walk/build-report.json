@@ -1,0 +1,60 @@
+{
+  "packageHash": "fe6ee7140151f5879cb2e7d82b63d2549df8e220e2059c0916fcafc8c7353504",
+  "cells": [
+    618,
+    590
+  ],
+  "chunks": 100,
+  "heightRange": [
+    -1,
+    64
+  ],
+  "inputs": {
+    "roadSegments": 12702,
+    "riverLines": 3
+  },
+  "objects": {
+    "building.apartment.bay": 2584,
+    "building.apartment.modern": 2441,
+    "building.chinatown": 922,
+    "building.commercial": 1798,
+    "building.commercial.historic": 3103,
+    "building.house": 3496,
+    "building.industrial": 1428,
+    "building.parking": 43,
+    "building.pier": 10,
+    "building.residential": 1094,
+    "building.rowhouse.edwardian": 9411,
+    "building.rowhouse.stucco": 7248,
+    "building.rowhouse.victorian": 9569,
+    "building.tower": 461,
+    "building.tower.deco": 52,
+    "building.tower.hotel": 26,
+    "prop.signal": 458,
+    "prop.streetlight": 8010,
+    "tree": 20602
+  },
+  "roads": {
+    "cells": 62987,
+    "edges": 65891,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 31,
+    "split_segments": 1,
+    "disconnected_junctions": 2,
+    "ok": false
+  },
+  "paths": {
+    "segments": 20882,
+    "cells": 103519
+  },
+  "surfaces": {
+    "woodland": 30168,
+    "scrub": 39,
+    "water": 26399,
+    "desert": 2955,
+    "grass": 7127,
+    "farmland": 14,
+    "urban": 297918
+  }
+}

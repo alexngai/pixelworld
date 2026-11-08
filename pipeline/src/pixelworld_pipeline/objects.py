@@ -491,6 +491,7 @@ def place_buildings(
                 "fp": _footprint(p, poly, tolerance),
                 "hm": round(height_m, 1),
                 "_grp": group,  # building id (parts join their building); see depict_buildings
+                "_c": (float(c.x), float(c.y)),  # projected centroid (facts lookup, D-055)
                 **hints,
             }
             if p.layout is not None:
@@ -537,6 +538,30 @@ def place_buildings(
         else:
             add(row, cls, height, row["id"], hints)
     return out, polys
+
+
+def type_buildings(region: Region, found: list[dict], spec: dict, streets, water) -> list[dict]:
+    """Building typologies (D-055): features, facts and the spec's rules."""
+    from . import typology
+
+    facts = None
+    if spec.get("facts") == "datasf":
+        from .sources import datasf
+
+        pf = datasf.ParcelFacts(region.crs, spec.get("rollYear"))
+        has = [i for i, inst in enumerate(found) if "_c" in inst]
+        xs = np.array([found[i]["_c"][0] for i in has])
+        ys = np.array([found[i]["_c"][1] for i in has])
+        got = pf.at(xs, ys)
+        facts = [None] * len(found)
+        for i, f in zip(has, got, strict=True):
+            facts[i] = f
+        on_lot = sum(f is not None for f in got)
+        print(f"typology facts: assessor roll {pf.year}, {on_lot}/{len(has)} buildings on a lot")
+    feats = typology.features(found, streets, water, region.meters_per_cell, facts)
+    counts = typology.classify(found, spec, feats)
+    print(f"typology: {counts}")
+    return found
 
 
 def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
@@ -594,7 +619,7 @@ def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) 
     scale = float(spec.get("scale", 1.0))
     min_h = float(spec.get("minHeightMeters", 0.0))
     if scale == 1.0 and min_h <= 0.0:
-        return [{k: v for k, v in inst.items() if k != "_grp"} for inst in instances]
+        return [{k: v for k, v in inst.items() if not k.startswith("_")} for inst in instances]
     groups: dict[str, list[dict]] = {}
     for inst in instances:
         groups.setdefault(inst["_grp"], []).append(inst)
@@ -631,7 +656,8 @@ def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) 
         if inst["_grp"] in keep:
             out.extend(keep.pop(inst["_grp"]))
     for inst in out:
-        inst.pop("_grp", None)
+        for k in [k for k in inst if k.startswith("_")]:
+            del inst[k]
     return out
 
 
@@ -697,10 +723,14 @@ def place(
     layout=None,
     heights=None,
     shift=None,
+    streets: list | None = None,
+    water: np.ndarray | None = None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
+    streets (the straightened road lines in cells) and water (a cell mask) feed
+    the building typology (D-055).
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
@@ -774,6 +804,8 @@ def place(
             print(f"lidar: {lidar_stats}")
         if snap is not None:
             found = snap_buildings(found, snap)
+        if spec.get("typology"):
+            found = type_buildings(region, found, spec["typology"], streets, water)
         instances += depict_buildings(p, found, depiction.get("buildings", {}))
     tree = shapely.STRtree(building_polys) if building_polys else None
 

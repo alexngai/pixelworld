@@ -133,6 +133,11 @@ export interface ObjectsFile {
     /** Overture roof shape and facade material hints (M3). */
     rs?: string;
     fm?: string;
+    /** Typology hints (D-055): front direction (0-7), corner lot, year built, storeys. */
+    fr?: number;
+    cn?: number;
+    yr?: number;
+    fl?: number;
   }[];
 }
 

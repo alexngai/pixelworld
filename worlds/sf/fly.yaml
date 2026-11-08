@@ -1,0 +1,30 @@
+# San Francisco Bay, flying level (D-046): the city with the Golden Gate, the
+# Marin Headlands, Alcatraz, Angel Island, Treasure Island and the Oakland
+# shore at 100 m per cell. Towers of 60 m or more are drawn 2x.
+# Build: cd pipeline && uv run pixelworld build ../worlds/sf/fly.yaml
+extends: region.yaml
+id: sf-fly
+name: San Francisco Bay (flying)
+level: fly
+bounds: [-122.56, 37.69, -122.25, 37.90]
+
+metersPerCell: 100
+verticalExaggeration: 2.0
+maxSlope: 3
+start: { lon: -122.42, lat: 37.79 }
+
+sources:
+  dem: { kind: usgs-3dep-1arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 4 }
+  roads:
+    classes: [motorway, trunk, primary]
+
+widths: { scale: 3.0, minCells: 0.08 }
+micro: { k: 4, dem: { overview: 1 } }
+
+objects:
+  depiction:
+    buildings: { scale: 2, minHeightMeters: 60 }
+    landmarks: { scale: 3 }
+    heightStretch: 2.0
+    scatter: 0.6

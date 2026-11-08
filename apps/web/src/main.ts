@@ -21,7 +21,16 @@ import {
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
 import { GeoGrid, decodePng, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
-import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
+// Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
+const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
+  string,
+  unknown
+>;
+function stylePack(id: string): unknown {
+  const json = STYLE_PACKS[`../../../worlds/_styles/${id}/style.json`];
+  if (!json) throw new Error(`no style pack ${id}`);
+  return json;
+}
 
 const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
 const MARGIN = 16; // context around a tile, in render units (cells at scale 1)
@@ -137,7 +146,8 @@ async function main() {
     const drop = Math.max(1, Math.round((slope * manifest.scale.metersPerCell) / manifest.scale.metersPerStep));
     return { drop, rockSurface: ids.get("rock")!, waterSurface: ids.get("water") ?? -1, snowSurface: ids.get("snow") ?? -1 };
   };
-  const baseStyle = validateStyle(styleJson as unknown as StylePack);
+  const styleJson = stylePack(params.get("style") ?? manifest.style);
+  const baseStyle = validateStyle(styleJson as StylePack);
   const style =
     objectsFile && baseStyle.objects?.surfaces
       ? validateStyle({ ...baseStyle, surfaces: { ...baseStyle.surfaces, ...baseStyle.objects.surfaces } })
@@ -304,7 +314,8 @@ async function main() {
 
   const sprites = new Map<Rotation, GpuImage | null>();
   const roverRamp = palette.rampIds.get("marker")!;
-  const cabRamp = palette.rampIds.get("coconino")!;
+  // the rover's cab: a pale ramp the style names "cab", else its first ramp after the marker
+  const cabRamp = palette.rampIds.get("cab") ?? palette.rampIds.get("coconino") ?? (roverRamp + 1) % palette.rampIds.size;
   const requestSprite = (r: Rotation) => {
     if (sprites.has(r)) return;
     sprites.set(r, null);
