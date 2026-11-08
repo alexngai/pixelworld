@@ -98,6 +98,22 @@ def test_package_carries_level_siblings_and_the_geo_grid(tmp_path):
     assert np.allclose(dl, lons, atol=1e-6) and np.allclose(dt, lats, atol=1e-6)
 
 
+def test_manifest_depiction_carries_what_the_client_draws_by():
+    from pixelworld_pipeline.build import manifest_depiction
+
+    # only object scales (drawn in the pipeline): nothing for the client
+    assert manifest_depiction({"buildings": {"scale": 2}, "landmarks": {"scale": 3}}) is None
+    assert manifest_depiction({"heightStretch": 2, "scatter": 0.6}) == {
+        "heightStretch": 2.0,
+        "scatter": 0.6,
+    }
+    # a flying level caps the traffic's enlargement (D-060)
+    assert manifest_depiction({"heightStretch": 2, "vehicleScale": 4}) == {
+        "heightStretch": 2.0,
+        "vehicleScale": 4.0,
+    }
+
+
 def _building(gid, x, y, half, hm, m=None):
     inst = {
         "g": "building.tower",

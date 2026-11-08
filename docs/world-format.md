@@ -95,6 +95,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - `level` names this package's level.
   - `levels` lists every level of the region, this one included. `world` is a sibling package's id, which is also its directory next to this one.
   - `depiction.heightStretch` overrides the style pack's object height stretch for this level (D-047).
+  - `depiction.vehicleScale` caps how much traffic vehicles are enlarged over their real size at this level (D-060); without it they are drawn at least 0.55 cells long.
   - Instances drawn bigger than real carry a smaller `m`: an object is drawn as if its local metres per cell were `m`.
 - **Hero landmarks (optional, M3, D-053):** `heroes` has one entry per landmark and rotation. Both images sit at absolute screen pixels (`left`, `top`) of that rotation's projection and share its size.
   - **`bake`:** an RGBA PNG of the landmark baked alone: R is the palette index, G and B are depth (`depthBase + (G·256 + B) / 256`, larger is closer), and A is coverage.

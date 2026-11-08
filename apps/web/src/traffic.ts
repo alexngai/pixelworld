@@ -95,6 +95,7 @@ export class TrafficLayer {
       level: manifest.level,
       density: opts.density,
       heightStretch: manifest.depiction?.heightStretch,
+      vehicleScale: manifest.depiction?.vehicleScale,
     });
   }
 

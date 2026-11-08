@@ -76,6 +76,8 @@ export interface SimOptions {
   maxVehicles?: number;
   /** The level's object height stretch (manifest depiction.heightStretch). */
   heightStretch?: number;
+  /** The most a vehicle is enlarged over its real size (manifest depiction.vehicleScale). */
+  vehicleScale?: number;
 }
 
 /** One drawn car of a vehicle. */
@@ -112,7 +114,7 @@ export class TrafficSim {
     opts: SimOptions,
     state?: SimState,
   ) {
-    this.scale = levelScale(opts.metersPerCell, opts.level, { heightStretch: opts.heightStretch });
+    this.scale = levelScale(opts.metersPerCell, opts.level, { heightStretch: opts.heightStretch, maxScale: opts.vehicleScale });
     this.density = opts.density ?? 1;
     this.maxVehicles = opts.maxVehicles ?? 220;
     this.usable = new Map();

@@ -531,6 +531,21 @@ def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
     return out
 
 
+def manifest_depiction(dep: dict[str, Any]) -> dict[str, float] | None:
+    """What the client needs of a level's `objects.depiction` (D-047), or None:
+    the object height stretch, the scatter density (M3) and the most traffic
+    vehicles are enlarged over their real size (D-060)."""
+    out: dict[str, float] = {}
+    if dep.get("heightStretch") is not None:
+        out["heightStretch"] = float(dep["heightStretch"])
+    if dep.get("scatter"):
+        # the client scatters vegetation by surface at this density (M3)
+        out["scatter"] = float(dep["scatter"])
+    if dep.get("vehicleScale"):
+        out["vehicleScale"] = float(dep["vehicleScale"])
+    return out or None
+
+
 def make_layout(region: Region, region_path: Path | None = None):
     if region.warp:
         spec = WarpSpec.from_dict(region.warp)
@@ -809,15 +824,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         # interpolation within ~2 cells even in stretched transition rings
         step = 4 if layout.warped else 16
         geo = (*layout.geo_grid(step), step)
-    depiction = None
-    dep = (region.objects or {}).get("depiction") or {}
-    if dep.get("heightStretch") is not None or dep.get("scatter"):
-        depiction = {}
-        if dep.get("heightStretch") is not None:
-            depiction["heightStretch"] = float(dep["heightStretch"])
-        if dep.get("scatter"):
-            # the client scatters vegetation by surface at this density (M3)
-            depiction["scatter"] = float(dep["scatter"])
+    depiction = manifest_depiction((region.objects or {}).get("depiction") or {})
     heroes = package_heroes(region, region_path, out_dir)
     manifest = write_package(
         out_dir,

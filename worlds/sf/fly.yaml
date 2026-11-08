@@ -50,3 +50,7 @@ objects:
     landmarks: { scale: 3 }
     heightStretch: 2.0
     scatter: 0.6
+    # traffic (D-060) at most 4x its size: a car drawn 0.55 cells long would be
+    # 55 m here, longer than the bridges' decks are wide; at 4x it's 18 m, as
+    # wide as a lane of the roads drawn at 3x, and a ferry about its real size
+    vehicleScale: 4
