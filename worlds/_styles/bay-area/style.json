@@ -158,31 +158,37 @@
       "params": { "style": 1, "litFraction": 0 }
     },
     "building.tower": {
-      "generator": "building",
+      "generator": "sfTower",
       "ramps": {
-        "wall": "tower-white",
-        "wall.granite": "granite",
-        "wall.terracotta": "terracotta",
-        "wall.concrete": "concrete",
-        "roof": "roof-flat",
-        "window": "glass",
-        "lit": "lit",
-        "lit.cool": "lit-cool"
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool",
+        "deco:wall": "terracotta", "deco:wall.cream": "paint-cream", "deco:wall.white": "tower-white", "deco:wall.zbuff": "terracotta",
+        "deco:spandrel": "bark", "deco:spandrel.cream": "terracotta", "deco:spandrel.white": "concrete", "deco:spandrel.zbuff": "brick",
+        "deco:trim": "tower-gold", "deco:trim.cream": "tower-gold", "deco:trim.white": "terracotta", "deco:trim.zbuff": "paint-cream",
+        "deco:cap": "jade", "deco:cap.slate": "roof-slate",
+        "slab:wall": "tower-white", "slab:wall.concrete": "concrete", "slab:wall.white": "paint-white",
+        "slab:spandrel": "tower-white", "slab:spandrel.concrete": "concrete", "slab:spandrel.white": "tower-white",
+        "granite:wall": "granite",
+        "postmodern:wall": "paint-cream", "postmodern:wall.buff": "terracotta", "postmodern:wall.stone": "stucco", "postmodern:wall.white": "tower-white",
+        "postmodern:trim": "terracotta", "postmodern:trim.buff": "paint-cream", "postmodern:trim.stone": "paint-white", "postmodern:trim.white": "concrete",
+        "postmodern:cap": "roof-slate", "postmodern:cap.green": "jade", "postmodern:cap.white": "tower-white",
+        "glass:wall": "tower-white", "glass:wall.grey": "concrete", "glass:reflect": "paint-sky", "glass:reflect.grey": "bridge-grey"
       },
-      "params": { "style": 2, "litFraction": 0.45 }
+      "params": { "kind": -1, "litFraction": 0.4, "deco": 0.3, "slab": 0.2, "granite": 0.05, "postmodern": 0.2, "glass": 0.25 }
     },
     "building.tower.hotel": {
-      "generator": "building",
+      "generator": "sfTower",
       "ramps": {
-        "wall": "terracotta",
-        "wall.white": "tower-white",
-        "roof": "roof-flat",
-        "window": "glass",
-        "lit": "lit",
-        "lit.cool": "lit-cool",
-        "trim": "tower-gold"
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool",
+        "deco:wall": "terracotta", "deco:wall.cream": "paint-cream", "deco:spandrel": "bark", "deco:spandrel.cream": "terracotta",
+        "deco:trim": "tower-gold", "deco:trim.cream": "tower-gold", "deco:cap": "jade",
+        "slab:wall": "tower-white", "slab:wall.cream": "paint-cream", "slab:spandrel": "tower-white", "slab:spandrel.cream": "paint-cream",
+        "granite:wall": "granite",
+        "postmodern:wall": "paint-cream", "postmodern:wall.buff": "terracotta", "postmodern:wall.white": "tower-white",
+        "postmodern:trim": "terracotta", "postmodern:trim.buff": "paint-cream", "postmodern:trim.white": "concrete",
+        "postmodern:cap": "roof-slate", "postmodern:cap.green": "jade",
+        "glass:wall": "tower-white", "glass:reflect": "paint-sky"
       },
-      "params": { "style": 2, "litFraction": 0.6 }
+      "params": { "kind": -1, "litFraction": 0.55, "deco": 0.25, "slab": 0.3, "granite": 0.05, "postmodern": 0.28, "glass": 0.12 }
     },
     "building.rowhouse.victorian": {
       "generator": "rowhouse",
@@ -300,9 +306,42 @@
       "params": { "type": 3, "litFraction": 0.1 }
     },
     "building.tower.deco": {
-      "generator": "building",
-      "ramps": { "wall": "terracotta", "wall.granite": "granite", "wall.white": "tower-white", "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool" },
-      "params": { "style": 2, "litFraction": 0.5 }
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "terracotta", "wall.cream": "paint-cream", "wall.granite": "granite", "wall.white": "tower-white", "wall.zbuff": "terracotta", "wall.zcream": "paint-cream",
+        "spandrel": "bark", "spandrel.cream": "terracotta", "spandrel.granite": "roof-slate", "spandrel.white": "concrete", "spandrel.zbuff": "brick", "spandrel.zcream": "bark",
+        "trim": "tower-gold", "trim.cream": "tower-gold", "trim.granite": "paint-cream", "trim.white": "terracotta", "trim.zbuff": "paint-cream", "trim.zcream": "terracotta",
+        "cap": "jade", "cap.slate": "roof-slate",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "building.tower.slab": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.concrete": "concrete", "wall.granite": "granite", "wall.white": "paint-white",
+        "spandrel": "tower-white", "spandrel.concrete": "concrete", "spandrel.granite": "granite", "spandrel.white": "tower-white",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 1, "litFraction": 0.45 }
+    },
+    "building.tower.postmodern": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "paint-cream", "wall.buff": "terracotta", "wall.stone": "stucco", "wall.white": "tower-white",
+        "trim": "terracotta", "trim.buff": "paint-cream", "trim.stone": "paint-white", "trim.white": "concrete",
+        "cap": "roof-slate", "cap.green": "jade", "cap.white": "tower-white",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 3, "litFraction": 0.45 }
+    },
+    "building.tower.glass": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.grey": "concrete", "reflect": "paint-sky", "reflect.grey": "bridge-grey",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 4, "litFraction": 0.35 }
     },
     "landmark.bridge.suspension": {
       "generator": "suspensionBridge",

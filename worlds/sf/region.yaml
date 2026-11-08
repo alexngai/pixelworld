@@ -67,8 +67,16 @@ objects:
       - { group: building.house, uses: [residential], floors: [1, 3] }
       - { group: building.commercial.historic, year: [1880, 1950], uses: [commercial, mixed, civic], floors: [1, 16] }
       - { group: building.industrial, uses: [industrial] }
-      # towers of the 1920s and 30s: setbacks, terracotta and granite
-      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1910, 1950] }
+      # towers by era (generators/towers.ts): the 1920s and 30s in terracotta
+      # and granite with piers, setbacks and crowns (none taller than the
+      # Russ Building: a taller tower on an old lot is a later one); the white
+      # and granite slabs of the 1960s and 70s; the stone towers with sculpted
+      # tops of the 1985 Downtown Plan; the glass towers south of Market.
+      # Towers with no record, or in parts, take a kind by seed.
+      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1906, 1950], maxHeight: 140 }
+      - { group: building.tower.slab, from: [building.tower, building.tower.hotel], year: [1950, 1983] }
+      - { group: building.tower.postmodern, from: [building.tower, building.tower.hotel], year: [1983, 2000] }
+      - { group: building.tower.glass, from: [building.tower, building.tower.hotel], year: [2000, 2100] }
       # houses with no record (mostly over the county line, where Daly City's
       # 1940s and 50s stucco rows continue the Sunset): narrow ones as stucco
       # rows, wider ones as houses of their era (mid-century without a year)
