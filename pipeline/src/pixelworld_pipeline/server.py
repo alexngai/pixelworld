@@ -8,7 +8,7 @@ full world build runs in the background on request. Binds to 127.0.0.1.
   GET  /api/source.png     the region in source space: hillshade, land cover, roads
   POST /api/solve          {warp} → stats, preview URL, forward-map lattice
   GET  /api/preview/<id>   a solved preview (world cells, 1 px per cell)
-  POST /api/save           {warp} → writes worlds/<id>/warp.yaml
+  POST /api/save           {warp} → writes the spec's warp file (worlds/<id>/warp.yaml)
   POST /api/build          start a full build into fixtures/<id>
   GET  /api/build          build status and log tail
 """
@@ -261,8 +261,22 @@ class Editor:
 
     # ---- saving and building --------------------------------------------------------------
 
+    def warp_file(self) -> Path:
+        """The warp file this spec owns (`warp: <file>` in the spec file itself).
+
+        A scale level that inherits its warp and overrides a few keys (D-046)
+        owns no warp file: edit the base level, or give the level its own file.
+        """
+        raw = yaml.safe_load(self.region_path.read_text()) or {}
+        if not isinstance(raw.get("warp"), str):
+            raise ValueError(
+                f"{self.region_path.name} doesn't own a warp file (its warp is inherited or "
+                "inline); edit the base level, or give this level `warp: <file>.yaml`"
+            )
+        return self.region_path.parent / raw["warp"]
+
     def save(self, warp: dict[str, Any]) -> Path:
-        path = self.region_path.parent / "warp.yaml"
+        path = self.warp_file()
         warp = self.strip(self.normalize(warp))
         clean = {
             k: warp[k]

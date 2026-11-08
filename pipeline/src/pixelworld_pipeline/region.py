@@ -73,6 +73,10 @@ class Region:
     # Terrain rules for fine cells: {cliffSlope, minLakeArea (m²), maxLakeRelief (m),
     # riverWidthMeters}.
     terrain: dict[str, Any] | None = None
+    # Scale levels (D-046): this world's level name, and every level of the region
+    # as [{name, world, label}], `world` being the sibling package's id.
+    level: str | None = None
+    levels: list[dict[str, Any]] | None = None
 
     # ---- loading -------------------------------------------------------------
 
@@ -90,8 +94,8 @@ class Region:
         w, s, e, n = (float(v) for v in need("bounds"))
         if not (w < e and s < n):
             raise RegionError("bounds must be [west, south, east, north]")
-        smoothing = raw.get("smoothing", {})
-        geology = raw.get("geology", {})
+        smoothing = raw.get("smoothing") or {}
+        geology = raw.get("geology") or {}
         start = need("start")
         region = Region(
             id=str(need("id")),
@@ -116,6 +120,8 @@ class Region:
             terrain=dict(raw["terrain"]) if raw.get("terrain") else None,
             micro=dict(raw["micro"]) if raw.get("micro") else None,
             warp=dict(raw["warp"]) if raw.get("warp") else None,
+            level=str(raw["level"]) if raw.get("level") else None,
+            levels=[dict(v) for v in raw["levels"]] if raw.get("levels") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")
@@ -125,6 +131,14 @@ class Region:
             raise RegionError("start must lie inside bounds")
         if region.micro is not None and int(region.micro.get("k", 0)) not in (2, 4, 8):
             raise RegionError("micro.k must be 2, 4 or 8")
+        if region.levels is not None:
+            names = [lv.get("name") for lv in region.levels]
+            if any(not lv.get("name") or not lv.get("world") for lv in region.levels):
+                raise RegionError("each level needs a name and a world (package id)")
+            if len(set(names)) != len(names):
+                raise RegionError("level names must be unique")
+            if region.level is not None and region.level not in names:
+                raise RegionError(f"level '{region.level}' is not in levels")
         if region.render is not None:
             scale = region.render.get("scale")
             if not (isinstance(scale, (int, float)) and 0 < scale <= 1):

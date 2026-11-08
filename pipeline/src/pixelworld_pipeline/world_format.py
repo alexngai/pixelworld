@@ -259,6 +259,23 @@ def height_range(
     return [lo, hi]
 
 
+GEO_FILE = "geo.i32.gz"
+
+
+def encode_geo(lons: np.ndarray, lats: np.ndarray) -> bytes:
+    """Geo grid file: gzip of int32 microdegrees, shape (ny, nx, 2) as (lon, lat),
+    each row delta-coded along x (the first point absolute)."""
+    q = np.round(np.stack([lons, lats], axis=-1) * 1e6).astype(np.int64)
+    d = np.diff(q, axis=1, prepend=0).astype("<i4")
+    return gzip.compress(d.tobytes(), compresslevel=9, mtime=0)
+
+
+def decode_geo(blob: bytes, nx: int, ny: int) -> tuple[np.ndarray, np.ndarray]:
+    d = np.frombuffer(gzip.decompress(blob), dtype="<i4").reshape(ny, nx, 2)
+    q = np.cumsum(d.astype(np.int64), axis=1) / 1e6
+    return q[..., 0], q[..., 1]
+
+
 def package_hash(manifest: dict[str, Any]) -> str:
     """SHA-256 of the manifest (minus this field) as canonical JSON.
 
@@ -298,6 +315,10 @@ def write_package(
     render: dict[str, Any] | None = None,
     objects: list[dict[str, Any]] | None = None,
     micro: tuple[np.ndarray, int] | None = None,
+    geo: tuple[np.ndarray, np.ndarray, int] | None = None,
+    level: str | None = None,
+    levels: list[dict[str, Any]] | None = None,
+    depiction: dict[str, Any] | None = None,
     compress: bool = False,
     clean: bool = False,
 ) -> dict[str, Any]:
@@ -308,6 +329,8 @@ def write_package(
     clean=True, chunk files left over from earlier builds are removed.
     micro = (micro_corners, K) adds micro-terrain (a (K·cells_y + 1, K·cells_x + 1)
     array of micro-corner heights) and `micro: {k}` to the manifest.
+    geo = (lons, lats, step) writes `geo.i32.gz`, the lon/lat of cell corners every
+    `step` cells (encode_geo), for moving between scale levels.
     """
     cells_y, cells_x = base.shape
     full = {
@@ -422,6 +445,25 @@ def write_package(
         }
     elif clean and objects_path.exists():
         objects_path.unlink()
+    if depiction is not None:
+        manifest["depiction"] = depiction
+    if level is not None:
+        manifest["level"] = level
+    if levels is not None:
+        manifest["levels"] = levels
+    geo_path = out_dir / GEO_FILE
+    if geo is not None:
+        lons, lats, step = geo
+        blob = encode_geo(lons, lats)
+        geo_path.write_bytes(blob)
+        manifest["geo"] = {
+            "path": GEO_FILE,
+            "step": int(step),
+            "size": [int(lons.shape[1]), int(lons.shape[0])],
+            "sha256": hashlib.sha256(blob).hexdigest(),
+        }
+    elif clean and geo_path.exists():
+        geo_path.unlink()
     manifest["packageHash"] = package_hash(manifest)
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return manifest

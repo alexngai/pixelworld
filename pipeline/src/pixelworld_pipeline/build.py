@@ -403,6 +403,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             "pins": len(layout.spec.pins),
             "vertical": layout.spec.vertical or None,
         }
+    geo = None
+    if region.levels:
+        # warped maps bend between grid points: a finer grid keeps the
+        # interpolation within ~2 cells even in stretched transition rings
+        step = 4 if layout.warped else 16
+        geo = (*layout.geo_grid(step), step)
+    depiction = None
+    hs = ((region.objects or {}).get("depiction") or {}).get("heightStretch")
+    if hs is not None:
+        depiction = {"heightStretch": float(hs)}
     manifest = write_package(
         out_dir,
         world_id=region.id,
@@ -446,6 +456,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         render=region.render,
         objects=instances,
         micro=micro,
+        geo=geo,
+        level=region.level,
+        levels=region.levels,
+        depiction=depiction,
         compress=compress,
         clean=True,
     )

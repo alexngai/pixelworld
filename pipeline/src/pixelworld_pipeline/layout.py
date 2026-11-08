@@ -23,6 +23,19 @@ from .sources.http import CACHE_ROOT
 from .warp import Focus, Pin, ScaleField, Warp, solve
 
 
+def geo_positions(cells: tuple[int, int], step: int) -> tuple[np.ndarray, np.ndarray]:
+    """Cell-corner coordinates of the geo grid: every `step` cells, plus the far edge."""
+    cx, cy = cells
+    xs = np.unique(np.append(np.arange(0, cx, step), cx)).astype(np.float64)
+    ys = np.unique(np.append(np.arange(0, cy, step), cy)).astype(np.float64)
+    return xs, ys
+
+
+def _geo_from_projected(region: Region, px: np.ndarray, py: np.ndarray):
+    lons, lats = transform_points(region.crs, "EPSG:4326", px.ravel().tolist(), py.ravel().tolist())
+    return np.asarray(lons).reshape(px.shape), np.asarray(lats).reshape(px.shape)
+
+
 class UniformLayout:
     warped = False
 
@@ -46,6 +59,13 @@ class UniformLayout:
         cx, cy = self.cells
         return np.full((cy, cx), self.region.meters_per_cell)
 
+    def geo_grid(self, step: int) -> tuple[np.ndarray, np.ndarray]:
+        """(lons, lats) at cell corners every `step` cells (see geo_positions)."""
+        west, north, _, _ = self.region.grid
+        m = self.region.meters_per_cell
+        gx, gy = np.meshgrid(*geo_positions(self.cells, step))
+        return _geo_from_projected(self.region, west + gx * m, north - gy * m)
+
 
 @dataclass
 class WarpSpec:
@@ -60,6 +80,9 @@ class WarpSpec:
     vertical: dict[str, Any] = field(default_factory=dict)
     # automatic magnification from fame (importance.py)
     importance: dict[str, Any] = field(default_factory=dict)
+    # multiplies every focus area's metres per cell: one knob that coarsens or
+    # refines all focus areas together (scale levels, D-046)
+    focus_scale: float = 1.0
 
     @staticmethod
     def from_dict(raw: dict[str, Any]) -> WarpSpec:
@@ -71,10 +94,14 @@ class WarpSpec:
             mesh_km=float(raw.get("meshKm", 2.0)),
             vertical=dict(raw.get("vertical", {})),
             importance=dict(raw.get("importance", {})),
+            focus_scale=float(raw.get("focusScale", 1.0)),
         )
 
     def digest(self) -> str:
-        body = json.dumps(self.__dict__, sort_keys=True, default=str)
+        body = dict(self.__dict__)
+        if body["focus_scale"] == 1.0:
+            del body["focus_scale"]  # older specs keep their digest
+        body = json.dumps(body, sort_keys=True, default=str)
         return hashlib.sha256(body.encode()).hexdigest()[:16]
 
 
@@ -131,7 +158,7 @@ class WarpedLayout:
                     float(sx[0]),
                     float(sy[0]),
                     r,
-                    float(f["metersPerCell"]),
+                    float(f["metersPerCell"]) * self.spec.focus_scale,
                     float(f.get("falloffKm", f["radiusKm"])) * 1000,
                 )
             )
@@ -148,7 +175,8 @@ class WarpedLayout:
 
     def _solve(self) -> Warp:
         places = json.dumps(self.places, sort_keys=True) if self.spec.importance else ""
-        key = f"{self.region.digest()}|{self.spec.digest()}|{places}"
+        # the solve depends on the region's envelope and the warp spec only
+        key = f"{self.region.bounds}|{self.spec.digest()}|{places}"
         digest = hashlib.sha256(key.encode()).hexdigest()[:16]
         path = CACHE_ROOT / self.region.id / f"warp-{digest}.npz"
         if path.exists():
@@ -221,6 +249,12 @@ class WarpedLayout:
         cx, cy = self.cells
         gx, gy = np.meshgrid(np.arange(cx) + 0.5, np.arange(cy) + 0.5)
         return self.warp.scale_at_cells(gx, gy)
+
+    def geo_grid(self, step: int) -> tuple[np.ndarray, np.ndarray]:
+        """(lons, lats) at cell corners every `step` cells (see geo_positions)."""
+        gx, gy = np.meshgrid(*geo_positions(self.cells, step))
+        sx, sy = self.warp.to_source(gx, gy)
+        return _geo_from_projected(self.region, *self.source_to_projected(sx, sy))
 
     def cell_centers_lonlat(self):
         cx, cy = self.cells

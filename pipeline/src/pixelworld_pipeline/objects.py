@@ -15,6 +15,15 @@ Region spec (all sections optional):
         - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 60, offset: 16 }
       landmarks:
         - { group: landmark.tower.lookout, lon: -111.8261, lat: 36.0441, hm: 60, clear: 20 }
+      depiction:    # how big things are drawn at this scale level (D-047)
+        heightStretch: 2.5                          # overrides the style pack's
+        buildings: { scale: 2, minHeightMeters: 60 } # oversize; keep only tall ones
+        landmarks: { scale: 4 }                     # or `scale:` on one landmark
+
+A depiction scale s draws an object as if its local metres per cell were m / s:
+footprint and height grow by s about the object's anchor. Oversized buildings
+are placed tallest first and skipped where they'd overlap one already placed,
+so a coarse level keeps the skyline's landmarks rather than a smear of boxes.
 """
 
 from __future__ import annotations
@@ -297,7 +306,7 @@ def place_buildings(
         if float(part.get("min_height") or 0) <= 3:
             parts_by_building.setdefault(part["building_id"], []).append(part)
 
-    def add(row: dict, cls: str | None, height_m: float) -> None:
+    def add(row: dict, cls: str | None, height_m: float, group: str) -> None:
         geom = p.project(shapely.from_wkt(row["geometry"]))
         for poly in list(geom.geoms) if hasattr(geom, "geoms") else [geom]:
             if poly.geom_type != "Polygon" or poly.area < min_area:
@@ -314,6 +323,7 @@ def place_buildings(
                 "s": _stable_int(row["id"]),
                 "fp": _footprint(p, poly, tolerance),
                 "hm": round(height_m, 1),
+                "_grp": group,  # building id (parts join their building); see depict_buildings
             }
             if p.layout is not None:
                 inst["m"] = round(p.scale_at(c.x, c.y), 2)
@@ -330,12 +340,61 @@ def place_buildings(
         height = _height(row, _kind(cls))
         my_parts = parts_by_building.get(row["id"], []) if row.get("has_parts") else []
         if my_parts:
-            add(row, cls, min(height, podium_m))
+            add(row, cls, min(height, podium_m), row["id"])
             for part in sorted(my_parts, key=lambda r: r["id"]):
-                add(part, cls, _height(part, "other"))
+                add(part, cls, _height(part, "other"), row["id"])
         else:
-            add(row, cls, height)
+            add(row, cls, height, row["id"])
     return out, polys
+
+
+def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) -> list[dict]:
+    """Apply a level's building depiction: drop buildings lower than
+    `minHeightMeters` and draw the rest `scale` times their size about the
+    building's anchor (parts move with their building). Scaled-up buildings go
+    tallest first; one that would overlap a building already placed is left out."""
+    scale = float(spec.get("scale", 1.0))
+    min_h = float(spec.get("minHeightMeters", 0.0))
+    if scale == 1.0 and min_h <= 0.0:
+        return [{k: v for k, v in inst.items() if k != "_grp"} for inst in instances]
+    groups: dict[str, list[dict]] = {}
+    for inst in instances:
+        groups.setdefault(inst["_grp"], []).append(inst)
+    tops = {g: max(i.get("hm", 0.0) for i in insts) for g, insts in groups.items()}
+    keep: dict[str, list[dict]] = {}
+    placed: list = []
+    for g in sorted(groups, key=lambda g: (-tops[g], g)):
+        if tops[g] < min_h:
+            continue
+        insts = groups[g]
+        if scale == 1.0:
+            keep[g] = insts
+            continue
+        ax, ay = insts[0]["x"], insts[0]["y"]
+        moved = []
+        for inst in insts:
+            fp = (np.asarray(inst["fp"]) - (ax, ay)) * scale + (ax, ay)
+            new = {
+                **inst,
+                "x": round(ax + (inst["x"] - ax) * scale, 3),
+                "y": round(ay + (inst["y"] - ay) * scale, 3),
+                "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
+                "m": round(inst.get("m", p.m) / scale, 2),
+            }
+            moved.append(new)
+        if scale > 1.0:
+            shape = shapely.union_all([shapely.Polygon(i["fp"]).buffer(0) for i in moved])
+            if any(shape.intersection(o).area > 0.02 * min(shape.area, o.area) for o in placed):
+                continue
+            placed.append(shape)
+        keep[g] = moved
+    out = []
+    for inst in instances:  # original order, so output is stable
+        if inst["_grp"] in keep:
+            out.extend(keep.pop(inst["_grp"]))
+    for inst in out:
+        inst.pop("_grp", None)
+    return out
 
 
 def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -> list[list[float]]:
@@ -371,14 +430,23 @@ def place(
     p = Placement(region, blocked, layout)
     instances: list[dict] = []
 
+    depiction = spec.get("depiction") or {}
     landmarks = spec.get("landmarks", [])
     clear_zones = []
+    lm_scale = []
     for lm in landmarks:
+        # dams are shaped to their canyon, so they keep their real size
+        s = (
+            1.0
+            if "line" in lm
+            else float(lm.get("scale", depiction.get("landmarks", {}).get("scale", 1.0)))
+        )
+        lm_scale.append(s)
         if "line" in lm and "lon" not in lm:
             (lon0, lat0), (lon1, lat1) = lm["line"]
             lm = {**lm, "lon": 0.5 * (lon0 + lon1), "lat": 0.5 * (lat0 + lat1)}
         xs, ys = transform_points("EPSG:4326", region.crs, [lm["lon"]], [lm["lat"]])
-        clear_zones.append((xs[0], ys[0], float(lm.get("clear", 0))))
+        clear_zones.append((xs[0], ys[0], float(lm.get("clear", 0)) * s))
 
     def clear(x: float, y: float) -> bool:
         return any(math.hypot(x - lx, y - ly) < r for lx, ly, r in clear_zones)
@@ -390,7 +458,7 @@ def place(
         rows = overture.buildings(release, bbox)
         parts = overture.building_parts(release, bbox)
         found, building_polys = place_buildings(p, spec["buildings"], rows, parts, clear)
-        instances += found
+        instances += depict_buildings(p, found, depiction.get("buildings", {}))
     tree = shapely.STRtree(building_polys) if building_polys else None
 
     def occupied(xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
@@ -412,8 +480,9 @@ def place(
         inst = {"g": lm["group"], "x": round(float(cx[0]), 3), "y": round(float(cy[0]), 3), "s": k}
         if "hm" in lm:
             inst["hm"] = float(lm["hm"])
-        if p.layout is not None:
-            inst["m"] = round(p.scale_at(lx, ly), 2)
+        if p.layout is not None or lm_scale[k] != 1.0:
+            local = p.scale_at(lx, ly) if p.layout is not None else p.m
+            inst["m"] = round(local / lm_scale[k], 2)
         if "line" in lm:
             inst["fp"] = dam_footprint(p, lm["line"], float(lm.get("thicknessM", 60)))
             if heights is not None and "crestMeters" in lm:
