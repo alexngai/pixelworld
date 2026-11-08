@@ -485,7 +485,7 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 - **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
 - **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
 
-### M3.5: San Francisco — a city by its fabric — in progress (third round)
+### M3.5: San Francisco — a city by its fabric — in progress (fourth round next)
 
 **Goal:** a second region recognizable by its ordinary streets, not only by its landmarks. This pulls part of M5 (a second region and style pack) forward.
 
@@ -581,7 +581,7 @@ The first round's known issues went to three agents, each in its own git worktre
   - The Sunset and Richmond stucco rows now read as Latin American. Judges called out the pastel stucco with red tile accents and the absence of hills, fog or the ocean.
   - The Financial District still reads as Los Angeles: Salesforce Tower and the Transamerica Pyramid aren't in that frame.
 
-**Known issues and next steps:**
+**Known issues after the second round** (taken up in the third):
 - **The avenues:**
   - Fewer red tile copings and more bay windows on stucco rows (the "junior five" picture window over the garage).
   - The ocean, Golden Gate Park and Sutro Tower on the horizon; the driving level's views are too tight to show them.
@@ -593,6 +593,70 @@ The first round's known issues went to three agents, each in its own git worktre
 - **Downtown views:** frames that include Salesforce Tower and the Transamerica Pyramid; the evaluation's Financial District frame shows neither.
 - **Bay Bridge from its axis:** at that angle the bracing is seen edge-on, so the towers read as single poles.
 - **Parks:** canopy trees replace the client's cypress and eucalyptus scatter where they stand, so Golden Gate Park mixes in lawn-green trees.
+- **Heroes:** none of the San Francisco landmarks are heroes (D-053) yet.
+
+#### Third round: the avenues, the hills, downtown, and traffic
+
+Three more agents in worktrees, merged with the traffic thread (D-060) and rebuilt once:
+- **The avenues:**
+  - **Stucco fronts:** the "junior five" rows of the Sunset and Richmond: an entry stair in a recess beside a white garage door, a box, canted or curved bay over it, parapets by seed, and fewer red tile copings.
+  - **Sidewalk trees:** 19,332 along the avenues, from the canopy map.
+  - **Parks:** cypress and eucalyptus on tree-covered land.
+- **The hills:**
+  - **Rails in the street (D-061):** cable-car tracks with their slot on Powell, Mason, Hyde and California Streets; streetcar and light-rail tracks.
+  - **Pavement on slopes:** lit by its way's grade, so steep streets read as one slope, not stripes.
+  - **Walking level:** hills at 2×, and Lombard Street's block kept from snapping (`snap.roads.keep`).
+- **Downtown and the coast:**
+  - **Towers by era** (`towers.ts`): deco piers and crowns, white and granite slabs, postmodern stone tops, pale glass. Buildings in parts now take their building's year, so 409 towers are typed.
+  - **New landmarks:** the Dutch and Murphy windmills, and Alcatraz's cellhouse and lighthouse.
+- **Traffic (D-060), as an optional layer:** cars, buses, cable cars, streetcars, light rail, trains and ferries.
+
+![The third round's landmark views: downtown around the Transamerica Pyramid, the Bay Bridge's west span with the skyline, Alcatraz, and the Dutch Windmill by Ocean Beach](images/sf-landmarks-round3.png)
+
+![The third round's street views: Hyde Street with a cable car (driving), Alamo Square's rows (walking, hills at 2×), the Sunset, and the Mission (walking)](images/sf-streets-round3.png)
+
+**Blind evaluation, third round.** As in the second round: one fresh judge per image, no context hint found by any judge, 16 views in shuffled order, three of them decoys (a new one: a Las Vegas block of warehouses and tile-roofed houses). Traffic was on, at a fixed time. Two landmark frames cut their landmark short, so they were reframed and judged again by fresh judges; both results are listed.
+
+| View | Best guess | Confidence | Second round |
+|---|---|---|---|
+| Golden Gate Bridge, driving | the Golden Gate Bridge, south end | 88 | 90 |
+| Palace of Fine Arts, driving | the Palace of Fine Arts | 80 | 85 |
+| Coit Tower, driving | Coit Tower, Telegraph Hill | 78 | 72 |
+| Downtown, driving | San Francisco, the Transamerica Pyramid | 72 | Los Angeles, 30 |
+| Alcatraz, driving | Alcatraz | 72 | — (new) |
+| Dutch Windmill, driving, by Ocean Beach (reframed) | Golden Gate Park's windmill, Ocean Beach | 78 | — (new) |
+| Dutch Windmill, driving, in the park | Golden Gate Park's windmill | 20 | — |
+| Bay Bridge, flying, whole span with the skyline (reframed) | the Bay Bridge west span | 55 | 35 |
+| Bay Bridge, flying, its middle two towers | the Bay Bridge west span | 25 | — |
+| Mission, walking | San Francisco, Victorian rows | 30 | 45 |
+| Victorians, walking (hills at 2×) | Valparaíso (San Francisco second) | 12 | San Francisco, 22 |
+| Outer Sunset, driving | a Gulf city | 15 | Latin America, 15 |
+| Richmond, driving | Havana | 12 | Havana, 15 |
+| Russian Hill, driving, with a cable car | Tokyo | 12 | no famous place, 12 |
+| Chinatown, walking | northern Europe | 12 | Europe, 12 |
+| Decoy: the canyon rim | the Grand Canyon | 38 | no famous place |
+| Decoy: the Strip | Las Vegas | 12 | Las Vegas |
+| Decoy: Las Vegas warehouses (new) | no famous place (an industrial estate) | 12 | — |
+
+**Against the exit criteria:**
+- **Landmarks:** every landmark is named, and 6 of 7 reach 60% in frames that show the whole landmark. The Bay Bridge stops at 55: the judge read its towers as a generic lattice.
+- **Streets:** 1 of 6 street views is guessed as San Francisco (the Mission). Not met.
+- **Decoys:** none is guessed as San Francisco.
+
+**What the judges say about the streets:**
+- **Colour and form:** "pastel colours look procedurally assigned"; flat roofs and one window grid everywhere. At 25 m cells the bays and garages of the rows are too small to read, so the Sunset reads as a Gulf city and the Richmond as Havana.
+- **Ground:** dusty grey between the houses, very little green, and trees that read as palms. The avenues read as arid.
+- **Parks at 2×:** Alamo Square reads as "bare, eroded ochre hillside with gullies": micro-terrain noise exaggerated twice, in a dry grass colour.
+
+**Known issues and next steps (fourth round):**
+- **The avenues from the driving level:** green block interiors (backyards) and front gardens instead of grey lots; the rows' rhythm at the roof line, and white garage doors that read at 25 m; rounder street trees.
+- **Parks:** greener lawn in the city's parks; smooth micro-terrain on lawns, so the 2× walking level doesn't carve them into gullies.
+- **The Bay Bridge:** X-braced towers that read from the air.
+- **Fog and the horizon:** the ocean and the hills in street views; fog over the avenues.
+- **Traffic scale:** a car is drawn at least 0.55 cells long, so on the flying level it is 55 m long and dwarfs the bridges.
+- **The walking level has no sidewalk trees:** its `streetTrees` list holds only lights and signals.
+- **Lombard's hairpins** don't read at 10 m cells; a depiction that widens the bends and paints the block brick red may.
+- **Curving rails** (the Embarcadero) draw as steps.
 - **Heroes:** none of the San Francisco landmarks are heroes (D-053) yet.
 
 ### M4: Drive, fly, build
@@ -639,7 +703,7 @@ The first round's known issues went to three agents, each in its own git worktre
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between), and M3.5 (San Francisco) has a first cut; M4 is next.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between). M3.5 (San Francisco) has had three rounds: its landmarks pass the blind test, its ordinary streets don't yet. M4's ambient traffic is done; the rest of M4 is next.
 
 ## 3. Technology tracks
 
