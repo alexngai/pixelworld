@@ -285,3 +285,15 @@ The point is more room for visual interest; both halves are wanted.
 - **Accuracy:** bilinear interpolation of the warped Southwest is off by 0.005 cells (median) and 2.5 cells at worst, in stretched transition rings. A grid point every 8 cells would be 7 cells off at worst.
 - **Inverse:** lon/lat → cell is Newton's method from the nearest grid point. A residual over half a cell means "outside this world".
 - **Rejected alternative:** shipping the warp mesh is exact, but the client would need the projection, and inverting the warp needs point location.
+
+### D-049: Snap roads and buildings to the 8 grid directions (accepted)
+- **Why:** in this projection only the 8 grid directions draw as clean pixel lines: axes as 2:1 staircases, diagonals as horizontal or vertical lines. Tracing roads cell by cell turned slightly rotated street grids into straight streets with one-cell jogs, and roads at other angles into zigzags. Buildings rotated a few degrees by the projection and the warp drew jagged walls.
+- **Roads:**
+  - The network is simplified between shared vertices, then straightened as a whole. Each edge within `snap.roads.angle` of a grid direction becomes a constraint that it run exactly along it.
+  - The nodes take the smallest moves that satisfy all constraints: a sparse least-squares projection. A node pushed further than `maxShift` frees its edges' constraints and the solve repeats. Nodes never cross the world edge.
+  - Each edge is then laid in as few runs as keep it within `deviation` of its line.
+- **Objects:** they move with the roads through a smooth field built from the node moves, applied to whole footprints so shapes stay rigid. Building groups within `snap.buildings.angle` of a grid direction turn to it about their anchor. Dams keep their place.
+- **Rejected alternatives:**
+  - Snapping each road on its own: the jogs come from junction positions, so they can't be removed one road at a time.
+  - Adding a rotation term to the warp solver: it only helps warped worlds, and it wouldn't straighten roads that are merely noisy.
+- **Neutral by default:** without a `snap:` section, roads are traced as before and outputs are unchanged.

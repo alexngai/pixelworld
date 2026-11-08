@@ -341,13 +341,44 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 **Known issues and next steps:**
 - **Walking level:**
   - Roads are one cell (20 m) wide, but Las Vegas Boulevard is about 50 m. Roads need real widths, sidewalks and crossings at this scale.
-  - It inherits the M1.5 Strip's road report: 1 split segment and 2 disconnected junctions, so its build exits with status 1.
+  - Its road report was the M1.5 Strip's (1 split segment, 2 disconnected junctions). Snapping (M2.6) cleared it.
 - **Flying level:**
   - There's no vegetation or land-cover scatter yet (warped layouts don't support it).
   - The dam is at real size, so it's tiny.
   - The heights of oversized towers want tuning against the terrain's relief.
 - **Moving between levels** is a page reload. A seamless transition (take-off and landing) belongs with M4's vehicles.
 - **Editor:** it previews any level's warp (`pixelworld serve worlds/southwest/fly.yaml`). It only saves a warp file the spec owns, so a level that inherits its warp is tuned in its spec file. Depiction and generalization sliders would make tuning faster.
+
+### M2.6: Snapping to the isometric directions — done
+
+**Goal:** roads, street grids and buildings that draw as clean pixel lines instead of jittery staircases. In this projection the 8 grid directions are the clean ones: axes draw as 2:1 lines, diagonals as horizontal or vertical lines (D-049).
+
+![Before and after snapping: the Strip on the driving level, and the north Strip on the walking level](images/snap-before-after.png)
+
+**What was built:**
+- **Network straightening:** roads are simplified between the vertices they share. Every edge within 16° of a grid direction is then made to run exactly along it, solving for the smallest junction moves across the whole network, so junctions stay shared.
+  - A street grid rotated a degree or two by the projection or the warp comes out aligned. One-cell jogs along a straight street can't be fixed one road at a time, because the junctions force them.
+  - Junctions move under 2 cells, and never across the world's edge.
+- **Long runs:** each road edge is laid in long runs of grid directions, kept within 1 cell of the true line, instead of a cell-by-cell staircase.
+- **Buildings and other objects:** they move with the straightened streets (a smooth field that fades out 3 cells from the roads). Buildings within 12° of a grid direction turn to it, with their parts. Dams stay fitted to their canyon.
+- **Parameters:** everything is tunable per level under `snap:` (architecture §3.5). The Southwest sets it in `region.yaml`, and all three levels inherit it.
+
+| | Flying | Driving | Walking |
+|---|---|---|---|
+| Road cells with a 45° jog | 43.5% → 27.1% | 33.4% → 17.7% | 22.6% → 8.7% |
+| Mean straight run | 1.9 → 2.7 cells | 2.7 → 4.4 cells | 4.4 → 10.6 cells |
+| Building edges on a grid direction (±1°) | 28% → 37% | 16% → 47% | 40% → 58% |
+| Road edges made to run along a grid direction | 694 of 2,349 | 8,955 of 26,813 | 2,031 of 2,951 |
+| Junction moves, 99th percentile | 1.0 cell | 1.2 cells | 1.7 cells |
+
+- **Road reports:** they stay clean. The walking level's improved: it's now one connected network, with none of the M1.5 Strip's split segment and disconnected junctions.
+- **Cost:** straightening takes about 1.5 s on the driving level.
+- **Tests:** pytest covers straight runs, a rotated street grid coming out jog-free and connected, roads along the world edge, building turns and the shift field. The two Southwest goldens were updated after review.
+
+**Known issues:**
+- **Remaining jogs:** most are on winding highways and in dense city blocks shorter than a cell, where an in-between angle has no clean answer. A looser `snap.roads.angle` or `deviation` trades position for straightness.
+- **Irregular footprints:** buildings whose edges agree on no direction aren't turned.
+- **Footprints near streets:** the shift moves objects with their streets, but doesn't check whether a moved footprint now overlaps a road cell.
 
 ### M3: Detail pass — components and landmarks
 

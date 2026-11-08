@@ -74,6 +74,10 @@ Because of this, the same real building can take up more or fewer cells dependin
 - **Height step:** the vertical unit. Terrain and object heights are whole steps.
 - **Terrain model:** RCT-style, extended to steep slope tiles. Each cell has a base height (its lowest corner) and a corner shape: each corner sits 0–3 steps above the base. Neighbouring cells share corner heights, so slopes are continuous. Where they don't match, the edge becomes a vertical cliff face. The pipeline caps the rise per cell (`max_slope`, default 2); anything steeper becomes a terrace with cliffs. This gives gradual slopes on gentle ground, readable terraces and cliffs on canyon walls and mesas, and ramps that roads can climb. Rises of 1–3 steps per cell keep cell edges on clean pixel angles (horizontal, 2:1 or 1:1 going up).
 - **Directions:** 8. A world-axis edge projects to an exact 2:1 pixel staircase. A world diagonal projects to a perfectly horizontal or vertical screen line, so 45° roads and building cuts are also pixel-clean. Curves become 8-direction polylines.
+- **Snapping to the grid directions (D-049):** geometry is pulled toward those 8 directions so it draws as clean pixel lines rather than jittery staircases.
+  - **Street networks:** they are straightened as a whole. Each road edge within a few degrees of a grid direction is made to run exactly along it, with junctions moving as little as possible (under 2 cells) and staying shared. A slightly rotated street grid therefore comes out aligned rather than full of one-cell jogs.
+  - **Long runs:** roads are laid in long runs, so in-between angles alternate a few long runs instead of single steps.
+  - **Buildings:** they move with their streets and turn to the nearest grid direction when they're close to one.
 - **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree.
 - **Chunk:** 64×64 cells, the unit of streaming and storage. Bake tiles, the unit of client baking, may be smaller (to be tuned in M0).
 
@@ -115,6 +119,7 @@ A region is built as several world packages, one per way of moving through it. E
   | Generalization | `sources.roads.classes`, `terrain` rules (e.g. minimum lake area), `objects.buildings` (`minArea`, `bounds`), `objects.depiction.buildings.minHeightMeters` |
   | Depiction | `objects.depiction.buildings.scale`, `objects.depiction.landmarks.scale` (or `scale` on one landmark), `objects.depiction.heightStretch` |
   | Data | `sources.dem` and `sources.landcover`: kind and overview |
+  | Snapping | `snap.roads` (`angle`, `simplify`, `deviation`, `maxShift`), `snap.buildings` (`angle`, `follow`) (D-049) |
 
 - **Moving between levels:** every level package has a geo grid, the lon/lat of cell corners (D-048). The client turns the rover's cell into lon/lat in one level and back into a cell in the next (the L key). A place outside the next level's area lands at that level's start.
 - **Not a zoom:** zoom enlarges the same baked pixels. A level is a different world, with its own cells, generalization and depiction.
