@@ -92,14 +92,15 @@ San Francisco at three scale levels, built from [`worlds/sf/`](../worlds/sf/) on
   - **Buildings:** 168,878. They come from Overture footprints and heights; DataSF's assessor roll supplies year built, storeys, use and neighbourhood (160,794 matched to a lot).
   - **Types:** stucco row houses (82,002), Edwardian rows (26,961), houses (20,100), Victorian rows (17,632), apartment blocks with bays (3,245) and without (5,297), historic commercial blocks (5,150), warehouses (2,884), Chinatown (924), pier sheds (123), and towers by era: deco (107), slabs (129), postmodern (66) and glass (107), with 73 left to a kind by seed.
   - **Trees:** 81,627: 62,295 where the WRI/Meta canopy height map shows 3 m or more (cypress and eucalyptus on tree-covered land), and 19,332 sidewalk trees along the avenues.
+  - **Ground (D-062):** 25,121 lawn cells (parks, golf courses, pitches, gardens and cemeteries from Overture land use) and 43,558 yard cells beside houses.
   - **Rails in the street (D-061):** 3,709 cells: cable-car tracks over Nob Hill and Russian Hill, the streetcar and light-rail lines, Caltrain.
   - **Landmarks (generic depictions):** the Golden Gate Bridge, the Bay Bridge's west span (both in pieces, D-056), the Transamerica Pyramid, Salesforce Tower, Coit Tower, the Ferry Building, City Hall, the Palace of Fine Arts, Sutro Tower, the Dutch and Murphy windmills, and Alcatraz's cellhouse and lighthouse.
   - **Traffic routes (D-060):** 16,428.
   - **Size:** 8.6 MB, of which `objects.json.gz` (version 2, D-057) is 7.3 MB and `routes.json.gz` 0.3 MB.
 - **sf-walk:** the northeast of the city at 10 m per cell, from the Haight and Alamo Square to the Embarcadero and from Dolores Park to North Beach, with hills at 2× and Lombard Street's hairpins kept from snapping.
-  - **Contents:** 43,650 buildings at 1.4× height, 20,225 canopy trees, 8,008 street lights and 458 signals, 3,819 rail cells, 9,895 traffic routes, and the landmarks within it (not the Palace of Fine Arts: its colonnade would reach past a tile's margin at 10 m cells).
+  - **Contents:** 43,650 buildings at 1.4× height, 20,225 canopy trees and 9,181 sidewalk trees, 22,175 lawn and 92,652 yard cells, 8,008 street lights and 458 signals, 114 lantern strings over Grant Avenue and Stockton Street, 3,816 rail cells, and the landmarks within it, including the Dragon Gate (not the Palace of Fine Arts: its colonnade would reach past a tile's margin at 10 m cells).
   - **Size:** 3.4 MB.
-- **sf-fly:** the Bay from the Marin Headlands to the Oakland shore at 100 m per cell, 0.26 MB with 920 traffic routes. Only towers of 60 m or more (2×) and the landmarks (3×) are drawn; there's no typology pass and no street trees.
+- **sf-fly:** the Bay from the Marin Headlands to the Oakland shore at 100 m per cell, with 920 traffic routes and vehicles enlarged at most 4× (`vehicleScale`). Only towers of 60 m or more (2×) and the landmarks (3×) are drawn; there's no typology pass and no street trees.
 - **Road reports:** clean on all three levels.
 
 ```sh
@@ -113,7 +114,7 @@ Sources and licenses:
 - Roads, paths and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Building records: DataSF, Assessor Historical Secured Property Tax Rolls and Parcels. ODC PDDL 1.0.
 - Tree canopy (driving and walking levels): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
-- Rail and ferry lines (rails and traffic routes): Overture Maps transportation theme. ODbL 1.0.
+- Rail and ferry lines (rails and traffic routes), parks and natural land (lawns): Overture Maps transportation and base themes. ODbL 1.0.
 
 ## exp-* (M1.5 pixel detail experiment)
 
