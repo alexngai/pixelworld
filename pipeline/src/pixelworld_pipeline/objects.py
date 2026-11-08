@@ -73,8 +73,10 @@ class Placement:
     are stamped rigidly (the local similarity at their anchor), never sheared.
     """
 
-    def __init__(self, region: Region, blocked: np.ndarray, layout=None):
+    def __init__(self, region: Region, blocked: np.ndarray, layout=None, shift=None):
         self.region = region
+        # cells → cells displacement that follows straightened roads (D-049)
+        self.shift = shift
         self.layout = layout if layout is not None and layout.warped else None
         self.west, self.north, _, _ = region.grid
         self.cx, self.cy = blocked.shape[1], blocked.shape[0]
@@ -97,17 +99,27 @@ class Placement:
         self.landcover  # noqa: B018 (loads it)
         return self._landcover[1]
 
-    def to_cells(self, xs: np.ndarray, ys: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def to_cells(
+        self, xs: np.ndarray, ys: np.ndarray, shift: bool = True
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Projected metres → cells; with `shift`, objects move with their roads."""
         if self.layout is not None:
             L = self.layout
-            return L.warp.to_cells(np.asarray(xs) - L.x0, L.y1 - np.asarray(ys))
-        return (np.asarray(xs) - self.west) / self.m, (self.north - np.asarray(ys)) / self.m
+            cx, cy = L.warp.to_cells(np.asarray(xs) - L.x0, L.y1 - np.asarray(ys))
+        else:
+            cx = (np.asarray(xs) - self.west) / self.m
+            cy = (self.north - np.asarray(ys)) / self.m
+        if shift and self.shift is not None:
+            dx, dy = self.shift(cx, cy)
+            return cx + dx, cy + dy
+        return cx, cy
 
     def similarity(self, x: float, y: float) -> np.ndarray:
         """2×2 map from projected metres (x east, y north) to cells near (x, y):
         the closest similarity to the local Jacobian (uniform: 1/m, y flipped)."""
         h = 10.0
-        cx, cy = self.to_cells(np.array([x, x + h, x]), np.array([y, y, y + h]))
+        # the map itself, not the road-following shift (that moves objects whole)
+        cx, cy = self.to_cells(np.array([x, x + h, x]), np.array([y, y, y + h]), shift=False)
         j = np.array([[cx[1] - cx[0], cx[2] - cx[0]], [cy[1] - cy[0], cy[2] - cy[0]]]) / h
         # j maps (east, north) → (cell x, cell y) with a reflection (north is −y); similarity of j·F
         f = np.array([[1.0, 0.0], [0.0, -1.0]])
@@ -281,7 +293,13 @@ def _footprint(p: Placement, poly, tolerance: float) -> list[list[float]]:
     ring = poly.simplify(tolerance).exterior
     coords = np.asarray(ring.coords)[:-1]
     if p.layout is None:
-        cx, cy = p.to_cells(coords[:, 0], coords[:, 1])
+        cx, cy = p.to_cells(coords[:, 0], coords[:, 1], shift=False)
+        if p.shift is not None:
+            # moved whole, by its centroid's shift, so its shape stays rigid
+            c = poly.centroid
+            ox, oy = p.to_cells(np.array([c.x]), np.array([c.y]), shift=False)
+            dx, dy = p.shift(ox, oy)
+            cx, cy = cx + dx[0], cy + dy[0]
     else:
         # rigid stamp: the local similarity around the centroid, so shapes never shear
         c = poly.centroid
@@ -348,6 +366,53 @@ def place_buildings(
     return out, polys
 
 
+def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
+    """Turn buildings to the nearest of the 8 grid directions (D-049).
+
+    A building whose footprint edges run within `angle` degrees of a grid axis
+    or diagonal turns about its anchor to run exactly along it (its parts turn
+    with it), so its walls draw as clean pixel lines. Irregular footprints,
+    whose edges agree on no direction, are left as they are.
+    """
+    limit = np.radians(float(spec.get("angle", 12.0)))
+    groups: dict[str, list[dict]] = {}
+    for inst in instances:
+        groups.setdefault(inst["_grp"], []).append(inst)
+    turn: dict[str, float] = {}
+    for g, insts in groups.items():
+        fp = np.asarray(insts[0]["fp"], dtype=np.float64)
+        e = np.roll(fp, -1, axis=0) - fp
+        length = np.hypot(e[:, 0], e[:, 1])
+        if length.sum() <= 0:
+            continue
+        # edge directions modulo 45°: the 8-fold angle averages them
+        z = (length * np.exp(8j * np.arctan2(e[:, 1], e[:, 0]))).sum() / length.sum()
+        psi = np.angle(z) / 8.0
+        if abs(z) >= 0.5 and 1e-4 < abs(psi) <= limit:
+            turn[g] = -psi
+    out = []
+    for inst in instances:
+        a = turn.get(inst["_grp"])
+        if a is None:
+            out.append(inst)
+            continue
+        root = groups[inst["_grp"]][0]
+        c, s_ = np.cos(a), np.sin(a)
+        rot = np.array([[c, -s_], [s_, c]])
+        o = np.array([root["x"], root["y"]])
+        fp = (np.asarray(inst["fp"]) - o) @ rot.T + o
+        xy = rot @ (np.array([inst["x"], inst["y"]]) - o) + o
+        out.append(
+            {
+                **inst,
+                "x": round(float(xy[0]), 3),
+                "y": round(float(xy[1]), 3),
+                "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
+            }
+        )
+    return out
+
+
 def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) -> list[dict]:
     """Apply a level's building depiction: drop buildings lower than
     `minHeightMeters` and draw the rest `scale` times their size about the
@@ -402,7 +467,7 @@ def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -
     upstream (to the left of the line) by `bulge` of its length."""
     (lon0, lat0), (lon1, lat1) = line
     xs, ys = transform_points("EPSG:4326", p.region.crs, [lon0, lon1], [lat0, lat1])
-    ax, ay = p.to_cells(np.array(xs), np.array(ys))
+    ax, ay = p.to_cells(np.array(xs), np.array(ys), shift=False)  # fitted to its canyon
     a = np.array([ax[0], ay[0]])
     b = np.array([ax[1], ay[1]])
     along = b - a
@@ -420,14 +485,20 @@ def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -
 
 
 def place(
-    region: Region, blocked: np.ndarray, road_rows: list[dict], layout=None, heights=None
+    region: Region,
+    blocked: np.ndarray,
+    road_rows: list[dict],
+    layout=None,
+    heights=None,
+    shift=None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
     """
     spec = region.objects or {}
-    p = Placement(region, blocked, layout)
+    p = Placement(region, blocked, layout, shift)
+    snap = (region.snap or {}).get("buildings")
     instances: list[dict] = []
 
     depiction = spec.get("depiction") or {}
@@ -458,6 +529,8 @@ def place(
         rows = overture.buildings(release, bbox)
         parts = overture.building_parts(release, bbox)
         found, building_polys = place_buildings(p, spec["buildings"], rows, parts, clear)
+        if snap is not None:
+            found = snap_buildings(found, snap)
         instances += depict_buildings(p, found, depiction.get("buildings", {}))
     tree = shapely.STRtree(building_polys) if building_polys else None
 
@@ -476,7 +549,7 @@ def place(
         instances += street_trees(p, rule, road_rows, occupied, f"{i}")
     for k, lm in enumerate(landmarks):
         lx, ly, _ = clear_zones[k]
-        cx, cy = p.to_cells(np.array([lx]), np.array([ly]))
+        cx, cy = p.to_cells(np.array([lx]), np.array([ly]), shift="line" not in lm)
         inst = {"g": lm["group"], "x": round(float(cx[0]), 3), "y": round(float(cy[0]), 3), "s": k}
         if "hm" in lm:
             inst["hm"] = float(lm["hm"])

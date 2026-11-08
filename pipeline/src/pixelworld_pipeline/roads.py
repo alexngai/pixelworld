@@ -52,6 +52,224 @@ def trace_cells(xs: np.ndarray, ys: np.ndarray, step: float = 0.1) -> list[tuple
     return thin
 
 
+def octilinear_path(
+    a: tuple[int, int], b: tuple[int, int], deviation: float
+) -> list[tuple[int, int]]:
+    """Cells from a to b in long runs along the 8 grid directions (D-049).
+
+    A straight or diagonal line is one run. Anything in between alternates an
+    axis run and a diagonal run, in as few runs as keep the path within
+    `deviation` cells of the straight line, so it reads as a few clean pixel
+    lines rather than a zigzag of single steps.
+    """
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    sx, sy = (dx > 0) - (dx < 0), (dy > 0) - (dy < 0)
+    n_diag = min(abs(dx), abs(dy))
+    n_axis = max(abs(dx), abs(dy)) - n_diag
+    axis = (sx, 0) if abs(dx) > abs(dy) else (0, sy)
+    diag = (sx, sy)
+    length = float(np.hypot(dx, dy))
+    # a run of n_axis then n_diag strays n_axis·n_diag / length from the line;
+    # split into chunks until each strays at most `deviation`
+    chunks = 1
+    if n_axis and n_diag:
+        chunks = max(1, int(np.ceil(n_axis * n_diag / (length * max(deviation, 1e-6)))))
+        chunks = min(chunks, n_axis, n_diag)
+    out = [a]
+    x, y = a
+    for k in range(chunks):
+        na = round((k + 1) * n_axis / chunks) - round(k * n_axis / chunks)
+        nd = round((k + 1) * n_diag / chunks) - round(k * n_diag / chunks)
+        # alternate the order so consecutive chunks join runs of one direction
+        for step, n in ((axis, na), (diag, nd)) if k % 2 == 0 else ((diag, nd), (axis, na)):
+            for _ in range(n):
+                x, y = x + step[0], y + step[1]
+                out.append((x, y))
+    return out
+
+
+def _douglas_peucker(pts: np.ndarray, tol: float) -> list[int]:
+    """Indices of the points kept by Douglas–Peucker simplification (ends kept)."""
+    keep = {0, len(pts) - 1}
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        i, j = stack.pop()
+        if j <= i + 1:
+            continue
+        a, b = pts[i], pts[j]
+        ab = b - a
+        n = float(np.hypot(*ab))
+        rel = pts[i + 1 : j] - a
+        if n < 1e-12:
+            d = np.hypot(rel[:, 0], rel[:, 1])
+        else:
+            d = np.abs(ab[0] * rel[:, 1] - ab[1] * rel[:, 0]) / n
+        k = int(np.argmax(d))
+        if d[k] > tol:
+            m = i + 1 + k
+            keep.add(m)
+            stack += [(i, m), (m, j)]
+    return sorted(keep)
+
+
+OCTI_NORMALS = [
+    np.array([np.cos(np.radians(45 * k + 90)), np.sin(np.radians(45 * k + 90))]) for k in range(4)
+]
+
+
+@dataclass
+class Straightened:
+    lines: list
+    origin: np.ndarray  # (n, 2) node positions before, in cells
+    moved: np.ndarray  # (n, 2) node positions after
+    constrained: int  # edges made octilinear
+    edges: int
+
+    def shift(self, radius: float):
+        """A smooth displacement field (cells → cells) that follows the moved
+        nodes within `radius` cells and fades out beyond, for objects that
+        should keep their place along the roads."""
+        from scipy.spatial import cKDTree
+
+        tree = cKDTree(self.origin)
+        delta = self.moved - self.origin
+        sigma = radius / 2.0
+
+        def fn(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+            q = np.column_stack([np.ravel(x), np.ravel(y)])
+            if len(self.origin) == 0 or len(q) == 0:
+                return np.zeros(np.shape(x)), np.zeros(np.shape(y))
+            k = min(8, len(self.origin))
+            d, idx = tree.query(q, k=k, distance_upper_bound=radius)
+            d = d.reshape(len(q), k)
+            idx = idx.reshape(len(q), k)
+            ok = np.isfinite(d)
+            w = np.where(ok, np.exp(-0.5 * (np.where(ok, d, 0) / sigma) ** 2), 0.0)
+            pad = np.vstack([delta, np.zeros((1, 2))])
+            dd = pad[np.where(ok, idx, len(delta))]
+            # near nodes take their movement; far from any node it fades to zero
+            total = w.sum(axis=1) + 0.05
+            sx = (w * dd[..., 0]).sum(axis=1) / total
+            sy = (w * dd[..., 1]).sum(axis=1) / total
+            return sx.reshape(np.shape(x)), sy.reshape(np.shape(y))
+
+        return fn
+
+
+def straighten(
+    lines: list,
+    angle: float = 12.0,
+    simplify: float = 0.5,
+    max_shift: float = 2.0,
+    min_length: float = 1.0,
+    shape: tuple[int, int] | None = None,
+) -> Straightened:
+    """Straighten a road network toward the 8 grid directions (D-049).
+
+    Each road is simplified (Douglas–Peucker, `simplify` cells) between the
+    vertices it shares with other roads. Every simplified edge within `angle`
+    degrees of a grid direction becomes a constraint that it run exactly along
+    it, and the nodes move as little as possible to satisfy all constraints at
+    once, so a slightly rotated street grid becomes an aligned one rather than
+    a set of streets with jogs. Junctions stay shared. A node pushed further
+    than `max_shift` cells frees its edges' constraints and the solve repeats.
+    With the grid `shape` (cy, cx), no node is pushed across a world edge it
+    started inside (roads often run along the edge of a warped world).
+    """
+    from scipy.sparse import coo_matrix, identity
+    from scipy.sparse.linalg import spsolve
+
+    def key(x: float, y: float) -> tuple[int, int]:
+        return (round(x * 1e5), round(y * 1e5))
+
+    uses: dict[tuple[int, int], int] = defaultdict(int)
+    for _, _, parts in lines:
+        for xs, ys in parts:
+            ks = [key(x, y) for x, y in zip(xs, ys, strict=True)]
+            for k in set(ks):
+                uses[k] += 1
+            uses[ks[0]] += 1
+            uses[ks[-1]] += 1
+    index: dict[tuple[int, int], int] = {}
+    origin: list[tuple[float, float]] = []
+
+    def node(x: float, y: float) -> int:
+        k = key(x, y)
+        if k not in index:
+            index[k] = len(origin)
+            origin.append((float(x), float(y)))
+        return index[k]
+
+    chains: list[tuple[str, int, list[list[int]]]] = []
+    for seg_id, rank, parts in lines:
+        out_parts = []
+        for xs, ys in parts:
+            pts = np.column_stack([xs, ys]).astype(np.float64)
+            ks = [key(x, y) for x, y in pts]
+            anchors = [i for i, k in enumerate(ks) if uses[k] >= 2]
+            chain = [anchors[0]]
+            for i, j in zip(anchors, anchors[1:], strict=False):
+                chain += [i + m for m in _douglas_peucker(pts[i : j + 1], simplify)[1:]]
+            ids = [node(*pts[i]) for i in chain]
+            ids = [n for k, n in enumerate(ids) if k == 0 or n != ids[k - 1]]
+            out_parts.append(ids)
+        chains.append((seg_id, rank, out_parts))
+
+    p0 = np.asarray(origin, dtype=np.float64).reshape(-1, 2)
+    n = len(p0)
+    edge_set = sorted(
+        {
+            (min(a, b), max(a, b))
+            for _, _, ps in chains
+            for c in ps
+            for a, b in zip(c, c[1:], strict=False)
+        }
+    )
+    cand = []
+    for a, b in edge_set:
+        v = p0[b] - p0[a]
+        length = float(np.hypot(*v))
+        if length < min_length:
+            continue
+        theta = np.degrees(np.arctan2(v[1], v[0])) % 180.0
+        k = int(round(theta / 45.0)) % 4
+        dev = abs((theta - 45.0 * k + 90.0) % 180.0 - 90.0)
+        if dev <= angle:
+            cand.append((a, b, k))
+    active = np.ones(len(cand), dtype=bool)
+    p = p0.copy()
+    alpha = 1e-6
+    for _ in range(8):
+        rows, cols, vals = [], [], []
+        for r, (a, b, k) in enumerate(c for c, on in zip(cand, active, strict=True) if on):
+            nx, ny = OCTI_NORMALS[k]
+            rows += [r, r, r, r]
+            cols += [2 * b, 2 * b + 1, 2 * a, 2 * a + 1]
+            vals += [nx, ny, -nx, -ny]
+        m = int(active.sum())
+        if m == 0:
+            p = p0.copy()
+            break
+        C = coo_matrix((vals, (rows, cols)), shape=(m, 2 * n)).tocsr()
+        A = (C.T @ C + alpha * identity(2 * n)).tocsc()
+        x = spsolve(A, alpha * p0.ravel())
+        p = np.asarray(x).reshape(n, 2)
+        far = np.hypot(*(p - p0).T) > max_shift
+        if not far.any():
+            break
+        bad = np.array([far[a] or far[b] for a, b, _ in cand]) & active
+        active &= ~bad
+    if shape is not None:
+        hi = np.array([shape[1], shape[0]], dtype=np.float64) - 1e-6
+        inside = (p0 >= 0) & (p0 <= hi)
+        p = np.where(inside, np.clip(p, 0.0, hi), p)
+    new_lines = [
+        (seg_id, rank, [(p[c, 0].copy(), p[c, 1].copy()) for c in ps if len(c) >= 1])
+        for seg_id, rank, ps in chains
+    ]
+    return Straightened(new_lines, p0, p, int(active.sum()), len(edge_set))
+
+
 @dataclass
 class RoadLayer:
     mask: np.ndarray  # uint16 (cy, cx)
@@ -63,8 +281,13 @@ class RoadLayer:
 def rasterize(
     lines: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray]]]],
     shape: tuple[int, int],
+    deviation: float | None = None,
 ) -> RoadLayer:
-    """lines: (id, class rank ≥ 1, parts as (xs, ys) in cell coords)."""
+    """lines: (id, class rank ≥ 1, parts as (xs, ys) in cell coords).
+
+    With `deviation`, each polyline edge becomes long octilinear runs
+    (octilinear_path) between the cells of its vertices; otherwise the line is
+    traced cell by cell (trace_cells)."""
     cy, cx = shape
     mask = np.zeros(shape, dtype=np.uint16)
     cls = np.zeros(shape, dtype=np.uint8)
@@ -81,7 +304,14 @@ def rasterize(
     for seg_id, rank, parts in lines:
         visited: list[tuple[int, int]] = []
         for xs, ys in parts:
-            path = trace_cells(xs, ys)
+            if deviation is None:
+                path = trace_cells(xs, ys)
+            else:
+                verts = [(int(np.floor(x)), int(np.floor(y))) for x, y in zip(xs, ys, strict=True)]
+                path = verts[:1]
+                for va, vb in zip(verts, verts[1:], strict=False):
+                    if va != vb:
+                        path += octilinear_path(va, vb, deviation)[1:]
             for a, b in zip(path, path[1:], strict=False):
                 dx, dy = b[0] - a[0], b[1] - a[1]
                 if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):

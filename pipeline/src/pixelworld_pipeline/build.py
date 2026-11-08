@@ -320,9 +320,30 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     q, water_level = apply_water(q, lake, river)
 
     # roads: snap, cut-and-fill on the corner field
-    road_layer = road_stage.rasterize(
-        _lines_in_cells(layout, road_rows, lambda r: ROAD_RANK[r["class"]]), (cy, cx)
-    )
+    road_lines = _lines_in_cells(layout, road_rows, lambda r: ROAD_RANK[r["class"]])
+    snap = region.snap or {}
+    road_shift = None
+    deviation = None
+    if "roads" in snap:
+        # straighten the network toward the 8 grid directions (D-049)
+        rs = snap["roads"] or {}
+        straight = road_stage.straighten(
+            road_lines,
+            angle=float(rs.get("angle", 16.0)),
+            simplify=float(rs.get("simplify", 0.75)),
+            max_shift=float(rs.get("maxShift", 2.0)),
+            shape=(cy, cx),
+        )
+        road_lines = straight.lines
+        deviation = float(rs.get("deviation", 1.0))
+        follow = float((snap.get("buildings") or {}).get("follow", 3.0))
+        road_shift = straight.shift(follow)
+        moved = np.hypot(*(straight.moved - straight.origin).T)
+        print(
+            f"snap: {straight.constrained}/{straight.edges} road edges made octilinear, "
+            f"nodes moved p99 {np.percentile(moved, 99) if len(moved) else 0:.2f} cells"
+        )
+    road_layer = road_stage.rasterize(road_lines, (cy, cx), deviation=deviation)
     heights = road_stage.road_heights(road_layer.mask, q)
     q = road_stage.apply_to_corners(q, road_layer.mask, heights)
     on_road = (road_layer.mask & road_stage.CONNECT_MASK) != 0
@@ -380,7 +401,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             return metres / step_m
 
         instances, object_counts = object_stage.place(
-            region, blocked, road_rows, layout, drawn_steps
+            region, blocked, road_rows, layout, drawn_steps, shift=road_shift
         )
         print(f"objects: {object_counts}")
     attribution = [

@@ -77,6 +77,9 @@ class Region:
     # as [{name, world, label}], `world` being the sibling package's id.
     level: str | None = None
     levels: list[dict[str, Any]] | None = None
+    # Isometric snapping (D-049): {"roads": {angle, simplify, deviation, maxShift},
+    # "buildings": {angle, follow}}; roads straighten toward the 8 grid directions.
+    snap: dict[str, Any] | None = None
 
     # ---- loading -------------------------------------------------------------
 
@@ -122,6 +125,7 @@ class Region:
             warp=dict(raw["warp"]) if raw.get("warp") else None,
             level=str(raw["level"]) if raw.get("level") else None,
             levels=[dict(v) for v in raw["levels"]] if raw.get("levels") else None,
+            snap=dict(raw["snap"]) if raw.get("snap") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")
