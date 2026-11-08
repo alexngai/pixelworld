@@ -23,3 +23,6 @@ __pycache__/
 # Scratch world packages for trying pipeline parameters
 fixtures/_try/
 fixtures/_variants/
+
+# Agent worktrees (local, never committed)
+.claude/worktrees/
