@@ -70,7 +70,7 @@ objects:
       # towers of the 1920s and 30s: setbacks, terracotta and granite
       - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1910, 1950] }
   # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
-  landmarks: [golden-gate-bridge, bay-bridge-west, transamerica-pyramid, coit-tower, ferry-building, sf-city-hall, sutro-tower]
+  landmarks: [golden-gate-bridge, bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall, palace-of-fine-arts, sutro-tower]
   landmarkDepiction: generic
   depiction: { heightStretch: 1.5, scatter: 1.0 }
 

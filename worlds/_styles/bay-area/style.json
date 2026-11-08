@@ -241,18 +241,28 @@
     },
     "landmark.bridge.suspension": {
       "generator": "suspensionBridge",
-      "ramps": { "structure": "bridge-orange", "deck": "roof-flat", "pier": "concrete" },
-      "params": { "spans": 1, "side": 0.175, "towerRatio": 3.3 }
+      "ramps": { "structure": "bridge-orange", "truss": "bridge-orange", "deck": "asphalt", "pier": "concrete" },
+      "params": { "spans": 1, "side": 0.175, "towerRatio": 3.3, "hangers": 10, "tower": 0, "portals": 4, "leg": 0.45, "legDepth": 0.4, "truss": 0.08, "pierTop": 0.15 }
     },
     "landmark.bridge.suspension.double": {
       "generator": "suspensionBridge",
-      "ramps": { "structure": "bridge-grey", "deck": "roof-flat", "pier": "concrete" },
-      "params": { "spans": 2, "side": 0.25, "towerRatio": 2.7 }
+      "ramps": { "structure": "bridge-grey", "truss": "bridge-grey", "deck": "roof-flat", "pier": "concrete" },
+      "params": { "spans": 2, "side": 0.25, "towerRatio": 2.7, "hangers": 8, "tower": 1, "portals": 4, "leg": 0.3, "legDepth": 0.36, "taper": 0.08, "decks": 2, "truss": 0.12, "pierTop": 0.12 }
     },
     "landmark.tower.pyramid": {
       "generator": "pyramidTower",
       "ramps": { "structure": "tower-white", "window": "glass" },
-      "params": { "base": 0.18 }
+      "params": { "base": 0.16, "spire": 0.2, "wing": 0.45 }
+    },
+    "landmark.tower.obelisk": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "glass" },
+      "params": { "base": 0.1, "top": 0.75, "corner": 0.3, "crown": 0.1 }
+    },
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "glass" },
+      "params": { "base": 0.1, "top": 0.75, "corner": 0.3, "crown": 0.1, "turn": 1 }
     },
     "landmark.tower.column": {
       "generator": "column",
@@ -261,13 +271,18 @@
     },
     "landmark.hall.clock": {
       "generator": "towerHall",
-      "ramps": { "wall": "paint-cream", "roof": "roof-slate", "window": "glass", "accent": "paint-white" },
+      "ramps": { "wall": "paint-cream", "roof": "roof-flat", "window": "glass", "accent": "paint-white", "cap": "stucco" },
       "params": { "hall": 0.22 }
     },
     "landmark.hall.domed": {
       "generator": "domedHall",
       "ramps": { "wall": "paint-white", "roof": "roof-flat", "window": "glass", "dome": "roof-slate" },
       "params": { "length": 1.4, "depth": 1.0, "hall": 0.3, "dome": 0.17 }
+    },
+    "landmark.rotunda": {
+      "generator": "rotunda",
+      "ramps": { "stone": "terracotta", "dome": "roof-tile", "detail": "stucco" },
+      "params": { "radius": 0.35, "dome": 0.23, "arc": 1.6, "arcCentre": 1.16, "arcHeight": 0.4, "open": 115 }
     },
     "landmark.tower.mast": {
       "generator": "tripodMast",

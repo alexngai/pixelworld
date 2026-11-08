@@ -1,0 +1,9 @@
+name: Salesforce Tower
+wikidata: Q14684154
+# Overture's footprint centroid; its plan is a rounded square turned to the SoMa grid
+anchor: { lon: -122.396927, lat: 37.789776 }
+height: 326
+clear: 25
+replaces: [Salesforce Tower]
+depictions:
+  generic: { group: landmark.tower.obelisk.diagonal }   # a tapering tower with an open crown; no logo

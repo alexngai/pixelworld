@@ -1,0 +1,15 @@
+name: Palace of Fine Arts
+wikidata: Q966263
+# the rotunda (Overture's footprint centroid); its colonnade arcs behind it, open to the lagoon in the east
+anchor: { lon: -122.448397, lat: 37.802918 }
+height: 49          # to the top of the dome
+clear: 35
+# the rotunda (with its parts), and Overture's colonnade arms and the pylons at their ends
+replaces:
+  - Palace of Fine Arts
+  - 44cb0a88-d2e3-449f-9ac2-14460662bdf9   # north colonnade
+  - 78445793-6ee4-4c77-a1a2-5fcd06af0011   # south colonnade
+  - 6775137b-d0ca-433d-97ec-5c2184e3bb25
+  - 2d6407af-d29e-4455-aeac-a0035ed1ad1d
+depictions:
+  generic: { group: landmark.rotunda }   # a domed rotunda with a curved colonnade; no name

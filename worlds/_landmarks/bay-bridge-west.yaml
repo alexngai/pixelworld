@@ -7,5 +7,12 @@ base: 0
 thickness: 32
 bulge: 0
 snap: true
+# Overture draws its towers and central anchorage as buildings (bridge_structure)
+replaces:
+  - Center Anchorage
+  - b7712d6a-ed17-481b-8363-33fd5dd5a925   # towers, Rincon Hill to Yerba Buena Island
+  - bffe497c-e1d8-48cc-b721-261e262d2402
+  - 359429ef-2b01-4b8b-951f-64a291ddffc9
+  - 37ed7828-de67-4f12-a18f-b5c485f41f67
 depictions:
   generic: { group: landmark.bridge.suspension.double }
