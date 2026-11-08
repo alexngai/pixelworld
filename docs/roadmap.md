@@ -85,7 +85,7 @@ If phones miss the bake budget, the first step is profiling mesh generation (per
 
 | Exit criterion | Result |
 |---|---|
-| Whole region explorable at one uniform scale | Done. 1028×700 cells at 400 m (about 410 × 280 km, from the Mojave west of Las Vegas to Flagstaff), 2.5× vertical exaggeration, 187 chunks, 0.97 MB gzipped. Chunks stream on demand; an e2e test checks that a view 680 cells from the start loads under a quarter of the chunks and has no holes. |
+| Whole region explorable at one uniform scale | Done. 1028×700 cells at 400 m (about 410 × 280 km, from the Mojave west of Las Vegas to Flagstaff), 2.5× vertical exaggeration, 187 chunks, 0.63 MB gzipped. Chunks stream on demand; an e2e test checks that a view 680 cells from the start loads under a quarter of the chunks and has no holes. |
 | Identical package hash on re-run | Verified: two builds from the same spec and cached inputs give the same `packageHash` (`bccd07e9…`). A pytest covers the hash for synthetic packages. |
 | Roads connected and drivable after snapping | Verified by the build's validation report: 26,298 Overture segments became 13,453 road cells and 15,156 edges, with 0 discontinuous edges, 0 over-steep edges, 0 segments split and 0 junctions disconnected. The rover drives the network within its grade limit. |
 
@@ -148,7 +148,7 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 | Strip, 3.6 × 8.2 km | 76 + 308 ms | 212 + 358 ms | 608 + 698 ms | 1,352 + 1,409 ms (9,401 objects) |
 
 - Gzipped terrain costs about 1.5 bytes per fine cell in the canyon and 0.5 in the flat city. Every layer is stored at fine resolution.
-- Extrapolated to the whole Southwest, that's roughly 6–17 MB at K=4 and 23–69 MB at K=8, against 0.97 MB today.
+- Extrapolated to the whole Southwest, that's roughly 6–17 MB at K=4 and 23–69 MB at K=8, against 0.63 MB today.
 - Objects add 100–340 KB per area.
 - JavaScript meshing of K=8 terrain takes 0.6–1.4 s per area (1.4–1.8 s with objects). That confirms M1.6's plan to move terrain onto the GPU and store micro-heights only.
 
@@ -161,11 +161,11 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 - Street-tree counts vary with K, because road cells block more ground at coarse cells.
 - At night the streets stay dark: there are no street lights yet.
 
-### M1.6: Micro-terrain — in progress
+### M1.6: Micro-terrain — done (desktop GPU timing to confirm)
 
 **Goal:** pixel-resolution terrain everywhere, without changing the gameplay grid.
 
-- **Data:** a 4×4 grid of fine heights per cell (K=4, D-037), stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary. Only heights are stored at fine resolution; other layers stay per cell (storing every layer finely would cost roughly 6–70× today's package, see M1.5).
+- **Data:** a 4×4 grid of fine heights per cell (K=4, D-037), stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary. Only heights are stored at fine resolution; other layers stay per cell (storing every layer finely would cost roughly 10–110× the cell-only package, see M1.5).
 - **Pipeline:** builds micro-heights from finer elevation sources. Roads and pads are cut and filled at micro resolution, and water stays flat.
 - **Rendering:** terrain moves to the GPU, as a heightfield ray-march or a GPU-built grid mesh, so bake cost scales with pixels rather than with geometry. JavaScript mesh building can't handle 64× the vertices.
 - **Gameplay:** vehicles sample micro-heights.
@@ -174,6 +174,46 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 - The Southwest renders with micro-terrain at every zoom.
 - Bake time per tile is within the budget on desktop.
 - The package size increase is understood and acceptable. M1.5 measured 0.5–1.5 bytes per fine cell, gzipped, with every layer at fine resolution; micro-heights alone should cost less.
+
+#### M1.6 results
+
+![Grand Canyon Village (rotation 2) and the Black Canyon below Hoover Dam (rotation 1) at 2×: cells (M1) and micro-terrain (M1.6)](images/m1.6-cells-vs-micro.png)
+
+![The Grand Canyon at 1× on micro-terrain, rotation 2](images/m1.6-grand-canyon-r2.png)
+
+![Grand Canyon Village at 2× in all four rotations](images/m1.6-rotations.png)
+
+**What was built:**
+- **Data:** chunks carry micro-corner heights (`MHGT`, D-038), 4×4 micro-cells per cell with quarter-step heights. The pipeline reads the 30 m DEM's 60 m overview at every micro-corner, keeps water cells flat at their level and cuts road beds along road centre lines from the cells' road profile.
+  - The cell layers are unchanged, and so is the road report: 0 discontinuities, 0 split segments, 0 disconnected junctions.
+  - Micro-terrain agrees with them closely: the mean micro height per cell is within 0.2 steps of the cell's mean (median), 0.6 at the 95th percentile and 4.5 at most, in steep terraces.
+- **Rendering:** the GPU builds the geometry (D-039). The baker gets textures, the vertex shader emits tops and the walls facing the viewer, and an AO pre-pass runs per micro-corner. Steep micro-tops become bare strata, and land-cover borders are jittered per micro-cell.
+- **Gameplay:** the rover samples micro heights.
+
+| Exit criterion | Result |
+|---|---|
+| The Southwest renders with micro-terrain at every zoom | Done. Every tile bakes from micro-terrain. Zoom levels are integer upscales of the same baked tiles. An e2e test checks that Grand Canyon Village is hole-free in all 4 rotations, and the streaming test still finds no holes. The Vegas golden was updated after review. |
+| Bake time per tile within the desktop budget (≤ 50 ms on a GPU) | **Not measured on a GPU**: there is none in this environment. In software rendering (SwiftShader), a tile plus its margin takes 256–322 ms against 146–225 ms for cell meshes (table below). |
+| Package size increase understood and acceptable | 0.63 MB → 3.97 MB gzipped (6.3×) for the whole Southwest. Chunks stream on demand, so a view loads a small share of that. |
+
+**Software-rendering cost per tile** (SwiftShader, zoom 2, 960×640 view; mesh or field preparation + bake):
+
+| View | Cells (M1) | Micro-terrain (M1.6) |
+|---|---|---|
+| Las Vegas, rotation 0 | 44 + 139 ms | 8 + 258 ms |
+| Grand Canyon Village, rotation 2 | 65 + 160 ms | 10 + 322 ms |
+| Black Canyon below Hoover Dam, rotation 1 | 38 + 108 ms | 8 + 256 ms |
+
+The first GPU version took 1.2 s per tile. Two changes brought it down:
+- **Plain draws:** drawing with `gl_VertexID` instead of instancing (SwiftShader runs instances one by one) gave a 4× speed-up, with identical pixels.
+- **Walls only where they exist:** this keeps wall cost proportional to actual cliffs.
+
+**Known issues:**
+- **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix.
+- **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized.
+- **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds.
+- **Road beds** are 0.3 cells to either side of the centre line, so in mountains they read as wide benches.
+- **Not combined yet:** render scale (the M1.5 experiment worlds) and micro-terrain don't work together.
 
 ### M2: Elastic map and editor v0
 
@@ -250,7 +290,7 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 and M1.6 are done; M2 is next.
 
 ## 3. Technology tracks
 

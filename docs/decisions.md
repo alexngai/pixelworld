@@ -208,3 +208,22 @@ The point is more room for visual interest; both halves are wanted.
 - **K=4:** every cell holds 4×4 micro-cells. A micro-cell is an 8×4 px diamond, and its height step is a quarter step (2 px).
 - **Why:** its ledges form clean 2 px clusters, and it needs about a quarter of K=8's data and a third of its meshing time. K=8's 1 px treads read as hatching on steep walls.
 
+### D-038: Micro-terrain storage (accepted, M1.6)
+- **Corner heights only:** chunks store the height of every micro-corner (`MHGT`, rows delta-coded) rather than a base and shape per micro-cell. The shape bytes compressed badly: 4.5 of 8.9 MB in the first build.
+- **Derivation:** micro-cells follow from their corners by one rule that the pipeline and the client share (a slope tile up to 3 micro-steps, else flat at the rounded mean).
+- **Cost:** the Southwest grows from 0.63 MB to 3.97 MB gzipped, about 6.3×.
+- **Constraints from the cell layers:**
+  - Water cells are flat at their level.
+  - Roads run on a bed cut 0.3 cells either side of the line between connected road-cell centres, following the cells' road profile.
+  - The cell layers, their package hash inputs and the road report are unchanged.
+
+### D-039: Micro-terrain on the GPU (accepted, M1.6)
+- **Geometry:** the vertex shader builds it from textures: drawn corners per micro-cell, and per cell its surface, roads, class and geology.
+- **Draws:** tops for every micro-cell, and walls only for micro-cells listed as having one on an edge facing the viewer (also the sunlit edges).
+- **Plain draws:** they use `gl_VertexID`. Instancing made software rendering 4× slower, because SwiftShader runs instances one by one.
+- **AO:** a pre-pass computes it per micro-corner at the corner's lowest and highest height, and vertices interpolate between the two.
+- **Materials:**
+  - Steep micro-tops become bare strata.
+  - Land-cover borders are jittered per micro-cell.
+- **Margin:** micro-terrain tiles use an 8-cell bake margin (shadows and AO reach a few cells).
+

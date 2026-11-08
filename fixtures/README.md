@@ -25,7 +25,9 @@ Surface classes (woodland, forest, scrub, rock, sand) are generated from elevati
 
 ## southwest
 
-The M1 region: the US Southwest at a uniform 400 m per cell, 2.5× vertical exaggeration and slope tiles up to 2 steps per cell. It's 1028×700 cells in 187 gzipped chunks. It's built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml):
+The M1 region: the US Southwest at a uniform 400 m per cell, 2.5× vertical exaggeration and slope tiles up to 2 steps per cell. It's 1028×700 cells in 187 gzipped chunks: 0.63 MB with cells only, 3.97 MB with micro-terrain.
+
+Since M1.6 the chunks also carry micro-terrain: 4×4 micro-cells (100 m) per cell, with quarter-step heights from the DEM's 60 m overview (`MHGT`, D-038). It's built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml):
 
 ```sh
 cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml

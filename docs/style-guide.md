@@ -115,13 +115,14 @@ These choices live in the gridify stage and the fixture script, but they're styl
 
 ![4× close-up: tree pattern, strata, AO dither, outline](images/m0-closeup-4x.png)
 
-## 10. Pixel-scale terrain (M1.5 experiment)
+## 10. Pixel-scale terrain (M1.5 experiment, M1.6 micro-terrain)
 
-Fine worlds draw each cell smaller (`render.scale`). These rules come from the experiment (D-032, D-036) and are proposals until M1.6 settles K:
+Micro-terrain (M1.6) uses K=4: 8×4 px micro-cells with 2 px height steps. The M1.5 experiment worlds draw fine cells smaller instead (`render.scale`). These rules apply to both (D-032, D-036, D-039):
 
-- **Steep cells are bare rock.** Every fine cell steeper than 0.6 rise over run takes the strata ramp, whatever its land cover. Canyon walls then read as bands of ledges rather than a green-and-tan herringbone.
+- **Steep cells are bare rock.** Every fine cell or micro-cell steeper than 0.6 rise over run takes the strata ramp, whatever its land cover. Canyon walls then read as bands of ledges rather than a green-and-tan herringbone. For micro-terrain the shader applies it per micro-cell (style `terrain.steepRockSlope`); water and snow keep their surface.
+- **Ragged land-cover borders.** Land cover is still per 400 m cell. Each micro-cell takes its surface from a point jittered by up to ±0.4 cell, hashed in world coordinates, so borders are ragged at micro-cell scale rather than following the cell grid. Water keeps its exact cells, because its geometry is flat only there.
 - **Patterns keep their pixel size.** Field and city-block patterns, and road widths, are measured in render units. Road widths are capped at one cell.
-- **K=4 versus K=8:** see [roadmap](roadmap.md) M1.5 and D-037. K=4 ledges form 2 px clusters; K=8 gives 1 px hatching.
+- **K=4 (chosen, D-037):** its ledges form 2 px clusters; K=8 gave 1 px hatching. See [roadmap](roadmap.md) M1.5 and M1.6.
 
 ![A Supai wall at 3×: K=4, K=8 with objects, K=8 terrain only](images/m1.5-desert-view-k4-k8.png)
 

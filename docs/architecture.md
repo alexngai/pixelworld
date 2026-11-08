@@ -74,6 +74,7 @@ Because of this, the same real building can take up more or fewer cells dependin
 - **Height step:** the vertical unit. Terrain and object heights are whole steps.
 - **Terrain model:** RCT-style, extended to steep slope tiles. Each cell has a base height (its lowest corner) and a corner shape: each corner sits 0–3 steps above the base. Neighbouring cells share corner heights, so slopes are continuous. Where they don't match, the edge becomes a vertical cliff face. The pipeline caps the rise per cell (`max_slope`, default 2); anything steeper becomes a terrace with cliffs. This gives gradual slopes on gentle ground, readable terraces and cliffs on canyon walls and mesas, and ramps that roads can climb. Rises of 1–3 steps per cell keep cell edges on clean pixel angles (horizontal, 2:1 or 1:1 going up).
 - **Directions:** 8. A world-axis edge projects to an exact 2:1 pixel staircase. A world diagonal projects to a perfectly horizontal or vertical screen line, so 45° roads and building cuts are also pixel-clean. Curves become 8-direction polylines.
+- **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree.
 - **Chunk:** 64×64 cells, the unit of streaming and storage. Bake tiles, the unit of client baking, may be smaller (to be tuned in M0).
 
 ### 3.4 Projection (initial constants, tuned in M0)
@@ -178,7 +179,7 @@ Goal: a smooth, fold-free mapping from region meters to world cells that matches
 
 Generators are pure functions: `(semantic instance, style pack, seed) → 3D geometry + material IDs`. Seeds are a stable hash of (region, feature ID, purpose).
 
-- **Terrain:** cells → mesh with top faces, slope faces and cliff faces. Materials come from the surface class, plus elevation bands (rock strata) and a seeded pattern.
+- **Terrain:** cells → mesh with top faces, slope faces and cliff faces. Materials come from the surface class, plus elevation bands (rock strata) and a seeded pattern. Worlds with micro-terrain skip the JavaScript mesh: the baker builds the geometry on the GPU (§8.1).
 - **Buildings:** footprint → massing (setbacks by height) → roof (flat, gable, hip, dome, …) → facade pattern → material ramps. The parameters come from the style pack and building use.
 - **Networks:** each road or rail cell, based on its connectivity mask, becomes a road piece (straight, corner, junction, ramp, bridge) with markings by class.
 - **Vegetation and props:** species templates per biome, with density from land cover and canopy data.
@@ -192,7 +193,11 @@ Hero assets are baked offline and can be painted over. A painted-over sprite rep
 
 Bake tiles are 32×32 cells. Each bake renders the tile plus a 16-cell margin of context, and every face carries its owning cell, so shadows, AO and outlines cross seams correctly. Pixels whose front-most surface belongs to another tile are left empty for that tile to fill (D-021). The exact rules are in [style-guide.md](style-guide.md). For each bake tile and view rotation:
 
-1. **Scene:** build the 3D geometry for the cells from the generators.
+1. **Scene:** build the 3D geometry for the cells from the generators. Micro-terrain (M1.6, D-039) is the exception:
+   - **Upload:** it goes up as textures (drawn micro-cell corners, cell attributes), and the vertex shader builds tops and walls from them.
+   - **Walls:** only walls on the edges facing the viewer are drawn, because those are also the sunlit ones.
+   - **AO:** a pre-pass computes AO per micro-corner.
+   - **Margin:** micro-terrain tiles use an 8-cell margin.
 2. **Shadow map:** an orthographic light view. Its XY extent covers the receivers (owned cells) and its depth range covers every caster.
 3. **G-buffer pass** (integer projection, no anti-aliasing): ramp, quantized light level (N·L and shadow), material pattern, AO darkness, ownership and face kind, plus depth.
 4. **Downsample by vote:** shapes that aren't on the grid (domes, organic forms) will be rendered at a higher resolution and reduced by majority vote on material ID, never by averaging colors. This is needed from M3; terrain doesn't use it.
