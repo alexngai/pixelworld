@@ -222,6 +222,27 @@
         "wall.salmon": "paint-salmon", "trim.salmon": "paint-cream", "accent.salmon": "jade",
         "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "brick",
         "wall.teal": "jade", "trim.teal": "paint-cream", "accent.teal": "tower-gold",
+        "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
+        "wall.zcream": "paint-cream", "trim.zcream": "paint-white", "accent.zcream": "brick",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white", "gable": "roof-slate",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 0, "litFraction": 0.3 }
+    },
+    "building.rowhouse.victorian.pale": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-white", "trim": "paint-cream", "accent": "paint-slate",
+        "wall.blue": "paint-slate", "trim.blue": "paint-white", "accent.blue": "paint-cream",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-sage",
+        "wall.cream": "paint-cream", "trim.cream": "paint-white", "accent.cream": "brick",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "paint-sage",
+        "wall.green": "paint-sage", "trim.green": "paint-cream", "accent.green": "brick",
+        "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white", "accent.grey2": "brick",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "paint-slate",
+        "wall.white2": "paint-white", "trim.white2": "tower-white", "accent.white2": "brick",
+        "wall.white3": "paint-white", "trim.white3": "paint-cream", "accent.white3": "paint-sage",
         "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white", "gable": "roof-slate",
         "window": "glass", "lit": "lit"
       },
@@ -233,9 +254,33 @@
         "wall": "paint-cream", "trim": "paint-white", "accent": "paint-sage",
         "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-slate",
         "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "brick",
+        "wall.cream3": "paint-cream", "trim.cream3": "paint-white", "accent.cream3": "paint-slate",
+        "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white", "accent.grey2": "brick",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "paint-sage",
+        "wall.sand": "sand", "trim.sand": "paint-white", "accent.sand": "paint-sage",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "paint-slate",
+        "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
+        "wall.white2": "paint-white", "trim.white2": "paint-cream", "accent.white2": "brick",
+        "wall.white3": "paint-white", "trim.white3": "tower-white", "accent.white3": "paint-sage",
+        "wall.white4": "paint-white", "trim.white4": "paint-cream", "accent.white4": "paint-slate",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 1, "litFraction": 0.3 }
+    },
+    "building.rowhouse.edwardian.painted": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-cream", "trim": "paint-white", "accent": "paint-sage",
+        "wall.blue": "paint-slate", "trim.blue": "paint-white", "accent.blue": "tower-gold",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-slate",
+        "wall.green": "paint-sage", "trim.green": "paint-cream", "accent.green": "brick",
         "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
         "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "paint-sage",
-        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "paint-slate",
+        "wall.rose": "paint-rose", "trim.rose": "paint-white", "accent.rose": "paint-slate",
+        "wall.salmon": "paint-salmon", "trim.salmon": "paint-cream", "accent.salmon": "jade",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "brick",
         "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
         "wall.white2": "paint-white", "trim.white2": "paint-cream", "accent.white2": "brick",
         "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
@@ -250,13 +295,20 @@
         "wall.butter": "paint-butter", "trim.butter": "paint-white",
         "wall.cream": "paint-cream", "trim.cream": "paint-white",
         "wall.cream2": "paint-cream", "trim.cream2": "paint-white",
+        "wall.cream3": "paint-cream", "trim.cream3": "paint-white",
+        "wall.grey": "tower-white", "trim.grey": "paint-white",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white",
         "wall.mint": "paint-mint", "trim.mint": "paint-white",
         "wall.rose": "paint-rose", "trim.rose": "paint-white",
-        "wall.salmon": "paint-salmon", "trim.salmon": "paint-white",
+        "wall.sand": "sand", "trim.sand": "paint-white",
+        "wall.sand2": "sand", "trim.sand2": "paint-white",
         "wall.sky": "paint-sky", "trim.sky": "paint-white",
-        "wall.white": "paint-white", "trim.white": "stucco",
+        "wall.stucco2": "stucco", "trim.stucco2": "paint-white",
+        "wall.stucco3": "stucco", "trim.stucco3": "paint-white",
+        "wall.white": "paint-white", "trim.white": "tower-white",
         "wall.white2": "paint-white", "trim.white2": "stucco",
-        "wall.white3": "paint-white", "trim.white3": "concrete",
+        "wall.white3": "paint-white", "trim.white3": "tower-white",
+        "wall.white4": "paint-white", "trim.white4": "paint-white",
         "accent": "bark", "eave": "roof-tile",
         "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
         "window": "glass", "lit": "lit"
@@ -269,11 +321,15 @@
         "wall": "stucco", "trim": "paint-white", "accent": "brick",
         "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "bark",
         "wall.cream": "paint-cream", "trim.cream": "paint-white", "accent.cream": "bark",
-        "wall.grey": "concrete", "trim.grey": "paint-white", "accent.grey": "granite",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "brick",
+        "wall.grey": "tower-white", "trim.grey": "paint-white", "accent.grey": "granite",
         "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "bark",
+        "wall.sand": "sand", "trim.sand": "paint-white", "accent.sand": "bark",
         "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "bark",
-        "wall.white": "paint-white", "trim.white": "concrete", "accent.white": "brick",
+        "wall.stucco2": "stucco", "trim.stucco2": "paint-white", "accent.stucco2": "bark",
+        "wall.white": "paint-white", "trim.white": "tower-white", "accent.white": "brick",
         "wall.white2": "paint-white", "trim.white2": "stucco", "accent.white2": "granite",
+        "wall.white3": "paint-white", "trim.white3": "tower-white", "accent.white3": "bark",
         "eave": "roof-tile", "gable": "roof-slate",
         "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
         "window": "glass", "lit": "lit"
@@ -287,8 +343,10 @@
         "wall.brick": "brick", "trim.brick": "paint-cream",
         "wall.butter": "paint-butter", "trim.butter": "paint-white",
         "wall.cream2": "paint-cream", "trim.cream2": "terracotta",
+        "wall.grey": "stucco", "trim.grey": "paint-white",
         "wall.terracotta": "terracotta", "trim.terracotta": "paint-white",
         "wall.white": "paint-white", "trim.white": "paint-cream",
+        "wall.white2": "paint-white", "trim.white2": "tower-white",
         "roof": "roof-flat", "roof.gravel": "stucco",
         "window": "glass", "lit": "lit"
       },
@@ -301,7 +359,11 @@
     },
     "building.chinatown": {
       "generator": "block",
-      "ramps": { "wall": "paint-cream", "wall.butter": "paint-butter", "wall.mint": "paint-mint", "wall.brick": "brick", "trim": "chinatown-red", "eave": "jade", "sign": "chinatown-red", "sign.gold": "tower-gold", "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit" },
+      "ramps": {
+        "wall": "paint-cream", "wall.brick": "brick", "wall.butter": "paint-butter", "wall.green": "paint-sage", "wall.mint": "paint-mint", "wall.white": "paint-white",
+        "trim": "chinatown-red", "accent": "tower-gold", "eave": "jade", "sign": "chinatown-red", "sign.gold": "tower-gold",
+        "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit"
+      },
       "params": { "type": 2, "litFraction": 0.5 }
     },
     "building.commercial.historic": {
@@ -309,6 +371,9 @@
       "ramps": {
         "wall": "terracotta", "trim": "paint-white",
         "wall.brick": "brick", "trim.brick": "paint-cream",
+        "wall.buff": "terracotta", "trim.buff": "paint-cream",
+        "wall.cream": "paint-cream", "trim.cream": "terracotta",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white",
         "wall.granite": "granite", "trim.granite": "paint-cream",
         "wall.white": "paint-white", "trim.white": "terracotta",
         "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit"
@@ -427,6 +492,21 @@
       "generator": "cellhouse",
       "ramps": { "wall": "paint-cream", "roof": "roof-flat", "window": "glass", "detail": "concrete" },
       "params": { "head": 0.14, "tail": 0.3, "tailWidth": 0.45, "hall": 0.8, "wing": 0.55 }
+    },
+    "landmark.gate": {
+      "generator": "gate",
+      "ramps": { "stone": "paint-white", "base": "granite", "tile": "jade", "beam": "chinatown-red", "gold": "tower-gold" },
+      "params": { "width": 1.15, "depth": 0.22, "middle": 0.4 }
+    },
+    "prop.lanterns": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
+      "params": { "span": 24, "height": 12, "every": 4, "sag": 2 }
+    },
+    "prop.lanterns.wide": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
+      "params": { "span": 32, "height": 13, "every": 5, "sag": 2 }
     },
     "prop.streetlight": {
       "generator": "streetLight",
