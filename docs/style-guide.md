@@ -169,7 +169,7 @@ Objects are voxel models generated per semantic group (D-030) and baked with the
 
 ## 13. Buildings and landmarks (M3)
 
-Buildings come from data, Overture footprints with lidar heights and massing (D-052), and are drawn by the `building` generator (v2). Landmarks come from the registry (D-051) and have generators of their own.
+Buildings come from data, Overture footprints with lidar heights and massing (D-052), and are drawn by the `building` generator (v2). Landmarks come from the registry (D-051) and have generators of their own. A style pack can draw typed buildings with generators of its own: San Francisco's are in §15.
 
 **Massing**
 - **Heights:** real metres × `heightStretch` (2.5 when driving and flying, 1.0 when walking).
@@ -239,6 +239,8 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 
   Objects keep a fixed pixel size, so a density reads the same on every level. `depiction.scatter` scales it per level.
 - **Kept clear:** water, roads, paths, a band beside wide roads, cliffs and cells under placed objects.
+- **Canopy trees** (pipeline): a region spec can place trees where a canopy height map shows them (`objects.vegetation` with `canopy`), and `byLandcover` picks species by land cover, so San Francisco's tree-covered parks get cypress and eucalyptus.
+- **Sidewalk trees** (`objects.streetTrees` with `canopy`, group `tree.street`): road cells are kept clear of everything else, so sidewalk trees stand on the verge just past the drawn asphalt, in rows along straight road cells, where the canopy map shows trees beside the real road. This is the one exception to keeping a band beside roads clear.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
 
 ## 15. San Francisco (the `bay-area` pack)
@@ -258,13 +260,27 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 |---|---|---|
 | Victorian rows (before 1906) | saturated: blue, mustard, green, plum, teal, oxblood, a few pastels | cream or white trim, a contrasting accent on the frieze and door |
 | Edwardian rows (1906–1920) | creams, whites, pale tones | white trim, dentils |
-| Stucco rows (1920–1960) | pastel stucco | white garage doors; red tile copings mostly before 1945, storybook gables before 1942 |
+| Stucco rows (1920–1960) | whites, creams and pastel stucco | white garage doors and copings; tiled pent roofs and storybook gables on about a fifth, mostly the 1920s |
 | Mid-century (rowhouse type 3) | white and grey | a band of sliding windows, a flat fascia, sometimes a brick or stone veneer |
 | Apartments | cream, white, brick, terracotta | white cornices, stacked bays |
 | Houses without a row (`building.house`) | the row-house form of their era (type -1), white and grey | — |
 | Chinatown | cream, butter, mint, brick | red balcony rails, red and gold signs, jade eaves, pagoda roofs |
 
 - **Shades:** walls only show shades 2–3 of a paint ramp, so paint ramps are tuned for those two.
+
+**Stucco fronts** (`stuccoRow`): the entry stair sits in a recess on one side, beside a white garage door, with a box, canted or curved bay over it, drawn by stepping the rest of the upper front back. Parapets are raised, pedimented, stepped, curved or plain, with end piers on some. A light well on one lot line breaks each roof, so a row reads as separate houses from above.
+
+**Towers** (`towers.ts`, by year built, D-055)
+
+| Kind | Years | Drawn as |
+|---|---|---|
+| deco (`building.tower.deco`) | 1906–1950, at most 140 m | terracotta, buff, cream or granite piers between recessed window bays over dark spandrels; one or two setbacks with pinnacles; a stepped crown with gold dentils, a pinnacled one, or a lantern with a copper cap |
+| slab | 1950–1983 | white slabs with fins and notched corners; a few dark granite ones |
+| postmodern | 1983–2000 | stone towers with setbacks and a pyramid, stepped or spire top |
+| glass | after 2000 | pale sky-blue panels in white mullions; a sloped, stepped, open-fin or spire crown |
+
+- **No dark-glass boxes:** downtown reads light. Towers with no record take a kind by seed (deco 0.30, glass 0.25, slab 0.20, postmodern 0.20, granite 0.05), and Overture's `facade_material: glass` forces glass.
+- **Diagonal faces:** faces turned 45° (the grid south of Market) get flush windows. Round footprints never step back.
 
 **Street detail (walking level):** window hoods and accent aprons, paired windows beside the bay, corner stores on some corner lots, and roof decks with a stair penthouse. Stoops aren't drawn, because they would overhang the street or leave the footprint.
 
@@ -281,3 +297,6 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | `landmark.hall.domed` | `domedHall` | City Hall |
 | `landmark.rotunda` | `rotunda` | the Palace of Fine Arts: a red dome on column clusters, a curved colonnade |
 | `landmark.tower.mast` | `tripodMast` | Sutro Tower, in red and white bands |
+| `landmark.windmill` | `windmill` | the Dutch and Murphy windmills in Golden Gate Park: octagonal smock mills, a cap, four sails facing the sea, drawn 1.35× to read over the park's trees |
+| `landmark.lighthouse` | `lighthouse` | the Alcatraz light: a tapering tower, a gallery, a lantern lit at night |
+| `landmark.cellhouse` | `cellhouse` (a line landmark) | the Alcatraz cellhouse: a long hall of barred windows, a skylight monitor, a taller head block |
