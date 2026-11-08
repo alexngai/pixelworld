@@ -96,11 +96,13 @@ test.describe("US Southwest (M1)", () => {
   });
 
   test("streams only the chunks it needs and stays hole-free far from the start", async ({ page }) => {
-    // Grand Canyon Village, ~680 cells east of the Las Vegas start.
-    await open(page, "zoom=2&rot=2&rover=876.7,404.4");
+    // Grand Canyon Village, ~720 cells east of the Las Vegas start in the warped layout.
+    await open(page, "zoom=2&rot=2&rover=913.8,401.6");
     const s = await stats(page);
     expect(s.chunksLoaded).toBeGreaterThan(0);
     expect(s.chunksLoaded).toBeLessThan(s.chunksTotal / 4);
+    // the warp gives the South Rim 150 m cells (the Strip, at the start, 100 m)
+    expect((s as unknown as { metersPerCell: number }).metersPerCell).toBeCloseTo(150, -1);
     const { data } = await pixels(page);
     let background = 0;
     for (let i = 0; i < data.length; i += 4) if (hex(data, i) === "#1e1c2b") background++;
@@ -110,7 +112,7 @@ test.describe("US Southwest (M1)", () => {
   test("micro-terrain is hole-free in every rotation, and the rover rides on it", async ({ page }) => {
     for (const rot of [0, 1, 2, 3]) {
       // Grand Canyon Village: canyon walls, the rim, AZ-64
-      await open(page, `zoom=2&rot=${rot}&rover=876.7,404.4`);
+      await open(page, `zoom=2&rot=${rot}&rover=913.8,401.6`);
       const { data } = await pixels(page);
       let background = 0;
       for (let i = 0; i < data.length; i += 4) if (hex(data, i) === "#1e1c2b") background++;
@@ -120,7 +122,7 @@ test.describe("US Southwest (M1)", () => {
     const heights = await page.evaluate(() => {
       const out: number[] = [];
       for (let i = 0; i < 8; i++) {
-        window.__pixelworld!.setRover(876.1 + i * 0.25, 404.6);
+        window.__pixelworld!.setRover(913.2 + i * 0.25, 401.8);
         out.push((window.__pixelworld!.stats() as { rover: { h: number } }).rover.h);
       }
       return out;

@@ -1,37 +1,91 @@
 {
-  "packageHash": "f0a5eddd5ccb77779d9c1606d695d97cd0ea32cd5500fa28fc73b1de31836676",
+  "packageHash": "b6f454f3b3a324d55950622859f4c745a03eb9d55852e363a801538243595514",
   "cells": [
-    1028,
-    700
+    1155,
+    709
   ],
-  "chunks": 187,
+  "chunks": 228,
   "heightRange": [
-    2,
-    59
+    0,
+    102
   ],
   "inputs": {
     "roadSegments": 26298,
     "riverLines": 1032
   },
+  "warp": {
+    "method": "v2",
+    "cells": [
+      1155,
+      709
+    ],
+    "folds": 0,
+    "maxAnisotropy": 15.277,
+    "focus": [
+      {
+        "name": "las-vegas-strip",
+        "target": 100.0,
+        "achieved": 100.2,
+        "error": 0.002
+      },
+      {
+        "name": "hoover-dam",
+        "target": 100.0,
+        "achieved": 100.0,
+        "error": 0.0
+      },
+      {
+        "name": "lake-mead",
+        "target": 250.0,
+        "achieved": 250.5,
+        "error": 0.002
+      },
+      {
+        "name": "grand-canyon-village",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.001
+      },
+      {
+        "name": "desert-view",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.0
+      }
+    ],
+    "pins": [],
+    "solveSeconds": 17.159
+  },
+  "objects": {
+    "building.commercial": 2656,
+    "building.parking": 83,
+    "building.residential": 2789,
+    "building.tower": 85,
+    "building.tower.hotel": 22,
+    "landmark.dam": 1,
+    "landmark.sign": 1,
+    "landmark.tower.lookout": 1,
+    "landmark.tower.observation": 1
+  },
   "roads": {
-    "cells": 13453,
-    "edges": 15156,
+    "cells": 24412,
+    "edges": 27092,
     "discontinuous_edges": 0,
     "steep_edges": 0,
-    "components": 5,
+    "components": 3,
     "split_segments": 0,
     "disconnected_junctions": 0,
     "ok": true
   },
   "surfaces": {
-    "rock": 36921,
-    "woodland": 101513,
-    "forest": 17744,
-    "scrub": 185863,
-    "water": 7621,
-    "desert": 213627,
-    "grass": 148284,
-    "farmland": 417,
-    "urban": 7610
+    "rock": 71744,
+    "woodland": 122183,
+    "forest": 21931,
+    "scrub": 171806,
+    "water": 14336,
+    "desert": 226347,
+    "grass": 142672,
+    "farmland": 414,
+    "urban": 47462
   }
 }
