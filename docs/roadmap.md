@@ -485,6 +485,61 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 - **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
 - **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
 
+### M3.5: San Francisco — a city by its fabric — first cut done
+
+**Goal:** a second region recognizable by its ordinary streets, not only by its landmarks. This pulls part of M5 (a second region and style pack) forward.
+
+![San Francisco's fabric: Victorian rows by Alamo Square and the Mission (walking level), Chinatown, and the Sunset's stucco rows (driving level)](images/sf-fabric.png)
+
+![San Francisco's landmarks: Coit Tower on Telegraph Hill, the Golden Gate Bridge, the Bay Bridge's west span, City Hall](images/sf-landmarks.png)
+
+**What was built:**
+- **Region:** three levels on uniform layouts.
+  - **Driving:** the whole city at 25 m.
+  - **Walking:** the northeast at 10 m.
+  - **Flying:** the Bay at 100 m.
+- **Style pack:** `bay-area`, with 42 ramps: marine light, ten house paints, slate, tile and tar roofs, granite, terracotta, brick, Chinatown red and jade, and orange and grey bridges. The web app now loads the pack a world names.
+- **Building typologies (D-055):**
+  - **Features:** from geometry and the street: width, depth, shared walls, the front's direction, corner lots, over water.
+  - **Facts:** from DataSF's assessor roll and parcels (year built, storeys, use, neighbourhood). 160,829 of 168,920 buildings matched to a lot.
+  - **Rules:** in the spec. The driving level has 72,935 stucco rows, 26,961 Edwardian rows, 17,632 Victorian rows, 19,205 houses, 8,546 apartment blocks, 5,150 historic commercial blocks, 2,884 warehouses, 924 Chinatown buildings, 123 pier sheds and 52 1920s towers.
+- **Street-facing generators:** `rowhouse` and `block`. They draw bays, false fronts with cornices, painted-lady trim, garages, Queen Anne gables, tile eaves, balconies, pagoda roofs, bulkheads and sawtooth roofs, checked against the style guide on 810 generated models.
+- **Landmarks (D-051, D-056):** registry entries and generic generators for the Golden Gate Bridge, the Bay Bridge's west span, the Transamerica Pyramid, Coit Tower, the Ferry Building, City Hall and Sutro Tower.
+  - **Long landmarks:** owned per voxel column and cut into pieces that share their line. This cut a Bay Bridge view from 215 s to 22 s of software baking.
+  - **Bridges:** each lies on the road it carries, with water under the deck.
+
+**Blind evaluation.** A fresh-context agent saw eleven unlabelled views in shuffled order, two of them decoys from the Southwest, with no hint of the region. It was then asked which guesses had leaned on other views.
+
+| View | Its best guess | Confidence | Leaned on other views |
+|---|---|---|---|
+| Coit Tower, driving | Coit Tower, San Francisco | 70 | no |
+| Golden Gate Bridge, driving | the Golden Gate Bridge | 65 | slightly |
+| Bay Bridge, driving | the Bay Bridge west span | 35 | strongly |
+| Outer Sunset, driving | San Francisco, the Sunset | 30 | partly |
+| Richmond, driving | San Francisco, the Mission | 20 | yes |
+| Victorians, walking | San Francisco, SoMa | 15 | yes |
+| Mission, walking | San Francisco, Hayes Valley | 10 | yes |
+| Chinatown, walking | an older downtown (San Francisco) | 10 | yes |
+| Financial District, driving | downtown Los Angeles (San Francisco second) | 30 | no |
+| Decoy: the Strip | Las Vegas | 10 | no |
+| Decoy: the canyon rim | the Grand Canyon | 35 | no |
+
+- **Landmarks:** they now carry the city on their own. An earlier round, before them, put the Victorian rows in Dublin and Chinatown in Berlin; a second pass on the facades followed it.
+- **Fabric:** it reads as San Francisco only once a landmark has suggested the city. In the evaluator's words, "colours, roofs and window textures look the same everywhere", and ordinary street views carry no city signal of their own.
+
+**Known issues and next steps:**
+- **Fabric that speaks for itself:**
+  - Fewer dark roofs (light tar and gravel are the city's roofscape), paint schemes per neighbourhood and era rather than one shared set, and street trees where the canopy data has them on the driving level.
+  - Muni and cable-car lines, the hills' relief at street level, and fog.
+- **Landmark detail:**
+  - The Golden Gate's towers are thin sticks with no stepped portals, and its deck isn't orange.
+  - The Bay Bridge's towers are single poles.
+  - The Financial District reads as Los Angeles: the Transamerica Pyramid was out of frame, and Salesforce Tower is a generic box.
+  - The landmarks are generic depictions; none are heroes (D-053) yet.
+- **Under the bridges:** faint streaks remain on the water where the road bed was flattened before the deck took the road.
+- **Walking level:** its road report has one split segment and two disconnected junctions at 10 m cells. Steep paved slopes draw as terraces whose pale risers look like stripes.
+- **Package size:** the driving level's `objects.json.gz` is 8 MB for 169k buildings. Footprints relative to their anchor and 16-bit seeds would bring it to about 5.7 MB, but the seed change would alter every existing world's buildings.
+
 ### M4: Drive, fly, build
 
 **Goal:** make the world playable.
@@ -524,7 +579,7 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between); M4 is next.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between), and M3.5 (San Francisco) has a first cut; M4 is next.
 
 ## 3. Technology tracks
 

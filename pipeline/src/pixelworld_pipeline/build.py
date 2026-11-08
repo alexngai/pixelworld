@@ -157,6 +157,42 @@ def refresh_heroes(region_path: Path, out_dir: Path) -> list[dict]:
     return heroes or []
 
 
+def bridge_decks_over_water(
+    instances: list[dict],
+    wet: np.ndarray,
+    shape: tuple[int, int],
+    on_road: np.ndarray | None = None,
+    reach: int = 2,
+) -> np.ndarray:
+    """Cells under bridge landmarks (their footprints) that are water, and the
+    road cells over water within `reach` cells of a deck: the road the bridge
+    carries, drawn in steps where its line isn't a grid direction."""
+    from rasterio import features
+    from rasterio.transform import Affine
+
+    polys = [
+        shapely.Polygon(inst["fp"])
+        for inst in instances
+        if inst.get("fp") and inst["g"].startswith("landmark.bridge")
+    ]
+    if not polys:
+        return np.zeros(shape, dtype=bool)
+    # footprints are in cells: the identity transform rasterizes them on the grid
+    mask = features.geometry_mask(polys, shape, Affine.identity(), invert=True, all_touched=True)
+    from scipy import ndimage
+
+    # land cover sees a deck over the water as built-up: thin gaps in the water
+    # (a road or two cells wide, water on both sides) count as water here
+    closed = ndimage.binary_closing(np.pad(wet, reach), iterations=reach)[
+        reach:-reach, reach:-reach
+    ]
+    out = mask & closed
+    if on_road is not None and reach > 0:
+        near = ndimage.binary_dilation(mask, iterations=reach)
+        out |= near & closed & on_road
+    return out
+
+
 def paved_band(on_road: np.ndarray, half_width: np.ndarray) -> np.ndarray:
     """Cells whose centre lies within the half-width (cells) of the nearest road
     cell's centre: the pavement of a road wider than its own cells."""
@@ -608,6 +644,27 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             water=is_water,
         )
         print(f"objects: {object_counts}")
+        # over water, a bridge's deck is the road: the water under it stays water (D-056)
+        under = bridge_decks_over_water(
+            instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road
+        )
+        if under.any():
+            from scipy import ndimage
+
+            road_layer.mask[under] = 0
+            road_layer.cls[under] = 0
+            if road_hw is not None:
+                road_hw[under] = 0
+            # the level of the water around (cells land cover took for land have none)
+            lvl = np.where(water != NO_WATER, water, np.iinfo(np.int16).min).astype(np.int32)
+            around = ndimage.grey_dilation(lvl, size=(7, 7))
+            level = np.where(water != NO_WATER, water, around)
+            level = np.where(level > np.iinfo(np.int16).min, level, low)
+            base = np.where(under, level, base).astype(np.int16)
+            shape = np.where(under, 0, shape).astype(np.uint8)
+            water = np.where(under, base, water).astype(np.int16)
+            surface = np.where(under, S["water"], surface).astype(surface.dtype)
+            print(f"bridges: {int(under.sum())} cells of water under their decks")
     attribution = [
         ATTRIBUTION[region.sources["dem"]["kind"]],
         ATTRIBUTION[region.sources["landcover"]["kind"]],

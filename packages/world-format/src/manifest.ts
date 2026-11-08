@@ -138,6 +138,11 @@ export interface ObjectsFile {
     cn?: number;
     yr?: number;
     fl?: number;
+    /** Base height in steps (long landmarks). */
+    z0?: number;
+    /** A piece of a long landmark: the whole line's ends and half-width, in cells. */
+    ln?: [number, number, number, number];
+    lw?: number;
   }[];
 }
 

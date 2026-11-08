@@ -210,3 +210,99 @@ def test_hero_bakes_and_paints_are_packaged_and_refreshed(registry, tmp_path):
     assert refresh_heroes(spec_path, out) == []
     assert "heroes" not in json.loads((out / "manifest.json").read_text())
     assert not (out / "heroes").exists()
+
+
+def test_bridges_turn_to_the_grid_with_their_road_and_keep_their_foot(registry):
+    import math
+
+    lm_root = registry / "_landmarks"
+    # a bridge about 10° off north, like the Golden Gate
+    (lm_root / "span.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "line": [[-115.1955, 36.0015], [-115.1945, 36.0085]],
+                "crest": 60,
+                "base": 0,
+                "thickness": 20,
+                "bulge": 0,
+                "snap": True,
+                "depictions": {"generic": {"group": "landmark.bridge.suspension"}},
+            }
+        )
+    )
+    for snap in (None, {"roads": {"angle": 16}}):
+        path = registry / "r" / "region.yaml"
+        extra = {"snap": snap} if snap else {}
+        path.write_text(yaml.safe_dump(SPEC | {"objects": {"landmarks": ["span"]}} | extra))
+        r = Region.load(path)
+        blocked = np.zeros(r.cells[::-1], dtype=bool)
+        out, _ = objects.place(r, blocked, [], heights=lambda x, y, m: m / 10.0)
+        bridge = out[0]
+        fp = np.asarray(bridge["fp"])
+        # the band's long direction
+        d = fp[len(fp) // 2 - 1] - fp[0]
+        angle = math.degrees(math.atan2(d[0], -d[1]))  # 0 = north
+        if snap is None:
+            assert 5 < abs(angle) < 15
+        else:
+            assert abs(angle) < 0.5
+            assert bridge["z0"] == 0.0 and bridge["top"] == 6.0
+
+
+def test_snapped_bridges_lie_on_the_road_they_carry(registry):
+    (registry / "_landmarks" / "span.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "line": [[-115.1955, 36.0015], [-115.1945, 36.0085]],
+                "crest": 60,
+                "thickness": 20,
+                "bulge": 0,
+                "snap": True,
+                "depictions": {"generic": {"group": "landmark.bridge.suspension"}},
+            }
+        )
+    )
+    path = registry / "r" / "region.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            SPEC | {"objects": {"landmarks": ["span"]}, "snap": {"roads": {"angle": 16}}}
+        )
+    )
+    r = Region.load(path)
+    blocked = np.zeros(r.cells[::-1], dtype=bool)
+    alone, _ = objects.place(r, blocked, [])
+    x0 = float(np.asarray(alone[0]["fp"])[:, 0].mean())
+    road = [("r", 1, [(np.array([x0 + 1.5, x0 + 1.5]), np.array([0.0, 100.0]))])]
+    on_road, _ = objects.place(r, blocked, [], streets=road)
+    assert abs(float(np.asarray(on_road[0]["fp"])[:, 0].mean()) - (x0 + 1.5)) < 0.05
+    # a road snapping left slanted: the bridge follows it, piece by piece
+    ys = np.array([0.0, 100.0])
+    slanted = [("r", 1, [(x0 + 0.1 * (ys - 50.0), ys)])]
+    on_slant, _ = objects.place(r, blocked, [], streets=slanted)
+    for piece in on_slant:
+        c = np.asarray(piece["fp"]).mean(axis=0)
+        assert abs(c[0] - (x0 + 0.1 * (c[1] - 50.0))) < 0.05
+
+
+def test_water_under_a_bridge_deck_stays_water():
+    from pixelworld_pipeline.build import bridge_decks_over_water
+
+    wet = np.zeros((10, 10), dtype=bool)
+    wet[:, 4:] = True  # the shore at x = 4
+    instances = [
+        {"g": "landmark.bridge.suspension", "fp": [[2.0, 3.0], [8.0, 3.0], [8.0, 4.0], [2.0, 4.0]]},
+        {"g": "building.house", "fp": [[0.0, 0.0], [9.0, 0.0], [9.0, 9.0], [0.0, 9.0]]},
+    ]
+    under = bridge_decks_over_water(instances, wet, (10, 10))
+    assert np.argwhere(under).tolist() == [[3, 4], [3, 5], [3, 6], [3, 7]]
+    # the road it carries, stepping beside the deck over the water, goes too; roads on land stay
+    road = np.zeros((10, 10), dtype=bool)
+    road[5, 2:9] = True
+    road[8, 6] = True  # a road over water, but too far from the deck
+    under = bridge_decks_over_water(instances, wet, (10, 10), road)
+    assert under[5, 4:8].all() and not under[5, 2:4].any() and not under[8, 6]
+    # land cover taking the deck itself for land: a one-cell gap in the water still counts
+    gap = wet.copy()
+    gap[:, 6] = False
+    under = bridge_decks_over_water(instances, gap, (10, 10))
+    assert under[3, 6] and under[3, 4:8].all()

@@ -1,0 +1,332 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "sf-fly",
+  "name": "San Francisco Bay (flying)",
+  "chunkSize": 64,
+  "cellsX": 274,
+  "cellsY": 234,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "61ba01567b6265f5545e85e2e8970ff1ad47c316a0ea61e7889b7180b9253edc",
+      "heightRange": [
+        0,
+        17
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "3f3fcd4a75e77ab3204bea38d50877e8c88839e28976c108931bd4a205718376",
+      "heightRange": [
+        0,
+        13
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "e12e16aad3a2e86d7559f477e4c0566ea55d08c83c027c7b6f52e7a6315320a4",
+      "heightRange": [
+        0,
+        3
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "1b76551bb11101528c00a49dbf1e9120f500a866acee22928f779addbd80f4e9",
+      "heightRange": [
+        0,
+        12
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "f4ad4b678c448dc8c28c1c26b537c581cd4fd2e33da040875e0b0725406cf256",
+      "heightRange": [
+        1,
+        20
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "c3a9ecf0c3398baed62e29b489908dfcf225a9ec4778f7192085556eee2fba40",
+      "heightRange": [
+        0,
+        15
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "3609abb1fa782287f8a3ab7d70480a0740a9199e0853bb05b63e1baf063cc3d8",
+      "heightRange": [
+        0,
+        12
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "868c41e80de7bba61d03fc048806a1d13f423d4c63691b4b8777b8b112ea37f1",
+      "heightRange": [
+        0,
+        6
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "3863f72cf31611d8d0ea25cb37aee74217b6169d0c5eee29948d9bbf8d2d3e36",
+      "heightRange": [
+        -1,
+        2
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "77331fc328ba568ae336d004b69421b9a410e11bd9af52a572309254ed0b3eab",
+      "heightRange": [
+        0,
+        4
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "a4f0aa5b59b9ac3a87e1b711e8616fb2756d1a88d11536bff2d9c5181e9aa3e9",
+      "heightRange": [
+        0,
+        6
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "1c601297f77c0fd8a5daf5e1eb08907c8f85063d7293344937395008268c182a",
+      "heightRange": [
+        0,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "48a0b4ab7e4c3dd48658af29976c34c5fdfde652e961bd0c1ee776f04380838d",
+      "heightRange": [
+        0,
+        7
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "e34abe1ca89c37cc50d979a78215bc75b40aeb6aac629b39f254e25c63d36172",
+      "heightRange": [
+        0,
+        1
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "11b01be4c25bb49fb1dee64b3636c15f4783450ca5e22ceae29134d50af762e5",
+      "heightRange": [
+        0,
+        1
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "90f26bf761c42be3fc5ff13be12faee12bfe927794178bec6df1e50938523e62",
+      "heightRange": [
+        0,
+        6
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "16c9c99e66178d33f9602cb8c54ef619fb40c620b46d0833890a9457a7ac6cb4",
+      "heightRange": [
+        0,
+        18
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "4d299852d99b997e9a040eff908e81b39a0a5bd3079e0b7959a7fb4c91f39631",
+      "heightRange": [
+        0,
+        8
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "14500c4e009cd9f2ad67ca9729db626791f58088cebcb5250671bbc3c8322c25",
+      "heightRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "a16dc09d9e19ce0f2d7594c4a9d2a8240093c5591ac3e485d860c65988061ab0",
+      "heightRange": [
+        0,
+        1
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 100.0,
+    "metersPerStep": 20.412415,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.0
+  },
+  "heightRange": [
+    -1,
+    20
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "bay-area",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "primary",
+    "2": "trunk",
+    "3": "motorway"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 123,
+    "y": 122
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=37.795 +lon_0=-122.405 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -122.56,
+      37.69,
+      -122.25,
+      37.9
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "b3424765f5eab8bc",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "f01a93bef10295613ce5f6bb331bcbd69effcc405e869d64499e2909ae743dc7",
+    "count": 474
+  },
+  "depiction": {
+    "heightStretch": 2.0,
+    "scatter": 0.6
+  },
+  "level": "fly",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "sf-fly",
+      "label": "Flying over the Bay"
+    },
+    {
+      "name": "drive",
+      "world": "sf",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "sf-walk",
+      "label": "Walking the hills"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      19,
+      16
+    ],
+    "sha256": "38a58f9555770f5a9a080ba0519c76a7a85927915ce001be5b16f948795280ba"
+  },
+  "packageHash": "0ca9f85e98f79aa35a0fa603f388e238eea4dea8e73edd3d40c56cae8905e0c4"
+}

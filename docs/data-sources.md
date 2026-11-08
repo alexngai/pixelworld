@@ -56,6 +56,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | Building heights | 3D city models; lidar (surface minus terrain) | OSM `height` / `building:levels`; Overture height | estimate from use, area and region style |
 | Roof shape | 3D city models (LoD2) | OSM `roof:shape`; roof fitting from lidar (later) | style-pack default by use |
 | Building use | OSM building/amenity/shop tags; POIs inside the footprint | surrounding land use | generic, by zone |
+| Building age and type | city assessor and parcel records (e.g. DataSF); footprint geometry and street frontage (D-055) | OSM `start_date`, `building:architecture` | type by shape and neighbourhood |
 | Trees / canopy | lidar (3DEP, AHN, …); Meta/WRI 1 m canopy height | OSM woods and individual trees; city tree inventories | density from land cover |
 | Colors (roofs, ground tint) | sampled from NAIP / national orthophotos | Sentinel-2 | style-pack palette |
 | Small features (pools, parking, sports fields) | OSM | imagery segmentation (later) | omitted |
@@ -98,6 +99,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | Overture buildings | footprints merged from OSM, Microsoft, Google Open Buildings and others; heights where known | global | ODbL |
 | Microsoft building footprints | ML footprints, some heights | global | ODbL |
 | Google Open Buildings (incl. 2.5D) | ML footprints; heights in some areas | Global South focus | CC BY 4.0 / ODbL |
+| DataSF assessor roll and parcels | year built, storeys, units, use and neighbourhood per lot; lot polygons | San Francisco | ODC PDDL 1.0 |
 
 ### Vector features and POIs
 

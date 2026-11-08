@@ -353,3 +353,33 @@ The point is more room for visual interest; both halves are wanted.
   - **Density:** each level's `depiction.scatter` scales it: 0.6 flying, 1.0 driving and walking.
 - **Pipeline objects:** trees where they really stand (the WRI/Meta 1 m canopy height map, CC BY 4.0, at 3 m or more on the walking level), street trees, street lights along main streets, and traffic signals where three or more street segments meet. These matter for gameplay (collision, landmarks to steer by) or need data the client doesn't have.
 - **Rejected alternative:** the pipeline placing every shrub. The driving Southwest would carry hundreds of thousands of instances for decoration that needs no facts.
+
+### D-055: Building typologies from geometry, streets and public records (accepted)
+- **Why:** a city is recognized by its ordinary fabric as much as by its landmarks. In San Francisco that means rows of narrow Victorians and Edwardians with bay windows, the stucco rows of the Sunset, corniced apartment blocks, Chinatown and the piers. A generic "residential" box can't carry any of it.
+- **Features (pipeline, `typology.py`):** for each building:
+  - width and depth (its oriented rectangle)
+  - the share of its outline against neighbours
+  - the side facing the nearest street, from the straightened network
+  - corner lots, and whether it stands over water
+  - from a facts source where one exists, year built, storeys, use and neighbourhood
+- **Facts for San Francisco:** DataSF's parcels and the assessor's secured roll (ODC PDDL), joined by map lot. Condominium units are aggregated: the earliest year, the most storeys, the sum of units, the most common use. 160,829 of 168,920 buildings on the driving level fall on a lot with a record.
+- **Rules:** an ordered list in the region spec (`objects.typology.rules`) maps features to a group; the first match wins, and unmatched buildings keep their generic group. A rule names any of: a year range, uses, neighbourhoods, width, depth, shared-wall share, storeys, height, over water, corner lot. Rules replace only generic groups unless they say `from:`.
+- **Hints:** typed buildings carry `fr` (the front's direction), `cn` (corner), `yr` (year built) and `fl` (storeys) for their generator.
+- **Generators (`facades.ts`):**
+  - `rowhouse`: Victorian, Edwardian and stucco variants. A bay is drawn by stepping the rest of the front back a voxel. Each house has a false front with a cornice, a frieze and string courses, a garage and an entry door, and sometimes a short Queen Anne or storybook gable.
+  - `block`: apartments with stacked bays, historic commercial blocks, Chinatown (balconies, signs, jade eaves, pagoda roofs), pier sheds and warehouses.
+  - Both follow the style guide's building rules: inside the footprint, no overhangs, glass only on the skin.
+- **Tuned by blind tests:** a fresh-context evaluator first read the Victorian rows as Dublin and Chinatown as Berlin, because of pitched slate roofs and plain colour. Victorian rows are now mostly flat-roofed behind false fronts, with painted-lady trim.
+- **Rejected alternatives:**
+  - Classifying by neighbourhood polygons alone. It needs no records, but every block in a neighbourhood would get the same type, and a 1960s apartment block among Victorians is part of the look. Neighbourhoods remain a rule field.
+  - Imagery (roof colour from NAIP). Facades, which carry most of the look, can't be seen from above.
+
+### D-056: Long landmarks: per-column ownership, a fixed base, snapped with their road (accepted)
+- **Why:** the Golden Gate Bridge is 109 cells long on the driving level. Objects were owned by their anchor's cell and baked only in tiles whose slice held that anchor, so anything longer than a tile's margin would be clipped.
+- **Ownership:** a footprint wider than 16 cells is owned per voxel column, each column by the cell under it. Faces never merge across cell lines, and the object joins every slice its footprint reaches. Each tile bakes its own part, with shadows from the whole.
+- **Base:** such landmarks carry `z0`, their base in steps (a bridge's water level), so every tile builds them at the same height wherever its slice ends.
+- **Snapping:** a line landmark marked `snap: true` (bridges) moves with the road shift at its middle and turns about it to the nearest grid direction within the roads' snap angle, as its road did (D-049). Where a road runs along it, the bridge instead lies on that road's drawn axis: a line fitted through the road along the span. A road too slanted to straighten within `maxShift` keeps its slant (the Golden Gate's does), and so does its bridge, so the deck always carries the road. Dams don't snap: they stay fitted to their canyon.
+- **Water under the deck:** over water a bridge's deck is the road. Cells under a bridge piece that are water lose their road decal and stay water, so the road isn't painted on the bay beneath the deck. The road report still checks the network as rasterized.
+- **Pieces:** a snapped line landmark is cut into pieces of at most 12 cells along its line.
+  - **Shared line:** each piece carries the whole line (`ln`, `lw`), so the generator measures its position along the span (towers, cable sag, hangers) against the whole and the pieces join exactly.
+  - **Why:** a diagonal bridge in one piece is a square voxel box. The Bay Bridge's west span was about 335 million voxels, mostly empty, rebuilt in every tile it touched; a view of it took 215 s to bake in software.

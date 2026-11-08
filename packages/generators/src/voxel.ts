@@ -59,16 +59,32 @@ export interface VoxelScale {
 /**
  * Mesh the visible faces of a voxel model, merging coplanar faces of the
  * same material into rectangles (greedy meshing). The model's (0, 0, 0)
- * corner sits at `origin` (world units); `cell` is the owning cell.
+ * corner sits at `origin` (world units); `cell` is the owning cell, or
+ * "column" to give every voxel column the cell under it (objects bigger than
+ * a bake tile's margin: each tile then bakes its own part, and faces are not
+ * merged across cell lines).
  */
 export function meshVoxels(
   model: VoxelModel,
   scale: VoxelScale,
   origin: readonly [number, number, number],
-  cell: readonly [number, number],
+  cell: readonly [number, number] | "column",
   mb: MeshBuilder = new MeshBuilder(),
 ): MeshBuilder {
   const dims = [model.sx, model.sy, model.sz];
+  const perColumn = cell === "column";
+  const cellOf = (x: number, y: number): [number, number] => [
+    Math.floor(origin[0] + (x + 0.5) * scale.h),
+    Math.floor(origin[1] + (y + 0.5) * scale.h),
+  ];
+  // per-column ownership: an id per voxel column's cell, so faces only merge within a cell
+  const colKey = perColumn ? new Int32Array(model.sx * model.sy) : null;
+  if (colKey)
+    for (let y = 0; y < model.sy; y++)
+      for (let x = 0; x < model.sx; x++) {
+        const [cx, cy] = cellOf(x, y);
+        colKey[y * model.sx + x] = (cx & 0xffff) | ((cy & 0x7fff) << 16);
+      }
   // For each axis d and direction (−/+), sweep slices and merge face masks.
   for (let d = 0; d < 3; d++) {
     const u = (d + 1) % 3;
@@ -76,6 +92,7 @@ export function meshVoxels(
     const du = dims[u]!;
     const dv = dims[v]!;
     const mask = new Int32Array(du * dv);
+    const owner = new Int32Array(du * dv);
     for (const dir of [-1, 1] as const) {
       for (let slice = 0; slice < dims[d]!; slice++) {
         mask.fill(0);
@@ -91,6 +108,7 @@ export function meshVoxels(
             if (!m) continue;
             if (model.get(p[0]! + q[0]!, p[1]! + q[1]!, p[2]! + q[2]!)) continue;
             mask[j * du + i] = m;
+            if (colKey) owner[j * du + i] = colKey[p[1]! * model.sx + p[0]!]!;
           }
         // greedy rectangles
         for (let j = 0; j < dv; j++)
@@ -100,15 +118,25 @@ export function meshVoxels(
               i++;
               continue;
             }
+            const o = owner[j * du + i]!;
+            const same = (k: number) => mask[k] === m && owner[k] === o;
             let w = 1;
-            while (i + w < du && mask[j * du + i + w] === m) w++;
+            while (i + w < du && same(j * du + i + w)) w++;
             let h = 1;
             outer: while (j + h < dv) {
-              for (let k = 0; k < w; k++) if (mask[(j + h) * du + i + k] !== m) break outer;
+              for (let k = 0; k < w; k++) if (!same((j + h) * du + i + k)) break outer;
               h++;
             }
             for (let jj = 0; jj < h; jj++) for (let k = 0; k < w; k++) mask[(j + jj) * du + i + k] = 0;
-            emitFace(mb, d, u, v, dir, slice, i, j, w, h, model.materials[m]!, scale, origin, cell);
+            let own: readonly [number, number];
+            if (perColumn) {
+              const at = [0, 0, 0];
+              at[d] = slice;
+              at[u] = i;
+              at[v] = j;
+              own = cellOf(at[0]!, at[1]!);
+            } else own = cell as readonly [number, number];
+            emitFace(mb, d, u, v, dir, slice, i, j, w, h, model.materials[m]!, scale, origin, own);
             i += w;
           }
       }

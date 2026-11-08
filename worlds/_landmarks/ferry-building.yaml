@@ -1,0 +1,12 @@
+name: San Francisco Ferry Building
+wikidata: Q1408117
+# its long hall along the Embarcadero (Overture footprint's long axis)
+line: [[-122.39272, 37.79476], [-122.39416, 37.79630]]
+height: 75          # the clock tower
+thickness: 48
+bulge: 0
+snap: true
+clear: 40
+replaces: [San Francisco Ferry Building]
+depictions:
+  generic: { group: landmark.hall.clock }

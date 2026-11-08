@@ -661,14 +661,83 @@ def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) 
     return out
 
 
-def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -> list[list[float]]:
+def _street_axis(
+    a: np.ndarray, b: np.ndarray, streets: list | None
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """The axis of the street a bridge a→b carries: a line fitted through the
+    nearest street points along the span (within 4 cells), as long as a→b and
+    centred where a→b's middle falls on it; None where no street runs along."""
+    if not streets:
+        return None
+    geoms = []
+    for _, _, parts in streets:
+        for xs, ys in parts:
+            if len(xs) >= 2:
+                geoms.append(shapely.LineString(np.column_stack([xs, ys])))
+    if not geoms:
+        return None
+    tree = shapely.STRtree(geoms)
+    pts = []
+    for t in np.linspace(0.05, 0.95, 19):
+        pt = a + t * (b - a)
+        i = tree.query_nearest(shapely.Point(pt), max_distance=4.0)
+        if len(i) == 0:
+            continue
+        g = geoms[int(i[0])]
+        q = g.interpolate(g.project(shapely.Point(pt)))
+        pts.append((q.x, q.y))
+    if len(pts) < 5:
+        return None
+    q = np.asarray(pts)
+    c = q.mean(axis=0)
+    _, _, vt = np.linalg.svd(q - c)
+    u = vt[0]
+    if np.dot(u, b - a) < 0:
+        u = -u
+    half = 0.5 * float(np.hypot(*(b - a)))
+    mid = c + u * float(np.dot(0.5 * (a + b) - c, u))
+    return mid - half * u, mid + half * u
+
+
+def dam_footprint(
+    p: Placement,
+    line,
+    thickness_m: float,
+    bulge: float = 0.15,
+    snap_deg: float | None = None,
+    streets: list | None = None,
+) -> list[list[float]]:
     """An arch-dam footprint in cells: a band along the abutment line, bowed
-    upstream (to the left of the line) by `bulge` of its length."""
+    upstream (to the left of the line) by `bulge` of its length.
+
+    With snap_deg (bridges), the line moves with its road (the shift field at
+    its middle) and turns about its middle to the nearest of the 8 grid
+    directions within that many degrees, as its road did (D-049); dams stay
+    fitted to their canyon."""
     (lon0, lat0), (lon1, lat1) = line
     xs, ys = transform_points("EPSG:4326", p.region.crs, [lon0, lon1], [lat0, lat1])
     ax, ay = p.to_cells(np.array(xs), np.array(ys), shift=False)  # fitted to its canyon
     a = np.array([ax[0], ay[0]])
     b = np.array([ax[1], ay[1]])
+    if snap_deg is not None:
+        mid = 0.5 * (a + b)
+        if p.shift is not None:
+            dx, dy = p.shift(np.array([mid[0]]), np.array([mid[1]]))
+            mid = mid + np.array([float(dx[0]), float(dy[0])])
+        half_vec = 0.5 * (b - a)
+        a, b = mid - half_vec, mid + half_vec
+        # follow the road it carries, which snapping may or may not have straightened
+        on_street = _street_axis(a, b, streets)
+        if on_street is not None:
+            a, b = on_street
+        else:
+            ang = math.atan2(half_vec[1], half_vec[0])
+            target = round(ang / (math.pi / 4)) * (math.pi / 4)
+            if abs(math.degrees(ang - target)) <= snap_deg:
+                ang = target
+            r = float(np.hypot(*half_vec))
+            half_vec = np.array([math.cos(ang), math.sin(ang)]) * r
+            a, b = mid - half_vec, mid + half_vec
     along = b - a
     length = float(np.hypot(*along))
     n = np.array([along[1], -along[0]]) / max(length, 1e-9)  # left of the line, in cells
@@ -681,6 +750,41 @@ def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -
     inner = centre - half * n
     ring = np.concatenate([outer, inner[::-1]])
     return [[round(float(x), 2), round(float(y), 2)] for x, y in ring]
+
+
+SEGMENT_CELLS = 12.0
+
+
+def line_segments(inst: dict, seg_cells: float) -> list[dict]:
+    """A straight band landmark cut into pieces of at most seg_cells along its
+    line (D-056). Every piece carries the whole line (`ln`: its ends, `lw`: its
+    half-width, in cells), so a generator draws its part of the whole; a
+    diagonal bridge in one piece would be a huge, mostly empty voxel box."""
+    fp = np.asarray(inst["fp"], dtype=np.float64)
+    m = len(fp) // 2
+    outer, inner = fp[:m], fp[m:][::-1]
+    centre = 0.5 * (outer + inner)
+    a, b = centre[0], centre[-1]
+    length = float(np.hypot(*(b - a)))
+    half = float(np.hypot(*(outer[0] - centre[0])))
+    n_seg = max(1, math.ceil(length / max(seg_cells, 1e-6)))
+    u = (b - a) / max(length, 1e-9)
+    nrm = np.array([u[1], -u[0]])
+    out = []
+    for j in range(n_seg):
+        p0 = a + (b - a) * (j / n_seg)
+        p1 = a + (b - a) * ((j + 1) / n_seg)
+        ring = [p0 + half * nrm, p1 + half * nrm, p1 - half * nrm, p0 - half * nrm]
+        piece = {
+            **inst,
+            "x": float((p0[0] + p1[0]) / 2),
+            "y": float((p0[1] + p1[1]) / 2),
+            "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in ring],
+            "ln": [round(float(v), 3) for v in (*a, *b)],
+            "lw": round(half, 3),
+        }
+        out.append(piece)
+    return out
 
 
 def line_parts(p: Placement, lm: dict, k: int, heights, mid: tuple[float, float]) -> list[dict]:
@@ -847,12 +951,29 @@ def place(
         if "orient" in lm:
             inst["r"] = int(lm["orient"]) % 4
         if "line" in lm:
+            snap_deg = None
+            if lm.get("snap") and region.snap:
+                snap_deg = float(region.snap.get("roads", {}).get("angle", 16.0))
             inst["fp"] = dam_footprint(
-                p, lm["line"], float(lm.get("thicknessM", 60)), float(lm.get("bulge", 0.15))
+                p,
+                lm["line"],
+                float(lm.get("thicknessM", 60)),
+                float(lm.get("bulge", 0.15)),
+                snap_deg,
+                streets,
             )
+            if snap_deg is not None:
+                fp = np.asarray(inst["fp"])
+                inst["x"], inst["y"] = float(fp[:, 0].mean()), float(fp[:, 1].mean())
             if heights is not None and "crestMeters" in lm:
                 inst["top"] = round(float(heights(lx, ly, float(lm["crestMeters"]))), 2)
+            if heights is not None and "baseMeters" in lm:
+                inst["z0"] = round(float(heights(lx, ly, float(lm["baseMeters"]))), 2)
             instances += line_parts(p, lm, k, heights, (lx, ly))
+            if snap_deg is not None:
+                # long straight landmarks (bridges) go in pieces along their line
+                instances += line_segments(inst, float(lm.get("segmentCells", SEGMENT_CELLS)))
+                continue
         instances.append(inst)
 
     for inst in instances:

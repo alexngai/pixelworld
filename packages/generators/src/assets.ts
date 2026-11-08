@@ -1,5 +1,6 @@
 import { MeshBuilder, type MeshData } from "./mesh";
 import { FACADE_GENERATORS } from "./facades";
+import { LANDMARK_KIT } from "./landmarkKit";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
 
 /**
@@ -42,6 +43,29 @@ export interface ObjectInstance {
   cn?: number;
   yr?: number;
   fl?: number;
+  /** Base height in steps (long landmarks, so every tile builds them alike). */
+  z0?: number;
+  /** A piece of a long landmark: the whole line's ends [ax, ay, bx, by] and half-width, in cells. */
+  ln?: [number, number, number, number];
+  lw?: number;
+}
+
+/** Footprints wider than this (cells) are owned per voxel column (see meshVoxels). */
+export const BIG_FOOTPRINT_CELLS = 16;
+
+/** A footprint's bounding box in cells: [x0, y0, x1, y1]. */
+export function footprintBounds(fp: [number, number][]): [number, number, number, number] {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of fp) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  return [x0, y0, x1, y1];
 }
 
 /** Style-pack entry for a group: generator name, role → ramp name, parameters. */
@@ -77,6 +101,11 @@ export interface GenContext {
    * and the typology's street front, corner lot, year built and storeys (D-055).
    */
   hints?: { roof?: string; facade?: string; front?: number; corner?: boolean; year?: number; floors?: number };
+  /**
+   * Where the model sits (footprint objects): its (0, 0) corner in world cells
+   * and the voxel size in cells; for a piece of a long landmark, the whole line.
+   */
+  frame?: { x0: number; y0: number; voxel: number; line?: { a: [number, number]; b: [number, number]; half: number } };
 }
 
 export type Generator = (ctx: GenContext) => VoxelModel;
@@ -625,7 +654,7 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
     return m;
   },
 };
-Object.assign(GENERATORS, LANDMARK_GENERATORS, FACADE_GENERATORS);
+Object.assign(GENERATORS, LANDMARK_GENERATORS, FACADE_GENERATORS, LANDMARK_KIT);
 
 /**
  * Generate one model for a group, as buildObjects would (used by tests and
@@ -635,7 +664,13 @@ export function generateModel(
   catalog: AssetCatalog,
   rampIds: Map<string, number>,
   group: string,
-  opts: { seed: number; mask?: { sx: number; sy: number; on: Uint8Array }; heightVox?: number; hints?: GenContext["hints"] },
+  opts: {
+    seed: number;
+    mask?: { sx: number; sy: number; on: Uint8Array };
+    heightVox?: number;
+    hints?: GenContext["hints"];
+    frame?: GenContext["frame"];
+  },
 ): VoxelModel {
   const spec = resolveAsset(catalog, group);
   if (!spec) throw new Error(`no asset for group ${group}`);
@@ -645,6 +680,7 @@ export function generateModel(
   ctx.mask = opts.mask;
   ctx.heightVox = opts.heightVox;
   ctx.hints = opts.hints;
+  ctx.frame = opts.frame;
   return gen(ctx);
 }
 
@@ -778,9 +814,12 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     if (!gen) throw new Error(`unknown generator ${spec.generator}`);
     const cell: [number, number] = [Math.floor(inst.x), Math.floor(inst.y)];
     // Footprints sit on their lowest corner so slopes don't leave them floating.
-    const base = inst.fp
-      ? Math.min(...inst.fp.map(([x, y]) => opts.heightAt(x, y)))
-      : opts.heightAt(inst.x, inst.y);
+    const base =
+      inst.z0 !== undefined
+        ? inst.z0
+        : inst.fp
+          ? Math.min(...inst.fp.map(([x, y]) => opts.heightAt(x, y)))
+          : opts.heightAt(inst.x, inst.y);
     if (inst.fp || inst.hm !== undefined || inst.top !== undefined) {
       // unique object: footprint building or landmark
       const ctx = makeContext(spec, opts, inst.s);
@@ -802,8 +841,16 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       if (inst.fp) {
         const fpm = footprintMask(inst.fp, opts.voxel.h);
         ctx.mask = fpm.mask;
+        ctx.frame = { x0: fpm.x0, y0: fpm.y0, voxel: opts.voxel.h };
+        if (inst.ln && inst.lw !== undefined)
+          ctx.frame.line = { a: [inst.ln[0], inst.ln[1]], b: [inst.ln[2], inst.ln[3]], half: inst.lw };
         model = gen(ctx);
         origin = [fpm.x0, fpm.y0, base];
+        const [bx0, by0, bx1, by1] = footprintBounds(inst.fp);
+        if (Math.max(bx1 - bx0, by1 - by0) > BIG_FOOTPRINT_CELLS) {
+          meshVoxels(model, opts.voxel, origin, "column", merged);
+          continue;
+        }
       } else {
         // landmarks may be turned (an observation wheel's plane)
         model = inst.r ? rotateModel(gen(ctx), inst.r) : gen(ctx);

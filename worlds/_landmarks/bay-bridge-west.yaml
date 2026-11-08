@@ -1,0 +1,11 @@
+name: San Francisco–Oakland Bay Bridge (west span)
+wikidata: Q771404
+# two suspension bridges joined at a central anchorage, Rincon Hill to Yerba Buena Island
+line: [[-122.38800, 37.78830], [-122.36700, 37.80850]]
+crest: 58
+base: 0
+thickness: 32
+bulge: 0
+snap: true
+depictions:
+  generic: { group: landmark.bridge.suspension.double }

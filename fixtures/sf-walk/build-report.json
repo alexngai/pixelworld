@@ -1,5 +1,5 @@
 {
-  "packageHash": "fe6ee7140151f5879cb2e7d82b63d2549df8e220e2059c0916fcafc8c7353504",
+  "packageHash": "4b5a1968c89e2f04822b99c607aef61f1be0e66beb2d06b0634bcbf8288ca97e",
   "cells": [
     618,
     590
@@ -17,22 +17,27 @@
     "building.apartment.bay": 2584,
     "building.apartment.modern": 2441,
     "building.chinatown": 922,
-    "building.commercial": 1798,
+    "building.commercial": 1782,
     "building.commercial.historic": 3103,
     "building.house": 3496,
-    "building.industrial": 1428,
+    "building.industrial": 1427,
     "building.parking": 43,
     "building.pier": 10,
     "building.residential": 1094,
     "building.rowhouse.edwardian": 9411,
     "building.rowhouse.stucco": 7248,
     "building.rowhouse.victorian": 9569,
-    "building.tower": 461,
+    "building.tower": 454,
     "building.tower.deco": 52,
     "building.tower.hotel": 26,
+    "landmark.bridge.suspension.double": 25,
+    "landmark.hall.clock": 2,
+    "landmark.hall.domed": 1,
+    "landmark.tower.column": 1,
+    "landmark.tower.pyramid": 1,
     "prop.signal": 458,
     "prop.streetlight": 8010,
-    "tree": 20602
+    "tree": 20594
   },
   "roads": {
     "cells": 62987,
@@ -51,10 +56,10 @@
   "surfaces": {
     "woodland": 30168,
     "scrub": 39,
-    "water": 26399,
-    "desert": 2955,
+    "water": 26428,
+    "desert": 2950,
     "grass": 7127,
     "farmland": 14,
-    "urban": 297918
+    "urban": 297894
   }
 }

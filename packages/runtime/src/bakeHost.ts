@@ -2,8 +2,10 @@ import { TerrainGrid } from "@pixelworld/grid";
 import { Baker, type BakeScene } from "@pixelworld/bake";
 import { applyHeroPaint } from "./heroPaint";
 import {
+  BIG_FOOTPRINT_CELLS,
   buildBoxesMesh,
   buildObjects,
+  footprintBounds,
   occupiedCells,
   scatterInstances,
   buildTerrainField,
@@ -151,8 +153,17 @@ export class BakeHost {
     renderScale: number,
     owned: { x0: number; y0: number; x1: number; y1: number },
   ) {
-    const inSlice = (o: ObjectInstance) =>
-      o.x >= slice.x0 && o.y >= slice.y0 && o.x < slice.x0 + slice.width && o.y < slice.y0 + slice.height;
+    const sx1 = slice.x0 + slice.width;
+    const sy1 = slice.y0 + slice.height;
+    // big footprints (bridges) reach into slices far from their anchor
+    const inSlice = (o: ObjectInstance) => {
+      if (o.x >= slice.x0 && o.y >= slice.y0 && o.x < sx1 && o.y < sy1) return true;
+      if (!o.fp) return false;
+      const [x0, y0, x1, y1] = footprintBounds(o.fp);
+      return x1 - x0 > BIG_FOOTPRINT_CELLS / 2 || y1 - y0 > BIG_FOOTPRINT_CELLS / 2
+        ? x1 >= slice.x0 && y1 >= slice.y0 && x0 < sx1 && y0 < sy1
+        : false;
+    };
     const placed = objects.instances.filter(inSlice);
     let instances = placed;
     if (objects.scatter && objects.scatter.density > 0) {

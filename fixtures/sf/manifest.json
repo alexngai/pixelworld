@@ -131,7 +131,7 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "228155b774459b9157723cfe8567c5de5cbee154ecc7ae6ace4e1c870618eb13",
+      "sha256": "0e0da9d3542125099049ce9c5e7e8d31378ddfc1c90d6fe58498b221f9fb7371",
       "heightRange": [
         -1,
         22
@@ -231,7 +231,7 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "745b6a724b56b7467386cbd8b26bf5fab503964e1e8d9fda45a478b973446369",
+      "sha256": "36edc60284f4df36a88130e32e3dd8432d21d05a11aeeb0f0fc2a57398427262",
       "heightRange": [
         -1,
         13
@@ -291,7 +291,7 @@
       "x": 8,
       "y": 2,
       "path": "chunks/8_2.pxwc.gz",
-      "sha256": "30ca934b875115bb1134b37ad488e8c4828ed18902e3e7610bee0a56d8e29781",
+      "sha256": "d3d9e93c272b5b62d894f2f9f8b51c1c9986690de6388c323f7cd40577a51fcc",
       "heightRange": [
         -1,
         16
@@ -381,7 +381,7 @@
       "x": 7,
       "y": 3,
       "path": "chunks/7_3.pxwc.gz",
-      "sha256": "e2cd0fdcd578a3cf7e84617a56398b6d5ef83061528c97042b0757d7e97442dc",
+      "sha256": "b7d7bdddcc273c7ec946b6096c207f7b8c1cc0047be0564c2e790c8537bcd363",
       "heightRange": [
         -1,
         3
@@ -391,7 +391,7 @@
       "x": 8,
       "y": 3,
       "path": "chunks/8_3.pxwc.gz",
-      "sha256": "2a2e1bf47c905750198906c2278de5e0d6855a1e081810d0db8c6d5a63efd4ee",
+      "sha256": "362f880207c26398ec5284600b358f09ee2e02ca3b334fe123f411e58fc54fa3",
       "heightRange": [
         -1,
         0
@@ -1190,7 +1190,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "39e6bdedd769b654",
+      "region": "d5ad2e561bfebccc",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -1204,7 +1204,7 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "7acd46b109b0a6321ee15b9e885f90ba1b000fd068e29f438a849959fd04ce10",
+    "sha256": "00ef9fb58f9cd140d3396c051b70b763063621b91d3e59d36bf144c5fba1aae1",
     "count": 168942
   },
   "depiction": {
@@ -1238,5 +1238,5 @@
     ],
     "sha256": "39739d3d8152c70ee63abec55813b2366d52c83864d37a325a948b2d9ed63607"
   },
-  "packageHash": "ca94fc8ba7e04a1f43db139d3348d1f410734ec45787538e0b2eac58e5cb9488"
+  "packageHash": "82eaa2555f604c28e62a09a1ab2bd289a936b458c7e6db0cf73f76aee223ccc6"
 }

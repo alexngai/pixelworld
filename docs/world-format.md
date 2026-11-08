@@ -82,6 +82,8 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - optional `top`: absolute top height in steps (dam crests, bridge decks)
   - optional `id`: landmark registry id (D-051), on a landmark and each of its parts
   - optional `rs`, `fm`, `fc`, `rc`: Overture roof shape, facade material, facade colour and roof colour, as hints for the building generator (M3)
+  - optional `fr`, `cn`, `yr`, `fl`: typology hints (D-055). `fr` is the direction the front faces (0–7, in 45° steps from +x, with y growing south), `cn` is 1 on a corner lot, `yr` is the year built and `fl` the storeys
+  - optional `z0`: base height in steps, for long landmarks such as bridges, so every tile builds them at the same height (D-056)
 
   Objects with `fp` or `hm` are unique; the rest are instanced per variant. Groups resolve through the style pack (D-030). Decorative scatter is not stored: clients add it by surface, scaled by `depiction.scatter` (D-054).
 - **Scale levels (optional, D-046):**

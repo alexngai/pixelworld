@@ -310,3 +310,23 @@ test.describe("Hero landmarks (D-053)", () => {
     expect(same / fresh.pixels.length).toBeGreaterThan(0.999);
   });
 });
+
+test.describe("San Francisco (D-055, D-056)", () => {
+  test("Victorian rows by Alamo Square: typologies on the walking level", async ({ page }) => {
+    // the city's own style pack (bay-area), named by the world
+    await open(page, "world=/sf-walk/&marker=0&zoom=3&rot=0&at=-122.4327,37.7760");
+    await expect(page.locator("#view")).toHaveScreenshot("sf-walk-alamo-r0.png");
+  });
+
+  test("Telegraph Hill and Coit Tower over the rows of North Beach", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=2&rot=0&at=-122.40583,37.80237");
+    await expect(page.locator("#view")).toHaveScreenshot("sf-coit-r0.png");
+  });
+
+  test("the Bay Bridge spans its tiles whole, from pieces that join", async ({ page }) => {
+    const t0 = Date.now();
+    await open(page, "world=/sf/&marker=0&zoom=1&rot=0&at=-122.382,37.797");
+    expect(Date.now() - t0).toBeLessThan(90_000); // was 215 s as one diagonal voxel box
+    await expect(page.locator("#view")).toHaveScreenshot("sf-bay-bridge-r0.png");
+  });
+});
