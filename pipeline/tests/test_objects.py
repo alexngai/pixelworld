@@ -225,3 +225,87 @@ def test_objects_file_is_written_compressed_and_hashed(tmp_path):
         clean=True,
     )
     assert "objects" not in again and not (tmp_path / "objects.json.gz").exists()
+
+
+def _none(xs, ys):
+    return np.zeros(len(xs), dtype=bool)
+
+
+def test_sidewalk_trees_stand_on_the_verge_where_the_canopy_map_has_trees():
+    region = Region.from_dict(
+        SPEC | {"widths": {"scale": 1.5, "minCells": 0.1}, "snap": {"roads": {"deviation": 1.0}}}
+    )
+    cx, cy = region.cells
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    # a street running north–south 0.2 cells west of its drawn axis (x = 10.5),
+    # crossed by another at y = 30.5
+    ns = (np.array([10.3, 10.3]), np.array([2.0, 40.0]))
+    ew = (np.array([2.0, 30.0]), np.array([30.5, 30.5]))
+    streets = [("a", 3, [ns]), ("b", 3, [ew])]
+    rows = [{"id": "a", "class": "residential"}, {"id": "b", "class": "residential"}]
+    roads = objects.DrawnRoads(region, (cy, cx), streets, rows)
+    sampled = []
+
+    class FakeCanopy:
+        # trees north of y = 20 cells only
+        def sample(self, xs, ys, crs):
+            sampled.append(np.column_stack([xs, ys]))
+            return np.where(np.asarray(ys) > p.north - 20 * p.m, 6.0, 0.0)
+
+    house = shapely.box(11.0, 5.0, 14.0, 6.0)  # its front on the east verge
+
+    def in_house(x, y):
+        return shapely.contains_xy(house, x, y)
+
+    rule = {"group": "tree.street", "roads": ["residential"], "canopy": 3, "spacing": 10}
+    out = objects.sidewalk_trees(p, rule, roads, _none, in_house, FakeCanopy())
+    assert out == objects.sidewalk_trees(p, rule, roads, _none, in_house, FakeCanopy())
+    xs = np.array([i["x"] for i in out])
+    ys = np.array([i["y"] for i in out])
+    on_ns = np.abs(xs - 10.5) < 1
+    # rows on both sides of the drawn axis, off the asphalt, two per cell per side
+    assert (xs[on_ns] < 10.5).sum() > 20 and (xs[on_ns] > 10.5).sum() > 20
+    assert (roads.clearance(xs, ys) > 0).all()
+    assert (ys[on_ns] < 20).all()  # only where the map has trees
+    assert not in_house(xs, ys).any()
+    near_junction = (np.abs(xs - 10.5) < 1.5) & (np.abs(ys - 30.5) < 1.5)
+    assert not near_junction.any()
+    # the canopy is read beside the real line (x = 10.3), not the drawn axis
+    at = np.concatenate(sampled)
+    sx, sy = (at[:, 0] - p.west) / p.m, (p.north - at[:, 1]) / p.m
+    west = sx[(sx < 10.3) & (sy < 25)]
+    verge = 10.5 - xs[xs < 10.5].max()
+    assert abs(np.median(west) - (10.3 - verge)) < 0.05
+    # no map, no trees; a landmark's clear zone keeps them away
+    assert objects.sidewalk_trees(p, rule, roads, _none, in_house, None) == []
+
+    def everywhere(x, y):
+        return np.ones(len(x), dtype=bool)
+
+    assert objects.sidewalk_trees(p, rule, roads, everywhere, in_house, FakeCanopy()) == []
+
+
+def test_canopy_trees_take_the_groups_of_their_cells_land_cover(monkeypatch):
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    lc = np.full((cy, cx), 50, dtype=np.uint8)  # built up
+    lc[:, : cx // 2] = 10  # tree cover in the west half
+    monkeypatch.setattr(objects.rasters, "landcover_cells", lambda r: lc)
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+
+    class FakeCanopy:
+        def sample(self, xs, ys, crs):
+            return np.full(len(xs), 9.0)
+
+    rule = {
+        "group": "tree",
+        "canopy": 3,
+        "spacing": 20,
+        "byLandcover": {"tree": ["tree.cypress", "tree.eucalyptus"]},
+    }
+    out = objects.scatter(p, rule, _none, "t", FakeCanopy())
+    west = {i["g"] for i in out if i["x"] < cx // 2}
+    east = {i["g"] for i in out if i["x"] >= cx // 2}
+    assert west == {"tree.cypress", "tree.eucalyptus"} and east == {"tree"}
+    with pytest.raises(ValueError, match="unknown land cover class"):
+        objects.scatter(p, rule | {"byLandcover": {"trees": ["x"]}}, _none, "t", FakeCanopy())

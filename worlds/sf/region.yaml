@@ -75,12 +75,18 @@ objects:
       - { group: building.rowhouse.stucco, from: [building.residential], maxWidth: 12, floors: [1, 3] }
       - { group: building.house, from: [building.residential], floors: [1, 3] }
   vegetation:
-    # street, backyard and park trees where the canopy height map (WRI/Meta,
-    # 1 m) shows 3 m or more. A tree is drawn about 8 m across at 25 m cells,
-    # so one every 12 m at most (about 60,000; every 10 m gave 90,000, mostly
-    # in the parks, for 0.5 MB more). Sidewalk trees mostly fall in road
-    # cells, which are kept clear, so in the rows these are backyard trees.
-    - { group: tree, canopy: 3, spacing: 12, density: 0.9 }
+    # backyard and park trees where the canopy height map (WRI/Meta, 1 m)
+    # shows 3 m or more. A tree is drawn about 8 m across at 25 m cells, so
+    # one every 12 m at most (about 60,000; every 10 m gave 90,000, mostly in
+    # the parks, for 0.5 MB more). On tree-covered land (Golden Gate Park, the
+    # Presidio, Sutro Forest, Mount Davidson) they are the park's cypress and
+    # eucalyptus, as the client's woodland scatter is.
+    - { group: tree, canopy: 3, spacing: 12, density: 0.9, byLandcover: { tree: [tree.cypress, tree.eucalyptus, tree.cypress] } }
+  streetTrees:
+    # sidewalk trees, also from the canopy map: road cells are kept clear of
+    # everything else, so these stand on the verge just past the drawn
+    # asphalt, in rows along the avenues where the map shows trees
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 12, kerb: 2, offset: 9 }
   # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
   landmarks: [golden-gate-bridge, bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall, palace-of-fine-arts, sutro-tower]
   landmarkDepiction: generic

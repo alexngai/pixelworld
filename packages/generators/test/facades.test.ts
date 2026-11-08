@@ -111,6 +111,76 @@ describe("facade paint and roofs", () => {
   });
 });
 
+describe("stucco rows (the Sunset and the Richmond)", () => {
+  // driving-scale lots: 5 voxels wide, 14 deep, the front facing +y (the y = 13 row)
+  const houses = Array.from({ length: 240 }, (_, i) => {
+    const year = [1925, 1940, 1948][i % 3]!;
+    const m = generateModel(style.assets, rampIds, "building.rowhouse.stucco", {
+      seed: 1000 + i,
+      mask: rect(5, 14),
+      heightVox: 5.8,
+      hints: { front: 2, year, floors: 1 },
+    });
+    const ramp = (x: number, y: number, z: number) => rampName.get(m.materials[m.get(x, y, z)]!) ?? "";
+    let top = 0;
+    while (m.get(0, 5, top + 1)) top++;
+    return { m, year, ramp, H: top, body: ramp(0, 5, top) };
+  });
+
+  it("puts tile on a minority, mostly the 1920s", () => {
+    const tiled = houses.map(({ m, ramp }) => {
+      for (let z = 0; z < m.sz; z++) for (let y = 0; y < m.sy; y++) for (let x = 0; x < m.sx; x++) if (ramp(x, y, z) === "roof-tile") return true;
+      return false;
+    });
+    const share = (ys: number[]) => {
+      const sel = houses.map((h, i) => (ys.includes(h.year) ? tiled[i] : null)).filter((t) => t !== null);
+      return sel.filter(Boolean).length / sel.length;
+    };
+    expect(share([1925, 1940, 1948])).toBeGreaterThan(0.08);
+    expect(share([1925, 1940, 1948])).toBeLessThan(0.25);
+    expect(share([1925])).toBeGreaterThan(share([1948]));
+  });
+
+  it("draws a white garage door at the street and a bay over it on most", () => {
+    let garages = 0;
+    let painted = 0;
+    let bays = 0;
+    for (const { m, ramp, H, body } of houses) {
+      // the bay keeps the street line while the front beside it (not the entry) steps back
+      let bay = false;
+      let pier = false;
+      for (let x = 0; x < 5; x++) {
+        if (m.get(x, 13, H - 2)) bay = true;
+        else if (m.get(x, 13, 1)) pier = true;
+      }
+      if (bay && pier) bays++;
+      if (body === "paint-white") continue;
+      painted++;
+      let white = 0;
+      for (let x = 0; x < 5; x++) if (ramp(x, 13, 0) === "paint-white") white++;
+      if (white >= 2) garages++;
+    }
+    expect(garages / painted).toBeGreaterThan(0.9);
+    expect(bays / houses.length).toBeGreaterThan(0.7);
+  });
+
+  it("varies the parapet's profile from house to house", () => {
+    const profiles = new Set(
+      houses.map(({ m }) => {
+        const tops: number[] = [];
+        for (let x = 0; x < 5; x++) {
+          let z = m.sz - 1;
+          while (z > 0 && !m.get(x, 13, z) && !m.get(x, 12, z)) z--;
+          tops.push(z);
+        }
+        const lo = Math.min(...tops);
+        return tops.map((t) => t - lo).join("");
+      }),
+    );
+    expect(profiles.size).toBeGreaterThanOrEqual(5);
+  });
+});
+
 describe("facade typologies follow the style guide", () => {
   it("every group, front, size, height and year", () => {
     let seed = 1;
