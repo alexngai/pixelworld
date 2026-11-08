@@ -25,7 +25,23 @@ micro: { k: 4, dem: { overview: 1 } }
 objects:
   # only towers and landmarks are drawn from the air: no typology pass, and no
   # street trees (the driving level's canopy rule would carpet the Bay at 100 m).
-  # The landmarks are the driving level's, Alcatraz and the windmills included.
+  # The landmarks are the driving level's. Point landmarks are drawn 3x, but
+  # Alcatraz's cellhouse is a line and keeps its size: its lighthouse is drawn
+  # 1.5x and the cellhouse a little taller, so the island isn't a lighthouse's.
+  landmarks:
+    - golden-gate-bridge
+    - bay-bridge-west
+    - transamerica-pyramid
+    - salesforce-tower
+    - coit-tower
+    - ferry-building
+    - sf-city-hall
+    - palace-of-fine-arts
+    - sutro-tower
+    - dutch-windmill
+    - murphy-windmill
+    - { id: alcatraz-cellhouse, hm: 26 }
+    - { id: alcatraz-lighthouse, scale: 1.5 }
   typology: null
   vegetation: null
   depiction:

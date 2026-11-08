@@ -319,8 +319,8 @@
     "building.tower.slab": {
       "generator": "sfTower",
       "ramps": {
-        "wall": "tower-white", "wall.concrete": "concrete", "wall.granite": "granite", "wall.white": "paint-white",
-        "spandrel": "tower-white", "spandrel.concrete": "concrete", "spandrel.granite": "granite", "spandrel.white": "tower-white",
+        "wall": "tower-white", "wall.concrete": "concrete", "wall.granite": "granite", "wall.white": "paint-white", "wall.zwhite": "tower-white", "wall.zwhite2": "tower-white",
+        "spandrel": "tower-white", "spandrel.concrete": "concrete", "spandrel.granite": "granite", "spandrel.white": "tower-white", "spandrel.zwhite": "concrete", "spandrel.zwhite2": "tower-white",
         "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
       },
       "params": { "kind": 1, "litFraction": 0.45 }
