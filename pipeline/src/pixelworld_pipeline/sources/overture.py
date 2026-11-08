@@ -81,14 +81,19 @@ def query(
     columns: list[str],
     keep,
     workers: int = 6,
+    filter_tag: str = "",
 ) -> list[dict]:
     """Rows (as dicts) from row groups intersecting bbox for which keep(row) is true.
 
-    Results are cached per (release, theme, kind, bbox, columns) as JSON with
-    geometries in WKT, sorted by id so repeated builds are deterministic.
+    Results are cached per (release, theme, kind, bbox, columns, filter_tag) as
+    JSON with geometries in WKT, sorted by id so repeated builds are
+    deterministic. `filter_tag` must describe `keep`: two filters over the same
+    box and columns would otherwise share one cache entry.
     """
     w, s, e, n = bbox
     tag = f"{theme}-{kind}-{w:.4f}_{s:.4f}_{e:.4f}_{n:.4f}-{'_'.join(sorted(columns))}"
+    if filter_tag:
+        tag += f"-{filter_tag}"
     path = CACHE_ROOT / "overture" / release / f"{hashlib.sha1(tag.encode()).hexdigest()[:16]}.json"
     meta_path = path.with_suffix(".tag")
     if path.exists() and meta_path.exists() and meta_path.read_text() == tag:
@@ -130,17 +135,52 @@ def query(
 ROAD_COLUMNS = ["id", "subtype", "class", "subclass", "connectors", "geometry"]
 
 
-def roads(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
-    """Road segments of the given classes (links/ramps excluded)."""
+def roads(
+    release: str,
+    bbox: tuple[float, float, float, float],
+    classes: list[str],
+    exclude_subclasses: list[str] | None = None,
+) -> list[dict]:
+    """Road segments of the given classes (links/ramps and `exclude_subclasses`,
+    e.g. parking aisles, left out)."""
     wanted = set(classes)
+    skip = {"link", *(exclude_subclasses or [])}
     return query(
         release,
         "transportation",
         "segment",
         bbox,
         ROAD_COLUMNS,
-        lambda r: r["subtype"] == "road" and r["class"] in wanted and r.get("subclass") != "link",
+        lambda r: r["subtype"] == "road" and r["class"] in wanted and r.get("subclass") not in skip,
+        filter_tag=f"roads:{','.join(sorted(wanted))}:skip:{','.join(sorted(skip))}",
     )
+
+
+# Footways split by their subclass: sidewalks and crosswalks look different.
+FOOTWAY_SUBCLASSES = {"sidewalk", "crosswalk"}
+PATH_SOURCE_CLASSES = {"footway", "pedestrian", "path", "steps", "cycleway"}
+
+
+def path_class(row: dict) -> str:
+    """The path class a segment is drawn as: footway subclasses count as their own."""
+    if row["class"] == "footway" and row.get("subclass") in FOOTWAY_SUBCLASSES:
+        return row["subclass"]
+    return row["class"]
+
+
+def paths(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
+    """Pedestrian and cycle ways whose path_class is in `classes` (D-050)."""
+    wanted = set(classes)
+    rows = query(
+        release,
+        "transportation",
+        "segment",
+        bbox,
+        ROAD_COLUMNS,
+        lambda r: r["subtype"] == "road" and r["class"] in PATH_SOURCE_CLASSES,
+        filter_tag="paths",
+    )
+    return [r for r in rows if path_class(r) in wanted]
 
 
 def rivers(
@@ -155,7 +195,15 @@ def rivers(
         geom_type = shapely.from_wkb(r["geometry"]).geom_type
         return geom_type in ("LineString", "MultiLineString")
 
-    return query(release, "base", "water", bbox, ["id", "subtype", "class", "geometry"], keep)
+    return query(
+        release,
+        "base",
+        "water",
+        bbox,
+        ["id", "subtype", "class", "geometry"],
+        keep,
+        filter_tag=f"rivers:{','.join(sorted(wanted))}",
+    )
 
 
 BUILDING_COLUMNS = ["id", "class", "subtype", "height", "num_floors", "is_underground", "has_parts"]

@@ -274,6 +274,8 @@ def straighten(
 class RoadLayer:
     mask: np.ndarray  # uint16 (cy, cx)
     cls: np.ndarray  # uint8 (cy, cx)
+    # widest way through each cell, metres (0 where none or widths weren't given)
+    width: np.ndarray | None = None
     # segment id → cells (inside the grid), for validation
     segment_cells: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
 
@@ -282,26 +284,38 @@ def rasterize(
     lines: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray]]]],
     shape: tuple[int, int],
     deviation: float | None = None,
+    widths: dict[str, float] | None = None,
+    rank_of=None,
 ) -> RoadLayer:
     """lines: (id, class rank ≥ 1, parts as (xs, ys) in cell coords).
 
     With `deviation`, each polyline edge becomes long octilinear runs
     (octilinear_path) between the cells of its vertices; otherwise the line is
-    traced cell by cell (trace_cells)."""
+    traced cell by cell (trace_cells). `widths` (segment id → metres) records the
+    widest way in each cell. The class number written to a cell is the line's
+    class; with `rank_of` (class → priority) the higher-priority class wins,
+    else the larger number does."""
     cy, cx = shape
     mask = np.zeros(shape, dtype=np.uint16)
     cls = np.zeros(shape, dtype=np.uint8)
-    layer = RoadLayer(mask, cls)
+    width = np.zeros(shape, dtype=np.float32) if widths is not None else None
+    layer = RoadLayer(mask, cls, width=width)
+    rank = rank_of or (lambda c: c)
 
     def inside(c: tuple[int, int]) -> bool:
         return 0 <= c[0] < cx and 0 <= c[1] < cy
 
-    def mark(c: tuple[int, int], bit: int, rank: int) -> None:
+    def mark(c: tuple[int, int], bit: int, klass: int, w: float = 0.0) -> None:
         if inside(c):
             mask[c[1], c[0]] |= 1 << bit
-            cls[c[1], c[0]] = max(int(cls[c[1], c[0]]), rank)
+            old = int(cls[c[1], c[0]])
+            if old == 0 or rank(klass) > rank(old):
+                cls[c[1], c[0]] = klass
+            if width is not None and w > width[c[1], c[0]]:
+                width[c[1], c[0]] = w
 
-    for seg_id, rank, parts in lines:
+    for seg_id, klass, parts in lines:
+        w = float(widths.get(seg_id, 0.0)) if widths is not None else 0.0
         visited: list[tuple[int, int]] = []
         for xs, ys in parts:
             if deviation is None:
@@ -316,12 +330,12 @@ def rasterize(
                 dx, dy = b[0] - a[0], b[1] - a[1]
                 if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):
                     continue
-                mark(a, DIR_INDEX[(dx, dy)], rank)
-                mark(b, DIR_INDEX[(-dx, -dy)], rank)
+                mark(a, DIR_INDEX[(dx, dy)], klass, w)
+                mark(b, DIR_INDEX[(-dx, -dy)], klass, w)
                 if dx and dy:  # diagonal: flag the corner for the two other cells
                     px, py = a[0] + (dx > 0), a[1] + (dy > 0)
                     for o in ((a[0] + dx, a[1]), (a[0], a[1] + dy)):
-                        mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], rank)
+                        mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], klass, w)
             visited.extend(c for c in path if inside(c))
         layer.segment_cells[seg_id] = visited
     return layer
@@ -499,10 +513,30 @@ def validate(
     )
 
 
-def junction_index(segments: list[dict]) -> dict[str, list[str]]:
-    """connector id → segment ids, for connectors shared by 2+ segments."""
+def junction_index(segments: list[dict], inside=None) -> dict[str, list[str]]:
+    """connector id → segment ids, for connectors shared by 2+ segments.
+
+    inside(segment id, at) → bool, if given, keeps only connectors that lie in
+    the grid (`at` is the connector's position along the segment, 0..1): roads
+    that meet beyond the world's edge can't be checked inside it.
+    """
     by_connector: dict[str, list[str]] = defaultdict(list)
     for seg in segments:
         for conn in seg.get("connectors") or []:
+            if inside is not None and not inside(seg["id"], float(conn.get("at") or 0.0)):
+                continue
             by_connector[conn["connector_id"]].append(seg["id"])
     return {k: sorted(v) for k, v in by_connector.items() if len(v) > 1}
+
+
+def point_at(xs: np.ndarray, ys: np.ndarray, at: float) -> tuple[float, float]:
+    """The point a fraction `at` of the way along a polyline (by length)."""
+    d = np.hypot(np.diff(xs), np.diff(ys))
+    total = float(d.sum())
+    if total <= 0:
+        return float(xs[0]), float(ys[0])
+    target = min(max(at, 0.0), 1.0) * total
+    cum = np.concatenate([[0.0], np.cumsum(d)])
+    i = int(np.clip(np.searchsorted(cum, target, side="right") - 1, 0, len(d) - 1))
+    t = (target - cum[i]) / d[i] if d[i] > 0 else 0.0
+    return float(xs[i] + (xs[i + 1] - xs[i]) * t), float(ys[i] + (ys[i + 1] - ys[i]) * t)

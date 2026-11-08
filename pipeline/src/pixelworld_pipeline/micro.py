@@ -46,8 +46,12 @@ def flatten_water(q: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
     return np.where(np.isfinite(at), at, q)
 
 
-def road_segments(mask: np.ndarray, centre_h: np.ndarray) -> list[tuple[float, ...]]:
-    """(ax, ay, ha, bx, by, hb) centre-to-centre segments of connected road cells (cells, steps)."""
+def road_segments(
+    mask: np.ndarray, centre_h: np.ndarray, half_width: np.ndarray | None = None
+) -> list[tuple[float, ...]]:
+    """(ax, ay, ha, bx, by, hb, r) centre-to-centre segments of connected road
+    cells (cells, steps); r is the bed radius: the road's half-width where
+    known (D-050), at least ROAD_BED_RADIUS."""
     out = []
     ys, xs = np.nonzero(mask & CONNECT_MASK)
     h, w = mask.shape
@@ -68,6 +72,9 @@ def road_segments(mask: np.ndarray, centre_h: np.ndarray) -> list[tuple[float, .
                     nx + 0.5,
                     ny + 0.5,
                     float(centre_h[ny, nx]),
+                    ROAD_BED_RADIUS
+                    if half_width is None
+                    else max(ROAD_BED_RADIUS, float(half_width[y, x]), float(half_width[ny, nx])),
                 )
             )
     return out
@@ -81,11 +88,13 @@ def cut_road_beds(
     best = np.full(q.shape, np.inf)
     target = np.zeros(q.shape)
     hc, wc = q.shape
-    for ax, ay, ha, bx, by, hb in segments:
-        x0 = max(0, int(np.floor((min(ax, bx) - radius) * k)))
-        x1 = min(wc - 1, int(np.ceil((max(ax, bx) + radius) * k)))
-        y0 = max(0, int(np.floor((min(ay, by) - radius) * k)))
-        y1 = min(hc - 1, int(np.ceil((max(ay, by) + radius) * k)))
+    for seg in segments:
+        ax, ay, ha, bx, by, hb = seg[:6]
+        r = seg[6] if len(seg) > 6 else radius
+        x0 = max(0, int(np.floor((min(ax, bx) - r) * k)))
+        x1 = min(wc - 1, int(np.ceil((max(ax, bx) + r) * k)))
+        y0 = max(0, int(np.floor((min(ay, by) - r) * k)))
+        y1 = min(hc - 1, int(np.ceil((max(ay, by) + r) * k)))
         if x1 < x0 or y1 < y0:
             continue
         gx, gy = np.meshgrid(np.arange(x0, x1 + 1) / k, np.arange(y0, y1 + 1) / k)
@@ -93,7 +102,7 @@ def cut_road_beds(
         t = np.clip(((gx - ax) * vx + (gy - ay) * vy) / (vx * vx + vy * vy), 0.0, 1.0)
         d = np.hypot(gx - ax - vx * t, gy - ay - vy * t)
         sub_best = best[y0 : y1 + 1, x0 : x1 + 1]
-        take = (d <= radius) & (d < sub_best)
+        take = (d <= r) & (d < sub_best)
         sub_best[take] = d[take]
         target[y0 : y1 + 1, x0 : x1 + 1][take] = ((ha + (hb - ha) * t) * k)[take]
     on = np.isfinite(best)
@@ -109,6 +118,7 @@ def build_micro(
     shape: np.ndarray,
     water: np.ndarray,
     road_mask: np.ndarray,
+    road_half_width: np.ndarray | None = None,
 ) -> np.ndarray:
     """Integer micro-corner heights (micro-steps) from micro-corner elevations.
 
@@ -122,6 +132,6 @@ def build_micro(
     q = corner_m / (step_m / k)
     q = flatten_water(q, water, k)
     centre = cell_corner_heights(base, shape).mean(axis=0)
-    q = cut_road_beds(q, road_segments(road_mask, centre), k)
+    q = cut_road_beds(q, road_segments(road_mask, centre, road_half_width), k)
     q = flatten_water(q, water, k)  # water wins where a road bed touches a shore
     return round_half_up(q).astype(np.int16)

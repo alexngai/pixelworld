@@ -80,6 +80,9 @@ class Region:
     # Isometric snapping (D-049): {"roads": {angle, simplify, deviation, maxShift},
     # "buildings": {angle, follow}}; roads straighten toward the 8 grid directions.
     snap: dict[str, Any] | None = None
+    # Real widths (D-050): {"scale", "minCells", "roads": {class: m}, "paths": {class: m}};
+    # without it roads draw at the style pack's fixed width.
+    widths: dict[str, Any] | None = None
 
     # ---- loading -------------------------------------------------------------
 
@@ -126,6 +129,7 @@ class Region:
             level=str(raw["level"]) if raw.get("level") else None,
             levels=[dict(v) for v in raw["levels"]] if raw.get("levels") else None,
             snap=dict(raw["snap"]) if raw.get("snap") else None,
+            widths=dict(raw["widths"]) if raw.get("widths") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")

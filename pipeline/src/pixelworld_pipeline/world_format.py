@@ -58,6 +58,11 @@ LAYERS = (
     # vertical caricature (M2): drawn height h ↔ real height ref + (h − ref)·invR
     ("vref", b"VREF", "<i2", 0),  # reference height, 1/16 steps
     ("vfac", b"VFAC", "<i2", 4096),  # 1/R, 1/4096 units (4096 = no exaggeration)
+    # real widths (D-050): road half-width in 1/32 cell; paths as their own network
+    ("road_width", b"RWID", "u1", 0),
+    ("path", b"PATH", "<u2", 0),  # same encoding as ROAD
+    ("path_class", b"PCLS", "u1", 0),
+    ("path_width", b"PWID", "u1", 0),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -119,6 +124,10 @@ class Chunk:
     geology: np.ndarray = field(default=None)  # uint8 geology province id
     vref: np.ndarray = field(default=None)  # int16 relief reference height, 1/16 steps
     vfac: np.ndarray = field(default=None)  # int16 inverse relief factor, 1/4096
+    road_width: np.ndarray = field(default=None)  # uint8 road half-width, 1/32 cell
+    path: np.ndarray = field(default=None)  # uint16 path connectivity (like road)
+    path_class: np.ndarray = field(default=None)  # uint8 path class id, 0 = none
+    path_width: np.ndarray = field(default=None)  # uint8 path half-width, 1/32 cell
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -305,6 +314,11 @@ def write_package(
     geology: np.ndarray | None = None,
     vref: np.ndarray | None = None,
     vfac: np.ndarray | None = None,
+    road_width: np.ndarray | None = None,
+    path: np.ndarray | None = None,
+    path_class: np.ndarray | None = None,
+    path_width: np.ndarray | None = None,
+    path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
     road_classes: dict[int, str] | None = None,
@@ -343,6 +357,10 @@ def write_package(
         "geology": geology,
         "vref": vref,
         "vfac": vfac,
+        "road_width": road_width,
+        "path": path,
+        "path_class": path_class,
+        "path_width": path_width,
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -419,6 +437,8 @@ def write_package(
     }
     if road_classes is not None:
         manifest["roadClasses"] = {str(k): v for k, v in sorted(road_classes.items())}
+    if path_classes is not None:
+        manifest["pathClasses"] = {str(k): v for k, v in sorted(path_classes.items())}
     if provinces is not None:
         manifest["geology"] = {str(k): v for k, v in sorted(provinces.items())}
     if start is not None:

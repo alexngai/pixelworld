@@ -12,6 +12,7 @@ import json
 from collections import deque
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import shapely
@@ -50,8 +51,75 @@ SURFACES = {
     11: "snow",
 }
 S = {name: i for i, name in SURFACES.items()}
-ROAD_CLASSES = {1: "secondary", 2: "primary", 3: "trunk", 4: "motorway"}
-ROAD_RANK = {name: i for i, name in ROAD_CLASSES.items()}
+# Road and path classes, lowest priority first. A world numbers the classes it
+# uses in this order, so the classic four keep ids 1-4 (secondary..motorway).
+ROAD_ORDER = (
+    "service",
+    "unclassified",
+    "living_street",
+    "residential",
+    "tertiary",
+    "secondary",
+    "primary",
+    "trunk",
+    "motorway",
+)
+PATH_ORDER = ("path", "cycleway", "steps", "footway", "sidewalk", "crosswalk", "pedestrian")
+# Typical full widths in metres (D-050); one carriageway where roads are mapped
+# as two (motorways, divided boulevards). Region specs override them (widths:).
+ROAD_WIDTH_M = {
+    "motorway": 16.0,
+    "trunk": 14.0,
+    "primary": 14.0,
+    "secondary": 12.0,
+    "tertiary": 10.0,
+    "residential": 8.0,
+    "living_street": 6.0,
+    "unclassified": 7.0,
+    "service": 5.0,
+}
+PATH_WIDTH_M = {
+    "pedestrian": 8.0,
+    "crosswalk": 4.0,
+    "sidewalk": 3.0,
+    "footway": 3.0,
+    "steps": 3.0,
+    "cycleway": 2.5,
+    "path": 2.0,
+}
+
+
+def paved_band(on_road: np.ndarray, half_width: np.ndarray) -> np.ndarray:
+    """Cells whose centre lies within the half-width (cells) of the nearest road
+    cell's centre: the pavement of a road wider than its own cells."""
+    from scipy import ndimage
+
+    if not on_road.any():
+        return np.zeros_like(on_road)
+    dist, (iy, ix) = ndimage.distance_transform_edt(~on_road, return_indices=True)
+    return dist <= half_width[iy, ix]
+
+
+def class_ids(classes: list[str], order: tuple[str, ...]) -> dict[int, str]:
+    """id → class for the classes a world uses, numbered in priority order."""
+    unknown = set(classes) - set(order)
+    if unknown:
+        raise ValueError(f"unknown way classes {sorted(unknown)}; use some of {list(order)}")
+    used = [c for c in order if c in set(classes)]
+    return {i + 1: c for i, c in enumerate(used)}
+
+
+def half_width_cells(
+    width_m: np.ndarray, meters_per_cell: np.ndarray, spec: dict[str, Any]
+) -> np.ndarray:
+    """Per-cell half-width (u8, 1/32 cell) from the widest way's metres (D-050):
+    scale × real width at the local scale, never narrower than minCells."""
+    scale = float(spec.get("scale", 1.0))
+    min_cells = float(spec.get("minCells", 0.1))
+    hw = np.maximum(scale * width_m / 2.0 / meters_per_cell, min_cells / 2.0)
+    return np.where(width_m > 0, np.clip(np.round(hw * 32.0), 1, 255), 0).astype(np.uint8)
+
+
 CLIFF_DROP_METERS = 80.0
 FOREST_ABOVE_METERS = 2300.0
 
@@ -288,7 +356,18 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     landcover = layout.cell_landcover()
     release = region.sources["overture"]["release"]
     bbox = region.lonlat_envelope()
-    road_rows = overture.roads(release, bbox, region.sources["roads"]["classes"])
+    road_spec = region.sources["roads"]
+    road_ids = class_ids(road_spec["classes"], ROAD_ORDER)
+    road_id = {c: i for i, c in road_ids.items()}
+    road_rows = overture.roads(
+        release, bbox, road_spec["classes"], road_spec.get("excludeSubclasses")
+    )
+    path_ids: dict[int, str] = {}
+    path_rows: list[dict] = []
+    if "paths" in region.sources:
+        path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
+        path_rows = overture.paths(release, bbox, region.sources["paths"]["classes"])
+    path_id = {c: i for i, c in path_ids.items()}
     river_rows = overture.rivers(release, bbox, region.sources["rivers"]["subtypes"])
 
     # heights in steps on the shared corner field
@@ -320,21 +399,25 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     q, water_level = apply_water(q, lake, river)
 
     # roads: snap, cut-and-fill on the corner field
-    road_lines = _lines_in_cells(layout, road_rows, lambda r: ROAD_RANK[r["class"]])
+    road_lines = _lines_in_cells(layout, road_rows, lambda r: road_id[r["class"]])
+    road_lines_mapped = road_lines
+    path_lines = _lines_in_cells(layout, path_rows, lambda r: path_id[overture.path_class(r)])
     snap = region.snap or {}
     road_shift = None
     deviation = None
     if "roads" in snap:
         # straighten the network toward the 8 grid directions (D-049)
         rs = snap["roads"] or {}
+        # roads and paths straighten together, so crossings stay where they meet
         straight = road_stage.straighten(
-            road_lines,
+            road_lines + path_lines,
             angle=float(rs.get("angle", 16.0)),
             simplify=float(rs.get("simplify", 0.75)),
             max_shift=float(rs.get("maxShift", 2.0)),
             shape=(cy, cx),
         )
-        road_lines = straight.lines
+        road_lines = straight.lines[: len(road_lines)]
+        path_lines = straight.lines[len(road_lines) :]
         deviation = float(rs.get("deviation", 1.0))
         follow = float((snap.get("buildings") or {}).get("follow", 3.0))
         road_shift = straight.shift(follow)
@@ -343,7 +426,25 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             f"snap: {straight.constrained}/{straight.edges} road edges made octilinear, "
             f"nodes moved p99 {np.percentile(moved, 99) if len(moved) else 0:.2f} cells"
         )
-    road_layer = road_stage.rasterize(road_lines, (cy, cx), deviation=deviation)
+    widths = region.widths
+    road_w = path_w = None
+    if widths is not None:
+        rw = ROAD_WIDTH_M | {k: float(v) for k, v in (widths.get("roads") or {}).items()}
+        pw = PATH_WIDTH_M | {k: float(v) for k, v in (widths.get("paths") or {}).items()}
+        road_w = {r["id"]: rw[r["class"]] for r in road_rows}
+        path_w = {r["id"]: pw[overture.path_class(r)] for r in path_rows}
+    road_layer = road_stage.rasterize(road_lines, (cy, cx), deviation=deviation, widths=road_w)
+    path_layer = (
+        road_stage.rasterize(path_lines, (cy, cx), deviation=deviation, widths=path_w)
+        if path_rows
+        else None
+    )
+    road_hw = path_hw = None
+    if widths is not None:
+        mpc = layout.meters_per_cell()
+        road_hw = half_width_cells(road_layer.width, mpc, widths)
+        if path_layer is not None:
+            path_hw = half_width_cells(path_layer.width, mpc, widths)
     heights = road_stage.road_heights(road_layer.mask, q)
     q = road_stage.apply_to_corners(q, road_layer.mask, heights)
     on_road = (road_layer.mask & road_stage.CONNECT_MASK) != 0
@@ -369,10 +470,22 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         meters_per_cell=region.meters_per_cell,
     )
     geology, province_names = provinces(region, layout)
+    # junctions are checked where they lie inside the grid (as first mapped)
+    mapped = {seg_id: parts for seg_id, _, parts in road_lines_mapped}
+
+    def junction_inside(seg_id: str, at: float) -> bool:
+        parts = mapped.get(seg_id)
+        if not parts:
+            return False
+        xs = np.concatenate([p[0] for p in parts])
+        ys = np.concatenate([p[1] for p in parts])
+        x, y = road_stage.point_at(xs, ys, at)
+        return 0 <= x < cx and 0 <= y < cy
+
     report = road_stage.validate(
         road_layer,
         cell_corner_heights(base, shape),
-        road_stage.junction_index(road_rows),
+        road_stage.junction_index(road_rows, junction_inside),
     )
     print(f"roads: {asdict(report)}")
 
@@ -384,7 +497,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         micro_m = layout.corner_elevation(dem_spec, k)
         if layout.warped and layout.spec.vertical:
             micro_m = layout.relief(micro_m, k)[0]
-        mc = micro_stage.build_micro(micro_m, step_m, k, base, shape, water, road_layer.mask)
+        mc = micro_stage.build_micro(
+            micro_m,
+            step_m,
+            k,
+            base,
+            shape,
+            water,
+            road_layer.mask,
+            None if road_hw is None else road_hw / 32.0,
+        )
         micro = (mc, k)
         print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
 
@@ -394,6 +516,8 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     if region.objects is not None:
         steep_steps = max(1, round(OBJECT_MAX_SLOPE * region.vertical_exaggeration / STEP_WORLD))
         blocked = on_road | is_water | cliff_mask(base, shape, min_drop=steep_steps)
+        if road_hw is not None:
+            blocked |= paved_band(on_road, road_hw / 32.0)
 
         def drawn_steps(x: float, y: float, metres: float) -> float:
             if layout.warped:
@@ -444,6 +568,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         water=water,
         road=road_layer.mask,
         road_class=road_layer.cls,
+        road_width=road_hw,
+        path=None if path_layer is None else path_layer.mask,
+        path_class=None if path_layer is None else path_layer.cls,
+        path_width=path_hw,
+        path_classes=path_ids or None,
         geology=geology,
         vref=vref,
         vfac=vfac,
@@ -457,7 +586,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             "verticalExaggeration": region.vertical_exaggeration,
         },
         surfaces=SURFACES,
-        road_classes=ROAD_CLASSES,
+        road_classes=road_ids,
         provinces=province_names,
         start=(int(sx[0]), int(sy[0])),
         style=region.style,
@@ -493,6 +622,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         **({"warp": layout.warp.stats} if layout.warped else {}),
         **({"objects": object_counts} if instances is not None else {}),
         "roads": asdict(report) | {"ok": report.ok()},
+        **(
+            {"paths": {"segments": len(path_rows), "cells": int((path_layer.mask > 0).sum())}}
+            if path_layer is not None
+            else {}
+        ),
         "surfaces": {
             SURFACES[int(k)]: int(v)
             for k, v in zip(*np.unique(surface, return_counts=True), strict=True)

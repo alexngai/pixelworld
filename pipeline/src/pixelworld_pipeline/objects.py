@@ -223,6 +223,7 @@ def street_trees(
             p.region.lonlat_envelope(),
             ["id", "class", "names", "geometry"],
             lambda r: r["class"] in classes,
+            filter_tag=f"classes:{','.join(sorted(classes))}",
         )
     for row in sorted(road_rows, key=lambda r: r["id"]):
         if row["class"] not in classes:
