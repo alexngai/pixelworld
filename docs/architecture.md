@@ -145,7 +145,7 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 1. **fetch:** download the raw sources clipped to the region bounding box. The raw cache stays outside the repo.
 2. **normalize:** reproject to the region CRS, unify schemas, and assign stable feature IDs.
 3. **semantics:** fuse sources by priority into semantic layers: terrain, water, land cover, road/rail networks, buildings (footprint, height, roof shape, use), vegetation and POIs. See the fusion matrix in [data-sources.md](data-sources.md).
-4. **importance:** score features and areas by fame and interest (Wikidata sitelinks, Wikipedia pageviews, OSM tags), combine with the hand-painted focus areas, and produce a target **scale field**.
+4. **importance:** score features and areas by fame and interest, combine with the hand-painted focus areas, and produce a target **scale field**. M2 uses Wikidata sitelinks, kept as a committed snapshot (`worlds/<id>/importance.json`, refreshed by `pixelworld importance`). Pageviews and OSM tags may come later.
 5. **warp:** solve the map deformation (§6), producing forward and inverse maps.
 6. **gridify:**
    - Resample the DEM into cells (base height + corner shape + cliffs) and land cover into surface materials.
@@ -157,23 +157,38 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 8. **place:** emit instances for everything gameplay cares about: buildings, trees, props with collision, and landmark stamps (rigid, own scale). Purely decorative scatter (grass tufts, pebbles) is left to the client.
 9. **export:** write the chunked world package plus a manifest.
 
-The editor drives the same stages through a local pipeline server, so changing a pin or a scale brush re-solves and re-exports the affected area.
+The editor drives the same stages through a local pipeline server (`uv run pixelworld serve worlds/<id>/region.yaml`, plus `pnpm --filter @pixelworld/editor dev`). A pin or focus edit re-solves the warp and shows a warped preview within seconds, and "Build world" re-exports the whole package (about 1.5 min for the Southwest).
 
 ## 6. Elastic map (warp)
 
 Goal: a smooth, fold-free mapping from region meters to world cells that matches the target scale field while keeping local shapes recognizable.
 
-- **v0 (no warp):** uniform scale. Used for M1.
-- **v1 (separable):** x′ = F(x), y′ = G(y), built from the cumulative interest along each axis. Simple and grid-friendly, but it can't scale two places at the same latitude independently.
+Implemented in M2 (`pipeline/src/pixelworld_pipeline/warp.py`, `layout.py`; decisions D-040 to D-044):
+
+- **Scale field:** target metres per cell over the region.
+  - **Background:** the scale where nothing is magnified.
+  - **Focus areas:** circles with a target scale inside a core radius, blending back over a falloff (smoothstep in log scale).
+  - **Importance:** up to 1.6× extra magnification around places with many Wikipedia sitelinks (§5 stage 4).
+  - **Combining:** where terms overlap, the finest wins. Focus areas and pins live in `worlds/<id>/warp.yaml`, which the editor writes.
+- **v0 (no warp):** uniform scale, used for M1 and for worlds without a `warp` section. The layout itself adds nothing, so these worlds build as before M2, apart from pipeline rule changes such as D-044.
+- **v1 (separable):** x′ = F(x), y′ = G(y), built from the cumulative interest along each axis. It's always fold-free and serves as v2's starting point. It can't scale two places at the same latitude independently.
 - **v2 (mesh solve):**
-  - Lay a triangle mesh over the region. Solve for vertex positions so that each triangle is close to a *similarity transform* (rotation + uniform scale) at its target scale, using sparse least squares with alternating local/global iterations.
-  - Pins act as hard or soft positional constraints.
-  - A fold check (every triangle keeps its orientation) rejects invalid solutions.
-  - Editor UX: paint scale, drag pins, re-solve in about a second for a region.
+  - **Mesh:** a triangulated grid (2 km; the editor uses 4 km).
+  - **Energy:** each triangle's distortion is measured relative to its target scale with the symmetric Dirichlet energy. This is minimal for a similarity at the target and infinite at inversion. It is weighted by area times magnification², i.e. by the output area it occupies.
+  - **Minimisation:** reweighted local/global steps (SLIM). A line search never lets a triangle flip, so a solve that starts fold-free stays fold-free.
+  - **Boundary:** it slides along a rectangle whose size is solved.
+  - **Pins:** soft positional constraints.
+  - **Corrections:** two passes rescale each focus area's internal target by its measured error.
+  - **Southwest:** every focus area lands within 0.5% of its target, in about 20 s on a 2 km mesh or 3–4 s on 4 km.
 - **Applying the warp:**
-  - Rasters (DEM, land cover) are sampled through the inverse map.
-  - Vectors are densified, then forward-mapped.
-  - Landmarks and building anchors are forward-mapped as points. Their geometry is stamped at object/landmark scale and never deformed.
+  - **Rasters:** the DEM (cell and micro-corners) and land cover are sampled at inverse-mapped points. Sources are read as a pyramid of levels in fixed, individually cached blocks. Each point uses the coarsest level no coarser than its local sample spacing.
+  - **Vectors:** they are densified to about 1 km, then forward-mapped.
+  - **Provinces and the start:** they use the maps too.
+  - **Landmarks and building footprints:** they are stamped rigidly with the local similarity at their anchor and never sheared. Each instance carries its local metres per cell.
+- **Vertical caricature:**
+  - **Rule:** local relief is exaggerated as elev′ = ref + R·(elev − ref). ref is the elevation smoothed over about 6 km, so flat ground and the regional trend are untouched. R = (base metres per cell / local metres per cell)^γ, clamped, so magnified places keep the base proportions.
+  - **Strata:** per-cell `VREF`/`VFAC` layers carry the mapping, so the shader draws strata at real elevations.
+- **Editor UX:** `apps/editor` with `pixelworld serve`; see §11 and the roadmap's M2 results.
 
 ## 7. Content generation (client, TypeScript)
 
@@ -275,7 +290,7 @@ packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
 packages/sim/†            vehicles, flight, building, cell occupancy
 apps/web/                 player app
-apps/editor/†             editor (warp tools, overrides, landmark placement)
+apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
 tools/bake-cli/†          headless offline baking (Playwright)
 e2e/                      Playwright golden-image and behaviour tests
 ```

@@ -227,3 +227,38 @@ The point is more room for visual interest; both halves are wanted.
   - Land-cover borders are jittered per micro-cell.
 - **Margin:** micro-terrain tiles use an 8-cell bake margin (shadows and AO reach a few cells).
 
+### D-040: Elastic map solver (accepted, M2)
+- **Energy and method:** v2 minimises a weighted symmetric Dirichlet energy relative to each triangle's target scale, using SLIM-style reweighted local/global steps. A flip-preventing line search starts from the fold-free separable map.
+- **Rejected alternative:** plain ARAP/similarity energy. It folded or crushed the background once focus areas were weighted enough to hit their targets.
+- **Weights:** they count distortion by output area (magnification²), so focus areas keep their scale and the transitions absorb the stretch.
+- **Boundary:** it slides along a solved rectangle, so the world stays a rectangle.
+- **Corrections:** two passes rescale the internal targets, bringing focus cores within 0.5%.
+- **Result:** the magnified areas push their surroundings outward like a fisheye. The anisotropy sits in the transition rings: p95 about 3, a few slivers higher.
+
+### D-041: Vertical caricature keeps proportions (accepted, M2)
+- **Problem:** with one metres-per-step everywhere, magnified places would look flatter than the base, and the compressed background spikier.
+- **Rule:** local relief is exaggerated around a smoothed reference, elev′ = ref + R·(elev − ref), with R = (base / local metres per cell)^γ clamped to [0.6, 4]. Flat ground and the regional trend are unchanged.
+- **Strata:** they stay at real elevations through the per-cell `VREF`/`VFAC` layers.
+
+### D-042: Importance from Wikidata sitelinks (accepted, M2)
+- **Scoring:** places with coordinates in the region are scored by sitelinks. Counties, deserts, mountain ranges, rivers and events are left out.
+- **Snapshot:** the result is a committed snapshot, so builds don't depend on the live service, which was rate-limited during M2.
+- **Effect:** Gaussian splats of log-sitelinks give up to 1.6× magnification. Hand-painted focus areas remain the main control.
+
+### D-043: Editor v0 architecture (accepted, M2)
+- **Pieces:** a local pipeline server (standard library HTTP on 127.0.0.1) and a canvas editor (`apps/editor`).
+- **Fast loop:** an edit re-solves the warp on a 4 km mesh and returns a warped preview of a source-space map plus a forward-map lattice, in about 5 s for the Southwest.
+- **Full build:** it runs in the background on request, about 1.5 min.
+- **File:** the editor owns `worlds/<id>/warp.yaml`; the region spec includes it.
+
+### D-044: Neighbouring road cells share one level (accepted, M2)
+- **Rule:** road height relaxation keeps every pair of neighbouring road cells within one step, connected or not.
+- **Why:** parallel carriageways and crossings share corners. In magnified areas a bigger gap split road cells into terraces: 27 discontinuous edges in the first warped build, 0 after this change.
+- **Validation:** the steep-edge check now scales its threshold by step length (√2 for diagonals).
+- **Trade-off:** overpasses can't be more than one step above the road below.
+
+### D-045: Warped land cover is sampled 3×3 per cell (accepted, M2)
+- **Problem:** the warped layout sampled land cover once, at each cell centre. At Lake Mead's 250 m cells, Boulder Canyon's narrow strait fell between centres and split the lake from the Colorado. The uniform build doesn't do this because it takes the mode over the whole cell.
+- **Rule:** each cell takes 9 samples spread over it. The most common class wins, with ties going to the centre sample, and water wins from 3 samples.
+- **Result:** a channel wider than a third of the cell, measured across the channel, stays connected. Lake Mead and the Colorado are one water body again.
+- **Cost:** water cells grew 6% and land-cover sampling takes about 10 s more per build.

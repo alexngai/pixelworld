@@ -215,7 +215,7 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 - **Road beds** are 0.3 cells to either side of the centre line, so in mountains they read as wide benches.
 - **Not combined yet:** render scale (the M1.5 experiment worlds) and micro-terrain don't work together.
 
-### M2: Elastic map and editor v0
+### M2: Elastic map and editor v0 — done
 
 **Goal:** demonstrate the core idea: Las Vegas, Hoover Dam and the Grand Canyon within a short drive.
 
@@ -230,6 +230,78 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 - Roads and rivers stay continuous and recognizable.
 - Each focus area hits its target scale within tolerance.
 - An editor change shows up in the preview within seconds for the affected area.
+
+#### M2 results
+
+![The Strip, Hoover Dam and Grand Canyon Village at 2×: uniform 400 m cells (M1.6) and the elastic map (M2)](images/m2-before-after.png)
+
+![The Southwest at uniform scale and after the warp, as the editor previews it (1 pixel per cell)](images/m2-warp.png)
+
+![Editor v0: focus areas on the source map, the warped world with its lattice, and the solve's per-focus results](images/m2-editor.png)
+
+**What was built:**
+- **Warp:** a scale field from hand-placed focus areas plus automatic importance, then a mesh solve.
+  - v1 is separable; v2 is a fold-free mesh solve with soft pins and a boundary that slides along a rectangle (D-040).
+  - The build fails on any fold. Solves are cached by the warp spec's digest.
+- **Pipeline on a layout:** every stage samples through a layout: elevation, land cover, roads, rivers, provinces, micro-terrain and objects.
+  - The uniform layout changes nothing by itself. The M1.5 fixtures rebuild byte for byte, and the M0 and M1.5 goldens are unchanged.
+  - A uniform Southwest build differs from M1.6 only in road beds: 36 cells in 3 of 187 chunks, from D-044.
+  - Lines are split about every 1 km before mapping, so they bend with the warp.
+- **Vertical caricature:** relief is exaggerated by the local magnification around a smoothed reference (D-041). Strata keep their real elevations through the new `VREF`/`VFAC` layers.
+- **Importance:** a committed Wikidata snapshot of 110 places scored by sitelinks adds up to 1.6× magnification (D-042).
+- **Rigid stamping:** buildings and landmarks are placed with the local similarity of the map at their anchor. They keep their shape and real size relative to the local cells.
+  - Hoover Dam is a new `landmark.dam` stamped along its crest line.
+- **Editor v0:** `apps/editor` plus a local pipeline server, `pixelworld serve` (D-043).
+  - Focus areas can be added, dragged and resized; each has a scale, radius and falloff. Pins and the background scale are editable too.
+  - Each edit re-solves and redraws the preview. Saving writes `worlds/<id>/warp.yaml`; a full build runs in the background.
+- **Client:** the manifest records metres per cell for every chunk. The HUD shows the local scale and the real (un-exaggerated) elevation.
+- **Fixes the warp needed:**
+  - Neighbouring road cells share one level (D-044).
+  - Warped land cover is sampled 3×3 per cell (D-045).
+
+| Exit criterion | Result |
+|---|---|
+| The warp has no folds | 0 folds. The worst cell is stretched 15:1, in a few slivers of the transition rings; p95 is about 3:1. |
+| Roads and rivers stay continuous and recognizable | Road report over 24,412 road cells: 0 discontinuous edges, 0 steep edges, 0 split segments, 0 disconnected junctions. Lake Mead and the Colorado through the Grand Canyon are one water body, as in the uniform build; the only split is at Hoover Dam. |
+| Each focus area hits its target scale | All five within 0.2% (table below). |
+| An editor change shows in the preview within seconds | About 5 s: the warp is re-solved on a 4 km mesh in 3.5 s, then the preview is redrawn. A full build takes 80 s in the background. |
+
+| Focus area | Target | Achieved |
+|---|---|---|
+| Las Vegas Strip | 100 m/cell | 100.2 |
+| Hoover Dam | 100 | 100.0 |
+| Lake Mead | 250 | 250.5 |
+| Grand Canyon Village | 150 | 150.1 |
+| Desert View | 150 | 150.1 |
+
+| | M1.6 (uniform) | M2 (warped) |
+|---|---|---|
+| World | 1028×700 cells | 1155×709 cells (+14%) |
+| Empty desert | 400 m/cell | about 500 m/cell (the background) |
+| Strip → Grand Canyon Village, straight line | 684 cells | 718 cells |
+| Package, gzipped | 3.97 MB | 5.62 MB of chunks + 0.30 MB of objects |
+| Build, with cached sources | 30 s | 80 s, plus 17 s for the first solve of a warp on the 2 km mesh |
+
+**The drive didn't get shorter.** The focus areas and their falloff rings take more cells than the compressed desert gives back. The Strip and the canyon get 16× and 7× more cells per area, but the drive between them grew by 5%. Solving (without building) with a coarser background shows the knob:
+
+| Background | World | Strip → Grand Canyon Village | Focus errors |
+|---|---|---|---|
+| 500 m (built) | 1155×709 | 718 cells | ≤ 0.2% |
+| 800 m | 963×525 | 576 cells | ≤ 0.1% |
+| 1200 m | 879×424 | 513 cells | ≤ 0.6% |
+
+Which drive length is right depends on vehicle speed, which M4 sets; the editor's background field changes it in seconds.
+
+**Known issues:**
+- **Transition rings:** stretched cells smear terrain and land cover around the Strip, visible as rings in the warp preview.
+- **Black Canyon:** at 100 m cells the relief factor reaches the cap of 4, so the canyon below Hoover Dam is a deep slot. A lower cap per feature is the likely fix.
+- **Narrow water on warped layouts:** 3×3 samples per cell can still miss a channel narrower than a third of a stretched cell.
+- **Importance:** it uses Wikidata sitelinks only; pageviews and OSM tags aren't in. The live service rate-limits queries, so the snapshot is committed.
+- **Editor scale brush:** it's circular focus areas only; there's no freehand painting.
+- **Objects:**
+  - Land-cover scatter (vegetation) isn't supported on warped layouts yet.
+  - Buildings are only placed around the Strip.
+  - The dam is a plain procedural wedge.
 
 ### M3: Detail pass — components and landmarks
 

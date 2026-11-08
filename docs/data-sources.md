@@ -34,6 +34,7 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 | Elevation | USGS 3DEP 1 arc-second (30 m) | the 120 m overview of each COG tile, over HTTP range requests, averaged per cell corner |
 | Elevation (micro-terrain, M1.6) | USGS 3DEP 1 arc-second (30 m) | the 60 m overview, averaged per micro-corner (100 m apart in the Southwest) |
 | Elevation (fine cells, M1.5) | USGS 3DEP 1/3 arc-second (10 m) | full resolution or an overview, averaged per cell corner |
+| Importance (M2) | Wikidata items with coordinates, scored by sitelinks | SPARQL query over the region's bounds, saved as a committed snapshot (`worlds/<id>/importance.json`); CC0 |
 | Buildings (M1.5) | Overture buildings and building parts | footprints, class and height (or floors × 3.5 m), over HTTP range reads; parts become towers on a podium |
 | Land cover | ESA WorldCover 2021 (10 m) | the 160 m overview, mode-resampled per cell |
 | Roads | Overture `transportation/segment` (from OSM), release pinned in the region spec | GeoParquet row groups pruned by bounding box from a cached footer index |

@@ -25,7 +25,8 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "cellsY": 128,
   "chunks": [
     { "x": 0, "y": 0, "path": "chunks/0_0.pxwc.gz", "sha256": "…",
-      "heightRange": [2, 31] }      // lowest/highest corner height in the chunk (steps)
+      "heightRange": [2, 31],       // lowest/highest corner height in the chunk (steps)
+      "metersPerCell": 102.4 }      // optional (M2): mean real metres per cell in a warped world
   ],
   "scale": {
     "metersPerCell": 160,           // layout scale (uniform in v0; warped from M2)
@@ -47,6 +48,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "render": { "scale": 0.125, "tileSize": 512 },  // optional (M1.5): render units per cell; bake tile edge in cells
   "objects": { "path": "objects.json.gz", "sha256": "…", "count": 9401 },  // optional (M1.5)
   "micro": { "k": 4 },              // optional (M1.6): every chunk has an MHGT section
+  "warp": { "method": "v2", "background": 500, "focus": [ … ], "pins": 0, "vertical": { … } },  // optional (M2), informational
   "packageHash": "…"                // SHA-256 of this manifest without the field
 }
 ```
@@ -55,6 +57,11 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
 - **Optional fields:** `heightRange`, the chunk `heightRange`s, `roadClasses`, `geology`, `start` and `packageHash` are all optional, so M0 manifests stay valid. Clients use the height ranges to place and depth-sort tiles before any chunk is loaded. Without them, a client has to load every chunk first.
 - **Package hash:** `packageHash` is the SHA-256 of the manifest's canonical JSON (sorted keys, without `packageHash`). The manifest already lists every chunk's SHA-256, so identical inputs and code give an identical hash. Clients key their baked-tile caches on it.
 - **Surface IDs are local to a package.** The contract between the pipeline and the client is the surface **name**. Style packs map surface names to materials. Road classes and geology provinces work the same way.
+- **Warped worlds (optional, M2, D-040):** cells are laid out by an elastic map, so real metres per cell vary.
+  - **Local scale:** `chunks[].metersPerCell` records the mean per chunk.
+  - **Summary:** `warp` summarises the layout (focus targets and what they achieved).
+  - **Nominal scale:** `scale.metersPerCell` stays the base scale that heights and steepness rules are expressed in.
+  - **Objects:** instances carry `m`, their local metres per cell, and a dam carries `top`, its crest height in steps.
 - **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too.
 - **Render scale (optional, D-032):** `render.scale` in (0, 1] draws each cell at that fraction of a 32×16 px tile, and heights shrink by the same factor. Fine experiment worlds use it to stand in for micro-terrain. `render.tileSize` overrides the bake tile edge (default 32 cells).
 - **Objects (optional, D-034):** `objects.path` points to a gzipped JSON file, `{ "version": 1, "instances": [...] }`. Each instance has:
@@ -110,6 +117,8 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `RCLS` | `u8[]` | no | road class ID (see `manifest.roadClasses`); 0 = none |
 | `GEOL` | `u8[]` | no | geology province ID (see `manifest.geology`); picks the strata set for rock and cliffs |
 | `MHGT` | `i16[]` | no | micro-terrain (M1.6, D-038): see below |
+| `VREF` | `i16[]` | no | vertical caricature (M2, D-041): relief reference height in 1/16 steps (default 0) |
+| `VFAC` | `i16[]` | no | vertical caricature: 1/R in 1/4096 units (default 4096 = none). A drawn height h is the real height `ref + (h − ref)·VFAC/4096` |
 
 Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 

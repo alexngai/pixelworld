@@ -25,20 +25,30 @@ Surface classes (woodland, forest, scrub, rock, sand) are generated from elevati
 
 ## southwest
 
-The M1 region: the US Southwest at a uniform 400 m per cell, 2.5× vertical exaggeration and slope tiles up to 2 steps per cell. It's 1028×700 cells in 187 gzipped chunks: 0.63 MB with cells only, 3.97 MB with micro-terrain.
+The US Southwest on the M2 elastic map, built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml) and its warp, [`warp.yaml`](../worlds/southwest/warp.yaml).
 
-Since M1.6 the chunks also carry micro-terrain: 4×4 micro-cells (100 m) per cell, with quarter-step heights from the DEM's 60 m overview (`MHGT`, D-038). It's built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml):
+- **Size:** 1155×709 cells in 228 gzipped chunks. The chunks are 5.62 MB and `objects.json.gz` is 0.30 MB.
+- **Scale:** cells are about 500 m in the open desert. Focus areas are finer: 100 m on the Las Vegas Strip and at Hoover Dam, 250 m on Lake Mead, 150 m at Grand Canyon Village and Desert View. The manifest records each focus area's achieved scale and every chunk's metres per cell.
+- **Relief:** 2.5× vertical exaggeration (65.3 m per height step), with local relief exaggerated where cells are magnified (D-041). The `VREF`/`VFAC` layers keep strata at real elevations.
+- **Micro-terrain:** 4×4 micro-cells per cell (`MHGT`, D-038).
+- **Objects:** buildings around the Strip, plus four landmarks: the Strat, the Welcome to Fabulous Las Vegas sign, Hoover Dam and the Desert View Watchtower.
 
 ```sh
 cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+# or edit the warp interactively: http://localhost:5180 (pnpm --filter @pixelworld/editor dev)
+uv run pixelworld serve ../worlds/southwest/region.yaml
 ```
 
-`build-report.json` records the package hash, the road validation and the surface counts.
+`build-report.json` records the package hash, the warp's statistics (folds, anisotropy, focus results, solve time), the road validation, the object counts and the surface counts.
+
+Before M2 this package was uniform: 1028×700 cells at 400 m (M1, 0.63 MB), then with micro-terrain (M1.6, 3.97 MB).
 
 Sources and licenses:
 - Elevation: USGS 3DEP 1 arc-second DEM. Public domain.
 - Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads and rivers: © OpenStreetMap contributors via Overture Maps (release 2026-10-21.0). ODbL 1.0, so this package is a derivative database under the ODbL.
+- Buildings: Overture Maps buildings (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints). ODbL 1.0.
+- Importance (`worlds/southwest/importance.json`, used to build the warp, not shipped in the package): Wikidata. CC0.
 
 ## exp-* (M1.5 pixel detail experiment)
 
