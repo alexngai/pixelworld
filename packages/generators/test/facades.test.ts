@@ -289,6 +289,33 @@ describe("Chinatown", () => {
   it("varies its window layout from building to building", () => {
     expect(new Set(fronts.map((f) => f.glass)).size).toBeGreaterThanOrEqual(12);
   });
+
+  it("wraps the eave round its sides, and gives a corner lot's side street a front", () => {
+    const side = (corner: boolean, seed = 11) => {
+      const m = generateModel(style.assets, rampIds, "building.chinatown", {
+        seed,
+        mask: rect(18, 30),
+        heightVox: 28,
+        hints: { front: 2, year: 1910, floors: 4, corner },
+      });
+      // the x = 0 side wall, behind the front
+      const count = (want: Set<string>) => {
+        let n = 0;
+        for (let y = 2; y < 28; y++) for (let z = 0; z < 26; z++) if (want.has(rampName.get(m.materials[m.get(0, y, z)]!) ?? "")) n++;
+        return n;
+      };
+      let jade = 0;
+      for (let y = 0; y < 30; y++) if (rampName.get(m.materials[m.get(0, y, 27)]!) === "jade") jade++;
+      return { red: count(new Set(["chinatown-red"])), glass: count(glassRamps), jade };
+    };
+    const plain = side(false);
+    const corner = side(true);
+    expect(corner.red).toBeGreaterThan(plain.red + 20);
+    expect(corner.glass).toBeGreaterThan(plain.glass);
+    // most carry the jade eave round the whole roof's edge
+    const jade = Array.from({ length: 10 }, (_, i) => side(false, 20 + i).jade > 20);
+    expect(jade.filter(Boolean).length).toBeGreaterThanOrEqual(6);
+  });
 });
 
 describe("facade typologies follow the style guide", () => {

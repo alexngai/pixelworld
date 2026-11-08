@@ -195,14 +195,17 @@ const PARAPET_ODDS: [string, number][] = [
  * over it the living room's big window, most often in a box, canted or curved
  * bay. The bay is drawn by stepping the rest of the upper front back (no
  * overhang); a canted or curved bay has glazed sides, and where it projects
- * two voxels its corners are cut. On top, a parapet whose profile varies by
- * seed (raised, a small pediment, end piers, stepped, curved, plain), with a
- * white coping on most; a short red-tiled pent roof on a minority (mostly the
- * 1920s Mediterranean ones) and now and then a storybook gable. A light well
+ * two voxels its corners are cut. The bay rises to the roof line under a
+ * white cap, with the parapet set back on the wall behind it, so its bump
+ * reads from above even on a front five voxels wide (a 25-foot lot at 25 m
+ * cells). On top, a parapet whose profile varies by seed (raised, a small
+ * pediment, end piers, stepped, curved, plain), with a white coping on most;
+ * a short red-tiled pent roof on a minority (mostly the 1920s Mediterranean
+ * ones) and now and then a storybook gable (before 1940). A light well
  * halfway back on one lot line breaks each long roof, so from above a row
- * reads as houses side by side. Mid-century
- * fronts keep a flat fascia, a band of sliding windows or a box bay, and
- * sometimes a brick or stone veneer at the street.
+ * reads as houses side by side. Mid-century fronts keep a flat fascia, a band
+ * of sliding windows or a box bay, and sometimes a brick or stone veneer at
+ * the street.
  */
 function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: number, year: number): VoxelModel {
   const { rand } = ctx;
@@ -766,25 +769,65 @@ function chinatown(ctx: GenContext, f: Facade, H: number, fh: number): VoxelMode
       raise(a, H, red); // a red parapet
     }
 
+  // the sides: party walls mostly, with a window here and there where they
+  // show; a corner lot's side street gets a front of its own (windows in
+  // pairs behind red rails over a sign band). The frieze and the jade eave
+  // run round every wall that shows.
+  const corner = ctx.hints?.corner === true;
+  if (!corner) sideWindows(m, f, H, fh, p.pane, 4);
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const;
+  const [fx, fy] = f.front;
+  for (let y = 0; y < f.sy; y++)
+    for (let x = 0; x < f.sx; x++) {
+      const d = f.depth[y * f.sx + x]!;
+      if (d < 0) continue;
+      for (const [dx, dy] of dirs) {
+        if (dx === fx && dy === fy) continue; // the front has its own
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < f.sx && ny < f.sy && f.depth[ny * f.sx + nx]! >= 0) continue;
+        const side = !(dx === -fx && dy === -fy); // not the rear
+        const show = (z: number) => m.get(x, y, z) && !m.get(nx, ny, z);
+        if (jadeEave) {
+          for (const z of [H - 2, H - 1]) if (show(z)) m.set(x, y, z, eave);
+          if (show(H - 3)) m.set(x, y, H - 3, red);
+        }
+        if (!corner || !side || d < 1) continue;
+        const inBay = d % 4 === 1 || d % 4 === 2;
+        for (let z = 1; z < zTop; z++) {
+          if (!show(z)) continue;
+          const zf = z % fh;
+          if (z < fh) {
+            if (zf === fh - 1 || (zf === fh - 2 && fh >= 6)) m.set(x, y, z, band);
+            else if (inBay && z >= 2) m.set(x, y, z, p.pane());
+          } else if (inBay && zf !== 0 && !(fh >= 4 && zf === fh - 1)) m.set(x, y, z, zf === 1 ? red : zf <= 6 ? p.pane() : p.body);
+        }
+      }
+    }
+
   // a pagoda: a tower on the corner of some corner lots, a pavilion on some other roofs
   const tiers = fine ? [Math.max(3, fh - 1), 3, 2] : [2, 1];
   const room = Math.min(W, f.maxDepth + 1);
-  if (ctx.hints?.corner && room >= (fine ? 7 : 5) && rand() < 0.4) {
+  if (corner && room >= (fine ? 7 : 5) && rand() < 0.4) {
     const size = Math.min(room, fine ? 9 : 5);
     pagoda(m, f, rand() < 0.5 ? 0 : W - size, 0, size, H, tiers, { eave, post: red, glass: p.pane(), finial: gold });
   } else if (room >= (fine ? 9 : 5) && f.maxDepth >= 6 && rand() < 0.15) {
     const size = Math.min(room - 2, fine ? 9 : 5);
     pagoda(m, f, Math.floor((W - size) / 2), 1, size, H, tiers.slice(1), { eave, post: red, glass: p.pane(), finial: gold });
   }
-  // side walls: party walls mostly, a window here and there where they show
-  sideWindows(m, f, H, fh, p.pane, 4);
   return m;
 }
 
 /**
- * Blocks on wider lots. params.type: 0 apartments with stacked bays and a
- * cornice, 1 historic commercial (storefronts, paired windows, cornice),
- * 2 Chinatown (balconies, a green tile eave), 3 a pier shed (arched bulkhead,
+ * Blocks on wider lots. params.type: 0 apartments with stacked bays (white
+ * panels between their windows) and a cornice, 1 historic commercial
+ * (storefronts, paired windows, cornice), 2 Chinatown (see chinatown:
+ * balconies, signs, a jade eave, pagodas), 3 a pier shed (arched bulkhead,
  * low gable), 4 a warehouse (window grid, sawtooth roof), 5 a plain modern
  * block (ribbon windows).
  */
