@@ -440,7 +440,7 @@
     ],
     "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
   },
-  "packageHash": "e8b90fa21665ecca027c260a2b0073546438fcd240539bd0bd7ecf9ace9ceceb",
+  "packageHash": "b15eed8225bc8f2c30a5726eff6c0bec7f1e51a09a71346819ae7fd4c64c956b",
   "heroes": [
     {
       "id": "strat-tower",
@@ -586,5 +586,11 @@
       "paint": "heroes/desert-view-watchtower/paint-r3.png",
       "sha256": "11e626fdee1c8721d9dfe1b45e5a39ccc518e7eeebaa9908f9f1d1957ff19f5f"
     }
-  ]
+  ],
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "51a3fcefb2a4777eff466a9c7f553303789a5ad7430848a0d6cfc44f3e74bc33",
+    "version": 1,
+    "count": 478
+  }
 }

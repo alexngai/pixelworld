@@ -7,6 +7,8 @@ A world package is a directory, or later an archive, containing:
 ```
 manifest.json
 chunks/<cx>_<cy>.pxwc      (or .pxwc.gz)
+objects.json.gz             (optional)
+routes.json.gz              (optional: ambient traffic routes, D-060)
 build-report.json           (optional, written by the pipeline; not read by clients)
 ```
 
@@ -54,6 +56,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "level": "drive",                 // optional (D-046): this package's scale level
   "levels": [ { "name": "fly", "world": "southwest-fly", "label": "Flying" }, … ],  // optional: every level of the region
   "geo": { "path": "geo.i32.gz", "step": 4, "size": [290, 179], "sha256": "…" },  // optional (D-048)
+  "routes": { "path": "routes.json.gz", "sha256": "…", "version": 1, "count": 16428 },  // optional (D-060)
   "heroes": [ { "id": "strat-tower", "rotation": 0, "left": -2046, "top": 3969, "width": 17, "height": 151,
                 "depthBase": 564, "bake": "heroes/strat-tower/bake-r0.png",
                 "paint": "heroes/strat-tower/paint-r0.png", "sha256": "…" }, … ],  // optional (M3, D-053)
@@ -102,6 +105,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **Points:** they sit at cell corners `x = min(i·step, cellsX)` and `y = min(j·step, cellsY)`; positions in between are bilinear.
   - **Coding:** each row is delta-coded along x, with the first point absolute.
   - **Use:** clients convert between cells and lon/lat with it, both ways, to carry a place from one level to another.
+- **Routes (optional layer, D-060):** `routes.path` points to a gzipped JSON file of polylines that ambient traffic follows. See [Optional layers](#optional-layers) and [Routes file](#routes-file-routesjsongz).
 - **Chunk coordinates:** chunk `(cx, cy)` covers cells `[cx·chunkSize, (cx+1)·chunkSize) × [cy·chunkSize, (cy+1)·chunkSize)`.
 
 ## Chunk file (`.pxwc`)
@@ -166,6 +170,41 @@ Optional sections are omitted when they hold only their default value (no water,
 - **Role of the cell layers:** they stay the gameplay summary; micro-terrain is what's drawn and what vehicles drive on.
 
 **v0 chunks** have a `SLOP` section instead of `CRNR`: a 4-bit mask, 0–14, where bit i means corner i is one step above `BASE`. Readers convert it to a shape where each set bit becomes an offset of 1.
+
+## Optional layers
+
+A layer is extra content on top of the world that the world doesn't need: its own file in the package, listed in the manifest as `<layer>: {path, sha256, version, …}`, with its own version. The chunk format, the objects file and the bake never depend on a layer:
+
+- **Absent:** a package without the layer works exactly as before.
+- **Added on its own:** a layer is written into a built package by its own pipeline command, without rebuilding chunks (traffic: `pixelworld routes <spec>`), and only its manifest entry and the package hash change.
+- **Drawn on top:** clients draw a layer as a dynamic overlay in the compositor, depth-tested against the baked tiles (architecture §8.2). Baked tiles never contain it and nothing is re-baked when it changes.
+- **Switchable:** each layer, and each of its sublayers, turns on and off on its own (a URL parameter, a key, a toggle in the layer panel).
+
+Layers so far: `routes` (ambient traffic, D-060). People, boats or aircraft would follow the same pattern.
+
+## Routes file (`routes.json.gz`)
+
+The traffic layer (D-060). Sublayers: road vehicles (`net: road`), rail and transit (`net: rail`), ferries (`net: ferry`); the viewer takes `traffic=0/1`, `trafficLayers=road,rail,ferry`, the V key and the layer panel. Written by `pixelworld routes` (pipeline `routes.py`) from a built package, read by `parseRoutes` in `packages/sim`. Deterministic gzip of JSON with sorted keys:
+
+```jsonc
+{
+  "version": 1,
+  "nodes": [[20.5, 10.5, 2.0], …],      // junctions: x, y (cells), h (steps)
+  "routes": [
+    { "net": "road", "cls": "primary", "a": 0, "b": 5, "w": 0.42,
+      "pts": [2.5, 10.5, 2.0, 20.5, 10.5, 2.0] },
+    { "net": "road", "cls": "primary", "a": 7, "b": 9, "bridge": "golden-gate-bridge", "deck": true, "pts": […] },
+    { "net": "rail", "kind": "cablecar", "a": 12, "b": 13, "pts": […] },
+    { "net": "ferry", "kind": "ferry", "name": "…", "pts": […] }
+  ]
+}
+```
+
+- **`pts`:** a flat list of x, y, h per vertex: cells, cells, steps. Two decimals. Between vertices, positions and heights are linear.
+- **`net`:** `road`, `rail` or `ferry`. A road route carries its road class name (`cls`, as in `roadClasses`); rail and ferry routes carry the vehicle kind (`kind`: `cablecar`, `streetcar`, `lightrail`, `train`, `ferry`).
+- **Junctions:** `a` and `b` index `nodes`, at the first and last vertex. Routes meeting at a node chain; each network (roads, and each rail kind) has its own nodes. Ferry lines have none.
+- **Optional fields:** `w` is the road's half-width in cells (median of `RWID` along it), `deck` marks a route with vertices on a bridge deck, `bridge` names the landmark whose deck a route crosses over water, `name` is a ferry line's name.
+- **Versioning:** readers reject other versions.
 
 ## Versioning
 

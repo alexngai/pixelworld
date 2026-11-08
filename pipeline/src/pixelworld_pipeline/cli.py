@@ -19,6 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("region", type=Path, help="path to worlds/<id>/region.yaml")
     b.add_argument("--out", type=Path, help="output directory (default: fixtures/<id>)")
     b.add_argument("--no-compress", action="store_true", help="write plain .pxwc chunks")
+    b.add_argument("--no-routes", action="store_true", help="skip ambient traffic routes (D-060)")
     srv = sub.add_parser("serve", help="local pipeline server for the editor (apps/editor)")
     srv.add_argument("region", type=Path)
     srv.add_argument("--port", type=int, default=8765)
@@ -31,7 +32,23 @@ def main(argv: list[str] | None = None) -> int:
     )
     her.add_argument("region", type=Path)
     her.add_argument("--out", type=Path, help="package directory (default: fixtures/<id>)")
+    rts = sub.add_parser(
+        "routes", help="add ambient traffic routes to a built package (D-060), no rebuild"
+    )
+    rts.add_argument("region", type=Path)
+    rts.add_argument("--out", type=Path, help="package directory (default: fixtures/<id>)")
     args = parser.parse_args(argv)
+
+    if args.command == "routes":
+        from .routes import refresh_routes
+
+        region = Region.load(args.region)
+        out = args.out or REPO / "fixtures" / region.id
+        t0 = time.time()
+        report = refresh_routes(args.region, out)
+        print(json.dumps(report, indent=2))
+        print(f"routes for {out} in {time.time() - t0:.0f}s")
+        return 0
 
     if args.command == "heroes":
         from .build import refresh_heroes
@@ -63,6 +80,10 @@ def main(argv: list[str] | None = None) -> int:
         out = args.out or REPO / "fixtures" / region.id
         t0 = time.time()
         report = build(args.region, out, compress=not args.no_compress)
+        if not args.no_routes:
+            from .routes import refresh_routes
+
+            report["routes"] = refresh_routes(args.region, out)
         print(json.dumps(report, indent=2))
         print(f"wrote {out} in {time.time() - t0:.0f}s")
         return 0 if report["roads"]["ok"] else 1

@@ -605,6 +605,11 @@ The first round's known issues went to three agents, each in its own git worktre
 - Speeds tuned to the compressed layout.
 - Grid building mode (place and remove) with local re-bake.
 - Palette LUT variants (day/night) and water palette cycling.
+- **Ambient traffic (D-060), done:**
+  - **Routes:** `pixelworld routes` exports routes from each built package: the drawn roads, bridge decks at their height, rail matched onto the streets (San Francisco's cable cars and F line) or laid on their own, and ferry lines. All six San Francisco and Southwest levels have them.
+  - **Simulation:** `packages/sim` runs cars, buses, cable cars, streetcars, light rail, trains and ferries deterministically around the view, at speeds compressed per level, and serializes its state.
+  - **Drawing:** generic box models baked per heading, depth-tested by the compositor; the e2e suite checks movement, a car on the Golden Gate's deck and a fixed-time golden.
+  - **Left for the drivable car:** a vehicle controller on the same routes (lane changes, turning at junctions under player control), leaving a route for free driving on the road bits and slopes, collisions with traffic, traffic lights or yielding at junctions, and drawn rails (tracks are not in the chunks yet).
 
 **Exit criteria:**
 - A complete Vegas → Hoover Dam → Grand Canyon run by car, then a canyon flight, at 60 fps on desktop.

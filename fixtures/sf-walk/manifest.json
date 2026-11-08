@@ -1153,5 +1153,11 @@
     ],
     "sha256": "2537b6a0c338cd2b12061ca9b2c97c7b858af3782bc917b468517ce6c35f14f1"
   },
-  "packageHash": "c641d9b89b0cfae39faab7aafbcbe3586f07a2090dab1ad7795747cdbb072b21"
+  "packageHash": "6ea9054ba1e20d2847c1afbc4545acb6fd306b6cfee94002098135dc3a4f073e",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "7c34194127632da9a772a93b944242b4a056e22bbe9b2b94e4fe1f9fbc7863bd",
+    "version": 1,
+    "count": 9895
+  }
 }

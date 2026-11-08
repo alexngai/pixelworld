@@ -1,5 +1,5 @@
 {
-  "packageHash": "e2373bd1c041be8206c21d32f7aed076266889b667d6a3da6ecd3e213b4ff0f5",
+  "packageHash": "e2aee55482ef287a6c3425f3d781a37cc80167c89444a0703c2d3be7c276969c",
   "cells": [
     274,
     234
@@ -46,5 +46,13 @@
     "grass": 2630,
     "farmland": 3,
     "urban": 17888
+  },
+  "routes": {
+    "cablecar": 9,
+    "ferry": 23,
+    "lightrail": 11,
+    "road": 791,
+    "streetcar": 4,
+    "train": 82
   }
 }

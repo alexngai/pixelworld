@@ -52,6 +52,9 @@ importers:
       '@pixelworld/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@pixelworld/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
       '@pixelworld/style':
         specifier: workspace:*
         version: link:../../packages/style
@@ -99,6 +102,12 @@ importers:
       '@pixelworld/world-format':
         specifier: workspace:*
         version: link:../world-format
+
+  packages/sim:
+    dependencies:
+      '@pixelworld/generators':
+        specifier: workspace:*
+        version: link:../generators
 
   packages/style: {}
 

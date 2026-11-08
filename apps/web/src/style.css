@@ -102,6 +102,29 @@ canvas#view.fixed {
   color: var(--muted);
 }
 
+/* Optional layers (traffic): a toggle per layer and sublayer, top right. */
+.layers {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layers label {
+  cursor: pointer;
+}
+
+.layers .sub {
+  padding-left: 16px;
+  color: var(--muted);
+}
+
 .hidden {
   display: none;
 }

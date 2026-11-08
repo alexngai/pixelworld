@@ -1,5 +1,5 @@
 {
-  "packageHash": "e8b90fa21665ecca027c260a2b0073546438fcd240539bd0bd7ecf9ace9ceceb",
+  "packageHash": "b15eed8225bc8f2c30a5726eff6c0bec7f1e51a09a71346819ae7fd4c64c956b",
   "cells": [
     339,
     219
@@ -88,5 +88,9 @@
     "grass": 14198,
     "farmland": 19,
     "urban": 3368
+  },
+  "routes": {
+    "road": 410,
+    "train": 68
   }
 }

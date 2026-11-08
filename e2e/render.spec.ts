@@ -1,11 +1,16 @@
 import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { expect, test, type Page } from "@playwright/test";
 import { decodePng } from "../packages/world-format/src/png";
 
-/** Open a fixed-size view and wait until every visible tile is baked and drawn. */
+/**
+ * Open a fixed-size view and wait until every visible tile is baked and drawn.
+ * Ambient traffic (D-060) is off unless the query asks for it, so scenes stay still.
+ */
 async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
-  await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}`);
+  const traffic = /(^|&)traffic=/.test(query) ? "" : "&traffic=0";
+  await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}${traffic}`);
   await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => window.__pixelworld!.ready());
 }
@@ -134,7 +139,7 @@ test.describe("US Southwest (M1)", () => {
   });
 
   test("baked tiles persist in IndexedDB across a reload", async ({ page }) => {
-    const url = "/?hud=0&w=640&h=360&zoom=2&rot=1";
+    const url = "/?hud=0&w=640&h=360&zoom=2&rot=1&traffic=0";
     await page.setViewportSize({ width: 640, height: 360 });
     await page.goto(url);
     await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
@@ -162,7 +167,7 @@ test.describe("US Southwest (M1)", () => {
 
   test("the sources screen lists every attribution from the manifest", async ({ page }) => {
     await page.setViewportSize({ width: 960, height: 540 });
-    await page.goto("/?cache=0&w=960&h=540&zoom=2");
+    await page.goto("/?cache=0&w=960&h=540&zoom=2&traffic=0");
     await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
     await expect(page.locator("#sources")).toBeHidden();
     await page.keyboard.press("i");
@@ -328,5 +333,100 @@ test.describe("San Francisco (D-055, D-056)", () => {
     await open(page, "world=/sf/&marker=0&zoom=1&rot=0&at=-122.382,37.797");
     expect(Date.now() - t0).toBeLessThan(90_000); // was 215 s as one diagonal voxel box
     await expect(page.locator("#view")).toHaveScreenshot("sf-bay-bridge-r0.png");
+  });
+});
+
+test.describe("Ambient traffic (D-060)", () => {
+  type Drawn = { id: number; kind: string; part: number; x: number; y: number; h: number; sx: number; sy: number };
+  const traffic = (page: Page) =>
+    page.evaluate(() => window.__pixelworld!.traffic()!) as Promise<{ ticks: number; counts: Record<string, number>; vehicles: Drawn[] }>;
+
+  /** Pixels that differ between two captures inside a box around the canvas centre. */
+  function changedNearCentre(a: { width: number; height: number; data: number[] }, b: typeof a, half: number) {
+    let n = 0;
+    for (let y = a.height / 2 - half; y < a.height / 2 + half; y++)
+      for (let x = a.width / 2 - half; x < a.width / 2 + half; x++) {
+        const i = (y * a.width + x) * 4;
+        if (hex(a.data, i) !== hex(b.data, i)) n++;
+      }
+    return n;
+  }
+
+  test("vehicles move along the streets between two steps", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5");
+    const a = await traffic(page);
+    expect(a.counts.car).toBeGreaterThan(10);
+    expect(a.counts.cablecar).toBeGreaterThan(0);
+    const before = await pixels(page);
+    await page.evaluate(() => window.__pixelworld!.trafficStep(2));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const b = await traffic(page);
+    expect(b.ticks).toBe(a.ticks + 60);
+    const was = new Map(a.vehicles.map((v) => [`${v.id}/${v.part}`, v]));
+    let moved = 0;
+    let both = 0;
+    for (const v of b.vehicles) {
+      const p = was.get(`${v.id}/${v.part}`);
+      if (!p) continue;
+      both++;
+      if (Math.hypot(v.x - p.x, v.y - p.y) > 0.2) moved++;
+    }
+    expect(both).toBeGreaterThan(10);
+    expect(moved / both).toBeGreaterThan(0.5); // most move; some wait behind others
+    const after = await pixels(page);
+    let changed = 0;
+    for (let i = 0; i < after.data.length; i += 4) if (hex(after.data, i) !== hex(before.data, i)) changed++;
+    expect(changed).toBeGreaterThan(100);
+  });
+
+  test("a car on the Golden Gate is drawn on its deck", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=3&rot=0&fx=147&fy=112&traffic=1&trafficPause=1&trafficTime=20");
+    // the deck's height from the bridge landmark (objects file)
+    const objects = JSON.parse(gunzipSync(readFileSync("fixtures/sf/objects.json.gz")).toString());
+    const deck = objects.instances.find((o: { id?: string; top?: number }) => o.id === "golden-gate-bridge" && o.top).top;
+    const { vehicles } = await traffic(page);
+    const car = vehicles.find((v) => v.kind === "car" && v.y > 90 && v.y < 140 && Math.abs(v.x - 147) < 4);
+    expect(car, "a car on the bridge's water span").toBeTruthy();
+    expect(car!.h).toBeCloseTo(deck, 1);
+    // centred on the car at deck height: it is drawn there, over the deck
+    await page.evaluate(([x, y, h]) => window.__pixelworld!.lookAt(x!, y!, h), [car!.x, car!.y, car!.h]);
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const withCars = await pixels(page);
+    await page.evaluate(() => window.__pixelworld!.setTraffic({ enabled: false }));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const without = await pixels(page);
+    expect(changedNearCentre(withCars, without, 12)).toBeGreaterThan(20);
+  });
+
+  test("sublayers switch on and off on their own, from the URL and the layer panel", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail");
+    const kinds = async () => new Set((await traffic(page)).vehicles.map((v) => v.kind));
+    expect([...(await kinds())].sort()).toEqual(["cablecar"]);
+    // the panel shows with the HUD; ticking road vehicles adds the cars
+    await page.goto(
+      "/?cache=0&w=640&h=360&world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail",
+    );
+    await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
+    await expect(page.locator("#layers")).toBeVisible();
+    await page.getByLabel("road vehicles").check();
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect(await kinds()).toContain("car");
+    // the simulation is the same whichever sublayers are drawn
+    await page.evaluate(() => window.__pixelworld!.setTraffic({ layers: ["rail"] }));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect([...(await kinds())].sort()).toEqual(["cablecar"]);
+    // and the whole layer: off leaves the baked world as it was
+    await page.keyboard.press("v");
+    await expect(page.getByLabel("Traffic (V)")).not.toBeChecked();
+    expect((await traffic(page)).vehicles.length).toBe(0);
+  });
+
+  test("cable cars and cars on Russian Hill at a fixed time match golden", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=3&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5");
+    await page.evaluate(() => window.__pixelworld!.lookAt(356.7, 203.0));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const t = await traffic(page);
+    expect(t.counts.cablecar).toBeGreaterThan(0);
+    await expect(page.locator("#view")).toHaveScreenshot("sf-traffic-hyde-r0.png");
   });
 });

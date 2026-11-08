@@ -13,6 +13,7 @@
     "@pixelworld/generators": "workspace:*",
     "@pixelworld/grid": "workspace:*",
     "@pixelworld/runtime": "workspace:*",
+    "@pixelworld/sim": "workspace:*",
     "@pixelworld/style": "workspace:*",
     "@pixelworld/world-format": "workspace:*"
   }
