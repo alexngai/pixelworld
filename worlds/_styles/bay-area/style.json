@@ -131,6 +131,11 @@
       "ramps": { "body": "eucalyptus", "trunk": "bark" },
       "params": { "radius": 0.9, "radiusJitter": 0.4, "height": 2.4, "trunk": 2, "holes": 0.2 }
     },
+    "tree.street": {
+      "generator": "blob",
+      "ramps": { "body": "lawn", "trunk": "bark" },
+      "params": { "radius": 1.1, "radiusJitter": 0.5, "height": 1.2, "trunk": 2, "holes": 0.08 }
+    },
     "tree.palm": {
       "generator": "palm",
       "ramps": { "trunk": "bark", "fronds": "palm" },
@@ -225,12 +230,14 @@
         "wall": "stucco", "trim": "paint-white",
         "wall.butter": "paint-butter", "trim.butter": "paint-white",
         "wall.cream": "paint-cream", "trim.cream": "paint-white",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white",
         "wall.mint": "paint-mint", "trim.mint": "paint-white",
         "wall.rose": "paint-rose", "trim.rose": "paint-white",
         "wall.salmon": "paint-salmon", "trim.salmon": "paint-white",
         "wall.sky": "paint-sky", "trim.sky": "paint-white",
         "wall.white": "paint-white", "trim.white": "stucco",
         "wall.white2": "paint-white", "trim.white2": "stucco",
+        "wall.white3": "paint-white", "trim.white3": "concrete",
         "accent": "bark", "eave": "roof-tile",
         "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
         "window": "glass", "lit": "lit"

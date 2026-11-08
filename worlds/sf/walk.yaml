@@ -32,8 +32,12 @@ objects:
     podiumMeters: 18
     houseMaxArea: 350
   vegetation:
-    # street and park trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
-    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+    # street and park trees where the canopy height map (WRI/Meta, 1 m) shows
+    # 3 m or more; on tree-covered land, the park's cypress and eucalyptus
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9, byLandcover: { tree: [tree.cypress, tree.eucalyptus, tree.cypress] } }
+  # sidewalks are path cells of their own at 10 m, which canopy trees may
+  # stand on: no verge rows needed
+  streetTrees: null
   streetProps:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }

@@ -27,6 +27,7 @@ objects:
   # street trees (the driving level's canopy rule would carpet the Bay at 100 m)
   typology: null
   vegetation: null
+  streetTrees: null
   depiction:
     buildings: { scale: 2, minHeightMeters: 60 }
     landmarks: { scale: 3 }

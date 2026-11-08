@@ -9,10 +9,13 @@ Region spec (all sections optional):
 
     objects:
       buildings: { minArea: 30, towerMeters: 45, podiumMeters: 15 }
-      vegetation:   # scatter by ESA WorldCover class
+      vegetation:   # scatter by ESA WorldCover class, or where the canopy map has trees
         - { group: tree.pinyon-juniper, landcover: [tree], spacing: 22, density: 0.8 }
+        - { group: tree, canopy: 3, spacing: 12, byLandcover: { tree: [tree.cypress] } }
       streetTrees:  # rows along roads of the given classes (optionally by name)
         - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 60, offset: 16 }
+        # or on the verge past the drawn asphalt, where the canopy map has trees
+        - { group: tree.street, roads: [residential], canopy: 3, spacing: 12, kerb: 2 }
       landmarks:
         - { group: landmark.tower.lookout, lon: -111.8261, lat: 36.0441, hm: 60, clear: 20 }
       depiction:    # how big things are drawn at this scale level (D-047)
@@ -83,6 +86,7 @@ class Placement:
         self.m = region.meters_per_cell
         self.blocked = blocked
         self._landcover = None
+        self._cell_landcover = None
         # placement lattice anchored to the spec's envelope, not the cell grid
         self.envelope = region._projected_envelope()
 
@@ -98,6 +102,29 @@ class Placement:
     def lc_px(self) -> float:
         self.landcover  # noqa: B018 (loads it)
         return self._landcover[1]
+
+    @property
+    def cell_landcover(self) -> np.ndarray:
+        """WorldCover class per cell, as the cell's surface is classified from."""
+        if self.layout is not None:
+            raise ValueError("land-cover groups aren't supported on warped layouts yet")
+        if self._cell_landcover is None:
+            self._cell_landcover = rasters.landcover_cells(self.region)
+        return self._cell_landcover
+
+    def from_cells(self, cx: np.ndarray, cy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Cells as drawn (after the road shift) → projected metres: to_cells
+        undone, the shift by a few fixed-point steps (it is smooth)."""
+        if self.layout is not None:
+            raise ValueError("placing from cells isn't supported on warped layouts yet")
+        ox = np.asarray(cx, dtype=np.float64)
+        oy = np.asarray(cy, dtype=np.float64)
+        bx, by = ox, oy
+        if self.shift is not None:
+            for _ in range(4):
+                dx, dy = self.shift(bx, by)
+                bx, by = ox - dx, oy - dy
+        return self.west + bx * self.m, self.north - by * self.m
 
     def to_cells(
         self, xs: np.ndarray, ys: np.ndarray, shift: bool = True
@@ -199,16 +226,248 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
     else:
         ok &= np.isin(p.landcover_at(xs, ys), list(codes))
     ok &= ~occupied(xs, ys)
+    keep = np.nonzero(ok)[0]
+    groups = _groups_by_landcover(p, rule, cx[keep], cy[keep], seeds[keep])
     return [
         {
-            "g": rule["group"],
+            "g": g,
             "x": float(cx[k]),
             "y": float(cy[k]),
             "s": int(seeds[k]),
             "r": int(rots[k]),
         }
-        for k in np.nonzero(ok)[0]
+        for k, g in zip(keep, groups, strict=True)
     ]
+
+
+def _groups_by_landcover(
+    p: Placement, rule: dict[str, Any], cx: np.ndarray, cy: np.ndarray, seeds: np.ndarray
+) -> list[str]:
+    """Each kept point's group: the rule's, or with `byLandcover` ({class:
+    [groups]}), one of the groups listed for the land cover of the cell it
+    stands in (picked by its seed). That is the class the cell's surface, and
+    so the client's scatter, comes from: canopy trees in a park's woodland are
+    the park's species, not street trees."""
+    by = rule.get("byLandcover")
+    if not by or not len(cx):
+        return [rule["group"]] * len(cx)
+    _codes(list(by))  # check the class names
+    lc = p.cell_landcover
+    h, w = lc.shape
+    ix = np.clip(np.floor(cx).astype(np.int64), 0, w - 1)
+    iy = np.clip(np.floor(cy).astype(np.int64), 0, h - 1)
+    names = [rasters.WORLDCOVER.get(int(c), "") for c in lc[iy, ix]]
+    out = []
+    for name, s in zip(names, seeds, strict=True):
+        choice = by.get(name)
+        if isinstance(choice, str):
+            choice = [choice]
+        out.append(choice[int(s) % len(choice)] if choice else rule["group"])
+    return out
+
+
+class DrawnRoads:
+    """The road network as the terrain draws it: connections, class and
+    half-width per cell (rasterized from the straightened lines exactly as the
+    build does), for objects that stand beside the asphalt."""
+
+    def __init__(self, region: Region, shape: tuple[int, int], streets: list, road_rows: list):
+        from . import roads as road_stage
+        from .build import ROAD_WIDTH_M, half_width_cells
+
+        snap = region.snap or {}
+        deviation = float((snap["roads"] or {}).get("deviation", 1.0)) if "roads" in snap else None
+        cls_of = {r["id"]: r["class"] for r in road_rows}
+        widths = region.widths
+        rw = ROAD_WIDTH_M | {k: float(v) for k, v in ((widths or {}).get("roads") or {}).items()}
+        layer = road_stage.rasterize(
+            streets,
+            shape,
+            deviation=deviation,
+            widths={sid: rw[cls_of[sid]] for sid, _, _ in streets if sid in cls_of},
+        )
+        self.mask = layer.mask & road_stage.CONNECT_MASK
+        # class number (as rasterized: the larger wins) → class name
+        self.cls = layer.cls
+        self.names = {k: cls_of[sid] for sid, k, _ in streets if sid in cls_of}
+        m = region.meters_per_cell
+        if widths is not None and layer.width is not None:
+            self.hw = half_width_cells(layer.width, np.full(shape, m), widths) / 32.0
+        else:
+            self.hw = np.where(layer.width > 0, layer.width / 2 / m, 0.0)
+        self.dirs = road_stage.DIRS
+        # the lines themselves: a drawn road runs through cell centres, up to
+        # half a cell off the line its objects (and the real verge) follow
+        self.lines = [
+            shapely.LineString(np.column_stack([xs, ys]))
+            for _, _, parts in streets
+            for xs, ys in parts
+            if len(xs) >= 2
+        ]
+        self.tree = shapely.STRtree(self.lines) if self.lines else None
+
+    def line_offset(self, cx: np.ndarray, cy: np.ndarray, reach: float = 1.0) -> np.ndarray:
+        """(n, 2): from each point to the nearest point on a road line within
+        `reach` cells (zero where there is none)."""
+        out = np.zeros((len(cx), 2))
+        if self.tree is None or not len(cx):
+            return out
+        pts = shapely.points(cx, cy)
+        idx = self.tree.query_nearest(pts, max_distance=reach, all_matches=False)
+        if not idx.size:
+            return out
+        q, g = idx
+        lines = np.asarray(self.lines, dtype=object)[g]
+        near = shapely.line_interpolate_point(lines, shapely.line_locate_point(lines, pts[q]))
+        out[q, 0] = shapely.get_x(near) - cx[q]
+        out[q, 1] = shapely.get_y(near) - cy[q]
+        return out
+
+    def clearance(self, qx: np.ndarray, qy: np.ndarray, reach: int = 2) -> np.ndarray:
+        """Distance (cells) from each point to the nearest drawn asphalt: half
+        segments from road cell centres toward their connected neighbours,
+        widened by the cell's half-width; negative on the asphalt."""
+        h, w = self.mask.shape
+        best = np.full(len(qx), np.inf)
+        bx = np.floor(qx).astype(np.int64)
+        by = np.floor(qy).astype(np.int64)
+        for oy in range(-reach, reach + 1):
+            for ox in range(-reach, reach + 1):
+                ix, iy = bx + ox, by + oy
+                inside = (ix >= 0) & (iy >= 0) & (ix < w) & (iy < h)
+                ixc, iyc = np.clip(ix, 0, w - 1), np.clip(iy, 0, h - 1)
+                bits = np.where(inside, self.mask[iyc, ixc], 0)
+                hw = self.hw[iyc, ixc]
+                cx0, cy0 = ix + 0.5, iy + 0.5
+                for i, (dx, dy) in enumerate(self.dirs):
+                    on = (bits >> i) & 1 == 1
+                    if not on.any():
+                        continue
+                    # the half segment centre → centre + (dx, dy) / 2
+                    ex, ey = 0.5 * dx, 0.5 * dy
+                    t = np.clip(((qx - cx0) * ex + (qy - cy0) * ey) / (ex * ex + ey * ey), 0, 1)
+                    d = np.hypot(qx - cx0 - t * ex, qy - cy0 - t * ey) - hw
+                    best = np.where(on, np.minimum(best, d), best)
+        return best
+
+
+def sidewalk_trees(
+    p: Placement,
+    rule: dict[str, Any],
+    roads: DrawnRoads,
+    in_clear_zone,
+    in_building,
+    canopy,
+    water: np.ndarray | None = None,
+    tag: str = "",
+) -> list[dict]:
+    """Street trees where the canopy height map (WRI/Meta, 1 m) has them: rows
+    along the straight stretches of drawn roads of the given classes, on the
+    verge just past the asphalt (`kerb` metres past its drawn half-width, and
+    at least `offset` metres from its centre line), `spacing` metres apart.
+
+    Everything else keeps road cells clear, so canopy scatter puts trees in
+    parks and backyards; these stand on a road cell's own verge. A spot is
+    kept where the map shows a tree at least `canopy` metres tall within
+    `search` metres of the same place beside the real road, out of buildings
+    (as drawn) and landmarks' clear zones."""
+    classes = set(rule["roads"])
+    spacing = float(rule.get("spacing", 12))
+    kerb = float(rule.get("kerb", 2.0))
+    offset = float(rule.get("offset", 0.0))
+    search = float(rule.get("search", 3.0))
+    density = float(rule.get("density", 1.0))
+    m = p.m
+    mask = roads.mask
+    want = np.isin(roads.cls, [k for k, name in roads.names.items() if name in classes])
+    cols: list[list[np.ndarray]] = [[], [], [], [], [], []]  # x, y, normal x, y, centre x, y
+    for i, (dx, dy) in enumerate(roads.dirs[:4]):
+        # straight stretches only: the road runs on through the cell, no junction or bend
+        through = want & (mask == ((1 << i) | (1 << (i + 4))))
+        iy, ix = np.nonzero(through)
+        if not len(ix):
+            continue
+        length = math.hypot(dx, dy)
+        tx, ty = dx / length, dy / length
+        n = max(1, round(length * m / spacing))
+        d = np.maximum(offset / m, roads.hw[iy, ix] + kerb / m)
+        for j in range(n):
+            u = length * ((j + 0.5) / n - 0.5)
+            for side in (-1.0, 1.0):
+                nx, ny = -side * ty, side * tx
+                for col, v in zip(
+                    cols,
+                    (
+                        ix + 0.5 + u * tx + nx * d,
+                        iy + 0.5 + u * ty + ny * d,
+                        np.full(len(ix), nx),
+                        np.full(len(ix), ny),
+                        ix + 0.5 + u * tx,
+                        iy + 0.5 + u * ty,
+                    ),
+                    strict=True,
+                ):
+                    col.append(v)
+    if not cols[0]:
+        return []
+    ax, ay, nx, ny, ox, oy = (np.concatenate(c) for c in cols)
+    order = np.lexsort((ax, ay))  # row-major, whatever order the directions came in
+    ax, ay, nx, ny, ox, oy = (v[order] for v in (ax, ay, nx, ny, ox, oy))
+    rng = np.random.default_rng(_seed(p.region, f"sidewalk|{tag}|{rule['group']}"))
+    keep_roll = rng.uniform(size=ax.size)
+    seeds = rng.integers(0, 2**31, size=ax.size)
+    rots = rng.integers(0, 4, size=ax.size)
+    ok = p.inside(ax, ay) & (keep_roll < density)
+    if water is not None:
+        ix = np.clip(ax.astype(np.int64), 0, p.cx - 1)
+        iy = np.clip(ay.astype(np.int64), 0, p.cy - 1)
+        ok &= ~water[iy, ix]
+    k = np.nonzero(ok)[0]
+    ok[k] = ~in_building(ax[k], ay[k]) & (roads.clearance(ax[k], ay[k]) >= 0.5 * kerb / m)
+    k = np.nonzero(ok)[0]
+    tall = np.zeros(ax.size, dtype=bool)
+    if canopy is not None and len(k):
+        # the same place beside the line the road was drawn from (half a cell
+        # off the drawn axis at most), in real metres
+        off = roads.line_offset(ox[k], oy[k])
+        across = off[:, 0] * nx[k] + off[:, 1] * ny[k]
+        x, y = p.from_cells(ax[k] + across * nx[k], ay[k] + across * ny[k])
+        ok[k] &= ~in_clear_zone(x, y)
+        # around that spot, across the road and along it (cells: y south)
+        h = np.zeros(len(k))
+        ex, ey = ny[k], nx[k]  # along the road, in metres east and north
+        for a in (-spacing / 3, 0.0, spacing / 3):
+            for t in (-search, 0.0, search):
+                sx = x + t * nx[k] + a * ex
+                sy = y - t * ny[k] + a * ey
+                h = np.maximum(h, canopy.sample(sx, sy, p.region.crs))
+        tall[k] = h >= float(rule["canopy"])
+    ok &= tall
+    return [
+        {
+            "g": rule["group"],
+            "x": float(ax[j]),
+            "y": float(ay[j]),
+            "s": int(seeds[j]),
+            "r": int(rots[j]),
+        }
+        for j in np.nonzero(ok)[0]
+    ]
+
+
+def _in_footprints(instances: list[dict]):
+    """Test points (cells, as drawn) against the footprints placed so far."""
+    polys = [shapely.Polygon(i["fp"]) for i in instances if "fp" in i and len(i["fp"]) >= 3]
+    tree = shapely.STRtree(polys) if polys else None
+
+    def fn(cx: np.ndarray, cy: np.ndarray) -> np.ndarray:
+        hit = np.zeros(len(cx), dtype=bool)
+        if tree is not None and len(cx):
+            idx, _ = tree.query(shapely.points(cx, cy), predicate="within")
+            hit[idx] = True
+        return hit
+
+    return fn
 
 
 def street_trees(
@@ -918,19 +1177,32 @@ def place(
         if tree is not None:
             idx, _ = tree.query(shapely.points(xs, ys), predicate="within")
             hit[idx] = True
+        return hit | in_clear_zone(xs, ys)
+
+    def in_clear_zone(xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+        hit = np.zeros(len(xs), dtype=bool)
         for lx, ly, r in clear_zones:
             hit |= np.hypot(xs - lx, ys - ly) < max(r, 1.0)
         return hit
 
     canopy = None
-    if any("canopy" in rule for rule in (spec.get("vegetation") or [])):
+    rules = (spec.get("vegetation") or []) + (spec.get("streetTrees") or [])
+    if any("canopy" in rule for rule in rules):
         from .sources.canopy import CanopyGrid
 
         canopy = CanopyGrid(region.lonlat_envelope())
     for i, rule in enumerate(spec.get("vegetation") or []):
         instances += scatter(p, rule, occupied, f"{i}", canopy)
+    drawn = None
     for i, rule in enumerate(spec.get("streetTrees") or []):
-        instances += street_trees(p, rule, road_rows, occupied, f"{i}")
+        if "canopy" not in rule:
+            instances += street_trees(p, rule, road_rows, occupied, f"{i}")
+            continue
+        if drawn is None:
+            drawn = DrawnRoads(region, blocked.shape, streets or [], road_rows)
+        instances += sidewalk_trees(
+            p, rule, drawn, in_clear_zone, _in_footprints(instances), canopy, water, f"{i}"
+        )
     # street furniture (M3): lights along roads, signals at major junctions
     for i, rule in enumerate(spec.get("streetProps") or []):
         if rule.get("at") == "junctions":
