@@ -102,7 +102,7 @@ Also delivered:
 - **Busy, spiky mountains.** At 400 m per cell and 2.5× exaggeration, mountain ranges are busy with one-cell pillars. Focus-area scales in M2 change this anyway.
 - **Rough geology boundary.** The Colorado Plateau outline is hand-drawn, and strata colour by elevation alone (no dip).
 
-### M1.5: Pixel detail experiment — in progress
+### M1.5: Pixel detail experiment — done (K to confirm)
 
 **Goal:** decide how pixel-level detail should look before building it properly. Two small areas, the Desert View area of the Grand Canyon and a stretch of the Las Vegas Strip, are rendered three ways:
 1. today's coarse cells
@@ -118,11 +118,54 @@ The experiment code may be throwaway where it doesn't fit the production design.
 
 **Exit criteria:** the look is chosen and recorded in the style guide and decision log; micro-terrain and M3 can start from it.
 
+#### M1.5 results
+
+Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds are built from 40 m and 20 m cells drawn at ¼ and ⅛ size (`render.scale`), so a K=8 cell is a 4×2 px diamond and one height step is 1 px. Worlds: `fixtures/exp-*`, specs: `worlds/experiment/`.
+
+![Desert View, rotation 2: coarse cells, K=4, K=8, K=8 with objects](images/m1.5-desert-view-variants.png)
+
+![The rim at 2×: coarse, K=4, K=8 (the watchtower, a caricatured landmark, sits left of the rover)](images/m1.5-desert-view-rim.png)
+
+![A Supai wall at 3×: K=4 ledges, K=8 hatching](images/m1.5-desert-view-k4-k8.png)
+
+![The Strip at 2× with objects: coarse, K=4, K=8](images/m1.5-strip-variants.png)
+
+![The Strip at 3×, K=8: day, and the night palette on the same bake](images/m1.5-strip-day-night.png)
+
+**Findings:**
+- **Pixel-scale terrain transforms the canyon.** Side canyons, buttes and the river bend become legible. The strata read as bands of ledges instead of 32 px blocks.
+- **K=4 versus K=8 is a matter of taste.** K=4 (8×4 px cells, 2 px steps) gives chunky ledges that look hand-pixelled. K=8 (4×2 px cells, 1 px steps) gives finer landforms, but its 1 px treads read as hatching on steep walls. On flat ground (the Strip) the two look almost the same.
+- **Steep ground has to be rock.** With fine cells, a canyon wall is many cells wide. When its treads kept their land-cover colour (woodland, grass) the wall became a green-and-tan herringbone. Making every cell steeper than 0.6 rise over run bare rock fixed it (D-036).
+- **Objects make the city.** About 5,500 buildings from Overture footprints, with towers, podiums and houses, turn the Strip from a grey "blocks" pattern into a skyline. The night palette, with lit windows and neon trim, works by swapping the palette alone, without a re-bake (D-035).
+- **Iconic beats accurate.** Real proportions made the 21 m watchtower a 5 px stub. Its depicted height is 80 m (×4), and the observation tower is a generic design, not a replica.
+- **Occlusion:** in a fixed isometric view, tall towers hide streets and the fountain lake behind them. M3 needs a way to deal with this (cutaways, fading, or relying on the 4 rotations).
+
+**Cost** (SwiftShader, one bake tile per area, mesh + bake):
+
+| Area | Coarse | K=4 | K=8 | K=8 with objects |
+|---|---|---|---|---|
+| Desert View, 5.6 × 6.9 km | 56 + 315 ms | 421 + 754 ms | 1,379 + 1,085 ms | 1,797 + 2,715 ms (6,808 objects) |
+| Strip, 3.6 × 8.2 km | 76 + 308 ms | 212 + 358 ms | 608 + 698 ms | 1,352 + 1,409 ms (9,401 objects) |
+
+- Gzipped terrain costs about 1.5 bytes per fine cell in the canyon and 0.5 in the flat city. Every layer is stored at fine resolution.
+- Extrapolated to the whole Southwest, that's roughly 6–17 MB at K=4 and 23–69 MB at K=8, against 0.97 MB today.
+- Objects add 100–340 KB per area.
+- JavaScript meshing of K=8 terrain takes 0.6–1.4 s per area (1.4–1.8 s with objects). That confirms M1.6's plan to move terrain onto the GPU and store micro-heights only.
+
+**Proposed decisions:** D-032 to D-037 in the [decision log](decisions.md).
+
+**Still open:** the choice of K (D-037). The recommendation is K=4, for its cleaner pixel clusters at about a quarter of K=8's data and a third of its meshing time; K=8 remains the "every pixel" option.
+
+**Known issues:**
+- The K=8 Strip reports 1 split road segment and 2 disconnected junctions at 20 m cells.
+- Street-tree counts vary with K, because road cells block more ground at coarse cells.
+- At night the streets stay dark: there are no street lights yet.
+
 ### M1.6: Micro-terrain
 
 **Goal:** pixel-resolution terrain everywhere, without changing the gameplay grid.
 
-- **Data:** a K×K grid of fine heights per cell (K from the experiment, likely 8), with 1 px vertical resolution, stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary.
+- **Data:** a K×K grid of fine heights per cell (K from the experiment: 4 or 8, D-037), stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary. Only heights are stored at fine resolution; other layers stay per cell (storing every layer finely would cost roughly 6–70× today's package, see M1.5).
 - **Pipeline:** builds micro-heights from finer elevation sources. Roads and pads are cut and filled at micro resolution, and water stays flat.
 - **Rendering:** terrain moves to the GPU, as a heightfield ray-march or a GPU-built grid mesh, so bake cost scales with pixels rather than with geometry. JavaScript mesh building can't handle 64× the vertices.
 - **Gameplay:** vehicles sample micro-heights.
@@ -130,7 +173,7 @@ The experiment code may be throwaway where it doesn't fit the production design.
 **Exit criteria:**
 - The Southwest renders with micro-terrain at every zoom.
 - Bake time per tile is within the budget on desktop.
-- The package size increase is understood and acceptable (estimate: about 3× for K=4, about 10× for K=8, gzipped).
+- The package size increase is understood and acceptable. M1.5 measured 0.5–1.5 bytes per fine cell, gzipped, with every layer at fine resolution; micro-heights alone should cost less.
 
 ### M2: Elastic map and editor v0
 

@@ -173,3 +173,39 @@ The point is more room for visual interest; both halves are wanted.
 ### D-031: Order of work (accepted)
 - **Sequence:** the M1.5 pixel detail experiment comes first, to choose the look, then M1.6 micro-terrain, then the M2 elastic map, then the M3 detail pass.
 - **Why:** micro-terrain and the warp change the canvas the detail pass draws on.
+
+### D-032: Render scale for fine worlds (proposed, M1.5)
+- **What:** a manifest can set `render.scale` < 1. The worker scales mesh positions to render units, so a cell covers fewer pixels; the camera, tile rects and depth range work in render units.
+- **What stays in world units:** road decals, ownership and shadow lookups. Road widths and the field and block patterns are in render units, so they keep their pixel size.
+- **Scope:** an experiment tool that emulates micro-terrain with ordinary cells. M1.6 replaces it with micro-heights inside normal cells.
+
+### D-033: Object pixel scale (proposed, M1.5)
+- **Fixed pixel size:** one voxel is a 2×1 px top and 1 px tall at native zoom, whatever the map scale (`objectVoxelScale`). At the 160 m/cell layout a voxel is 10 m across.
+- **Heights:** depicted height in voxels is `metres × heightStretch ÷ voxel metres`, with `heightStretch` 2.5 in the style pack. Footprints come from data and sit on their lowest corner.
+- **Landmarks:** a landmark's depicted height can exceed its real one when that's what makes it read (the Desert View watchtower is drawn at 80 m, about ×4).
+- **Outlines:** the depth threshold is 2 world cells, i.e. 2 × render scale in render units.
+
+### D-034: Objects in the world package (proposed, M1.5)
+- **File:** `objects.json.gz` lists instances: semantic group, position in cells, seed, optional quarter-turn, footprint and height. It is hashed into the manifest.
+- **Placement:** the pipeline places objects from rules in the region spec: land-cover scatter, street trees by road class and name, Overture buildings, and landmarks. Placement works in metres, with seeds that don't depend on cell size, so variants of an area get the same objects.
+- **Drawing:** the client builds objects from the style pack's catalog (D-030). Repeated objects are instanced per variant (6 per group); unique objects such as buildings and landmarks are merged into one mesh.
+- **Classification:**
+  - A building becomes a tower at 45 m or more.
+  - A building with parts becomes a podium, capped at 15–18 m, with its parts on top.
+  - In the city, unclassified footprints under 350 m² count as houses.
+
+### D-035: Night palette by palette swap (proposed, M1.5)
+- **Mechanism:** a style pack's `night` section dims and blue-shifts every ramp (saturation, then a multiplier and offset per channel) and replaces emissive ramps with glowing colours. Indices don't change, so night needs no re-bake.
+- **Lit windows:** windows that are lit use their own ramp (`lit`, `lit-cool`), identical to glass by day, so each building has a fixed set of lit windows. Neon trim uses emissive ramps too.
+
+### D-036: Fine-terrain rules (proposed, M1.5)
+- **Steep ground:** with fine cells, every cell steeper than 0.6 rise over run is bare rock, whatever its land cover.
+- **Water:** water bodies smaller than an area threshold, or whose ground spans more than a few metres (canyon shadows that WorldCover reads as water), are dropped.
+- **Rivers:** they are buffered to their real width.
+- **Scope:** these are region-spec options (`terrain:`), so coarse worlds keep their M1 rules and their package hashes.
+
+### D-037: Micro-terrain resolution (open, M1.5)
+- **Candidates:** K=4 (8×4 px micro-cells, 2 px height steps) or K=8 (4×2 px, 1 px steps).
+- **Recommendation:** K=4. Its ledges form clean 2 px clusters, and it needs about a quarter of K=8's data and a third of its meshing time. K=8's 1 px treads read as hatching on steep walls.
+- **To decide:** the user picks the look from the M1.5 comparisons; M1.6 builds to that choice.
+

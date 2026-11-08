@@ -114,3 +114,54 @@ These choices live in the gridify stage and the fixture script, but they're styl
 ![Rotation 2, 2× zoom](images/m0-south-rim-r2.png)
 
 ![4× close-up: tree pattern, strata, AO dither, outline](images/m0-closeup-4x.png)
+
+## 10. Pixel-scale terrain (M1.5 experiment)
+
+Fine worlds draw each cell smaller (`render.scale`). These rules come from the experiment (D-032, D-036) and are proposals until M1.6 settles K:
+
+- **Steep cells are bare rock.** Every fine cell steeper than 0.6 rise over run takes the strata ramp, whatever its land cover. Canyon walls then read as bands of ledges rather than a green-and-tan herringbone.
+- **Patterns keep their pixel size.** Field and city-block patterns, and road widths, are measured in render units. Road widths are capped at one cell.
+- **K=4 versus K=8:** see [roadmap](roadmap.md) M1.5 and D-037. K=4 ledges form 2 px clusters; K=8 gives 1 px hatching.
+
+![A Supai wall at 3×: K=4, K=8 with objects, K=8 terrain only](images/m1.5-desert-view-k4-k8.png)
+
+## 11. Objects (M1.5 experiment)
+
+Objects are voxel models generated per semantic group (D-030) and baked with the terrain through the same passes: lighting, shadows, AO, outlines and palette.
+
+- **Scale (D-033):**
+  - A voxel is a 2×1 px top and 1 px tall at native zoom, whatever the map scale.
+  - Heights are `metres × heightStretch ÷ voxel metres`, with `heightStretch` 2.5.
+  - Trees and palms are deliberately oversized (a conifer is 5 voxels across) so they read as trees.
+- **Catalog:** the style pack's `assets` maps a group to a generator, role ramps and parameters. The longest dotted prefix wins (`tree.conifer.ponderosa` falls back to `tree.conifer`, then `tree`).
+
+  | Generator | Groups (desert-southwest) | Notes |
+  |---|---|---|
+  | `conifer` | `tree.conifer` | layered skirts |
+  | `blob` | `tree`, `tree.pinyon-juniper`, `shrub` | ellipsoid crown with holes, optional trunk |
+  | `palm` | `tree.palm` | `reach` sets frond length |
+  | `boulder` | `rock.boulder` | |
+  | `building` | `building.residential`, `building.commercial`, `building.parking`, `building.tower`, `building.tower.hotel` | `style` 0 hip roof, 1 low-rise with parapet and a window band, 2 tower with a window grid and crown |
+  | `lookoutTower` | `landmark.tower.lookout` | round stone tower, slits, crenellation, optional round room |
+  | `observationTower` | `landmark.tower.observation` | generic shaft, legs and pod; no replica |
+  | `sign` | `landmark.sign` | generic diamond roadside sign with a neon rim |
+
+- **Role variants:** a role can name several ramps (`wall`, `wall.gold`, `wall.concrete`), and each building picks one by its seed.
+- **Repeated objects** use 6 variants per group and 4 quarter-turns, drawn instanced.
+- **Ramps added:** `bark`, `palm`, `stucco`, `roof-tile`, `roof-flat`, `glass`, `lit`, `lit-cool`, `tower-white`, `tower-gold`, `concrete`, `neon-pink`, `neon-cyan`.
+- **Ground under objects:** when a world has objects, the style's `objects.surfaces` replaces surface styles; the urban block pattern becomes a light speckle, because real buildings stand there.
+
+![The Strip at 2× with objects: coarse, K=4, K=8](images/m1.5-strip-variants.png)
+
+## 12. Night palette (M1.5 experiment)
+
+- **One bake, two palettes (D-035):** night is a palette variant, so switching (T in the app, `?palette=night`) needs no re-bake.
+- **Ordinary ramps** are desaturated to 55%, multiplied by (0.30, 0.34, 0.52) and lifted by (4, 6, 16). The result is a moonlit blue that keeps the day shading.
+- **Emissive ramps** get their own night colours, bright across all shades:
+  - `lit` (warm windows)
+  - `lit-cool` (cool windows, the observation tower's pod)
+  - `neon-pink` and `neon-cyan` (trim and signs)
+  - `marker` (the rover)
+- **Lit windows:** by day, `lit` and `lit-cool` equal `glass`. The generator assigns about 35–60% of window voxels to them, so each building has a fixed pattern of lit windows.
+
+![The Strip at 3×, K=8: day, and night on the same bake](images/m1.5-strip-day-night.png)
