@@ -193,7 +193,17 @@ export interface TerrainLayers {
   road: Uint16Array;
   roadClass: Uint8Array;
   geology: Uint8Array;
+  /**
+   * Vertical caricature (M2): a drawn height h (steps) corresponds to the real
+   * height ref + (h − ref)·invR, with ref = vref/16 steps and invR = vfac/4096.
+   * Defaults (0, 4096) mean no exaggeration.
+   */
+  vref: Int16Array;
+  vfac: Int16Array;
 }
+
+/** VFAC value meaning "no relief exaggeration". */
+export const VFAC_ONE = 4096;
 
 /**
  * Micro-terrain (M1.6, D-037): k×k micro-cells per cell. `corners` holds the
@@ -254,6 +264,8 @@ export function copyCells(
       b.road[di] = a.road[si]!;
       b.roadClass[di] = a.roadClass[si]!;
       b.geology[di] = a.geology[si]!;
+      b.vref[di] = a.vref[si]!;
+      b.vfac[di] = a.vfac[si]!;
     }
   }
   const ma = src.micro;
@@ -288,6 +300,9 @@ export class TerrainGrid {
   readonly roadClass: Uint8Array;
   /** Geology province id (manifest geology), selects the cliff strata set. */
   readonly geology: Uint8Array;
+  /** Vertical caricature mapping (see TerrainLayers). */
+  readonly vref: Int16Array;
+  readonly vfac: Int16Array;
   /** Micro-terrain, or null for cell-only terrain. */
   readonly micro: MicroLayers | null;
 
@@ -304,6 +319,8 @@ export class TerrainGrid {
     this.road = layers?.road ?? new Uint16Array(n);
     this.roadClass = layers?.roadClass ?? new Uint8Array(n);
     this.geology = layers?.geology ?? new Uint8Array(n);
+    this.vref = layers?.vref ?? new Int16Array(n);
+    this.vfac = layers?.vfac ?? new Int16Array(n).fill(VFAC_ONE);
     for (const [name, arr] of Object.entries(this.layers())) {
       if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
     }
@@ -333,6 +350,8 @@ export class TerrainGrid {
       road: this.road,
       roadClass: this.roadClass,
       geology: this.geology,
+      vref: this.vref,
+      vfac: this.vfac,
     };
   }
 

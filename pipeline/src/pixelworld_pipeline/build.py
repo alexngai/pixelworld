@@ -29,8 +29,9 @@ from .gridify import (
     meters_per_step,
     round_half_up,
 )
+from .layout import UniformLayout, WarpedLayout, WarpSpec
 from .region import Region
-from .sources import overture, rasters
+from .sources import overture
 from .world_format import NO_WATER, write_package
 
 SURFACES = {
@@ -223,9 +224,9 @@ def classify(
     return out
 
 
-def provinces(region: Region) -> tuple[np.ndarray, dict[int, str]]:
+def provinces(region: Region, layout=None) -> tuple[np.ndarray, dict[int, str]]:
     names = {0: region.default_province}
-    lons, lats = region.cell_centers_lonlat()
+    lons, lats = (layout or region).cell_centers_lonlat()
     geo = np.zeros(lons.shape, dtype=np.uint8)
     for i, p in enumerate(region.provinces, start=1):
         names[i] = p.name
@@ -234,31 +235,51 @@ def provinces(region: Region) -> tuple[np.ndarray, dict[int, str]]:
     return geo, names
 
 
-def _lines_in_cells(region: Region, rows: list[dict], rank_of) -> list:
+def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
     out = []
     for row in rows:
         geom = shapely.from_wkt(row["geometry"])
+        if layout.warped:
+            # the warp bends long straight segments: map points ~1 km apart
+            geom = shapely.segmentize(geom, 0.01)
         parts = list(geom.geoms) if hasattr(geom, "geoms") else [geom]
         cell_parts = []
         for part in parts:
             coords = np.asarray(part.coords)
             if len(coords) < 2:
                 continue
-            xs, ys = region.lonlat_to_cell(coords[:, 0], coords[:, 1])
+            xs, ys = layout.lonlat_to_cell(coords[:, 0], coords[:, 1])
             cell_parts.append((xs, ys))
         if cell_parts:
             out.append((row["id"], rank_of(row), cell_parts))
     return out
 
 
-def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
+def make_layout(region: Region):
+    if region.warp:
+        return WarpedLayout(region, WarpSpec.from_dict(region.warp))
+    return UniformLayout(region)
+
+
+def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) -> dict:
     region = Region.load(region_path)
-    cx, cy = region.cells
-    print(f"region {region.id}: {cx}×{cy} cells at {region.meters_per_cell:g} m")
+    layout = layout or make_layout(region)
+    cx, cy = layout.cells
+    if layout.warped:
+        ws = layout.warp.stats
+        print(f"region {region.id}: {cx}×{cy} cells, warped ({ws['method']}, {ws['folds']} folds)")
+        for f in ws["focus"]:
+            print(f"  focus {f['name']}: {f['achieved']} m/cell (target {f['target']})")
+    else:
+        print(f"region {region.id}: {cx}×{cy} cells at {region.meters_per_cell:g} m")
 
     # fetch (cached)
-    dem = rasters.dem_corners(region).astype(np.float64)
-    landcover = rasters.landcover_cells(region)
+    dem = layout.corner_elevation(region.sources["dem"])
+    dem_real = dem
+    vref = vfac = None
+    if layout.warped and layout.spec.vertical:
+        dem, ref, rel = layout.relief(dem)
+    landcover = layout.cell_landcover()
     release = region.sources["overture"]["release"]
     bbox = region.lonlat_envelope()
     road_rows = overture.roads(release, bbox, region.sources["roads"]["classes"])
@@ -267,6 +288,12 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     # heights in steps on the shared corner field
     step_m = meters_per_step(region.meters_per_cell, region.vertical_exaggeration)
     corner_m = dem
+    if layout.warped and layout.spec.vertical:
+        # per-cell relief mapping for the client (strata stay at real elevations)
+        ref_cell = corner_stack(ref).mean(axis=0) / step_m
+        rel_cell = corner_stack(rel).mean(axis=0)
+        vref = np.clip(round_half_up(ref_cell * 16), -32768, 32767).astype(np.int16)
+        vfac = np.clip(round_half_up(4096 / rel_cell), 1, 32767).astype(np.int16)
     if region.bilateral_cells > 0:
         corner_m = bilateral(dem, region.bilateral_cells, region.bilateral_meters)
     q = round_half_up(corner_m / step_m).astype(np.int64)
@@ -277,7 +304,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     lake = drop_small(landcover == 80, min_lake_cells)
     if "maxLakeRelief" in terrain:
         lake = drop_sloped(lake, dem, terrain["maxLakeRelief"])
-    river_lines = _lines_in_cells(region, river_rows, lambda r: 1)
+    river_lines = _lines_in_cells(layout, river_rows, lambda r: 1)
     river_layer = road_stage.rasterize(river_lines, (cy, cx))
     river = (river_layer.mask & road_stage.CONNECT_MASK) != 0
     if "riverWidthMeters" in terrain:
@@ -288,7 +315,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
 
     # roads: snap, cut-and-fill on the corner field
     road_layer = road_stage.rasterize(
-        _lines_in_cells(region, road_rows, lambda r: ROAD_RANK[r["class"]]), (cy, cx)
+        _lines_in_cells(layout, road_rows, lambda r: ROAD_RANK[r["class"]]), (cy, cx)
     )
     heights = road_stage.road_heights(road_layer.mask, q)
     q = road_stage.apply_to_corners(q, road_layer.mask, heights)
@@ -302,9 +329,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     shape = np.where(is_water, 0, shape).astype(np.uint8)
     water = np.where(is_water, base, NO_WATER).astype(np.int16)
 
+    # classes by real elevation: the smoothed field, unless relief is exaggerated
+    exaggerated = layout.warped and bool(layout.spec.vertical)
     surface = classify(
         landcover,
-        corner_m,
+        dem_real if exaggerated else corner_m,
         base,
         shape,
         water,
@@ -312,7 +341,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         cliff_slope=terrain.get("cliffSlope"),
         meters_per_cell=region.meters_per_cell,
     )
-    geology, province_names = provinces(region)
+    geology, province_names = provinces(region, layout)
     report = road_stage.validate(
         road_layer,
         cell_corner_heights(base, shape),
@@ -325,7 +354,9 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     if region.micro is not None:
         k = int(region.micro["k"])
         dem_spec = region.sources["dem"] | region.micro.get("dem", {})
-        micro_m = rasters.dem_corners(region, k, dem_spec).astype(np.float64)
+        micro_m = layout.corner_elevation(dem_spec, k)
+        if layout.warped and layout.spec.vertical:
+            micro_m = layout.relief(micro_m, k)[0]
         mc = micro_stage.build_micro(micro_m, step_m, k, base, shape, water, road_layer.mask)
         micro = (mc, k)
         print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
@@ -346,7 +377,18 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     if region.objects and "buildings" in region.objects:
         attribution.append(ATTRIBUTION["overture-buildings"])
 
-    sx, sy = region.lonlat_to_cell([region.start[0]], [region.start[1]])
+    sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
+    warp_info = None
+    chunk_scale = None
+    if layout.warped:
+        chunk_scale = layout.meters_per_cell()
+        warp_info = {
+            "method": layout.warp.stats["method"],
+            "background": layout.spec.background,
+            "focus": layout.warp.stats["focus"],
+            "pins": len(layout.spec.pins),
+            "vertical": layout.spec.vertical or None,
+        }
     manifest = write_package(
         out_dir,
         world_id=region.id,
@@ -358,6 +400,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         road=road_layer.mask,
         road_class=road_layer.cls,
         geology=geology,
+        vref=vref,
+        vfac=vfac,
+        chunk_scale=chunk_scale,
+        warp_info=warp_info,
         chunk_size=region.chunk_size,
         scale={
             "metersPerCell": region.meters_per_cell,
@@ -380,6 +426,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
                 "overtureRelease": release,
                 "maxSlope": region.max_slope,
                 "bilateral": [region.bilateral_cells, region.bilateral_meters],
+                **({"warp": layout.spec.digest()} if layout.warped else {}),
             },
         },
         render=region.render,
@@ -394,6 +441,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         "chunks": len(manifest["chunks"]),
         "heightRange": manifest["heightRange"],
         "inputs": {"roadSegments": len(road_rows), "riverLines": len(river_rows)},
+        **({"warp": layout.warp.stats} if layout.warped else {}),
         **({"objects": object_counts} if instances is not None else {}),
         "roads": asdict(report) | {"ok": report.ok()},
         "surfaces": {

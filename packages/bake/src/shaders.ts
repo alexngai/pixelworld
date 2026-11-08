@@ -350,6 +350,7 @@ const FIELD_COMMON = /* glsl */ `
 precision highp isampler2D;
 uniform isampler2D uFieldCorners; // (k·W) × (k·H): drawn corners c0..c3 of each micro-cell, micro-steps
 uniform isampler2D uFieldCells;   // W × H: surface, road mask, road class | geology << 8, water
+uniform isampler2D uFieldVmap;    // W × H: relief reference (1/16 steps), inverse factor (1/4096)
 uniform int uK;
 uniform ivec2 uSliceOrigin;       // world cell of the slice's cell (0, 0)
 uniform ivec2 uSliceSize;         // cells
@@ -531,6 +532,22 @@ flat out vec2 vCell;
 flat out vec2 vRoad;
 flat out float vGeol;
 
+// Real height (steps) of a drawn point, for strata: undo the relief exaggeration
+// (ref + (h − ref)·invR), interpolated between cell centres.
+float realHeight(vec3 pos) {
+  vec2 g = pos.xy - vec2(uSliceOrigin) - 0.5;
+  ivec2 i0 = ivec2(floor(g));
+  vec2 f = g - vec2(i0);
+  vec2 acc = vec2(0.0);
+  for (int j = 0; j < 4; j++) {
+    ivec2 o = ivec2(j & 1, j >> 1);
+    ivec2 c = clamp(i0 + o, ivec2(0), uSliceSize - 1);
+    vec2 v = vec2(texelFetch(uFieldVmap, c, 0).rg) * vec2(1.0 / 16.0, 1.0 / 4096.0);
+    acc += v * (o.x == 1 ? f.x : 1.0 - f.x) * (o.y == 1 ? f.y : 1.0 - f.y);
+  }
+  return acc.x + (pos.z - acc.x) * acc.y;
+}
+
 float cornerAo(ivec2 c, float hm) {
   // the corner's height range over the micro-cells that share it
   float lo = 1e9;
@@ -592,7 +609,7 @@ void main() {
   vNormal = vec3(uRot * nrm.xy, nrm.z);
   vec3 P = vec3(uv, h * uStepWorld) + vNormal * 0.04 * uScale;
   vLight = vec3(dot(P, uLightRight), dot(P, uLightUp), dot(P, uSun));
-  vH = h;
+  vH = realHeight(pos);
   vAo = cornerAo(corner, hm);
   vGrid = pos.xy / uScale;
   vMat = vec2(float(surface), float(kind));

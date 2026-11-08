@@ -17,6 +17,8 @@ export interface TerrainField {
   corners: Int16Array;
   /** Per cell: surface id, road mask, road class | geology << 8, water level (4 per cell). */
   cells: Int16Array;
+  /** Per cell: relief reference (1/16 steps) and inverse factor (1/4096), 2 per cell. */
+  vmap: Int16Array;
   /** Height (steps) that world-edge skirts reach down to. */
   floor: number;
   /** World size in cells: skirts are drawn only at real world edges. */
@@ -88,6 +90,11 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     }
   const n = grid.width * grid.height;
   const cells = new Int16Array(n * 4);
+  const vmap = new Int16Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    vmap[i * 2] = grid.vref[i]!;
+    vmap[i * 2 + 1] = grid.vfac[i]!;
+  }
   for (let i = 0; i < n; i++) {
     cells[i * 4] = grid.surface[i]!;
     cells[i * 4 + 1] = grid.road[i]! & 0x0fff; // connections and corner crossings fit in 12 bits
@@ -101,6 +108,7 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     height: grid.height,
     corners,
     cells,
+    vmap,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],

@@ -13,6 +13,8 @@ export interface ChunkRef {
   sha256?: string;
   /** Lowest and highest corner height in the chunk (steps). */
   heightRange?: [number, number];
+  /** Mean real metres per cell in the chunk (warped worlds). */
+  metersPerCell?: number;
 }
 
 export interface Attribution {
@@ -65,6 +67,14 @@ export interface WorldManifest {
   render?: { scale: number; tileSize?: number };
   /** Micro-terrain (M1.6): every chunk carries K×K micro-cells per cell (MHGT). */
   micro?: { k: number };
+  /** Elastic map (M2): how the world was laid out (informational). */
+  warp?: {
+    method: string;
+    background: number;
+    focus: { name: string; target: number; achieved: number; error: number }[];
+    pins: number;
+    vertical?: Record<string, number> | null;
+  };
   /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
   objects?: { path: string; sha256?: string; count?: number };
 }

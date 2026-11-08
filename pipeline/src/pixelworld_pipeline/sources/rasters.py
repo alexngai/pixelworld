@@ -241,3 +241,146 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, dst)
     return dst, px
+
+
+# ---- point sampling for warped layouts (M2) ------------------------------------------------
+#
+# A warped world samples rasters at arbitrary projected points whose spacing
+# varies (fine in focus areas, coarse elsewhere). Sources are read as a
+# pyramid of levels (native resolution × 2^i); each point uses the coarsest
+# level no coarser than its local sample spacing, so averaging/mode
+# resampling acts as the prefilter. Levels are fetched in fixed blocks of
+# BLOCK_PX pixels aligned to the projected grid, cached one file per block,
+# so re-solving a warp re-uses almost all downloads.
+
+BLOCK_PX = 512
+_NATIVE = {"usgs-3dep-1arcsec": 30.0, "usgs-3dep-13arcsec": 10.0, "esa-worldcover-2021": 10.0}
+_MAX_LEVEL = 4  # 16× native: the deepest overview the COGs reliably carry
+
+
+def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -> np.ndarray:
+    """Pixels of block (bx, by) at resolution res, with a 1-pixel apron on every side."""
+    size = BLOCK_PX + 2
+    x0 = bx * BLOCK_PX * res - res
+    y1 = (by + 1) * BLOCK_PX * res + res  # blocks count northward
+    key = f"{kind}|{res}|{bx}|{by}|{mode}"
+    path = CACHE_ROOT / "levels" / f"{hashlib.sha256(key.encode()).hexdigest()[:20]}.npy"
+    path_tag = path.with_suffix(".tag")
+    crs_tag = region.crs.to_proj4()
+    if path.exists() and path_tag.exists() and path_tag.read_text() == f"{key}|{crs_tag}":
+        return np.load(path)
+    is_dem = kind in USGS_3DEP
+    dst = np.full((size, size), np.nan if is_dem else 0, dtype=np.float32 if is_dem else np.uint8)
+    transform = rasterio.Affine(res, 0, x0, 0, -res, y1)
+    # tiles overlapping the block, from its lon/lat envelope
+    from rasterio.warp import transform as tp
+
+    xs = [x0, x0 + size * res]
+    ys = [y1 - size * res, y1]
+    lons, lats = tp(
+        region.crs, "EPSG:4326", [xs[0], xs[1], xs[0], xs[1]], [ys[0], ys[0], ys[1], ys[1]]
+    )
+    env = (min(lons) - 0.01, min(lats) - 0.01, max(lons) + 0.01, max(lats) + 0.01)
+    urls = usgs_3dep_tiles(env, kind) if is_dem else esa_worldcover_tiles(env)
+    factor = max(1, int(round(res / _NATIVE[kind])))
+    resampling = Resampling.average if is_dem else Resampling.mode
+    _warp_tiles(urls, dst, transform, region, factor, resampling, np.nan if is_dem else 0)
+    if is_dem and np.isnan(dst).any():
+        # gaps past the data's edge: grow from valid pixels, then the mean
+        if np.isnan(dst).all():
+            dst[:] = 0.0
+        else:
+            try:
+                dst = fill_nan_nearest(dst, max_iter=16).astype(np.float32)
+            except RuntimeError:
+                dst = np.where(np.isnan(dst), np.nanmean(dst), dst).astype(np.float32)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(path, dst)
+    path_tag.write_text(f"{key}|{crs_tag}")
+    return dst
+
+
+def sample_points(
+    region: Region,
+    kind: str,
+    x: np.ndarray,
+    y: np.ndarray,
+    spacing: np.ndarray,
+) -> np.ndarray:
+    """Sample a source at projected points (metres): bilinear for elevation,
+    nearest for land cover, from the level that matches each point's spacing."""
+    is_dem = kind in USGS_3DEP
+    native = _NATIVE[kind]
+    x = np.asarray(x, dtype=np.float64).ravel()
+    y = np.asarray(y, dtype=np.float64).ravel()
+    spacing = np.asarray(spacing, dtype=np.float64)
+    spacing = spacing.ravel() if spacing.size == x.size else np.broadcast_to(spacing, x.shape)
+    level = np.clip(np.floor(np.log2(np.maximum(spacing, native) / native)), 0, _MAX_LEVEL).astype(
+        int
+    )
+    out = np.zeros(x.shape, dtype=np.float64 if is_dem else np.uint8)
+    for lv in np.unique(level):
+        res = native * 2.0**lv
+        sel = np.nonzero(level == lv)[0]
+        span = BLOCK_PX * res
+        bx = np.floor(x[sel] / span).astype(np.int64)
+        by = np.floor(y[sel] / span).astype(np.int64)
+        keys = by * 1_000_003 + bx
+        for key in np.unique(keys):
+            pick = sel[keys == key]
+            kbx, kby = int(bx[keys == key][0]), int(by[keys == key][0])
+            grid = _block(region, kind, res, kbx, kby, "level")
+            # fractional pixel coordinates inside the block (pixel centres at +0.5)
+            px = (x[pick] - (kbx * span - res)) / res - 0.5
+            py = ((kby + 1) * span + res - y[pick]) / res - 0.5
+            if is_dem:
+                i0 = np.clip(np.floor(px).astype(int), 0, grid.shape[1] - 2)
+                j0 = np.clip(np.floor(py).astype(int), 0, grid.shape[0] - 2)
+                fx = np.clip(px - i0, 0, 1)
+                fy = np.clip(py - j0, 0, 1)
+                g = grid.astype(np.float64)
+                out[pick] = (
+                    g[j0, i0] * (1 - fx) * (1 - fy)
+                    + g[j0, i0 + 1] * fx * (1 - fy)
+                    + g[j0 + 1, i0] * (1 - fx) * fy
+                    + g[j0 + 1, i0 + 1] * fx * fy
+                )
+            else:
+                i = np.clip(np.round(px).astype(int), 0, grid.shape[1] - 1)
+                j = np.clip(np.round(py).astype(int), 0, grid.shape[0] - 1)
+                out[pick] = grid[j, i]
+    return out
+
+
+def smoothed_dem(region: Region, kind: str, sigma_m: float, res: float = 480.0):
+    """The whole region's elevation at `res`, Gaussian-smoothed (σ in metres), as
+    (grid, x0, y1, res) for bilinear sampling: the reference for relief exaggeration."""
+    from ..gridify import smooth
+
+    x0, y0, x1, y1 = region._projected_envelope()
+    margin = 3 * sigma_m
+    nx = int(np.ceil((x1 - x0 + 2 * margin) / res)) + 1
+    ny = int(np.ceil((y1 - y0 + 2 * margin) / res)) + 1
+    gx0, gy1 = x0 - margin, y1 + margin
+    xs = gx0 + (np.arange(nx) + 0.5) * res
+    ys = gy1 - (np.arange(ny) + 0.5) * res
+    gx, gy = np.meshgrid(xs, ys)
+    elev = sample_points(region, kind, gx, gy, np.full(gx.size, res)).reshape(ny, nx)
+    return smooth(elev, sigma_m / res), gx0, gy1, res
+
+
+def sample_grid(grid_info, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Bilinear sample of a (grid, x0, y1, res) raster at projected points."""
+    grid, gx0, gy1, res = grid_info
+    px = (np.asarray(x) - gx0) / res - 0.5
+    py = (gy1 - np.asarray(y)) / res - 0.5
+    i0 = np.clip(np.floor(px).astype(int), 0, grid.shape[1] - 2)
+    j0 = np.clip(np.floor(py).astype(int), 0, grid.shape[0] - 2)
+    fx = np.clip(px - i0, 0, 1)
+    fy = np.clip(py - j0, 0, 1)
+    return (
+        grid[j0, i0] * (1 - fx) * (1 - fy)
+        + grid[j0, i0 + 1] * fx * (1 - fy)
+        + grid[j0 + 1, i0] * (1 - fx) * fy
+        + grid[j0 + 1, i0 + 1] * fx * fy
+    )

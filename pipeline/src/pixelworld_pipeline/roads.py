@@ -113,7 +113,8 @@ def road_heights(mask: np.ndarray, corners: np.ndarray, smooth_iterations: int =
     """Integer road height per cell (−32768 where there's no road).
 
     Starts from the cell's mean corner height, smooths along the network, then
-    relaxes until every connected pair differs by at most one step.
+    relaxes until every pair of neighbouring road cells (connected or not)
+    differs by at most one step.
     """
     on = (mask & CONNECT_MASK) != 0
     c = corners.astype(np.float64)
@@ -128,13 +129,17 @@ def road_heights(mask: np.ndarray, corners: np.ndarray, smooth_iterations: int =
             count += conn[i]
         h = np.where(count > 0, 0.5 * h + 0.5 * total / np.maximum(count, 1), h)
     hi = np.floor(h + 0.5).astype(np.int64)
+    # Every pair of neighbouring road cells stays within one step, connected or
+    # not: parallel carriageways and crossings share corners, and a bigger gap
+    # there would split a road cell into terraces.
+    near = [on & _neighbor(on, dx, dy, False) for dx, dy in DIRS]
     for _ in range(4 * max(mask.shape)):
         lo_bound = np.full_like(hi, np.iinfo(np.int64).min)
         hi_bound = np.full_like(hi, np.iinfo(np.int64).max)
         for i, (dx, dy) in enumerate(DIRS):
             nb = _neighbor(hi, dx, dy, 0)
-            lo_bound = np.where(conn[i], np.maximum(lo_bound, nb - 1), lo_bound)
-            hi_bound = np.where(conn[i], np.minimum(hi_bound, nb + 1), hi_bound)
+            lo_bound = np.where(near[i], np.maximum(lo_bound, nb - 1), lo_bound)
+            hi_bound = np.where(near[i], np.minimum(hi_bound, nb + 1), hi_bound)
         too_high = hi > hi_bound
         too_low = hi < lo_bound
         if not (too_high.any() or too_low.any()):
@@ -237,7 +242,8 @@ def validate(
                 discontinuous += 1
             ma = float(cell_corners[:, y, x].mean())
             mb = float(cell_corners[:, ny, nx].mean())
-            if abs(ma - mb) > 1.5:
+            # more than 1.5 steps per cell travelled (diagonal neighbours are √2 apart)
+            if abs(ma - mb) > 1.5 * (1.4142135623730951 if dx and dy else 1.0):
                 steep += 1
     components = len({find(k) for k in parent})
 

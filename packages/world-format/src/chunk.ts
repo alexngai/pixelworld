@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, VFAC_ONE, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworld/grid";
 
 /** Chunk binary codec, format v1 (reads v0). Spec: docs/world-format.md. */
 
@@ -73,6 +73,8 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const roadS = section("ROAD", 2, false);
   const rclsS = section("RCLS", 1, false);
   const geolS = section("GEOL", 1, false);
+  const vrefS = section("VREF", 2, false);
+  const vfacS = section("VFAC", 2, false);
   const micro = decodeMicro(view, sections.get("MHGT"), size);
 
   const base = new Int16Array(n);
@@ -81,6 +83,10 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   if (watrS) for (let i = 0; i < n; i++) water[i] = view.getInt16(watrS.offset + i * 2, true);
   const road = new Uint16Array(n);
   if (roadS) for (let i = 0; i < n; i++) road[i] = view.getUint16(roadS.offset + i * 2, true);
+  const vref = new Int16Array(n);
+  if (vrefS) for (let i = 0; i < n; i++) vref[i] = view.getInt16(vrefS.offset + i * 2, true);
+  const vfac = new Int16Array(n).fill(VFAC_ONE);
+  if (vfacS) for (let i = 0; i < n; i++) vfac[i] = view.getInt16(vfacS.offset + i * 2, true);
   const bytesOf = (s: { offset: number } | null) =>
     s ? new Uint8Array(buffer.slice(s.offset, s.offset + n)) : new Uint8Array(n);
   const roadClass = bytesOf(rclsS);
@@ -101,7 +107,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
     x,
     y,
     size,
-    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology, micro }),
+    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology, vref, vfac, micro }),
   };
 }
 
@@ -171,6 +177,8 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.road)) payloads.push(["ROAD", u16(terrain.road)]);
   if (any(terrain.roadClass)) payloads.push(["RCLS", terrain.roadClass.slice()]);
   if (any(terrain.geology)) payloads.push(["GEOL", terrain.geology.slice()]);
+  if (any(terrain.vref)) payloads.push(["VREF", i16(terrain.vref)]);
+  if (terrain.vfac.some((v) => v !== VFAC_ONE)) payloads.push(["VFAC", i16(terrain.vfac)]);
   if (terrain.micro) payloads.push(["MHGT", encodeMicro(terrain.micro, size)]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;

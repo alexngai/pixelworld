@@ -77,6 +77,7 @@ interface UploadedMesh {
 interface UploadedField {
   corners: WebGLTexture;
   cells: WebGLTexture;
+  vmap: WebGLTexture;
   ao: WebGLTexture;
   instances: number;
   /** Per edge: an R32I texture (4096 per row) listing the micro-cells with a wall there. */
@@ -210,7 +211,7 @@ export class Baker {
     for (const f of sc.fields ?? []) {
       const up = this.fields.get(f);
       if (!up) continue;
-      for (const t of [up.corners, up.cells, up.ao]) this.gl.deleteTexture(t);
+      for (const t of [up.corners, up.cells, up.vmap, up.ao]) this.gl.deleteTexture(t);
       for (const w of up.walls) this.gl.deleteTexture(w.list);
       this.fields.delete(f);
     }
@@ -225,6 +226,7 @@ export class Baker {
     const mh = f.height * f.k;
     const corners = createTexture(gl, mw, mh, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.corners);
     const cells = createTexture(gl, f.width, f.height, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.cells);
+    const vmap = createTexture(gl, f.width, f.height, gl.RG16I, gl.RG_INTEGER, gl.SHORT, f.vmap);
     const ao = rgba8Texture(gl, mw + 1, mh + 1);
     const fb = framebuffer(gl, ao, null);
     gl.viewport(0, 0, mw + 1, mh + 1);
@@ -232,7 +234,7 @@ export class Baker {
     gl.disable(gl.BLEND);
     const { prog, u } = this.fieldAo;
     gl.useProgram(prog);
-    this.setFieldUniforms(u, f, corners, cells, 0);
+    this.setFieldUniforms(u, f, corners, cells, vmap, 0);
     gl.bindVertexArray(this.emptyVao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -244,7 +246,7 @@ export class Baker {
       data.set(list);
       return { list: createTexture(gl, w, h, gl.R32I, gl.RED_INTEGER, gl.INT, data), count: list.length };
     });
-    const up = { corners, cells, ao, instances: mw * mh, walls };
+    const up = { corners, cells, vmap, ao, instances: mw * mh, walls };
     this.fields.set(f, up);
     return up;
   }
@@ -255,6 +257,7 @@ export class Baker {
     f: TerrainField,
     corners: WebGLTexture,
     cells: WebGLTexture,
+    vmap: WebGLTexture,
     rotation: Rotation,
     ao: WebGLTexture | null = null,
   ): void {
@@ -268,6 +271,9 @@ export class Baker {
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, ao);
     gl.uniform1i(u.loc("uFieldAo"), 3);
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, vmap);
+    gl.uniform1i(u.loc("uFieldVmap"), 5);
     gl.uniform1i(u.loc("uK"), f.k);
     gl.uniform2i(u.loc("uSliceOrigin"), f.origin[0], f.origin[1]);
     gl.uniform2i(u.loc("uSliceSize"), f.width, f.height);
@@ -282,7 +288,7 @@ export class Baker {
     const gl = this.gl;
     for (const f of fields) {
       const up = this.uploadField(f);
-      this.setFieldUniforms(u, f, up.corners, up.cells, rotation, up.ao);
+      this.setFieldUniforms(u, f, up.corners, up.cells, up.vmap, rotation, up.ao);
       gl.bindVertexArray(this.emptyVao);
       gl.uniform1i(u.loc("uWallList"), 4);
       // tops: every micro-cell
@@ -469,7 +475,7 @@ export class Baker {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindVertexArray(null);
-    for (const unit of [4, 3, 2, 1, 0]) {
+    for (const unit of [5, 4, 3, 2, 1, 0]) {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, null);
     }

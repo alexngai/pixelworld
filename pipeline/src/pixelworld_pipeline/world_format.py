@@ -55,6 +55,9 @@ LAYERS = (
     ("road", b"ROAD", "<u2", 0),
     ("road_class", b"RCLS", "u1", 0),
     ("geology", b"GEOL", "u1", 0),
+    # vertical caricature (M2): drawn height h ↔ real height ref + (h − ref)·invR
+    ("vref", b"VREF", "<i2", 0),  # reference height, 1/16 steps
+    ("vfac", b"VFAC", "<i2", 4096),  # 1/R, 1/4096 units (4096 = no exaggeration)
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -114,6 +117,8 @@ class Chunk:
     road: np.ndarray = field(default=None)  # uint16 road connectivity + corner crossings
     road_class: np.ndarray = field(default=None)  # uint8 road class id, 0 = none
     geology: np.ndarray = field(default=None)  # uint8 geology province id
+    vref: np.ndarray = field(default=None)  # int16 relief reference height, 1/16 steps
+    vfac: np.ndarray = field(default=None)  # int16 inverse relief factor, 1/4096
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -281,6 +286,10 @@ def write_package(
     road: np.ndarray | None = None,
     road_class: np.ndarray | None = None,
     geology: np.ndarray | None = None,
+    vref: np.ndarray | None = None,
+    vfac: np.ndarray | None = None,
+    chunk_scale: np.ndarray | None = None,
+    warp_info: dict[str, Any] | None = None,
     road_classes: dict[int, str] | None = None,
     provinces: dict[int, str] | None = None,
     start: tuple[int, int] | None = None,
@@ -309,6 +318,8 @@ def write_package(
         "road": road,
         "road_class": road_class,
         "geology": geology,
+        "vref": vref,
+        "vfac": vfac,
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -351,6 +362,11 @@ def write_package(
                     "path": rel,
                     "sha256": hashlib.sha256(blob).hexdigest(),
                     "heightRange": height_range(base[ys, xs], shape[ys, xs], mrange),
+                    **(
+                        {"metersPerCell": round(float(np.mean(chunk_scale[ys, xs])), 1)}
+                        if chunk_scale is not None
+                        else {}
+                    ),
                 }
             )
 
@@ -392,6 +408,8 @@ def write_package(
         manifest["render"] = render
     if micro is not None:
         manifest["micro"] = {"k": int(micro[1])}
+    if warp_info is not None:
+        manifest["warp"] = warp_info
     objects_path = out_dir / "objects.json.gz"
     if objects is not None:
         blob = json.dumps({"version": 1, "instances": objects}, separators=(",", ":")).encode()

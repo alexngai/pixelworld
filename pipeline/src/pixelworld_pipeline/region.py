@@ -31,6 +31,9 @@ def load_spec(path: Path) -> dict[str, Any]:
     """Read a region spec; `extends: other.yaml` merges this file over another
     (mappings merge key by key, anything else replaces; null removes a section)."""
     raw = yaml.safe_load(path.read_text())
+    # `warp: warp.yaml` keeps the editor-managed warp (focus areas, pins) in its own file
+    if isinstance(raw.get("warp"), str):
+        raw["warp"] = yaml.safe_load((path.parent / raw["warp"]).read_text())
     parent = raw.pop("extends", None)
     if parent is None:
         return raw
@@ -65,6 +68,8 @@ class Region:
     objects: dict[str, Any] | None = None
     # Micro-terrain (M1.6): {"k": 4, "dem": {...source override...}}.
     micro: dict[str, Any] | None = None
+    # Elastic map (M2): {"background", "focus": [...], "pins": [...], "vertical": {...}}.
+    warp: dict[str, Any] | None = None
     # Terrain rules for fine cells: {cliffSlope, minLakeArea (m²), maxLakeRelief (m),
     # riverWidthMeters}.
     terrain: dict[str, Any] | None = None
@@ -110,6 +115,7 @@ class Region:
             objects=dict(raw["objects"]) if raw.get("objects") else None,
             terrain=dict(raw["terrain"]) if raw.get("terrain") else None,
             micro=dict(raw["micro"]) if raw.get("micro") else None,
+            warp=dict(raw["warp"]) if raw.get("warp") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")

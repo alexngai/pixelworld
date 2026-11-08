@@ -1,0 +1,21 @@
+# Elastic map for the Southwest (M2, docs/architecture.md §6). The editor
+# (apps/editor) rewrites this file: focus areas and pins.
+#
+# background: metres per cell where nothing is magnified (the empty desert
+#   between places is compressed a little to keep the drive short)
+# focus: areas drawn finer; inside radiusKm the target holds, then it blends
+#   back to the background over falloffKm
+# vertical: local relief is exaggerated by (400 m / local m per cell)^gamma
+#   around the elevation smoothed over referenceSigmaKm, so magnified places
+#   keep the M1 proportions and flat ground stays flat
+background: 500
+method: v2
+meshKm: 2
+vertical: { gamma: 1.0, referenceSigmaKm: 6, min: 0.6, max: 4.0 }
+focus:
+  - { name: las-vegas-strip, lon: -115.1728, lat: 36.1147, radiusKm: 7, falloffKm: 15, metersPerCell: 100 }
+  - { name: hoover-dam, lon: -114.7377, lat: 36.0160, radiusKm: 4, falloffKm: 10, metersPerCell: 100 }
+  - { name: lake-mead, lon: -114.55, lat: 36.15, radiusKm: 15, falloffKm: 15, metersPerCell: 250 }
+  - { name: grand-canyon-village, lon: -112.12, lat: 36.06, radiusKm: 14, falloffKm: 20, metersPerCell: 150 }
+  - { name: desert-view, lon: -111.83, lat: 36.05, radiusKm: 6, falloffKm: 10, metersPerCell: 150 }
+pins: []
