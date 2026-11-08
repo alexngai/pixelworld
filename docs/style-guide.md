@@ -240,3 +240,44 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
   Objects keep a fixed pixel size, so a density reads the same on every level. `depiction.scatter` scales it per level.
 - **Kept clear:** water, roads, paths, a band beside wide roads, cliffs and cells under placed objects.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
+
+## 15. San Francisco (the `bay-area` pack)
+
+The city is read by its fabric first (D-055): row houses on 25-foot lots, the stucco rows of the Sunset and Richmond, corniced apartment blocks, Chinatown and the piers. Its landmarks come second.
+
+**Roofs**
+- **Flat roofs are light:** grey tar and gravel, a white coating or warm gravel. Large apartment blocks are never white, because white glares at that size.
+- **Slate** goes only on Queen Anne gables, which are short and on 10–30% of Victorians.
+- **Lot lines:** each row house raises a one-voxel parapet in its body colour on one lot line, so a row of flat roofs still reads as separate houses.
+
+**Paint schemes** (generators/facades.ts)
+- **What a scheme is:** the role variants that share a name, such as `wall.blue`, `trim.blue` and `accent.blue`. Trim and accent come from the body's scheme, never at random.
+- **Per typology and era:**
+
+| Typology | Body | Trim and accent |
+|---|---|---|
+| Victorian rows (before 1906) | saturated: blue, mustard, green, plum, teal, oxblood, a few pastels | cream or white trim, a contrasting accent on the frieze and door |
+| Edwardian rows (1906–1920) | creams, whites, pale tones | white trim, dentils |
+| Stucco rows (1920–1960) | pastel stucco | white garage doors; red tile copings mostly before 1945, storybook gables before 1942 |
+| Mid-century (rowhouse type 3) | white and grey | a band of sliding windows, a flat fascia, sometimes a brick or stone veneer |
+| Apartments | cream, white, brick, terracotta | white cornices, stacked bays |
+| Houses without a row (`building.house`) | the row-house form of their era (type -1), white and grey | — |
+| Chinatown | cream, butter, mint, brick | red balcony rails, red and gold signs, jade eaves, pagoda roofs |
+
+- **Shades:** walls only show shades 2–3 of a paint ramp, so paint ramps are tuned for those two.
+
+**Street detail (walking level):** window hoods and accent aprons, paired windows beside the bay, corner stores on some corner lots, and roof decks with a stair penthouse. Stoops aren't drawn, because they would overhang the street or leave the footprint.
+
+**Landmarks** (generic depictions, D-051)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.bridge.suspension` | `suspensionBridge` (portal towers, stepped struts, grooved legs) | the Golden Gate Bridge: orange towers, truss and railings |
+| `landmark.bridge.suspension.double` | `suspensionBridge` (X-braced towers, double deck) | the Bay Bridge's west span, grey |
+| `landmark.tower.pyramid` | `pyramidTower` | the Transamerica Pyramid: a spire, wings on two faces, an arcade at the foot |
+| `landmark.tower.obelisk.diagonal` | `obeliskTower` | Salesforce Tower: corners rounding as it rises, a lattice crown |
+| `landmark.tower.column` | `column` | Coit Tower |
+| `landmark.hall.clock` | `towerHall` | the Ferry Building: clock faces, an arched stage, a lantern, a flagpole |
+| `landmark.hall.domed` | `domedHall` | City Hall |
+| `landmark.rotunda` | `rotunda` | the Palace of Fine Arts: a red dome on column clusters, a curved colonnade |
+| `landmark.tower.mast` | `tripodMast` | Sutro Tower, in red and white bands |

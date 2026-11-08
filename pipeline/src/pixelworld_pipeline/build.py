@@ -707,7 +707,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         from .sources.datasf import ATTRIBUTION as DATASF_ATTRIBUTION
 
         attribution.append(DATASF_ATTRIBUTION)
-    if region.objects and any("canopy" in r for r in region.objects.get("vegetation", [])):
+    if region.objects and any("canopy" in r for r in (region.objects.get("vegetation") or [])):
         from .sources.canopy import ATTRIBUTION as CANOPY_ATTRIBUTION
 
         attribution.append(CANOPY_ATTRIBUTION)

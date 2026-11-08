@@ -842,7 +842,7 @@ def place(
     instances: list[dict] = []
 
     depiction = spec.get("depiction") or {}
-    landmarks = spec.get("landmarks", [])
+    landmarks = spec.get("landmarks") or []
     clear_zones = []
     lm_scale = []
     for lm in landmarks:
@@ -923,16 +923,16 @@ def place(
         return hit
 
     canopy = None
-    if any("canopy" in rule for rule in spec.get("vegetation", [])):
+    if any("canopy" in rule for rule in (spec.get("vegetation") or [])):
         from .sources.canopy import CanopyGrid
 
         canopy = CanopyGrid(region.lonlat_envelope())
-    for i, rule in enumerate(spec.get("vegetation", [])):
+    for i, rule in enumerate(spec.get("vegetation") or []):
         instances += scatter(p, rule, occupied, f"{i}", canopy)
-    for i, rule in enumerate(spec.get("streetTrees", [])):
+    for i, rule in enumerate(spec.get("streetTrees") or []):
         instances += street_trees(p, rule, road_rows, occupied, f"{i}")
     # street furniture (M3): lights along roads, signals at major junctions
-    for i, rule in enumerate(spec.get("streetProps", [])):
+    for i, rule in enumerate(spec.get("streetProps") or []):
         if rule.get("at") == "junctions":
             instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
         else:

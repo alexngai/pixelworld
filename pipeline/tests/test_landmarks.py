@@ -346,3 +346,14 @@ def test_micro_terrain_under_a_bridge_deck_is_flat_water():
     for x0, x1 in ((0, 2), (8, 10)):
         bed = (slice(4 * k + 1, 5 * k), slice(x0 * k + 1, x1 * k - 1))
         assert (mc2[bed] == mc[bed]).all() and (mc2[bed] == k).all()
+
+
+def test_a_level_can_switch_object_sections_off_with_null(registry):
+    # a level spec that extends another turns sections off with null (fly.yaml: vegetation: null)
+    r = _region(
+        registry,
+        {"landmarks": None, "vegetation": None, "streetTrees": None, "streetProps": None},
+    )
+    blocked = np.zeros(r.cells[::-1], dtype=bool)
+    out, counts = objects.place(r, blocked, [])
+    assert out == [] and counts == {}

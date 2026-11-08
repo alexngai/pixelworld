@@ -89,13 +89,16 @@ Sources and licenses:
 San Francisco at three scale levels, built from [`worlds/sf/`](../worlds/sf/) on the `bay-area` style pack. The point of this region is the ordinary fabric, not only the landmarks: every building is typed from its shape, its street and the city's records (D-055), and drawn by street-facing generators.
 
 - **sf (driving):** the whole city at a uniform 25 m per cell, from Ocean Beach to the Embarcadero and from the Golden Gate to the county line, with 1.5× vertical exaggeration and 4×4 micro-cells.
-  - **Buildings:** 168,920. They come from Overture footprints and heights; DataSF's assessor roll supplies year built, storeys, use and neighbourhood (160,829 matched to a lot).
-  - **Types:** stucco row houses (72,935), Edwardian rows (26,961), houses (19,205), Victorian rows (17,632), apartment blocks with bays (3,249) and without (5,297), historic commercial blocks (5,150), warehouses (2,884), Chinatown (924), pier sheds (123) and 1920s towers (52).
-  - **Landmarks (generic depictions):** the Golden Gate Bridge, the Bay Bridge's west span (both in pieces, D-056), the Transamerica Pyramid, Coit Tower, the Ferry Building, City Hall and Sutro Tower.
+  - **Buildings:** 168,883. They come from Overture footprints and heights; DataSF's assessor roll supplies year built, storeys, use and neighbourhood (160,796 matched to a lot).
+  - **Types:** stucco row houses (82,002), Edwardian rows (26,961), houses (19,979), Victorian rows (17,632), apartment blocks with bays (3,245) and without (5,297), historic commercial blocks (5,150), warehouses (2,884), Chinatown (924), pier sheds (123) and 1920s towers (52).
+  - **Trees:** 62,296, where the WRI/Meta canopy height map shows 3 m or more.
+  - **Landmarks (generic depictions):** the Golden Gate Bridge, the Bay Bridge's west span (both in pieces, D-056), the Transamerica Pyramid, Salesforce Tower, Coit Tower, the Ferry Building, City Hall, the Palace of Fine Arts and Sutro Tower.
+  - **Size:** 8.1 MB, of which `objects.json.gz` (version 2, D-057) is 6.7 MB.
 - **sf-walk:** the northeast of the city at 10 m per cell, from the Haight and Alamo Square to the Embarcadero and from Dolores Park to North Beach.
-  - **Contents:** 43,662 buildings at 1.4× height, 20,594 canopy trees, 8,010 street lights and 458 signals, and the landmarks within it.
-  - **Road report:** one split segment and two disconnected junctions at 10 m cells, so the build exits with status 1; the package is still written.
-- **sf-fly:** the Bay from the Marin Headlands to the Oakland shore at 100 m per cell. Only towers of 60 m or more are drawn (2×), plus the landmarks (3×).
+  - **Contents:** 43,650 buildings at 1.4× height, 20,594 canopy trees, 8,010 street lights and 458 signals, and the landmarks within it (not the Palace of Fine Arts: its colonnade would reach past a tile's margin at 10 m cells).
+  - **Size:** 3.0 MB.
+- **sf-fly:** the Bay from the Marin Headlands to the Oakland shore at 100 m per cell, 0.24 MB. Only towers of 60 m or more (2×) and the landmarks (3×) are drawn; there's no typology pass and no street trees.
+- **Road reports:** clean on all three levels.
 
 ```sh
 cd pipeline
@@ -107,7 +110,7 @@ Sources and licenses:
 - Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads, paths and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Building records: DataSF, Assessor Historical Secured Property Tax Rolls and Parcels. ODC PDDL 1.0.
-- Tree canopy (walking level): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+- Tree canopy (driving and walking levels): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
 ## exp-* (M1.5 pixel detail experiment)
 

@@ -1,5 +1,5 @@
 {
-  "packageHash": "0ca9f85e98f79aa35a0fa603f388e238eea4dea8e73edd3d40c56cae8905e0c4",
+  "packageHash": "e2373bd1c041be8206c21d32f7aed076266889b667d6a3da6ecd3e213b4ff0f5",
   "cells": [
     274,
     234
@@ -14,16 +14,18 @@
     "riverLines": 8
   },
   "objects": {
-    "building.commercial": 143,
+    "building.commercial": 141,
     "building.residential": 87,
-    "building.tower": 216,
+    "building.tower": 202,
     "building.tower.hotel": 18,
     "landmark.bridge.suspension": 2,
     "landmark.bridge.suspension.double": 3,
     "landmark.hall.clock": 1,
     "landmark.hall.domed": 1,
+    "landmark.rotunda": 1,
     "landmark.tower.column": 1,
     "landmark.tower.mast": 1,
+    "landmark.tower.obelisk.diagonal": 1,
     "landmark.tower.pyramid": 1
   },
   "roads": {

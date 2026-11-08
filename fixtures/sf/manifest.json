@@ -131,7 +131,7 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "0e0da9d3542125099049ce9c5e7e8d31378ddfc1c90d6fe58498b221f9fb7371",
+      "sha256": "6915876eebddb2a0ef97fca2d25eaf945cf8a55b11697e29bf2a2eaeb5d4c459",
       "heightRange": [
         -1,
         22
@@ -231,7 +231,7 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "36edc60284f4df36a88130e32e3dd8432d21d05a11aeeb0f0fc2a57398427262",
+      "sha256": "b731bda7abed47606df3f46a3aab625f0c9d3b77af3b0a0b32039d61fc8e68b8",
       "heightRange": [
         -1,
         13
@@ -291,7 +291,7 @@
       "x": 8,
       "y": 2,
       "path": "chunks/8_2.pxwc.gz",
-      "sha256": "d3d9e93c272b5b62d894f2f9f8b51c1c9986690de6388c323f7cd40577a51fcc",
+      "sha256": "ea9f48b5375e3aa3cba52859920e57fbf9f2dfd13509a6183b83a5df9db08df3",
       "heightRange": [
         -1,
         16
@@ -381,7 +381,7 @@
       "x": 7,
       "y": 3,
       "path": "chunks/7_3.pxwc.gz",
-      "sha256": "b7d7bdddcc273c7ec946b6096c207f7b8c1cc0047be0564c2e790c8537bcd363",
+      "sha256": "0ca5bf56bc27fc57d43a60542878b8cbaa192f99bd3a11228af776cffd8fbef1",
       "heightRange": [
         -1,
         3
@@ -391,9 +391,9 @@
       "x": 8,
       "y": 3,
       "path": "chunks/8_3.pxwc.gz",
-      "sha256": "362f880207c26398ec5284600b358f09ee2e02ca3b334fe123f411e58fc54fa3",
+      "sha256": "c27b83cfaf5234a493ab7d36a1ee4b259b3fd9ea39fd7ea5f7a20e51ff4ff3ef",
       "heightRange": [
-        -1,
+        0,
         0
       ]
     },
@@ -1158,6 +1158,11 @@
       "name": "DataSF: Assessor Historical Secured Property Tax Rolls, Parcels",
       "license": "ODC PDDL 1.0",
       "url": "https://data.sf.gov/"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
     }
   ],
   "roadClasses": {
@@ -1190,7 +1195,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "d5ad2e561bfebccc",
+      "region": "26c7ea99e4edb09c",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -1204,8 +1209,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "00ef9fb58f9cd140d3396c051b70b763063621b91d3e59d36bf144c5fba1aae1",
-    "count": 168942
+    "sha256": "ca6fc0954e8fd54f6ff0bd6690ead378c2b38fcde0367a90c368ba72f11bf736",
+    "count": 231203
   },
   "depiction": {
     "heightStretch": 1.5,
@@ -1238,5 +1243,5 @@
     ],
     "sha256": "39739d3d8152c70ee63abec55813b2366d52c83864d37a325a948b2d9ed63607"
   },
-  "packageHash": "82eaa2555f604c28e62a09a1ab2bd289a936b458c7e6db0cf73f76aee223ccc6"
+  "packageHash": "186ec9943d13a88069c5e2482736740306ed5157c52af97f64e15021aad50833"
 }

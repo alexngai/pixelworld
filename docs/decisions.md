@@ -362,7 +362,7 @@ The point is more room for visual interest; both halves are wanted.
   - the side facing the nearest street, from the straightened network
   - corner lots, and whether it stands over water
   - from a facts source where one exists, year built, storeys, use and neighbourhood
-- **Facts for San Francisco:** DataSF's parcels and the assessor's secured roll (ODC PDDL), joined by map lot. Condominium units are aggregated: the earliest year, the most storeys, the sum of units, the most common use. 160,829 of 168,920 buildings on the driving level fall on a lot with a record.
+- **Facts for San Francisco:** DataSF's parcels and the assessor's secured roll (ODC PDDL), joined by map lot. Condominium units are aggregated: the earliest year, the most storeys, the sum of units, the most common use. 160,796 of 168,883 buildings on the driving level fall on a lot with a record.
 - **Rules:** an ordered list in the region spec (`objects.typology.rules`) maps features to a group; the first match wins, and unmatched buildings keep their generic group. A rule names any of: a year range, uses, neighbourhoods, width, depth, shared-wall share, storeys, height, over water, corner lot. Rules replace only generic groups unless they say `from:`.
 - **Hints:** typed buildings carry `fr` (the front's direction), `cn` (corner), `yr` (year built) and `fl` (storeys) for their generator.
 - **Generators (`facades.ts`):**
@@ -383,3 +383,20 @@ The point is more room for visual interest; both halves are wanted.
 - **Pieces:** a snapped line landmark is cut into pieces of at most 12 cells along its line.
   - **Shared line:** each piece carries the whole line (`ln`, `lw`), so the generator measures its position along the span (towers, cable sag, hangers) against the whole and the pieces join exactly.
   - **Why:** a diagonal bridge in one piece is a square voxel box. The Bay Bridge's west span was about 335 million voxels, mostly empty, rebuilt in every tile it touched; a view of it took 215 s to bake in software.
+
+### D-057: Objects file version 2, footprints relative to their anchor (accepted)
+- **Why:** absolute footprint coordinates, in cells with two decimals, made up most of the San Francisco driving level's `objects.json.gz`: 8.3 MB for 169k buildings.
+- **Format:** version 2 stores each footprint point as `[dx, dy]` in integer hundredths of a cell from the instance's anchor, itself rounded to hundredths. This decodes to exactly the numbers version 1 held, so footprints and seeds don't change and every world draws the same buildings.
+- **Reading and writing:**
+  - **Pipeline:** `world_format.encode_objects` and `decode_objects`; packages are written as version 2.
+  - **Client:** `parseObjects` in `packages/world-format` converts back to absolute footprints, so nothing downstream changes. Version 1 files still load.
+  - **Tests:** shared golden files in `testdata/world-format/` cover both sides.
+- **Result:** the driving level falls from 8.30 to 6.15 MB before street trees, the walking level from 2.69 to 2.22 MB and the Southwest from 0.30 to 0.22 MB.
+- **Rejected alternatives:**
+  - Flat `[dx, dy, dx, dy, …]` arrays: they save about 0.2 MB more but change the shape of `fp`.
+  - 16-bit seeds: they would change every existing world's buildings.
+
+### D-058: Ways that graze the world's edge stay in one piece (accepted)
+- **Why:** a street on the walking level's north edge had one vertex 0.19 cells outside the grid. Its cell path stepped out and back, and steps through outside cells aren't drawn, so the street fell into stubs. That gave a split segment and two disconnected junctions in the road report.
+- **Rule:** in both rasterizers, a run of outside cells between two inside cells that stays within one cell of the edge is drawn on the edge cells. Ways that really leave the grid are drawn as before.
+- **Effect:** the San Francisco walking level's road report is clean. Only cells along world edges change elsewhere: 16 road and 20 path cells on the Southwest walking level, 8 road cells on the 20 m Strip experiment.
