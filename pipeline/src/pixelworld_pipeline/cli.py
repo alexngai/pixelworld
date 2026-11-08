@@ -19,7 +19,17 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("region", type=Path, help="path to worlds/<id>/region.yaml")
     b.add_argument("--out", type=Path, help="output directory (default: fixtures/<id>)")
     b.add_argument("--no-compress", action="store_true", help="write plain .pxwc chunks")
+    imp = sub.add_parser("importance", help="refresh the region's Wikidata importance snapshot")
+    imp.add_argument("region", type=Path)
+    imp.add_argument("--min-sitelinks", type=int, default=20)
     args = parser.parse_args(argv)
+
+    if args.command == "importance":
+        from .importance import snapshot_path, write_snapshot
+
+        snap = write_snapshot(args.region, args.min_sitelinks)
+        print(f"{len(snap['places'])} places → {snapshot_path(args.region)}")
+        return 0
 
     if args.command == "build":
         from .build import build

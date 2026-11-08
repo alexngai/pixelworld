@@ -352,9 +352,19 @@ def sample_points(
     return out
 
 
+_SMOOTHED: dict[tuple, tuple] = {}
+
+
 def smoothed_dem(region: Region, kind: str, sigma_m: float, res: float = 480.0):
     """The whole region's elevation at `res`, Gaussian-smoothed (σ in metres), as
     (grid, x0, y1, res) for bilinear sampling: the reference for relief exaggeration."""
+    key = (_grid_key(region), kind, sigma_m, res)
+    if key not in _SMOOTHED:
+        _SMOOTHED[key] = _smoothed_dem(region, kind, sigma_m, res)
+    return _SMOOTHED[key]
+
+
+def _smoothed_dem(region: Region, kind: str, sigma_m: float, res: float):
     from ..gridify import smooth
 
     x0, y0, x1, y1 = region._projected_envelope()

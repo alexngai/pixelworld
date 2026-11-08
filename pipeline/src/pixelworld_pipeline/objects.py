@@ -58,19 +58,59 @@ def _stable_int(text: str) -> int:
 
 
 class Placement:
-    """Projected-metre ↔ cell conversions and lookups for one region build."""
+    """Projected-metre ↔ cell conversions and lookups for one region build.
 
-    def __init__(self, region: Region, blocked: np.ndarray):
+    With a warped layout, positions go through the elastic map and footprints
+    are stamped rigidly (the local similarity at their anchor), never sheared.
+    """
+
+    def __init__(self, region: Region, blocked: np.ndarray, layout=None):
         self.region = region
-        self.west, self.north, self.cx, self.cy = region.grid
+        self.layout = layout if layout is not None and layout.warped else None
+        self.west, self.north, _, _ = region.grid
+        self.cx, self.cy = blocked.shape[1], blocked.shape[0]
         self.m = region.meters_per_cell
         self.blocked = blocked
-        self.landcover, self.lc_px = rasters.landcover_fine(region)
+        self._landcover = None
         # placement lattice anchored to the spec's envelope, not the cell grid
         self.envelope = region._projected_envelope()
 
+    @property
+    def landcover(self):
+        if self.layout is not None:
+            raise ValueError("land-cover scatter isn't supported on warped layouts yet")
+        if self._landcover is None:
+            self._landcover = rasters.landcover_fine(self.region)
+        return self._landcover[0]
+
+    @property
+    def lc_px(self) -> float:
+        self.landcover  # noqa: B018 (loads it)
+        return self._landcover[1]
+
     def to_cells(self, xs: np.ndarray, ys: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if self.layout is not None:
+            L = self.layout
+            return L.warp.to_cells(np.asarray(xs) - L.x0, L.y1 - np.asarray(ys))
         return (np.asarray(xs) - self.west) / self.m, (self.north - np.asarray(ys)) / self.m
+
+    def similarity(self, x: float, y: float) -> np.ndarray:
+        """2×2 map from projected metres (x east, y north) to cells near (x, y):
+        the closest similarity to the local Jacobian (uniform: 1/m, y flipped)."""
+        h = 10.0
+        cx, cy = self.to_cells(np.array([x, x + h, x]), np.array([y, y, y + h]))
+        j = np.array([[cx[1] - cx[0], cx[2] - cx[0]], [cy[1] - cy[0], cy[2] - cy[0]]]) / h
+        # j maps (east, north) → (cell x, cell y) with a reflection (north is −y); similarity of j·F
+        f = np.array([[1.0, 0.0], [0.0, -1.0]])
+        a = j @ f
+        scale = 0.5 * math.hypot(a[0, 0] + a[1, 1], a[1, 0] - a[0, 1])
+        theta = math.atan2(a[1, 0] - a[0, 1], a[0, 0] + a[1, 1])
+        rot = np.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
+        return scale * rot @ f
+
+    def scale_at(self, x: float, y: float) -> float:
+        """Local metres per cell."""
+        return 1.0 / math.sqrt(abs(np.linalg.det(self.similarity(x, y))))
 
     def project(self, geom):
         """Lon/lat shapely geometry → projected metres."""
@@ -231,7 +271,14 @@ def building_group(cls: str | None, height_m: float, tower_m: float) -> str:
 def _footprint(p: Placement, poly, tolerance: float) -> list[list[float]]:
     ring = poly.simplify(tolerance).exterior
     coords = np.asarray(ring.coords)[:-1]
-    cx, cy = p.to_cells(coords[:, 0], coords[:, 1])
+    if p.layout is None:
+        cx, cy = p.to_cells(coords[:, 0], coords[:, 1])
+    else:
+        # rigid stamp: the local similarity around the centroid, so shapes never shear
+        c = poly.centroid
+        ox, oy = p.to_cells(np.array([c.x]), np.array([c.y]))
+        d = (coords - np.array([c.x, c.y])) @ p.similarity(c.x, c.y).T
+        cx, cy = ox[0] + d[:, 0], oy[0] + d[:, 1]
     return [[round(float(x), 2), round(float(y), 2)] for x, y in zip(cx, cy, strict=True)]
 
 
@@ -260,16 +307,17 @@ def place_buildings(
             if not p.inside(cx, cy)[0] or clear(c.x, c.y):
                 continue
             polys.append(poly)
-            out.append(
-                {
-                    "g": building_group(cls, height_m, tower_m),
-                    "x": round(float(cx[0]), 3),
-                    "y": round(float(cy[0]), 3),
-                    "s": _stable_int(row["id"]),
-                    "fp": _footprint(p, poly, tolerance),
-                    "hm": round(height_m, 1),
-                }
-            )
+            inst = {
+                "g": building_group(cls, height_m, tower_m),
+                "x": round(float(cx[0]), 3),
+                "y": round(float(cy[0]), 3),
+                "s": _stable_int(row["id"]),
+                "fp": _footprint(p, poly, tolerance),
+                "hm": round(height_m, 1),
+            }
+            if p.layout is not None:
+                inst["m"] = round(p.scale_at(c.x, c.y), 2)
+            out.append(inst)
 
     small_house_m2 = float(spec.get("houseMaxArea", 0))
     for row in rows:
@@ -290,15 +338,45 @@ def place_buildings(
     return out, polys
 
 
-def place(region: Region, blocked: np.ndarray, road_rows: list[dict]) -> tuple[list[dict], dict]:
-    """All instances for a region, plus counts per group for the build report."""
+def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -> list[list[float]]:
+    """An arch-dam footprint in cells: a band along the abutment line, bowed
+    upstream (to the left of the line) by `bulge` of its length."""
+    (lon0, lat0), (lon1, lat1) = line
+    xs, ys = transform_points("EPSG:4326", p.region.crs, [lon0, lon1], [lat0, lat1])
+    ax, ay = p.to_cells(np.array(xs), np.array(ys))
+    a = np.array([ax[0], ay[0]])
+    b = np.array([ax[1], ay[1]])
+    along = b - a
+    length = float(np.hypot(*along))
+    n = np.array([along[1], -along[0]]) / max(length, 1e-9)  # left of the line, in cells
+    half = 0.5 * thickness_m / p.scale_at(0.5 * (xs[0] + xs[1]), 0.5 * (ys[0] + ys[1]))
+    t = np.linspace(0, 1, 9)
+    centre = (
+        a[None, :] + t[:, None] * along[None, :] + (4 * bulge * length * t * (1 - t))[:, None] * n
+    )
+    outer = centre + half * n
+    inner = centre - half * n
+    ring = np.concatenate([outer, inner[::-1]])
+    return [[round(float(x), 2), round(float(y), 2)] for x, y in ring]
+
+
+def place(
+    region: Region, blocked: np.ndarray, road_rows: list[dict], layout=None, heights=None
+) -> tuple[list[dict], dict]:
+    """All instances for a region, plus counts per group for the build report.
+
+    heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
+    """
     spec = region.objects or {}
-    p = Placement(region, blocked)
+    p = Placement(region, blocked, layout)
     instances: list[dict] = []
 
     landmarks = spec.get("landmarks", [])
     clear_zones = []
     for lm in landmarks:
+        if "line" in lm and "lon" not in lm:
+            (lon0, lat0), (lon1, lat1) = lm["line"]
+            lm = {**lm, "lon": 0.5 * (lon0 + lon1), "lat": 0.5 * (lat0 + lat1)}
         xs, ys = transform_points("EPSG:4326", region.crs, [lm["lon"]], [lm["lat"]])
         clear_zones.append((xs[0], ys[0], float(lm.get("clear", 0))))
 
@@ -308,7 +386,7 @@ def place(region: Region, blocked: np.ndarray, road_rows: list[dict]) -> tuple[l
     building_polys = []
     if "buildings" in spec:
         release = region.sources["overture"]["release"]
-        bbox = region.lonlat_envelope()
+        bbox = tuple(spec["buildings"].get("bounds", region.lonlat_envelope()))
         rows = overture.buildings(release, bbox)
         parts = overture.building_parts(release, bbox)
         found, building_polys = place_buildings(p, spec["buildings"], rows, parts, clear)
@@ -334,6 +412,12 @@ def place(region: Region, blocked: np.ndarray, road_rows: list[dict]) -> tuple[l
         inst = {"g": lm["group"], "x": round(float(cx[0]), 3), "y": round(float(cy[0]), 3), "s": k}
         if "hm" in lm:
             inst["hm"] = float(lm["hm"])
+        if p.layout is not None:
+            inst["m"] = round(p.scale_at(lx, ly), 2)
+        if "line" in lm:
+            inst["fp"] = dam_footprint(p, lm["line"], float(lm.get("thicknessM", 60)))
+            if heights is not None and "crestMeters" in lm:
+                inst["top"] = round(float(heights(lx, ly, float(lm["crestMeters"]))), 2)
         instances.append(inst)
 
     for inst in instances:

@@ -22,6 +22,16 @@ micro:
   k: 4
   dem: { overview: 2 }
 
+# Objects (M2: landmarks, buildings on the Strip). Landmarks are stamped
+# rigidly at their mapped anchor; the dam spans its crest line from OSM.
+objects:
+  buildings: { bounds: [-115.19, 36.08, -115.14, 36.15], minArea: 200, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  landmarks:
+    - { group: landmark.tower.observation, lon: -115.1555, lat: 36.1474, hm: 350, clear: 45 }
+    - { group: landmark.sign, lon: -115.17282, lat: 36.08208, clear: 10 }
+    - { group: landmark.tower.lookout, lon: -111.8261, lat: 36.0441, hm: 80, clear: 30 }
+    - { group: landmark.dam, line: [[-114.73680, 36.01480], [-114.73939, 36.01650]], crestMeters: 376, thicknessM: 45, clear: 60 }
+
 style: desert-southwest
 start: { lon: -115.1728, lat: 36.1147 } # Las Vegas Strip
 

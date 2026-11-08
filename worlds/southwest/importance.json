@@ -1,0 +1,777 @@
+{
+ "source": "Wikidata (CC0), items with coordinates and sitelinks",
+ "queried": "2026-11-08",
+ "minSitelinks": 20,
+ "places": [
+  {
+   "id": "Q23768",
+   "label": "Las Vegas",
+   "lon": -115.14861,
+   "lat": 36.16722,
+   "sitelinks": 197
+  },
+  {
+   "id": "Q118841",
+   "label": "Grand Canyon",
+   "lon": -112.09528,
+   "lat": 36.0975,
+   "sitelinks": 116
+  },
+  {
+   "id": "Q79842",
+   "label": "Flagstaff",
+   "lon": -111.63111,
+   "lat": 35.19917,
+   "sitelinks": 88
+  },
+  {
+   "id": "Q49267",
+   "label": "Henderson",
+   "lon": -114.98139,
+   "lat": 36.03167,
+   "sitelinks": 80
+  },
+  {
+   "id": "Q172822",
+   "label": "Q172822",
+   "lon": -114.73778,
+   "lat": 36.01583,
+   "sitelinks": 73
+  },
+  {
+   "id": "Q143782",
+   "label": "North Las Vegas",
+   "lon": -115.12158,
+   "lat": 36.20058,
+   "sitelinks": 67
+  },
+  {
+   "id": "Q177397",
+   "label": "Area 51",
+   "lon": -115.80833,
+   "lat": 37.23333,
+   "sitelinks": 67
+  },
+  {
+   "id": "Q220289",
+   "label": "Grand Canyon National Park",
+   "lon": -112.122,
+   "lat": 36.0553,
+   "sitelinks": 62
+  },
+  {
+   "id": "Q79733",
+   "label": "Kingman",
+   "lon": -114.025,
+   "lat": 35.20833,
+   "sitelinks": 62
+  },
+  {
+   "id": "Q52472",
+   "label": "St. George",
+   "lon": -113.57806,
+   "lat": 37.09528,
+   "sitelinks": 58
+  },
+  {
+   "id": "Q205325",
+   "label": "Zion National Park",
+   "lon": -112.98785,
+   "lat": 37.20262,
+   "sitelinks": 57
+  },
+  {
+   "id": "Q858801",
+   "label": "Boulder City",
+   "lon": -114.8325,
+   "lat": 35.97861,
+   "sitelinks": 52
+  },
+  {
+   "id": "Q79864",
+   "label": "Williams",
+   "lon": -112.19,
+   "lat": 35.24944,
+   "sitelinks": 50
+  },
+  {
+   "id": "Q984542",
+   "label": "Paradise",
+   "lon": -115.12472,
+   "lat": 36.08194,
+   "sitelinks": 50
+  },
+  {
+   "id": "Q79432",
+   "label": "Bullhead City",
+   "lon": -114.58861,
+   "lat": 35.11556,
+   "sitelinks": 49
+  },
+  {
+   "id": "Q130069",
+   "label": "Kanab",
+   "lon": -112.53111,
+   "lat": 37.03556,
+   "sitelinks": 46
+  },
+  {
+   "id": "Q853886",
+   "label": "Harry Reid International Airport",
+   "lon": -115.15056,
+   "lat": 36.08528,
+   "sitelinks": 46
+  },
+  {
+   "id": "Q991218",
+   "label": "Mesquite",
+   "lon": -114.06714,
+   "lat": 36.80356,
+   "sitelinks": 44
+  },
+  {
+   "id": "Q466895",
+   "label": "Lowell Observatory",
+   "lon": -111.66444,
+   "lat": 35.20278,
+   "sitelinks": 42
+  },
+  {
+   "id": "Q998951",
+   "label": "Colorado City",
+   "lon": -112.97806,
+   "lat": 36.98944,
+   "sitelinks": 41
+  },
+  {
+   "id": "Q482646",
+   "label": "Hurricane",
+   "lon": -113.32611,
+   "lat": 37.17417,
+   "sitelinks": 40
+  },
+  {
+   "id": "Q482386",
+   "label": "Washington",
+   "lon": -113.50333,
+   "lat": 37.11944,
+   "sitelinks": 39
+  },
+  {
+   "id": "Q646089",
+   "label": "Q646089",
+   "lon": -115.152,
+   "lat": 36.1315,
+   "sitelinks": 38
+  },
+  {
+   "id": "Q745608",
+   "label": "Las Vegas Strip",
+   "lon": -115.1725,
+   "lat": 36.12,
+   "sitelinks": 38
+  },
+  {
+   "id": "Q483249",
+   "label": "Santa Clara",
+   "lon": -113.64917,
+   "lat": 37.13694,
+   "sitelinks": 37
+  },
+  {
+   "id": "Q1013165",
+   "label": "Fredonia",
+   "lon": -112.52167,
+   "lat": 36.94944,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q482401",
+   "label": "Ivins",
+   "lon": -113.68083,
+   "lat": 37.1675,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q482508",
+   "label": "Springdale",
+   "lon": -112.99972,
+   "lat": 37.18444,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q482758",
+   "label": "La Verkin",
+   "lon": -113.26667,
+   "lat": 37.21361,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q483016",
+   "label": "Hildale",
+   "lon": -112.98722,
+   "lat": 37.00278,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q992507",
+   "label": "Spring Valley",
+   "lon": -115.25028,
+   "lat": 36.1125,
+   "sitelinks": 36
+  },
+  {
+   "id": "Q1018999",
+   "label": "Tusayan",
+   "lon": -112.12889,
+   "lat": 35.97528,
+   "sitelinks": 35
+  },
+  {
+   "id": "Q774784",
+   "label": "Winchester",
+   "lon": -115.12083,
+   "lat": 36.13583,
+   "sitelinks": 35
+  },
+  {
+   "id": "Q3476581",
+   "label": "Supai",
+   "lon": -112.6886,
+   "lat": 36.23506,
+   "sitelinks": 34
+  },
+  {
+   "id": "Q483289",
+   "label": "Toquerville",
+   "lon": -113.28583,
+   "lat": 37.25389,
+   "sitelinks": 34
+  },
+  {
+   "id": "Q483406",
+   "label": "Big Water",
+   "lon": -111.65806,
+   "lat": 37.07972,
+   "sitelinks": 34
+  },
+  {
+   "id": "Q654515",
+   "label": "Lake Mead",
+   "lon": -114.39,
+   "lat": 36.25,
+   "sitelinks": 34
+  },
+  {
+   "id": "Q182273",
+   "label": "Grand Canyon Village",
+   "lon": -112.13944,
+   "lat": 36.05333,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q482682",
+   "label": "Glendale",
+   "lon": -112.60139,
+   "lat": 37.33194,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q483345",
+   "label": "Orderville",
+   "lon": -112.63771,
+   "lat": 37.27582,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q483441",
+   "label": "Alton",
+   "lon": -112.48194,
+   "lat": 37.44,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q483586",
+   "label": "New Harmony",
+   "lon": -113.30583,
+   "lat": 37.47944,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q637389",
+   "label": "Luxor Resort & Casino",
+   "lon": -115.17583,
+   "lat": 36.09556,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q993749",
+   "label": "Sunrise Manor",
+   "lon": -115.05972,
+   "lat": 36.17556,
+   "sitelinks": 33
+  },
+  {
+   "id": "Q129949",
+   "label": "Rockville",
+   "lon": -113.0375,
+   "lat": 37.16139,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q1344696",
+   "label": "Enterprise",
+   "lon": -115.19806,
+   "lat": 36.03139,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q1559107",
+   "label": "Seligman",
+   "lon": -112.874,
+   "lat": 35.3283,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q482603",
+   "label": "Virgin",
+   "lon": -113.18972,
+   "lat": 37.20167,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q8039",
+   "label": "Caesars Palace Grand Prix",
+   "lon": -115.175,
+   "lat": 36.11694,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q845846",
+   "label": "The STRAT Hotel, Casino & SkyPod",
+   "lon": -115.15603,
+   "lat": 36.14746,
+   "sitelinks": 32
+  },
+  {
+   "id": "Q25007",
+   "label": "Bellagio Hotel & Casino",
+   "lon": -115.17534,
+   "lat": 36.11201,
+   "sitelinks": 31
+  },
+  {
+   "id": "Q27768421",
+   "label": "Allegiant Stadium",
+   "lon": -115.183,
+   "lat": 36.09078,
+   "sitelinks": 31
+  },
+  {
+   "id": "Q482468",
+   "label": "Leeds",
+   "lon": -113.36083,
+   "lat": 37.23944,
+   "sitelinks": 31
+  },
+  {
+   "id": "Q594154",
+   "label": "Laughlin",
+   "lon": -114.61861,
+   "lat": 35.14167,
+   "sitelinks": 31
+  },
+  {
+   "id": "Q1024109",
+   "label": "Peach Springs",
+   "lon": -113.42333,
+   "lat": 35.53444,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q177756",
+   "label": "Searchlight",
+   "lon": -114.91694,
+   "lat": 35.46833,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q2008647",
+   "label": "Oatman",
+   "lon": -114.38361,
+   "lat": 35.02639,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q2283257",
+   "label": "Goodsprings",
+   "lon": -115.434,
+   "lat": 35.8317,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q60749353",
+   "label": "Sphere",
+   "lon": -115.16207,
+   "lat": 36.1212,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q724615",
+   "label": "Ash Fork",
+   "lon": -112.48722,
+   "lat": 35.22111,
+   "sitelinks": 30
+  },
+  {
+   "id": "Q1535079",
+   "label": "Golden Valley",
+   "lon": -114.215,
+   "lat": 35.2231,
+   "sitelinks": 29
+  },
+  {
+   "id": "Q2323152",
+   "label": "Moapa Valley",
+   "lon": -114.45806,
+   "lat": 36.57444,
+   "sitelinks": 29
+  },
+  {
+   "id": "Q878966",
+   "label": "Bitter Springs",
+   "lon": -111.656,
+   "lat": 36.6208,
+   "sitelinks": 29
+  },
+  {
+   "id": "Q914990",
+   "label": "New Kingman-Butler",
+   "lon": -114.02583,
+   "lat": 35.25167,
+   "sitelinks": 29
+  },
+  {
+   "id": "Q1889583",
+   "label": "Blue Diamond",
+   "lon": -115.403,
+   "lat": 36.0472,
+   "sitelinks": 28
+  },
+  {
+   "id": "Q2323325",
+   "label": "Whitney",
+   "lon": -115.04417,
+   "lat": 36.09639,
+   "sitelinks": 28
+  },
+  {
+   "id": "Q569978",
+   "label": "Caesars Palace",
+   "lon": -115.174,
+   "lat": 36.1165,
+   "sitelinks": 28
+  },
+  {
+   "id": "Q931331",
+   "label": "Dolan Springs",
+   "lon": -114.26083,
+   "lat": 35.61583,
+   "sitelinks": 28
+  },
+  {
+   "id": "Q1049209",
+   "label": "The Venetian",
+   "lon": -115.17025,
+   "lat": 36.12106,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q1112096",
+   "label": "Summerlin South",
+   "lon": -115.33278,
+   "lat": 36.12639,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q113112116",
+   "label": "Las Vegas Strip Circuit",
+   "lon": -115.16181,
+   "lat": 36.11003,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q1368043",
+   "label": "Mandalay Bay",
+   "lon": -115.17472,
+   "lat": 36.09167,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q1721394",
+   "label": "Kaibab",
+   "lon": -112.66833,
+   "lat": 36.9125,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q1953161",
+   "label": "Moapa",
+   "lon": -114.58908,
+   "lat": 36.67144,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q2323266",
+   "label": "Sandy Valley",
+   "lon": -115.652,
+   "lat": 35.8289,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q483549",
+   "label": "Apple Valley",
+   "lon": -113.12439,
+   "lat": 37.08971,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q713960",
+   "label": "MGM Grand Las Vegas",
+   "lon": -115.16917,
+   "lat": 36.1025,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q735912",
+   "label": "Nellis Air Force Base",
+   "lon": -115.03425,
+   "lat": 36.2362,
+   "sitelinks": 27
+  },
+  {
+   "id": "Q1064449",
+   "label": "Horseshoe Bend",
+   "lon": -111.51389,
+   "lat": 36.87944,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q1165635",
+   "label": "Lowell Observatory Near-Earth-Object Search",
+   "lon": -111.66444,
+   "lat": 35.20278,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q132192",
+   "label": "Kachina Village",
+   "lon": -111.69278,
+   "lat": 35.09694,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q1360223",
+   "label": "Parks",
+   "lon": -111.959,
+   "lat": 35.2914,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q2034673",
+   "label": "Mountainaire",
+   "lon": -111.66,
+   "lat": 35.0911,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q2482963",
+   "label": "Bunkerville",
+   "lon": -114.13639,
+   "lat": 36.76528,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q3338973",
+   "label": "T-Mobile Arena",
+   "lon": -115.17836,
+   "lat": 36.10292,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q900983",
+   "label": "The Mirage",
+   "lon": -115.17567,
+   "lat": 36.12158,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q900983",
+   "label": "The Mirage",
+   "lon": -115.17346,
+   "lat": 36.12121,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q938100",
+   "label": "Indian Springs",
+   "lon": -115.67722,
+   "lat": 36.57167,
+   "sitelinks": 26
+  },
+  {
+   "id": "Q139901",
+   "label": "Northern Arizona University",
+   "lon": -111.655,
+   "lat": 35.1875,
+   "sitelinks": 25
+  },
+  {
+   "id": "Q2482960",
+   "label": "Cal-Nev-Ari",
+   "lon": -114.88083,
+   "lat": 35.30333,
+   "sitelinks": 25
+  },
+  {
+   "id": "Q2482972",
+   "label": "Mount Charleston",
+   "lon": -115.635,
+   "lat": 36.25806,
+   "sitelinks": 25
+  },
+  {
+   "id": "Q2066890",
+   "label": "Alamo",
+   "lon": -115.16444,
+   "lat": 37.365,
+   "sitelinks": 23
+  },
+  {
+   "id": "Q691491",
+   "label": "Paris Las Vegas",
+   "lon": -115.17067,
+   "lat": 36.11222,
+   "sitelinks": 23
+  },
+  {
+   "id": "Q1064873",
+   "label": "Excalibur Hotel and Casino",
+   "lon": -115.17556,
+   "lat": 36.09889,
+   "sitelinks": 22
+  },
+  {
+   "id": "Q2446595",
+   "label": "Anderson Mesa Station",
+   "lon": -111.53583,
+   "lat": 35.09694,
+   "sitelinks": 22
+  },
+  {
+   "id": "Q2964098",
+   "label": "Chloride",
+   "lon": -114.1994,
+   "lat": 35.41444,
+   "sitelinks": 22
+  },
+  {
+   "id": "Q2964098",
+   "label": "Chloride",
+   "lon": -114.19944,
+   "lat": 35.41444,
+   "sitelinks": 22
+  },
+  {
+   "id": "Q998986",
+   "label": "Littlefield",
+   "lon": -113.92972,
+   "lat": 36.88722,
+   "sitelinks": 22
+  },
+  {
+   "id": "Q1239004",
+   "label": "Humphreys Peak",
+   "lon": -111.67795,
+   "lat": 35.34634,
+   "sitelinks": 21
+  },
+  {
+   "id": "Q1426968",
+   "label": "Flamingo Las Vegas",
+   "lon": -115.17056,
+   "lat": 36.11611,
+   "sitelinks": 21
+  },
+  {
+   "id": "Q1429071",
+   "label": "New York-New York Hotel and Casino",
+   "lon": -115.175,
+   "lat": 36.102,
+   "sitelinks": 21
+  },
+  {
+   "id": "Q2302311",
+   "label": "University of Nevada, Las Vegas",
+   "lon": -115.14376,
+   "lat": 36.10779,
+   "sitelinks": 21
+  },
+  {
+   "id": "Q717472",
+   "label": "MGM Grand Garden Arena",
+   "lon": -115.16861,
+   "lat": 36.10481,
+   "sitelinks": 21
+  },
+  {
+   "id": "Q1281171",
+   "label": "Trump Hotel Las Vegas",
+   "lon": -115.17267,
+   "lat": 36.1291,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q1281171",
+   "label": "Trump Hotel Las Vegas",
+   "lon": -115.17265,
+   "lat": 36.12908,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q3709553",
+   "label": "Doney Park",
+   "lon": -111.51738,
+   "lat": 35.27001,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q4878053",
+   "label": "Beaver Dam",
+   "lon": -113.93333,
+   "lat": 36.9,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q5244996",
+   "label": "White Hills",
+   "lon": -114.397,
+   "lat": 35.7381,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q5405510",
+   "label": "Walnut Creek",
+   "lon": -114.127,
+   "lat": 35.1311,
+   "sitelinks": 20
+  },
+  {
+   "id": "Q5471708",
+   "label": "Fort Mohave",
+   "lon": -114.622,
+   "lat": 35.0431,
+   "sitelinks": 20
+  }
+ ]
+}

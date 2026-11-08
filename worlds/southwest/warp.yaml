@@ -5,6 +5,7 @@
 #   between places is compressed a little to keep the drive short)
 # focus: areas drawn finer; inside radiusKm the target holds, then it blends
 #   back to the background over falloffKm
+# importance: automatic magnification from fame (see importance.json)
 # vertical: local relief is exaggerated by (400 m / local m per cell)^gamma
 #   around the elevation smoothed over referenceSigmaKm, so magnified places
 #   keep the M1 proportions and flat ground stays flat
@@ -12,6 +13,9 @@ background: 500
 method: v2
 meshKm: 2
 vertical: { gamma: 1.0, referenceSigmaKm: 6, min: 0.6, max: 4.0 }
+# importance (importance.json, from Wikidata): famous places get up to 1.6x
+# extra magnification on top of the background, with no hand-painted focus
+importance: { minSitelinks: 20, sigmaKm: 4, maxMagnification: 1.6, reference: 80 }
 focus:
   - { name: las-vegas-strip, lon: -115.1728, lat: 36.1147, radiusKm: 7, falloffKm: 15, metersPerCell: 100 }
   - { name: hoover-dam, lon: -114.7377, lat: 36.0160, radiusKm: 4, falloffKm: 10, metersPerCell: 100 }

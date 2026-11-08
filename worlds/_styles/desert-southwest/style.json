@@ -180,6 +180,10 @@
       "ramps": { "stone": "toroweap", "detail": "vishnu" },
       "params": { "radius": 2.5, "roomRadius": 3 }
     },
+    "landmark.dam": {
+      "generator": "dam",
+      "ramps": { "face": "concrete", "crest": "roof-flat", "detail": "limestone" }
+    },
     "landmark.sign": {
       "generator": "sign",
       "ramps": { "panel": "tower-white", "neon": "neon-pink", "post": "concrete" }

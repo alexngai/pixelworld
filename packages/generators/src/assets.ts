@@ -23,6 +23,10 @@ export interface ObjectInstance {
   fp?: [number, number][];
   /** Real height in metres (buildings, landmarks). */
   hm?: number;
+  /** Real metres per cell at the instance (warped worlds; the world's scale otherwise). */
+  m?: number;
+  /** Absolute top height in steps (dam crests), overriding hm. */
+  top?: number;
 }
 
 /** Style-pack entry for a group: generator name, role → ramp name, parameters. */
@@ -179,6 +183,24 @@ const GENERATORS: Record<string, Generator> = {
       for (let y = cy0; y < mask.sy - cy0; y++)
         for (let x = cx0; x < mask.sx - cx0; x++) if (on(x, y)) m.fill(x, y, H, x + 1, y + 1, H + 2, wall);
     }
+    return m;
+  },
+
+  /** Arch dam: the footprint extruded from the riverbed to the crest. */
+  dam: ({ ramp, mask, heightVox }) => {
+    if (!mask) throw new Error("dam generator needs a footprint");
+    const H = Math.max(2, Math.round(heightVox ?? 8));
+    const m = new VoxelModel(mask.sx, mask.sy, H + 1);
+    const face = m.material(ramp("face"));
+    const crest = m.material(ramp("crest"));
+    const band = m.material(ramp("detail"));
+    const on = (x: number, y: number) => x >= 0 && y >= 0 && x < mask.sx && y < mask.sy && mask.on[y * mask.sx + x] === 1;
+    for (let y = 0; y < mask.sy; y++)
+      for (let x = 0; x < mask.sx; x++) {
+        if (!on(x, y)) continue;
+        for (let z = 0; z < H; z++) m.set(x, y, z, z % 6 === 5 ? band : face);
+        m.set(x, y, H, crest);
+      }
     return m;
   },
 
@@ -411,10 +433,13 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     const base = inst.fp
       ? Math.min(...inst.fp.map(([x, y]) => opts.heightAt(x, y)))
       : opts.heightAt(inst.x, inst.y);
-    if (inst.fp || inst.hm !== undefined) {
+    if (inst.fp || inst.hm !== undefined || inst.top !== undefined) {
       // unique object: footprint building or landmark
       const ctx = makeContext(spec, opts, inst.s);
-      if (inst.hm !== undefined) ctx.heightVox = (inst.hm / opts.voxelMeters) * opts.heightStretch;
+      // voxel metres follow the local scale on warped worlds
+      const voxelMeters = inst.m !== undefined ? opts.voxel.h * inst.m : opts.voxelMeters;
+      if (inst.hm !== undefined) ctx.heightVox = (inst.hm / voxelMeters) * opts.heightStretch;
+      if (inst.top !== undefined) ctx.heightVox = Math.max(1, (inst.top - base) / opts.voxel.v);
       let origin: [number, number, number];
       let model: VoxelModel;
       if (inst.fp) {

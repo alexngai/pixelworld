@@ -58,6 +58,8 @@ class WarpSpec:
     mesh_km: float = 2.0
     # relief exaggeration that keeps local proportions (see WarpedLayout.relief)
     vertical: dict[str, Any] = field(default_factory=dict)
+    # automatic magnification from fame (importance.py)
+    importance: dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def from_dict(raw: dict[str, Any]) -> WarpSpec:
@@ -68,6 +70,7 @@ class WarpSpec:
             method=str(raw.get("method", "v2")),
             mesh_km=float(raw.get("meshKm", 2.0)),
             vertical=dict(raw.get("vertical", {})),
+            importance=dict(raw.get("importance", {})),
         )
 
     def digest(self) -> str:
@@ -80,12 +83,31 @@ class WarpedLayout:
 
     warped = True
 
-    def __init__(self, region: Region, spec: WarpSpec, warp: Warp | None = None, extra=None):
+    def __init__(
+        self,
+        region: Region,
+        spec: WarpSpec,
+        warp: Warp | None = None,
+        places: list[dict[str, Any]] | None = None,
+    ):
         self.region = region
         self.spec = spec
         x0, y0, x1, y1 = region._projected_envelope()
         self.x0, self.y1 = x0, y1
         self.width_m, self.height_m = x1 - x0, y1 - y0
+        self.places = places or []
+        extra = None
+        if spec.importance and self.places:
+            from .importance import scale_grid
+
+            extra = scale_grid(
+                self.places,
+                self._src,
+                self.width_m,
+                self.height_m,
+                spec.background,
+                spec.importance,
+            )
         self.scale_field = ScaleField(spec.background, self.focus_areas(), extra)
         self.warp = warp or self._solve()
         self.cells = (math.ceil(self.warp.width), math.ceil(self.warp.height))
@@ -125,13 +147,11 @@ class WarpedLayout:
         return out
 
     def _solve(self) -> Warp:
-        key = f"{self.region.digest()}|{self.spec.digest()}|{self.scale_field.extra is not None}"
-        path = (
-            CACHE_ROOT
-            / self.region.id
-            / f"warp-{hashlib.sha256(key.encode()).hexdigest()[:16]}.npz"
-        )
-        if path.exists() and self.scale_field.extra is None:
+        places = json.dumps(self.places, sort_keys=True) if self.spec.importance else ""
+        key = f"{self.region.digest()}|{self.spec.digest()}|{places}"
+        digest = hashlib.sha256(key.encode()).hexdigest()[:16]
+        path = CACHE_ROOT / self.region.id / f"warp-{digest}.npz"
+        if path.exists():
             data = np.load(path, allow_pickle=False)
             from .warp import Mesh
 
@@ -147,9 +167,8 @@ class WarpedLayout:
             method=self.spec.method,
             spacing_m=self.spec.mesh_km * 1000,
         )
-        if self.scale_field.extra is None:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            np.savez(path, uv=warp.uv, w=warp.width, h=warp.height, stats=json.dumps(warp.stats))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(path, uv=warp.uv, w=warp.width, h=warp.height, stats=json.dumps(warp.stats))
         return warp
 
     # ---- mapping -------------------------------------------------------------------
@@ -270,3 +289,24 @@ class WarpedLayout:
             scale = np.repeat(np.repeat(scale, k, 0)[: sx.shape[0]], k, 1)[:, : sx.shape[1]]
         r = np.clip((self.region.meters_per_cell / scale) ** gamma, lo, hi)
         return ref + r * (elev - ref), ref, r
+
+    def drawn_height(self, px: float, py: float, metres: float) -> float:
+        """The exaggerated elevation (metres) drawn for a real one at a projected point."""
+        v = self.spec.vertical
+        if not v:
+            return metres
+        kind = self.region.sources["dem"]["kind"]
+        sigma = float(v.get("referenceSigmaKm", 6.0)) * 1000
+        ref = float(
+            rasters.sample_grid(
+                rasters.smoothed_dem(self.region, kind, sigma), np.array([px]), np.array([py])
+            )[0]
+        )
+        cx, cy = self.warp.to_cells(np.array([px - self.x0]), np.array([self.y1 - py]))
+        scale = float(self.warp.scale_at_cells(cx, cy)[0])
+        gamma = float(v.get("gamma", 1.0))
+        r = min(
+            max((self.region.meters_per_cell / scale) ** gamma, float(v.get("min", 0.5))),
+            float(v.get("max", 4.0)),
+        )
+        return ref + r * (metres - ref)

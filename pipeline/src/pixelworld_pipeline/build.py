@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 
+from . import importance as importance_stage
 from . import micro as micro_stage
 from . import objects as object_stage
 from . import roads as road_stage
@@ -255,15 +256,20 @@ def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
     return out
 
 
-def make_layout(region: Region):
+def make_layout(region: Region, region_path: Path | None = None):
     if region.warp:
-        return WarpedLayout(region, WarpSpec.from_dict(region.warp))
+        spec = WarpSpec.from_dict(region.warp)
+        places = None
+        if spec.importance and region_path is not None:
+            snap = importance_stage.load_snapshot(region_path)
+            places = snap["places"] if snap else None
+        return WarpedLayout(region, spec, places=places)
     return UniformLayout(region)
 
 
 def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) -> dict:
     region = Region.load(region_path)
-    layout = layout or make_layout(region)
+    layout = layout or make_layout(region, region_path)
     cx, cy = layout.cells
     if layout.warped:
         ws = layout.warp.stats
@@ -367,7 +373,15 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     if region.objects is not None:
         steep_steps = max(1, round(OBJECT_MAX_SLOPE * region.vertical_exaggeration / STEP_WORLD))
         blocked = on_road | is_water | cliff_mask(base, shape, min_drop=steep_steps)
-        instances, object_counts = object_stage.place(region, blocked, road_rows)
+
+        def drawn_steps(x: float, y: float, metres: float) -> float:
+            if layout.warped:
+                return layout.drawn_height(x, y, metres) / step_m
+            return metres / step_m
+
+        instances, object_counts = object_stage.place(
+            region, blocked, road_rows, layout, drawn_steps
+        )
         print(f"objects: {object_counts}")
     attribution = [
         ATTRIBUTION[region.sources["dem"]["kind"]],
