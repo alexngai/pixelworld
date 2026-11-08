@@ -71,7 +71,7 @@ describe("San Francisco towers", () => {
               n++;
             }
     expect(n).toBe(GROUPS.length * masks.length * 3 * 2 * 2);
-  });
+  }, 30_000); // several hundred towers: about 3 s alone, longer on a loaded runner
 
   it("measures a footprint's depth from its edge", () => {
     const { depth, maxDepth } = footprintDepth(rectMask(9, 7));
