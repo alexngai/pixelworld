@@ -19,10 +19,21 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("region", type=Path, help="path to worlds/<id>/region.yaml")
     b.add_argument("--out", type=Path, help="output directory (default: fixtures/<id>)")
     b.add_argument("--no-compress", action="store_true", help="write plain .pxwc chunks")
+    srv = sub.add_parser("serve", help="local pipeline server for the editor (apps/editor)")
+    srv.add_argument("region", type=Path)
+    srv.add_argument("--port", type=int, default=8765)
+    srv.add_argument("--out", type=Path, help="build output (default: fixtures/<id>)")
     imp = sub.add_parser("importance", help="refresh the region's Wikidata importance snapshot")
     imp.add_argument("region", type=Path)
     imp.add_argument("--min-sitelinks", type=int, default=20)
     args = parser.parse_args(argv)
+
+    if args.command == "serve":
+        from .server import serve
+
+        region = Region.load(args.region)
+        serve(args.region, args.out or REPO / "fixtures" / region.id, args.port)
+        return 0
 
     if args.command == "importance":
         from .importance import snapshot_path, write_snapshot

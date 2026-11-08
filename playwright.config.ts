@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 const PORT = 5199;
+export const EDITOR_PORT = 5198;
 
 /**
  * Golden-image and behaviour tests for the baked renderer. Rendering uses
@@ -26,10 +27,19 @@ export default defineConfig({
     },
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
-  webServer: {
-    command: `pnpm --filter @pixelworld/web exec vite --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: `pnpm --filter @pixelworld/web exec vite --port ${PORT} --strictPort`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      // the editor; its /api is mocked per test (e2e/editor.spec.ts)
+      command: `pnpm --filter @pixelworld/editor exec vite --port ${EDITOR_PORT} --strictPort`,
+      url: `http://localhost:${EDITOR_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 });

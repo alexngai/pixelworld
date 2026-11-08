@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixelworld editor</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <strong id="title">Pixelworld editor</strong>
+      <div class="tools" role="toolbar" aria-label="Tools">
+        <button data-tool="select" class="active" title="Select and drag (S)">Select</button>
+        <button data-tool="focus" title="Add a focus area (F)">Add focus</button>
+        <button data-tool="pin" title="Pin a place (P)">Add pin</button>
+      </div>
+      <label class="bg">Background <input id="background" type="number" min="100" max="2000" step="10" /> m/cell</label>
+      <span id="status" class="status">loading…</span>
+      <div class="actions">
+        <button id="save">Save</button>
+        <button id="build">Build world</button>
+        <a id="viewer" target="_blank" rel="noopener">Open viewer</a>
+      </div>
+    </header>
+    <main>
+      <section class="pane">
+        <h2>Source <small>(real geography, uniform scale)</small></h2>
+        <canvas id="source" aria-label="Source map"></canvas>
+      </section>
+      <section class="pane">
+        <h2>World <small>(after the warp; drag pins here)</small></h2>
+        <canvas id="world" aria-label="Warped preview"></canvas>
+      </section>
+      <aside>
+        <div id="selection"></div>
+        <h3>Solve</h3>
+        <div id="stats"></div>
+        <h3>Build</h3>
+        <pre id="buildlog">not built in this session</pre>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
