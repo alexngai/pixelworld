@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, vehicleBoxes, type RoutesFile } from "../src";
+import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, roadSpeed, vehicleBoxes, type RoutesFile } from "../src";
 
 /**
  * A small town: a 5×5 grid of streets 10 cells apart (primary along y = 20,
@@ -220,6 +220,10 @@ describe("traffic simulation", () => {
     // and the simulation takes the cap from its options
     const net = new RouteNetwork(parseRoutes(town()));
     expect(new TrafficSim(net, { metersPerCell: 100, level: "fly", vehicleScale: 4 }).scale.sizeScale).toBe(4);
+  });
+
+  it("crawls down a crooked brick street", () => {
+    expect(roadSpeed("brick")).toBeLessThan(roadSpeed("living_street"));
   });
 
   it("builds a model for every kind facing its heading", () => {

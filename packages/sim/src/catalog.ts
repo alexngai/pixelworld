@@ -51,6 +51,8 @@ const ROAD_SPEED: Record<string, number> = {
   unclassified: 9,
   living_street: 5,
   service: 5,
+  // a kept street drawn as its own class (D-049): Lombard Street's crooked block
+  brick: 2.5,
 };
 
 /** Road classes buses run on. */
