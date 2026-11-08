@@ -67,6 +67,8 @@ objects:
   # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
   landmarks: [strat-tower, welcome-sign, eiffel-replica, high-roller, hoover-dam, hoover-bypass-bridge, desert-view-watchtower]
   landmarkDepiction: generic
+  # the client scatters trees, shrubs and rocks by surface (M3)
+  depiction: { scatter: 1.0 }
 
 style: desert-southwest
 start: { lon: -115.1728, lat: 36.1147 } # Las Vegas Strip

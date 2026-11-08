@@ -27,3 +27,4 @@ objects:
   depiction:
     buildings: { scale: 3, minHeightMeters: 80 }
     landmarks: { scale: 5 }
+    scatter: 0.6

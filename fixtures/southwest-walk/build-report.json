@@ -1,5 +1,5 @@
 {
-  "packageHash": "5ebd8e55466712680512843ef1ce7266bbc49a67b3d3894abbcda431723d3762",
+  "packageHash": "e70800f41f21d7ddb73789c0301153d712dd088015c626f1993be13642f8a8cb",
   "cells": [
     182,
     412
@@ -23,8 +23,10 @@
     "landmark.tower.lattice": 1,
     "landmark.tower.observation": 1,
     "landmark.wheel": 1,
+    "prop.signal": 124,
+    "prop.streetlight": 2133,
     "shrub": 6,
-    "tree": 2491,
+    "tree": 4873,
     "tree.palm": 236
   },
   "roads": {

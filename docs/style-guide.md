@@ -166,3 +166,54 @@ Objects are voxel models generated per semantic group (D-030) and baked with the
 - **Lit windows:** by day, `lit` and `lit-cool` equal `glass`. The generator assigns about 35–60% of window voxels to them, so each building has a fixed pattern of lit windows.
 
 ![The Strip at 3×, K=8: day, and night on the same bake](images/m1.5-strip-day-night.png)
+
+## 13. Buildings and landmarks (M3)
+
+Buildings come from data, Overture footprints with lidar heights and massing (D-052), and are drawn by the `building` generator (v2). Landmarks come from the registry (D-051) and have generators of their own.
+
+**Massing**
+- **Heights:** real metres × `heightStretch` (2.5 when driving and flying, 1.0 when walking).
+- **Lidar towers:** large complexes get tower parts where lidar sees roofs well above the podium, so Caesars, the Venetian, Excalibur and New York-New York keep their skylines.
+- **Setbacks:** towers 30 voxels or taller step back once or twice in their top third (about 60% of towers, by seed).
+- **No overhangs:** every voxel rests on another. Buildings stay inside their footprint, and nothing floats.
+
+**Roofs**
+
+| Roof | Where | Drawn as |
+|---|---|---|
+| flat | low-rises and towers by default | parapet (neon trim on hotel towers); rooftop equipment on large low-rise roofs; a penthouse, spire or beacon on towers |
+| hipped | houses by default, or from Overture | inset one voxel per layer |
+| gabled | from Overture | a ridge along the longer side |
+| pyramidal | from Overture | a cap on a tower; a large, broad footprint becomes a pyramid from the ground up, with a dark glass skin |
+| dome | from Overture | a hemispherical cap |
+
+**Facades**
+- **Glass on the skin only:** windows are glass, or `lit`/`lit-cool` at night, and only on outer walls.
+- **Towers** use one pattern by seed:
+  - punched windows (every other column on odd floors)
+  - ribbon windows (whole odd floors)
+  - vertical fins (two columns of glass, one of wall)
+  - a curtain wall (glass except every sixth floor), always for gold-walled or glass-faced towers
+- **Low-rises** have storefront glass at street level and windows every third floor. Large ones carry a band of neon at the top: a sign with no lettering.
+- **Houses** have windows on every third floor and tiled hip roofs.
+
+**Landmarks** (generic depictions: shapes, no names or logos)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.tower.observation` | `observationTower` | the STRAT tower |
+| `landmark.tower.lattice` | `latticeTower` | the Eiffel Tower replica at Paris Las Vegas: four legs, base arches, two lit platforms, a spire |
+| `landmark.wheel` | `wheel` | the High Roller: rim, spokes, 28 lit cabins, A-frame legs |
+| `landmark.sign` | `sign` | the Welcome sign: a diamond with a neon rim, no lettering |
+| `landmark.dam` | `dam` | Hoover Dam, bowed upstream |
+| `landmark.dam.intake` | `intakeTower` | its four intake towers in the lake |
+| `landmark.bridge.arch` | `archBridge` | the Hoover Dam bypass bridge: arch rib, columns, deck |
+| `landmark.tower.lookout` | `lookoutTower` | the Desert View Watchtower |
+
+**Checked in tests** (`packages/generators/test/buildings.test.ts`, 192 generated buildings):
+- no voxel outside the footprint
+- no overhangs
+- glass only on the skin
+- only style ramps
+- pyramids where the data says so
+- setbacks inside the footprint

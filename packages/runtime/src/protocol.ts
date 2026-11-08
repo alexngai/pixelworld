@@ -1,6 +1,6 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworld/grid";
 import type { BakedImage, StyleParams } from "@pixelworld/bake";
-import type { AssetCatalog, Box, ObjectInstance } from "@pixelworld/generators";
+import type { AssetCatalog, Box, ObjectInstance, ScatterRules } from "@pixelworld/generators";
 
 /** Messages between the main thread and the bake worker. */
 
@@ -29,6 +29,8 @@ export interface WorldObjects {
   heightStretch: number;
   /** Generated variants per group for repeated objects. */
   variants: number;
+  /** Decorative scatter by surface (M3), when the world asks for it. */
+  scatter?: ScatterRules;
 }
 
 /** A block of terrain cut from the world, with its world-space origin. */

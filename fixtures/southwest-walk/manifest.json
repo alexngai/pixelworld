@@ -268,6 +268,11 @@
       "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
       "license": "Public domain",
       "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
     }
   ],
   "roadClasses": {
@@ -311,7 +316,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "b3e4c157af6237c8",
+      "region": "fe2bb1ebc2434901",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -325,11 +330,12 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "029f16b483e524b6f8fa98a918863cef5ab9ca0a3a25fed2326f2db610d4ac22",
-    "count": 7827
+    "sha256": "1ba8dc9c9f32ba26fca1f61e10db72f7224ce32be8435d9d23451026b537007c",
+    "count": 12466
   },
   "depiction": {
-    "heightStretch": 1.0
+    "heightStretch": 1.0,
+    "scatter": 1.0
   },
   "level": "walk",
   "levels": [
@@ -358,5 +364,5 @@
     ],
     "sha256": "6ebd18be6a34c66ad3335e7ef5832d63228ccd5911ffce709a3da33a14865af3"
   },
-  "packageHash": "5ebd8e55466712680512843ef1ce7266bbc49a67b3d3894abbcda431723d3762"
+  "packageHash": "e70800f41f21d7ddb73789c0301153d712dd088015c626f1993be13642f8a8cb"
 }

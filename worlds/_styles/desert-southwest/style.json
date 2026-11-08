@@ -109,6 +109,16 @@
       "service": { "halfWidth": 0.04, "centerLine": false }
     }
   },
+  "scatter": {
+    "woodland": [{ "group": "tree.pinyon-juniper", "perCell": 2.4 }],
+    "forest": [{ "group": "tree.conifer", "perCell": 3.0 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.9 }],
+    "grass": [{ "group": "shrub", "perCell": 0.2 }],
+    "desert": [{ "group": "shrub.desert", "perCell": 0.12 }, { "group": "rock.boulder", "perCell": 0.04 }],
+    "sand": [{ "group": "rock.boulder", "perCell": 0.02 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.06 }],
+    "urban": [{ "group": "tree", "perCell": 0.06 }]
+  },
   "paths": {
     "classes": {
       "sidewalk": { "ramp": "concrete" },
@@ -144,6 +154,11 @@
       "generator": "blob",
       "ramps": { "body": "scrub" },
       "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "shrub.desert": {
+      "generator": "blob",
+      "ramps": { "body": "desert" },
+      "params": { "radius": 0.5, "radiusJitter": 0.3, "height": 0.4, "trunk": 0, "holes": 0.2 }
     },
     "rock.boulder": { "generator": "boulder", "ramps": { "rock": "coconino" } },
     "building.residential": {
@@ -204,6 +219,16 @@
     "landmark.sign": {
       "generator": "sign",
       "ramps": { "panel": "tower-white", "neon": "neon-pink", "post": "concrete" }
+    },
+    "prop.streetlight": {
+      "generator": "streetLight",
+      "ramps": { "pole": "concrete", "lamp": "lit" },
+      "params": { "height": 6 }
+    },
+    "prop.signal": {
+      "generator": "trafficSignal",
+      "ramps": { "pole": "iron", "head": "asphalt", "light": "marker" },
+      "params": { "height": 5 }
     },
     "landmark.tower.lattice": {
       "generator": "latticeTower",

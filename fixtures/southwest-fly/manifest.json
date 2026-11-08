@@ -349,7 +349,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "9f4ed0cd0e6ed76f",
+      "region": "c82e83b64d0a7942",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 2,
       "bilateral": [
@@ -410,6 +410,9 @@
     "sha256": "168ab047c1c51916d24332c05177cf951eb9f516806650fe8f6eb10891119c18",
     "count": 59
   },
+  "depiction": {
+    "scatter": 0.6
+  },
   "level": "fly",
   "levels": [
     {
@@ -437,5 +440,5 @@
     ],
     "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
   },
-  "packageHash": "b3a4ea748ba7280498c762f1b5806af18fccd017181f1ea5391245dc86c0e0df"
+  "packageHash": "0857c53227eb0344766b0aa5f945bd810f8a8d9abd5930ff98ca7961e2ac3656"
 }

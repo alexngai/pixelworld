@@ -105,6 +105,8 @@ const GENERATORS: Record<string, Generator> = {
           const d = ((x - c) / rx) ** 2 + ((y - c) / rx) ** 2 + ((z - trunkH - rz) / rz) ** 2;
           if (d <= 1 && rand() > holes) m.set(x, y, z, body);
         }
+    // tiny blobs can lose every voxel to holes: keep at least the core
+    if (!m.count()) m.set(Math.floor(c), Math.floor(c), Math.max(0, Math.round(trunkH)), body);
     return m;
   },
 
@@ -175,7 +177,7 @@ const GENERATORS: Record<string, Generator> = {
     let capH = 0;
     let pure = false;
     if (roofShape === "pyramidal") {
-      pure = H <= 4 * maxDepth;
+      pure = style !== 0 && maxDepth >= 4 && H <= 4 * maxDepth;
       capH = pure ? H : Math.min(H - 1, Math.round(maxDepth * 2.5));
     } else if (roofShape === "dome") capH = Math.min(H - 1, Math.round(maxDepth * 1.2));
     else if (roofShape === "hipped" || roofShape === "half_hipped" || roofShape === "gabled")
@@ -236,20 +238,34 @@ const GENERATORS: Record<string, Generator> = {
           if (style >= 1 && edgeAt(x, y, zTop)) m.set(x, y, Hw, trims.length && style === 2 ? trim : wall); // parapet
           else m.set(x, y, zTop, roof);
         } else {
+          // caps rise from the outline left after any setbacks
+          if (Hw > 0 && !keep(x, y, zTop)) continue;
+          const ins = Hw > 0 ? inset(zTop) : 0;
+          const de = d - ins;
+          const md = Math.max(1, maxDepth - ins);
           let colTop: number;
-          if (roofShape === "pyramidal") colTop = Hw + Math.round((capH * d) / Math.max(1, maxDepth));
+          if (roofShape === "pyramidal") colTop = Hw + Math.round((capH * de) / md);
           else if (roofShape === "dome") {
-            const u = 1 - d / Math.max(1, maxDepth);
+            const u = 1 - de / md;
             colTop = Hw + Math.round(capH * Math.sqrt(Math.max(0, 1 - u * u)));
           } else if (roofShape === "gabled") {
             // ridge along the longer side: rise with the distance across the short side
             const across = sx >= sy ? Math.min(y, sy - 1 - y) + 1 : Math.min(x, sx - 1 - x) + 1;
             colTop = Hw + Math.min(capH, across);
-          } else colTop = Hw + Math.min(capH, d); // hipped
-          const cap = pure ? m.material(ramp("window")) : roof; // a pure pyramid is dark glass
-          for (let z = Hw; z < colTop; z++) m.set(x, y, z, cap);
+          } else colTop = Hw + Math.min(capH, de); // hipped
+          for (let z = Hw; z < colTop; z++) m.set(x, y, z, pure ? wall : roof);
         }
       }
+    if (pure) {
+      // a pyramid's skin is dark glass; its inside stays wall
+      const glass = m.material(ramp("window"));
+      const solid = (x: number, y: number, z: number) => m.get(x, y, z) !== 0;
+      for (let z = 0; z < m.sz; z++)
+        for (let y = 0; y < sy; y++)
+          for (let x = 0; x < sx; x++)
+            if (solid(x, y, z) && (!solid(x - 1, y, z) || !solid(x + 1, y, z) || !solid(x, y - 1, z) || !solid(x, y + 1, z) || !solid(x, y, z + 1)))
+              m.set(x, y, z, glass);
+    }
     // rooftop details on flat roofs
     if (roofShape === "flat" || capH === 0) {
       const tops: [number, number][] = [];
@@ -571,8 +587,55 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
         }
     return m;
   },
+
+  /** Street light: a pole, an arm over the street, a lamp that glows at night. */
+  streetLight: ({ ramp, param }) => {
+    const h = Math.round(param("height", 6));
+    const m = new VoxelModel(3, 1, h + 1);
+    const pole = m.material(ramp("pole"));
+    const lamp = m.material(ramp("lamp"));
+    for (let z = 0; z < h; z++) m.set(0, 0, z, pole);
+    m.set(1, 0, h - 1, pole);
+    m.set(2, 0, h - 1, lamp);
+    return m;
+  },
+
+  /** Traffic signal: a pole with a signal head. */
+  trafficSignal: ({ ramp, param }) => {
+    const h = Math.round(param("height", 5));
+    const m = new VoxelModel(2, 1, h + 2);
+    const pole = m.material(ramp("pole"));
+    const head = m.material(ramp("head"));
+    const light = m.material(ramp("light"));
+    for (let z = 0; z < h; z++) m.set(0, 0, z, pole);
+    m.set(1, 0, h - 1, head);
+    m.set(1, 0, h, light);
+    m.set(1, 0, h + 1, head);
+    return m;
+  },
 };
 Object.assign(GENERATORS, LANDMARK_GENERATORS);
+
+/**
+ * Generate one model for a group, as buildObjects would (used by tests and
+ * the offline hero bake): footprint mask, height in voxels, seed and hints.
+ */
+export function generateModel(
+  catalog: AssetCatalog,
+  rampIds: Map<string, number>,
+  group: string,
+  opts: { seed: number; mask?: { sx: number; sy: number; on: Uint8Array }; heightVox?: number; hints?: { roof?: string; facade?: string } },
+): VoxelModel {
+  const spec = resolveAsset(catalog, group);
+  if (!spec) throw new Error(`no asset for group ${group}`);
+  const gen = GENERATORS[spec.generator];
+  if (!gen) throw new Error(`unknown generator ${spec.generator}`);
+  const ctx = makeContext(spec, { rampIds } as ObjectBuildOptions, opts.seed);
+  ctx.mask = opts.mask;
+  ctx.heightVox = opts.heightVox;
+  ctx.hints = opts.hints;
+  return gen(ctx);
+}
 
 /** Rotate a model by quarter turns around the vertical axis. */
 export function rotateModel(model: VoxelModel, quarters: number): VoxelModel {
@@ -745,7 +808,8 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
   }
   return {
     merged: merged.build(),
-    batches: [...variants.values()].map((b) => ({
+    // an empty variant would have no bounds: leave it out
+    batches: [...variants.values()].filter((b) => b.mesh.vertexCount > 0).map((b) => ({
       mesh: b.mesh,
       offsets: new Float32Array(b.offsets),
       cells: new Float32Array(b.cells),

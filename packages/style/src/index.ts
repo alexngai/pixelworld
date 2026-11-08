@@ -75,6 +75,11 @@ export interface StylePack {
    * styles when a world has objects (real buildings make the block pattern redundant).
    */
   objects?: { heightStretch: number; variants: number; surfaces?: Record<string, SurfaceStyle> };
+  /**
+   * Decorative scatter (M3): surface name → objects the client adds per cell,
+   * on worlds whose manifest asks for it (`depiction.scatter`).
+   */
+  scatter?: Record<string, { group: string; perCell: number }[]>;
   /** Night palette variant: everything darkens except emissive ramps. */
   night?: NightStyle;
   /** Micro-terrain look (M1.6). */
@@ -150,6 +155,13 @@ export function validateStyle(style: StylePack): StylePack {
     for (const [name, c] of Object.entries(style.roads.classes))
       if (c.ramp && !(c.ramp in style.ramps)) throw new StyleError(`road class ${name} uses undefined ramp ${c.ramp}`);
   }
+  for (const [surface, rules] of Object.entries(style.scatter ?? {}))
+    for (const r of rules) {
+      if (!(surface in style.surfaces)) throw new StyleError(`scatter for unknown surface ${surface}`);
+      if (!Object.keys(style.assets ?? {}).some((g) => r.group === g || r.group.startsWith(g + ".")))
+        throw new StyleError(`scatter group ${r.group} has no asset`);
+      if (!(r.perCell >= 0)) throw new StyleError(`scatter ${surface}/${r.group}: perCell must be ≥ 0`);
+    }
   for (const [name, c] of Object.entries(style.paths?.classes ?? {}))
     if (!(c.ramp in style.ramps)) throw new StyleError(`path class ${name} uses undefined ramp ${c.ramp}`);
   for (const [group, a] of Object.entries(style.assets ?? {}))

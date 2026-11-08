@@ -3,6 +3,8 @@ import { Baker, type BakeScene } from "@pixelworld/bake";
 import {
   buildBoxesMesh,
   buildObjects,
+  occupiedCells,
+  scatterInstances,
   buildTerrainField,
   buildTerrainMesh,
   objectVoxelScale,
@@ -83,7 +85,7 @@ export class BakeHost {
         scene = { meshes: [terrain], batches: [] };
       }
       if (init.objects) {
-        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1);
+        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
         scene.meshes.push(objects.merged);
         scene.batches.push(...objects.batches);
       }
@@ -111,12 +113,36 @@ export class BakeHost {
     this.reply(msg.id, res, meshMs, vertices);
   }
 
-  /** Objects whose base point lies in the slice, built in world units. */
-  private objectsFor(objects: WorldObjects, slice: TerrainSlice, grid: TerrainGrid, renderScale: number) {
+  /**
+   * Objects whose base point lies in the slice, built in world units, plus the
+   * decorative scatter (M3) of the tile's cells and a two-cell ring around them
+   * (enough for anything that leans into the tile).
+   */
+  private objectsFor(
+    objects: WorldObjects,
+    slice: TerrainSlice,
+    grid: TerrainGrid,
+    renderScale: number,
+    owned: { x0: number; y0: number; x1: number; y1: number },
+  ) {
     const inSlice = (o: ObjectInstance) =>
       o.x >= slice.x0 && o.y >= slice.y0 && o.x < slice.x0 + slice.width && o.y < slice.y0 + slice.height;
+    const placed = objects.instances.filter(inSlice);
+    let instances = placed;
+    if (objects.scatter && objects.scatter.density > 0) {
+      const origin: [number, number] = [slice.x0, slice.y0];
+      const occupied = occupiedCells(placed, origin, slice.width, slice.height);
+      const ring = 2;
+      const rect = {
+        x0: owned.x0 - ring - slice.x0,
+        y0: owned.y0 - ring - slice.y0,
+        x1: owned.x1 + ring - slice.x0,
+        y1: owned.y1 + ring - slice.y0,
+      };
+      instances = placed.concat(scatterInstances(grid, origin, rect, objects.scatter, occupied));
+    }
     const voxel = objectVoxelScale(renderScale);
-    return buildObjects(objects.instances.filter(inSlice), {
+    return buildObjects(instances, {
       catalog: objects.catalog,
       rampIds: new Map(objects.rampIds),
       voxel,

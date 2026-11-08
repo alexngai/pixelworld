@@ -40,10 +40,16 @@ objects:
     houseMaxArea: 350
     lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018, res: 4, depth: 6 }
   vegetation:
-    - { group: tree, landcover: [tree], spacing: 16, density: 0.8 }
+    # trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 9, density: 0.9 }
     - { group: shrub, landcover: [shrub], spacing: 40, density: 0.2 }
   streetTrees:
     - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 70, offset: 24 }
+  # street furniture (M3): lights along the main streets, signals at their junctions
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 45, offset: 13 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 14 }
   landmarks: [strat-tower, welcome-sign, eiffel-replica, high-roller]
-  # at walking scale true proportions read best: no extra height stretch
-  depiction: { heightStretch: 1.0 }
+  # at walking scale true proportions read best: no extra height stretch;
+  # the client scatters shrubs and rocks by surface (M3)
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
