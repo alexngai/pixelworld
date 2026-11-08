@@ -4,7 +4,7 @@ wikidata: Q44440
 line: [[-122.47627, 37.81119], [-122.48010, 37.82860]]
 crest: 67           # deck height above the water (m)
 base: 0             # the towers stand in the water
-thickness: 30
+thickness: 34       # the towers straddle the deck: legs outside its 27 m
 bulge: 0
 snap: true          # turns with its road to the grid (D-049)
 depictions:
