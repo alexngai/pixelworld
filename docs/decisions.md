@@ -313,3 +313,43 @@ The point is more room for visual interest; both halves are wanted.
   - Without width data, the old in-cell decal is used, so older worlds are unchanged.
 - **Cost:** about 1.6× the software (SwiftShader) bake time on the walking level, from one texel fetch per neighbour cell.
 - **Overture cache:** the cache key now includes the row filter. Two filters over the same box used to share one cache entry, which would have dropped the walking level's new classes.
+
+### D-051: A landmark registry with generic depictions by default (accepted, M3)
+- **What:** one file per landmark in `worlds/_landmarks/<id>.yaml`: an anchor point (or a line, for dams and bridges), real or depicted height, clearance, the Overture buildings it stands in for, sub-parts, and a map of depiction variants. Regions list landmarks by id and may override fields. Loading a region expands each reference into the inline form object placement already used.
+- **Generic by default:** every landmark must have a `generic` depiction, and it is the default (`objects.landmarkDepiction`). Generic depictions draw a type (an observation tower, a lattice tower, an observation wheel, an arch bridge), never names, logos or trademarked designs, so any release is safe. Names in the registry are references for people, never drawn.
+- **Replacing buildings:** a landmark's `replaces` drops the Overture buildings it stands for (by name or id) with their parts, so the generic tower doesn't stand inside an Overture box of itself.
+- **Ids in the package:** every instance of a registry landmark, its parts included, carries the landmark's `id`. Offline tools find landmarks by it (D-053).
+- **Rejected alternative:** landmarks inline in each region spec, as in M2. The same landmark appears in several levels (D-046), and its facts would be copied into each one.
+
+### D-052: Building heights and towers from 3DEP lidar (accepted, M3)
+- **Why:** Overture heights on the Strip are often machine-estimated and far too low for large complexes: Excalibur's towers came out 13.8 m, against about 74 m measured. A podium-and-tower resort drawn as one box at its mean height also loses its silhouette.
+- **Source:** the USGS 3DEP lidar point clouds on AWS (public domain), read as Entwine Point Tiles. Only the octree nodes over the building boxes are fetched, down to a set depth, and cached. Each grid cell (4 m) keeps the lowest ground return and the highest return of classes 1 and 6. The Las Vegas survey classifies no buildings, and unclassified returns inside a footprint are mostly roof.
+- **Rule per footprint:**
+  - Keep Overture's height unless lidar covers at least half the footprint and either Overture has no height or lidar's 95th-percentile roof is over 1.5× it and more than 15 m above it.
+  - Large roofs (3,000 m² or more) whose 95th percentile stands more than `towerGap` (25 m) above the median become a podium at the median height plus tower parts. Each part is a connected region of tall roof of at least `minTowerArea` (600 m²), drawn at its own 95th-percentile height.
+- **Result:** 1,199 buildings take lidar heights on the driving level and 25 tower parts appear (1,196 and 24 on the walking level). Mandalay Bay measures 146 m (146 m listed) and Wynn about 174 m.
+- **Rejected alternative:** fitting roofs to the points. It's on the "Later" list. Medians and towers are enough for the silhouettes the Strip needs at these scales.
+
+### D-053: Hero landmarks are baked offline and painted over (accepted, M3)
+- **What:** a hero landmark (`hero: true` in the registry) is baked alone, in every rotation, by `tools/hero-bake.mjs`. The tool drives the player app in headless Chromium with SwiftShader, the same renderer the client uses, so the offline bake equals the client's.
+  - **Bakes:** RGBA PNGs (palette index, depth high byte, depth low byte, coverage) plus each one's screen position and depth base, in `worlds/_landmarks/<id>/hero/<world>/`.
+  - **Paint-overs:** indexed PNGs in the style palette, where index 0 keeps the baked pixel, in `worlds/_landmarks/<id>/paint/<world>/`. A `-view.png` of each bake in palette colours is written for artists to paint against.
+  - **Packaging:** the build (or `pixelworld heroes <spec>`, which needs no rebuild) copies bakes and paints into the package and lists them in the manifest's `heroes`. Their hashes are part of the package hash, so a new paint invalidates cached tiles.
+- **At run time:** after every tile bake, painted pixels are stamped in.
+  - **On the silhouette:** a pixel is painted only where the tile shows the landmark there, its depth within 3/256 of the offline bake's. Anything standing in front still hides it.
+  - **Beyond the silhouette:** a pixel is painted where the tile is empty or shows something behind the landmark's nearest point (a beacon light above a tower, say).
+- **Surviving re-bakes:** the stamp runs on every bake, so painted pixels survive cache misses, style changes and rebuilds.
+  - **Re-registration:** when a rebuild moves or reshapes a landmark, a fresh `hero-bake` re-registers each paint. It shifts the paint by the offset (±4 px) that best overlaps the old silhouette with the new one, and reports the overlap.
+  - **Check:** `--check` fails if a fresh bake no longer matches the stored one.
+  - **E2E:** a test checks that the stored bake still equals a fresh one, and that painted pixels appear in freshly baked tiles and go away with `?paint=0`.
+- **First heroes:** the Strat, Hoover Dam (with its intake towers) and the Desert View Watchtower, on all three Southwest levels where they appear (28 bakes). Their paints are demo touch-ups generated by the tool (`--demo-paint`) as stand-ins for an artist's: a lit window band and a warning light on the Strat, lift joints on the dam's concrete, masonry coursing on the watchtower, and a selective outline on all three.
+- **Rejected alternatives:**
+  - Replacing the baked landmark with a sprite. Terrain, neighbours and shadows around it change with every bake, and a sprite with its own depth would need its own occlusion rules. Stamping only the painted pixels keeps the bake authoritative.
+  - Storing paint in tile space. Tiles are re-cut whenever tile size or margins change, and a landmark spans several tiles.
+
+### D-054: Decorative scatter is the client's, gameplay objects the pipeline's (accepted, M3)
+- **Client scatter:** shrubs, small trees and boulders are placed per bake tile by surface class from rules in the style pack (`scatter`), as a pure function of the world cell (a hash). Overlapping tiles agree, and nothing is stored per instance.
+  - **Where:** not on water, roads, paths or cliffs, beside wide roads, or under objects the pipeline placed.
+  - **Density:** each level's `depiction.scatter` scales it: 0.6 flying, 1.0 driving and walking.
+- **Pipeline objects:** trees where they really stand (the WRI/Meta 1 m canopy height map, CC BY 4.0, at 3 m or more on the walking level), street trees, street lights along main streets, and traffic signals where three or more street segments meet. These matter for gameplay (collision, landmarks to steer by) or need data the client doesn't have.
+- **Rejected alternative:** the pipeline placing every shrub. The driving Southwest would carry hundreds of thousands of instances for decoration that needs no facts.

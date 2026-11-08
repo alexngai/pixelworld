@@ -217,3 +217,26 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 - only style ramps
 - pyramids where the data says so
 - setbacks inside the footprint
+
+**Hero paint-overs** (D-053)
+- **Format:** paint in the style palette only: open `paint/<world>/r<n>.png` (indexed, the palette embedded) over `hero/<world>/r<n>-view.png`. Index 0 keeps the baked pixel.
+- **What to paint:** details the generator can't make, such as window bands, masonry, joints and signage shapes (still no lettering or logos). Use the ramp the bake already uses and move along it, so the paint swaps cleanly to the night palette.
+- **Outlines:** a selective outline (a darker shade of the inner colour instead of shade 0 on lit edges) is allowed on heroes.
+- **Beyond the silhouette:** single pixels such as warning lights only. They show over background and over what lies behind the landmark, never over what stands in front of it.
+- **Shadows:** leave cast shadows to the bake. Paint covers whatever shading the tile has there.
+
+## 14. Vegetation and props (M3)
+
+- **Client scatter** (D-054): the style pack's `scatter` rules give objects per cell by surface:
+  - woodland: 2.4 pinyon-juniper
+  - forest: 3.0 conifers
+  - scrub: 0.9 shrubs
+  - grass: 0.2 shrubs
+  - desert: 0.12 desert shrubs and 0.04 boulders
+  - rock: 0.06 boulders
+  - sand: 0.02 boulders
+  - urban: 0.06 trees
+
+  Objects keep a fixed pixel size, so a density reads the same on every level. `depiction.scatter` scales it per level.
+- **Kept clear:** water, roads, paths, a band beside wide roads, cliffs and cells under placed objects.
+- **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.

@@ -230,10 +230,11 @@ Generators are pure functions: `(semantic instance, style pack, seed) → 3D geo
 - **Terrain:** cells → mesh with top faces, slope faces and cliff faces. Materials come from the surface class, plus elevation bands (rock strata) and a seeded pattern. Worlds with micro-terrain skip the JavaScript mesh: the baker builds the geometry on the GPU (§8.1).
 - **Buildings:** footprint → massing (setbacks by height) → roof (flat, gable, hip, dome, …) → facade pattern → material ramps. The parameters come from the style pack and building use.
 - **Networks:** each road or rail cell, based on its connectivity mask, becomes a road piece (straight, corner, junction, ramp, bridge) with markings by class.
-- **Vegetation and props:** species templates per biome, with density from land cover and canopy data.
-- **Landmarks:** hero assets, either voxel models (`.vox`) or a small parametric DSL built from the component kit (towers, arches, domes, lattices…). Each depiction variant is a separate asset.
+- **Vegetation and props (M3, D-054):** species templates per biome. Decorative scatter (shrubs, small trees, rocks) is placed by the client per bake tile from the style pack's rules by surface, hashed per world cell so overlapping tiles agree. The pipeline places what needs data or matters for play: trees from the canopy height map, street trees, street lights and traffic signals.
+- **Buildings (M3):** the generator reads Overture roof-shape and facade hints and lidar tower parts (D-052). The style guide (§13) holds the rules.
+- **Landmarks (D-051):** registry entries in `worlds/_landmarks/` pick a depiction per variant (`generic` by default), each a semantic group: parametric generators from the component kit (towers, lattices, wheels, arches, domes, intake towers) or, later, voxel models (`.vox`).
 
-Hero assets are baked offline and can be painted over. A painted-over sprite replaces the generated one through an override.
+Hero landmarks (D-053) are baked offline (`tools/hero-bake.mjs`) and painted over. After every tile bake the client stamps the painted pixels in where the tile shows the landmark at its baked depth, so paint survives re-bakes and anything in front still hides it.
 
 ## 8. Rendering
 
@@ -265,7 +266,7 @@ Bakes run in two places with the same code:
   - **Streaming (M1):** a `ChunkStore` fetches gzipped chunks around the view, deduplicated, with URLs carrying the chunk hash. For each tile it slices the tile plus margin across chunk boundaries and hands the slice to the worker. The mesh builder only adds skirts at real world edges, not slice edges.
   - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed and pruned least-recently-used. Cache keys include the package hash, style hash and `BAKE_VERSION`, so any change to the world, the style or the baker makes old tiles unreachable.
   - **GPU budget:** tile textures stay on the GPU within a memory budget (192 MB), evicting least-recently-drawn tiles.
-- **Offline**, in headless Chromium via Playwright, for hero assets, building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
+- **Offline**, in headless Chromium via Playwright, for hero assets (`tools/hero-bake.mjs`, D-053), building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
 
 ### 8.2 Runtime compositor
 
@@ -310,21 +311,21 @@ Entries marked † don't exist yet.
 
 ```
 docs/                     architecture, roadmap, data sources, decisions, format + style specs
-worlds/                   region specs, style packs, landmark registry†, overrides†
-assets/†                  hero models (.vox), painted sprite overrides, palettes
+worlds/                   region specs, style packs, landmark registry with hero bakes and paint-overs, overrides†
+assets/†                  hero models (.vox), palettes
 fixtures/                 committed world packages served by the dev app (M0 slice, Southwest)
 testdata/                 cross-language golden files
 pipeline/                 Python geo pipeline (uv-managed package + CLI)
 packages/grid/            coordinates, projection, rotations, cell model
 packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables
-packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks†)
+packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks), client scatter
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
 packages/sim/†            vehicles, flight, building, cell occupancy
 apps/web/                 player app
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
-tools/bake-cli/†          headless offline baking (Playwright)
+tools/                    headless offline baking (Playwright): hero-bake.mjs
 e2e/                      Playwright golden-image and behaviour tests
 ```
 
