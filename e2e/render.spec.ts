@@ -5,12 +5,14 @@ import { decodePng } from "../packages/world-format/src/png";
 
 /**
  * Open a fixed-size view and wait until every visible tile is baked and drawn.
- * Ambient traffic (D-060) is off unless the query asks for it, so scenes stay still.
+ * Ambient traffic (D-060) and fog are off unless the query asks for them, so
+ * scenes stay still and goldens made before them still hold.
  */
 async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
   const traffic = /(^|&)traffic=/.test(query) ? "" : "&traffic=0";
-  await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}${traffic}`);
+  const fog = /(^|&)fog=/.test(query) ? "" : "&fog=0";
+  await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}${traffic}${fog}`);
   await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => window.__pixelworld!.ready());
 }
@@ -429,5 +431,52 @@ test.describe("Ambient traffic (D-060)", () => {
     const t = await traffic(page);
     expect(t.counts.cablecar).toBeGreaterThan(0);
     await expect(page.locator("#view")).toHaveScreenshot("sf-traffic-hyde-r0.png");
+  });
+});
+
+test.describe("Fog (an atmosphere layer)", () => {
+  type FogState = { enabled: boolean; paused: boolean; time: number; drawn: boolean } | null;
+  const fog = (page: Page) => page.evaluate(() => window.__pixelworld!.fog()) as Promise<FogState>;
+  const changed = (a: { data: number[] }, b: { data: number[] }) => {
+    let n = 0;
+    for (let i = 0; i < a.data.length; i += 4) if (hex(a.data, i) !== hex(b.data, i)) n++;
+    return n;
+  };
+  // the Golden Gate from the city side: water, Fort Point and the north tower rising out of the fog
+  const GATE = "world=/sf/&marker=0&zoom=1&rot=0&at=-122.4770,37.8130";
+
+  test("fog through the Golden Gate at a fixed time matches golden; off, the frame is as without it", async ({ page }) => {
+    await open(page, GATE + "&fog=1&fogTime=30&fogPause=1");
+    expect(await fog(page)).toEqual({ enabled: true, paused: true, time: 30, drawn: true });
+    await expect(page.locator("#view")).toHaveScreenshot("sf-fog-golden-gate-r0.png");
+    const foggy = await pixels(page);
+    // the drift is a function of the time alone
+    await page.evaluate(() => window.__pixelworld!.setFog({ time: 90 }));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect(changed(await pixels(page), foggy)).toBeGreaterThan(1000);
+    await page.evaluate(() => window.__pixelworld!.setFog({ time: 30 }));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect(changed(await pixels(page), foggy)).toBe(0);
+    // G switches it off: the frame is exactly the one drawn without fog
+    await page.keyboard.press("g");
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect((await fog(page))!.enabled).toBe(false);
+    const toggled = await pixels(page);
+    await open(page, GATE); // fog=0
+    const plain = await pixels(page);
+    expect(changed(toggled, plain)).toBe(0);
+    expect(changed(foggy, plain)).toBeGreaterThan(foggy.data.length / 4 / 3);
+  });
+
+  test("no fog on the walking level, nor where the style's areas don't reach", async ({ page }) => {
+    await open(page, "world=/sf-walk/&marker=0&zoom=3&rot=0&at=-122.4327,37.7760&fog=1");
+    expect(await fog(page)).toBeNull(); // the bay-area pack turns fog off when walking
+    // North Beach is out of the fog: the layer is on, draws nothing, and the golden still holds
+    await open(page, "world=/sf/&marker=0&zoom=2&rot=0&at=-122.40583,37.80237&fog=1");
+    expect(await fog(page)).toMatchObject({ enabled: true, drawn: false });
+    await expect(page.locator("#view")).toHaveScreenshot("sf-coit-r0.png");
+    // nor in a world whose style has none
+    await open(page, "zoom=2&rot=0&fog=1");
+    expect(await fog(page)).toBeNull();
   });
 });

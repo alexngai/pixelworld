@@ -88,6 +88,65 @@ export interface StylePack {
     /** Micro-cell tops steeper than this rise over run are bare rock (D-036). */
     steepRockSlope?: number;
   };
+  /**
+   * Atmosphere layers drawn over the baked world by the compositor (fog).
+   * They never change a bake, so they are left out of the tile cache key.
+   */
+  atmosphere?: AtmosphereStyle;
+}
+
+export interface AtmosphereStyle {
+  fog?: FogStyle;
+}
+
+/**
+ * A fog layer: dithered in the palette over the areas it names, thick on low
+ * ground and gone above its ceiling, so hills and towers rise out of it.
+ *
+ * Fog is a veil: each level moves every pixel's colour part of the way toward
+ * the fog's own colour and snaps it to the nearest palette colour that pales
+ * it (no more saturated, no farther in lightness from the fog), so the result
+ * stays in the palette and swaps to night with it.
+ */
+export interface FogStyle {
+  /** The fog's own colour: a ramp and one of its shades. */
+  ramp: string;
+  shade: number;
+  /** Veil levels, thin → thick: how far each moves a colour toward the fog's (0–1, increasing; 1 is the fog's colour). */
+  veil: number[];
+  /** Top of the fog, in metres of drawn terrain height (the level's metres per step). */
+  ceilingMeters: number;
+  /** The fog thins to nothing over this many metres below its ceiling. */
+  fadeMeters: number;
+  /** Where the fog lies; where areas overlap, the densest wins. */
+  areas: FogArea[];
+  /** Patches drifting through the areas with the wind. Without it the fog is even and still. */
+  drift?: FogDrift;
+  /** Coverage per scale level (manifest `level`): multiplies every area's density. Unlisted levels: 1; 0 turns fog off. */
+  levels?: Record<string, number>;
+  /** By night: coverage multiplier (0 = no fog at night). Emissive ramps show through. Without it: no fog at night. */
+  night?: { density: number };
+}
+
+export interface FogArea {
+  name?: string;
+  /** Outline as [lon, lat] points (WGS84); the last point joins the first. */
+  polygon: [number, number][];
+  /** Coverage inside, 0–1: the share of pixels the fog takes over low ground. */
+  density: number;
+  /** Width of the soft edge in metres, centred on the outline (0: a hard edge). */
+  edgeMeters?: number;
+}
+
+export interface FogDrift {
+  /** Wind speed in real metres per second (levels compress time as traffic does, D-060). */
+  speed: number;
+  /** Compass bearing the fog moves toward, in degrees (90 = east). */
+  toward: number;
+  /** Size of a patch, in metres. */
+  sizeMeters: number;
+  /** 0 = even fog, 1 = patches with clear gaps between them. */
+  contrast: number;
 }
 
 export interface AssetStyle {
@@ -178,7 +237,36 @@ export function validateStyle(style: StylePack): StylePack {
       colors.forEach(parseHex);
     }
   }
+  if (style.atmosphere?.fog) validateFog(style.atmosphere.fog, style);
   return style;
+}
+
+function validateFog(fog: FogStyle, style: StylePack): void {
+  const unit = (v: unknown) => typeof v === "number" && v >= 0 && v <= 1;
+  if (!(fog.ramp in style.ramps)) throw new StyleError(`fog ramp ${fog.ramp} not defined`);
+  if (!(Number.isInteger(fog.shade) && fog.shade >= 0 && fog.shade < SHADES))
+    throw new StyleError(`fog shade must be 0..${SHADES - 1}`);
+  if (!fog.veil.length || !fog.veil.every((k, i) => unit(k) && k > (fog.veil[i - 1] ?? 0)))
+    throw new StyleError("fog veil levels must increase within 0..1");
+  if (!(fog.fadeMeters > 0)) throw new StyleError("fog fadeMeters must be > 0");
+  if (typeof fog.ceilingMeters !== "number") throw new StyleError("fog needs ceilingMeters");
+  for (const a of fog.areas) {
+    const name = a.name ?? "(unnamed)";
+    if (a.polygon.length < 3) throw new StyleError(`fog area ${name} needs 3 or more points`);
+    for (const p of a.polygon)
+      if (p.length !== 2 || !(Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90))
+        throw new StyleError(`fog area ${name}: points are [lon, lat]`);
+    if (!unit(a.density)) throw new StyleError(`fog area ${name}: density must be 0..1`);
+    if (a.edgeMeters !== undefined && !(a.edgeMeters >= 0)) throw new StyleError(`fog area ${name}: edgeMeters must be ≥ 0`);
+  }
+  if (fog.drift) {
+    const d = fog.drift;
+    if (!(d.speed >= 0) || !(d.sizeMeters > 0) || typeof d.toward !== "number" || !unit(d.contrast))
+      throw new StyleError("fog drift needs speed ≥ 0, toward, sizeMeters > 0 and contrast 0..1");
+  }
+  for (const [level, k] of Object.entries(fog.levels ?? {}))
+    if (!(k >= 0)) throw new StyleError(`fog level ${level}: coverage multiplier must be ≥ 0`);
+  if (fog.night && !(fog.night.density >= 0)) throw new StyleError("fog night density must be ≥ 0");
 }
 
 export interface Palette {

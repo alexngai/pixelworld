@@ -6,3 +6,5 @@ export * from "./protocol";
 export * from "./tileCache";
 export * from "./world";
 export * from "./heroPaint";
+export * from "./fog";
+export * from "./fogPass";
