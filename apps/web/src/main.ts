@@ -11,6 +11,7 @@ import {
   hashString,
   loadManifest,
   loadObjects,
+  setupFog,
   tileKey,
   worldDepthRange,
   type GpuImage,
@@ -30,6 +31,7 @@ import {
   type DrawnVehicle,
   type TrafficSublayer,
 } from "./traffic";
+import { FogLayer } from "./fog";
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
 const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
   string,
@@ -84,6 +86,12 @@ interface PixelworldDebug {
   setTraffic: (opts: { enabled?: boolean; paused?: boolean; layers?: TrafficSublayer[] }) => void;
   /** Centre the camera on a cell at a height (steps; default the surface there). */
   lookAt: (x: number, y: number, h?: number) => Promise<void>;
+  /** Fog (an atmosphere layer): its state, null where the world has none. */
+  fog: () => { enabled: boolean; paused: boolean; time: number; drawn: boolean } | null;
+  /** Switch fog, pause its drift or set its clock (seconds of play). */
+  setFog: (opts: { enabled?: boolean; paused?: boolean; time?: number }) => void;
+  /** Draw the current frame n times, waiting for the GPU each time: mean milliseconds per frame. */
+  timeFrames: (n: number) => number;
 }
 declare global {
   interface Window {
@@ -196,7 +204,8 @@ async function main() {
   const applyPalette = () => compositor.setPalette(night ? buildPalette(style, "night").rgba : palette.rgba);
   applyPalette();
 
-  const styleHash = hashString(JSON.stringify(styleJson));
+  // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the tile cache key.
+  const styleHash = hashString(JSON.stringify({ ...(styleJson as object), atmosphere: undefined }));
   const cache = params.get("cache") === "0" ? null : await TileCache.open();
   const cacheKey = (t: TileRequest) =>
     [
@@ -432,36 +441,52 @@ async function main() {
       for (const l of only.split(",")) if ((TRAFFIC_SUBLAYERS as string[]).includes(l)) traffic.layers.add(l as TrafficSublayer);
     }
   }
-  // the layer toggles (top right): traffic and each sublayer
+  // Fog (an atmosphere layer): where the style pack has fog over this world and level; fog=0 starts it off
+  const fogSetup = setupFog(style, palette, manifest, geo ? (x, y) => geo.cellToLonLat(x, y) : null);
+  const fog = fogSetup ? new FogLayer(fogSetup, RS, floor) : null;
+  if (fog) {
+    compositor.setFogField(fog.setup.field);
+    fog.enabled = params.get("fog") !== "0";
+    // fogTime=s and fogPause=1 fix the drift for tests
+    fog.time = num("fogTime", 0);
+    fog.paused = params.get("fogPause") === "1";
+  }
+  // the layer toggles (top right): traffic and each sublayer, fog
   const layersEl = document.getElementById("layers")!;
   const layerBoxes = new Map<string, HTMLInputElement>();
+  const hasLayers = !!traffic || !!fog;
   const syncLayers = () => {
-    if (!traffic) return;
-    layerBoxes.get("traffic")!.checked = traffic.enabled;
-    for (const l of TRAFFIC_SUBLAYERS) {
-      const box = layerBoxes.get(l)!;
-      box.checked = traffic.layers.has(l);
-      box.disabled = !traffic.enabled;
+    if (traffic) {
+      layerBoxes.get("traffic")!.checked = traffic.enabled;
+      for (const l of TRAFFIC_SUBLAYERS) {
+        const box = layerBoxes.get(l)!;
+        box.checked = traffic.layers.has(l);
+        box.disabled = !traffic.enabled;
+      }
     }
+    if (fog) layerBoxes.get("fog")!.checked = fog.enabled;
+  };
+  const toggle = (key: string, label: string, sub: boolean, onChange: (on: boolean) => void) => {
+    const row = document.createElement("label");
+    if (sub) row.className = "sub";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.onchange = () => {
+      onChange(box.checked);
+      syncLayers();
+      dirty = true;
+    };
+    row.append(box, ` ${label}`);
+    layersEl.append(row);
+    layerBoxes.set(key, box);
   };
   if (traffic) {
-    const toggle = (key: string, label: string, sub: boolean, onChange: (on: boolean) => void) => {
-      const row = document.createElement("label");
-      if (sub) row.className = "sub";
-      const box = document.createElement("input");
-      box.type = "checkbox";
-      box.onchange = () => {
-        onChange(box.checked);
-        syncLayers();
-        dirty = true;
-      };
-      row.append(box, ` ${label}`);
-      layersEl.append(row);
-      layerBoxes.set(key, box);
-    };
     toggle("traffic", "Traffic (V)", false, (on) => (traffic.enabled = on));
     for (const l of TRAFFIC_SUBLAYERS)
       toggle(l, SUBLAYER_LABELS[l], true, (on) => (on ? traffic.layers.add(l) : traffic.layers.delete(l)));
+  }
+  if (fog) toggle("fog", "Fog (G)", false, (on) => (fog.enabled = on));
+  if (hasLayers) {
     syncLayers();
     if (params.get("hud") !== "0") layersEl.classList.remove("hidden");
   }
@@ -507,13 +532,18 @@ async function main() {
       night = !night;
       applyPalette();
     }
-    else if (k === "h") [hud, help, ...(traffic ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
+    else if (k === "h") [hud, help, ...(hasLayers ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "l") switchLevel();
     else if (k === "v" && traffic) {
       traffic.enabled = !traffic.enabled;
       syncLayers();
       renderedComplete = false; // ready() waits for the frame without (or with) vehicles
+    }
+    else if (k === "g" && fog) {
+      fog.enabled = !fog.enabled;
+      syncLayers();
+      renderedComplete = false;
     }
     else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
@@ -597,6 +627,9 @@ async function main() {
   let lastT = performance.now();
   let renderedComplete = false;
   let renderMs = 0;
+  let fogDrawn = false;
+  // the last frame drawn, again (timeFrames)
+  let redraw: (() => void) | null = null;
   const readyResolvers: (() => void)[] = [];
 
   function tilesInView(snap: ReturnType<Camera["snapped"]>) {
@@ -645,6 +678,7 @@ async function main() {
       trafficFocus();
       if (traffic.update(dt)) dirty = true;
     }
+    if (fog?.update(dt)) dirty = true;
 
     const snap = camera.snapped();
     const order = tilesInView(snap);
@@ -668,26 +702,29 @@ async function main() {
       const vehicles = traffic?.instances(r);
       if (vehicles && !vehicles.complete) complete = false;
       const t0 = performance.now();
-      compositor.render(
-        {
-          left: snap.left,
-          top: snap.top,
-          fracX: snap.fracX,
-          fracY: snap.fracY,
-          zoom: camera.zoom,
-          internalWidth: camera.internalWidth,
-          internalHeight: camera.internalHeight,
-          depthRange,
-        },
-        drawTiles,
-        // marker=0 hides the rover (clean screenshots for evaluation)
-        [
-          ...(vehicles?.list ?? []),
-          ...(sprite && params.get("marker") !== "0"
-            ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
-            : []),
-        ],
-      );
+      // fog over the target (one pixel wider than the view, for the sub-pixel offset)
+      const fogView = { left: snap.left, top: snap.top, width: camera.internalWidth + 1, height: camera.internalHeight + 1 };
+      const fogFrame = fog?.frame(r, night, fogView) ?? null;
+      fogDrawn = fogFrame !== null;
+      const frameParams = {
+        left: snap.left,
+        top: snap.top,
+        fracX: snap.fracX,
+        fracY: snap.fracY,
+        zoom: camera.zoom,
+        internalWidth: camera.internalWidth,
+        internalHeight: camera.internalHeight,
+        depthRange,
+      };
+      // marker=0 hides the rover (clean screenshots for evaluation)
+      const spriteList = [
+        ...(vehicles?.list ?? []),
+        ...(sprite && params.get("marker") !== "0"
+          ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
+          : []),
+      ];
+      redraw = () => compositor.render(frameParams, drawTiles, spriteList, fogFrame);
+      redraw();
       renderMs = performance.now() - t0;
       dirty = !complete; // keep redrawing while tiles stream in
       renderedComplete = complete;
@@ -742,6 +779,7 @@ async function main() {
             baked: traffic.spriteCount,
           }
         : null,
+      fog: fog ? { enabled: fog.enabled, drawn: fogDrawn, time: fog.time } : null,
     };
   }
 
@@ -768,6 +806,9 @@ async function main() {
         ? [
             `traffic ${s.traffic.enabled ? `${s.traffic.vehicles} vehicles` : "off"} (V toggles) · sim ${s.traffic.simMs.toFixed(1)} ms · draw ${(s.traffic.drawMs + renderMs).toFixed(1)} ms`,
           ]
+        : []),
+      ...(s.fog
+        ? [`fog   ${s.fog.enabled ? (s.fog.drawn ? "on" : "on, none in view") : "off"} (G toggles) · frame ${renderMs.toFixed(1)} ms`]
         : []),
       `fps   ${fps.toFixed(0)}`,
     ].join("\n");
@@ -857,6 +898,28 @@ async function main() {
       syncLayers();
       renderedComplete = false;
       dirty = true;
+    },
+    fog: () => (fog ? { enabled: fog.enabled, paused: fog.paused, time: fog.time, drawn: fogDrawn } : null),
+    setFog: ({ enabled, paused, time }) => {
+      if (!fog) return;
+      if (enabled !== undefined) fog.enabled = enabled;
+      if (paused !== undefined) fog.paused = paused;
+      if (time !== undefined) fog.time = time;
+      syncLayers();
+      renderedComplete = false;
+      dirty = true;
+    },
+    timeFrames: (n) => {
+      if (!redraw) return NaN;
+      const gl = compositor.gl;
+      const px = new Uint8Array(4);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) {
+        redraw();
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // waits for the GPU
+      }
+      return (performance.now() - t0) / n;
     },
   };
 

@@ -10,6 +10,7 @@ import {
   materialTables,
   paletteIndex,
   validateStyle,
+  type FogStyle,
   type StylePack,
 } from "../src/index";
 
@@ -114,5 +115,31 @@ describe("desert-southwest style pack", () => {
     expect(() =>
       validateStyle({ ...style, provinces: { x: "missing-set" } }),
     ).toThrow(StyleError);
+  });
+
+  it("validates an atmosphere's fog: ramps, veil levels, areas, drift and levels", () => {
+    const fog: FogStyle = {
+      ramp: "sand",
+      shade: 5,
+      veil: [0.3, 0.6, 1],
+      ceilingMeters: 200,
+      fadeMeters: 100,
+      areas: [{ name: "box", density: 0.8, edgeMeters: 500, polygon: [[-115, 36], [-114, 36], [-114, 37]] }],
+      drift: { speed: 4, toward: 90, sizeMeters: 400, contrast: 0.5 },
+      levels: { walk: 0 },
+      night: { density: 0.5 },
+    };
+    const withFog = (f: Partial<FogStyle>) => ({ ...style, atmosphere: { fog: { ...fog, ...f } } });
+    expect(() => validateStyle(withFog({}))).not.toThrow();
+    expect(() => validateStyle(withFog({ ramp: "nope" }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ shade: 6 }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ veil: [0.6, 0.3] }))).toThrow(StyleError); // must increase
+    expect(() => validateStyle(withFog({ veil: [] }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ fadeMeters: 0 }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ areas: [{ density: 0.5, polygon: [[0, 0], [1, 1]] }] }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ areas: [{ density: 1.5, polygon: [[0, 0], [1, 1], [1, 0]] }] }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ areas: [{ density: 1, polygon: [[0, 0], [1, 100], [1, 0]] }] }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ drift: { speed: 1, toward: 0, sizeMeters: 0, contrast: 0 } }))).toThrow(StyleError);
+    expect(() => validateStyle(withFog({ levels: { fly: -1 } }))).toThrow(StyleError);
   });
 });
