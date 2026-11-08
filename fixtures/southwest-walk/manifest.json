@@ -364,7 +364,7 @@
     ],
     "sha256": "6ebd18be6a34c66ad3335e7ef5832d63228ccd5911ffce709a3da33a14865af3"
   },
-  "packageHash": "9e0297d991af1a8fd1bf73a17881a9d7a35c34a589919c4edb5db4c223d6f5aa",
+  "packageHash": "9d7402036a999660cbf8177271328d312caf04ad15cd6c2fd536484987ec00f7",
   "heroes": [
     {
       "id": "strat-tower",
@@ -414,5 +414,11 @@
       "paint": "heroes/strat-tower/paint-r3.png",
       "sha256": "7e21a1f5aa57ad1523c2fa51cdb38636dd36dce1aab1511bf415659d78ebe91b"
     }
-  ]
+  ],
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "3e07617b273e95c12de0fb46f91c939f36c0165bfe14fdcb25a3bcf7d7a1fa1b",
+    "version": 1,
+    "count": 7946
+  }
 }

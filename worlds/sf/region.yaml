@@ -99,4 +99,10 @@ sources:
   rivers:
     subtypes: [river]
 
+# Ambient traffic routes (D-060): `pixelworld routes`. Overture records the
+# cable cars as tram lines without a route name; the F and E streetcars carry
+# theirs.
+routes:
+  rail: { unnamedTram: cablecar }
+
 geology: null

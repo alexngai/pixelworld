@@ -89,6 +89,8 @@ export interface WorldManifest {
   geo?: { path: string; step: number; size: [number, number]; sha256?: string };
   /** Painted-over hero landmarks (M3, D-053): one entry per landmark and rotation. */
   heroes?: HeroRef[];
+  /** Ambient traffic routes (D-060): a gzipped JSON file relative to the manifest. */
+  routes?: { path: string; sha256?: string; version?: number; count?: number };
 }
 
 export interface HeroRef {

@@ -290,6 +290,7 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 - **Flight:** an arcade flight model moving freely in 3D above the grid. Altitude is shown by a drop shadow; collision is checked against cell heights and occupant heights.
 - **Building:** place and remove on the grid using the same generators. Valid placement is checked against slope and occupancy.
 - **Tuning:** speeds are tuned to the compressed layout ("Vegas to the Grand Canyon in about 90 seconds"), not to real-world time.
+- **Ambient traffic (D-060):** `packages/sim` moves cars, buses, cable cars, streetcars, light rail, trains and ferries along the routes the pipeline exports from each built package (`routes.json.gz`: the drawn roads, bridge decks at their height, rail and ferry lines). It steps in fixed ticks from one seeded RNG, keeps a density per kind around the view, and its whole state serializes as JSON. Vehicles are baked once per model and heading, in one view rotation, and drawn by the compositor as depth-tested sprites (§8.2).
 
 ## 10. World package format
 
@@ -322,7 +323,7 @@ packages/style/           style-pack validation, palette, material tables
 packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks), client scatter
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
-packages/sim/†            vehicles, flight, building, cell occupancy
+packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models (flight†, building†, cell occupancy†)
 apps/web/                 player app
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
 tools/                    headless offline baking (Playwright): hero-bake.mjs

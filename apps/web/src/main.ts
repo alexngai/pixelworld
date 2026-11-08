@@ -21,6 +21,7 @@ import {
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
 import { GeoGrid, decodePng, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+import { TrafficLayer, loadRoutes, rampLookup, type DrawnVehicle } from "./traffic";
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
 const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
   string,
@@ -60,6 +61,20 @@ interface PixelworldDebug {
   ) => Promise<({ rotation: number; left: number; top: number; width: number; height: number; depthBase: number; pixels: number[] } | null)[]>;
   /** The day palette, RGBA per index. */
   palette: () => number[];
+  /** Ambient traffic (D-060): what is drawn now, null without routes. */
+  traffic: () => {
+    enabled: boolean;
+    paused: boolean;
+    ticks: number;
+    time: number;
+    counts: Record<string, number>;
+    vehicles: DrawnVehicle[];
+  } | null;
+  /** Run the traffic simulation forward by whole ticks (seconds of play). */
+  trafficStep: (seconds: number) => void;
+  setTraffic: (opts: { enabled?: boolean; paused?: boolean }) => void;
+  /** Centre the camera on a cell at a height (steps; default the surface there). */
+  lookAt: (x: number, y: number, h?: number) => Promise<void>;
 }
 declare global {
   interface Window {
@@ -381,6 +396,25 @@ async function main() {
   let zoomFromParams = params.has("zoom");
 
   let dirty = true;
+  // Ambient traffic (D-060): on where the package has routes, unless traffic=0
+  const routes =
+    params.get("traffic") === "0"
+      ? null
+      : await loadRoutes(worldUrl, manifest).catch((e: unknown) => {
+          console.warn("routes:", e);
+          return null;
+        });
+  const traffic = routes
+    ? new TrafficLayer(
+        routes,
+        manifest,
+        service,
+        compositor,
+        { seed: num("trafficSeed", 1), renderScale: RS, ramp: rampLookup(palette.rampIds), density: num("trafficDensity", 1) },
+        () => (dirty = true),
+      )
+    : null;
+  if (traffic) traffic.paused = params.get("trafficPause") === "1";
   function resize() {
     const dpr = fixedSize ? 1 : window.devicePixelRatio || 1;
     const w = fixedSize ? num("w", 640) : Math.round(window.innerWidth * dpr);
@@ -400,6 +434,13 @@ async function main() {
   }
   resize();
   window.addEventListener("resize", resize);
+  const trafficFocus = () =>
+    traffic?.focus(camera.fx / RS, camera.fy / RS, camera.internalWidth, camera.internalHeight);
+  if (traffic) {
+    trafficFocus();
+    // trafficTime=s: start the simulation that far along (fixed scenes for tests)
+    traffic.step(num("trafficTime", 0));
+  }
 
   const depthRange = worldDepthRange(manifest.cellsX * RS, manifest.cellsY * RS, floor * RS, maxH * RS);
 
@@ -419,6 +460,7 @@ async function main() {
     else if (k === "h") [hud, help].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "l") switchLevel();
+    else if (k === "v" && traffic) traffic.enabled = !traffic.enabled;
     else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
       camera.zoom = Number(k);
@@ -500,6 +542,7 @@ async function main() {
   let fpsT = performance.now();
   let lastT = performance.now();
   let renderedComplete = false;
+  let renderMs = 0;
   const readyResolvers: (() => void)[] = [];
 
   function tilesInView(snap: ReturnType<Camera["snapped"]>) {
@@ -544,6 +587,10 @@ async function main() {
     lastT = now;
     update(dt);
     requestSprite(camera.rotation);
+    if (traffic) {
+      trafficFocus();
+      if (traffic.update(dt)) dirty = true;
+    }
 
     const snap = camera.snapped();
     const order = tilesInView(snap);
@@ -564,6 +611,9 @@ async function main() {
 
     if (dirty) {
       const p = project(rover.x * RS, rover.y * RS, rover.h * RS, r);
+      const vehicles = traffic?.instances(r);
+      if (vehicles && !vehicles.complete) complete = false;
+      const t0 = performance.now();
       compositor.render(
         {
           left: snap.left,
@@ -577,10 +627,14 @@ async function main() {
         },
         drawTiles,
         // marker=0 hides the rover (clean screenshots for evaluation)
-        sprite && params.get("marker") !== "0"
-          ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
-          : [],
+        [
+          ...(vehicles?.list ?? []),
+          ...(sprite && params.get("marker") !== "0"
+            ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
+            : []),
+        ],
       );
+      renderMs = performance.now() - t0;
       dirty = !complete; // keep redrawing while tiles stream in
       renderedComplete = complete;
       if (complete && service.idle) readyResolvers.splice(0).forEach((f) => f());
@@ -622,6 +676,18 @@ async function main() {
       objects: objectsFile?.instances.length ?? 0,
       palette: night ? "night" : "day",
       cacheWrites: cache?.writes ?? 0,
+      // CPU time of the last drawn frame: compositor submission, traffic simulation and sprites
+      renderMs,
+      traffic: traffic
+        ? {
+            enabled: traffic.enabled,
+            vehicles: traffic.sim.vehicles.length,
+            sprites: traffic.drawn.length,
+            simMs: traffic.simMs,
+            drawMs: traffic.drawMs,
+            baked: traffic.spriteCount,
+          }
+        : null,
     };
   }
 
@@ -644,6 +710,11 @@ async function main() {
       `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,
       `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
       `      ${s.bakeMode} · ${s.renderer}`,
+      ...(s.traffic
+        ? [
+            `traffic ${s.traffic.enabled ? `${s.traffic.vehicles} vehicles` : "off"} (V toggles) · sim ${s.traffic.simMs.toFixed(1)} ms · draw ${(s.traffic.drawMs + renderMs).toFixed(1)} ms`,
+          ]
+        : []),
       `fps   ${fps.toFixed(0)}`,
     ].join("\n");
   }
@@ -693,6 +764,40 @@ async function main() {
       return out;
     },
     palette: () => Array.from(palette.rgba),
+    traffic: () =>
+      traffic
+        ? {
+            enabled: traffic.enabled,
+            paused: traffic.paused,
+            ticks: traffic.sim.ticks,
+            time: traffic.sim.time,
+            counts: traffic.sim.counts(),
+            vehicles: traffic.drawn,
+          }
+        : null,
+    trafficStep: (seconds) => {
+      if (!traffic) return;
+      trafficFocus();
+      traffic.step(seconds);
+      renderedComplete = false;
+      dirty = true;
+    },
+    lookAt: async (x, y, h) => {
+      await ensureAt(x, y);
+      follow = false;
+      camera.fx = x * RS;
+      camera.fy = y * RS;
+      camera.fh = (h ?? store.surfaceHeightAt(x, y) ?? camera.fh / RS) * RS;
+      renderedComplete = false;
+      dirty = true;
+    },
+    setTraffic: ({ enabled, paused }) => {
+      if (!traffic) return;
+      if (enabled !== undefined) traffic.enabled = enabled;
+      if (paused !== undefined) traffic.paused = paused;
+      renderedComplete = false;
+      dirty = true;
+    },
   };
 
   requestAnimationFrame(frame);
