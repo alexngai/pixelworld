@@ -485,9 +485,14 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 - **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
 - **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
 
-### M3.5: San Francisco — a city by its fabric — second round done
+### M3.5: San Francisco — a city by its fabric — in progress (third round)
 
 **Goal:** a second region recognizable by its ordinary streets, not only by its landmarks. This pulls part of M5 (a second region and style pack) forward.
+
+**Exit criteria** (a per-image blind test: one fresh judge per image, no context hints, two or more decoys from another region):
+- Every landmark view names its landmark, at 60% confidence or more.
+- At least 4 of 6 landmark-free street views get San Francisco as the best guess.
+- No decoy is guessed as San Francisco.
 
 ![San Francisco's fabric: Victorian rows by Alamo Square and the Mission (walking level), Chinatown, and the Sunset's stucco rows (driving level)](images/sf-fabric.png)
 
