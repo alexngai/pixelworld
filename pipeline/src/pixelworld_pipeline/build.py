@@ -542,6 +542,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         attribution.append(ATTRIBUTION["overture-buildings"])
         if region.objects["buildings"].get("lidar"):
             attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
+    if region.objects and any("canopy" in r for r in region.objects.get("vegetation", [])):
+        from .sources.canopy import ATTRIBUTION as CANOPY_ATTRIBUTION
+
+        attribution.append(CANOPY_ATTRIBUTION)
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None
@@ -562,9 +566,14 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         step = 4 if layout.warped else 16
         geo = (*layout.geo_grid(step), step)
     depiction = None
-    hs = ((region.objects or {}).get("depiction") or {}).get("heightStretch")
-    if hs is not None:
-        depiction = {"heightStretch": float(hs)}
+    dep = (region.objects or {}).get("depiction") or {}
+    if dep.get("heightStretch") is not None or dep.get("scatter"):
+        depiction = {}
+        if dep.get("heightStretch") is not None:
+            depiction["heightStretch"] = float(dep["heightStretch"])
+        if dep.get("scatter"):
+            # the client scatters vegetation by surface at this density (M3)
+            depiction["scatter"] = float(dep["scatter"])
     manifest = write_package(
         out_dir,
         world_id=region.id,

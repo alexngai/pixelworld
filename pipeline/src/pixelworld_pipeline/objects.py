@@ -169,11 +169,13 @@ def _codes(names: list[str]) -> set[int]:
         ) from None
 
 
-def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "") -> list[dict]:
-    """Jittered-lattice scatter where the land cover matches, thinned by density."""
+def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=None) -> list[dict]:
+    """Jittered-lattice scatter where the land cover matches, thinned by density.
+    A rule with `canopy: <metres>` keeps points where the canopy height map
+    (WRI/Meta, 1 m) is at least that tall instead (M3): trees where trees are."""
     spacing = float(rule["spacing"])
     density = float(rule.get("density", 1.0))
-    codes = _codes(rule["landcover"])
+    codes = _codes(rule["landcover"]) if "landcover" in rule else None
     x0, y0, x1, y1 = p.envelope
     gx = np.arange(math.floor(x0 / spacing), math.ceil(x1 / spacing))
     gy = np.arange(math.floor(y0 / spacing), math.ceil(y1 / spacing))
@@ -188,7 +190,14 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "") -> list
     ys = (jj.ravel() + jitter[1]) * spacing
     cx, cy = p.to_cells(xs, ys)
     ok = p.free(cx, cy) & (keep_roll < density)
-    ok &= np.isin(p.landcover_at(xs, ys), list(codes))
+    if "canopy" in rule:
+        cand = np.nonzero(ok)[0]
+        tall = np.zeros(n, dtype=bool)
+        if canopy is not None and len(cand):
+            tall[cand] = canopy.sample(xs[cand], ys[cand], p.region.crs) >= float(rule["canopy"])
+        ok &= tall
+    else:
+        ok &= np.isin(p.landcover_at(xs, ys), list(codes))
     ok &= ~occupied(xs, ys)
     return [
         {
@@ -260,6 +269,47 @@ def street_trees(
             "s": int(seeds[k]),
             "r": int(rots[k]),
         }
+        for k in np.nonzero(ok)[0]
+    ]
+
+
+def junction_props(
+    p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
+) -> list[dict]:
+    """Props at junctions where 3+ segments of the given road classes meet (traffic
+    signals): two per junction, on opposite corners `offset` metres out."""
+    classes = set(rule["roads"])
+    offset = float(rule.get("offset", 12))
+    where: dict[str, tuple[float, float]] = {}
+    count: dict[str, int] = {}
+    for row in road_rows:
+        if row["class"] not in classes:
+            continue
+        line = shapely.from_wkt(row["geometry"])
+        if line.geom_type != "LineString":
+            continue
+        for conn in row.get("connectors") or []:
+            at = float(conn.get("at") or 0.0)
+            pt = line.interpolate(at, normalized=True)
+            where[conn["connector_id"]] = (pt.x, pt.y)
+            count[conn["connector_id"]] = count.get(conn["connector_id"], 0) + 1
+    xs: list[float] = []
+    ys: list[float] = []
+    for cid in sorted(c for c, n in count.items() if n >= 3):
+        lon, lat = where[cid]
+        (x,), (y,) = transform_points("EPSG:4326", p.region.crs, [lon], [lat])
+        for sx, sy in ((1, 1), (-1, -1)):
+            xs.append(x + sx * offset * 0.7071)
+            ys.append(y + sy * offset * 0.7071)
+    if not xs:
+        return []
+    ax, ay = np.asarray(xs), np.asarray(ys)
+    cx, cy = p.to_cells(ax, ay)
+    ok = p.free(cx, cy) & ~occupied(ax, ay)
+    rng = np.random.default_rng(_seed(p.region, f"junction|{tag}|{rule['group']}"))
+    seeds = rng.integers(0, 2**31, size=ax.size)
+    return [
+        {"g": rule["group"], "x": float(cx[k]), "y": float(cy[k]), "s": int(seeds[k]), "r": 0}
         for k in np.nonzero(ok)[0]
     ]
 
@@ -734,10 +784,21 @@ def place(
             hit |= np.hypot(xs - lx, ys - ly) < max(r, 1.0)
         return hit
 
+    canopy = None
+    if any("canopy" in rule for rule in spec.get("vegetation", [])):
+        from .sources.canopy import CanopyGrid
+
+        canopy = CanopyGrid(region.lonlat_envelope())
     for i, rule in enumerate(spec.get("vegetation", [])):
-        instances += scatter(p, rule, occupied, f"{i}")
+        instances += scatter(p, rule, occupied, f"{i}", canopy)
     for i, rule in enumerate(spec.get("streetTrees", [])):
         instances += street_trees(p, rule, road_rows, occupied, f"{i}")
+    # street furniture (M3): lights along roads, signals at major junctions
+    for i, rule in enumerate(spec.get("streetProps", [])):
+        if rule.get("at") == "junctions":
+            instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
+        else:
+            instances += street_trees(p, rule, road_rows, occupied, f"p{i}")
     for k, lm in enumerate(landmarks):
         lx, ly, _ = clear_zones[k]
         cx, cy = p.to_cells(np.array([lx]), np.array([ly]), shift="line" not in lm)

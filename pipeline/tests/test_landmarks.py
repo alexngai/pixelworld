@@ -134,3 +134,20 @@ def test_lidar_massing_finds_podium_and_towers():
     # outside the survey: keep Overture
     nowhere = HeightGrid(heights, np.zeros_like(heights, bool), grid.transform, res)
     assert objects.lidar_massing(footprint, nowhere, None, {}) is None
+
+
+def test_canopy_rule_keeps_points_where_trees_stand():
+    region = Region.from_dict(SPEC)
+    blocked = np.zeros(region.cells[::-1], dtype=bool)
+    p = objects.Placement(region, blocked)
+
+    class FakeCanopy:
+        # trees (8 m) only in the west half of the region
+        def sample(self, xs, ys, crs):
+            return np.where(np.asarray(xs) < p.west + 450.0, 8.0, 0.0)
+
+    rule = {"group": "tree", "canopy": 3, "spacing": 15}
+    out = objects.scatter(p, rule, lambda xs, ys: np.zeros(len(xs), bool), "t", FakeCanopy())
+    assert out and all(i["x"] * p.m < 450.0 + 15 for i in out)
+    none = objects.scatter(p, rule, lambda xs, ys: np.zeros(len(xs), bool), "t", None)
+    assert none == []
