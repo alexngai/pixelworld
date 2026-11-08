@@ -3,6 +3,7 @@ import { Baker, type BakeScene } from "@pixelworld/bake";
 import {
   buildBoxesMesh,
   buildObjects,
+  buildTerrainField,
   buildTerrainMesh,
   objectVoxelScale,
   scaleMesh,
@@ -46,7 +47,7 @@ export class BakeHost {
           const t0 = performance.now();
           const mesh = buildBoxesMesh(msg.boxes);
           const meshMs = performance.now() - t0;
-          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: false });
+          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: true });
           this.baker.releaseScene(mesh);
           this.reply(msg.id, res, meshMs, mesh.vertexCount);
           break;
@@ -68,16 +69,19 @@ export class BakeHost {
     let scene = this.meshCache.get(key);
     if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
-      const terrain = buildTerrainMesh(
-        grid,
-        { x0: 0, y0: 0, x1: slice.width, y1: slice.height },
-        {
-          floor: init.floor,
-          offset: [slice.x0, slice.y0],
-          world: { width: init.worldWidth, height: init.worldHeight },
-        },
-      );
-      scene = { meshes: [terrain], batches: [] };
+      const world = { width: init.worldWidth, height: init.worldHeight };
+      if (grid.micro) {
+        // micro-terrain: the GPU builds the geometry from height textures
+        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor });
+        scene = { meshes: [], batches: [], fields: [field] };
+      } else {
+        const terrain = buildTerrainMesh(
+          grid,
+          { x0: 0, y0: 0, x1: slice.width, y1: slice.height },
+          { floor: init.floor, offset: [slice.x0, slice.y0], world },
+        );
+        scene = { meshes: [terrain], batches: [] };
+      }
       if (init.objects) {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1);
         scene.meshes.push(objects.merged);
@@ -102,7 +106,8 @@ export class BakeHost {
     const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true });
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
-      scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0);
+      scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
+      (scene.fields ?? []).reduce((n, f) => n + f.width * f.height * f.k * f.k * 18, 0);
     this.reply(msg.id, res, meshMs, vertices);
   }
 

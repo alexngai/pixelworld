@@ -66,6 +66,11 @@ export interface StylePack {
   objects?: { heightStretch: number; variants: number; surfaces?: Record<string, SurfaceStyle> };
   /** Night palette variant: everything darkens except emissive ramps. */
   night?: NightStyle;
+  /** Micro-terrain look (M1.6). */
+  terrain?: {
+    /** Micro-cell tops steeper than this rise over run are bare rock (D-036). */
+    steepRockSlope?: number;
+  };
 }
 
 export interface AssetStyle {

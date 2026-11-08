@@ -107,6 +107,28 @@ test.describe("US Southwest (M1)", () => {
     expect(background).toBe(0);
   });
 
+  test("micro-terrain is hole-free in every rotation, and the rover rides on it", async ({ page }) => {
+    for (const rot of [0, 1, 2, 3]) {
+      // Grand Canyon Village: canyon walls, the rim, AZ-64
+      await open(page, `zoom=2&rot=${rot}&rover=876.7,404.4`);
+      const { data } = await pixels(page);
+      let background = 0;
+      for (let i = 0; i < data.length; i += 4) if (hex(data, i) === "#1e1c2b") background++;
+      expect(background, `rotation ${rot}`).toBe(0);
+    }
+    // heights come from micro-terrain: quarter steps, not whole cell corners
+    const heights = await page.evaluate(() => {
+      const out: number[] = [];
+      for (let i = 0; i < 8; i++) {
+        window.__pixelworld!.setRover(876.1 + i * 0.25, 404.6);
+        out.push((window.__pixelworld!.stats() as { rover: { h: number } }).rover.h);
+      }
+      return out;
+    });
+    expect(heights.some((h) => !Number.isInteger(h * 2))).toBe(true);
+    expect(new Set(heights).size).toBeGreaterThan(2);
+  });
+
   test("baked tiles persist in IndexedDB across a reload", async ({ page }) => {
     const url = "/?hud=0&w=640&h=360&zoom=2&rot=1";
     await page.setViewportSize({ width: 640, height: 360 });

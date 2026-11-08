@@ -10,6 +10,7 @@
   "ao": {
     "strength": 2.4
   },
+  "terrain": { "steepRockSlope": 0.6 },
   "ramps": {
     "kaibab": ["#2f2a3a", "#4f4652", "#7a6c6c", "#a29384", "#c8b89e", "#e8dcbc"],
     "toroweap": ["#33283a", "#574046", "#80604f", "#a6825f", "#c6a274", "#e2c08f"],

@@ -338,3 +338,314 @@ void main() {
   o = vec4(float(index), floor(local16 / 256.0), mod(local16, 256.0), 255.0) / 255.0;
 }
 `;
+
+// ---------------------------------------------------------------------------
+// Micro-terrain fields (M1.6): geometry built in the vertex shader. One
+// instance per micro-cell, 18 vertices: the top (two triangles, split like
+// packages/grid splitDiagonal) and the walls on the two edges that face the
+// viewer, which are also the two the sun lights (SUN_DIR has +u and +v), so
+// both passes need nothing else. Mirrors buildTerrainMesh for cells.
+
+const FIELD_COMMON = /* glsl */ `
+precision highp isampler2D;
+uniform isampler2D uFieldCorners; // (k·W) × (k·H): drawn corners c0..c3 of each micro-cell, micro-steps
+uniform isampler2D uFieldCells;   // W × H: surface, road mask, road class | geology << 8, water
+uniform int uK;
+uniform ivec2 uSliceOrigin;       // world cell of the slice's cell (0, 0)
+uniform ivec2 uSliceSize;         // cells
+uniform ivec2 uWorldSize;         // cells
+uniform float uFloor;             // skirt bottom, steps
+uniform ivec2 uNearFirst;         // 1 where instances run from high to low x / y (nearest first)
+uniform int uWallEdge;            // -1: draw tops (one instance per micro-cell); else walls on this edge
+uniform float uStepWorld;
+
+const ivec2 CORNER_OFF[4] = ivec2[4](ivec2(0, 0), ivec2(1, 0), ivec2(1, 1), ivec2(0, 1));
+const ivec2 EDGE_CORNERS[4] = ivec2[4](ivec2(0, 1), ivec2(1, 2), ivec2(2, 3), ivec2(3, 0));
+const ivec2 EDGE_NEIGHBOR[4] = ivec2[4](ivec2(0, -1), ivec2(1, 0), ivec2(0, 1), ivec2(-1, 0));
+const ivec2 EDGE_NB_CORNERS[4] = ivec2[4](ivec2(3, 2), ivec2(0, 3), ivec2(1, 0), ivec2(2, 1));
+
+ivec2 microSize() { return uSliceSize * uK; }
+bool inSlice(ivec2 m) {
+  ivec2 s = microSize();
+  return m.x >= 0 && m.y >= 0 && m.x < s.x && m.y < s.y;
+}
+bool inWorld(ivec2 m) {
+  ivec2 w = uSliceOrigin * uK + m;
+  ivec2 s = uWorldSize * uK;
+  return w.x >= 0 && w.y >= 0 && w.x < s.x && w.y < s.y;
+}
+ivec4 cornersAt(ivec2 m) { return texelFetch(uFieldCorners, m, 0); }
+
+int splitDiag(ivec4 h) {
+  int d02 = abs(h.x - h.z);
+  int d13 = abs(h.y - h.w);
+  if (d02 != d13) return d02 < d13 ? 0 : 1;
+  return h.y + h.w > h.x + h.z ? 1 : 0;
+}
+
+// Height (micro-steps) on micro-cell m's top at fraction f, same split as the mesh.
+float topHeight(ivec4 h, vec2 f) {
+  vec4 c = vec4(h);
+  if (splitDiag(h) == 0)
+    return f.x >= f.y ? c.x + (c.y - c.x) * f.x + (c.z - c.y) * f.y
+                      : c.x + (c.w - c.x) * f.y + (c.z - c.w) * f.x;
+  return f.x + f.y <= 1.0 ? c.x + (c.y - c.x) * f.x + (c.w - c.x) * f.y
+                          : c.z + (c.w - c.z) * (1.0 - f.x) + (c.y - c.z) * (1.0 - f.y);
+}
+
+
+`;
+
+/** Vertex-shader-only part of the field code (uses gl_InstanceID / gl_VertexID). */
+const FIELD_VERTEX = /* glsl */ `
+uniform isampler2D uWallList;  // wall draws: micro-cells (row-major index) with a wall on uWallEdge, 4096 per row
+// One vertex of the instance. pos: world cells and steps. hm: its height in
+// micro-steps; corner: the micro-corner it sits on (for AO). kind: face kind.
+void fieldVertex(out vec3 pos, out vec3 nrm, out int kind, out ivec2 corner, out float hm, out ivec2 m) {
+  // One plain draw per part, six vertices per micro-cell (instancing is slow in
+  // software renderers): the micro-cell from gl_VertexID / 6.
+  ivec2 ms = microSize();
+  int item = gl_VertexID / 6;
+  int vid = gl_VertexID % 6;
+  if (uWallEdge < 0) {
+    m = ivec2(item % ms.x, item / ms.x);
+    // draw nearest micro-cells first so hidden fragments fail the depth test early
+    if (uNearFirst.x == 1) m.x = ms.x - 1 - m.x;
+    if (uNearFirst.y == 1) m.y = ms.y - 1 - m.y;
+  } else {
+    int cell = texelFetch(uWallList, ivec2(item % 4096, item / 4096), 0).r;
+    m = ivec2(cell % ms.x, cell / ms.x);
+  }
+  ivec4 h = cornersAt(m);
+  float k = float(uK);
+  vec2 org = vec2(uSliceOrigin) + vec2(m) / k;
+  if (uWallEdge < 0) {
+    ivec3 t = splitDiag(h) == 0
+      ? (vid < 3 ? ivec3(0, 1, 2) : ivec3(0, 2, 3))
+      : (vid < 3 ? ivec3(0, 1, 3) : ivec3(1, 2, 3));
+    int c = t[vid % 3];
+    hm = float(h[c]);
+    pos = vec3(org + vec2(CORNER_OFF[c]) / k, hm / k);
+    vec3 a = vec3(vec2(CORNER_OFF[t.x]) / k, float(h[t.x]) / k * uStepWorld);
+    vec3 b = vec3(vec2(CORNER_OFF[t.y]) / k, float(h[t.y]) / k * uStepWorld);
+    vec3 d = vec3(vec2(CORNER_OFF[t.z]) / k, float(h[t.z]) / k * uStepWorld);
+    nrm = normalize(cross(b - a, d - a));
+    if (nrm.z < 0.0) nrm = -nrm;
+    kind = (h.x == h.y && h.y == h.z && h.z == h.w) ? 0 : 1;
+    corner = m + CORNER_OFF[c];
+    return;
+  }
+  int e = uWallEdge;
+  int j = vid;
+  ivec2 ec = EDGE_CORNERS[e];
+  ivec2 nb = m + EDGE_NEIGHBOR[e];
+  float ta = float(h[ec.x]);
+  float tb = float(h[ec.y]);
+  float ba = ta;
+  float bb = tb;
+  kind = 2;
+  if (inSlice(nb)) {
+    ivec4 nh = cornersAt(nb);
+    ivec2 nc = EDGE_NB_CORNERS[e];
+    ba = float(nh[nc.x]);
+    bb = float(nh[nc.y]);
+  } else if (!inWorld(nb)) {
+    ba = uFloor * k;
+    bb = ba;
+    kind = 3;
+  }  // else: slice edge inside the world, no wall (the neighbour is another slice's)
+  vec2 pa = org + vec2(CORNER_OFF[ec.x]) / k;
+  vec2 pb = org + vec2(CORNER_OFF[ec.y]) / k;
+  nrm = vec3(vec2(EDGE_NEIGHBOR[e]), 0.0);
+  float da = ta - ba;
+  float db = tb - bb;
+  vec3 v = vec3(pa, ta);  // degenerate unless a case below applies
+  if (da >= 0.0 && db >= 0.0) {
+    if (j < 3 && da > 0.0) v = j == 0 ? vec3(pa, ta) : j == 1 ? vec3(pb, tb) : vec3(pa, ba);
+    if (j >= 3 && db > 0.0) v = j == 3 ? vec3(pb, tb) : j == 4 ? vec3(pb, bb) : vec3(pa, ba);
+  } else if (da > 0.0 || db > 0.0) {
+    // edges cross: only the part where this side is higher
+    float f = da / (da - db);
+    vec3 cr = vec3(mix(pa, pb, f), ta + (tb - ta) * f);
+    if (j < 3) {
+      if (da > 0.0) v = j == 0 ? vec3(pa, ta) : j == 1 ? cr : vec3(pa, ba);
+      else v = j == 0 ? vec3(pb, tb) : j == 1 ? vec3(pb, bb) : cr;
+    }
+  }
+  hm = v.z;
+  pos = vec3(v.xy, v.z / k);
+  corner = m + (distance(v.xy, pa) <= distance(v.xy, pb) ? CORNER_OFF[ec.x] : CORNER_OFF[ec.y]);
+}
+`;
+
+export const FIELD_SHADOW_VS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+${FIELD_COMMON}
+${FIELD_VERTEX}
+uniform mat2 uRot;
+uniform vec3 uSun;
+uniform vec3 uLightRight;
+uniform vec3 uLightUp;
+uniform vec4 uLightRect;
+uniform vec2 uLightDepth;
+void main() {
+  vec3 pos; vec3 nrm; int kind; ivec2 corner; float hm; ivec2 m;
+  fieldVertex(pos, nrm, kind, corner, hm, m);
+  vec3 P = vec3(uRot * pos.xy, pos.z * uStepWorld);
+  gl_Position = vec4(
+    2.0 * (dot(P, uLightRight) - uLightRect.x) / (uLightRect.z - uLightRect.x) - 1.0,
+    2.0 * (dot(P, uLightUp) - uLightRect.y) / (uLightRect.w - uLightRect.y) - 1.0,
+    1.0 - 2.0 * (dot(P, uSun) - uLightDepth.x) / (uLightDepth.y - uLightDepth.x),
+    1.0);
+}
+`;
+
+export const FIELD_GBUFFER_VS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+${FIELD_COMMON}
+${FIELD_VERTEX}
+uniform mat2 uRot;
+uniform vec2 uOrigin;
+uniform vec2 uSize;
+uniform vec2 uDepthRange;
+uniform vec3 uSun;
+uniform vec3 uLightRight;
+uniform vec3 uLightUp;
+uniform float uScale;
+uniform sampler2D uFieldAo;      // (k·W + 1) × (k·H + 1): AO at each corner's lowest and highest height
+uniform int uSteepDrop;          // micro-steps; tops this far above a neighbour are bare rock (0 = off)
+uniform int uRockSurface;        // surface id drawn on steep tops (-1 = none)
+uniform int uWaterSurface;
+uniform int uSnowSurface;
+
+out vec3 vNormal;
+out vec3 vLight;
+out float vH;
+out float vAo;
+out vec2 vGrid;
+flat out vec2 vMat;
+flat out vec2 vCell;
+flat out vec2 vRoad;
+flat out float vGeol;
+
+float cornerAo(ivec2 c, float hm) {
+  // the corner's height range over the micro-cells that share it
+  float lo = 1e9;
+  float hi = -1e9;
+  for (int i = 0; i < 4; i++) {
+    ivec2 mc = c - CORNER_OFF[i];  // the micro-cell whose corner i is c
+    if (!inSlice(mc)) continue;
+    float v = float(cornersAt(mc)[i]);
+    lo = min(lo, v);
+    hi = max(hi, v);
+  }
+  vec2 ao = texelFetch(uFieldAo, c, 0).rg;
+  float t = hi > lo ? clamp((hm - lo) / (hi - lo), 0.0, 1.0) : 0.0;
+  return mix(ao.r, ao.g, t);
+}
+
+void main() {
+  vec3 pos; vec3 nrm; int kind; ivec2 corner; float hm; ivec2 m;
+  fieldVertex(pos, nrm, kind, corner, hm, m);
+  ivec2 cell = m / uK;
+  ivec4 attr = texelFetch(uFieldCells, cell, 0);
+  int surface = attr.x;
+  // Ragged land-cover borders: each micro-cell takes its surface from a point
+  // jittered by up to ±0.4 cell (hashed in world coordinates, so tiles agree).
+  // Water keeps its exact cells: its geometry is flat only there.
+  {
+    ivec2 wm = uSliceOrigin * uK + m;
+    uint hx = uint(wm.x) * 0x8da6b343u ^ uint(wm.y) * 0xd8163841u;
+    hx ^= hx >> 16; hx *= 0x7feb352du; hx ^= hx >> 15; hx *= 0x846ca68bu; hx ^= hx >> 16;
+    vec2 jit = vec2(float(hx & 0xffffu), float(hx >> 16)) / 65536.0 - 0.5;
+    ivec2 jc = clamp(ivec2(floor((vec2(m) + 0.5) / float(uK) + jit * 0.8)), ivec2(0), uSliceSize - 1);
+    int js = texelFetch(uFieldCells, jc, 0).x;
+    if (surface != uWaterSurface && js != uWaterSurface) surface = js;
+  }
+  if (kind <= 1 && uSteepDrop > 0 && uRockSurface >= 0 && surface != uWaterSurface && surface != uSnowSurface) {
+    ivec4 h = cornersAt(m);
+    bool steep = false;
+    for (int e = 0; e < 4; e++) {
+      ivec2 nb = m + EDGE_NEIGHBOR[e];
+      if (!inSlice(nb)) continue;
+      ivec4 nh = cornersAt(nb);
+      ivec2 ec = EDGE_CORNERS[e];
+      ivec2 nc = EDGE_NB_CORNERS[e];
+      if (min(h[ec.x], h[ec.y]) - max(nh[nc.x], nh[nc.y]) >= uSteepDrop) steep = true;
+    }
+    if (steep) surface = uRockSurface;
+  }
+
+  vec2 uv = uRot * pos.xy;
+  float h = pos.z;
+  float sx = 16.0 * (uv.x - uv.y);
+  float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
+  float d = uv.x + uv.y + h / 3.0;
+  gl_Position = vec4(
+    2.0 * (sx - uOrigin.x) / uSize.x - 1.0,
+    2.0 * (sy - uOrigin.y) / uSize.y - 1.0,
+    1.0 - 2.0 * (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x),
+    1.0);
+  vNormal = vec3(uRot * nrm.xy, nrm.z);
+  vec3 P = vec3(uv, h * uStepWorld) + vNormal * 0.04 * uScale;
+  vLight = vec3(dot(P, uLightRight), dot(P, uLightUp), dot(P, uSun));
+  vH = h;
+  vAo = cornerAo(corner, hm);
+  vGrid = pos.xy / uScale;
+  vMat = vec2(float(surface), float(kind));
+  vCell = vec2(uSliceOrigin + cell);
+  vRoad = kind <= 1 ? vec2(float(attr.y), float(attr.z & 255)) : vec2(0.0);
+  vGeol = float(attr.z >> 8);
+}
+`;
+
+/** AO for every micro-corner at its lowest (r) and highest (g) height; mirrors AoSampler. */
+export const FIELD_AO_FS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+${FIELD_COMMON}
+out vec4 o;
+
+float heightAt(vec2 p) {
+  ivec2 m = clamp(ivec2(floor(p)), ivec2(0), microSize() - 1);
+  return topHeight(cornersAt(m), clamp(p - vec2(m), 0.0, 1.0));
+}
+
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy);
+  float lo = 1e9;
+  float hi = -1e9;
+  for (int i = 0; i < 4; i++) {
+    ivec2 mc = c - CORNER_OFF[i];
+    if (!inSlice(mc)) continue;
+    float v = float(cornersAt(mc)[i]);
+    lo = min(lo, v);
+    hi = max(hi, v);
+  }
+  const vec2 DIRS[8] = vec2[8](vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1),
+    vec2(0.70710678, 0.70710678), vec2(-0.70710678, 0.70710678),
+    vec2(0.70710678, -0.70710678), vec2(-0.70710678, -0.70710678));
+  const float DIST[5] = float[5](1.0, 2.0, 4.0, 8.0, 12.0);  // micro-cells
+  vec2 size = vec2(microSize());
+  float sumLo = 0.0;
+  float sumHi = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float bestLo = 0.0;
+    float bestHi = 0.0;
+    for (int s = 0; s < 5; s++) {
+      vec2 q = vec2(c) + DIRS[i] * DIST[s];
+      if (q.x < 0.0 || q.y < 0.0 || q.x > size.x || q.y > size.y) continue;
+      float hs = heightAt(q);
+      // rise over run: both in micro units, so steps/cells cancel except the step scale
+      bestLo = max(bestLo, (hs - lo) * uStepWorld / DIST[s]);
+      bestHi = max(bestHi, (hs - hi) * uStepWorld / DIST[s]);
+    }
+    sumLo += bestLo / sqrt(1.0 + bestLo * bestLo);
+    sumHi += bestHi / sqrt(1.0 + bestHi * bestHi);
+  }
+  o = vec4(1.0 - sumLo / 8.0, 1.0 - sumHi / 8.0, 0.0, 1.0);
+}
+`;

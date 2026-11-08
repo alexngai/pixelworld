@@ -1,10 +1,13 @@
-import { STEP_WORLD, SUN_DIR, rotationMat2, type Rotation } from "@pixelworld/grid";
-import type { InstancedBatch, MeshData } from "@pixelworld/generators";
+import { EDGE_NEIGHBOR, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworld/grid";
+import type { InstancedBatch, MeshData, TerrainField } from "@pixelworld/generators";
 import { SHADES, type MaterialTables } from "@pixelworld/style";
 import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
-import { Uniforms, compileProgram, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
+import { Uniforms, compileProgram, createTexture, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
 import {
   COMPOSITE_FS,
+  FIELD_AO_FS,
+  FIELD_GBUFFER_VS,
+  FIELD_SHADOW_VS,
   FULLSCREEN_VS,
   GBUFFER_FS,
   GBUFFER_VS,
@@ -47,13 +50,18 @@ export interface StyleParams {
    * already scaled; patterns and road decals still work in world cells).
    */
   renderScale?: number;
+  /**
+   * Micro-terrain: tops at least `drop` micro-steps above a neighbouring
+   * micro-cell are drawn as `rockSurface` (bare strata), except water and snow.
+   */
+  steepRock?: { drop: number; rockSurface: number; waterSurface: number; snowSurface: number };
 }
 
 /**
  * Bump whenever bake output changes for the same inputs (shaders, passes,
  * generators). Persistent tile caches key on it.
  */
-export const BAKE_VERSION = "m1.2";
+export const BAKE_VERSION = "m1.6";
 
 const PAD = 2;
 const MAX_SHADOW = 4096;
@@ -66,26 +74,65 @@ interface UploadedMesh {
   instances: number;
 }
 
+interface UploadedField {
+  corners: WebGLTexture;
+  cells: WebGLTexture;
+  ao: WebGLTexture;
+  instances: number;
+  /** Per edge: an R32I texture (4096 per row) listing the micro-cells with a wall there. */
+  walls: { list: WebGLTexture; count: number }[];
+}
+
+/**
+ * Instance order for a rotation: 1 where x (y) should run from high to low so
+ * the nearest micro-cells (largest u + v) are drawn first.
+ */
+export function nearFirst(rotation: Rotation): [number, number] {
+  const [ux, vx] = rotateXY(1, 0, rotation);
+  const [uy, vy] = rotateXY(0, 1, rotation);
+  return [ux + vx > 0 ? 1 : 0, uy + vy > 0 ? 1 : 0];
+}
+
+/** The two cell edges (0 N, 1 E, 2 S, 3 W) whose walls face the viewer in a rotation. */
+export function frontEdges(rotation: Rotation): [number, number] {
+  const out: number[] = [];
+  EDGE_NEIGHBOR.forEach(([x, y], e) => {
+    const [u, v] = rotateXY(x, y, rotation);
+    if (u > 0.5 || v > 0.5) out.push(e);
+  });
+  return [out[0]!, out[1]!];
+}
+
+interface Program {
+  prog: WebGLProgram;
+  u: Uniforms;
+}
+
 /** Bakes meshes into indexed pixel art with depth. Runs in a worker or on the main thread. */
 export class Baker {
-  private shadowProg: WebGLProgram;
-  private gProg: WebGLProgram;
-  private compProg: WebGLProgram;
-  private shadowU: Uniforms;
-  private gU: Uniforms;
-  private compU: Uniforms;
+  private shadow: Program;
+  private g: Program;
+  private comp: Program;
+  private fieldShadow: Program;
+  private fieldG: Program;
+  private fieldAo: Program;
   private meshes = new WeakMap<MeshData, UploadedMesh>();
   private batches = new WeakMap<InstancedBatch, UploadedMesh>();
+  private fields = new WeakMap<TerrainField, UploadedField>();
   private style: StyleParams | null = null;
   private emptyVao: WebGLVertexArrayObject;
 
   constructor(private readonly gl: GL) {
-    this.shadowProg = compileProgram(gl, SHADOW_VS, SHADOW_FS);
-    this.gProg = compileProgram(gl, GBUFFER_VS, GBUFFER_FS);
-    this.compProg = compileProgram(gl, FULLSCREEN_VS, COMPOSITE_FS);
-    this.shadowU = new Uniforms(gl, this.shadowProg);
-    this.gU = new Uniforms(gl, this.gProg);
-    this.compU = new Uniforms(gl, this.compProg);
+    const program = (vs: string, fs: string): Program => {
+      const prog = compileProgram(gl, vs, fs);
+      return { prog, u: new Uniforms(gl, prog) };
+    };
+    this.shadow = program(SHADOW_VS, SHADOW_FS);
+    this.g = program(GBUFFER_VS, GBUFFER_FS);
+    this.comp = program(FULLSCREEN_VS, COMPOSITE_FS);
+    this.fieldShadow = program(FIELD_SHADOW_VS, SHADOW_FS);
+    this.fieldG = program(FIELD_GBUFFER_VS, GBUFFER_FS);
+    this.fieldAo = program(FULLSCREEN_VS, FIELD_AO_FS);
     this.emptyVao = gl.createVertexArray()!;
   }
 
@@ -160,6 +207,100 @@ export class Baker {
       this.free(up);
       this.batches.delete(b);
     }
+    for (const f of sc.fields ?? []) {
+      const up = this.fields.get(f);
+      if (!up) continue;
+      for (const t of [up.corners, up.cells, up.ao]) this.gl.deleteTexture(t);
+      for (const w of up.walls) this.gl.deleteTexture(w.list);
+      this.fields.delete(f);
+    }
+  }
+
+  /** Upload a micro-terrain field and compute its corner AO (independent of rotation). */
+  uploadField(f: TerrainField): UploadedField {
+    const existing = this.fields.get(f);
+    if (existing) return existing;
+    const gl = this.gl;
+    const mw = f.width * f.k;
+    const mh = f.height * f.k;
+    const corners = createTexture(gl, mw, mh, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.corners);
+    const cells = createTexture(gl, f.width, f.height, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.cells);
+    const ao = rgba8Texture(gl, mw + 1, mh + 1);
+    const fb = framebuffer(gl, ao, null);
+    gl.viewport(0, 0, mw + 1, mh + 1);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    const { prog, u } = this.fieldAo;
+    gl.useProgram(prog);
+    this.setFieldUniforms(u, f, corners, cells, 0);
+    gl.bindVertexArray(this.emptyVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(fb);
+    const walls = f.walls.map((list) => {
+      const w = Math.max(1, Math.min(4096, list.length));
+      const h = Math.max(1, Math.ceil(list.length / 4096));
+      const data = new Int32Array(w * h);
+      data.set(list);
+      return { list: createTexture(gl, w, h, gl.R32I, gl.RED_INTEGER, gl.INT, data), count: list.length };
+    });
+    const up = { corners, cells, ao, instances: mw * mh, walls };
+    this.fields.set(f, up);
+    return up;
+  }
+
+  /** Field textures on units 1–3 (unit 0 is the shadow map) and the field's geometry uniforms. */
+  private setFieldUniforms(
+    u: Uniforms,
+    f: TerrainField,
+    corners: WebGLTexture,
+    cells: WebGLTexture,
+    rotation: Rotation,
+    ao: WebGLTexture | null = null,
+  ): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, corners);
+    gl.uniform1i(u.loc("uFieldCorners"), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, cells);
+    gl.uniform1i(u.loc("uFieldCells"), 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, ao);
+    gl.uniform1i(u.loc("uFieldAo"), 3);
+    gl.uniform1i(u.loc("uK"), f.k);
+    gl.uniform2i(u.loc("uSliceOrigin"), f.origin[0], f.origin[1]);
+    gl.uniform2i(u.loc("uSliceSize"), f.width, f.height);
+    gl.uniform2i(u.loc("uWorldSize"), f.world.width, f.world.height);
+    gl.uniform1f(u.loc("uFloor"), f.floor);
+    gl.uniform2iv(u.loc("uNearFirst"), nearFirst(rotation));
+    gl.uniform1f(u.loc("uStepWorld"), STEP_WORLD);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private drawFields(u: Uniforms, fields: TerrainField[], rotation: Rotation): void {
+    const gl = this.gl;
+    for (const f of fields) {
+      const up = this.uploadField(f);
+      this.setFieldUniforms(u, f, up.corners, up.cells, rotation, up.ao);
+      gl.bindVertexArray(this.emptyVao);
+      gl.uniform1i(u.loc("uWallList"), 4);
+      // tops: every micro-cell
+      gl.uniform1i(u.loc("uWallEdge"), -1);
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, up.walls[0]!.list); // unused, but an integer texture
+      gl.drawArrays(gl.TRIANGLES, 0, 6 * up.instances);
+      // walls: only micro-cells that have one on an edge facing the viewer
+      for (const e of frontEdges(rotation)) {
+        const w = up.walls[e]!;
+        if (!w.count) continue;
+        gl.uniform1i(u.loc("uWallEdge"), e);
+        gl.bindTexture(gl.TEXTURE_2D, w.list);
+        gl.drawArrays(gl.TRIANGLES, 0, 6 * w.count);
+      }
+      gl.activeTexture(gl.TEXTURE0);
+    }
+    gl.bindVertexArray(null);
   }
 
   private drawScene(draws: UploadedMesh[]): void {
@@ -205,6 +346,8 @@ export class Baker {
     const rot = rotationMat2(rotation);
     const basis = lightBasis(SUN_DIR);
     const draws = [...scene.meshes.map((m) => this.upload(m)), ...scene.batches.map((b) => this.uploadBatch(b))];
+    const fields = scene.fields ?? [];
+    fields.forEach((f) => this.uploadField(f)); // AO prepasses before any pass state is set
     const scale = style.renderScale ?? 1;
 
     gl.disable(gl.CULL_FACE);
@@ -226,16 +369,22 @@ export class Baker {
       gl.viewport(0, 0, sw, sh);
       gl.clearDepth(1);
       gl.clear(gl.DEPTH_BUFFER_BIT);
-      gl.useProgram(this.shadowProg);
-      const u = this.shadowU;
-      gl.uniformMatrix2fv(u.loc("uRot"), false, rot);
-      gl.uniform1f(u.loc("uStepWorld"), STEP_WORLD);
-      gl.uniform3fv(u.loc("uSun"), basis.sun);
-      gl.uniform3fv(u.loc("uLightRight"), basis.right);
-      gl.uniform3fv(u.loc("uLightUp"), basis.up);
-      gl.uniform4fv(u.loc("uLightRect"), lb.rect);
-      gl.uniform2fv(u.loc("uLightDepth"), lb.depth);
+      for (const { prog, u } of [this.shadow, this.fieldShadow]) {
+        gl.useProgram(prog);
+        gl.uniformMatrix2fv(u.loc("uRot"), false, rot);
+        gl.uniform1f(u.loc("uStepWorld"), STEP_WORLD);
+        gl.uniform3fv(u.loc("uSun"), basis.sun);
+        gl.uniform3fv(u.loc("uLightRight"), basis.right);
+        gl.uniform3fv(u.loc("uLightUp"), basis.up);
+        gl.uniform4fv(u.loc("uLightRect"), lb.rect);
+        gl.uniform2fv(u.loc("uLightDepth"), lb.depth);
+      }
+      gl.useProgram(this.shadow.prog);
       this.drawScene(draws);
+      if (fields.length) {
+        gl.useProgram(this.fieldShadow.prog);
+        this.drawFields(this.fieldShadow.u, fields, rotation);
+      }
     }
 
     // 2. G-buffer: ramp, light level, AO, flags + depth
@@ -246,9 +395,8 @@ export class Baker {
     gl.clearColor(0, 0, 0, 0);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(this.gProg);
-    {
-      const u = this.gU;
+    for (const { prog, u } of [this.g, this.fieldG]) {
+      gl.useProgram(prog);
       const t = style.tables;
       gl.uniformMatrix2fv(u.loc("uRot"), false, rot);
       gl.uniform2f(u.loc("uOrigin"), origin[0], origin[1]);
@@ -279,17 +427,27 @@ export class Baker {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);
+      const sr = style.steepRock;
+      gl.uniform1i(u.loc("uSteepDrop"), sr?.drop ?? 0);
+      gl.uniform1i(u.loc("uRockSurface"), sr?.rockSurface ?? -1);
+      gl.uniform1i(u.loc("uWaterSurface"), sr?.waterSurface ?? -1);
+      gl.uniform1i(u.loc("uSnowSurface"), sr?.snowSurface ?? -1);
     }
+    gl.useProgram(this.g.prog);
     this.drawScene(draws);
+    if (fields.length) {
+      gl.useProgram(this.fieldG.prog);
+      this.drawFields(this.fieldG.u, fields, rotation);
+    }
 
     // 3. Composite: cleanup, AO dither, outlines → palette index + local depth
     const outTex = rgba8Texture(gl, rect.width, rect.height);
     const outFb = framebuffer(gl, outTex, null);
     gl.viewport(0, 0, rect.width, rect.height);
     gl.disable(gl.DEPTH_TEST);
-    gl.useProgram(this.compProg);
+    gl.useProgram(this.comp.prog);
     {
-      const u = this.compU;
+      const u = this.comp.u;
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, gTex);
       gl.uniform1i(u.loc("uG"), 0);
@@ -311,10 +469,10 @@ export class Baker {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindVertexArray(null);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    for (const unit of [4, 3, 2, 1, 0]) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
     for (const fb of [shadowFb, gFb, outFb]) if (fb) gl.deleteFramebuffer(fb);
     for (const tex of [shadowTex, gTex, gDepth, outTex]) if (tex) gl.deleteTexture(tex);
 

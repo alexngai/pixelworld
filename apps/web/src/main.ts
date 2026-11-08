@@ -24,6 +24,7 @@ import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
 const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
 const MARGIN = 16; // context around a tile, in render units (cells at scale 1)
+const MICRO_MARGIN = 8; // micro-terrain: shadows and AO reach a few cells; 16× the cells cost more
 const PAN_SPEED = 220; // internal px / s
 const DRIVE_SPEED = 3; // cells / s
 // Steepest grade the rover can drive, in height steps per cell travelled. Gentle
@@ -107,9 +108,18 @@ async function main() {
   // Render scale: fine worlds draw each cell smaller (render units = cells × RS).
   const RS = manifest.render?.scale ?? 1;
   const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
-  const margin = Math.ceil(MARGIN / RS);
+  const margin = manifest.micro ? MICRO_MARGIN : Math.ceil(MARGIN / RS);
 
   const objectsFile = params.get("objects") === "0" ? null : await loadObjects(worldUrl, manifest);
+  // Micro-terrain: tops steeper than the style's rock slope are bare strata (D-036).
+  const steepRockParams = () => {
+    const slope = style.terrain?.steepRockSlope;
+    const ids = new Map(Object.entries(manifest.surfaces).map(([id, name]) => [name, Number(id)]));
+    if (!manifest.micro || !slope || !ids.has("rock")) return undefined;
+    // rise over run in micro-steps per micro-cell = slope × metres per cell / metres per step
+    const drop = Math.max(1, Math.round((slope * manifest.scale.metersPerCell) / manifest.scale.metersPerStep));
+    return { drop, rockSurface: ids.get("rock")!, waterSurface: ids.get("water") ?? -1, snowSurface: ids.get("snow") ?? -1 };
+  };
   const baseStyle = validateStyle(styleJson as unknown as StylePack);
   const style =
     objectsFile && baseStyle.objects?.surfaces
@@ -178,6 +188,7 @@ async function main() {
         aoStrength: style.ao.strength,
         outlineThreshold: style.outline.depthThreshold,
         renderScale: RS,
+        steepRock: steepRockParams(),
       },
       tileSize,
       margin,

@@ -1,10 +1,14 @@
 import { DEPTH_PER_STEP, HALF_H, HALF_W, STEP_PX, STEP_WORLD, rotateXY, type Rotation } from "@pixelworld/grid";
-import type { CellRect, InstancedBatch, MeshData } from "@pixelworld/generators";
+import { forEachFieldPoint, type CellRect, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworld/generators";
 
-/** What a bake draws: plain meshes plus instanced batches of repeated objects. */
+/**
+ * What a bake draws: plain meshes, instanced batches of repeated objects, and
+ * micro-terrain fields whose geometry the GPU builds.
+ */
 export interface BakeScene {
   meshes: MeshData[];
   batches: InstancedBatch[];
+  fields?: TerrainField[];
 }
 
 export function asScene(s: MeshData | BakeScene): BakeScene {
@@ -36,6 +40,7 @@ export function forEachScenePoint(
       for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) fn(ox + x, oy + y, oz + z, cx, cy);
     }
   }
+  for (const f of scene.fields ?? []) forEachFieldPoint(f, fn);
 }
 
 export interface ScreenBounds {
