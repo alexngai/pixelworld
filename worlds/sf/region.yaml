@@ -128,6 +128,18 @@ sources:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
   rivers:
     subtypes: [river]
+  # Rails drawn in the street (M3.5): each segment, out of its tunnels, is
+  # drawn as the first rule it matches. Street tracks follow the roads they
+  # run in; trains keep their own way.
+  rails:
+    # cable-car tracks with the cable's slot: the unnamed tram lines over Nob
+    # Hill and Russian Hill (Powell, Mason, Hyde and California Streets)
+    - { draw: cable, rail: [tram], unnamed: true, bounds: [-122.4225, 37.784, -122.3958, 37.8075] }
+    # streetcar and light-rail tracks: the F and E lines on Market Street and
+    # the Embarcadero, the N, L, K, M, J and T lines in the street
+    - { draw: street, rail: [tram, light_rail] }
+    # trains on their own way: Caltrain into 4th and King
+    - { draw: train, rail: [standard_gauge] }
 
 # Ambient traffic routes (D-060): `pixelworld routes`. Overture records the
 # cable cars as tram lines without a route name; the F and E streetcars carry

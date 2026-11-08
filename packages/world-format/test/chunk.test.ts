@@ -100,6 +100,16 @@ describe("chunk codec", () => {
     expect(plain).not.toContain("RWID");
   });
 
+  it("round-trips rails drawn in the street (M3.5), and leaves them out when there are none", () => {
+    const grid = new TerrainGrid(4, 4);
+    grid.rail[9] = 0b0100_0100 | (2 << 12); // east and west, cable-car tracks
+    const bytes = new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: grid }));
+    expect(new TextDecoder().decode(bytes)).toContain("RAIL");
+    expect(decodeChunk(bytes.buffer).terrain.rail[9]).toBe(0b0100_0100 | (2 << 12));
+    const plain = new TextDecoder().decode(new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: new TerrainGrid(4, 4) })));
+    expect(plain).not.toContain("RAIL");
+  });
+
   it("rejects corrupt input", () => {
     const { buffer } = loadGolden("chunk-v1-small");
     const bad = buffer.slice(0);

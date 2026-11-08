@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 import pyarrow.parquet as pq
 import shapely
+from shapely.ops import substring
 
 from .http import CACHE_ROOT, HttpRangeFile, get
 
@@ -181,6 +182,70 @@ def paths(release: str, bbox: tuple[float, float, float, float], classes: list[s
         filter_tag="paths",
     )
     return [r for r in rows if path_class(r) in wanted]
+
+
+RAIL_COLUMNS = ["id", "subtype", "class", "names", "rail_flags", "connectors", "geometry"]
+
+
+def rails(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
+    """Rail segments of the given classes (tram, light_rail, funicular, …) with
+    their names and rail flags (`is_tunnel` and `is_bridge` ranges along them)."""
+    wanted = set(classes)
+    return query(
+        release,
+        "transportation",
+        "segment",
+        bbox,
+        RAIL_COLUMNS,
+        lambda r: r["subtype"] == "rail" and r["class"] in wanted,
+        filter_tag=f"rails:{','.join(sorted(wanted))}",
+    )
+
+
+def rail_open_parts(row: dict) -> list:
+    """A rail segment's lon/lat line without its tunnels (`is_tunnel` ranges
+    in its rail flags; a flag without a range covers the whole segment)."""
+    line = shapely.from_wkt(row["geometry"])
+    parts = list(line.geoms) if hasattr(line, "geoms") else [line]
+    if line.geom_type != "LineString":
+        return parts  # ranges are along a single line; multi-lines are kept whole
+    cuts: list[tuple[float, float]] = []
+    for flag in row.get("rail_flags") or []:
+        if "is_tunnel" not in (flag.get("values") or []):
+            continue
+        a, b = flag.get("between") or (0.0, 1.0)
+        cuts.append((float(a), float(b)))
+    if not cuts:
+        return [line]
+    out, at = [], 0.0
+    for a, b in sorted(cuts):
+        if a > at:
+            out.append(substring(line, at, a, normalized=True))
+        at = max(at, b)
+    if at < 1.0:
+        out.append(substring(line, at, 1.0, normalized=True))
+    return [g for g in out if g.geom_type == "LineString" and g.length > 0]
+
+
+def rail_matches(rule: dict, row: dict) -> bool:
+    """A rail segment matches a rule by its class (`rail`), and optionally by
+    name (any of `names`, case-insensitive, within its primary name; or
+    `unnamed: true`, none) and by a lon/lat box (`bounds`: west, south, east,
+    north) that holds all of it."""
+    if row["class"] not in set(rule.get("rail") or []):
+        return False
+    name = (((row.get("names") or {}).get("primary")) or "").lower()
+    if rule.get("unnamed") and name:
+        return False
+    names = [n.lower() for n in rule.get("names") or []]
+    if names and not any(n in name for n in names):
+        return False
+    if "bounds" in rule:
+        w, s, e, n = (float(v) for v in rule["bounds"])
+        x0, y0, x1, y1 = shapely.from_wkt(row["geometry"]).bounds
+        if x0 < w or y0 < s or x1 > e or y1 > n:
+            return False
+    return True
 
 
 def rivers(

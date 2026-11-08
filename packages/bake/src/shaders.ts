@@ -174,17 +174,97 @@ float roadDistance(vec2 local, int mask) {
 }
 
 #ifdef FIELD_WAYS
+uniform mat2 uRot;
+uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
+uniform int uRailRamp;           // -1: the style draws no rails
+
+// Rails in the street (M3.5), on tops over the way decal: a track along each
+// rail line (street tracks on their road's drawn centre line), cable-car
+// tracks with a dark slot between their rails, a train's on a ballast bed.
+// Returns the shade change it asks for.
+float railsDecal(inout int ramp, inout int pattern) {
+  if (uRailRamp < 0) return 0.0;
+  ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
+  float best = 9.0;
+  int kind = 0;
+  for (int dy = -1; dy <= 1; dy++) {
+    for (int dx = -1; dx <= 1; dx++) {
+      ivec2 c = own + ivec2(dx, dy);
+      if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
+      int r = texelFetch(uFieldRails, c, 0).r;
+      if ((r & 255) == 0) continue;
+      vec2 local = vGrid - vec2(uSliceOrigin + c);
+      if (length(max(max(-local, local - 1.0), 0.0)) > 0.3) continue;
+      float d = roadDistance(local, r & 255);
+      if (d < best) { best = d; kind = (r >> 12) & 15; }
+    }
+  }
+  // in cells: rails about a pixel wide at the native scale
+  const float GAUGE = 0.08;  // a rail's centre from its track's
+  const float RAIL = 0.035;  // a rail's half-width
+  if (kind == 0) return 0.0;
+  if (abs(best - GAUGE) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
+  if (kind == 2 && best < 0.03) { ramp = uAsphaltRamp; pattern = 0; return -2.0; }  // the cable's slot
+  if (kind == 3 && best < GAUGE + 0.08) { ramp = uRailRamp; pattern = 0; return -2.0; }  // ballast
+  return 0.0;
+}
+
+// Height (micro-steps) at a slice cell's centre, on the drawn micro-terrain.
+float cellCentreHeight(ivec2 c) {
+  ivec2 m = clamp(c * uK + uK / 2, ivec2(0), microSize() - 1);
+  ivec4 h = cornersAt(m);
+  return uK % 2 == 0 ? float(h.x) : dot(vec4(h), vec4(0.25));
+}
+
+// The grade of a way through slice cell c (micro-steps per cell, x and y),
+// from the centre heights of the cells it connects to: two cells along where
+// it runs on straight, so a steady climb drawn as flats and ramps (heights are
+// whole steps per cell) reads as one slope. No grade across a way.
+vec2 wayGrade(ivec2 c, int mask, bool path) {
+  const ivec2 DIRS[8] = ivec2[8](ivec2(0, -1), ivec2(1, -1), ivec2(1, 0), ivec2(1, 1),
+    ivec2(0, 1), ivec2(-1, 1), ivec2(-1, 0), ivec2(-1, -1));
+  float h0 = cellCentreHeight(c);
+  mat2 a = mat2(1e-3);
+  vec2 b = vec2(0.0);
+  for (int i = 0; i < 8; i++) {
+    if (((mask >> i) & 1) == 0) continue;
+    ivec2 d = DIRS[i];
+    ivec2 n = c + d;
+    if (n.x < 0 || n.y < 0 || n.x >= uSliceSize.x || n.y >= uSliceSize.y) continue;
+    ivec2 far = n + d;
+    ivec4 nw = texelFetch(uFieldWays, n, 0);
+    bool on = far.x >= 0 && far.y >= 0 && far.x < uSliceSize.x && far.y < uSliceSize.y &&
+      ((((path ? nw.z : nw.x) >> i) & 1) == 1);
+    ivec2 to = on ? far : n;
+    vec2 v = vec2(to - c);
+    a += outerProduct(v, v);
+    b += v * (cellCentreHeight(to) - h0);
+  }
+  return inverse(a) * b;
+}
+
 // Real widths (D-050): a road or path can be wider than its cells, so look at
 // the cells within reach and take the nearest way (relative to its half-width)
 // that covers this point. Roads are at least the style's width for their class.
 // Paths (sidewalks, crosswalks) draw over roads.
-void waysDecal(inout int ramp, inout int pattern) {
+// The way drawn at a point (face kind: 0 flat top, 1 sloped top, 2 wall), with
+// its grade as a normal (rotated like vNormal). Crosswalk stripes are drawn on
+// gentle crossings only: on a steep street, screen-space stripes stand up like a
+// fence. On a riser (a terrace wall) stripes and centre lines are left off.
+void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out vec3 gradeN) {
+  bool riser = kind == 2;
+  paved = false;
+  gradeN = vec3(0.0, 0.0, 1.0);
   ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
   float roadBest = 2.0;
   float roadD = 0.0;
   int roadCls = 0;
+  ivec2 roadCell = ivec2(0);
+  int roadMask = 0;
   float pathBest = 2.0;
   int pathCls = 0;
+  ivec2 pathCell = ivec2(0);
+  int pathMask = 0;
   int reach = min(uWayReach, 3);
   for (int dy = -reach; dy <= reach; dy++) {
     for (int dx = -reach; dx <= reach; dx++) {
@@ -203,28 +283,39 @@ void waysDecal(inout int ramp, inout int pattern) {
         if (gap <= hw) {
           // centre-to-neighbour strips only: crossing flags would extend past the cell
           float d = roadDistance(local, w.x & 255);
-          if (d <= hw && d / hw < roadBest) { roadBest = d / hw; roadD = d; roadCls = cls; }
+          if (d <= hw && d / hw < roadBest) { roadBest = d / hw; roadD = d; roadCls = cls; roadCell = c; roadMask = w.x & 255; }
         }
       }
       if (w.z != 0) {
         float hw = float(w.w >> 8) / 32.0;
         if (hw > 0.0 && gap <= hw) {
           float d = roadDistance(local, w.z & 255);
-          if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; }
+          if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; pathCell = c; pathMask = w.z & 255; }
         }
       }
     }
   }
-  if (pathCls > 0 && uPaths[pathCls].x >= 0.0) {
+  bool path = pathCls > 0 && uPaths[pathCls].x >= 0.0;
+  if (!path && roadCls == 0) return;
+  paved = true;
+  // the road's grade where a road runs here (sidewalks and crossings lie on
+  // its bed; a crossing runs across the climb), else the path's own; in
+  // micro-steps per cell → rise per run in world units
+  vec2 g = (roadCls > 0 ? wayGrade(roadCell, roadMask, false) : wayGrade(pathCell, pathMask, true)) * uStepWorld / float(uK);
+  vec3 n = normalize(vec3(-g, 1.0));
+  gradeN = vec3(uRot * n.xy, n.z);
+  pattern = 0;
+  if (path) {
     vec4 pc = uPaths[pathCls];
     ivec2 ap = ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin);
-    bool gap = pc.y > 0.5 && ((ap.x >> 1) & 1) == 1;  // 2 px zebra stripes
+    // 2 px zebra stripes, on crossings flatter than about a third of a step per cell
+    // (a crossing's own grade runs across the climb: off a road, trust flat tops only)
+    bool gentle = length(g) <= 0.35 * uStepWorld && kind != 2 && (roadCls > 0 || kind == 0);
+    bool gap = pc.y > 0.5 && gentle && ((ap.x >> 1) & 1) == 1;
     ramp = gap ? uAsphaltRamp : int(pc.x);
-    pattern = 0;
-  } else if (roadCls > 0) {
+  } else {
     vec4 rc = uRoads[roadCls];
-    ramp = (rc.y > 0.5 && roadD * uScale < 0.022) ? uMarkingRamp : (rc.z >= 0.0 ? int(rc.z) : uAsphaltRamp);
-    pattern = 0;
+    ramp = (rc.y > 0.5 && !riser && roadD * uScale < 0.022) ? uMarkingRamp : (rc.z >= 0.0 ? int(rc.z) : uAsphaltRamp);
   }
 }
 #endif
@@ -266,10 +357,24 @@ void main() {
   // Road decal on top faces.
   int roadMask = int(vRoad.x + 0.5);
   bool realWidths = false;
+  vec3 n = normalize(vNormal);
+  bool riser = false;
+  float railShade = 0.0;
 #ifdef FIELD_WAYS
   if (uWayReach > 0) {
     realWidths = true;
-    if (!vertical && mat < 100) waysDecal(ramp, pattern);
+    // Pavement is lit by its way's grade rather than its micro-tiles, so a
+    // steep street drawn as flats and ramps reads as one slope, not stripes.
+    // Terrace walls (risers) on pavement take the pavement a shade darker
+    // rather than pale strata.
+    bool paved = false;
+    vec3 gradeN;
+    if (kind != 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN);
+    if (paved) {
+      n = gradeN;
+      riser = vertical;
+    }
+    if (!vertical && mat < 100) railShade = railsDecal(ramp, pattern);
   }
 #endif
   if (!realWidths && roadMask != 0 && !vertical && mat < 100) {
@@ -283,7 +388,6 @@ void main() {
     }
   }
 
-  vec3 n = normalize(vNormal);
   float ndl = dot(n, uSun);
   bool shadowed = ndl <= 0.0;
   if (!shadowed && uShadowEnabled == 1) {
@@ -321,7 +425,9 @@ void main() {
     if (min(f.x, f.y) < 0.14) level -= 1.0;
     else if (rnd(block.x * 7 + col, block.y * 5 + row, 5) < density) level += 1.0;
   }
-  if (vertical && aboveBand < 0.14) level -= 1.0;  // strata bedding line
+  level += railShade;
+  if (riser) level -= 1.0;  // a riser on pavement: the pavement's own colour, a shade darker
+  else if (vertical && aboveBand < 0.14) level -= 1.0;  // strata bedding line
   level = clamp(level, 1.0, 5.0);
 
   bool owned = vCell.x >= uOwned.x && vCell.y >= uOwned.y && vCell.x < uOwned.z && vCell.y < uOwned.w;

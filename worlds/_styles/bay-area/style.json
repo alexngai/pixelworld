@@ -80,6 +80,7 @@
   "roads": {
     "asphalt": "asphalt",
     "marking": "marking",
+    "rail": "bridge-grey",
     "classes": {
       "motorway": { "halfWidth": 0.2, "centerLine": true },
       "trunk": { "halfWidth": 0.17, "centerLine": true },
@@ -424,6 +425,50 @@
       "generator": "trafficSignal",
       "ramps": { "pole": "concrete", "head": "asphalt", "light": "marker" },
       "params": { "height": 5 }
+    },
+    "prop.cablecar": {
+      "generator": "cableCar",
+      "ramps": { "body": "chinatown-red", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand" },
+      "params": { "length": 14, "width": 4, "open": 3 }
+    },
+    "prop.cablecar.diagonal": {
+      "generator": "cableCar",
+      "ramps": { "body": "chinatown-red", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand" },
+      "params": { "length": 14, "width": 4, "open": 3, "turn": 1 }
+    },
+    "prop.streetcar": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "paint-cream", "lower.a": "jade",
+        "upper.b": "paint-cream", "lower.b": "chinatown-red",
+        "upper.c": "paint-butter", "lower.c": "bridge-orange",
+        "upper.d": "paint-cream", "lower.d": "paint-slate",
+        "roof": "bridge-grey", "window": "glass", "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4 }
+    },
+    "prop.streetcar.diagonal": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "paint-cream", "lower.a": "jade",
+        "upper.b": "paint-cream", "lower.b": "chinatown-red",
+        "upper.c": "paint-butter", "lower.c": "bridge-orange",
+        "upper.d": "paint-cream", "lower.d": "paint-slate",
+        "roof": "bridge-grey", "window": "glass", "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4, "turn": 1 }
+    },
+    "prop.lightrail": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "chinatown-red", "roof": "bridge-grey", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1 }
+    },
+    "prop.lightrail.diagonal": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "chinatown-red", "roof": "bridge-grey", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1, "turn": 1 }
     }
   },
   "night": {

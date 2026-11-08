@@ -12,8 +12,20 @@ level: walk
 bounds: [-122.455, 37.755, -122.385, 37.808]
 
 metersPerCell: 10
-verticalExaggeration: 1.0
+# Hills at 2x, so Russian Hill and Nob Hill read as steep from the street: a
+# 20% grade climbs a step per cell (the steepest a road is drawn; steeper
+# blocks are cut into the hill). At 1x they read as gentle slopes.
+verticalExaggeration: 2.0
 maxSlope: 3
+
+# Lombard Street's crooked block keeps its hairpins: snapping would straighten
+# them (D-049). It's drawn 5 m wide (its one lane), so the bends stay apart.
+# At 25 m the driving level can't draw them, so only here.
+snap:
+  roads:
+    keep:
+      - { bounds: [-122.4197, 37.8019, -122.4179, 37.8023], width: 5 }
+
 start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
 
 sources:

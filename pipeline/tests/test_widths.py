@@ -117,6 +117,13 @@ def test_width_and_path_layers_round_trip_in_a_chunk():
         Chunk(x=0, y=0, base=z, shape=z.astype(np.uint8), surface=z.astype(np.uint8))
     )
     assert b"RWID" not in plain and b"PATH" not in plain  # optional layers stay out when empty
+    assert b"RAIL" not in plain
+    rail = np.zeros((n, n), np.uint16)
+    rail[4, 4] = 0b0100_0100 | (2 << 12)  # east-west cable-car tracks (M3.5)
+    with_rail = encode_chunk(
+        Chunk(x=0, y=0, base=z, shape=z.astype(np.uint8), surface=z.astype(np.uint8), rail=rail)
+    )
+    assert b"RAIL" in with_rail and decode_chunk(with_rail).rail[4, 4] == rail[4, 4]
 
 
 def test_junctions_beyond_the_world_edge_are_not_checked():

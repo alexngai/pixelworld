@@ -64,6 +64,9 @@ LAYERS = (
     ("path", b"PATH", "<u2", 0),  # same encoding as ROAD
     ("path_class", b"PCLS", "u1", 0),
     ("path_width", b"PWID", "u1", 0),
+    # rails drawn in the street (M3.5): connections like ROAD (bits 0-7) and
+    # what is drawn in bits 12-15 (roads.RAIL_KINDS)
+    ("rail", b"RAIL", "<u2", 0),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -129,6 +132,7 @@ class Chunk:
     path: np.ndarray = field(default=None)  # uint16 path connectivity (like road)
     path_class: np.ndarray = field(default=None)  # uint8 path class id, 0 = none
     path_width: np.ndarray = field(default=None)  # uint8 path half-width, 1/32 cell
+    rail: np.ndarray = field(default=None)  # uint16 rail connectivity | kind << 12
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -376,6 +380,7 @@ def write_package(
     path: np.ndarray | None = None,
     path_class: np.ndarray | None = None,
     path_width: np.ndarray | None = None,
+    rail: np.ndarray | None = None,
     path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
@@ -420,6 +425,7 @@ def write_package(
         "path": path,
         "path_class": path_class,
         "path_width": path_width,
+        "rail": rail,
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)

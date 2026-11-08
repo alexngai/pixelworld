@@ -454,6 +454,63 @@ def provinces(region: Region, layout=None) -> tuple[np.ndarray, dict[int, str]]:
     return geo, names
 
 
+def kept_ways(rows: list[dict], rules: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """The roads and paths that keep their real geometry when the network is
+    straightened (`snap.roads.keep`, D-049), by id, each with the rule that
+    keeps it: those lying wholly inside a rule's lon/lat box (`bounds`: west,
+    south, east, north), such as a crooked street's block between its two
+    cross streets. A rule's `width` (metres) overrides its roads' widths."""
+    boxes = [(tuple(float(v) for v in rule["bounds"]), rule) for rule in rules]
+    out: dict[str, dict[str, Any]] = {}
+    if not boxes:
+        return out
+    for row in rows:
+        x0, y0, x1, y1 = shapely.from_wkt(row["geometry"]).bounds
+        for (w, s, e, n), rule in boxes:
+            if w <= x0 and s <= y0 and x1 <= e and y1 <= n:
+                out[row["id"]] = rule
+                break
+    return out
+
+
+def rail_lines(
+    layout, rows: list[dict], rules: list[dict[str, Any]], shift=None, simplify: float = 0.75
+) -> list:
+    """Rail segments as lines in cells (`sources.rails`, M3.5), each with the
+    kind its first matching rule draws (`draw`: street, cable or train; rules
+    match as overture.rail_matches), out of their tunnels. With the
+    straightened roads' `shift`, they move with their streets: a vertex every
+    half cell, so a track bends where its street was straightened, then
+    simplified again (`simplify` cells) so it's drawn in long runs rather
+    than wobbling from row to row."""
+    out = []
+    claimed: set[str] = set()
+    for rule in rules:
+        kind = road_stage.RAIL_KINDS[rule["draw"]]
+        for row in rows:
+            if row["id"] in claimed or not overture.rail_matches(rule, row):
+                continue
+            claimed.add(row["id"])
+            parts = []
+            for part in overture.rail_open_parts(row):
+                coords = np.asarray(part.coords)
+                xs, ys = layout.lonlat_to_cell(coords[:, 0], coords[:, 1])
+                c = np.asarray(
+                    shapely.segmentize(shapely.LineString(np.column_stack([xs, ys])), 0.5).coords
+                )
+                xs, ys = c[:, 0], c[:, 1]
+                if shift is not None:
+                    dx, dy = shift(xs, ys)
+                    xs, ys = xs + dx, ys + dy
+                c = np.asarray(
+                    shapely.simplify(shapely.LineString(np.column_stack([xs, ys])), simplify).coords
+                )
+                parts.append((c[:, 0], c[:, 1]))
+            if parts:
+                out.append((row["id"], kind, parts))
+    return out
+
+
 def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
     out = []
     for row in rows:
@@ -555,9 +612,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     snap = region.snap or {}
     road_shift = None
     deviation = None
+    keep: dict[str, dict[str, Any]] = {}
     if "roads" in snap:
         # straighten the network toward the 8 grid directions (D-049)
         rs = snap["roads"] or {}
+        keep = kept_ways(road_rows + path_rows, rs.get("keep") or [])
         # roads and paths straighten together, so crossings stay where they meet
         straight = road_stage.straighten(
             road_lines + path_lines,
@@ -565,7 +624,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             simplify=float(rs.get("simplify", 0.75)),
             max_shift=float(rs.get("maxShift", 2.0)),
             shape=(cy, cx),
+            keep=set(keep),
         )
+        if keep:
+            print(f"snap: {len(keep)} ways keep their real geometry")
         road_lines = straight.lines[: len(road_lines)]
         path_lines = straight.lines[len(road_lines) :]
         deviation = float(rs.get("deviation", 1.0))
@@ -583,6 +645,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         pw = PATH_WIDTH_M | {k: float(v) for k, v in (widths.get("paths") or {}).items()}
         road_w = {r["id"]: rw[r["class"]] for r in road_rows}
         path_w = {r["id"]: pw[overture.path_class(r)] for r in path_rows}
+        # a kept road may be drawn narrower than its class (a crooked street's one lane)
+        for seg_id in road_w.keys() & keep.keys():
+            if "width" in keep[seg_id]:
+                road_w[seg_id] = float(keep[seg_id]["width"])
     road_layer = road_stage.rasterize(road_lines, (cy, cx), deviation=deviation, widths=road_w)
     path_layer = (
         road_stage.rasterize(path_lines, (cy, cx), deviation=deviation, widths=path_w)
@@ -598,6 +664,19 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     heights = road_stage.road_heights(road_layer.mask, q)
     q = road_stage.apply_to_corners(q, road_layer.mask, heights)
     on_road = (road_layer.mask & road_stage.CONNECT_MASK) != 0
+    # rails in the street (M3.5): street tracks along their roads' centre lines
+    rail = None
+    rail_rules = region.sources.get("rails") or []
+    if rail_rules:
+        classes = sorted({c for rule in rail_rules for c in rule.get("rail") or []})
+        rail_rows = overture.rails(release, bbox, classes)
+        rail = road_stage.rail_layer(
+            rail_lines(layout, rail_rows, rail_rules, road_shift),
+            (cy, cx),
+            deviation=deviation,
+            on_road=on_road,
+        )
+        print(f"rails: {int((rail != 0).sum())} cells from {len(rail_rows)} segments")
 
     # gridify
     base, shape = gridify_heights(q.astype(np.float64), steep="flat", max_offset=region.max_slope)
@@ -754,6 +833,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         path=None if path_layer is None else path_layer.mask,
         path_class=None if path_layer is None else path_layer.cls,
         path_width=path_hw,
+        rail=rail,
         path_classes=path_ids or None,
         geology=geology,
         vref=vref,
@@ -808,6 +888,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         **(
             {"paths": {"segments": len(path_rows), "cells": int((path_layer.mask > 0).sum())}}
             if path_layer is not None
+            else {}
+        ),
+        **(
+            {
+                "rails": {
+                    kind: int(((rail >> road_stage.RAIL_KIND_SHIFT) == k).sum())
+                    for kind, k in road_stage.RAIL_KINDS.items()
+                }
+            }
+            if rail is not None
             else {}
         ),
         "surfaces": {

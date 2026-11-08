@@ -163,6 +163,7 @@ def straighten(
     max_shift: float = 2.0,
     min_length: float = 1.0,
     shape: tuple[int, int] | None = None,
+    keep: set[str] | None = None,
 ) -> Straightened:
     """Straighten a road network toward the 8 grid directions (D-049).
 
@@ -175,7 +176,12 @@ def straighten(
     than `max_shift` cells frees its edges' constraints and the solve repeats.
     With the grid `shape` (cy, cx), no node is pushed across a world edge it
     started inside (roads often run along the edge of a warped world).
+
+    Ways whose ids are in `keep` keep their real geometry (a crooked street's
+    hairpins): every vertex stays and none of their edges is constrained, so
+    only the junctions they share with straightened roads move.
     """
+    keep = keep or set()
     from scipy.sparse import coo_matrix, identity
     from scipy.sparse.linalg import spsolve
 
@@ -206,10 +212,13 @@ def straighten(
         for xs, ys in parts:
             pts = np.column_stack([xs, ys]).astype(np.float64)
             ks = [key(x, y) for x, y in pts]
-            anchors = [i for i, k in enumerate(ks) if uses[k] >= 2]
-            chain = [anchors[0]]
-            for i, j in zip(anchors, anchors[1:], strict=False):
-                chain += [i + m for m in _douglas_peucker(pts[i : j + 1], simplify)[1:]]
+            if seg_id in keep:
+                chain = list(range(len(pts)))
+            else:
+                anchors = [i for i, k in enumerate(ks) if uses[k] >= 2]
+                chain = [anchors[0]]
+                for i, j in zip(anchors, anchors[1:], strict=False):
+                    chain += [i + m for m in _douglas_peucker(pts[i : j + 1], simplify)[1:]]
             ids = [node(*pts[i]) for i in chain]
             ids = [n for k, n in enumerate(ids) if k == 0 or n != ids[k - 1]]
             out_parts.append(ids)
@@ -217,16 +226,21 @@ def straighten(
 
     p0 = np.asarray(origin, dtype=np.float64).reshape(-1, 2)
     n = len(p0)
-    edge_set = sorted(
-        {
+
+    def edges_of(chain_list) -> set[tuple[int, int]]:
+        return {
             (min(a, b), max(a, b))
-            for _, _, ps in chains
+            for _, _, ps in chain_list
             for c in ps
             for a, b in zip(c, c[1:], strict=False)
         }
-    )
+
+    edge_set = sorted(edges_of(chains))
+    kept = edges_of(c for c in chains if c[0] in keep)
     cand = []
     for a, b in edge_set:
+        if (a, b) in kept:
+            continue
         v = p0[b] - p0[a]
         length = float(np.hypot(*v))
         if length < min_length:
@@ -315,6 +329,139 @@ def along_edge(path: list[tuple[int, int]], shape: tuple[int, int]) -> list[tupl
     return out
 
 
+def cell_path(xs: np.ndarray, ys: np.ndarray, deviation: float | None) -> list[tuple[int, int]]:
+    """The cells a polyline (cell coordinates) is drawn through: long
+    octilinear runs between its vertices' cells with `deviation`
+    (octilinear_path), else traced cell by cell (trace_cells)."""
+    if deviation is None:
+        return trace_cells(xs, ys)
+    verts = [(int(np.floor(x)), int(np.floor(y))) for x, y in zip(xs, ys, strict=True)]
+    path = verts[:1]
+    for va, vb in zip(verts, verts[1:], strict=False):
+        if va != vb:
+            path += octilinear_path(va, vb, deviation)[1:]
+    return path
+
+
+# What a rail cell draws (RAIL layer bits 12-15, M3.5): a street's pair of
+# tracks, the same with cable-car slots, a train's track on its ballast.
+RAIL_KINDS = {"street": 1, "cable": 2, "train": 3}
+RAIL_KIND_SHIFT = 12
+
+
+def onto_roads(path: list[tuple[int, int]], on_road: np.ndarray) -> list[tuple[int, int]]:
+    """A cell path moved onto the road cells it runs beside: each cell that
+    isn't a road moves to a road cell among its 8 neighbours (if any): the
+    same way as the cell before it where it can, so a track between two
+    carriageways keeps to one of them, else the nearest. Repeats are dropped,
+    the gaps left are bridged in king steps and staircase corners cut."""
+    h, w = on_road.shape
+
+    def road(c: tuple[int, int]) -> bool:
+        return 0 <= c[0] < w and 0 <= c[1] < h and bool(on_road[c[1], c[0]])
+
+    moved: list[tuple[int, int]] = []
+    last = (0, 0)
+    for c in path:
+        if road(c):
+            last = (0, 0)
+        else:
+            keep = (c[0] + last[0], c[1] + last[1])
+            if last != (0, 0) and road(keep):
+                to = keep
+            else:
+                near = [
+                    (dx * dx + dy * dy, (c[0] + dx, c[1] + dy))
+                    for dy in (-1, 0, 1)
+                    for dx in (-1, 0, 1)
+                    if (dx or dy) and road((c[0] + dx, c[1] + dy))
+                ]
+                to = min(near)[1] if near else c
+            last = (to[0] - c[0], to[1] - c[1])
+            c = to
+        if not moved or moved[-1] != c:
+            moved.append(c)
+    out: list[tuple[int, int]] = []
+    for i, b in enumerate(moved):
+        a = moved[i - 1] if i else b
+        far = max(abs(b[0] - a[0]), abs(b[1] - a[1])) > 1
+        for c in octilinear_path(a, b, 1.0)[1:] if far else [b]:
+            # cut staircase corners: A→B→C where A and C are diagonal neighbours
+            if len(out) >= 2 and abs(out[-2][0] - c[0]) == 1 and abs(out[-2][1] - c[1]) == 1:
+                out.pop()
+            out.append(c)
+    return out
+
+
+def rail_layer(
+    lines: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray]]]],
+    shape: tuple[int, int],
+    deviation: float | None = None,
+    on_road: np.ndarray | None = None,
+) -> np.ndarray:
+    """Rails per cell (u16, M3.5): connections to neighbours in bits 0-7, as
+    for roads, and what is drawn there (RAIL_KINDS) in bits 12-15, the highest
+    kind where lines of several kinds meet.
+
+    lines: (id, kind, parts in cells). With `on_road`, street and cable-car
+    tracks run along the roads they're in (onto_roads), on their drawn centre
+    lines (a street's two tracks often merge into one there); trains keep
+    their own cells."""
+    cy, cx = shape
+    out = np.zeros(shape, dtype=np.uint16)
+
+    def inside(c: tuple[int, int]) -> bool:
+        return 0 <= c[0] < cx and 0 <= c[1] < cy
+
+    for _seg_id, kind, parts in lines:
+        for xs, ys in parts:
+            path = along_edge(cell_path(xs, ys, deviation), shape)
+            if on_road is not None and kind != RAIL_KINDS["train"]:
+                path = onto_roads(path, on_road)
+            for c in path:
+                if inside(c):
+                    old = int(out[c[1], c[0]]) >> RAIL_KIND_SHIFT
+                    out[c[1], c[0]] = (out[c[1], c[0]] & CONNECT_MASK) | (
+                        max(old, kind) << RAIL_KIND_SHIFT
+                    )
+            for a, b in zip(path, path[1:], strict=False):
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):
+                    continue
+                out[a[1], a[0]] |= 1 << DIR_INDEX[(dx, dy)]
+                out[b[1], b[0]] |= 1 << DIR_INDEX[(-dx, -dy)]
+    return drop_rungs(out)
+
+
+def drop_rungs(rail: np.ndarray) -> np.ndarray:
+    """Rail connections without the rungs between parallel tracks: a link
+    between two cells that both run at right angles to it (where tracks in
+    neighbouring cells step across to each other) would draw a rail straight
+    across the street. Crossings and corners keep their links: a track carries
+    on through one of their two cells along the link, or one of them doesn't
+    run across it."""
+    out = rail.copy()
+    h, w = rail.shape
+    ys, xs = np.nonzero(rail & CONNECT_MASK)
+    for y, x in zip(ys.tolist(), xs.tolist(), strict=True):
+        m = int(rail[y, x])
+        for i in range(4):  # N, NE, E, SE: each link once, from its west / north end
+            if not (m >> i) & 1:
+                continue
+            dx, dy = DIRS[i]
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < w and 0 <= ny < h):
+                continue
+            across = (1 << ((i + 2) % 8)) | (1 << ((i + 6) % 8))
+            n = int(rail[ny, nx])
+            # a track that carries on through either end is a crossing, not a rung
+            through = (m >> ((i + 4) % 8)) & 1 or (n >> i) & 1
+            if m & across and n & across and not through:
+                out[y, x] &= ~np.uint16(1 << i)
+                out[ny, nx] &= ~np.uint16(1 << ((i + 4) % 8))
+    return out
+
+
 @dataclass
 class RoadLayer:
     mask: np.ndarray  # uint16 (cy, cx)
@@ -364,15 +511,7 @@ def rasterize(
         w = float(widths.get(seg_id, 0.0)) if widths is not None else 0.0
         visited: list[tuple[int, int]] = []
         for xs, ys in parts:
-            if deviation is None:
-                path = trace_cells(xs, ys)
-            else:
-                verts = [(int(np.floor(x)), int(np.floor(y))) for x, y in zip(xs, ys, strict=True)]
-                path = verts[:1]
-                for va, vb in zip(verts, verts[1:], strict=False):
-                    if va != vb:
-                        path += octilinear_path(va, vb, deviation)[1:]
-            path = along_edge(path, shape)
+            path = along_edge(cell_path(xs, ys, deviation), shape)
             for a, b in zip(path, path[1:], strict=False):
                 dx, dy = b[0] - a[0], b[1] - a[1]
                 if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):

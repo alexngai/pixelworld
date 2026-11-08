@@ -209,7 +209,17 @@ export interface TerrainLayers {
   path: Uint16Array;
   pathClass: Uint8Array;
   pathWidth: Uint8Array;
+  /**
+   * Rails drawn in the street (M3.5): connections like `road` (bits 0-7) and
+   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
+   */
+  rail: Uint16Array;
 }
+
+/** What a rail cell draws (TerrainLayers.rail >> 12): a street's pair of tracks, the same with cable slots, a train's track. */
+export const RAIL_STREET = 1;
+export const RAIL_CABLE = 2;
+export const RAIL_TRAIN = 3;
 
 /** VFAC value meaning "no relief exaggeration". */
 export const VFAC_ONE = 4096;
@@ -279,6 +289,7 @@ export function copyCells(
       b.path[di] = a.path[si]!;
       b.pathClass[di] = a.pathClass[si]!;
       b.pathWidth[di] = a.pathWidth[si]!;
+      b.rail[di] = a.rail[si]!;
     }
   }
   const ma = src.micro;
@@ -321,6 +332,8 @@ export class TerrainGrid {
   readonly path: Uint16Array;
   readonly pathClass: Uint8Array;
   readonly pathWidth: Uint8Array;
+  /** Rails drawn in the street (see TerrainLayers). */
+  readonly rail: Uint16Array;
   /** Micro-terrain, or null for cell-only terrain. */
   readonly micro: MicroLayers | null;
 
@@ -343,6 +356,7 @@ export class TerrainGrid {
     this.path = layers?.path ?? new Uint16Array(n);
     this.pathClass = layers?.pathClass ?? new Uint8Array(n);
     this.pathWidth = layers?.pathWidth ?? new Uint8Array(n);
+    this.rail = layers?.rail ?? new Uint16Array(n);
     for (const [name, arr] of Object.entries(this.layers())) {
       if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
     }
@@ -378,6 +392,7 @@ export class TerrainGrid {
       path: this.path,
       pathClass: this.pathClass,
       pathWidth: this.pathWidth,
+      rail: this.rail,
     };
   }
 
