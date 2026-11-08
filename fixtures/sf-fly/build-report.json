@@ -1,5 +1,5 @@
 {
-  "packageHash": "0c3325a1ba18606849bca3cdfd461d327dbf7143e0bc3552361411a928ea3641",
+  "packageHash": "83020b8077a3feaba099fb74a63112f5c47ad39c82f7cd416f27d2e56642b457",
   "cells": [
     274,
     234
@@ -50,10 +50,11 @@
     "woodland": 7086,
     "scrub": 91,
     "water": 35757,
-    "desert": 661,
-    "grass": 2630,
-    "farmland": 3,
-    "urban": 17888
+    "desert": 610,
+    "grass": 1767,
+    "farmland": 2,
+    "urban": 17248,
+    "lawn": 1555
   },
   "routes": {
     "cablecar": 9,

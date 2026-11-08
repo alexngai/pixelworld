@@ -1,5 +1,5 @@
 {
-  "packageHash": "b0614b2570fafbc91b3bb33237d2c6743d1f2811d1f9cdbe5dd03f12585d0bbb",
+  "packageHash": "d134a613cc1cf7d5517671c8b1d85790610de63e987875205ba54f2690e37854",
   "cells": [
     584,
     645
@@ -24,9 +24,11 @@
     "building.parking": 54,
     "building.pier": 123,
     "building.residential": 521,
-    "building.rowhouse.edwardian": 26961,
+    "building.rowhouse.edwardian": 17543,
+    "building.rowhouse.edwardian.painted": 9418,
     "building.rowhouse.stucco": 82002,
-    "building.rowhouse.victorian": 17632,
+    "building.rowhouse.victorian": 12890,
+    "building.rowhouse.victorian.pale": 4742,
     "building.tower": 73,
     "building.tower.deco": 107,
     "building.tower.glass": 107,
@@ -36,6 +38,7 @@
     "landmark.bridge.suspension": 7,
     "landmark.bridge.suspension.double": 10,
     "landmark.cellhouse": 1,
+    "landmark.gate": 1,
     "landmark.hall.clock": 1,
     "landmark.hall.domed": 1,
     "landmark.lighthouse": 1,
@@ -66,13 +69,15 @@
     "train": 827
   },
   "surfaces": {
-    "woodland": 43620,
+    "woodland": 35342,
     "scrub": 367,
     "water": 155657,
-    "desert": 4988,
-    "grass": 19681,
-    "farmland": 32,
-    "urban": 152335
+    "desert": 4381,
+    "grass": 9099,
+    "farmland": 14,
+    "urban": 103144,
+    "lawn": 25118,
+    "yard": 43558
   },
   "routes": {
     "cablecar": 16,
