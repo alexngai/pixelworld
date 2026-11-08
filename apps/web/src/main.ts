@@ -539,6 +539,7 @@ async function main() {
       rotation: camera.rotation,
       rover: { x: rover.x, y: rover.y, h: rover.h },
       cache: cache ? "indexeddb" : "off",
+      metersPerCell: store.metersPerCellAt(rover.x, rover.y),
       renderScale: RS,
       objects: objectsFile?.instances.length ?? 0,
       palette: night ? "night" : "day",
@@ -548,10 +549,12 @@ async function main() {
 
   function updateHud() {
     const s = stats();
-    const meters = Math.round(rover.h * metersPerStep + elevationDatumMeters);
+    // real elevation: undo the vertical caricature of warped worlds
+    const meters = Math.round(store.realHeightAt(rover.x, rover.y, rover.h) * metersPerStep + elevationDatumMeters);
+    const local = manifest.warp ? ` · here ${Math.round(store.metersPerCellAt(rover.x, rover.y))} m/cell (warped)` : "";
     const ve = verticalExaggeration(manifest.scale).toFixed(2);
     hud.textContent = [
-      `${manifest.name} · ${manifest.scale.metersPerCell} m/cell${RS !== 1 ? ` drawn at ×${RS}` : ""} · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
+      `${manifest.name} · ${manifest.scale.metersPerCell} m/cell${RS !== 1 ? ` drawn at ×${RS}` : ""}${local} · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
       `      ${s.objects} objects · ${s.palette} palette${style.night ? " (T toggles)" : ""}`,
       `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
       `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,

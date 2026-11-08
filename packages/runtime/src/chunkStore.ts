@@ -156,6 +156,26 @@ export class ChunkStore {
     return c.chunk.terrain.surfaceHeightAt(c.lx + (x - Math.floor(x)), c.ly + (y - Math.floor(y)));
   }
 
+  /**
+   * Real height (steps) for a drawn height at a position: undoes the vertical
+   * caricature of warped worlds (VREF/VFAC); the drawn height elsewhere.
+   */
+  realHeightAt(x: number, y: number, h: number): number {
+    const c = this.cellOf(Math.floor(x), Math.floor(y));
+    if (!c) return h;
+    const t = c.chunk.terrain;
+    const i = t.index(c.lx, c.ly);
+    const ref = t.vref[i]! / 16;
+    return ref + (h - ref) * (t.vfac[i]! / 4096);
+  }
+
+  /** Real metres per cell around a position (warped worlds), else the manifest's scale. */
+  metersPerCellAt(x: number, y: number): number {
+    const s = this.chunkSize;
+    const ref = this.refs.get(key(Math.floor(x / s), Math.floor(y / s)));
+    return ref?.metersPerCell ?? this.manifest.scale.metersPerCell;
+  }
+
   isWater(x: number, y: number): boolean {
     const c = this.cellOf(Math.floor(x), Math.floor(y));
     return !!c && c.chunk.terrain.water[c.chunk.terrain.index(c.lx, c.ly)] !== NO_WATER;
