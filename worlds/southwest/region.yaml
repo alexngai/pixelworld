@@ -39,6 +39,13 @@ snap:
   roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
   buildings: { angle: 12, follow: 3 }
 
+# Real widths (D-050): ways are drawn at `scale` × their real width at the local
+# scale (defaults per class in the pipeline, e.g. 14 m for a primary road's
+# carriageway; override with roads: {class: metres} / paths: {...}), never
+# narrower than `minCells`, nor than the style's width for the class (so coarse
+# maps keep their road hierarchy). Driving: twice real, so city roads read.
+widths: { scale: 2.0, minCells: 0.08 }
+
 # Micro-terrain (M1.6, D-037): 4×4 micro-cells (100 m) per cell, heights in
 # quarter steps, read from the 60 m overview of the 30 m DEM.
 micro:

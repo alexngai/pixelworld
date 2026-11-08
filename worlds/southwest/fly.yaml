@@ -16,9 +16,10 @@ verticalExaggeration: 2.5
 # and Hoover Dam at 400 m, the canyon rim at 600 m).
 warp: { background: 1500, focusScale: 4 }
 
-# Generalization: only the main roads.
+# Generalization: only the main roads, drawn 4× their real width.
 sources:
   roads: { classes: [motorway, trunk] }
+widths: { scale: 4.0, minCells: 0.08 }
 
 # Depiction: oversized landmarks and the tallest towers only, drawn bigger;
 # where enlarged towers would overlap, the taller one stays.

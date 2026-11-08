@@ -246,6 +246,13 @@ test.describe("Scale levels (D-046)", () => {
     await expect(page.locator("#view")).toHaveScreenshot("southwest-fly-strip-r0.png");
   });
 
+  test("the walking level draws roads at their real width, with sidewalks and crosswalks", async ({ page }) => {
+    // Las Vegas Boulevard at Flamingo Road, terrain and ways only (D-050)
+    await open(page, "world=/southwest-walk/&zoom=2&rot=0&objects=0");
+    expect(await level(page)).toBe("walk");
+    await expect(page.locator("#view")).toHaveScreenshot("southwest-walk-ways-r0.png");
+  });
+
   test("switching levels keeps the rover at the same place", async ({ page }) => {
     await open(page, "zoom=1&rot=0"); // driving, at the Strip
     expect(await level(page)).toBe("drive");

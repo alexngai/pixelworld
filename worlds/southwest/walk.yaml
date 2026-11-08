@@ -15,10 +15,18 @@ maxSlope: 3
 warp: null
 smoothing: null
 
-# 5 m micro-cells from the 10 m DEM
+# 5 m micro-cells from the 10 m DEM; every street (not parking aisles or
+# driveways) and the pedestrian network: sidewalks, crosswalks, footways
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+
+# true widths (D-050): a 14 m carriageway spans most of a 20 m cell
+widths: { scale: 1.0, minCells: 0.1 }
 micro: { k: 4, dem: { overview: 1 } }
 
 # keep lakes and big pools (the fountain lake), drop specks

@@ -11,7 +11,7 @@
       "x": 0,
       "y": 0,
       "path": "chunks/0_0.pxwc.gz",
-      "sha256": "a03baa668ba534b6e181a4cfa14ef66dec2a53e023eb68563fb7ae842b07410a",
+      "sha256": "9cd665c254e306cfc6c09213b8700b726c5aaaf0c2ece4f28a7b362c07b207a9",
       "heightRange": [
         193,
         201
@@ -21,7 +21,7 @@
       "x": 1,
       "y": 0,
       "path": "chunks/1_0.pxwc.gz",
-      "sha256": "f25008b40f897b07e8973b131ae1e999f78ebe3c36b570754aa7a25b5de4eb32",
+      "sha256": "d78df7cf5a98a1d6916a6b6735bd9f8823819055188c48660776974ec94c5a2d",
       "heightRange": [
         190,
         196
@@ -31,7 +31,7 @@
       "x": 2,
       "y": 0,
       "path": "chunks/2_0.pxwc.gz",
-      "sha256": "1aaa8be139251ad27369d8e589a65ea05995503691066bab9c53d52566c5c92f",
+      "sha256": "419f65894e8e2cf97ece41967e9a0d3dfa23af2147b6901413cfd236b4870181",
       "heightRange": [
         188,
         192
@@ -41,7 +41,7 @@
       "x": 0,
       "y": 1,
       "path": "chunks/0_1.pxwc.gz",
-      "sha256": "3a51f2fc75a3b019f2243614d30a8c798409d1878ecf9f811af89367c7a8b5ee",
+      "sha256": "60040e18958c0b110190c8b8d95b536971ce62652cbeb9976a284363cd6eb14b",
       "heightRange": [
         194,
         201
@@ -51,7 +51,7 @@
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc.gz",
-      "sha256": "308b74a6b21b8a1e78a34b7e0bbfeee2944c8ad5ac8ba845e58ca2630f772cfa",
+      "sha256": "7d4a316facff72bb819514fc7dd6c0f911f27a1aef24996022887ce7ff95caf8",
       "heightRange": [
         190,
         198
@@ -61,7 +61,7 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "3f9a045fc5fd3386f0bb2f7ca0e3bfacba37500269049816f68eeb6bf215b3c5",
+      "sha256": "43f66e15402c3c854146f2030573ed91510bbb623da3627b12b1c751705877c3",
       "heightRange": [
         187,
         193
@@ -71,7 +71,7 @@
       "x": 0,
       "y": 2,
       "path": "chunks/0_2.pxwc.gz",
-      "sha256": "c7efe5505d6f48eb01a683aacf25fb14a88d303d2b7cb4b6d360adf5b3aa0133",
+      "sha256": "8b3003810b712fa7f2f8677204543d1291cf68ea2d8d668da15664753f83661a",
       "heightRange": [
         194,
         202
@@ -81,7 +81,7 @@
       "x": 1,
       "y": 2,
       "path": "chunks/1_2.pxwc.gz",
-      "sha256": "8274d44eafa3af428ba8760e137ab21bface2f7bd7667a5eb417d7c79fe6916a",
+      "sha256": "b8e7551bdf36d998e5208ac6ad1fdb65e4fab27becdc7c4ead5a582c1f1f1443",
       "heightRange": [
         191,
         198
@@ -91,7 +91,7 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "a8259b5a9db33f13f1fbd451c4f4253617a636d9bf64fcf6779fd4d8fa435bed",
+      "sha256": "0f4922eebded69b05b5e0f0fc30d5499ee879de7b44010a9b39e9cfa70e155a2",
       "heightRange": [
         189,
         194
@@ -101,7 +101,7 @@
       "x": 0,
       "y": 3,
       "path": "chunks/0_3.pxwc.gz",
-      "sha256": "07cb038e9341ce43adc175e7db84b298df22172a0b4b3a6c01fcb242e0c03a6f",
+      "sha256": "0f588bc3a98016f4fb70b8e591509fba8fbe21101272da6765cfc071102f6086",
       "heightRange": [
         196,
         205
@@ -111,7 +111,7 @@
       "x": 1,
       "y": 3,
       "path": "chunks/1_3.pxwc.gz",
-      "sha256": "a4687edf211ecc1a5bd922932f2a4bb3c8e5ff5c63acfebaeb257e1a10d0aa52",
+      "sha256": "2f263143336e44190f4afe5564d355cf8ff586bd21432de26585dca8325968ee",
       "heightRange": [
         192,
         199
@@ -121,7 +121,7 @@
       "x": 2,
       "y": 3,
       "path": "chunks/2_3.pxwc.gz",
-      "sha256": "dbaf1f258b79e04598a098b886f36e07f14fb107248052f9d673620bdc8a7e1c",
+      "sha256": "cf90b47b3cd14d8f2fd5bfb0e854d300206879971aae9fbe25366741468f89f5",
       "heightRange": [
         188,
         194
@@ -131,7 +131,7 @@
       "x": 0,
       "y": 4,
       "path": "chunks/0_4.pxwc.gz",
-      "sha256": "6fe6c5909a811025f574157b0e45e2fbf699e12a25715415aadf07fc5a680de4",
+      "sha256": "288926852c55232e23f73ff936bfc836540913045a86bccf9dfe7dedaf518dfc",
       "heightRange": [
         198,
         205
@@ -141,7 +141,7 @@
       "x": 1,
       "y": 4,
       "path": "chunks/1_4.pxwc.gz",
-      "sha256": "886554656ec8395fb865dcab17da6e3dd6590a4a5cc1530a63c51b5cb9cb31db",
+      "sha256": "eaf6916f8cf1db5773920c73704f74bf01e90b0a37b3869a8e568f869f82e2ce",
       "heightRange": [
         193,
         202
@@ -151,7 +151,7 @@
       "x": 2,
       "y": 4,
       "path": "chunks/2_4.pxwc.gz",
-      "sha256": "ff9c62bc6ccf39aab1eb80f4db709959fa51f024800116215f8b088f990be137",
+      "sha256": "77044bd32b4c27dc4d2c0e464cfb362ac86512eb606c675fb1e32a304c24ecb4",
       "heightRange": [
         190,
         196
@@ -161,7 +161,7 @@
       "x": 0,
       "y": 5,
       "path": "chunks/0_5.pxwc.gz",
-      "sha256": "c034fadc0e77192e67e72fe351fb85b9be650089aeb96801dfd835ca0d40ec63",
+      "sha256": "91e73d5826cbeef45bfeb16c4e4300ba0634943cd561d261b5af0a45ef35b37a",
       "heightRange": [
         199,
         208
@@ -171,7 +171,7 @@
       "x": 1,
       "y": 5,
       "path": "chunks/1_5.pxwc.gz",
-      "sha256": "40586d3ca2e62b516ff1f52a538c8be1d0b089bc3bf782fd2dd3c21d0f680f0e",
+      "sha256": "822eaeb59eab965b7661901cf5b440b66c6c7ce84a03687769b705e3c2db3e10",
       "heightRange": [
         195,
         204
@@ -181,7 +181,7 @@
       "x": 2,
       "y": 5,
       "path": "chunks/2_5.pxwc.gz",
-      "sha256": "9200eb316dbc0e09e9254e593bfe538c6c06c5f39f10cefe659e277b0056ce5b",
+      "sha256": "d06665007144817b4ad0e4d40e3c787a5aa8429c4aa7e95f357b2e3e8eede07d",
       "heightRange": [
         192,
         199
@@ -191,7 +191,7 @@
       "x": 0,
       "y": 6,
       "path": "chunks/0_6.pxwc.gz",
-      "sha256": "2922cb88ba7a493f2f4ef3029f1c07c46912a1c99249607790c743f9b0c1d54d",
+      "sha256": "e066095107b8cc01b4e2f17959f2f61e10263e724c484b320a063c4308632021",
       "heightRange": [
         202,
         210
@@ -201,7 +201,7 @@
       "x": 1,
       "y": 6,
       "path": "chunks/1_6.pxwc.gz",
-      "sha256": "41d50124be5f54c0240aa906644a211fe463c9835d2e42abdb1574bc441d23ae",
+      "sha256": "c747f16d333c7ce6009847e9d61ab4b34bca3acf70126eecf1c9a2940fe31e6a",
       "heightRange": [
         198,
         207
@@ -211,7 +211,7 @@
       "x": 2,
       "y": 6,
       "path": "chunks/2_6.pxwc.gz",
-      "sha256": "99aa2d15376864477f95bbf5dff1f58385e55b6c965aeb1b435fad0aff8ec93c",
+      "sha256": "aea9ccc5a9095bc1bdfc68bffc23d5b4ac6d847a2dd2338ae3019a1f10e4298b",
       "heightRange": [
         195,
         200
@@ -266,10 +266,24 @@
     }
   ],
   "roadClasses": {
-    "1": "secondary",
-    "2": "primary",
-    "3": "trunk",
-    "4": "motorway"
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
   },
   "geology": {
     "0": "basin-and-range",
@@ -292,7 +306,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "4e12711cd6d4e70a",
+      "region": "38206240a08d7067",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -306,8 +320,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "8c91cb4117f33f01390ac6696ea3c58f11e322e032fc02edf1f0876161d23c9d",
-    "count": 8911
+    "sha256": "7358bf7c96b2c61852dbc905ce9e5054e65859117f9e0a1699cfa71fc262a584",
+    "count": 7804
   },
   "depiction": {
     "heightStretch": 1.0
@@ -339,5 +353,5 @@
     ],
     "sha256": "6ebd18be6a34c66ad3335e7ef5832d63228ccd5911ffce709a3da33a14865af3"
   },
-  "packageHash": "8af27e087f4983e1832f11f74a7a54653eebc54df479a63dbb80f74eaab1e8ee"
+  "packageHash": "684f387452445f12428387039b57796a897c24629096d3dfbc4fe023d289dce6"
 }

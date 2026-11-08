@@ -56,7 +56,8 @@ The Southwest's other scale levels, built from [`fly.yaml`](../worlds/southwest/
   - **Generalization:** motorways and trunks only.
   - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam).
 - **southwest-walk:** the Las Vegas Strip at a uniform 20 m per cell, with 4×4 micro-cells from the 10 m DEM.
-  - **Size:** 182×412 cells, 0.52 MB.
+  - **Size:** 182×412 cells, 0.60 MB.
+  - **Ways:** every street class (no parking aisles or driveways) plus the pedestrian network (sidewalks, crosswalks, footways and more), drawn at real width (D-050).
   - **Objects:** every building footprint, trees, palms and the two Strip landmarks, at true proportions (`heightStretch` 1).
   - **Roads:** snapping (D-049) gives a clean road report: one network, no split segments, no disconnected junctions. The M1.5 Strip experiment it's built from has one split segment and two disconnected junctions at 20 m cells.
 
