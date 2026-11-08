@@ -75,6 +75,10 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const geolS = section("GEOL", 1, false);
   const vrefS = section("VREF", 2, false);
   const vfacS = section("VFAC", 2, false);
+  const rwidS = section("RWID", 1, false);
+  const pathS = section("PATH", 2, false);
+  const pclsS = section("PCLS", 1, false);
+  const pwidS = section("PWID", 1, false);
   const micro = decodeMicro(view, sections.get("MHGT"), size);
 
   const base = new Int16Array(n);
@@ -91,6 +95,11 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
     s ? new Uint8Array(buffer.slice(s.offset, s.offset + n)) : new Uint8Array(n);
   const roadClass = bytesOf(rclsS);
   const geology = bytesOf(geolS);
+  const roadWidth = bytesOf(rwidS);
+  const path = new Uint16Array(n);
+  if (pathS) for (let i = 0; i < n; i++) path[i] = view.getUint16(pathS.offset + i * 2, true);
+  const pathClass = bytesOf(pclsS);
+  const pathWidth = bytesOf(pwidS);
   const shape = new Uint8Array(buffer.slice(shapeS.offset, shapeS.offset + n));
   const surface = new Uint8Array(buffer.slice(surfS.offset, surfS.offset + n));
   if (version === 0) {
@@ -107,7 +116,22 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
     x,
     y,
     size,
-    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology, vref, vfac, micro }),
+    terrain: new TerrainGrid(size, size, {
+      base,
+      shape,
+      surface,
+      water,
+      road,
+      roadClass,
+      geology,
+      vref,
+      vfac,
+      roadWidth,
+      path,
+      pathClass,
+      pathWidth,
+      micro,
+    }),
   };
 }
 
@@ -179,6 +203,10 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.geology)) payloads.push(["GEOL", terrain.geology.slice()]);
   if (any(terrain.vref)) payloads.push(["VREF", i16(terrain.vref)]);
   if (terrain.vfac.some((v) => v !== VFAC_ONE)) payloads.push(["VFAC", i16(terrain.vfac)]);
+  if (any(terrain.roadWidth)) payloads.push(["RWID", terrain.roadWidth.slice()]);
+  if (any(terrain.path)) payloads.push(["PATH", u16(terrain.path)]);
+  if (any(terrain.pathClass)) payloads.push(["PCLS", terrain.pathClass.slice()]);
+  if (any(terrain.pathWidth)) payloads.push(["PWID", terrain.pathWidth.slice()]);
   if (terrain.micro) payloads.push(["MHGT", encodeMicro(terrain.micro, size)]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;

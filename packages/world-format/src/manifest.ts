@@ -52,6 +52,8 @@ export interface WorldManifest {
   start?: { x: number; y: number };
   /** Road class id (as string key) → class name, for the RCLS layer. */
   roadClasses?: Record<string, string>;
+  /** Path class id (as string key) → class name, for the PCLS layer (D-050). */
+  pathClasses?: Record<string, string>;
   /** Geology province id (as string key) → province name, for the GEOL layer. */
   geology?: Record<string, string>;
   /** SHA-256 over the manifest content and every chunk; identical for identical builds. */

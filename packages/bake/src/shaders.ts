@@ -120,9 +120,14 @@ uniform vec4 uStrataMin[16];     // 4 sets × 16 bands of lower bounds (steps)
 uniform ivec4 uStrataRamp[16];
 uniform ivec4 uStrataCount;
 uniform ivec4 uProvinceSet[4];   // geology id → strata set
-uniform vec4 uRoads[16];         // per road class: half width (cells), centre line
+uniform vec4 uRoads[16];         // per road class: half width (cells), centre line, ramp (-1 asphalt)
 uniform int uAsphaltRamp;
 uniform int uMarkingRamp;
+#ifdef FIELD_WAYS
+uniform isampler2D uFieldWays;   // W × H: road mask, class | half-width << 8, path mask, class | half-width << 8
+uniform int uWayReach;           // cells a road or path can reach beyond its own; 0 = style widths
+uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
+#endif
 
 out vec4 oG;
 
@@ -168,6 +173,62 @@ float roadDistance(vec2 local, int mask) {
   return d;
 }
 
+#ifdef FIELD_WAYS
+// Real widths (D-050): a road or path can be wider than its cells, so look at
+// the cells within reach and take the nearest way (relative to its half-width)
+// that covers this point. Roads are at least the style's width for their class.
+// Paths (sidewalks, crosswalks) draw over roads.
+void waysDecal(inout int ramp, inout int pattern) {
+  ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
+  float roadBest = 2.0;
+  float roadD = 0.0;
+  int roadCls = 0;
+  float pathBest = 2.0;
+  int pathCls = 0;
+  int reach = min(uWayReach, 3);
+  for (int dy = -reach; dy <= reach; dy++) {
+    for (int dx = -reach; dx <= reach; dx++) {
+      ivec2 c = own + ivec2(dx, dy);
+      if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
+      ivec4 w = texelFetch(uFieldWays, c, 0);
+      if (w.x == 0 && w.z == 0) continue;
+      vec2 local = vGrid - vec2(uSliceOrigin + c);
+      // a way's strips stay inside its cell: skip cells further than its half-width
+      float gap = length(max(max(-local, local - 1.0), 0.0));
+      if (w.x != 0) {
+        int cls = w.y & 255;
+        // never narrower than the style's width for the class: coarse maps keep
+        // their road hierarchy, fine ones grow roads to their real width
+        float hw = max(float(w.y >> 8) / 32.0, uRoads[cls].x);
+        if (gap <= hw) {
+          // centre-to-neighbour strips only: crossing flags would extend past the cell
+          float d = roadDistance(local, w.x & 255);
+          if (d <= hw && d / hw < roadBest) { roadBest = d / hw; roadD = d; roadCls = cls; }
+        }
+      }
+      if (w.z != 0) {
+        float hw = float(w.w >> 8) / 32.0;
+        if (hw > 0.0 && gap <= hw) {
+          float d = roadDistance(local, w.z & 255);
+          if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; }
+        }
+      }
+    }
+  }
+  if (pathCls > 0 && uPaths[pathCls].x >= 0.0) {
+    vec4 pc = uPaths[pathCls];
+    ivec2 ap = ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin);
+    bool gap = pc.y > 0.5 && ((ap.x >> 1) & 1) == 1;  // 2 px zebra stripes
+    ramp = gap ? uAsphaltRamp : int(pc.x);
+    pattern = 0;
+  } else if (roadCls > 0) {
+    vec4 rc = uRoads[roadCls];
+    ramp = (rc.y > 0.5 && roadD * uScale < 0.022) ? uMarkingRamp : (rc.z >= 0.0 ? int(rc.z) : uAsphaltRamp);
+    pattern = 0;
+  }
+}
+#endif
+
 int strataRampAt(int set, float h, out float above) {
   int count = uStrataCount[set];
   int last = set * 16 + count - 1;
@@ -204,7 +265,14 @@ void main() {
 
   // Road decal on top faces.
   int roadMask = int(vRoad.x + 0.5);
-  if (roadMask != 0 && !vertical && mat < 100) {
+  bool realWidths = false;
+#ifdef FIELD_WAYS
+  if (uWayReach > 0) {
+    realWidths = true;
+    if (!vertical && mat < 100) waysDecal(ramp, pattern);
+  }
+#endif
+  if (!realWidths && roadMask != 0 && !vertical && mat < 100) {
     vec4 rc = uRoads[int(vRoad.y + 0.5)];
     if (rc.x > 0.0) {
       float d = roadDistance(vGrid - vCell, roadMask);
@@ -666,3 +734,13 @@ void main() {
   o = vec4(1.0 - sumLo / 8.0, 1.0 - sumHi / 8.0, 0.0, 1.0);
 }
 `;
+
+/**
+ * G-buffer fragment shader for micro-terrain fields: the same as GBUFFER_FS,
+ * plus the field textures, so roads and paths can be drawn at their real
+ * widths across neighbouring cells (D-050).
+ */
+export const FIELD_GBUFFER_FS = GBUFFER_FS.replace(
+  "precision highp sampler2D;\n",
+  "precision highp sampler2D;\n#define FIELD_WAYS 1\n" + FIELD_COMMON,
+);

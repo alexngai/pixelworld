@@ -19,6 +19,18 @@ export interface TerrainField {
   cells: Int16Array;
   /** Per cell: relief reference (1/16 steps) and inverse factor (1/4096), 2 per cell. */
   vmap: Int16Array;
+  /**
+   * Per cell (D-050), everything the road and path decal needs in one texel:
+   * road mask, road class | half-width << 8, path mask, path class |
+   * half-width << 8 (half-widths in 1/32 cell, at most 127; 0 = style width).
+   */
+  ways: Int16Array;
+  /**
+   * How many cells a road or path can reach beyond its own (the widest
+   * half-width, rounded up), so the shader knows how far to look. 0 when the
+   * world has no real widths: roads keep the style's fixed in-cell decal.
+   */
+  wayReach: number;
   /** Height (steps) that world-edge skirts reach down to. */
   floor: number;
   /** World size in cells: skirts are drawn only at real world edges. */
@@ -91,6 +103,17 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
   const n = grid.width * grid.height;
   const cells = new Int16Array(n * 4);
   const vmap = new Int16Array(n * 2);
+  const ways = new Int16Array(n * 4);
+  let widest = 0;
+  for (let i = 0; i < n; i++) {
+    const rw = Math.min(127, grid.roadWidth[i]!);
+    const pw = Math.min(127, grid.pathWidth[i]!);
+    ways[i * 4] = grid.road[i]! & 0x0fff;
+    ways[i * 4 + 1] = grid.roadClass[i]! | (rw << 8);
+    ways[i * 4 + 2] = grid.path[i]! & 0x0fff;
+    ways[i * 4 + 3] = grid.pathClass[i]! | (pw << 8);
+    widest = Math.max(widest, rw, pw);
+  }
   for (let i = 0; i < n; i++) {
     vmap[i * 2] = grid.vref[i]!;
     vmap[i * 2 + 1] = grid.vfac[i]!;
@@ -109,6 +132,8 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     corners,
     cells,
     vmap,
+    ways,
+    wayReach: widest > 0 ? Math.ceil(widest / 32) : 0,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],

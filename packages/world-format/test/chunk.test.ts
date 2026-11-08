@@ -82,6 +82,24 @@ describe("chunk codec", () => {
     expect(Array.from(c.terrain.water)).toEqual([NO_WATER, NO_WATER, NO_WATER, NO_WATER]);
   });
 
+  it("round-trips real widths and the path network (D-050)", () => {
+    const grid = new TerrainGrid(4, 4);
+    grid.roadWidth[5] = 40;
+    grid.path[6] = 0b1000_0100;
+    grid.pathClass[6] = 3;
+    grid.pathWidth[6] = 7;
+    const bytes = new Uint8Array(encodeChunk({ x: 1, y: 2, size: 4, terrain: grid }));
+    const tags = new TextDecoder().decode(bytes);
+    for (const tag of ["RWID", "PATH", "PCLS", "PWID"]) expect(tags).toContain(tag);
+    const back = decodeChunk(bytes.buffer).terrain;
+    expect(back.roadWidth[5]).toBe(40);
+    expect(back.path[6]).toBe(0b1000_0100);
+    expect(back.pathClass[6]).toBe(3);
+    expect(back.pathWidth[6]).toBe(7);
+    const plain = new TextDecoder().decode(new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: new TerrainGrid(4, 4) })));
+    expect(plain).not.toContain("RWID");
+  });
+
   it("rejects corrupt input", () => {
     const { buffer } = loadGolden("chunk-v1-small");
     const bad = buffer.slice(0);

@@ -25,6 +25,20 @@ describe("terrain fields", () => {
     expect(Array.from(f.cells.subarray(0, 4))).toEqual([3, 4, 2 | (1 << 8), -32768]);
   });
 
+  it("packs real widths and paths, and how far they reach (D-050)", () => {
+    const plain = buildTerrainField(stepGrid(), { offset: [0, 0], world: { width: 2, height: 1 } });
+    expect(plain.wayReach).toBe(0); // style widths: roads stay inside their cells
+    const g = stepGrid();
+    g.roadWidth.set([40, 0]); // 1.25 cells half-width
+    g.path.set([0, 0x0040]);
+    g.pathClass.set([0, 2]);
+    g.pathWidth.set([0, 5]);
+    const f = buildTerrainField(g, { offset: [0, 0], world: { width: 2, height: 1 } });
+    // road mask, class | width << 8, path mask, class | width << 8
+    expect(Array.from(f.ways)).toEqual([0x0004, 2 | (40 << 8), 0, 0, 0, 0, 0x0040, 2 | (5 << 8)]);
+    expect(f.wayReach).toBe(2);
+  });
+
   it("lists walls only where a micro-cell stands above its neighbour or at the world edge", () => {
     const f = buildTerrainField(stepGrid(), { offset: [0, 0], world: { width: 2, height: 1 }, floor: -2 });
     // west edges (3): micro-cells 2 and 3 (and 6, 7 in the second row) rise above their west neighbours,

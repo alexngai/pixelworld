@@ -37,8 +37,18 @@ export interface StrataBand {
 }
 
 export interface RoadClassStyle {
-  halfWidth: number; // in render units (cells at render scale 1)
+  /** Fixed half-width in render units, for worlds without real widths (D-050). */
+  halfWidth: number;
   centerLine: boolean;
+  /** Surface ramp; the style's asphalt if absent. */
+  ramp?: string;
+}
+
+/** A path class (footway, sidewalk, crosswalk, …), drawn at its real width (D-050). */
+export interface PathClassStyle {
+  ramp: string;
+  /** Alternate the ramp with asphalt in pixel stripes (crosswalks). */
+  stripes?: boolean;
 }
 
 export interface StylePack {
@@ -57,6 +67,7 @@ export interface StylePack {
   provinces?: Record<string, string>;
   surfaces: Record<string, SurfaceStyle>;
   roads?: { asphalt: string; marking: string; classes: Record<string, RoadClassStyle> };
+  paths?: { classes: Record<string, PathClassStyle> };
   /** Semantic asset groups → generator, role ramps and parameters (D-030). */
   assets?: Record<string, AssetStyle>;
   /**
@@ -136,7 +147,11 @@ export function validateStyle(style: StylePack): StylePack {
   if (style.roads) {
     for (const r of [style.roads.asphalt, style.roads.marking])
       if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
+    for (const [name, c] of Object.entries(style.roads.classes))
+      if (c.ramp && !(c.ramp in style.ramps)) throw new StyleError(`road class ${name} uses undefined ramp ${c.ramp}`);
   }
+  for (const [name, c] of Object.entries(style.paths?.classes ?? {}))
+    if (!(c.ramp in style.ramps)) throw new StyleError(`path class ${name} uses undefined ramp ${c.ramp}`);
   for (const [group, a] of Object.entries(style.assets ?? {}))
     for (const [role, ramp] of Object.entries(a.ramps))
       if (!(ramp in style.ramps)) throw new StyleError(`asset ${group} role ${role} uses undefined ramp ${ramp}`);
@@ -202,6 +217,8 @@ export interface WorldVocabulary {
   surfaces: Record<string, string>;
   /** Road class id → name. */
   roadClasses?: Record<string, string>;
+  /** Path class id → name (D-050). */
+  pathClasses?: Record<string, string>;
   /** Geology province id → name. */
   geology?: Record<string, string>;
 }
@@ -219,8 +236,10 @@ export interface MaterialTables {
   strataCount: Int32Array;
   /** Geology province id → strata set index. */
   provinceSet: Int32Array;
-  /** Per road class id: (half width in cells, centre line 0/1, 0, 0). */
+  /** Per road class id: (half width in cells, centre line 0/1, ramp or -1 for asphalt, 0). */
   roads: Float32Array;
+  /** Per path class id: (ramp or -1 if unstyled, stripes 0/1, 0, 0). */
+  paths: Float32Array;
   asphaltRamp: number;
   markingRamp: number;
 }
@@ -240,6 +259,7 @@ export function materialTables(
     strataCount: new Int32Array(MAX_STRATA_SETS),
     provinceSet: new Int32Array(MAX_PROVINCES),
     roads: new Float32Array(MAX_ROAD_CLASSES * 4),
+    paths: new Float32Array(MAX_ROAD_CLASSES * 4).fill(-1),
     asphaltRamp: palette.rampIds.get(style.roads?.asphalt ?? "") ?? 0,
     markingRamp: palette.rampIds.get(style.roads?.marking ?? "") ?? 0,
   };
@@ -274,7 +294,15 @@ export function materialTables(
   for (const [id, cls] of Object.entries(world.roadClasses ?? {})) {
     const r = style.roads?.classes[cls];
     // Widths are in render units; on fine worlds a road fills at most its own cells.
-    if (r) t.roads.set([Math.min(0.5, r.halfWidth / renderScale), r.centerLine ? 1 : 0, 0, 0], Number(id) * 4);
+    if (r)
+      t.roads.set(
+        [Math.min(0.5, r.halfWidth / renderScale), r.centerLine ? 1 : 0, r.ramp ? ramp(r.ramp) : -1, 0],
+        Number(id) * 4,
+      );
+  }
+  for (const [id, cls] of Object.entries(world.pathClasses ?? {})) {
+    const c = style.paths?.classes[cls];
+    if (c) t.paths.set([ramp(c.ramp), c.stripes ? 1 : 0, 0, 0], Number(id) * 4);
   }
   return t;
 }

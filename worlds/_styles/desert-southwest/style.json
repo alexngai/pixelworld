@@ -100,7 +100,23 @@
       "motorway": { "halfWidth": 0.2, "centerLine": true },
       "trunk": { "halfWidth": 0.17, "centerLine": true },
       "primary": { "halfWidth": 0.1, "centerLine": false },
-      "secondary": { "halfWidth": 0.07, "centerLine": false }
+      "secondary": { "halfWidth": 0.07, "centerLine": false },
+      "tertiary": { "halfWidth": 0.06, "centerLine": false },
+      "residential": { "halfWidth": 0.05, "centerLine": false },
+      "unclassified": { "halfWidth": 0.05, "centerLine": false },
+      "living_street": { "halfWidth": 0.04, "centerLine": false },
+      "service": { "halfWidth": 0.04, "centerLine": false }
+    }
+  },
+  "paths": {
+    "classes": {
+      "sidewalk": { "ramp": "concrete" },
+      "footway": { "ramp": "concrete" },
+      "pedestrian": { "ramp": "concrete" },
+      "steps": { "ramp": "concrete" },
+      "crosswalk": { "ramp": "concrete", "stripes": true },
+      "cycleway": { "ramp": "concrete" },
+      "path": { "ramp": "sand" }
     }
   },
   "objects": {

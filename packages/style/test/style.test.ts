@@ -58,6 +58,18 @@ describe("desert-southwest style pack", () => {
     expect(t.asphaltRamp).toBe(p.rampIds.get("asphalt"));
   });
 
+  it("builds path tables: a ramp per class, stripes for crosswalks", () => {
+    const p = buildPalette(style);
+    const vocab = { surfaces: {}, pathClasses: { "1": "footway", "3": "crosswalk", "4": "unknown" } };
+    const t = materialTables(style, p, vocab, (m) => m);
+    expect(t.paths[1 * 4]).toBe(p.rampIds.get("concrete"));
+    expect(t.paths[1 * 4 + 1]).toBe(0);
+    expect(t.paths[3 * 4]).toBe(p.rampIds.get("concrete"));
+    expect(t.paths[3 * 4 + 1]).toBe(1);
+    expect(t.paths[4 * 4]).toBe(-1); // a class the style doesn't know stays undrawn
+    expect(t.roads[4 * 4 + 2]).toBe(0); // no world road classes → empty table
+  });
+
   it("keeps road widths in pixels on fine worlds, at most a cell wide", () => {
     const p = buildPalette(style);
     const vocab = { surfaces: {}, roadClasses: { "4": "motorway", "1": "secondary" } };

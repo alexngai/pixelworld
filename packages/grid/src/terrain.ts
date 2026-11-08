@@ -200,6 +200,15 @@ export interface TerrainLayers {
    */
   vref: Int16Array;
   vfac: Int16Array;
+  /**
+   * Real widths (D-050): half-width of the widest road through the cell, in
+   * 1/32 cell (0 = the style's fixed width). Paths (footways, sidewalks,
+   * crosswalks) are a network of their own, encoded like roads.
+   */
+  roadWidth: Uint8Array;
+  path: Uint16Array;
+  pathClass: Uint8Array;
+  pathWidth: Uint8Array;
 }
 
 /** VFAC value meaning "no relief exaggeration". */
@@ -266,6 +275,10 @@ export function copyCells(
       b.geology[di] = a.geology[si]!;
       b.vref[di] = a.vref[si]!;
       b.vfac[di] = a.vfac[si]!;
+      b.roadWidth[di] = a.roadWidth[si]!;
+      b.path[di] = a.path[si]!;
+      b.pathClass[di] = a.pathClass[si]!;
+      b.pathWidth[di] = a.pathWidth[si]!;
     }
   }
   const ma = src.micro;
@@ -303,6 +316,11 @@ export class TerrainGrid {
   /** Vertical caricature mapping (see TerrainLayers). */
   readonly vref: Int16Array;
   readonly vfac: Int16Array;
+  /** Real road widths and the path network (see TerrainLayers). */
+  readonly roadWidth: Uint8Array;
+  readonly path: Uint16Array;
+  readonly pathClass: Uint8Array;
+  readonly pathWidth: Uint8Array;
   /** Micro-terrain, or null for cell-only terrain. */
   readonly micro: MicroLayers | null;
 
@@ -321,6 +339,10 @@ export class TerrainGrid {
     this.geology = layers?.geology ?? new Uint8Array(n);
     this.vref = layers?.vref ?? new Int16Array(n);
     this.vfac = layers?.vfac ?? new Int16Array(n).fill(VFAC_ONE);
+    this.roadWidth = layers?.roadWidth ?? new Uint8Array(n);
+    this.path = layers?.path ?? new Uint16Array(n);
+    this.pathClass = layers?.pathClass ?? new Uint8Array(n);
+    this.pathWidth = layers?.pathWidth ?? new Uint8Array(n);
     for (const [name, arr] of Object.entries(this.layers())) {
       if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
     }
@@ -352,6 +374,10 @@ export class TerrainGrid {
       geology: this.geology,
       vref: this.vref,
       vfac: this.vfac,
+      roadWidth: this.roadWidth,
+      path: this.path,
+      pathClass: this.pathClass,
+      pathWidth: this.pathWidth,
     };
   }
 
