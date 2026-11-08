@@ -143,6 +143,31 @@ describe("San Francisco towers", () => {
     expect(names.has("paint-sky") || names.has("bridge-grey")).toBe(true);
   });
 
+  it("puts windows on faces turned 45° (the grid south of Market), and never steps a round tower back", () => {
+    const diamond = diamondMask(14);
+    for (const group of GROUPS)
+      for (let seed = 1; seed <= 6; seed++) {
+        const m = generateModel(style.assets, rampIds, group, { seed, mask: diamond, heightVox: 80 });
+        let glass = 0;
+        for (let z = 12; z < 60; z++)
+          for (let k = 0; k <= 14; k++) {
+            const v = m.get(14 + k, 28 - k, z); // the southeast face
+            if (v && glassRamps.has(rampName.get(m.materials[v]!)!)) glass++;
+          }
+        expect(glass, `${group} seed ${seed}`).toBeGreaterThan(30);
+      }
+    // a round footprint keeps its width to the top of its body
+    const r = 12;
+    const on = new Uint8Array((2 * r + 1) ** 2);
+    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) on[y * (2 * r + 1) + x] = Math.hypot(x - r, y - r) <= r + 0.3 ? 1 : 0;
+    const round = { sx: 2 * r + 1, sy: 2 * r + 1, on };
+    for (const group of ["building.tower.deco", "building.tower.postmodern"])
+      for (let seed = 1; seed <= 8; seed++) {
+        const m = generateModel(style.assets, rampIds, group, { seed, mask: round, heightVox: 120 });
+        expect(widthAt(m, r, 100), `${group} seed ${seed}`).toBeGreaterThanOrEqual(widthAt(m, r, 20) - 2);
+      }
+  });
+
   it("keeps the desert's generic towers on the building generator", () => {
     const desert = JSON.parse(
       readFileSync(fileURLToPath(new URL("../../../worlds/_styles/desert-southwest/style.json", import.meta.url)), "utf8"),

@@ -45,6 +45,31 @@ export function footprintDepth(mask: Mask): { depth: Int16Array; maxDepth: numbe
   return { depth, maxDepth };
 }
 
+/**
+ * Whether a footprint is round (a rasterized circle or octagon): much of its
+ * outline steps diagonally, but not all of it (a footprint turned 45° steps
+ * everywhere), and it is about as wide as deep. Round towers don't step back:
+ * a stepped drum reads as a different city's landmark.
+ */
+function isRound(mask: Mask): boolean {
+  const { sx, sy, on } = mask;
+  const inM = (x: number, y: number) => x >= 0 && y >= 0 && x < sx && y < sy && on[y * sx + x] === 1;
+  let skin = 0;
+  let diag = 0;
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++) {
+      if (!inM(x, y)) continue;
+      const nx = (inM(x + 1, y) ? 0 : 1) - (inM(x - 1, y) ? 0 : 1);
+      const ny = (inM(x, y + 1) ? 0 : 1) - (inM(x, y - 1) ? 0 : 1);
+      const open = !inM(x + 1, y) || !inM(x - 1, y) || !inM(x, y + 1) || !inM(x, y - 1);
+      if (!open) continue;
+      skin++;
+      if (nx !== 0 && ny !== 0 && (inM(x + ny, y - nx) || inM(x - ny, y + nx))) diag++;
+    }
+  const share = diag / Math.max(1, skin);
+  return share > 0.2 && share < 0.8 && sx < sy * 1.34 && sy < sx * 1.34;
+}
+
 /** A rectangle for a tower with no footprint (a point landmark): width and depth over its height. */
 function boxMask(H: number, width: number, depth: number): Mask {
   const sx = Math.max(5, Math.round(H * width));
@@ -154,6 +179,8 @@ interface Skin {
   ny: number;
   /** On a corner (open on two sides) or a wall one voxel thick. */
   corner: boolean;
+  /** A step of a diagonal face (open on two sides, the face running on past it): windows, but no recess. */
+  diagonal: boolean;
   /** Position along its face. */
   along: number;
   /** The top of its column at this setback (a terrace or the roof is above it). */
@@ -180,12 +207,13 @@ interface TowerSpec {
   parapet?: (s: Skin) => number[];
 }
 
-/** Fill a tower's massing, dress its skin and terraces; returns the highest solid z. */
+/** Fill a tower's massing, then dress its skin and terraces. */
 function drawTower(m: VoxelModel, t: TowerSpec): void {
   const { sx, sy, on } = t.mask;
   const inM = (x: number, y: number) => x >= 0 && y >= 0 && x < sx && y < sy && on[y * sx + x] === 1;
   const kept = (x: number, y: number, z: number) => inM(x, y) && z < t.top(x, y) && t.depth[y * sx + x]! > t.inset(z);
   const terraces: { s: Skin; stack: number[] }[] = [];
+  const recesses = new Map<number, [number, number]>(); // an open skin voxel → the column behind it
   // the massing and its roofs
   for (let y = 0; y < sy; y++)
     for (let x = 0; x < sx; x++) {
@@ -207,25 +235,35 @@ function drawTower(m: VoxelModel, t: TowerSpec): void {
         if (!(ox0 || ox1 || oy0 || oy1)) continue;
         const nx = (ox1 ? 1 : 0) - (ox0 ? 1 : 0);
         const ny = (oy1 ? 1 : 0) - (oy0 ? 1 : 0);
-        const corner = (ox0 || ox1) && (oy0 || oy1);
-        const s: Skin = { x, y, z, nx, ny, corner: corner || (nx === 0 && ny === 0), along: nx !== 0 ? y : x, last: !kept(x, y, z + 1) };
+        const open2 = (ox0 || ox1) && (oy0 || oy1);
+        // open on one x and one y side: a corner, unless the face runs on along the diagonal
+        const diagonal = open2 && nx !== 0 && ny !== 0 && (kept(x + ny, y - nx, z) || kept(x - ny, y + nx, z));
+        const corner = (open2 && !diagonal) || (nx === 0 && ny === 0);
+        const s: Skin = { x, y, z, nx, ny, corner, diagonal, along: nx !== 0 && !diagonal ? y : x, last: !kept(x, y, z + 1) };
         const f = t.face(s);
         const ix = x - nx;
         const iy = y - ny;
         // a recess needs a column behind it that stays inside the walls at this height
-        const deep = f.recess !== undefined && !s.corner && inM(ix, iy) && t.depth[iy * sx + ix]! > t.inset(z) + 1 && z < t.top(ix, iy);
+        const deep =
+          f.recess !== undefined && !s.corner && !s.diagonal && inM(ix, iy) && t.depth[iy * sx + ix]! > t.inset(z) + 1 && z < t.top(ix, iy);
         if (deep) {
           m.set(x, y, z, 0);
           m.set(ix, iy, z, f.recess!);
+          recesses.set((z * sy + y) * sx + x, [ix, iy]);
         } else m.set(x, y, z, f.mat);
         if (s.last && t.parapet) terraces.push({ s, stack: t.parapet(s) });
       }
     }
-  // no overhangs: an open recess under a solid voxel is closed again (top down, so runs close whole)
+  // no overhangs: an open recess under a solid voxel is closed again (top down, so runs close
+  // whole), and what was set behind it goes back to the inside
   for (let z = m.sz - 2; z >= 0; z--)
     for (let y = 0; y < sy; y++)
       for (let x = 0; x < sx; x++)
-        if (!m.get(x, y, z) && m.get(x, y, z + 1) && kept(x, y, z)) m.set(x, y, z, m.get(x, y, z + 1));
+        if (!m.get(x, y, z) && m.get(x, y, z + 1) && kept(x, y, z)) {
+          m.set(x, y, z, m.get(x, y, z + 1));
+          const behind = recesses.get((z * sy + y) * sx + x);
+          if (behind) m.set(behind[0], behind[1], z, t.interior(z, false));
+        }
   for (const { s, stack } of terraces) {
     if (!m.get(s.x, s.y, s.z)) continue; // parapets stand on piers, not on open bays
     stack.forEach((mat, k) => {
@@ -297,9 +335,11 @@ const decoTower: Generator = (ctx) => {
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const P = param("piers", 0) >= 2 ? Math.round(param("piers", 0)) : rand() < 0.6 ? 2 : 3;
-  const crownKind = param("crown", -1) >= 0 ? Math.round(param("crown", -1)) : Math.floor(rand() * 3);
+  const round = isRound(mask);
+  let crownKind = param("crown", -1) >= 0 ? Math.round(param("crown", -1)) : Math.floor(rand() * 3);
+  if (round && crownKind === 0) crownKind = 1; // no stepped drums
   const baseH = Math.min(Math.max(3, fh * 2), Math.round(H / 4));
-  const steps = setbacks(rand, H, half, fh, Math.round(param("setbacks", rand() < 0.75 ? 2 : 1)));
+  const steps = setbacks(rand, H, half, fh, round ? 0 : Math.round(param("setbacks", rand() < 0.75 ? 2 : 1)));
   const body = insetFrom(steps);
   // the crown: the top storeys, stepping in (stepped), straight with pinnacles, or a lantern
   const kBody = body(H - 1);
@@ -410,7 +450,7 @@ function graniteTower(ctx: GenContext, mask0: Mask, H: number): VoxelModel {
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const baseH = Math.min(fh * 2, Math.round(H / 5));
-  const steps = rand() < 0.4 ? setbacks(rand, H, half, fh, 1, 0.75) : [];
+  const steps = rand() < 0.4 && !isRound(mask) ? setbacks(rand, H, half, fh, 1, 0.75) : [];
   drawTower(m, {
     mask,
     depth,
@@ -437,10 +477,12 @@ function postmodernTower(ctx: GenContext, mask: Mask, H: number): VoxelModel {
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const baseH = Math.min(fh * 2, Math.round(H / 5));
-  const steps = setbacks(rand, H, half, fh, 2, 0.62);
+  const round = isRound(mask);
+  const steps = setbacks(rand, H, half, fh, round ? 0 : 2, 0.62);
   const body = insetFrom(steps);
   const kTop = body(H - 1);
-  const crown = hints?.roof === "pyramidal" ? 0 : Math.floor(rand() * 3); // 0 pyramid, 1 steps, 2 spire
+  let crown = hints?.roof === "pyramidal" ? 0 : Math.floor(rand() * 3); // 0 pyramid, 1 steps, 2 spire
+  if (round && crown === 1) crown = 2;
   const room = half - kTop;
   const capH = room >= 2 ? (crown === 0 ? Math.min(room, Math.round(H * 0.18)) : crown === 1 ? Math.min(room - 1, 3) * 2 : 0) : 0;
   const Htot = H + capH;
@@ -484,7 +526,8 @@ function glassTower(ctx: GenContext, mask: Mask, H: number): VoxelModel {
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const baseH = Math.min(fh * 2, Math.round(H / 5));
-  const crown = Math.floor(rand() * 4); // 0 sloped, 1 stepped, 2 fin screen, 3 spire
+  let crown = Math.floor(rand() * 4); // 0 sloped, 1 stepped, 2 fin screen, 3 spire
+  if (crown === 1 && isRound(mask)) crown = 3;
   const M = rand() < 0.5 ? 3 : 4; // mullion spacing
   // sloped top: the roof falls across the plan, along x or y
   const slopeH = crown === 0 ? Math.max(2, Math.round(H * 0.1)) : 0;
