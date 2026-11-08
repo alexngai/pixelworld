@@ -1,5 +1,5 @@
 {
-  "packageHash": "6ffc888784ba1e99099be01b5f1b4e9838d17ad220c5377935c6b5a83a9e311c",
+  "packageHash": "b3a4ea748ba7280498c762f1b5806af18fccd017181f1ea5391245dc86c0e0df",
   "cells": [
     339,
     219
@@ -57,13 +57,17 @@
     "solveSeconds": 14.882
   },
   "objects": {
-    "building.commercial": 10,
-    "building.tower": 38,
-    "building.tower.hotel": 4,
+    "building.commercial": 9,
+    "building.tower": 37,
+    "building.tower.hotel": 2,
+    "landmark.bridge.arch": 1,
     "landmark.dam": 1,
+    "landmark.dam.intake": 4,
     "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
     "landmark.tower.lookout": 1,
-    "landmark.tower.observation": 1
+    "landmark.tower.observation": 1,
+    "landmark.wheel": 1
   },
   "roads": {
     "cells": 2019,

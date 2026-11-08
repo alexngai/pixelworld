@@ -51,7 +51,8 @@
     "tower-gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
     "concrete": ["#2a2a31", "#45444b", "#64626a", "#86838a", "#a7a3a7", "#c6c2c2"],
     "neon-pink": ["#2a1023", "#4d1836", "#7a2148", "#a62c5b", "#cc4171", "#e8638c"],
-    "neon-cyan": ["#0e2028", "#14363d", "#1b5052", "#226b68", "#2e8780", "#46a39a"]
+    "neon-cyan": ["#0e2028", "#14363d", "#1b5052", "#226b68", "#2e8780", "#46a39a"],
+    "iron": ["#241d1c", "#382c28", "#4e3e35", "#665244", "#806853", "#9c8066"]
   },
   "strataSets": {
     "grand-canyon": [
@@ -203,6 +204,22 @@
     "landmark.sign": {
       "generator": "sign",
       "ramps": { "panel": "tower-white", "neon": "neon-pink", "post": "concrete" }
+    },
+    "landmark.tower.lattice": {
+      "generator": "latticeTower",
+      "ramps": { "structure": "iron", "deck": "iron", "accent": "lit" }
+    },
+    "landmark.wheel": {
+      "generator": "wheel",
+      "ramps": { "structure": "tower-white", "cabin": "lit-cool", "accent": "neon-cyan" }
+    },
+    "landmark.bridge.arch": {
+      "generator": "archBridge",
+      "ramps": { "structure": "concrete", "deck": "roof-flat", "detail": "limestone" }
+    },
+    "landmark.dam.intake": {
+      "generator": "intakeTower",
+      "ramps": { "structure": "concrete", "detail": "limestone", "crest": "roof-flat" }
     }
   },
   "night": {

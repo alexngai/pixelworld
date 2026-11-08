@@ -17,7 +17,7 @@ export interface ObjectInstance {
   y: number;
   /** Seed: picks the variant and drives the generator. */
   s: number;
-  /** Quarter turns (vegetation only). */
+  /** Quarter turns (vegetation, and landmarks without a footprint). */
   r?: number;
   /** Footprint polygon in world cells (buildings). */
   fp?: [number, number][];
@@ -27,6 +27,13 @@ export interface ObjectInstance {
   m?: number;
   /** Absolute top height in steps (dam crests), overriding hm. */
   top?: number;
+  /** Overture roof shape (buildings, M3): flat, pyramidal, dome, hipped, gabled, … */
+  rs?: string;
+  /** Overture facade material, e.g. glass (buildings, M3). */
+  fm?: string;
+  /** Overture facade / roof colour (#rrggbb), kept for later use. */
+  fc?: string;
+  rc?: string;
 }
 
 /** Style-pack entry for a group: generator name, role → ramp name, parameters. */
@@ -57,6 +64,8 @@ interface GenContext {
   mask?: { sx: number; sy: number; on: Uint8Array };
   /** Target height in voxels (buildings, landmarks). */
   heightVox?: number;
+  /** Shape hints from the data (buildings): Overture roof shape and facade material. */
+  hints?: { roof?: string; facade?: string };
 }
 
 type Generator = (ctx: GenContext) => VoxelModel;
@@ -129,59 +138,145 @@ const GENERATORS: Record<string, Generator> = {
     return m;
   },
 
-  /** Extruded footprint; `style` picks roof and facade treatment. */
-  building: ({ rand, ramp, ramps, param, mask, heightVox }) => {
+  /**
+   * Building v2 (M3): an extruded footprint with a roof, a facade pattern and
+   * rooftop details. `style` 0 residential, 1 low-rise, 2 tower. The roof comes
+   * from the data where Overture has one (pyramidal, dome, hipped, gabled),
+   * else from the style. Towers may step back near the top; facades pick a
+   * pattern by seed (punched windows, ribbons, fins, curtain wall).
+   */
+  building: ({ rand, ramp, ramps, param, mask, heightVox, hints }) => {
     if (!mask) throw new Error("building generator needs a footprint");
-    const style = param("style", 0); // 0 residential, 1 low-rise, 2 tower
+    const style = param("style", 0);
     const H = Math.max(1, Math.round(heightVox ?? param("defaultHeight", 2)));
-    const roofExtra = style === 0 ? Math.ceil(Math.min(mask.sx, mask.sy) / 2) : 2;
-    const m = new VoxelModel(mask.sx, mask.sy, H + roofExtra + 1);
+    const { sx, sy } = mask;
+    const on = (x: number, y: number) => x >= 0 && y >= 0 && x < sx && y < sy && mask.on[y * sx + x] === 1;
+    // depth: chessboard distance from outside (1 on the footprint's edge)
+    const depth = new Int16Array(sx * sy);
+    let maxDepth = 0;
+    for (let y = 0; y < sy; y++)
+      for (let x = 0; x < sx; x++) {
+        if (!on(x, y)) continue;
+        let d = 1;
+        while (d < 64) {
+          let ring = true;
+          for (let k = -d; k <= d && ring; k++)
+            if (!on(x + k, y - d) || !on(x + k, y + d) || !on(x - d, y + k) || !on(x + d, y + k)) ring = false;
+          if (!ring) break;
+          d++;
+        }
+        depth[y * sx + x] = d;
+        maxDepth = Math.max(maxDepth, d);
+      }
+    const roofShape = hints?.roof ?? (style === 0 ? "hipped" : "flat");
+    const glassFacade = hints?.facade === "glass";
+    // pitched roofs: the cap's height; a broad, low building with a pyramidal
+    // roof is a pyramid from the ground up
+    let capH = 0;
+    let pure = false;
+    if (roofShape === "pyramidal") {
+      pure = H <= 4 * maxDepth;
+      capH = pure ? H : Math.min(H - 1, Math.round(maxDepth * 2.5));
+    } else if (roofShape === "dome") capH = Math.min(H - 1, Math.round(maxDepth * 1.2));
+    else if (roofShape === "hipped" || roofShape === "half_hipped" || roofShape === "gabled")
+      capH = style === 0 ? Math.max(1, Math.ceil(maxDepth * 0.9)) : Math.min(H - 1, maxDepth);
+    const Hw = pure ? 0 : style === 0 ? H : H - (roofShape === "flat" ? 0 : capH);
+    const m = new VoxelModel(sx, sy, Math.max(H, Hw + capH) + 4);
     const walls = ramps("wall");
     const wall = m.material(walls[Math.floor(rand() * walls.length)]!);
     const roof = m.material(ramp("roof"));
     const window = m.material(ramp("window"));
-    // Lit windows look like glass by day and glow at night (emissive ramp).
     const litRamps = ramps("lit");
     const lit = litRamps.length ? m.material(litRamps[Math.floor(rand() * litRamps.length)]!) : window;
     const litFraction = param("litFraction", 0.35);
     const pane = () => (rand() < litFraction ? lit : window);
-    // Optional neon trim along the top of the walls (signature lighting).
     const trims = ramps("trim");
     const trim = trims.length ? m.material(trims[Math.floor(rand() * trims.length)]!) : wall;
-    const on = (x: number, y: number) => x >= 0 && y >= 0 && x < mask.sx && y < mask.sy && mask.on[y * mask.sx + x] === 1;
-    const edge = (x: number, y: number) => !on(x - 1, y) || !on(x + 1, y) || !on(x, y - 1) || !on(x, y + 1);
-    for (let y = 0; y < mask.sy; y++)
-      for (let x = 0; x < mask.sx; x++) {
+    // tower massing: up to two setbacks near the top
+    const setbacks: [number, number][] = [];
+    if (style === 2 && H >= 30 && maxDepth >= 3 && rand() < 0.6) {
+      setbacks.push([Math.round(Hw * (0.62 + rand() * 0.12)), 1]);
+      if (maxDepth >= 5 && rand() < 0.5) setbacks.push([Math.round(Hw * (0.84 + rand() * 0.06)), 2]);
+    }
+    const inset = (z: number) => setbacks.reduce((a, [z0, k]) => (z >= z0 ? k : a), 0);
+    const keep = (x: number, y: number, z: number) => depth[y * sx + x]! > inset(z);
+    const edgeAt = (x: number, y: number, z: number) =>
+      !(on(x - 1, y) && keep(x - 1, y, z)) || !(on(x + 1, y) && keep(x + 1, y, z)) ||
+      !(on(x, y - 1) && keep(x, y - 1, z)) || !(on(x, y + 1) && keep(x, y + 1, z));
+    // facade pattern (towers): punched windows, ribbons, fins or a curtain wall
+    const goldWall = walls.length > 1 && wall === m.material(walls[1]!);
+    const towerPattern = glassFacade || goldWall ? 3 : Math.floor(rand() * 3);
+    const big = sx * sy >= 64;
+    for (let y = 0; y < sy; y++)
+      for (let x = 0; x < sx; x++) {
         if (!on(x, y)) continue;
-        for (let z = 0; z < H; z++) {
+        for (let z = 0; z < Hw; z++) {
+          if (!keep(x, y, z)) continue;
           let mat = wall;
-          if (edge(x, y) && z > 0) {
-            if (style === 2 && z % 2 === 1 && (x + y) % 2 === 0) mat = pane();
-            if (style === 1 && z === Math.max(1, Math.floor(H / 2)) && (x + y) % 2 === 0) mat = pane();
-            if (style === 0 && z === 0) mat = wall;
+          if (edgeAt(x, y, z)) {
+            const c = x + y;
+            if (style === 2 && z > 0) {
+              if (towerPattern === 0 && z % 2 === 1 && c % 2 === 0) mat = pane();
+              else if (towerPattern === 1 && z % 2 === 1) mat = pane();
+              else if (towerPattern === 2 && c % 3 !== 0 && z % 4 !== 0) mat = pane();
+              else if (towerPattern === 3 && z % 6 !== 0) mat = pane();
+            } else if (style === 1) {
+              if (z === 0 && c % 3 !== 0 && big) mat = pane(); // storefronts
+              else if (z > 0 && z % 3 === 1 && c % 2 === 0) mat = pane();
+              else if (big && z === Hw - 1 && Hw >= 3) mat = trim; // a sign band, no lettering
+            } else if (style === 0 && z % 3 === 1 && c % 2 === 0) mat = window;
           }
           m.set(x, y, z, mat);
         }
-        if (style === 1 && edge(x, y)) m.set(x, y, H, trim); // parapet
-        else if (style === 1) m.set(x, y, H - 1, roof);
-        if (style === 2) m.set(x, y, H - 1, edge(x, y) ? trim : roof);
+        // roofs
+        const d = depth[y * sx + x]!;
+        const zTop = Math.max(0, Hw - 1);
+        if (roofShape === "flat" || capH === 0) {
+          if (!keep(x, y, zTop)) continue;
+          if (style >= 1 && edgeAt(x, y, zTop)) m.set(x, y, Hw, trims.length && style === 2 ? trim : wall); // parapet
+          else m.set(x, y, zTop, roof);
+        } else {
+          let colTop: number;
+          if (roofShape === "pyramidal") colTop = Hw + Math.round((capH * d) / Math.max(1, maxDepth));
+          else if (roofShape === "dome") {
+            const u = 1 - d / Math.max(1, maxDepth);
+            colTop = Hw + Math.round(capH * Math.sqrt(Math.max(0, 1 - u * u)));
+          } else if (roofShape === "gabled") {
+            // ridge along the longer side: rise with the distance across the short side
+            const across = sx >= sy ? Math.min(y, sy - 1 - y) + 1 : Math.min(x, sx - 1 - x) + 1;
+            colTop = Hw + Math.min(capH, across);
+          } else colTop = Hw + Math.min(capH, d); // hipped
+          const cap = pure ? m.material(ramp("window")) : roof; // a pure pyramid is dark glass
+          for (let z = Hw; z < colTop; z++) m.set(x, y, z, cap);
+        }
       }
-    if (style === 0) {
-      // hip roof: inset one voxel per layer
-      for (let k = 0; k < roofExtra; k++)
-        for (let y = k; y < mask.sy - k; y++)
-          for (let x = k; x < mask.sx - k; x++) {
-            let inner = true;
-            for (let dy = -k; dy <= k && inner; dy++) for (let dx = -k; dx <= k && inner; dx++) if (!on(x + dx, y + dy)) inner = false;
-            if (inner) m.set(x, y, H + k, roof);
-          }
-    }
-    if (style === 2 && mask.sx > 2 && mask.sy > 2) {
-      // crown: a smaller block on the roof
-      const cx0 = Math.floor(mask.sx / 3);
-      const cy0 = Math.floor(mask.sy / 3);
-      for (let y = cy0; y < mask.sy - cy0; y++)
-        for (let x = cx0; x < mask.sx - cx0; x++) if (on(x, y)) m.fill(x, y, H, x + 1, y + 1, H + 2, wall);
+    // rooftop details on flat roofs
+    if (roofShape === "flat" || capH === 0) {
+      const tops: [number, number][] = [];
+      for (let y = 0; y < sy; y++) for (let x = 0; x < sx; x++) if (on(x, y) && depth[y * sx + x]! > inset(Hw) + 1) tops.push([x, y]);
+      if (style === 1 && tops.length >= 12) {
+        // rooftop equipment
+        const n = 1 + Math.floor(rand() * Math.min(4, tops.length / 12));
+        for (let k = 0; k < n; k++) {
+          const [x, y] = tops[Math.floor(rand() * tops.length)]!;
+          m.fill(x, y, Hw, x + 1 + (rand() < 0.5 ? 1 : 0), y + 1, Hw + 1, wall);
+        }
+      }
+      if (style === 2 && tops.length) {
+        const r = rand();
+        const cx0 = Math.floor(sx / 3);
+        const cy0 = Math.floor(sy / 3);
+        if (r < 0.55 && sx > 2 && sy > 2) {
+          // mechanical penthouse
+          for (let y = cy0; y < sy - cy0; y++)
+            for (let x = cx0; x < sx - cx0; x++) if (on(x, y) && keep(x, y, Hw)) m.fill(x, y, Hw, x + 1, y + 1, Hw + 2, wall);
+        } else if (r < 0.8 && H >= 40) {
+          // spire with a beacon
+          const [x, y] = tops[Math.floor(tops.length / 2)]!;
+          for (let z = Hw; z < Hw + 3; z++) m.set(x, y, z, wall);
+          m.set(x, y, Hw + 3, trims.length ? trim : lit);
+        }
+      }
     }
     return m;
   },
@@ -299,6 +394,185 @@ const GENERATORS: Record<string, Generator> = {
     return m;
   },
 };
+
+/** Landmark generators added in M3 (D-051): generic shapes, no replicas of signage. */
+const LANDMARK_GENERATORS: Record<string, Generator> = {
+  /** Four-legged lattice tower: splayed legs, base arches, two platforms, a slender top. */
+  latticeTower: ({ ramp, param, heightVox }) => {
+    const H = Math.max(16, Math.round(heightVox ?? param("height", 60)));
+    const B = Math.max(3, Math.round(H * param("baseRatio", 0.19)));
+    const size = 2 * B + 2;
+    const m = new VoxelModel(size, size, H + 3);
+    const iron = m.material(ramp("structure"));
+    const deck = m.material(ramp("deck"));
+    const glow = m.material(ramp("accent"));
+    const c = B + 1; // the centre falls between voxels B and B + 1
+    const p1 = Math.round(H * 0.18);
+    const p2 = Math.round(H * 0.38);
+    const p3 = Math.round(H * 0.86);
+    // outer edge of each leg: a concave curve from B at the base to 1 at the top
+    const reach = (z: number) => 1 + (B - 1) * Math.pow(Math.max(0, 1 - z / (H * 0.92)), 2.2);
+    const lo = (r: number) => Math.floor(c - r);
+    const hi = (r: number) => Math.ceil(c + r) - 1;
+    for (let z = 0; z < p3; z++) {
+      const r = reach(z);
+      const t = z < p2 ? 2 : 1; // legs thin out above the second platform
+      for (const sx of [-1, 1])
+        for (const sy of [-1, 1])
+          for (let k = 0; k < t; k++)
+            for (let l = 0; l < t; l++)
+              m.set(sx > 0 ? hi(r) - k : lo(r) + k, sy > 0 ? hi(r) - l : lo(r) + l, z, iron);
+      if (z % 3 === 1 && r > 1.6 && z > p1) {
+        // lattice bracing: a dotted ring between the legs
+        for (let i = lo(r); i <= hi(r); i++)
+          if ((i + z) % 2 === 0) {
+            m.set(i, lo(r), z, iron);
+            m.set(i, hi(r), z, iron);
+            m.set(lo(r), i, z, iron);
+            m.set(hi(r), i, z, iron);
+          }
+      }
+    }
+    // arches under the first platform, one per face
+    const r1 = reach(p1);
+    const span = (hi(r1) - lo(r1)) / 2;
+    for (let i = lo(r1); i <= hi(r1); i++) {
+      const u = (i - (lo(r1) + span)) / Math.max(1, span);
+      const za = Math.round(p1 - (p1 * 0.55) * Math.sqrt(Math.max(0, 1 - u * u)));
+      for (const [x, y] of [[i, lo(reach(za))], [i, hi(reach(za))], [lo(reach(za)), i], [hi(reach(za)), i]] as const)
+        m.set(x, y, za, iron);
+    }
+    // two platforms with lights along their rims
+    for (const pz of [p1, p2]) {
+      const r = reach(pz) + 1;
+      for (let y = lo(r); y <= hi(r); y++)
+        for (let x = lo(r); x <= hi(r); x++) {
+          const rim = x === lo(r) || x === hi(r) || y === lo(r) || y === hi(r);
+          m.set(x, y, pz, rim && (x + y) % 2 === 0 ? glow : deck);
+        }
+    }
+    // the top: a small cabin, then a spire with a beacon
+    m.fill(Math.floor(c) - 1, Math.floor(c) - 1, p3, Math.floor(c) + 1, Math.floor(c) + 1, p3 + 2, deck);
+    for (let z = p3 + 2; z < H; z++) m.set(Math.floor(c), Math.floor(c), z, iron);
+    m.set(Math.floor(c), Math.floor(c), H, glow);
+    return m;
+  },
+
+  /** Observation wheel in the x–z plane: rim, spokes, cabins, hub and A-frame legs. */
+  wheel: ({ ramp, param, heightVox }) => {
+    const H = Math.max(14, Math.round(heightVox ?? param("height", 60)));
+    const R = Math.max(5, Math.round(H * 0.46));
+    const hubZ = H - R - 1;
+    const W = 2 * R + 5;
+    const D = 7;
+    const m = new VoxelModel(W, D, H + 2);
+    const steel = m.material(ramp("structure"));
+    const cabin = m.material(ramp("cabin"));
+    const glow = m.material(ramp("accent"));
+    const cx = R + 2;
+    const cy = 3;
+    const steps = Math.ceil(2 * Math.PI * R * 2);
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * 2 * Math.PI;
+      m.set(Math.round(cx + R * Math.cos(a)), cy, Math.round(hubZ + R * Math.sin(a)), i % 6 === 0 ? glow : steel);
+    }
+    const spokes = Math.round(param("spokes", 16));
+    for (let k = 0; k < spokes; k++) {
+      const a = (k / spokes) * 2 * Math.PI;
+      for (let r = 1; r < R; r++)
+        if (r % 2 === 0 || k % 2 === 0) m.set(Math.round(cx + r * Math.cos(a)), cy, Math.round(hubZ + r * Math.sin(a)), steel);
+    }
+    const cabins = Math.round(param("cabins", 28));
+    for (let k = 0; k < cabins; k++) {
+      const a = (k / cabins) * 2 * Math.PI;
+      const x = Math.round(cx + (R + 1) * Math.cos(a));
+      const z = Math.round(hubZ + (R + 1) * Math.sin(a));
+      for (let dy = -1; dy <= 1; dy++) m.set(x, cy + dy, z, cabin);
+    }
+    m.fill(cx - 1, cy - 1, hubZ - 1, cx + 2, cy + 2, hubZ + 2, steel);
+    // A-frame legs from the hub to the ground on both sides of the wheel
+    for (const sx of [-1, 1])
+      for (const sy of [-1, 1]) {
+        const x1 = cx + sx * Math.round(R * 0.45);
+        const y1 = cy + sy * 3;
+        for (let z = 0; z <= hubZ; z++) {
+          const t = 1 - z / hubZ;
+          m.set(Math.round(cx + (x1 - cx) * t), Math.round(cy + sy + (y1 - cy - sy) * t), z, steel);
+        }
+      }
+    return m;
+  },
+
+  /** Arch bridge on its footprint band: an arch rib springing from both ends, columns and a deck on top. */
+  archBridge: ({ ramp, mask, heightVox }) => {
+    if (!mask) throw new Error("arch bridge generator needs a footprint");
+    const H = Math.max(6, Math.round(heightVox ?? 24));
+    const m = new VoxelModel(mask.sx, mask.sy, H + 2);
+    const concrete = m.material(ramp("structure"));
+    const deck = m.material(ramp("deck"));
+    const rail = m.material(ramp("detail"));
+    const cells: [number, number][] = [];
+    for (let y = 0; y < mask.sy; y++) for (let x = 0; x < mask.sx; x++) if (mask.on[y * mask.sx + x]) cells.push([x, y]);
+    if (!cells.length) return m;
+    // the band's long axis (principal direction of its columns)
+    const mx = cells.reduce((a, [x]) => a + x, 0) / cells.length;
+    const my = cells.reduce((a, [, y]) => a + y, 0) / cells.length;
+    let sxx = 0;
+    let syy = 0;
+    let sxy = 0;
+    for (const [x, y] of cells) {
+      sxx += (x - mx) ** 2;
+      syy += (y - my) ** 2;
+      sxy += (x - mx) * (y - my);
+    }
+    const ang = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    const along = cells.map(([x, y]) => (x - mx) * ux + (y - my) * uy);
+    const across = cells.map(([x, y]) => -(x - mx) * uy + (y - my) * ux);
+    const a0 = Math.min(...along);
+    const a1 = Math.max(...along);
+    const w = Math.max(...across.map(Math.abs));
+    cells.forEach(([x, y], i) => {
+      const t = (along[i]! - a0) / Math.max(1e-6, a1 - a0);
+      const rib = Math.round(H * (0.3 + 0.62 * 4 * t * (1 - t)));
+      if (t > 0.06 && t < 0.94) {
+        m.set(x, y, rib, concrete);
+        m.set(x, y, rib - 1, concrete);
+        // spandrel columns from the rib up to the deck
+        if (Math.round(along[i]! - a0) % 6 === 0) for (let z = rib; z < H; z++) m.set(x, y, z, concrete);
+      } else {
+        for (let z = 0; z < H; z++) m.set(x, y, z, concrete); // abutments in the canyon walls
+      }
+      m.set(x, y, H, deck);
+      if (Math.abs(across[i]!) >= w - 0.75) m.set(x, y, H + 1, rail);
+    });
+    return m;
+  },
+
+  /** Intake tower: a fluted round tower with a crown, standing in the lake. */
+  intakeTower: ({ ramp, param, heightVox }) => {
+    const H = Math.max(6, Math.round(heightVox ?? param("height", 30)));
+    const R = param("radius", 2);
+    const n = Math.ceil(R) + 2;
+    const size = 2 * n + 1;
+    const m = new VoxelModel(size, size, H + 2);
+    const concrete = m.material(ramp("structure"));
+    const detail = m.material(ramp("detail"));
+    const crest = m.material(ramp("crest"));
+    for (let z = 0; z <= H; z++)
+      for (let y = -n; y <= n; y++)
+        for (let x = -n; x <= n; x++) {
+          const d = Math.hypot(x, y);
+          if (d <= R + 0.3) m.set(n + x, n + y, z, z >= H - 1 ? crest : concrete);
+          else if (d <= R + 1.3 && z < H - 3 && z > 1 && (x === 0 || y === 0 || Math.abs(x) === Math.abs(y)))
+            m.set(n + x, n + y, z, detail); // fluting
+          else if (d <= R + 1.3 && z >= H - 3 && z < H - 1) m.set(n + x, n + y, z, detail); // crown
+        }
+    return m;
+  },
+};
+Object.assign(GENERATORS, LANDMARK_GENERATORS);
 
 /** Rotate a model by quarter turns around the vertical axis. */
 export function rotateModel(model: VoxelModel, quarters: number): VoxelModel {
@@ -436,6 +710,7 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     if (inst.fp || inst.hm !== undefined || inst.top !== undefined) {
       // unique object: footprint building or landmark
       const ctx = makeContext(spec, opts, inst.s);
+      if (inst.rs || inst.fm) ctx.hints = { roof: inst.rs, facade: inst.fm };
       // voxel metres follow the local scale on warped worlds
       const voxelMeters = inst.m !== undefined ? opts.voxel.h * inst.m : opts.voxelMeters;
       if (inst.hm !== undefined) ctx.heightVox = (inst.hm / voxelMeters) * opts.heightStretch;
@@ -448,7 +723,8 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
         model = gen(ctx);
         origin = [fpm.x0, fpm.y0, base];
       } else {
-        model = gen(ctx);
+        // landmarks may be turned (an observation wheel's plane)
+        model = inst.r ? rotateModel(gen(ctx), inst.r) : gen(ctx);
         origin = [inst.x - (model.sx * opts.voxel.h) / 2, inst.y - (model.sy * opts.voxel.h) / 2, base];
       }
       meshVoxels(model, opts.voxel, origin, cell, merged);

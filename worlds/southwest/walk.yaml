@@ -33,14 +33,17 @@ micro: { k: 4, dem: { overview: 1 } }
 terrain: { minLakeArea: 4000, maxLakeRelief: 6 }
 
 objects:
-  buildings: { minArea: 40, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  buildings:
+    minArea: 40
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+    lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018, res: 4, depth: 6 }
   vegetation:
     - { group: tree, landcover: [tree], spacing: 16, density: 0.8 }
     - { group: shrub, landcover: [shrub], spacing: 40, density: 0.2 }
   streetTrees:
     - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 70, offset: 24 }
-  landmarks:
-    - { group: landmark.tower.observation, lon: -115.1555, lat: 36.1474, hm: 350, clear: 45 }
-    - { group: landmark.sign, lon: -115.17282, lat: 36.08208, clear: 10 }
+  landmarks: [strat-tower, welcome-sign, eiffel-replica, high-roller]
   # at walking scale true proportions read best: no extra height stretch
   depiction: { heightStretch: 1.0 }

@@ -1,5 +1,5 @@
 {
-  "packageHash": "c65b152b86e13d71c7de446ed3a578cb19d165d3a4cf6a3d1667affc4f1eebbc",
+  "packageHash": "997c95fef7f0464fdef3a392512a6d83aa11d45627d30d3918833b4d12b92137",
   "cells": [
     1155,
     709
@@ -57,15 +57,19 @@
     "solveSeconds": 18.407
   },
   "objects": {
-    "building.commercial": 2656,
-    "building.parking": 83,
-    "building.residential": 2789,
-    "building.tower": 85,
-    "building.tower.hotel": 22,
+    "building.commercial": 2694,
+    "building.parking": 79,
+    "building.residential": 2885,
+    "building.tower": 138,
+    "building.tower.hotel": 34,
+    "landmark.bridge.arch": 1,
     "landmark.dam": 1,
+    "landmark.dam.intake": 4,
     "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
     "landmark.tower.lookout": 1,
-    "landmark.tower.observation": 1
+    "landmark.tower.observation": 1,
+    "landmark.wheel": 1
   },
   "roads": {
     "cells": 25083,

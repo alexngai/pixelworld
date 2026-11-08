@@ -2561,6 +2561,11 @@
       "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
       "license": "ODbL 1.0",
       "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
     }
   ],
   "roadClasses": {
@@ -2590,7 +2595,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "4d25689589efb62c",
+      "region": "833954c77fd2d6ba",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 2,
       "bilateral": [
@@ -2648,8 +2653,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "3f1d444da3ddc2daf30914258ea5835b6cabc92d0719588d37845125a53b9625",
-    "count": 5639
+    "sha256": "221e4b60063c3f110fb8468a13f6485e5c9bc0a50c5af17fd56b5c2fcb973c77",
+    "count": 5841
   },
   "level": "drive",
   "levels": [
@@ -2678,5 +2683,5 @@
     ],
     "sha256": "b1ff4e45e94b03cd9b55769569b2eb204e2446407c278a38ae6638077c461a59"
   },
-  "packageHash": "c65b152b86e13d71c7de446ed3a578cb19d165d3a4cf6a3d1667affc4f1eebbc"
+  "packageHash": "997c95fef7f0464fdef3a392512a6d83aa11d45627d30d3918833b4d12b92137"
 }

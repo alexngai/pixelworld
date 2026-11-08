@@ -1,5 +1,5 @@
 {
-  "packageHash": "684f387452445f12428387039b57796a897c24629096d3dfbc4fe023d289dce6",
+  "packageHash": "5ebd8e55466712680512843ef1ce7266bbc49a67b3d3894abbcda431723d3762",
   "cells": [
     182,
     412
@@ -14,13 +14,15 @@
     "riverLines": 0
   },
   "objects": {
-    "building.commercial": 2144,
-    "building.parking": 76,
-    "building.residential": 2690,
-    "building.tower": 137,
-    "building.tower.hotel": 22,
+    "building.commercial": 2105,
+    "building.parking": 72,
+    "building.residential": 2683,
+    "building.tower": 194,
+    "building.tower.hotel": 36,
     "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
     "landmark.tower.observation": 1,
+    "landmark.wheel": 1,
     "shrub": 6,
     "tree": 2491,
     "tree.palm": 236
