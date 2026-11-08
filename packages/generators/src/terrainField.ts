@@ -31,6 +31,11 @@ export interface TerrainField {
    * world has no real widths: roads keep the style's fixed in-cell decal.
    */
   wayReach: number;
+  /**
+   * Per cell (M3.5): rails drawn in the street, connections in bits 0-7 and
+   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
+   */
+  rails: Int16Array;
   /** Height (steps) that world-edge skirts reach down to. */
   floor: number;
   /** World size in cells: skirts are drawn only at real world edges. */
@@ -118,6 +123,8 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     vmap[i * 2] = grid.vref[i]!;
     vmap[i * 2 + 1] = grid.vfac[i]!;
   }
+  const rails = new Int16Array(n);
+  for (let i = 0; i < n; i++) rails[i] = grid.rail[i]! & 0x7fff;
   for (let i = 0; i < n; i++) {
     cells[i * 4] = grid.surface[i]!;
     cells[i * 4 + 1] = grid.road[i]! & 0x0fff; // connections and corner crossings fit in 12 bits
@@ -134,6 +141,7 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     vmap,
     ways,
     wayReach: widest > 0 ? Math.ceil(widest / 32) : 0,
+    rails,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],

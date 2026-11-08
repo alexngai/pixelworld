@@ -66,7 +66,8 @@ export interface StylePack {
   /** Geology province name → strata set name. */
   provinces?: Record<string, string>;
   surfaces: Record<string, SurfaceStyle>;
-  roads?: { asphalt: string; marking: string; classes: Record<string, RoadClassStyle> };
+  /** `rail`: the ramp rails in the street are drawn in (M3.5); without it, no rails. */
+  roads?: { asphalt: string; marking: string; rail?: string; classes: Record<string, RoadClassStyle> };
   paths?: { classes: Record<string, PathClassStyle> };
   /** Semantic asset groups → generator, role ramps and parameters (D-030). */
   assets?: Record<string, AssetStyle>;
@@ -150,7 +151,7 @@ export function validateStyle(style: StylePack): StylePack {
     if (!(s.pattern in PATTERNS)) throw new StyleError(`surface ${name}: unknown pattern`);
   }
   if (style.roads) {
-    for (const r of [style.roads.asphalt, style.roads.marking])
+    for (const r of [style.roads.asphalt, style.roads.marking, ...(style.roads.rail ? [style.roads.rail] : [])])
       if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
     for (const [name, c] of Object.entries(style.roads.classes))
       if (c.ramp && !(c.ramp in style.ramps)) throw new StyleError(`road class ${name} uses undefined ramp ${c.ramp}`);
@@ -254,6 +255,8 @@ export interface MaterialTables {
   paths: Float32Array;
   asphaltRamp: number;
   markingRamp: number;
+  /** Ramp the rails in the street are drawn in (M3.5), -1 if the style has none. */
+  railRamp: number;
 }
 
 export function materialTables(
@@ -274,6 +277,7 @@ export function materialTables(
     paths: new Float32Array(MAX_ROAD_CLASSES * 4).fill(-1),
     asphaltRamp: palette.rampIds.get(style.roads?.asphalt ?? "") ?? 0,
     markingRamp: palette.rampIds.get(style.roads?.marking ?? "") ?? 0,
+    railRamp: palette.rampIds.get(style.roads?.rail ?? "") ?? -1,
   };
   const ramp = (name: string) => palette.rampIds.get(name)!;
 

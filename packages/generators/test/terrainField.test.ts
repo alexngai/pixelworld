@@ -39,6 +39,14 @@ describe("terrain fields", () => {
     expect(f.wayReach).toBe(2);
   });
 
+  it("packs rails drawn in the street (M3.5): connections and what is drawn", () => {
+    const g = stepGrid();
+    g.rail.set([0x0004 | (1 << 12), 0x0040 | (3 << 12)]);
+    const f = buildTerrainField(g, { offset: [0, 0], world: { width: 2, height: 1 } });
+    expect(Array.from(f.rails)).toEqual([0x0004 | (1 << 12), 0x0040 | (3 << 12)]);
+    expect(Array.from(buildTerrainField(stepGrid(), { offset: [0, 0], world: { width: 2, height: 1 } }).rails)).toEqual([0, 0]);
+  });
+
   it("lists walls only where a micro-cell stands above its neighbour or at the world edge", () => {
     const f = buildTerrainField(stepGrid(), { offset: [0, 0], world: { width: 2, height: 1 }, floor: -2 });
     // west edges (3): micro-cells 2 and 3 (and 6, 7 in the second row) rise above their west neighbours,
