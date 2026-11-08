@@ -13,6 +13,12 @@ smoothing:
   bilateralCells: 1.5
   bilateralMeters: 48
 
+# Micro-terrain (M1.6, D-037): 4×4 micro-cells (100 m) per cell, heights in
+# quarter steps, read from the 60 m overview of the 30 m DEM.
+micro:
+  k: 4
+  dem: { overview: 2 }
+
 style: desert-southwest
 start: { lon: -115.1728, lat: 36.1147 } # Las Vegas Strip
 

@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, isValidShape, shapeFromV0Mask } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworld/grid";
 
 /** Chunk binary codec, format v1 (reads v0). Spec: docs/world-format.md. */
 
@@ -73,6 +73,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const roadS = section("ROAD", 2, false);
   const rclsS = section("RCLS", 1, false);
   const geolS = section("GEOL", 1, false);
+  const micro = decodeMicro(view, sections.get("MHGT"), size);
 
   const base = new Int16Array(n);
   const water = new Int16Array(n).fill(NO_WATER);
@@ -100,8 +101,47 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
     x,
     y,
     size,
-    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology }),
+    terrain: new TerrainGrid(size, size, { base, shape, surface, water, road, roadClass, geology, micro }),
   };
+}
+
+/**
+ * MHGT: (K·size + 1)² int16 micro-corner heights, rows delta-coded (each value
+ * minus its left neighbour, the first of a row absolute; arithmetic wraps at 16 bits).
+ */
+function decodeMicro(
+  view: DataView,
+  s: { offset: number; length: number } | undefined,
+  size: number,
+): MicroLayers | null {
+  if (!s) return null;
+  const side = Math.round(Math.sqrt(s.length / 2));
+  const k = size ? Math.floor((side - 1) / size) : 0;
+  if (k < 1 || side !== k * size + 1 || side * side * 2 !== s.length)
+    throw new ChunkFormatError(`MHGT has ${s.length} bytes, not (K·${size} + 1)² int16`);
+  const corners = new Int16Array(side * side);
+  for (let y = 0; y < side; y++) {
+    let v = 0;
+    for (let x = 0; x < side; x++) {
+      const i = y * side + x;
+      v = (v + view.getInt16(s.offset + i * 2, true)) << 16 >> 16;
+      corners[i] = v;
+    }
+  }
+  return { k, corners };
+}
+
+function encodeMicro(m: MicroLayers, size: number): Uint8Array {
+  const side = m.k * size + 1;
+  const out = new Uint8Array(side * side * 2);
+  const v = new DataView(out.buffer);
+  for (let y = 0; y < side; y++)
+    for (let x = 0; x < side; x++) {
+      const i = y * side + x;
+      const d = x === 0 ? m.corners[i]! : m.corners[i]! - m.corners[i - 1]!;
+      v.setInt16(i * 2, d << 16 >> 16, true);
+    }
+  return out;
 }
 
 export function encodeChunk(chunk: Chunk): ArrayBuffer {
@@ -131,6 +171,7 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.road)) payloads.push(["ROAD", u16(terrain.road)]);
   if (any(terrain.roadClass)) payloads.push(["RCLS", terrain.roadClass.slice()]);
   if (any(terrain.geology)) payloads.push(["GEOL", terrain.geology.slice()]);
+  if (terrain.micro) payloads.push(["MHGT", encodeMicro(terrain.micro, size)]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;
   const placed = payloads.map(([tag, data]) => {

@@ -204,8 +204,7 @@ The point is more room for visual interest; both halves are wanted.
 - **Rivers:** they are buffered to their real width.
 - **Scope:** these are region-spec options (`terrain:`), so coarse worlds keep their M1 rules and their package hashes.
 
-### D-037: Micro-terrain resolution (open, M1.5)
-- **Candidates:** K=4 (8×4 px micro-cells, 2 px height steps) or K=8 (4×2 px, 1 px steps).
-- **Recommendation:** K=4. Its ledges form clean 2 px clusters, and it needs about a quarter of K=8's data and a third of its meshing time. K=8's 1 px treads read as hatching on steep walls.
-- **To decide:** the user picks the look from the M1.5 comparisons; M1.6 builds to that choice.
+### D-037: Micro-terrain resolution (accepted, M1.5)
+- **K=4:** every cell holds 4×4 micro-cells. A micro-cell is an 8×4 px diamond, and its height step is a quarter step (2 px).
+- **Why:** its ledges form clean 2 px clusters, and it needs about a quarter of K=8's data and a third of its meshing time. K=8's 1 px treads read as hatching on steep walls.
 

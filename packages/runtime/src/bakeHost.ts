@@ -67,7 +67,7 @@ export class BakeHost {
     const t0 = performance.now();
     let scene = this.meshCache.get(key);
     if (!scene) {
-      const grid = new TerrainGrid(slice.width, slice.height, slice.layers);
+      const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
       const terrain = buildTerrainMesh(
         grid,
         { x0: 0, y0: 0, x1: slice.width, y1: slice.height },

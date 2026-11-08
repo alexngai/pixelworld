@@ -1,4 +1,4 @@
-import type { Rotation, TerrainLayers } from "@pixelworld/grid";
+import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworld/grid";
 import type { BakedImage, StyleParams } from "@pixelworld/bake";
 import type { AssetCatalog, Box, ObjectInstance } from "@pixelworld/generators";
 
@@ -38,6 +38,8 @@ export interface TerrainSlice {
   width: number;
   height: number;
   layers: TerrainLayers;
+  /** Micro-terrain of the same cells, if the world has it. */
+  micro?: MicroLayers | null;
 }
 
 export interface BakeTileMessage {
@@ -88,5 +90,7 @@ export type FromWorker = BakedMessage | ReadyMessage | ErrorMessage;
 
 /** Typed arrays of a slice, for transferring to the worker without copying. */
 export function sliceTransferables(slice: TerrainSlice): Transferable[] {
-  return Object.values(slice.layers).map((a: ArrayBufferView) => a.buffer as ArrayBuffer);
+  const out = Object.values(slice.layers).map((a: ArrayBufferView) => a.buffer as ArrayBuffer);
+  if (slice.micro) out.push(slice.micro.corners.buffer as ArrayBuffer);
+  return out;
 }

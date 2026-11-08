@@ -169,6 +169,22 @@ export function splitDiagonal(h: readonly [number, number, number, number]): 0 |
   return h[1] + h[3] > h[0] + h[2] ? 1 : 0;
 }
 
+/**
+ * Height on a cell's top at fractional position (fx, fy) in [0, 1]², following
+ * the same triangle split as the rendered mesh.
+ */
+export function triangleHeight(h: Corners, fx: number, fy: number): number {
+  const [h0, h1, h2, h3] = h;
+  if (splitDiagonal(h) === 0) {
+    // diagonal c0–c2: triangles (c0,c1,c2) where fx >= fy, else (c0,c2,c3)
+    return fx >= fy ? h0 + (h1 - h0) * fx + (h2 - h1) * fy : h0 + (h3 - h0) * fy + (h2 - h3) * fx;
+  }
+  // diagonal c1–c3: triangles (c0,c1,c3) where fx + fy <= 1, else (c1,c2,c3)
+  return fx + fy <= 1
+    ? h0 + (h1 - h0) * fx + (h3 - h0) * fy
+    : h2 + (h3 - h2) * (1 - fx) + (h1 - h2) * (1 - fy);
+}
+
 export interface TerrainLayers {
   base: Int16Array;
   shape: Uint8Array;
@@ -177,6 +193,37 @@ export interface TerrainLayers {
   road: Uint16Array;
   roadClass: Uint8Array;
   geology: Uint8Array;
+}
+
+/**
+ * Micro-terrain (M1.6, D-037): k×k micro-cells per cell. `corners` holds the
+ * height of every micro-corner in micro-steps (1/k step), row-major over
+ * (k·width + 1) × (k·height + 1). Micro-cells follow from their four corners
+ * by `microCellCorners`.
+ */
+export interface MicroLayers {
+  k: number;
+  corners: Int16Array;
+}
+
+/** Steepest micro-cell that stays a slope tile; steeper ones become flat terraces. */
+export const MICRO_MAX_OFFSET = 3;
+
+export function emptyMicro(k: number, width: number, height: number): MicroLayers {
+  return { k, corners: new Int16Array((k * width + 1) * (k * height + 1)) };
+}
+
+/**
+ * A micro-cell's drawn corner heights from its micro-corner heights (c0..c3):
+ * the corners themselves when they span at most MICRO_MAX_OFFSET, otherwise
+ * flat at their rounded-half-up mean. Mirrors world_format.micro_cells.
+ */
+export function microCellCorners(c0: number, c1: number, c2: number, c3: number): Corners {
+  const lo = Math.min(c0, c1, c2, c3);
+  const hi = Math.max(c0, c1, c2, c3);
+  if (hi - lo <= MICRO_MAX_OFFSET) return [c0, c1, c2, c3];
+  const flat = Math.floor((c0 + c1 + c2 + c3) / 4 + 0.5);
+  return [flat, flat, flat, flat];
 }
 
 /**
@@ -209,6 +256,24 @@ export function copyCells(
       b.geology[di] = a.geology[si]!;
     }
   }
+  const ma = src.micro;
+  const mb = dst.micro;
+  if (!ma || !mb) return;
+  if (ma.k !== mb.k) throw new Error(`micro k mismatch (${ma.k} vs ${mb.k})`);
+  // every copied cell brings its (k+1)² micro-corners (shared ones agree)
+  const k = ma.k;
+  const sw = src.width * k + 1;
+  const dw = dst.width * k + 1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!src.inBounds(sx + x, sy + y) || !dst.inBounds(dx + x, dy + y)) continue;
+      for (let j = 0; j <= k; j++) {
+        const si = ((sy + y) * k + j) * sw + (sx + x) * k;
+        const di = ((dy + y) * k + j) * dw + (dx + x) * k;
+        mb.corners.set(ma.corners.subarray(si, si + k + 1), di);
+      }
+    }
+  }
 }
 
 /** Dense terrain layers for a rectangular block of cells (row-major, y then x). */
@@ -223,11 +288,13 @@ export class TerrainGrid {
   readonly roadClass: Uint8Array;
   /** Geology province id (manifest geology), selects the cliff strata set. */
   readonly geology: Uint8Array;
+  /** Micro-terrain, or null for cell-only terrain. */
+  readonly micro: MicroLayers | null;
 
   constructor(
     readonly width: number,
     readonly height: number,
-    layers?: Partial<TerrainLayers>,
+    layers?: Partial<TerrainLayers> & { micro?: MicroLayers | null },
   ) {
     const n = width * height;
     this.base = layers?.base ?? new Int16Array(n);
@@ -240,6 +307,21 @@ export class TerrainGrid {
     for (const [name, arr] of Object.entries(this.layers())) {
       if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
     }
+    this.micro = layers?.micro ?? null;
+    if (this.micro) {
+      const k = this.micro.k;
+      const m = (k * width + 1) * (k * height + 1);
+      if (this.micro.corners.length !== m) throw new Error(`micro layers need ${m} micro-corners for k=${k}`);
+    }
+  }
+
+  /** Drawn corner heights of micro-cell (mx, my), in micro-steps. */
+  microCorners(mx: number, my: number): Corners {
+    const m = this.micro!;
+    const w = this.width * m.k + 1;
+    const i = my * w + mx;
+    const c = m.corners;
+    return microCellCorners(c[i]!, c[i + 1]!, c[i + w + 1]!, c[i + w]!);
   }
 
   layers(): TerrainLayers {
@@ -287,6 +369,14 @@ export class TerrainGrid {
       if (a < lo) lo = a;
       if (b > hi) hi = b;
     }
+    const m = this.micro;
+    if (m) {
+      // derived micro-cells never leave the range of their corners
+      for (const c of m.corners) {
+        if (Math.floor(c / m.k) < lo) lo = Math.floor(c / m.k);
+        if (Math.ceil(c / m.k) > hi) hi = Math.ceil(c / m.k);
+      }
+    }
     return [lo, hi];
   }
 
@@ -295,22 +385,23 @@ export class TerrainGrid {
    * triangle split as the rendered mesh.
    */
   surfaceHeightAt(x: number, y: number): number {
+    const m = this.micro;
+    if (m) {
+      // micro-terrain is what's drawn: sample it, in steps
+      const mw = this.width * m.k;
+      const mh = this.height * m.k;
+      const px = x * m.k;
+      const py = y * m.k;
+      const mx = Math.min(mw - 1, Math.max(0, Math.floor(px)));
+      const my = Math.min(mh - 1, Math.max(0, Math.floor(py)));
+      const h = this.microCorners(mx, my);
+      return triangleHeight(h, Math.min(1, Math.max(0, px - mx)), Math.min(1, Math.max(0, py - my))) / m.k;
+    }
     const cx = Math.min(this.width - 1, Math.max(0, Math.floor(x)));
     const cy = Math.min(this.height - 1, Math.max(0, Math.floor(y)));
     const fx = Math.min(1, Math.max(0, x - cx));
     const fy = Math.min(1, Math.max(0, y - cy));
-    const h = this.corners(cx, cy);
-    const [h0, h1, h2, h3] = h;
-    if (splitDiagonal(h) === 0) {
-      // diagonal c0–c2: triangles (c0,c1,c2) where fx >= fy, else (c0,c2,c3)
-      return fx >= fy
-        ? h0 + (h1 - h0) * fx + (h2 - h1) * fy
-        : h0 + (h3 - h0) * fy + (h2 - h3) * fx;
-    }
-    // diagonal c1–c3: triangles (c0,c1,c3) where fx + fy <= 1, else (c1,c2,c3)
-    return fx + fy <= 1
-      ? h0 + (h1 - h0) * fx + (h3 - h0) * fy
-      : h2 + (h3 - h2) * (1 - fx) + (h1 - h2) * (1 - fy);
+    return triangleHeight(this.corners(cx, cy), fx, fy);
   }
 
   /**
@@ -329,7 +420,7 @@ export class TerrainGrid {
 
   /** Copy a sub-rectangle (clipped to bounds) into a new grid. */
   slice(x0: number, y0: number, w: number, h: number): TerrainGrid {
-    const out = new TerrainGrid(w, h);
+    const out = new TerrainGrid(w, h, this.micro ? { micro: emptyMicro(this.micro.k, w, h) } : undefined);
     copyCells(this, x0, y0, out, 0, 0, w, h);
     return out;
   }

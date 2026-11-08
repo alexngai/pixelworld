@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 
+from . import micro as micro_stage
 from . import objects as object_stage
 from . import roads as road_stage
 from .gridify import (
@@ -319,6 +320,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
     )
     print(f"roads: {asdict(report)}")
 
+    # micro-terrain (optional): K×K micro-cells per cell, constrained by the cell layers
+    micro = None
+    if region.micro is not None:
+        k = int(region.micro["k"])
+        dem_spec = region.sources["dem"] | region.micro.get("dem", {})
+        micro_m = rasters.dem_corners(region, k, dem_spec).astype(np.float64)
+        mc = micro_stage.build_micro(micro_m, step_m, k, base, shape, water, road_layer.mask)
+        micro = (mc, k)
+        print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
+
     # objects (optional): vegetation, buildings, landmarks as semantic groups
     instances = None
     object_counts: dict[str, int] = {}
@@ -373,6 +384,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True) -> dict:
         },
         render=region.render,
         objects=instances,
+        micro=micro,
         compress=compress,
         clean=True,
     )

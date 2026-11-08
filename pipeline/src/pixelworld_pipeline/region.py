@@ -63,6 +63,8 @@ class Region:
     render: dict[str, Any] | None = None
     # Object placement rules (vegetation, buildings, landmarks); see objects.py.
     objects: dict[str, Any] | None = None
+    # Micro-terrain (M1.6): {"k": 4, "dem": {...source override...}}.
+    micro: dict[str, Any] | None = None
     # Terrain rules for fine cells: {cliffSlope, minLakeArea (m²), maxLakeRelief (m),
     # riverWidthMeters}.
     terrain: dict[str, Any] | None = None
@@ -107,6 +109,7 @@ class Region:
             render=dict(raw["render"]) if raw.get("render") else None,
             objects=dict(raw["objects"]) if raw.get("objects") else None,
             terrain=dict(raw["terrain"]) if raw.get("terrain") else None,
+            micro=dict(raw["micro"]) if raw.get("micro") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")
@@ -114,6 +117,8 @@ class Region:
             raise RegionError("maxSlope must be 1..3")
         if not (w <= region.start[0] <= e and s <= region.start[1] <= n):
             raise RegionError("start must lie inside bounds")
+        if region.micro is not None and int(region.micro.get("k", 0)) not in (2, 4, 8):
+            raise RegionError("micro.k must be 2, 4 or 8")
         if region.render is not None:
             scale = region.render.get("scale")
             if not (isinstance(scale, (int, float)) and 0 < scale <= 1):

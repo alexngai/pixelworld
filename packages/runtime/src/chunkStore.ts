@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, copyCells } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, copyCells, emptyMicro } from "@pixelworld/grid";
 import {
   decodeChunk,
   maybeGunzip,
@@ -127,7 +127,10 @@ export class ChunkStore {
     const sy0 = Math.max(0, y0);
     const sx1 = Math.min(this.cellsX, x1);
     const sy1 = Math.min(this.cellsY, y1);
-    const grid = new TerrainGrid(Math.max(0, sx1 - sx0), Math.max(0, sy1 - sy0));
+    const w = Math.max(0, sx1 - sx0);
+    const h = Math.max(0, sy1 - sy0);
+    const k = this.manifest.micro?.k;
+    const grid = new TerrainGrid(w, h, k ? { micro: emptyMicro(k, w, h) } : undefined);
     const s = this.chunkSize;
     for (const [cx, cy] of this.chunksFor(sx0, sy0, sx1, sy1)) {
       const chunk = this.chunks.get(key(cx, cy));

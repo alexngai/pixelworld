@@ -142,3 +142,49 @@ describe("manifest", () => {
     expect(Array.from(grid.base)).toEqual([1, 2, 5, 3, 4, 7]);
   });
 });
+
+describe("micro-terrain sections (MHGT)", () => {
+  it("decodes the Python-written micro golden and re-encodes it byte for byte", () => {
+    const bin = readFileSync(goldenDir + "chunk-v1-micro.pxwc");
+    const buffer = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
+    const expected = JSON.parse(readFileSync(goldenDir + "chunk-v1-micro.json", "utf8")) as {
+      k: number;
+      microCorners: number[];
+    };
+    const chunk = decodeChunk(buffer);
+    expect(chunk.terrain.micro?.k).toBe(expected.k);
+    expect(Array.from(chunk.terrain.micro!.corners)).toEqual(expected.microCorners);
+    expect(new Uint8Array(encodeChunk(chunk))).toEqual(new Uint8Array(buffer));
+  });
+
+  it("keeps micro-terrain when assembling a world", () => {
+    const k = 2;
+    const mk = (v: number) => {
+      const t = new TerrainGrid(2, 2, { micro: { k, corners: new Int16Array(25).fill(v) } });
+      return t;
+    };
+    const manifest = {
+      format: "pixelworld-world",
+      formatVersion: 0,
+      id: "m",
+      name: "m",
+      chunkSize: 2,
+      cellsX: 3,
+      cellsY: 2,
+      chunks: [],
+      scale: { metersPerCell: 100, metersPerStep: 10, elevationDatumMeters: 0 },
+      surfaces: {},
+      style: "s",
+      attribution: [],
+      micro: { k },
+    } satisfies WorldManifest;
+    const grid = assembleTerrain(parseManifest(manifest), [
+      { x: 0, y: 0, size: 2, terrain: mk(4) },
+      { x: 1, y: 0, size: 2, terrain: mk(8) },
+    ]);
+    expect(grid.micro!.corners.length).toBe((3 * k + 1) * (2 * k + 1));
+    expect(grid.surfaceHeightAt(0.5, 0.5)).toBe(2); // 4 micro-steps at k=2
+    expect(grid.surfaceHeightAt(2.5, 0.5)).toBe(4);
+    expect(() => parseManifest({ ...manifest, micro: { k: 3 } })).toThrow();
+  });
+});

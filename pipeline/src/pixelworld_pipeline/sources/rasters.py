@@ -38,8 +38,14 @@ def _overview_level(factor: int) -> int | None:
     return level
 
 
+def _grid_key(region: Region) -> str:
+    """What a raster read depends on: the grid geometry, not the rest of the spec."""
+    west, north, cx, cy = region.grid
+    return f"{region.crs.to_proj4()}|{west}|{north}|{cx}|{cy}|{region.meters_per_cell}"
+
+
 def _cache_path(region: Region, name: str, params: str):
-    key = hashlib.sha256(f"{region.digest()}|{params}".encode()).hexdigest()[:16]
+    key = hashlib.sha256(f"{_grid_key(region)}|{params}".encode()).hexdigest()[:16]
     return CACHE_ROOT / region.id / f"{name}-{key}.npy"
 
 
@@ -115,9 +121,13 @@ def fill_nan_nearest(a: np.ndarray, max_iter: int = 64) -> np.ndarray:
     raise RuntimeError("DEM has a large gap that couldn't be filled")
 
 
-def dem_corners(region: Region) -> np.ndarray:
-    """Elevation (m) at every cell corner, shape (cells_y + 1, cells_x + 1)."""
-    spec = region.sources["dem"]
+def dem_corners(region: Region, k: int = 1, spec: dict | None = None) -> np.ndarray:
+    """Elevation (m) at every cell corner, shape (cells_y + 1, cells_x + 1).
+
+    With k > 1, at every micro-corner of K×K micro-cells per cell instead,
+    shape (K·cells_y + 1, K·cells_x + 1); `spec` overrides the DEM source.
+    """
+    spec = spec or region.sources["dem"]
     if spec["kind"] not in USGS_3DEP:
         raise ValueError(f"unsupported DEM source {spec['kind']}")
     overview = int(spec.get("overview", 4))
@@ -126,15 +136,18 @@ def dem_corners(region: Region) -> np.ndarray:
     params = f"{spec['kind']}|{overview}"
     if resampling != Resampling.average:
         params += f"|{resampling.name}"
+    if k != 1:
+        params += f"|micro{k}"
     path = _cache_path(region, "dem", params)
     if path.exists():
         return np.load(path)
     cx, cy = region.cells
-    dst = np.full((cy + 1, cx + 1), np.nan, dtype=np.float32)
+    dst = np.full((cy * k + 1, cx * k + 1), np.nan, dtype=np.float32)
     urls = usgs_3dep_tiles(region.lonlat_envelope(), spec["kind"])
-    missing = _warp_tiles(
-        urls, dst, region.corner_transform(), region, overview, resampling, np.nan
-    )
+    west, north, _, _ = region.grid
+    pm = region.meters_per_cell / k  # corner spacing; pixel centres sit on the corners
+    transform = rasterio.Affine(pm, 0, west - pm / 2, 0, -pm, north + pm / 2)
+    missing = _warp_tiles(urls, dst, transform, region, overview, resampling, np.nan)
     if missing:
         print(f"  dem: {len(missing)} tiles missing (outside coverage?)")
     gaps = int(np.isnan(dst).sum())

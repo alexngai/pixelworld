@@ -1,4 +1,4 @@
-import { TerrainGrid, copyCells } from "@pixelworld/grid";
+import { TerrainGrid, copyCells, emptyMicro } from "@pixelworld/grid";
 import type { Chunk } from "./chunk";
 
 /** World package manifest, format v0. Spec: docs/world-format.md. */
@@ -63,6 +63,8 @@ export interface WorldManifest {
    * bake tile edge in cells.
    */
   render?: { scale: number; tileSize?: number };
+  /** Micro-terrain (M1.6): every chunk carries K×K micro-cells per cell (MHGT). */
+  micro?: { k: number };
   /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
   objects?: { path: string; sha256?: string; count?: number };
 }
@@ -97,6 +99,8 @@ export function parseManifest(json: unknown): WorldManifest {
   if (!Array.isArray(m.chunks)) throw new ManifestError("missing chunks");
   if (!m.scale || typeof m.scale.metersPerStep !== "number")
     throw new ManifestError("missing scale");
+  if (m.micro !== undefined && ![2, 4, 8].includes(m.micro.k))
+    throw new ManifestError("micro.k must be 2, 4 or 8");
   if (m.render !== undefined) {
     const sc = m.render.scale;
     if (!(typeof sc === "number" && sc > 0 && sc <= 1)) throw new ManifestError("render.scale must be in (0, 1]");
@@ -120,7 +124,8 @@ export function surfaceIds(manifest: WorldManifest): Map<string, number> {
 
 /** Assemble decoded chunks into one TerrainGrid covering the whole world. */
 export function assembleTerrain(manifest: WorldManifest, chunks: Chunk[]): TerrainGrid {
-  const grid = new TerrainGrid(manifest.cellsX, manifest.cellsY);
+  const micro = manifest.micro ? emptyMicro(manifest.micro.k, manifest.cellsX, manifest.cellsY) : null;
+  const grid = new TerrainGrid(manifest.cellsX, manifest.cellsY, { micro });
   for (const c of chunks) {
     const t = c.terrain;
     copyCells(t, 0, 0, grid, c.x * manifest.chunkSize, c.y * manifest.chunkSize, t.width, t.height);

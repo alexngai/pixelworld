@@ -102,7 +102,7 @@ Also delivered:
 - **Busy, spiky mountains.** At 400 m per cell and 2.5× exaggeration, mountain ranges are busy with one-cell pillars. Focus-area scales in M2 change this anyway.
 - **Rough geology boundary.** The Colorado Plateau outline is hand-drawn, and strata colour by elevation alone (no dip).
 
-### M1.5: Pixel detail experiment — done (K to confirm)
+### M1.5: Pixel detail experiment — done
 
 **Goal:** decide how pixel-level detail should look before building it properly. Two small areas, the Desert View area of the Grand Canyon and a stretch of the Las Vegas Strip, are rendered three ways:
 1. today's coarse cells
@@ -154,18 +154,18 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 
 **Proposed decisions:** D-032 to D-037 in the [decision log](decisions.md).
 
-**Still open:** the choice of K (D-037). The recommendation is K=4, for its cleaner pixel clusters at about a quarter of K=8's data and a third of its meshing time; K=8 remains the "every pixel" option.
+**Chosen:** K=4 (D-037), for its cleaner pixel clusters at about a quarter of K=8's data and a third of its meshing time.
 
 **Known issues:**
 - The K=8 Strip reports 1 split road segment and 2 disconnected junctions at 20 m cells.
 - Street-tree counts vary with K, because road cells block more ground at coarse cells.
 - At night the streets stay dark: there are no street lights yet.
 
-### M1.6: Micro-terrain
+### M1.6: Micro-terrain — in progress
 
 **Goal:** pixel-resolution terrain everywhere, without changing the gameplay grid.
 
-- **Data:** a K×K grid of fine heights per cell (K from the experiment: 4 or 8, D-037), stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary. Only heights are stored at fine resolution; other layers stay per cell (storing every layer finely would cost roughly 6–70× today's package, see M1.5).
+- **Data:** a 4×4 grid of fine heights per cell (K=4, D-037), stored as an optional chunk section. Cells keep their base height and shape as the gameplay summary. Only heights are stored at fine resolution; other layers stay per cell (storing every layer finely would cost roughly 6–70× today's package, see M1.5).
 - **Pipeline:** builds micro-heights from finer elevation sources. Roads and pads are cut and filled at micro resolution, and water stays flat.
 - **Rendering:** terrain moves to the GPU, as a heightfield ray-march or a GPU-built grid mesh, so bake cost scales with pixels rather than with geometry. JavaScript mesh building can't handle 64× the vertices.
 - **Gameplay:** vehicles sample micro-heights.

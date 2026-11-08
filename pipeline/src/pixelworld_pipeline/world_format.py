@@ -58,6 +58,44 @@ LAYERS = (
 )
 _REQUIRED = {"base", "shape", "surface"}
 
+# Micro-terrain (M1.6, D-037), optional: MHGT holds the height of every
+# micro-corner, (K·size + 1)² int16 in micro-steps (1/K step), rows delta-coded
+# (each value minus its left neighbour; the first of a row is absolute). The
+# last row and column repeat the next chunk's first, so a chunk is complete on
+# its own. K is implied by the section length. Micro-cells are derived from
+# the corners by `micro_cells`; packages/grid applies the same rule.
+MICRO_TAG = b"MHGT"
+MICRO_MAX_OFFSET = 3
+
+
+def delta_rows(a: np.ndarray) -> np.ndarray:
+    d = a.astype(np.int32)
+    d[:, 1:] = d[:, 1:] - a[:, :-1].astype(np.int32)
+    return d.astype(np.int16)
+
+
+def undelta_rows(d: np.ndarray) -> np.ndarray:
+    return np.cumsum(d.astype(np.int32), axis=1).astype(np.int16)
+
+
+def micro_cells(
+    corners: np.ndarray, max_offset: int = MICRO_MAX_OFFSET
+) -> tuple[np.ndarray, np.ndarray]:
+    """Micro-cell (base, packed shape) from integer micro-corner heights.
+
+    A micro-cell whose corners span at most max_offset micro-steps is a slope
+    tile on those corners; a steeper one is flat at the rounded-half-up mean
+    of its corners (so steep ground becomes terraces with cliffs between).
+    """
+    c = np.asarray(corners).astype(np.int32)
+    cs = np.stack([c[:-1, :-1], c[:-1, 1:], c[1:, 1:], c[1:, :-1]])
+    lo = cs.min(axis=0)
+    steep = (cs.max(axis=0) - lo) > max_offset
+    flat = np.floor(cs.sum(axis=0) / 4 + 0.5).astype(np.int32)
+    base = np.where(steep, flat, lo)
+    offsets = np.where(steep, 0, cs - lo)
+    return base.astype(np.int16), pack_shape(offsets)
+
 
 class ChunkFormatError(ValueError):
     pass
@@ -76,9 +114,17 @@ class Chunk:
     road: np.ndarray = field(default=None)  # uint16 road connectivity + corner crossings
     road_class: np.ndarray = field(default=None)  # uint8 road class id, 0 = none
     geology: np.ndarray = field(default=None)  # uint8 geology province id
+    micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
         size = self.base.shape[0]
+        if self.micro_corners is not None:
+            m = self.micro_corners.shape[0] - 1
+            if m < size or m % size or self.micro_corners.shape != (m + 1, m + 1):
+                raise ChunkFormatError(
+                    f"micro corners must be (K·{size} + 1)², got {self.micro_corners.shape}"
+                )
+            self.micro_corners = self.micro_corners.astype(np.int16, copy=False)
         for name, _tag, dtype, fill in LAYERS:
             arr = getattr(self, name)
             if arr is None:
@@ -93,6 +139,13 @@ class Chunk:
     def size(self) -> int:
         return int(self.base.shape[0])
 
+    @property
+    def micro_k(self) -> int:
+        """Micro-cells per cell edge, 0 without micro-terrain."""
+        if self.micro_corners is None:
+            return 0
+        return (self.micro_corners.shape[0] - 1) // self.size
+
 
 def _align4(n: int) -> int:
     return (n + 3) & ~3
@@ -105,6 +158,8 @@ def encode_chunk(chunk: Chunk) -> bytes:
         if name not in _REQUIRED and not np.any(arr != fill):
             continue
         payloads.append((tag, arr.astype(dtype).tobytes()))
+    if chunk.micro_corners is not None:
+        payloads.append((MICRO_TAG, delta_rows(chunk.micro_corners).astype("<i2").tobytes()))
 
     offset = _HEADER.size + len(payloads) * _ENTRY.size
     placed = []
@@ -160,6 +215,14 @@ def decode_chunk(data: bytes) -> Chunk:
             layers[name] = shape_from_v0_mask(_v0_mask(section(b"SLOP", "u1", True)))
         else:
             layers[name] = section(tag, dtype, name in _REQUIRED)
+    if MICRO_TAG in sections:
+        off, length = sections[MICRO_TAG]
+        side = round((length / 2) ** 0.5)
+        k = (side - 1) // size if size else 0
+        if k < 1 or side != k * size + 1 or side * side * 2 != length:
+            raise ChunkFormatError(f"MHGT has {length} bytes, not (K·{size} + 1)² int16")
+        d = np.frombuffer(data, dtype="<i2", count=side * side, offset=off).reshape(side, side)
+        layers["micro_corners"] = undelta_rows(d)
     return Chunk(x=x, y=y, **layers)
 
 
@@ -169,12 +232,26 @@ def _v0_mask(mask: np.ndarray) -> np.ndarray:
     return mask
 
 
-def height_range(base: np.ndarray, shape: np.ndarray) -> list[int]:
-    """[lowest, highest] corner height of a block of cells."""
+def height_range(
+    base: np.ndarray,
+    shape: np.ndarray,
+    micro: tuple[np.ndarray, int] | None = None,
+) -> list[int]:
+    """[lowest, highest] corner height (steps) of a block of cells, micro-terrain included.
+
+    micro = (micro-corner heights, K). Derived micro-cells never leave the
+    range of their corners (a flat one sits at the rounded mean).
+    """
     if base.size == 0:
         return [0, 0]
     top = base.astype(np.int32) + unpack_shape(shape).max(axis=0)
-    return [int(base.min()), int(top.max())]
+    lo, hi = int(base.min()), int(top.max())
+    if micro is not None:
+        mc, k = micro
+        if mc.size:
+            lo = min(lo, int(np.floor(mc.min() / k)))
+            hi = max(hi, int(np.ceil(mc.max() / k)))
+    return [lo, hi]
 
 
 def package_hash(manifest: dict[str, Any]) -> str:
@@ -211,6 +288,7 @@ def write_package(
     generator: dict[str, Any] | None = None,
     render: dict[str, Any] | None = None,
     objects: list[dict[str, Any]] | None = None,
+    micro: tuple[np.ndarray, int] | None = None,
     compress: bool = False,
     clean: bool = False,
 ) -> dict[str, Any]:
@@ -219,6 +297,8 @@ def write_package(
     With compress=True chunks are written as deterministic gzip (`.pxwc.gz`,
     mtime 0) and the manifest records the hash of the compressed bytes. With
     clean=True, chunk files left over from earlier builds are removed.
+    micro = (micro_corners, K) adds micro-terrain (a (K·cells_y + 1, K·cells_x + 1)
+    array of micro-corner heights) and `micro: {k}` to the manifest.
     """
     cells_y, cells_x = base.shape
     full = {
@@ -248,6 +328,15 @@ def write_package(
                 )
                 out[: block.shape[0], : block.shape[1]] = block
                 layers[lname] = out
+            mrange = None
+            if micro is not None:
+                mc, k = micro
+                cs = chunk_size * k
+                block = mc[cy * cs : (cy + 1) * cs + 1, cx * cs : (cx + 1) * cs + 1]
+                # past the world edge, repeat the edge corners (flat, inside the range)
+                pad = ((0, cs + 1 - block.shape[0]), (0, cs + 1 - block.shape[1]))
+                layers["micro_corners"] = np.pad(block, pad, mode="edge")
+                mrange = (block, k)
             chunk = Chunk(x=cx, y=cy, **layers)
             blob = encode_chunk(chunk)
             rel = f"chunks/{cx}_{cy}.pxwc"
@@ -261,7 +350,7 @@ def write_package(
                     "y": cy,
                     "path": rel,
                     "sha256": hashlib.sha256(blob).hexdigest(),
-                    "heightRange": height_range(base[ys, xs], shape[ys, xs]),
+                    "heightRange": height_range(base[ys, xs], shape[ys, xs], mrange),
                 }
             )
 
@@ -284,7 +373,7 @@ def write_package(
         "cellsY": int(cells_y),
         "chunks": refs,
         "scale": scale,
-        "heightRange": height_range(base, shape),
+        "heightRange": height_range(base, shape, micro),
         "surfaces": {str(k): v for k, v in sorted(surfaces.items())},
         "style": style,
         "attribution": attribution,
@@ -301,6 +390,8 @@ def write_package(
         manifest["generator"] = generator
     if render is not None:
         manifest["render"] = render
+    if micro is not None:
+        manifest["micro"] = {"k": int(micro[1])}
     objects_path = out_dir / "objects.json.gz"
     if objects is not None:
         blob = json.dumps({"version": 1, "instances": objects}, separators=(",", ":")).encode()

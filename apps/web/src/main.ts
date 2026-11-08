@@ -159,7 +159,14 @@ async function main() {
     await store.ensureRect(x0, y0, x1, y1);
     const s = store.slice(x0, y0, x1, y1);
     return {
-      slice: { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers() },
+      slice: {
+        x0: s.x0,
+        y0: s.y0,
+        width: s.grid.width,
+        height: s.grid.height,
+        layers: s.grid.layers(),
+        micro: s.grid.micro,
+      },
     };
   };
 

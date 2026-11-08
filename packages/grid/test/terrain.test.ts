@@ -5,7 +5,10 @@ import {
   EDGE_NEIGHBOR,
   EDGE_NEIGHBOR_CORNERS,
   TerrainGrid,
+  copyCells,
   cornerHeights,
+  emptyMicro,
+  microCellCorners,
   isValidShape,
   packShape,
   shapeFromCorners,
@@ -95,5 +98,36 @@ describe("TerrainGrid", () => {
 
   it("validates layer sizes", () => {
     expect(() => new TerrainGrid(2, 2, { base: new Int16Array(3) })).toThrow();
+  });
+});
+
+describe("micro-terrain", () => {
+  it("derives micro-cells: slope tiles up to 3 micro-steps, flat terraces when steeper", () => {
+    expect(microCellCorners(0, 1, 3, 1)).toEqual([0, 1, 3, 1]);
+    expect(microCellCorners(1, 9, 9, 1)).toEqual([5, 5, 5, 5]); // mean 5
+    expect(microCellCorners(0, 1, 9, 12)).toEqual([6, 6, 6, 6]); // mean 5.5 rounds half up
+  });
+
+  it("samples heights from micro-terrain when present, in steps", () => {
+    const k = 4;
+    const g = new TerrainGrid(1, 1, { micro: emptyMicro(k, 1, 1) });
+    // a ramp rising 1 micro-step per micro-corner eastward
+    for (let y = 0; y <= k; y++) for (let x = 0; x <= k; x++) g.micro!.corners[y * (k + 1) + x] = 40 + x;
+    expect(g.surfaceHeightAt(0, 0.5)).toBe(10);
+    expect(g.surfaceHeightAt(0.5, 0.5)).toBe(10.5);
+    expect(g.surfaceHeightAt(1, 0.5)).toBe(11);
+    expect(g.heightRange()).toEqual([0, 11]); // cell layer at 0, micro up to 44/4
+  });
+
+  it("copies micro-corners with their cells", () => {
+    const k = 2;
+    const src = new TerrainGrid(2, 1, { micro: emptyMicro(k, 2, 1) });
+    src.micro!.corners.forEach((_, i, a) => (a[i] = i));
+    const dst = src.slice(1, 0, 1, 1);
+    // cell (1, 0) covers micro-corners x 2..4 of rows 0..2 in a 5-wide source
+    expect(Array.from(dst.micro!.corners)).toEqual([2, 3, 4, 7, 8, 9, 12, 13, 14]);
+    const plain = new TerrainGrid(1, 1);
+    copyCells(src, 0, 0, plain, 0, 0, 1, 1); // a grid without micro-terrain just skips it
+    expect(plain.micro).toBeNull();
   });
 });

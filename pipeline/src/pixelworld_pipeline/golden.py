@@ -53,6 +53,23 @@ def golden_chunk() -> Chunk:
     )
 
 
+def golden_micro_chunk() -> Chunk:
+    """A 2×2 chunk with K=2 micro-terrain: (2·2 + 1)² micro-corner heights."""
+    size, k = 2, 2
+    side = size * k + 1
+    corners = np.arange(side * side, dtype=np.int32).reshape(side, side) * 7 % 23 - 9
+    corners[0, 0] = -32000
+    corners[4, 4] = 32000
+    return Chunk(
+        x=3,
+        y=-1,
+        base=np.array([[10, 11], [12, -5]], dtype=np.int16),
+        shape=np.zeros((size, size), dtype=np.uint8),
+        surface=np.ones((size, size), dtype=np.uint8),
+        micro_corners=corners.astype(np.int16),
+    )
+
+
 def main() -> None:
     GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
     chunk = golden_chunk()
@@ -70,6 +87,17 @@ def main() -> None:
         "geology": chunk.geology.flatten().tolist(),
     }
     (GOLDEN_DIR / "chunk-v1-small.json").write_text(json.dumps(expected) + "\n")
+    micro = golden_micro_chunk()
+    (GOLDEN_DIR / "chunk-v1-micro.pxwc").write_bytes(encode_chunk(micro))
+    expected_micro = {
+        "x": micro.x,
+        "y": micro.y,
+        "size": micro.size,
+        "k": micro.micro_k,
+        "base": micro.base.flatten().tolist(),
+        "microCorners": micro.micro_corners.flatten().tolist(),
+    }
+    (GOLDEN_DIR / "chunk-v1-micro.json").write_text(json.dumps(expected_micro) + "\n")
     print(f"wrote golden files to {GOLDEN_DIR}")
 
 
