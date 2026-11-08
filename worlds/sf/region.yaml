@@ -69,6 +69,18 @@ objects:
       - { group: building.industrial, uses: [industrial] }
       # towers of the 1920s and 30s: setbacks, terracotta and granite
       - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1910, 1950] }
+      # houses with no record (mostly over the county line, where Daly City's
+      # 1940s and 50s stucco rows continue the Sunset): narrow ones as stucco
+      # rows, wider ones as houses of their era (mid-century without a year)
+      - { group: building.rowhouse.stucco, from: [building.residential], maxWidth: 12, floors: [1, 3] }
+      - { group: building.house, from: [building.residential], floors: [1, 3] }
+  vegetation:
+    # street, backyard and park trees where the canopy height map (WRI/Meta,
+    # 1 m) shows 3 m or more. A tree is drawn about 8 m across at 25 m cells,
+    # so one every 12 m at most (about 60,000; every 10 m gave 90,000, mostly
+    # in the parks, for 0.5 MB more). Sidewalk trees mostly fall in road
+    # cells, which are kept clear, so in the rows these are backyard trees.
+    - { group: tree, canopy: 3, spacing: 12, density: 0.9 }
   # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
   landmarks: [golden-gate-bridge, bay-bridge-west, transamerica-pyramid, coit-tower, ferry-building, sf-city-hall, sutro-tower]
   landmarkDepiction: generic
