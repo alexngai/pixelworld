@@ -124,6 +124,11 @@ CLIFF_DROP_METERS = 80.0
 FOREST_ABOVE_METERS = 2300.0
 
 ATTRIBUTION = {
+    "usgs-3dep-lidar": {
+        "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
+        "license": "Public domain",
+        "url": "https://www.usgs.gov/3d-elevation-program",
+    },
     "usgs-3dep-1arcsec": {
         "name": "USGS 3D Elevation Program (3DEP) 1 arc-second DEM",
         "license": "Public domain",
@@ -535,6 +540,8 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     ]
     if region.objects and "buildings" in region.objects:
         attribution.append(ATTRIBUTION["overture-buildings"])
+        if region.objects["buildings"].get("lidar"):
+            attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None

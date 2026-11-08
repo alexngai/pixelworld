@@ -206,7 +206,21 @@ def rivers(
     )
 
 
-BUILDING_COLUMNS = ["id", "class", "subtype", "height", "num_floors", "is_underground", "has_parts"]
+BUILDING_COLUMNS = [
+    "id",
+    "class",
+    "subtype",
+    "height",
+    "num_floors",
+    "is_underground",
+    "has_parts",
+    # M3: names (landmarks replace buildings by name), shape and colour hints
+    "names",
+    "roof_shape",
+    "roof_color",
+    "facade_color",
+    "facade_material",
+]
 PART_COLUMNS = ["id", "building_id", "height", "min_height", "num_floors", "is_underground"]
 
 

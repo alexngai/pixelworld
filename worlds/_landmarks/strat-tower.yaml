@@ -1,0 +1,8 @@
+name: Stratosphere Tower (The STRAT)
+wikidata: Q845846     # The STRAT Hotel, Casino & SkyPod
+anchor: { lon: -115.1555, lat: 36.1474 }
+height: 350
+clear: 45
+replaces: [Stratosphere Tower]
+depictions:
+  generic: { group: landmark.tower.observation }   # a generic shaft, legs and pod; no replica

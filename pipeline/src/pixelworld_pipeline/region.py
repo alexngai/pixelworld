@@ -88,7 +88,9 @@ class Region:
 
     @staticmethod
     def load(path: Path) -> Region:
-        return Region.from_dict(load_spec(Path(path)))
+        from .landmarks import expand
+
+        return Region.from_dict(expand(load_spec(Path(path)), Path(path)))
 
     @staticmethod
     def from_dict(raw: dict[str, Any]) -> Region:

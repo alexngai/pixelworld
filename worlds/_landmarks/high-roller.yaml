@@ -1,0 +1,8 @@
+name: High Roller observation wheel
+wikidata: Q892103
+anchor: { lon: -115.16820, lat: 36.11750 }
+height: 168
+clear: 40
+orient: 0
+depictions:
+  generic: { group: landmark.wheel }               # an observation wheel with cabins

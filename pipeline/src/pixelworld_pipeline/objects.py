@@ -310,10 +310,106 @@ def _footprint(p: Placement, poly, tolerance: float) -> list[list[float]]:
     return [[round(float(x), 2), round(float(y), 2)] for x, y in zip(cx, cy, strict=True)]
 
 
+# Overture roof shapes the building generator draws (anything else is flat)
+ROOF_SHAPES = {"flat", "pyramidal", "dome", "hipped", "half_hipped", "gabled", "skillion"}
+
+
+def _hints(row: dict) -> dict:
+    """Shape and colour hints from Overture for the building generator (M3)."""
+    out: dict[str, Any] = {}
+    if row.get("roof_shape") in ROOF_SHAPES:
+        out["rs"] = row["roof_shape"]
+    for key, col in (("fc", "facade_color"), ("rc", "roof_color")):
+        v = row.get(col)
+        if isinstance(v, str) and v.startswith("#") and len(v) == 7:
+            out[key] = v.lower()
+    if row.get("facade_material"):
+        out["fm"] = str(row["facade_material"])
+    return out
+
+
+def lidar_massing(
+    geom, grid, overture_height: float | None, spec: dict[str, Any]
+) -> tuple[float, list] | None:
+    """Height (and tower parts) of a footprint from a lidar height grid (D-052).
+
+    Returns None to keep the Overture height: when lidar covers less than half
+    the footprint, or Overture has a height and lidar doesn't see one well above
+    it (ML-estimated heights of large complexes can be far too low). Otherwise
+    (podium height, [(tower polygon, height), ...]): tower parts are connected
+    regions of at least `minTowerArea` m² whose roofs stand more than
+    `towerGap` m above the footprint's median roof.
+    """
+    from rasterio import features
+    from rasterio.transform import Affine
+    from scipy import ndimage
+
+    r0, r1, c0, c1 = grid.window(geom.bounds)
+    if r1 <= r0 or c1 <= c0:
+        return None
+    sub = grid.heights[r0:r1, c0:c1]
+    cov = grid.covered[r0:r1, c0:c1]
+    tr = grid.transform @ Affine.translation(c0, r0)
+    inside = features.geometry_mask([geom], sub.shape, tr, invert=True)
+    if inside.sum() < 3 or cov[inside].mean() < 0.5:
+        return None
+    roof = inside & (sub > 2.0)
+    if roof.sum() < max(2, 0.2 * inside.sum()):
+        return None
+    h = sub[roof]
+    p50, p95 = float(np.percentile(h, 50)), float(np.percentile(h, 95))
+    if overture_height and not (p95 > 1.5 * overture_height and p95 - overture_height > 15):
+        return None
+    cell_m2 = grid.res**2
+    gap = float(spec.get("towerGap", 25.0))
+    towers = []
+    if roof.sum() * cell_m2 >= 3000 and p95 - p50 > gap:
+        tall = roof & (sub > p50 + gap)
+        tall = ndimage.binary_opening(tall)
+        labels, n = ndimage.label(tall, structure=np.ones((3, 3)))
+        min_area = float(spec.get("minTowerArea", 600.0))
+        for k in range(1, n + 1):
+            comp = labels == k
+            if comp.sum() * cell_m2 < min_area:
+                continue
+            shapes = [
+                shapely.geometry.shape(g)
+                for g, v in features.shapes(comp.astype(np.uint8), mask=comp, transform=tr)
+                if v == 1
+            ]
+            poly = shapely.union_all(shapes).simplify(grid.res * 0.75).intersection(geom)
+            if poly.is_empty or poly.area < min_area:
+                continue
+            towers.append((poly, round(float(np.percentile(sub[comp], 95)), 1)))
+    podium = max(4.0, p50) if towers else max(4.0, p95)
+    return round(podium, 1), towers
+
+
+def replaced_by_landmark(row: dict, replaces: set[str]) -> bool:
+    """True if a landmark stands in for this building (by Overture id or name)."""
+    if not replaces:
+        return False
+    if row["id"] in replaces:
+        return True
+    name = ((row.get("names") or {}).get("primary") or "").strip().lower()
+    return bool(name) and name in replaces
+
+
 def place_buildings(
-    p: Placement, spec: dict[str, Any], rows: list[dict], parts: list[dict], clear
+    p: Placement,
+    spec: dict[str, Any],
+    rows: list[dict],
+    parts: list[dict],
+    clear,
+    replaces: set[str] | None = None,
+    heights: list | None = None,
+    stats: dict | None = None,
 ) -> tuple[list[dict], list]:
-    """Footprint instances (buildings, and parts of buildings that have them)."""
+    """Footprint instances (buildings, and parts of buildings that have them).
+    Buildings a landmark replaces (D-051) are left out, with their parts.
+    With a lidar height grid (`heights`, D-052), buildings without a height (or
+    with one far below what lidar sees) take lidar's, and large footprints whose
+    roofs stand well above their podium get lidar-derived tower parts."""
     min_area = float(spec.get("minArea", 30))
     tower_m = float(spec.get("towerMeters", 45))
     podium_m = float(spec.get("podiumMeters", 15))
@@ -325,8 +421,10 @@ def place_buildings(
         if float(part.get("min_height") or 0) <= 3:
             parts_by_building.setdefault(part["building_id"], []).append(part)
 
-    def add(row: dict, cls: str | None, height_m: float, group: str) -> None:
-        geom = p.project(shapely.from_wkt(row["geometry"]))
+    def add(
+        row: dict, cls: str | None, height_m: float, group: str, hints: dict, geom=None
+    ) -> None:
+        geom = geom if geom is not None else p.project(shapely.from_wkt(row["geometry"]))
         for poly in list(geom.geoms) if hasattr(geom, "geoms") else [geom]:
             if poly.geom_type != "Polygon" or poly.area < min_area:
                 continue
@@ -343,13 +441,17 @@ def place_buildings(
                 "fp": _footprint(p, poly, tolerance),
                 "hm": round(height_m, 1),
                 "_grp": group,  # building id (parts join their building); see depict_buildings
+                **hints,
             }
             if p.layout is not None:
                 inst["m"] = round(p.scale_at(c.x, c.y), 2)
             out.append(inst)
 
     small_house_m2 = float(spec.get("houseMaxArea", 0))
+    skip = {r.lower() for r in (replaces or set())} | set(replaces or set())
     for row in rows:
+        if replaced_by_landmark(row, skip):
+            continue
         cls = row.get("class")
         if cls is None and small_house_m2 > 0:
             # ML-derived footprints carry no class; small ones in a city are houses
@@ -358,12 +460,32 @@ def place_buildings(
                 cls = "house"
         height = _height(row, _kind(cls))
         my_parts = parts_by_building.get(row["id"], []) if row.get("has_parts") else []
+        hints = _hints(row)
+        if heights and not my_parts:
+            geom = p.project(shapely.from_wkt(row["geometry"]))
+            got = None
+            for grid in heights:  # the first grid that covers the footprint
+                got = lidar_massing(geom, grid, row.get("height"), spec.get("lidar") or {})
+                if got is not None:
+                    break
+            if got is not None:
+                podium, towers = got
+                if stats is not None:
+                    stats["lidarHeights"] = stats.get("lidarHeights", 0) + 1
+                    stats["lidarTowers"] = stats.get("lidarTowers", 0) + len(towers)
+                if towers:
+                    add(row, cls, podium, row["id"], {}, geom)
+                    for k, (poly, h) in enumerate(towers):
+                        add({"id": f"{row['id']}#t{k}"}, cls, h, row["id"], hints, poly)
+                else:
+                    add(row, cls, podium, row["id"], hints, geom)
+                continue
         if my_parts:
-            add(row, cls, min(height, podium_m), row["id"])
+            add(row, cls, min(height, podium_m), row["id"], {})
             for part in sorted(my_parts, key=lambda r: r["id"]):
-                add(part, cls, _height(part, "other"), row["id"])
+                add(part, cls, _height(part, "other"), row["id"], hints)
         else:
-            add(row, cls, height, row["id"])
+            add(row, cls, height, row["id"], hints)
     return out, polys
 
 
@@ -485,6 +607,37 @@ def dam_footprint(p: Placement, line, thickness_m: float, bulge: float = 0.15) -
     return [[round(float(x), 2), round(float(y), 2)] for x, y in ring]
 
 
+def line_parts(p: Placement, lm: dict, k: int, heights, mid: tuple[float, float]) -> list[dict]:
+    """Sub-objects of a line landmark (a dam's intake towers): each at a fraction
+    `along` the line, `offset` metres to its upstream side (where a dam bows)."""
+    out = []
+    if not lm.get("parts"):
+        return out
+    (lon0, lat0), (lon1, lat1) = lm["line"]
+    xs, ys = transform_points("EPSG:4326", p.region.crs, [lon0, lon1], [lat0, lat1])
+    ax, ay = p.to_cells(np.array(xs), np.array(ys), shift=False)
+    a = np.array([ax[0], ay[0]])
+    along = np.array([ax[1], ay[1]]) - a
+    n = np.array([along[1], -along[0]]) / max(float(np.hypot(*along)), 1e-9)
+    per_cell = p.scale_at(*mid)
+    for j, part in enumerate(lm["parts"]):
+        c = (
+            a
+            + float(part.get("along", 0.5)) * along
+            + n * float(part.get("offset", 0.0)) / per_cell
+        )
+        inst = {"g": part["group"], "x": float(c[0]), "y": float(c[1]), "s": k * 100 + j + 1}
+        if p.layout is not None:
+            inst["m"] = round(per_cell, 2)
+        if heights is not None and "crestMeters" in lm:
+            top_m = float(lm["crestMeters"]) + float(part.get("aboveCrest", 0.0))
+            inst["top"] = round(float(heights(*mid, top_m)), 2)
+        elif "height" in part:
+            inst["hm"] = float(part["height"])
+        out.append(inst)
+    return out
+
+
 def place(
     region: Region,
     blocked: np.ndarray,
@@ -523,13 +676,50 @@ def place(
     def clear(x: float, y: float) -> bool:
         return any(math.hypot(x - lx, y - ly) < r for lx, ly, r in clear_zones)
 
+    replaces = {r for lm in landmarks for r in lm.get("replaces", [])}
+    lidar_stats: dict[str, int] = {}
     building_polys = []
     if "buildings" in spec:
         release = region.sources["overture"]["release"]
-        bbox = tuple(spec["buildings"].get("bounds", region.lonlat_envelope()))
-        rows = overture.buildings(release, bbox)
-        parts = overture.building_parts(release, bbox)
-        found, building_polys = place_buildings(p, spec["buildings"], rows, parts, clear)
+        bounds = spec["buildings"].get("bounds", region.lonlat_envelope())
+        # one box, or a list of boxes (e.g. the Strip and Grand Canyon Village)
+        boxes = bounds if isinstance(bounds[0], (list, tuple)) else [bounds]
+        rows, parts, seen = [], [], set()
+        for box in boxes:
+            for r in overture.buildings(release, tuple(box)):
+                if r["id"] not in seen:
+                    seen.add(r["id"])
+                    rows.append(r)
+            parts += overture.building_parts(release, tuple(box))
+        parts = list({pt["id"]: pt for pt in parts}.values())
+        rows.sort(key=lambda r: r["id"])
+        grids = []
+        lidar_spec = spec["buildings"].get("lidar")
+        if lidar_spec:
+            from .sources import lidar as lidar_source
+
+            for box in boxes:
+                g = lidar_source.height_grid(
+                    lidar_spec["project"],
+                    tuple(box),
+                    region.crs,
+                    float(lidar_spec.get("res", 4.0)),
+                    int(lidar_spec.get("depth", 6)),
+                )
+                if g is not None:
+                    grids.append(g)
+        found, building_polys = place_buildings(
+            p,
+            spec["buildings"],
+            rows,
+            parts,
+            clear,
+            replaces,
+            heights=grids or None,
+            stats=lidar_stats,
+        )
+        if lidar_stats:
+            print(f"lidar: {lidar_stats}")
         if snap is not None:
             found = snap_buildings(found, snap)
         instances += depict_buildings(p, found, depiction.get("buildings", {}))
@@ -557,10 +747,15 @@ def place(
         if p.layout is not None or lm_scale[k] != 1.0:
             local = p.scale_at(lx, ly) if p.layout is not None else p.m
             inst["m"] = round(local / lm_scale[k], 2)
+        if "orient" in lm:
+            inst["r"] = int(lm["orient"]) % 4
         if "line" in lm:
-            inst["fp"] = dam_footprint(p, lm["line"], float(lm.get("thicknessM", 60)))
+            inst["fp"] = dam_footprint(
+                p, lm["line"], float(lm.get("thicknessM", 60)), float(lm.get("bulge", 0.15))
+            )
             if heights is not None and "crestMeters" in lm:
                 inst["top"] = round(float(heights(lx, ly, float(lm["crestMeters"]))), 2)
+            instances += line_parts(p, lm, k, heights, (lx, ly))
         instances.append(inst)
 
     for inst in instances:

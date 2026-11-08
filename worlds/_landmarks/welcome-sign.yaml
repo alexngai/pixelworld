@@ -1,0 +1,6 @@
+name: Welcome to Fabulous Las Vegas sign
+wikidata: Q175665
+anchor: { lon: -115.17282, lat: 36.08208 }
+clear: 10
+depictions:
+  generic: { group: landmark.sign }                # a diamond roadside sign with a neon rim; no lettering
