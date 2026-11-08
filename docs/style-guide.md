@@ -254,6 +254,7 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 - **Round street trees** (`roundTree`, generators/trees.ts): a lobed crown wider than it is tall, on a one- or two-voxel trunk, in the `leaf` ramp a shade deeper than lawn. A blob on a tall trunk read as a palm from the driving level.
 - **Sidewalk trees** (`objects.streetTrees` with `canopy`, group `tree.street`): road cells are kept clear of everything else, so sidewalk trees stand on the verge just past the drawn asphalt, in rows along straight road cells, where the canopy map shows trees beside the real road. This is the one exception to keeping a band beside roads clear.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
+- **Strung across a street** (`across: true`, optionally limited by `name` and a lon/lat `bounds`): one prop on the road's line, turned across it. San Francisco strings `prop.lanterns` (a sagging wire of red and gold lanterns) over Grant Avenue and Stockton Street in Chinatown.
 
 ## 15. San Francisco (the `bay-area` pack)
 
@@ -262,7 +263,8 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 **Roofs**
 - **Flat roofs are light:** grey tar and gravel, a white coating or warm gravel. Large apartment blocks are never white, because white glares at that size.
 - **Slate** goes only on Queen Anne gables, which are short and on 10–30% of Victorians.
-- **Lot lines:** each row house raises a one-voxel parapet in its body colour on one lot line, so a row of flat roofs still reads as separate houses.
+- **Lot lines:** each row house raises a one-voxel parapet on one lot line, in its body colour for two voxels and then in the roof's, so a row of flat roofs still reads as separate houses without pastel stripes across the roofs.
+- **Roof line:** each house in a row is a voxel taller or shorter than its neighbours (two on taller houses), and never lower than its storeys (`fl`), so a row steps house by house instead of reading as one block.
 
 **Paint schemes** (generators/facades.ts)
 - **What a scheme is:** the role variants that share a name, such as `wall.blue`, `trim.blue` and `accent.blue`. Trim and accent come from the body's scheme, never at random.
@@ -270,17 +272,18 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 
 | Typology | Body | Trim and accent |
 |---|---|---|
-| Victorian rows (before 1906) | saturated: blue, mustard, green, plum, teal, oxblood, a few pastels | cream or white trim, a contrasting accent on the frieze and door |
-| Edwardian rows (1906–1920) | creams, whites, pale tones | white trim, dentils |
-| Stucco rows (1920–1960) | whites, creams and pastel stucco | white garage doors and copings; tiled pent roofs and storybook gables on about a fifth, mostly the 1920s |
+| Victorian rows (before 1906) | saturated painted ladies: blue, mustard, green, plum, teal, oxblood, a few pastels. In Pacific Heights, Russian Hill, Nob Hill, North Beach, the Marina, the Richmond and the Sunset (`.pale`, by typology rule): mostly white, cream and grey, some deep blue and sage | cream or white trim, a contrasting accent on the frieze and door |
+| Edwardian rows (1906–1920) | creams, whites, pale tones; in the Mission, the Haight, the Western Addition and Hayes Valley (`.painted`) more saturated | white trim, dentils |
+| Stucco rows (1920–1960) | about four in five white, cream, beige, pale grey or sand; the rest mint, rose, sky or butter | white garage doors (a shade darker on white houses) and copings; tiled pent roofs and storybook gables mostly before 1940 |
 | Mid-century (rowhouse type 3) | white and grey | a band of sliding windows, a flat fascia, sometimes a brick or stone veneer |
-| Apartments | cream, white, brick, terracotta | white cornices, stacked bays |
+| Apartments | cream, white, grey, brick, terracotta | white cornices, stacked bays with white panels between them |
 | Houses without a row (`building.house`) | the row-house form of their era (type -1), white and grey | — |
-| Chinatown | cream, butter, mint, brick | red balcony rails, red and gold signs, jade eaves, pagoda roofs |
+| Chinatown | cream, butter, mint, brick | piers and window bays; balconies with red rails and balusters, or windows on red or jade sills; vertical signs (red with gold caps, or gold with red) and a sign band, no lettering; a red frieze and a jade eave with upturned corners round every visible wall; pagoda towers on some corner lots and pavilions on some roofs |
+| Historic commercial | buff, cream, granite, brick | cornices, storefronts |
 
 - **Shades:** walls only show shades 2–3 of a paint ramp, so paint ramps are tuned for those two.
 
-**Stucco fronts** (`stuccoRow`): the entry stair sits in a recess on one side, beside a white garage door, with a box, canted or curved bay over it, drawn by stepping the rest of the upper front back. Parapets are raised, pedimented, stepped, curved or plain, with end piers on some. A light well on one lot line breaks each roof, so a row reads as separate houses from above.
+**Stucco fronts** (`stuccoRow`): the entry stair sits in a recess on one side, beside a white garage door, with a box, canted or curved bay over it, drawn by stepping the rest of the upper front back. The bay rises to the roof line under a white cap, with the parapet set back behind it, so the bump reads from above at 25 m cells (a front is about 5 voxels wide there). Parapets are raised, pedimented, stepped, curved or plain, with end piers on some. A light well on one lot line breaks each roof, so a row reads as separate houses from above.
 
 **Towers** (`towers.ts`, by year built, D-055)
 
@@ -312,3 +315,4 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | `landmark.windmill` | `windmill` | the Dutch and Murphy windmills in Golden Gate Park: octagonal smock mills, a cap, four sails facing the sea, drawn 1.35× to read over the park's trees |
 | `landmark.lighthouse` | `lighthouse` | the Alcatraz light: a tapering tower, a gallery, a lantern lit at night |
 | `landmark.cellhouse` | `cellhouse` (a line landmark) | the Alcatraz cellhouse: a long hall of barred windows, a skylight monitor, a taller head block |
+| `landmark.gate` | `gate` (generators/chinatown.ts) | the Dragon Gate at Grant Avenue and Bush Street: a three-opening gate with stone piers, red beams, a blank gold plaque, jade hipped roofs with upturned corners |
