@@ -78,7 +78,7 @@ World-anchored patterns follow the terrain through rotations and slopes. Screen-
 - **Drawn as decals** in the bake: a top-face pixel is road when it's within the class's half-width of the cell's road centre lines. These run from the cell centre to the edge midpoint or corner of each connected neighbour, plus diagonal roads crossing the cell's corners.
 - **Pixel-clean:** roads follow the same 8 directions as the grid, so their edges are 2:1, horizontal or vertical lines.
 - **Widths** (half-widths in cells): motorway 0.2, trunk 0.17, primary 0.1, secondary 0.07. Narrowing primary and secondary was needed to stop Las Vegas's arterial grid from overpowering the city.
-- **Colours:** `asphalt` ramp; motorways and trunks get a one-pixel `marking` centre line. Roads are lit like the terrain under them.
+- **Colours:** `asphalt` ramp; motorways and trunks get a one-pixel `marking` centre line. Roads are lit like the terrain under them. A class may name its own `ramp`: the `bay-area` pack's `brick` class (a kept street drawn as its own class, D-049) paves Lombard Street's crooked block in `brick`.
 - **Pavement on slopes (M3.5):** where micro-terrain draws a way, its pavement is lit by the way's grade over about two cells, not by its micro-tiles, so a steady climb drawn as flats and ramps reads as one slope instead of stripes. Terrace walls (risers) on pavement take the pavement's colour a shade darker. Crosswalk stripes are drawn only on gentle crossings: on a steep street, screen-space stripes stand up like a fence.
 - **Rails (M3.5, D-061):** a style's `roads.rail` ramp draws the `RAIL` layer on top of the way: two rails about a pixel wide, street tracks on their road's centre line, cable-car tracks with a dark slot between the rails, train tracks on a ballast bed. A style without `roads.rail` draws no rails (the `bay-area` pack uses `bridge-grey`).
 
@@ -304,7 +304,7 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | Group | Generator | Landmark |
 |---|---|---|
 | `landmark.bridge.suspension` | `suspensionBridge` (portal towers, stepped struts, grooved legs) | the Golden Gate Bridge: orange towers, truss and railings |
-| `landmark.bridge.suspension.double` | `suspensionBridge` (X-braced towers, double deck) | the Bay Bridge's west span, grey |
+| `landmark.bridge.suspension.double` | `suspensionBridge` (X-braced towers, braced on their sides too over dark plates so they read side-on; cables sagging clear of the deck and onto a raised central anchorage; double deck) | the Bay Bridge's west span, grey |
 | `landmark.tower.pyramid` | `pyramidTower` | the Transamerica Pyramid: a spire, wings on two faces, an arcade at the foot |
 | `landmark.tower.obelisk.diagonal` | `obeliskTower` | Salesforce Tower: corners rounding as it rises, a lattice crown |
 | `landmark.tower.column` | `column` | Coit Tower |

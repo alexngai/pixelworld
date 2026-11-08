@@ -54,7 +54,11 @@ SURFACES = {
 S = {name: i for i, name in SURFACES.items()}
 # Road and path classes, lowest priority first. A world numbers the classes it
 # uses in this order, so the classic four keep ids 1-4 (secondary..motorway).
+# `brick` isn't Overture's: a kept street drawn as its own class (snap.roads.keep
+# `class`, Lombard Street's crooked block), below all others so the streets it
+# meets keep their junctions.
 ROAD_ORDER = (
+    "brick",
     "service",
     "unclassified",
     "living_street",
@@ -78,6 +82,7 @@ ROAD_WIDTH_M = {
     "living_street": 6.0,
     "unclassified": 7.0,
     "service": 5.0,
+    "brick": 5.0,
 }
 PATH_WIDTH_M = {
     "pedestrian": 8.0,
@@ -474,6 +479,45 @@ def kept_ways(rows: list[dict], rules: list[dict[str, Any]]) -> dict[str, dict[s
     return out
 
 
+def swing_kept(
+    layout,
+    road_lines: list,
+    path_lines: list,
+    keep: dict[str, dict[str, Any]],
+    rules: list[dict[str, Any]],
+    road_ids: set[str],
+) -> tuple[list, list, list[tuple[np.ndarray, np.ndarray, float, str]]]:
+    """Kept streets drawn wider than true (`snap.roads.keep`, D-049): a rule's
+    `widen` swings its ways' bends that many times further from the street's
+    axis, never past `within` metres of it (15), so the hairpins of a crooked
+    block read at walking scale (roads.swing). Returns the lines and, for
+    rules with a `surface`, the gardens between the bends: the axis's ends,
+    the half-width in cells and the surface name."""
+    gardens: list[tuple[np.ndarray, np.ndarray, float, str]] = []
+    if not any("widen" in rule for rule in rules):
+        return road_lines, path_lines, gardens
+    lines = road_lines + path_lines
+    mpc = layout.meters_per_cell()
+    for rule in rules:
+        if "widen" not in rule:
+            continue
+        ids = {seg_id for seg_id, r in keep.items() if r is rule}
+        street = ids & road_ids
+        at = [(xs[0], ys[0]) for seg_id, _, parts in lines if seg_id in street for xs, ys in parts]
+        if not at:
+            continue
+        ix = min(max(int(at[0][0]), 0), mpc.shape[1] - 1)
+        iy = min(max(int(at[0][1]), 0), mpc.shape[0] - 1)
+        within = float(rule.get("within", 15.0)) / float(mpc[iy, ix])
+        swung = road_stage.swing(lines, ids, street, float(rule["widen"]), within)
+        if swung is None:
+            continue
+        lines = swung.lines
+        if "surface" in rule:
+            gardens.append((swung.a, swung.b, within, str(rule["surface"])))
+    return lines[: len(road_lines)], lines[len(road_lines) :], gardens
+
+
 def rail_lines(
     layout, rows: list[dict], rules: list[dict[str, Any]], shift=None, simplify: float = 0.75
 ) -> list:
@@ -532,6 +576,21 @@ def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
     return out
 
 
+def manifest_depiction(dep: dict[str, Any]) -> dict[str, float] | None:
+    """What the client needs of a level's `objects.depiction` (D-047), or None:
+    the object height stretch, the scatter density (M3) and the most traffic
+    vehicles are enlarged over their real size (D-060)."""
+    out: dict[str, float] = {}
+    if dep.get("heightStretch") is not None:
+        out["heightStretch"] = float(dep["heightStretch"])
+    if dep.get("scatter"):
+        # the client scatters vegetation by surface at this density (M3)
+        out["scatter"] = float(dep["scatter"])
+    if dep.get("vehicleScale"):
+        out["vehicleScale"] = float(dep["vehicleScale"])
+    return out or None
+
+
 def make_layout(region: Region, region_path: Path | None = None):
     if region.warp:
         spec = WarpSpec.from_dict(region.warp)
@@ -565,7 +624,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     release = region.sources["overture"]["release"]
     bbox = region.lonlat_envelope()
     road_spec = region.sources["roads"]
-    road_ids = class_ids(road_spec["classes"], ROAD_ORDER)
+    snap = region.snap or {}
+    keep_rules = list((snap.get("roads") or {}).get("keep") or [])
+    # a kept street may be drawn as a class of its own (a crooked street's brick)
+    kept_classes = [rule["class"] for rule in keep_rules if "class" in rule]
+    road_ids = class_ids(list(dict.fromkeys(road_spec["classes"] + kept_classes)), ROAD_ORDER)
     road_id = {c: i for i, c in road_ids.items()}
     road_rows = overture.roads(
         release, bbox, road_spec["classes"], road_spec.get("excludeSubclasses")
@@ -607,17 +670,22 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     q, water_level = apply_water(q, lake, river)
 
     # roads: snap, cut-and-fill on the corner field
-    road_lines = _lines_in_cells(layout, road_rows, lambda r: road_id[r["class"]])
+    keep = kept_ways(road_rows + path_rows, keep_rules)
+    road_lines = _lines_in_cells(
+        layout, road_rows, lambda r: road_id[keep.get(r["id"], {}).get("class", r["class"])]
+    )
     road_lines_mapped = road_lines
     path_lines = _lines_in_cells(layout, path_rows, lambda r: path_id[overture.path_class(r)])
-    snap = region.snap or {}
     road_shift = None
     deviation = None
-    keep: dict[str, dict[str, Any]] = {}
+    gardens: list[tuple[np.ndarray, np.ndarray, float, str]] = []
     if "roads" in snap:
         # straighten the network toward the 8 grid directions (D-049)
         rs = snap["roads"] or {}
-        keep = kept_ways(road_rows + path_rows, rs.get("keep") or [])
+        # crooked streets first swing their bends wider, so they read at this scale
+        road_lines, path_lines, gardens = swing_kept(
+            layout, road_lines, path_lines, keep, keep_rules, {r["id"] for r in road_rows}
+        )
         # roads and paths straighten together, so crossings stay where they meet
         straight = road_stage.straighten(
             road_lines + path_lines,
@@ -716,6 +784,10 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         )
         surface[lawn] = surface_id["lawn"]
         print(f"ground: {int(lawn.sum())} lawn cells")
+    # a swung street's gardens: the cells its bends sweep take the rule's surface
+    for a, b, half, name in gardens:
+        band = road_stage.street_band(a, b, half + 0.5, (cy, cx)) & (water == NO_WATER)
+        surface[band] = surface_id[name]
     geology, province_names = provinces(region, layout)
     # junctions are checked where they lie inside the grid (as first mapped)
     mapped = {seg_id: parts for seg_id, _, parts in road_lines_mapped}
@@ -851,15 +923,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         # interpolation within ~2 cells even in stretched transition rings
         step = 4 if layout.warped else 16
         geo = (*layout.geo_grid(step), step)
-    depiction = None
-    dep = (region.objects or {}).get("depiction") or {}
-    if dep.get("heightStretch") is not None or dep.get("scatter"):
-        depiction = {}
-        if dep.get("heightStretch") is not None:
-            depiction["heightStretch"] = float(dep["heightStretch"])
-        if dep.get("scatter"):
-            # the client scatters vegetation by surface at this density (M3)
-            depiction["scatter"] = float(dep["scatter"])
+    depiction = manifest_depiction((region.objects or {}).get("depiction") or {})
     heroes = package_heroes(region, region_path, out_dir)
     manifest = write_package(
         out_dir,

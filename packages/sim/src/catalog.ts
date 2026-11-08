@@ -51,6 +51,8 @@ const ROAD_SPEED: Record<string, number> = {
   unclassified: 9,
   living_street: 5,
   service: 5,
+  // a kept street drawn as its own class (D-049): Lombard Street's crooked block
+  brick: 2.5,
 };
 
 /** Road classes buses run on. */
@@ -86,7 +88,10 @@ export function cruiseSpeed(kind: VehicleKind, r: Route): number {
  * driving and flying levels compress distances, so vehicles go faster than
  * real in cells to look busy at their pace (the rover crosses a cell in a
  * third of a second). Vehicles are drawn at least `minCarCells` long, and every
- * kind scales by the same factor, so a bus stays longer than a car.
+ * kind scales by the same factor, so a bus stays longer than a car. A level may
+ * cap that enlargement (`maxScale`, the manifest's `depiction.vehicleScale`): on
+ * a flying level a car 0.55 cells long would be 55 m, longer than a bridge's
+ * deck is wide, so there vehicles are drawn at most a few times their size.
  */
 export interface LevelScale {
   metersPerCell: number;
@@ -101,10 +106,11 @@ export interface LevelScale {
 export function levelScale(
   metersPerCell: number,
   level?: string,
-  opts: { minCarCells?: number; heightStretch?: number } = {},
+  opts: { minCarCells?: number; maxScale?: number; heightStretch?: number } = {},
 ): LevelScale {
   const timeScale = level === "walk" ? 1 : Math.max(1, Math.pow(metersPerCell / 10, 0.75));
-  const sizeScale = Math.max(1, ((opts.minCarCells ?? 0.55) * metersPerCell) / KINDS.car.length);
+  const legible = ((opts.minCarCells ?? 0.55) * metersPerCell) / KINDS.car.length;
+  const sizeScale = Math.max(1, Math.min(opts.maxScale ?? Infinity, legible));
   return { metersPerCell, timeScale, sizeScale, heightStretch: opts.heightStretch ?? 1 };
 }
 

@@ -83,24 +83,74 @@ describe("landmark kit", () => {
     expect(runs(m, 11, y, struts[0]![1] + 1, struts[1]![0] - 1)).toEqual([]);
   });
 
-  it("draws braced towers and a double deck", () => {
+  it("draws braced towers, X-braced between their legs and on their sides, and a double deck", () => {
     const H = 40;
     const m = bridge("landmark.bridge.suspension.double", H);
     const T = Math.round(H * 2.7);
-    const y = Math.round(400 * 0.125); // the first tower's middle
-    // X-bracing: in a panel between struts, the diagonals move across as they climb
-    const solidAt = (z: number) => [...Array(23).keys()].filter((x) => m.get(x, y, z) && x > 5 && x < 17);
-    const struts = runs(m, 11, y, H + 1, T);
-    expect(struts.length).toBeGreaterThanOrEqual(3);
-    const lo = struts[1]![1] + 2;
-    const hi = struts[2]![0] - 2;
-    expect(solidAt(lo)).not.toEqual(solidAt(hi));
-    expect(solidAt(Math.round((lo + hi) / 2)).length).toBeGreaterThan(0);
+    const A = Math.round(400 * 0.125); // the first tower's middle
+    // between the legs, in their front plane: struts over the deck, and in each panel
+    // between two struts diagonals that move across as they climb
+    const between = (z: number) =>
+      [...Array(23).keys()].filter((x) => x > 5 && x < 17 && [0, 1, 2, 3, 4, 5].some((k) => m.get(x, A + k, z)));
+    const struts = [...Array(T - H).keys()].map((k) => H + 1 + k).filter((z) => between(z).length === 11);
+    expect(struts.length).toBeGreaterThanOrEqual(4);
+    const gaps = struts.flatMap((z, i) => (i > 0 && z - struts[i - 1]! > 4 ? [[struts[i - 1]! + 1, z - 1] as const] : []));
+    expect(gaps.length).toBeGreaterThanOrEqual(3);
+    for (const [lo, hi] of gaps.slice(1)) {
+      expect(between(Math.round((lo + hi) / 2))).toContain(11); // the diagonals cross in the middle
+      expect(between(lo + 3).length).toBeGreaterThan(0);
+      expect(between(lo + 3)).not.toContain(11);
+    }
+    // and none of it in the middle of the tower's depth, so from the side it hides behind the legs
+    for (let z = H + 2; z < T; z++) expect(m.get(11, A, z), `z ${z}`).toBe(0);
+    // each leg's outer face: posts at its front and back, and X-braced panels plated behind
+    const face = (z: number, ramp: string) => [...Array(7).keys()].map((k) => A - 3 + k).filter((y) => rampAt(m, 0, y, z) === ramp);
+    const panels: [number, number][] = [];
+    for (let z = H + 1; z < T; z++)
+      if (face(z, "asphalt").length) {
+        const last = panels[panels.length - 1];
+        if (last && last[1] === z - 1) last[1] = z;
+        else panels.push([z, z]);
+      }
+    expect(panels.length).toBeGreaterThanOrEqual(3);
+    for (const [lo, hi] of panels) {
+      // the diagonals cross in the middle of the panel, and meet the posts at its ends
+      const z = Math.round((lo + hi) / 2);
+      expect(face(z, "bridge-grey")).toEqual(expect.arrayContaining([A - 1, A]));
+      expect(face(lo + 3, "bridge-grey")).not.toContain(A);
+      // the face's front and back edges are steel posts (stepping in as the legs taper)
+      const solid = [...Array(15).keys()].map((k) => A - 7 + k).filter((y) => m.get(0, y, z));
+      expect(rampAt(m, 0, solid[0]!, z)).toBe("bridge-grey");
+      expect(rampAt(m, 0, solid[solid.length - 1]!, z)).toBe("bridge-grey");
+    }
     // a lower deck inside the truss at the first bridge's mid-span
     const lower = runs(m, 11, 100, 0, H - 1);
     expect(lower.length).toBe(1);
     expect(lower[0]![0]).toBeLessThan(H - 3);
     expect(rampAt(m, 11, 100, H)).toBe("roof-flat");
+  });
+
+  it("hangs the cables: sagging between the towers and down the side spans, onto a raised central anchorage", () => {
+    const H = 40;
+    const m = bridge("landmark.bridge.suspension.double", H);
+    const T = Math.round(H * 2.7);
+    const cable = (y: number) => topOf(m, 1, y); // the cable plane, between the hangers
+    // mid-span: the cable stays clear of the deck (sag 0.06 of the towers over it)
+    expect(cable(101)).toBeGreaterThanOrEqual(H + 5);
+    expect(cable(101)).toBeLessThan(H + 9);
+    // the main span is a parabola: half way to mid-span it has dropped three quarters
+    const top = cable(Math.round(400 * 0.125) + 7);
+    expect(cable(75)).toBeLessThan(cable(101) + (top - cable(101)) * 0.4);
+    // the central anchorage stands well above the deck under the cables
+    const anchor = topOf(m, 1, 200);
+    expect(anchor).toBeGreaterThan(H + 0.15 * (T - H));
+    // its road stays open
+    expect(rampAt(m, 11, 200, H + 1)).toBeNull();
+    // the side spans sag below the straight line from the tower top to the anchorages
+    expect(cable(175)).toBeLessThan((anchor + T - 1) / 2 - 3);
+    expect(cable(25)).toBeLessThan((H + 1 + T - 1) / 2 - 3);
+    // and still climb from them all the way
+    for (let y = 157; y < 190; y += 4) expect(cable(y)).toBeGreaterThanOrEqual(cable(y + 4));
   });
 
   it("draws a long bridge in pieces that join up", () => {

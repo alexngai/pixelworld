@@ -363,3 +363,111 @@ def test_kept_ways_are_those_inside_a_keep_box():
     box = {"bounds": [-122.4197, 37.8019, -122.4179, 37.8023], "width": 5}
     assert kept_ways(rows, [box]) == {"crooked": box}
     assert kept_ways(rows, []) == {}
+
+
+def _lombard():
+    """A crooked block like Lombard Street's: hairpins swinging 0.7 cells
+    either side of its line between two cross streets 13 cells apart, a lane
+    joining it from the north at a mid-block vertex, and steps beside it."""
+    s = np.linspace(0.0, 13.0, 53)
+    zig = 0.7 * np.sin(s / 13.0 * 8 * math.pi)  # eight hairpins
+    xs, ys = 10.5 + s, 20.0 + zig
+    mid = 26  # the lane's junction
+    return [
+        ("west", 5, [(np.array([10.5, 10.5]), np.array([8.5, 32.5]))]),
+        ("east", 4, [(np.array([23.5, 23.5]), np.array([8.5, 32.5]))]),
+        ("crooked-a", 4, [(xs[: mid + 1], ys[: mid + 1])]),
+        ("crooked-b", 4, [(xs[mid:], ys[mid:])]),
+        ("lane", 4, [(np.array([xs[mid], xs[mid]]), np.array([10.5, ys[mid]]))]),
+        ("steps", 3, [(np.array([11.0, 23.0]), np.array([21.1, 21.1]))]),
+    ]
+
+
+def test_a_crooked_street_swings_wider_within_its_block_and_stays_joined():
+    lines = _lombard()
+    kept = {"crooked-a", "crooked-b", "steps"}
+    sw = R.swing(lines, kept, {"crooked-a", "crooked-b"}, factor=2.0, within=1.3)
+    assert sw is not None
+    got = {seg: parts for seg, _, parts in sw.lines}
+    before = {seg: parts for seg, _, parts in lines}
+    # the axis runs between the street's two ends, which stay where they were
+    assert np.allclose(sw.a, [10.5, 20.0]) and np.allclose(sw.b, [23.5, 20.0])
+    xs, ys = got["crooked-a"][0]
+    assert (xs[0], ys[0]) == pytest.approx((10.5, 20.0))
+    # the bends swing wider, up to 1.3 cells either side but never past it
+    off = np.concatenate([got["crooked-a"][0][1], got["crooked-b"][0][1]]) - 20.0
+    assert off.max() == pytest.approx(1.3) and off.min() == pytest.approx(-1.3)
+    old = np.concatenate([before["crooked-a"][0][1], before["crooked-b"][0][1]]) - 20.0
+    assert np.all(np.abs(off) >= np.abs(old) - 1e-9)
+    # along the street nothing moves
+    assert np.allclose(got["crooked-a"][0][0], before["crooked-a"][0][0])
+    # the steps beside it move out to the block's edge, no further
+    assert np.allclose(got["steps"][0][1], 21.3)
+    # the lane's end moves with the junction it shares, the rest of it stays
+    lane_x, lane_y = got["lane"][0]
+    joint = (got["crooked-b"][0][0][0], got["crooked-b"][0][1][0])
+    assert (lane_x[-1], lane_y[-1]) == pytest.approx(joint)
+    assert lane_y[0] == pytest.approx(10.5)
+    # the cross streets keep their line
+    assert np.allclose(got["west"][0][0], 10.5) and np.allclose(got["east"][0][0], 23.5)
+    # drawn, the hairpins span four rows instead of two, as one street
+    shape = (40, 40)
+
+    def drawn(ls):
+        st = R.straighten(ls, angle=16, simplify=0.75, keep=kept)
+        layer = R.rasterize(st.lines[:5], shape, deviation=1.0)
+        cells = layer.segment_cells["crooked-a"] + layer.segment_cells["crooked-b"]
+        return layer, {y for _, y in cells}
+
+    layer, rows = drawn(sw.lines)
+    assert rows == {18, 19, 20, 21} and drawn(lines)[1] == {19, 20}
+    junctions = {
+        "j": ["crooked-a", "crooked-b", "lane"],
+        "h": ["west", "crooked-a"],
+        "l": ["east", "crooked-b"],
+    }
+    report = R.validate(layer, np.zeros((4, *shape), dtype=np.int16), junctions)
+    assert report.split_segments == 0 and report.disconnected_junctions == 0
+    assert report.components == 1 and report.discontinuous_edges == 0
+    # the gardens between the bends: the cells the swung street sweeps
+    band = R.street_band(sw.a, sw.b, 1.3 + 0.5, shape)
+    assert {y for y in range(40) if band[y, 15]} == rows
+    assert not band[20, 9] and not band[20, 24]  # nor past its ends
+
+
+def test_kept_streets_swing_and_take_their_class_and_gardens_from_the_rule():
+    from pixelworld_pipeline.build import ROAD_ORDER, class_ids, swing_kept
+    from pixelworld_pipeline.layout import UniformLayout
+
+    region = Region.from_dict(
+        {
+            "id": "s",
+            "name": "S",
+            "bounds": [-122.43, 37.79, -122.41, 37.81],
+            "metersPerCell": 10,
+            "style": "s",
+            "start": {"lon": -122.42, "lat": 37.80},
+            "sources": {},
+        }
+    )
+    layout = UniformLayout(region)
+    lines = _lombard()
+    roads = {s for s, _, _ in lines[:5]}
+    rule = {"bounds": [0, 0, 0, 0], "widen": 2, "within": 13, "surface": "grass", "class": "brick"}
+    keep = dict.fromkeys(("crooked-a", "crooked-b", "steps"), rule)
+    swung, paths, gardens = swing_kept(layout, lines[:5], lines[5:], keep, [rule], roads)
+    assert len(swung) == 5 and len(paths) == 1
+    assert np.abs(swung[2][2][0][1] - 20.0).max() == pytest.approx(1.3)  # 13 m at 10 m cells
+    ((_a, _b, half, surface),) = gardens
+    assert half == pytest.approx(1.3) and surface == "grass"
+    # without `widen`, kept ways stay as they are
+    plain = {"bounds": [0, 0, 0, 0], "width": 5}
+    same = swing_kept(layout, lines[:5], lines[5:], dict.fromkeys(keep, plain), [plain], roads)
+    assert same == (lines[:5], lines[5:], [])
+    # the street's own class is the lowest: the streets it meets keep their junctions
+    assert class_ids(["residential", "tertiary", "brick"], ROAD_ORDER) == {
+        1: "brick",
+        2: "residential",
+        3: "tertiary",
+    }
+    assert class_ids(["residential", "tertiary"], ROAD_ORDER) == {1: "residential", 2: "tertiary"}

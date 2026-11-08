@@ -18,6 +18,9 @@ levels:
 # 25 m cells: a 25-foot lot is a third of a cell, about five object voxels
 # wide, so rows of houses read as rows. Hills at 1.5x: Twin Peaks is about
 # 40 steps above the Bay, and a 30% street climbs about one step per cell.
+# (2x was tried: Telegraph Hill stood a little taller, but Russian Hill and
+# Nob Hill read no steeper under their buildings, and the bridges' decks
+# stood a third further above the ground at their ends.)
 metersPerCell: 25
 verticalExaggeration: 1.5
 maxSlope: 3

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, vehicleBoxes, type RoutesFile } from "../src";
+import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, roadSpeed, vehicleBoxes, type RoutesFile } from "../src";
 
 /**
  * A small town: a 5×5 grid of streets 10 cells apart (primary along y = 20,
@@ -202,6 +202,28 @@ describe("traffic simulation", () => {
     }
     // both legs, both ways
     expect(seen.size).toBe(4);
+  });
+
+  it("draws vehicles at least 0.55 cells long, unless the level caps their enlargement", () => {
+    const len = (s: ReturnType<typeof levelScale>) => Math.max(...vehicleBoxes("car", 0, 0, 0, s, () => 1).map((b) => b.x1 - b.x0));
+    // a flying level at 100 m: legible cars would be 55 m long
+    expect(len(levelScale(100, "fly")) * 100).toBeCloseTo(55, 0);
+    const capped = levelScale(100, "fly", { maxScale: 4 });
+    expect(capped.sizeScale).toBe(4);
+    expect(len(capped) * 100).toBeCloseTo(KINDS.car.length * 4, 0);
+    // longer kinds are enlarged less, and never drawn smaller than real
+    const ferry = Math.max(...vehicleBoxes("ferry", 0, 0, 0, capped, () => 1).map((b) => b.x1 - b.x0));
+    expect(ferry * 100).toBeGreaterThanOrEqual(KINDS.ferry.length - 1e-6);
+    expect(ferry * 100).toBeLessThan(KINDS.ferry.length * 1.5);
+    // a cap above the legible size changes nothing (the driving level's 3x)
+    expect(levelScale(MPC, "drive", { maxScale: 4 })).toEqual(levelScale(MPC, "drive"));
+    // and the simulation takes the cap from its options
+    const net = new RouteNetwork(parseRoutes(town()));
+    expect(new TrafficSim(net, { metersPerCell: 100, level: "fly", vehicleScale: 4 }).scale.sizeScale).toBe(4);
+  });
+
+  it("crawls down a crooked brick street", () => {
+    expect(roadSpeed("brick")).toBeLessThan(roadSpeed("living_street"));
   });
 
   it("builds a model for every kind facing its heading", () => {

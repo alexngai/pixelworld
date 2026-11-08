@@ -79,8 +79,11 @@ export interface WorldManifest {
   };
   /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
   objects?: { path: string; sha256?: string; count?: number };
-  /** How objects are drawn at this scale level; overrides the style pack (D-047). */
-  depiction?: { heightStretch?: number; scatter?: number };
+  /**
+   * How objects are drawn at this scale level; overrides the style pack (D-047).
+   * `vehicleScale`: the most traffic vehicles are enlarged over their real size (D-060).
+   */
+  depiction?: { heightStretch?: number; scatter?: number; vehicleScale?: number };
   /** This world's scale level (D-046), e.g. "fly", "drive", "walk". */
   level?: string;
   /** Every level of the region; `world` is the sibling package's id (its directory). */
