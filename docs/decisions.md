@@ -392,6 +392,7 @@ The point is more room for visual interest; both halves are wanted.
 - **Pieces:** a snapped line landmark is cut into pieces of at most 12 cells along its line.
   - **Shared line:** each piece carries the whole line (`ln`, `lw`), so the generator measures its position along the span (towers, cable sag, hangers) against the whole and the pieces join exactly.
   - **Why:** a diagonal bridge in one piece is a square voxel box. The Bay Bridge's west span was about 335 million voxels, mostly empty, rebuilt in every tile it touched; a view of it took 215 s to bake in software.
+- **Seen side-on (M3.5):** a braced tower's X-bracing between its legs is edge-on from the side, where a long bridge is usually seen, so with `sideBrace` each leg is drawn as a braced frame along the bridge (posts, struts and an X in each panel, filled behind with a `plate` role). Main cables sag to `sag` above the deck, the side spans hang with the main span's curve, and `anchorTop` raises a central anchorage under the cables with the road through it left open. A blind judge read the Bay Bridge's towers without this as "generic lattice".
 
 ### D-057: Objects file version 2, footprints relative to their anchor (accepted)
 - **Why:** absolute footprint coordinates, in cells with two decimals, made up most of the San Francisco driving level's `objects.json.gz`: 8.3 MB for 169k buildings.
