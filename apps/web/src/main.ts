@@ -19,7 +19,7 @@ import {
   type TileRequest,
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
-import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+import { GeoGrid, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
 import styleJson from "../../../worlds/_styles/desert-southwest/style.json";
 
 const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
@@ -40,6 +40,10 @@ interface PixelworldDebug {
   stats: () => Record<string, unknown>;
   pan: (dx: number, dy: number) => void;
   setRover: (x: number, y: number) => void;
+  /** Lon/lat under the rover (worlds with a geo grid), else null. */
+  lonLat: () => [number, number] | null;
+  /** Reload at the same place in another scale level (the next one if no name). */
+  switchLevel: (name?: string) => void;
 }
 declare global {
   interface Window {
@@ -97,6 +101,12 @@ async function main() {
   const worldUrl = params.get("world") ?? "/southwest/";
   const manifest = await loadManifest(worldUrl);
   const store = new ChunkStore(manifest, worldUrl);
+  const worldBase = new URL(worldUrl, location.href);
+  // Lon/lat of cell corners: carries the rover's place between scale levels (D-046).
+  const geo = await GeoGrid.load(manifest, worldBase).catch((e: unknown) => {
+    console.warn("geo grid:", e);
+    return null;
+  });
   const sourcesButton = document.createElement("button");
   sourcesButton.textContent = "Sources (I)";
   sourcesButton.onclick = () => sources.classList.toggle("hidden");
@@ -203,7 +213,8 @@ async function main() {
               catalog: style.assets,
               rampIds: [...palette.rampIds],
               metersPerCell: manifest.scale.metersPerCell,
-              heightStretch: style.objects?.heightStretch ?? 1,
+              // a scale level may draw objects with other proportions (D-047)
+              heightStretch: manifest.depiction?.heightStretch ?? style.objects?.heightStretch ?? 1,
               variants: style.objects?.variants ?? 6,
             }
           : undefined,
@@ -282,10 +293,35 @@ async function main() {
   };
   const rover = { x: start.x + 0.5, y: start.y + 0.5, h: 0 };
   const roverParam = params.get("rover");
+  // at=lon,lat: arriving from another scale level; outside this level's area
+  // the rover starts at the world's start instead
+  let arrival = "";
+  const atParam = params.get("at");
   if (roverParam) {
     const [rx, ry] = roverParam.split(",").map(Number);
     rover.x = rx ?? rover.x;
     rover.y = ry ?? rover.y;
+  } else if (atParam && geo) {
+    const [lon, lat] = atParam.split(",").map(Number);
+    const cell = geo.lonLatToCell(lon!, lat!);
+    if (cell) [rover.x, rover.y] = cell;
+    else arrival = " · that place is outside this level, so starting here";
+  }
+
+  const levels = manifest.levels ?? [];
+  function switchLevel(name?: string) {
+    if (levels.length < 2) return;
+    const here = levels.findIndex((l) => l.name === manifest.level);
+    const target = name ? levels.find((l) => l.name === name) : levels[(here + 1) % levels.length];
+    if (!target || target.name === manifest.level) return;
+    const next = new URLSearchParams(location.search);
+    next.set("world", new URL(`../${target.world}/`, worldBase).pathname);
+    for (const key of ["rover", "fx", "fy", "at"]) next.delete(key);
+    if (geo) {
+      const [lon, lat] = geo.cellToLonLat(rover.x, rover.y);
+      next.set("at", `${lon.toFixed(6)},${lat.toFixed(6)}`);
+    }
+    location.search = next.toString();
   }
   const ensureAt = (x: number, y: number) =>
     store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1);
@@ -343,6 +379,7 @@ async function main() {
     }
     else if (k === "h") [hud, help].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
+    else if (k === "l") switchLevel();
     else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
       camera.zoom = Number(k);
@@ -540,6 +577,7 @@ async function main() {
       rover: { x: rover.x, y: rover.y, h: rover.h },
       cache: cache ? "indexeddb" : "off",
       metersPerCell: store.metersPerCellAt(rover.x, rover.y),
+      level: manifest.level ?? null,
       renderScale: RS,
       objects: objectsFile?.instances.length ?? 0,
       palette: night ? "night" : "day",
@@ -553,11 +591,16 @@ async function main() {
     const meters = Math.round(store.realHeightAt(rover.x, rover.y, rover.h) * metersPerStep + elevationDatumMeters);
     const local = manifest.warp ? ` · here ${Math.round(store.metersPerCellAt(rover.x, rover.y))} m/cell (warped)` : "";
     const ve = verticalExaggeration(manifest.scale).toFixed(2);
+    const ll = geo ? geo.cellToLonLat(rover.x, rover.y) : null;
+    const where = ll ? ` · ${ll[1].toFixed(4)}°, ${ll[0].toFixed(4)}°` : "";
     hud.textContent = [
       `${manifest.name} · ${manifest.scale.metersPerCell} m/cell${RS !== 1 ? ` drawn at ×${RS}` : ""}${local} · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
       `      ${s.objects} objects · ${s.palette} palette${style.night ? " (T toggles)" : ""}`,
+      ...(levels.length > 1
+        ? [`level ${levels.map((l) => (l.name === manifest.level ? `[${l.label ?? l.name}]` : (l.label ?? l.name))).join(" · ")} (L switches)${arrival}`]
+        : []),
       `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
-      `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
+      `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)}${where} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
       `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,
       `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
       `      ${s.bakeMode} · ${s.renderer}`,
@@ -587,6 +630,8 @@ async function main() {
       renderedComplete = false;
       dirty = true;
     },
+    lonLat: () => (geo ? geo.cellToLonLat(rover.x, rover.y) : null),
+    switchLevel,
   };
 
   requestAnimationFrame(frame);

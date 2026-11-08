@@ -77,6 +77,20 @@ export interface WorldManifest {
   };
   /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
   objects?: { path: string; sha256?: string; count?: number };
+  /** How objects are drawn at this scale level; overrides the style pack (D-047). */
+  depiction?: { heightStretch?: number };
+  /** This world's scale level (D-046), e.g. "fly", "drive", "walk". */
+  level?: string;
+  /** Every level of the region; `world` is the sibling package's id (its directory). */
+  levels?: LevelRef[];
+  /** Lon/lat of cell corners every `step` cells (geo.ts), for moving between levels. */
+  geo?: { path: string; step: number; size: [number, number]; sha256?: string };
+}
+
+export interface LevelRef {
+  name: string;
+  world: string;
+  label?: string;
 }
 
 /** Objects file: semantic-group instances placed by the pipeline. */
