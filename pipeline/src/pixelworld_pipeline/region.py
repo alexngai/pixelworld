@@ -83,6 +83,8 @@ class Region:
     # Real widths (D-050): {"scale", "minCells", "roads": {class: m}, "paths": {class: m}};
     # without it roads draw at the style pack's fixed width.
     widths: dict[str, Any] | None = None
+    # Ground surfaces from land use (M3.5): {"lawn": {...}, "yard": {...}}; see ground.py.
+    ground: dict[str, Any] | None = None
 
     # ---- loading -------------------------------------------------------------
 
@@ -132,6 +134,7 @@ class Region:
             levels=[dict(v) for v in raw["levels"]] if raw.get("levels") else None,
             snap=dict(raw["snap"]) if raw.get("snap") else None,
             widths=dict(raw["widths"]) if raw.get("widths") else None,
+            ground=dict(raw["ground"]) if raw.get("ground") else None,
         )
         if region.meters_per_cell <= 0 or region.vertical_exaggeration <= 0:
             raise RegionError("metersPerCell and verticalExaggeration must be positive")

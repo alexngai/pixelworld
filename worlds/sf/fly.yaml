@@ -21,6 +21,11 @@ sources:
 
 widths: { scale: 3.0, minCells: 0.08 }
 micro: { k: 4, dem: { overview: 1 } }
+# the parks' lawns, but not from the canopy map: at 100 m a wood is a wood
+# (and the 1 m map over the whole Bay is too big to read); no yards without houses
+ground:
+  lawn: { wooded: null }
+  yard: null
 
 objects:
   # only towers and landmarks are drawn from the air: no typology pass, and no

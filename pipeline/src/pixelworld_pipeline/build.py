@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 import shapely
 
+from . import ground as ground_stage
 from . import importance as importance_stage
 from . import micro as micro_stage
 from . import objects as object_stage
@@ -698,6 +699,23 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         cliff_slope=terrain.get("cliffSlope"),
         meters_per_cell=region.meters_per_cell,
     )
+    # ground from land use (M3.5): park lawns where WorldCover sees grass or built-up land
+    ground = region.ground or {}
+    surface_names = SURFACES | ground_stage.SURFACES if ground else SURFACES
+    surface_id = {name: i for i, name in surface_names.items()}
+    if ground and layout.warped:
+        raise ValueError("ground surfaces aren't supported on warped layouts yet")
+    if ground.get("lawn"):
+        lawn = ground_stage.lawn(
+            region,
+            surface,
+            surface_names,
+            dem_real if exaggerated else corner_m,
+            ground["lawn"],
+            road_shift,
+        )
+        surface[lawn] = surface_id["lawn"]
+        print(f"ground: {int(lawn.sum())} lawn cells")
     geology, province_names = provinces(region, layout)
     # junctions are checked where they lie inside the grid (as first mapped)
     mapped = {seg_id: parts for seg_id, _, parts in road_lines_mapped}
@@ -726,6 +744,13 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         micro_m = layout.corner_elevation(dem_spec, k)
         if layout.warped and layout.spec.vertical:
             micro_m = layout.relief(micro_m, k)[0]
+        # smoothed surfaces (M3.5): {surface: metres}, a Gaussian over each surface's own ground
+        sigma = None
+        if region.micro.get("smooth"):
+            sigma = np.zeros(surface.shape)
+            for name, metres in region.micro["smooth"].items():
+                (sid,) = ground_stage.surface_ids(surface_names, [name])
+                sigma[surface == sid] = float(metres) / (region.meters_per_cell / k)
         mc = micro_stage.build_micro(
             micro_m,
             step_m,
@@ -735,6 +760,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             water,
             road_layer.mask,
             None if road_hw is None else road_hw / 32.0,
+            sigma,
         )
         micro = (mc, k)
         print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
@@ -773,6 +799,22 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
                 under, base, shape, water, surface, low, road_layer, road_hw, micro
             )
             print(f"bridges: {int(under.sum())} cells of water under their decks")
+    # yards (M3.5): the green behind and between houses, once the houses stand
+    if ground.get("yard") and instances:
+        paved = on_road | (water != NO_WATER)
+        if road_hw is not None:
+            paved |= paved_band(on_road, road_hw / 32.0)
+        yard = ground_stage.yard_cells(
+            surface,
+            surface_names,
+            instances,
+            paved,
+            region.meters_per_cell,
+            ground["yard"],
+            seed=object_stage._seed(region, "yard"),
+        )
+        surface[yard] = surface_id["yard"]
+        print(f"ground: {int(yard.sum())} yard cells")
     attribution = [
         ATTRIBUTION[region.sources["dem"]["kind"]],
         ATTRIBUTION[region.sources["landcover"]["kind"]],
@@ -847,7 +889,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             "elevationDatumMeters": 0,
             "verticalExaggeration": region.vertical_exaggeration,
         },
-        surfaces=SURFACES,
+        surfaces=surface_names,
         road_classes=road_ids,
         provinces=province_names,
         start=(int(sx[0]), int(sy[0])),
@@ -901,7 +943,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             else {}
         ),
         "surfaces": {
-            SURFACES[int(k)]: int(v)
+            surface_names[int(k)]: int(v)
             for k, v in zip(*np.unique(surface, return_counts=True), strict=True)
         },
     }

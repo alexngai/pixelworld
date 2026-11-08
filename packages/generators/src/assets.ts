@@ -2,6 +2,7 @@ import { MeshBuilder, type MeshData } from "./mesh";
 import { FACADE_GENERATORS } from "./facades";
 import { LANDMARK_KIT } from "./landmarkKit";
 import { TOWER_GENERATORS } from "./towers";
+import { TREE_GENERATORS } from "./trees";
 import { VEHICLE_GENERATORS } from "./vehicles";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
 
@@ -662,6 +663,7 @@ Object.assign(
   FACADE_GENERATORS,
   LANDMARK_KIT,
   TOWER_GENERATORS,
+  TREE_GENERATORS,
   VEHICLE_GENERATORS,
 );
 
