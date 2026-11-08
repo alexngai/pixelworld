@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 import shapely
+from scipy import ndimage
 
 from pixelworld_pipeline import importance, objects
 from pixelworld_pipeline.layout import UniformLayout, WarpedLayout, WarpSpec
@@ -97,6 +98,27 @@ def test_relief_exaggeration_follows_magnification(layout):
     lo = layout.drawn_height(float(px[j, i]), float(py[j, i]), 500.0)
     hi = layout.drawn_height(float(px[j, i]), float(py[j, i]), 600.0)
     assert hi - lo == pytest.approx(100 * r[j, i], rel=0.1)
+
+
+def test_a_strait_narrower_than_a_cell_stays_connected(layout, monkeypatch):
+    # a north-south water channel 250 m wide where cells span up to ~640 m east-west
+    # (stretched in the transition ring): narrower than a cell, but wider than a
+    # third of one, the spacing of the 3×3 samples
+    x_lo, _ = layout.source_to_projected(np.array([38_000.0]), np.array([0.0]))
+    band = (float(x_lo[0]), float(x_lo[0]) + 250.0)
+
+    def fake_sample(region, kind, x, y, spacing):
+        x = np.asarray(x, dtype=float).ravel()
+        return np.where((x >= band[0]) & (x < band[1]), 80, 60).astype(np.uint8)
+
+    monkeypatch.setattr(rasters, "sample_points", fake_sample)
+    centre = layout.cell_landcover(sub=1, water_votes=1) == 80
+    covered = layout.cell_landcover() == 80
+    assert not centre.any(axis=1).all()  # centre samples miss the channel in some rows
+    assert covered.any(axis=1).all()  # every row keeps water
+    labels, n = ndimage.label(covered, structure=np.ones((3, 3)))
+    assert n == 1
+    assert covered.sum(axis=1).max() <= 2  # and the channel stays narrow
 
 
 def test_uniform_layout_matches_the_region_grid():

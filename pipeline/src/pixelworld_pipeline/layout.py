@@ -249,18 +249,39 @@ class WarpedLayout:
         elev = rasters.sample_points(self.region, spec["kind"], px, py, spacing)
         return elev.reshape(sx.shape)
 
-    def cell_landcover(self) -> np.ndarray:
+    def cell_landcover(self, sub: int = 3, water_votes: int = 3, band: int = 64) -> np.ndarray:
+        """Land-cover class per cell from sub×sub samples spread over the cell.
+
+        The most common class wins (ties go to the centre sample), as the
+        uniform build's mode resampling does. Water (80) wins from `water_votes`
+        samples, so a channel wider than a third of the cell (measured across the
+        channel; transition-ring cells are stretched) stays connected. With
+        centre samples only, a narrower strait (Boulder Canyon in Lake Mead at
+        250 m cells) fell between cell centres and split the lake in two.
+        """
         cx, cy = self.cells
-        gx, gy = np.meshgrid(np.arange(cx) + 0.5, np.arange(cy) + 0.5)
-        sx, sy = self.warp.to_source(gx, gy)
-        px, py = self.source_to_projected(sx, sy)
-        spacing = self.warp.scale_at_cells(gx, gy)
         kind = self.region.sources["landcover"]["kind"]
-        return (
-            rasters.sample_points(self.region, kind, px, py, spacing)
-            .reshape(cy, cx)
-            .astype(np.uint8)
-        )
+        off = (np.arange(sub) + 0.5) / sub
+        ox, oy = (a.ravel() for a in np.meshgrid(off, off))
+        centre = (sub * sub) // 2
+        out = np.empty((cy, cx), np.uint8)
+        for y0 in range(0, cy, band):
+            rows = min(band, cy - y0)
+            gx, gy = np.meshgrid(np.arange(cx), np.arange(y0, y0 + rows))
+            spacing = self.warp.scale_at_cells(gx + 0.5, gy + 0.5)[..., None]
+            sx, sy = self.warp.to_source(gx[..., None] + ox, gy[..., None] + oy)
+            px, py = self.source_to_projected(sx, sy)
+            samples = rasters.sample_points(
+                self.region, kind, px, py, np.broadcast_to(spacing, px.shape)
+            ).reshape(rows, cx, sub * sub)
+            classes = np.unique(samples)
+            votes = (samples[..., None] == classes).sum(axis=2) + 0.5 * (
+                samples[..., centre, None] == classes
+            )
+            best = classes[votes.argmax(axis=-1)]
+            water = (samples == 80).sum(axis=-1) >= water_votes
+            out[y0 : y0 + rows] = np.where(water, 80, best)
+        return out
 
     # ---- vertical caricature ---------------------------------------------------------
 
