@@ -1,4 +1,5 @@
 import { MeshBuilder, type MeshData } from "./mesh";
+import { CHINATOWN_GENERATORS } from "./chinatown";
 import { FACADE_GENERATORS } from "./facades";
 import { LANDMARK_KIT } from "./landmarkKit";
 import { TOWER_GENERATORS } from "./towers";
@@ -663,6 +664,7 @@ Object.assign(
   LANDMARK_KIT,
   TOWER_GENERATORS,
   VEHICLE_GENERATORS,
+  CHINATOWN_GENERATORS,
 );
 
 /**

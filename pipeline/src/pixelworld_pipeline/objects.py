@@ -16,6 +16,13 @@ Region spec (all sections optional):
         - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 60, offset: 16 }
         # or on the verge past the drawn asphalt, where the canopy map has trees
         - { group: tree.street, roads: [residential], canopy: 3, spacing: 12, kerb: 2 }
+      streetProps:  # street furniture: rows as streetTrees, or at junctions
+        - { group: prop.streetlight, roads: [primary], spacing: 40, offset: 9 }
+        - { group: prop.signal, roads: [primary], at: junctions, offset: 10 }
+        # strung across the street (over the road, turned across it), along
+        # the stretch of a named street inside a lon/lat box
+        - { group: prop.lanterns, roads: [tertiary], name: Grant Avenue, across: true,
+            spacing: 14, bounds: [-122.4075, 37.7900, -122.4040, 37.7985] }
       landmarks:
         - { group: landmark.tower.lookout, lon: -111.8261, lat: 36.0441, hm: 60, clear: 20 }
       depiction:    # how big things are drawn at this scale level (D-047)
@@ -473,14 +480,23 @@ def _in_footprints(instances: list[dict]):
 def street_trees(
     p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
 ) -> list[dict]:
-    """Rows of trees on both sides of roads of the given classes."""
+    """Rows of trees (or props) on both sides of roads of the given classes.
+
+    With `across`, one prop stands on the road's line at each step instead,
+    over the road (road cells are otherwise kept clear) and turned a quarter
+    where its road runs east-west, so a model drawn along x spans the street:
+    lanterns strung across it. `bounds` ([w, s, e, n], lon/lat) keeps a rule
+    to one stretch of its roads.
+    """
     classes = set(rule["roads"])
     spacing = float(rule["spacing"])
     offset = float(rule.get("offset", 12))
+    across = bool(rule.get("across"))
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
     rng = np.random.default_rng(_seed(p.region, f"street|{tag}|{rule['group']}"))
     xs: list[float] = []
     ys: list[float] = []
+    turns: list[int] = []
     name = rule.get("name", "").lower()
     if name:
         # names aren't in the road layer's columns; fetch them for this rule only
@@ -508,6 +524,12 @@ def street_trees(
                 tx, ty = b.x - a.x, b.y - a.y
                 norm = math.hypot(tx, ty) or 1.0
                 c = part.interpolate(d)
+                if across:
+                    # across a road running north-south is along x: no turn
+                    xs.append(c.x)
+                    ys.append(c.y)
+                    turns.append(0 if abs(ty) >= abs(tx) else 1)
+                    continue
                 for side in (-1, 1):
                     xs.append(c.x - side * ty / norm * offset)
                     ys.append(c.y + side * tx / norm * offset)
@@ -515,11 +537,16 @@ def street_trees(
         return []
     ax, ay = np.asarray(xs), np.asarray(ys)
     cx, cy = p.to_cells(ax, ay)
-    ok = p.free(cx, cy) & ~occupied(ax, ay)
+    # over the road, only the world's edge, buildings and landmarks keep props off
+    ok = (p.inside(cx, cy) if across else p.free(cx, cy)) & ~occupied(ax, ay)
     if codes is not None:
         ok &= np.isin(p.landcover_at(ax, ay), list(codes))
+    if "bounds" in rule:
+        w, s, e, n = (float(v) for v in rule["bounds"])
+        bx, by = transform_points("EPSG:4326", p.region.crs, [w, e], [s, n])
+        ok &= (ax >= min(bx)) & (ax <= max(bx)) & (ay >= min(by)) & (ay <= max(by))
     seeds = rng.integers(0, 2**31, size=ax.size)
-    rots = rng.integers(0, 4, size=ax.size)
+    rots = np.asarray(turns) if across else rng.integers(0, 4, size=ax.size)
     return [
         {
             "g": rule["group"],

@@ -150,7 +150,7 @@ function sideWindows(m: VoxelModel, f: Facade, H: number, fh: number, pane: () =
         for (let z = 1; z < H - 1; z++) {
           const zf = z % fh;
           // a window per floor: wall at the floor line and, on taller floors, a lintel
-          if (zf === 0 || (fh >= 3 && zf === fh - 1)) continue;
+          if (zf === 0 || (fh >= 3 && zf === fh - 1) || (fh >= 5 && (zf === 1 || zf === fh - 2))) continue;
           if (!m.get(nx, ny, z) && m.get(x, y, z)) m.set(x, y, z, pane());
         }
       }
@@ -211,8 +211,8 @@ function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: numb
   const mid = type === 3;
   const walk = W >= 9; // room for detail: about a 25-foot lot at the walking scale
   // Mediterranean revival belongs to the 1920s and 30s: a tiled pent roof, or a storybook gable
-  const tiled = !mid && W >= 4 && rand() < (year < 1932 ? 0.3 : year < 1942 ? 0.14 : 0.05);
-  const storybook = !mid && !tiled && W >= 4 && year < 1942 && rand() < 0.05;
+  const tiled = !mid && W >= 4 && rand() < (year < 1932 ? 0.24 : year < 1940 ? 0.1 : 0.03);
+  const storybook = !mid && !tiled && W >= 4 && rand() < (year < 1932 ? 0.06 : year < 1940 ? 0.03 : 0);
   const gable = storybook ? Math.max(1, Math.min(Math.floor(W / 2), Math.round(W * 0.4))) : 0;
   const m = new VoxelModel(f.sx, f.sy, H + Math.max(gable, 3) + 2);
   const p = palette(ctx, m);
@@ -269,8 +269,10 @@ function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: numb
       if (d < 0) continue;
       // the stair: a step per voxel of depth into the entry recess
       for (let z = 0; z < H; z++) if (d < back(a, z) && !(inEntry(a) && z <= d)) m.set(x, y, z, 0);
-      // a parapet on one lot line: rows of light flat roofs read as separate houses
-      if (d > 0 && a === 0 && W >= 3 && m.get(x, y, H - 1)) m.set(x, y, H, p.body);
+      // a parapet on one lot line: rows of light flat roofs read as separate
+      // houses. It turns the corner from the front in the body's paint, then
+      // runs back in the roof's, so a pastel house doesn't stripe the roofs.
+      if (d > 0 && a === 0 && W >= 3 && m.get(x, y, H - 1)) m.set(x, y, H, d <= 2 ? p.body : p.roof);
     }
   // a light well on the other lot line, halfway back, from the main floor up:
   // from above, a row reads as houses side by side rather than one long block
@@ -364,9 +366,13 @@ function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: numb
     r -= odds;
   }
   const profile = PARAPETS[style]!;
+  // a bay standing proud of the parapet: its top shows as a white cap at the
+  // roof line, with the parapet set back on the wall behind it, so the bump
+  // reads from above even where the front is a few voxels wide
+  const capBay = !mid && !gable && !tiled && bayDepth > 0;
   for (let a = 0; a < W; a++) {
     const k = back(a, H - 1);
-    setFront(a, H - 1, mid ? p.trim : p.body, k); // a mid-century fascia
+    setFront(a, H - 1, mid || (capBay && inBay(a)) ? p.trim : p.body, k); // a mid-century fascia, a bay's cap
     if (mid || gable) continue;
     if (tiled) {
       // a short pent roof of red tile sloping back from the parapet
@@ -376,7 +382,8 @@ function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: numb
       continue;
     }
     const h = W >= 4 ? profile(a, W) : 0;
-    for (let z = H; z <= H + h; z++) setFront(a, z, z === H + h ? coping : p.body, k);
+    const kp = capBay ? Math.max(k, bayDepth) : k;
+    for (let z = H; z <= H + h; z++) setFront(a, z, z === H + h ? coping : p.body, kp);
   }
   if (gable > 0) {
     // a storybook gable: a short, steep tiled roof running back from the street, its end on the front
@@ -393,8 +400,9 @@ function stuccoRow(ctx: GenContext, f: Facade, type: number, H: number, fh: numb
   // a roof deck on some wide, deep lots (the walking scale): a stair penthouse
   // by the far lot line and a rail around the deck in front of it
   if (W >= 8 && f.maxDepth >= 12 && gable === 0 && rand() < 0.3) roofDeck(m, f, H, fh, p);
-  // side walls are mostly blank: party walls, with a window here and there where they show
-  sideWindows(m, f, H, fh, p.pane, 4);
+  // side walls are mostly blank: party walls, with a window here and there
+  // where they show; a corner lot's front on the side street has more
+  sideWindows(m, f, H, fh, p.pane, ctx.hints?.corner ? 2 : 4);
   return m;
 }
 
@@ -415,6 +423,26 @@ function roofDeck(m: VoxelModel, f: Facade, H: number, fh: number, p: ReturnType
         if (d === d0 && a === W - 1 - pw) onFace(m, f, x, y, H, p.accent); // its door
       } else if (d >= d0 - 5 && d < d0 && a >= 2 && a < W - 1 && (d === d0 - 5 || a === 2 || a === W - 2)) m.set(x, y, H, p.trim);
     }
+}
+
+/**
+ * A row house's height in voxels. Footprint heights are often estimates in
+ * whole metres (most of the Sunset's stucco rows are 6 m, most of the
+ * Richmond's Edwardians 9 m), so a row of them would share one roof line and
+ * read as one long block. Each house steps up or down from it by seed, about
+ * a voxel on a low house and two on a tall one, so the roof line steps house
+ * by house; the storeys the roll records set a floor under it (three storeys
+ * are never drawn lower than a voxel row of windows apiece allows).
+ */
+function rowHeight(ctx: GenContext, type: number): number {
+  const base = ctx.heightVox ?? 8;
+  const step = type >= 2 ? 0.15 : 0.14;
+  let H = Math.round(base * (1 + (ctx.rand() - 0.5) * 2 * step));
+  const floors = ctx.hints?.floors;
+  // a storey needs three voxels (a floor line, a window, a lintel); a stucco
+  // house's storeys stand over its garage
+  if (floors !== undefined) H = Math.max(H, type >= 2 ? 2 * (floors + 1) + 1 : 3 * Math.min(floors, 4) + 1);
+  return Math.max(3, Math.min(60, H));
 }
 
 /** The row-house form of an era (params.type -1): Victorian, Edwardian, stucco or mid-century. */
@@ -452,10 +480,7 @@ export const rowhouse: Generator = (ctx) => {
   const year = hints?.year ?? (type === 3 ? 1965 : type === 2 ? 1935 : 1900);
   const f = facadeOf(mask, frontDir(mask, hints?.front));
   const W = f.width;
-  // neighbours differ by a voxel or so, so a row reads as separate lots; a
-  // stucco row was built as one, so its roof line stays even (parapets vary)
-  const jitter = type >= 2 ? 1.2 : 2.2;
-  const H = Math.max(3, Math.min(60, Math.round((ctx.heightVox ?? 8) + (rand() - 0.5) * jitter)));
+  const H = rowHeight(ctx, type);
   let floors = Math.max(1, Math.min(6, hints?.floors ?? Math.round(H / 4)));
   // the roll counts storeys over a garage or a raised basement
   if (floors < 2 && H >= (type >= 2 ? 5 : 6)) floors = 2;
@@ -578,10 +603,183 @@ export const rowhouse: Generator = (ctx) => {
   }
   // a roof deck on some wide, deep lots (the walking scale)
   if (W >= 8 && f.maxDepth >= 12 && gable === 0 && rand() < 0.3) roofDeck(m, f, H, fh, p);
-  // side walls are mostly blank: party walls, with a window here and there where they show
-  sideWindows(m, f, H, fh, p.pane, 4);
+  // side walls are mostly blank: party walls, with a window here and there
+  // where they show; a corner lot's front on the side street has more
+  sideWindows(m, f, H, fh, p.pane, hints?.corner ? 2 : 4);
   return m;
 };
+
+/**
+ * A pagoda on a roof: an n × n square of the footprint, at `a0` along the
+ * front and `d0` deep, standing on the roof at z0. Each tier steps in a voxel
+ * from the one below: a wall (`tiers[k]` voxels tall, red posts at its
+ * corners, glass between) under a jade eave whose corners turn up, then a
+ * stepped cap and a gold finial. Nothing overhangs: a tier's eave is the
+ * outer ring of the stack, and every column rises from the roof.
+ */
+function pagoda(
+  m: VoxelModel,
+  f: Facade,
+  a0: number,
+  d0: number,
+  n: number,
+  z0: number,
+  tiers: readonly number[],
+  mat: { eave: number; post: number; glass: number; finial: number },
+): void {
+  const rings = Math.floor((n - 1) / 2);
+  // the top of each ring: ring 0 is the lowest eave, on the roof
+  const top: number[] = [z0];
+  for (let r = 1; r <= rings; r++) top.push(top[r - 1]! + (r <= tiers.length ? tiers[r - 1]! + 1 : 1));
+  for (let y = 0; y < f.sy; y++)
+    for (let x = 0; x < f.sx; x++) {
+      const k = y * f.sx + x;
+      const i = f.along[k]! - a0;
+      const j = f.depth[k]! - d0;
+      if (f.depth[k]! < 0 || i < 0 || j < 0 || i >= n || j >= n || !m.get(x, y, z0 - 1)) continue;
+      const ring = Math.min(i, j, n - 1 - i, n - 1 - j);
+      const corner = (i === ring || i === n - 1 - ring) && (j === ring || j === n - 1 - ring);
+      const zt = top[ring]!;
+      for (let z = z0; z <= zt; z++) {
+        const wall = ring >= 1 && ring <= tiers.length && z > top[ring - 1]! && z < zt;
+        // a tier: red posts at its corners and a red rail round its foot, glass between
+        m.set(x, y, z, !wall ? mat.eave : corner || z === top[ring - 1]! + 1 ? mat.post : mat.glass);
+      }
+      // the eave's corners turn up; a finial on the cap
+      if (corner && ring < rings) m.set(x, y, zt + 1, mat.eave);
+      if (ring === rings) for (let z = zt + 1; z <= zt + 2; z++) m.set(x, y, z, mat.finial);
+    }
+}
+
+/**
+ * Chinatown (block type 2): shops under two to five floors of flats, along
+ * Grant Avenue and Stockton Street. Across the front, piers frame window
+ * bays: storefronts under a sign band at the street; above, balconies (a red
+ * rail, red balusters at the walking scale, glass doors behind) in every bay,
+ * in the middle bays only, or plain paired windows, by seed. Vertical signs,
+ * red with gold caps or gold with red, run down some piers. At the top, a red
+ * frieze under a jade tile eave whose corners turn up; corner lots often
+ * carry a pagoda tower on the corner, other roofs now and then a pagoda
+ * pavilion. Signs carry no lettering. Balconies are drawn on the wall, rails
+ * flush with it: a recess would leave the floor above it overhanging.
+ */
+function chinatown(ctx: GenContext, f: Facade, H: number, fh: number): VoxelModel {
+  const { rand } = ctx;
+  const W = f.width;
+  const fine = W >= 9 && fh >= 5; // the walking scale: balusters, two-voxel piers and signs
+  const m = new VoxelModel(f.sx, f.sy, H + 2 * fh + 12);
+  const p = palette(ctx, m);
+  const eaves = ctx.ramps("eave");
+  const eave = eaves.length ? m.material(eaves[0]!) : p.roof;
+  const signs = ctx.ramps("sign").map((r) => m.material(r));
+  const red = signs[0] ?? p.trim;
+  const gold = signs[1] ?? p.accent;
+  massing(m, f, H, p.body, p.roof);
+  const fronts: [number, number, number][] = [];
+  eachFront(f, 0, (x, y, a) => fronts.push([x, y, a]));
+  const paint = (a: number, z: number, mat: number) => {
+    for (const [x, y, aa] of fronts) if (aa === a) onFace(m, f, x, y, z, mat);
+  };
+  const raise = (a: number, z: number, mat: number) => {
+    for (const [x, y, aa] of fronts) if (aa === a && m.get(x, y, z - 1)) m.set(x, y, z, mat);
+  };
+
+  // piers between window bays, centred on the front
+  const pier = fine && rand() < 0.6 ? 2 : 1;
+  const bay = fine ? 2 + Math.floor(rand() * 3) : 2;
+  const mod = bay + pier;
+  const n = Math.max(0, Math.floor((W - pier) / mod));
+  const off = Math.floor((W - pier - n * mod) / 2);
+  const bayOf = (a: number) =>
+    n === 0 ? (W >= 3 && a > 0 && a < W - 1 ? 0 : -1) : a < off || a >= off + n * mod + pier || (a - off) % mod < pier ? -1 : Math.floor((a - off) / mod);
+  // balconies in every bay, in the middle bays, on every other floor, or none
+  const scheme = rand();
+  const balcony = (b: number, k: number) =>
+    scheme < 0.35 || (scheme < 0.55 && (n < 3 || (b > 0 && b < n - 1))) || (scheme < 0.75 && k % 2 === 1);
+  // windows: tall or short, on a red or jade sill on some
+  const tall = rand() < 0.5;
+  const sill = fine && rand() < 0.45 ? (rand() < 0.5 ? red : eave) : -1;
+  const band = rand() < 0.5 ? red : rand() < 0.6 ? gold : eave; // the shop sign band
+  const jadeEave = rand() < 0.8;
+  const zTop = H - (jadeEave ? 3 : 2); // the frieze and eave above the top floor's windows
+
+  for (let a = 0; a < W; a++) {
+    const b = bayOf(a);
+    // the ground floor: shop windows over a bulkhead, a sign band over them
+    for (let z = 1; z < Math.min(fh, zTop); z++) {
+      if ((z === fh - 1 && fh >= 3) || (z === fh - 2 && fh >= 6)) paint(a, z, b >= 0 || fine ? band : p.body); // two rows tall where there is room
+      else if (b >= 0) paint(a, z, (a - off - pier) % mod === Math.floor(bay / 2) && z <= 2 ? p.accent : p.pane());
+    }
+    if (b < 0) continue;
+    // the floors above: balconies or paired windows
+    for (let z = fh; z < zTop; z++) {
+      const zf = z % fh;
+      if (zf === 0) continue; // the floor line
+      if (fh >= 4 && zf === fh - 1) continue; // the lintel
+      if (balcony(b, Math.floor(z / fh))) {
+        if (zf === 1) paint(a, z, red);
+        else if (zf === 2 && fine) paint(a, z, a % 2 === 0 ? red : p.pane());
+        else if (zf <= 7) paint(a, z, p.pane()); // doors no taller than a storey's
+      } else if (zf === 1 && sill >= 0) paint(a, z, sill);
+      else if (zf >= (fh >= 4 ? 2 : 1) && zf <= (tall ? 6 : 4) && (tall || fh < 6 || zf < fh - 2)) {
+        // paired windows, a mullion between them on a wide bay
+        const i = (a - off - pier) % mod;
+        if (!(bay >= 4 && i === Math.floor(bay / 2) - 1 + (bay % 2))) paint(a, z, p.pane());
+      }
+    }
+  }
+
+  // vertical signs down some piers: red with gold caps, or gold with red
+  const piers: number[] = [];
+  for (let a = 0; a < W; a++) if (bayOf(a) < 0 && (a === 0 || bayOf(a - 1) >= 0)) piers.push(a);
+  const inner = piers.filter((a) => a > 0 && a + pier < W);
+  const pool = inner.length ? inner : piers;
+  // one to three on a shop front's width, more on a long front
+  const most = Math.max(3, Math.round(W / 10));
+  const nSigns = Math.min(pool.length, W >= 6 ? 1 + Math.floor(rand() * Math.min(most, pool.length)) : rand() < 0.6 ? 1 : 0);
+  for (let s = 0; s < nSigns; s++) {
+    const a0 = pool.splice(Math.floor(rand() * pool.length), 1)[0]!;
+    const goldSign = rand() < 0.35;
+    const z0 = fh;
+    const z1 = Math.min(zTop - 1, z0 + Math.max(2, Math.round(fh * (1.2 + rand() * 1.3))));
+    for (let a = a0; a < Math.min(W, a0 + (fine ? 2 : 1)); a++)
+      for (let z = z0; z <= z1; z++) paint(a, z, (z === z0 || z === z1) === goldSign ? red : gold);
+  }
+
+  // the top: a red frieze with gold dentils under a jade eave whose corners turn up
+  if (jadeEave) {
+    for (let a = 0; a < W; a++) {
+      paint(a, H - 3, fine && a % 3 === 1 ? gold : red);
+      for (const [x, y, aa] of fronts)
+        if (aa === a) {
+          m.set(x, y, H - 2, eave);
+          m.set(x, y, H - 1, eave);
+        }
+      const fromEnd = Math.min(a, W - 1 - a);
+      const rise = fine ? (fromEnd === 0 ? 2 : fromEnd === 1 ? 1 : 0) : fromEnd === 0 && W >= 3 ? 1 : 0;
+      for (let z = H; z < H + rise; z++) raise(a, z, eave);
+    }
+  } else
+    for (let a = 0; a < W; a++) {
+      paint(a, H - 2, red);
+      paint(a, H - 1, p.body);
+      raise(a, H, red); // a red parapet
+    }
+
+  // a pagoda: a tower on the corner of some corner lots, a pavilion on some other roofs
+  const tiers = fine ? [Math.max(3, fh - 1), 3, 2] : [2, 1];
+  const room = Math.min(W, f.maxDepth + 1);
+  if (ctx.hints?.corner && room >= (fine ? 7 : 5) && rand() < 0.4) {
+    const size = Math.min(room, fine ? 9 : 5);
+    pagoda(m, f, rand() < 0.5 ? 0 : W - size, 0, size, H, tiers, { eave, post: red, glass: p.pane(), finial: gold });
+  } else if (room >= (fine ? 9 : 5) && f.maxDepth >= 6 && rand() < 0.15) {
+    const size = Math.min(room - 2, fine ? 9 : 5);
+    pagoda(m, f, Math.floor((W - size) / 2), 1, size, H, tiers.slice(1), { eave, post: red, glass: p.pane(), finial: gold });
+  }
+  // side walls: party walls mostly, a window here and there where they show
+  sideWindows(m, f, H, fh, p.pane, 4);
+  return m;
+}
 
 /**
  * Blocks on wider lots. params.type: 0 apartments with stacked bays and a
@@ -591,7 +789,7 @@ export const rowhouse: Generator = (ctx) => {
  * block (ribbon windows).
  */
 export const block: Generator = (ctx) => {
-  const { rand, param, mask, hints } = ctx;
+  const { param, mask, hints } = ctx;
   if (!mask) throw new Error("block needs a footprint");
   const type = param("type", 0);
   const f = facadeOf(mask, frontDir(mask, hints?.front));
@@ -599,6 +797,7 @@ export const block: Generator = (ctx) => {
   const H = Math.max(3, Math.min(120, Math.round(ctx.heightVox ?? 10)));
   const floors = Math.max(1, Math.min(30, hints?.floors ?? Math.round(H / 4)));
   const fh = Math.max(2, Math.floor(H / floors));
+  if (type === 2) return chinatown(ctx, f, H, fh);
   const pierGable = type === 3 ? Math.max(1, Math.min(4, Math.floor(W / 4))) : 0;
   const m = new VoxelModel(f.sx, f.sy, H + Math.max(pierGable, 5) + 3);
   const p = palette(ctx, m);
@@ -619,7 +818,11 @@ export const block: Generator = (ctx) => {
     for (let z = 1; z < H - 1; z++) {
       const k = Math.floor(z / fh);
       const zf = z - k * fh;
-      if (zf === 0) continue; // floor lines stay wall
+      if (zf === 0) {
+        // floor lines stay wall; on stacked bays, white panels between the windows
+        if (type === 0 && isBay(a) && k > 0) onFace(m, f, wx!, wy!, z, p.trim);
+        continue;
+      }
       const ground = k === 0;
       if (type === 3) {
         // the bulkhead: a tall arch in the middle third, piers either side
@@ -628,7 +831,7 @@ export const block: Generator = (ctx) => {
         else if (z === H - 2 && a % 2 === 0) onFace(m, f, wx!, wy!, z, p.pane());
         continue;
       }
-      if (ground && (type === 1 || type === 2)) {
+      if (ground && type === 1) {
         // storefronts between piers
         onFace(m, f, wx!, wy!, z, a % 4 === 0 ? p.trim : z === fh - 1 ? p.trim : p.pane());
         continue;
@@ -644,57 +847,16 @@ export const block: Generator = (ctx) => {
         continue;
       }
       if (type === 0) {
-        // the bays glazed floor to floor; one window between them
-        if (isBay(a) ? !lintel : (W < 6 || a % bayEvery === 0) && !lintel && zf === Math.max(1, Math.floor(fh / 2)))
-          onFace(m, f, wx!, wy!, z, p.pane());
+        // the bays glazed floor to floor between white panels; one window between them
+        if (isBay(a)) onFace(m, f, wx!, wy!, z, lintel ? p.trim : p.pane());
+        else if ((W < 6 || a % bayEvery === 0) && !lintel && zf === Math.max(1, Math.floor(fh / 2))) onFace(m, f, wx!, wy!, z, p.pane());
         continue;
       }
-      // historic commercial and Chinatown: paired windows between piers
+      // historic commercial: paired windows between piers
       if (a % 3 !== 0 && !lintel) onFace(m, f, wx!, wy!, z, p.pane());
-      if (type === 2 && zf === 1 && a % 3 === 0) onFace(m, f, wx!, wy!, z, p.trim); // balcony posts
     }
   });
-  if (type === 2) {
-    // balconies: a red rail at the foot of every floor; signs hung down the front
-    for (let k = 1; k < floors; k++)
-      eachFront(f, 0, (x, y) => {
-        if (k * fh + 1 < H - 2) onFace(m, f, x, y, k * fh + 1, p.trim);
-      });
-    const signs = ctx.ramps("sign");
-    if (signs.length && W >= 3)
-      eachFront(f, 0, (x, y, a) => {
-        if (a === 1 || (W >= 9 && a === W - 2))
-          for (let z = fh; z < Math.min(H - 3, 3 * fh); z++) onFace(m, f, x, y, z, m.material(signs[(a + z) % signs.length]!));
-      });
-    // a jade tile eave with upturned corners
-    const eaves = ctx.ramps("eave");
-    const eave = eaves.length ? m.material(eaves[0]!) : p.roof;
-    eachFront(f, 0, (x, y, a) => {
-      m.set(x, y, H - 2, eave);
-      m.set(x, y, H - 1, eave);
-      if (a === 0 || a === W - 1) m.set(x, y, H, eave);
-    });
-    // a pagoda roof on some: two tiers of jade on red posts, near the front
-    if (W >= 5 && f.maxDepth >= 5 && rand() < 0.35) {
-      const pw = Math.max(3, Math.min(W - 2, Math.round(W * 0.5)));
-      const a0 = Math.floor((W - pw) / 2);
-      for (let y = 0; y < f.sy; y++)
-        for (let x = 0; x < f.sx; x++) {
-          const i = y * f.sx + x;
-          const a = f.along[i]!;
-          const d = f.depth[i]!;
-          if (d < 1 || d > pw || a < a0 || a >= a0 + pw) continue;
-          const da = Math.min(a - a0, a0 + pw - 1 - a);
-          const dd = Math.min(d - 1, pw - d);
-          const ring = Math.min(da, dd);
-          m.set(x, y, H, ring === 0 ? p.trim : eave);
-          m.set(x, y, H + 1, eave);
-          if (ring >= 1) m.set(x, y, H + 2, eave);
-          if (ring >= 1 && ring <= 1) m.set(x, y, H + 3, eave);
-          if (ring >= 2) for (let z = H + 2; z < H + 5; z++) m.set(x, y, z, eave);
-        }
-    }
-  } else if (type === 0 || type === 1) {
+  if (type === 0 || type === 1) {
     // the cornice
     eachFront(f, 0, (x, y, a) => {
       const [wx, wy] = wallAt(x, y, a);
@@ -724,7 +886,7 @@ export const block: Generator = (ctx) => {
         for (let z = H; z < H + t; z++) m.set(x, y, z, t > 0 && z === H + t - 1 && d % 4 === 3 ? p.glass : p.roof);
       }
   }
-  sideWindows(m, f, H, fh, p.pane, type === 4 ? 3 : 2);
+  sideWindows(m, f, H, fh, p.pane, 3);
   return m;
 };
 

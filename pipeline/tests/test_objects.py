@@ -285,6 +285,51 @@ def test_sidewalk_trees_stand_on_the_verge_where_the_canopy_map_has_trees():
     assert objects.sidewalk_trees(p, rule, roads, everywhere, in_house, FakeCanopy()) == []
 
 
+def test_props_strung_across_a_street_hang_over_it_turned_across_it():
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    # every cell is road: props beside a road keep off it, props across it don't
+    p = objects.Placement(region, np.ones((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.195 36.001, -115.195 36.009)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)",
+        },
+        {
+            "id": "c",
+            "class": "primary",
+            "geometry": "LINESTRING (-115.198 36.002, -115.192 36.002)",
+        },
+    ]
+    rule = {"group": "prop.lanterns", "roads": ["residential"], "across": True, "spacing": 40}
+    out = objects.street_trees(p, rule, rows, _none, "t")
+    assert out == objects.street_trees(p, rule, rows, _none, "t")
+    assert objects.street_trees(p, rule | {"across": False}, rows, _none, "t") == []
+    # one per step on each street's line (not a pair either side of it), turned across it
+    (ax,), (ay,) = p.to_cells(
+        *objects.transform_points("EPSG:4326", region.crs, [-115.195], [36.005])
+    )
+    ns = [i for i in out if abs(i["x"] - ax) < 0.5]
+    ew = [i for i in out if abs(i["y"] - ay) < 0.5 and abs(i["x"] - ax) >= 0.5]
+    assert len(ns) + len(ew) == len(out)
+    assert len(ns) >= 15 and len(ew) >= 15  # about 890 m and 720 m at 40 m steps
+    assert {i["r"] for i in ns} == {0} and {i["r"] for i in ew} == {1}
+    assert all(i["g"] == "prop.lanterns" for i in out)
+    # `bounds` keeps one stretch: here the north-south street near the crossing
+    box = {"bounds": [-115.1951, 36.0035, -115.1949, 36.0065]}
+    near = objects.street_trees(p, rule | box, rows, _none, "t")
+    assert 5 <= len(near) <= 10
+    assert all(abs(i["x"] - ax) < 0.5 and abs(i["y"] - ay) < 9 for i in near)
+    # buildings and landmarks' clear zones keep them off
+    assert objects.street_trees(p, rule, rows, lambda x, y: np.ones(len(x), dtype=bool), "t") == []
+
+
 def test_canopy_trees_take_the_groups_of_their_cells_land_cover(monkeypatch):
     region = Region.from_dict(SPEC)
     cx, cy = region.cells

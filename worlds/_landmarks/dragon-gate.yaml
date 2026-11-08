@@ -1,0 +1,9 @@
+name: Dragon Gate
+wikidata: Q40729318
+# Wikidata's coordinates: on Grant Avenue at Bush Street, Chinatown's southern entrance
+anchor: { lon: -122.405585, lat: 37.790685 }
+height: 11          # depicted: the middle roof's ridge, a little over three storeys
+scale: 1.25         # drawn a quarter larger, to read between the six-storey blocks around it
+clear: 4            # it stands in the street: keep only the sidewalk's edge clear
+depictions:
+  generic: { group: landmark.gate }   # three openings under green tile roofs, a blank plaque; no name or lettering

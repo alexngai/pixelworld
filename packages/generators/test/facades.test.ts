@@ -124,7 +124,8 @@ describe("stucco rows (the Sunset and the Richmond)", () => {
     const ramp = (x: number, y: number, z: number) => rampName.get(m.materials[m.get(x, y, z)]!) ?? "";
     let top = 0;
     while (m.get(0, 5, top + 1)) top++;
-    return { m, year, ramp, H: top, body: ramp(0, 5, top) };
+    // the body's paint low on the side wall (the lot-line parapet runs back in the roof's)
+    return { m, year, ramp, H: top, body: ramp(0, 5, 1) };
   });
 
   it("puts tile on a minority, mostly the 1920s", () => {
@@ -178,6 +179,115 @@ describe("stucco rows (the Sunset and the Richmond)", () => {
       }),
     );
     expect(profiles.size).toBeGreaterThanOrEqual(5);
+  });
+
+  it("paints most of them white, cream, beige, grey or sand, with a pastel here and there", () => {
+    const share = (set: Set<string>) => houses.filter((h) => set.has(h.body)).length / houses.length;
+    expect(share(NEUTRAL)).toBeGreaterThan(0.65);
+    expect(share(PASTEL)).toBeGreaterThan(0.08);
+    expect(share(PASTEL)).toBeLessThan(0.33);
+  });
+
+  it("caps the bay at the roof line with the parapet set back behind it", () => {
+    let capped = 0;
+    for (const { m, ramp } of houses) {
+      for (let x = 0; x < 5; x++) {
+        let z = m.sz - 1;
+        while (z > 0 && !m.get(x, 13, z)) z--;
+        // the bay's top at the street line: a cap over its glass, the parapet a voxel behind it and higher
+        if (!glassRamps.has(ramp(x, 13, z)) && glassRamps.has(ramp(x, 13, z - 1)) && m.get(x, 12, z + 1)) {
+          capped++;
+          break;
+        }
+      }
+    }
+    expect(capped / houses.length).toBeGreaterThan(0.5);
+  });
+});
+
+/** Body paints: neutral (the avenues), pastel, and the saturated paints of painted ladies. */
+const NEUTRAL = new Set(["paint-white", "paint-cream", "stucco", "sand", "tower-white", "terracotta", "concrete"]);
+const PASTEL = new Set(["paint-butter", "paint-mint", "paint-sky", "paint-rose", "paint-salmon"]);
+
+describe("paint and height by typology, era and neighbourhood", () => {
+  /** The body paint and wall height of n houses of a group on 5 × 12 lots facing +y. */
+  const row = (group: string, heightVox: number, floors: number, year: number, n = 160) =>
+    Array.from({ length: n }, (_, i) => {
+      const m = generateModel(style.assets, rampIds, group, { seed: 7000 + i, mask: rect(5, 12), heightVox, hints: { front: 2, year, floors } });
+      // the body low on a side wall; the wall's height at the back of the lot, under any parapet
+      let H = 0;
+      while (m.get(2, 1, H + 1)) H++;
+      return { body: rampName.get(m.materials[m.get(0, 6, 1)]!)!, H };
+    });
+  const neutral = (xs: { body: string }[]) => xs.filter((h) => NEUTRAL.has(h.body)).length / xs.length;
+
+  it("paints the painted ladies saturated, and the northern hills' Victorians pale", () => {
+    expect(neutral(row("building.rowhouse.victorian", 9, 2, 1895))).toBeLessThan(0.25);
+    expect(neutral(row("building.rowhouse.victorian.pale", 9, 2, 1895))).toBeGreaterThan(0.55);
+    expect(neutral(row("building.rowhouse.edwardian", 9, 2, 1912))).toBeGreaterThan(0.6);
+    expect(neutral(row("building.rowhouse.edwardian.painted", 9, 2, 1912))).toBeLessThan(0.5);
+  });
+
+  it("steps the roof line house by house where the footprints share one height", () => {
+    for (const [group, h, floors, year] of [
+      ["building.rowhouse.stucco", 5.76, 1, 1941],
+      ["building.rowhouse.edwardian", 8.64, 2, 1912],
+      ["building.rowhouse.victorian", 8.64, 2, 1895],
+    ] as const) {
+      const hs = row(group, h, floors, year).map((x) => x.H);
+      let steps = 0;
+      for (let i = 1; i < hs.length; i++) if (hs[i] !== hs[i - 1]) steps++;
+      expect(steps / (hs.length - 1), group).toBeGreaterThan(0.4);
+      expect(Math.max(...hs) - Math.min(...hs), group).toBeLessThanOrEqual(4);
+    }
+    // three storeys on the roll stand taller than two at the same footprint height
+    const mean = (xs: { H: number }[]) => xs.reduce((s, x) => s + x.H, 0) / xs.length;
+    expect(mean(row("building.rowhouse.edwardian", 8.64, 3, 1912))).toBeGreaterThan(mean(row("building.rowhouse.edwardian", 8.64, 2, 1912)) + 0.8);
+  });
+});
+
+describe("Chinatown", () => {
+  // walking-scale lots: 18 voxels wide, 30 deep, four storeys, the front facing +y (the y = 29 row)
+  const fronts = Array.from({ length: 60 }, (_, i) => {
+    const m = generateModel(style.assets, rampIds, "building.chinatown", {
+      seed: 300 + i,
+      mask: rect(18, 30),
+      heightVox: 28,
+      hints: { front: 2, year: 1910, floors: 4, corner: i % 2 === 0 },
+    });
+    const ramps = new Set<string>();
+    let glass = "";
+    let jadeTop = false;
+    let top = 0;
+    for (let z = 0; z < m.sz; z++)
+      for (let x = 0; x < 18; x++) {
+        const v = m.get(x, 29, z);
+        const r = v ? rampName.get(m.materials[v]!)! : "";
+        if (r) ramps.add(r);
+        if (z < 28) glass += glassRamps.has(r) ? "#" : ".";
+        if (r === "jade" && z >= 25) jadeTop = true;
+      }
+    for (let y = 0; y < 30; y++) for (let x = 0; x < 18; x++) for (let z = m.sz - 1; z > top; z--) if (m.get(x, y, z)) top = z;
+    return { ramps, glass, jadeTop, top, corner: i % 2 === 0 };
+  });
+
+  it("hangs red and gold on every front: rails, signs, a sign band", () => {
+    for (const f of fronts) {
+      expect(f.ramps.has("chinatown-red")).toBe(true);
+      expect(f.ramps.has("tower-gold") || f.ramps.has("jade")).toBe(true);
+    }
+    expect(fronts.filter((f) => f.ramps.has("tower-gold")).length / fronts.length).toBeGreaterThan(0.8);
+  });
+
+  it("tops most fronts with a jade eave, and raises pagodas on some corners", () => {
+    expect(fronts.filter((f) => f.jadeTop).length / fronts.length).toBeGreaterThan(0.6);
+    const pagodas = (corner: boolean) => fronts.filter((f) => f.corner === corner && f.top >= 28 + 6).length / 30;
+    expect(pagodas(true)).toBeGreaterThan(0.2);
+    expect(pagodas(true)).toBeGreaterThan(pagodas(false));
+  });
+
+  it("varies its window layout from building to building", () => {
+    expect(new Set(fronts.map((f) => f.glass)).size).toBeGreaterThanOrEqual(12);
   });
 });
 

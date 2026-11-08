@@ -53,8 +53,12 @@ objects:
   streetProps:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # red lanterns strung across Grant Avenue (from the Dragon Gate at Bush
+    # Street to Broadway) and across Stockton Street (Sacramento to Broadway)
+    - { group: prop.lanterns, roads: &named [primary, secondary, tertiary, residential, unclassified, living_street], name: Grant Avenue, across: true, spacing: 10, bounds: [-122.4080, 37.7908, -122.4050, 37.7980] }
+    - { group: prop.lanterns.wide, roads: *named, name: Stockton Street, across: true, spacing: 14, bounds: [-122.4095, 37.7936, -122.4070, 37.7980] }
   # (the windmills and Alcatraz lie outside this level)
-  landmarks: [bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall]
+  landmarks: [bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall, dragon-gate]
   landmarkDepiction: generic
   # a little taller than true, so the fronts of deep, three-storey row houses
   # outweigh their roofs
