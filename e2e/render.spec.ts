@@ -418,6 +418,7 @@ test.describe("Ambient traffic (D-060)", () => {
     // and the whole layer: off leaves the baked world as it was
     await page.keyboard.press("v");
     await expect(page.getByLabel("Traffic (V)")).not.toBeChecked();
+    await page.evaluate(() => window.__pixelworld!.ready());
     expect((await traffic(page)).vehicles.length).toBe(0);
   });
 

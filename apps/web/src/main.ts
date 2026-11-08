@@ -513,6 +513,7 @@ async function main() {
     else if (k === "v" && traffic) {
       traffic.enabled = !traffic.enabled;
       syncLayers();
+      renderedComplete = false; // ready() waits for the frame without (or with) vehicles
     }
     else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
