@@ -113,15 +113,20 @@ export interface LevelRef {
   label?: string;
 }
 
-/** Objects file: semantic-group instances placed by the pipeline. */
+/**
+ * Objects file: semantic-group instances placed by the pipeline, as read by
+ * `parseObjects`: footprints are in absolute cells whichever version was
+ * stored (version 2 stores them relative to the anchor).
+ */
 export interface ObjectsFile {
-  version: 1;
+  version: 1 | 2;
   instances: {
     g: string;
     x: number;
     y: number;
     s: number;
     r?: number;
+    /** Footprint polygon in cells. */
     fp?: [number, number][];
     hm?: number;
     /** Real metres per cell at the instance (warped worlds). */

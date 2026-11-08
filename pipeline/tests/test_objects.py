@@ -1,6 +1,7 @@
 """Object placement, fine-terrain rules and spec inheritance (M1.5 experiment)."""
 
 import gzip
+import hashlib
 import json
 
 import numpy as np
@@ -184,12 +185,30 @@ def test_objects_file_is_written_compressed_and_hashed(tmp_path):
         style="s",
         attribution=[],
         render={"scale": 0.125},
-        objects=[{"g": "tree", "x": 1.5, "y": 2.5, "s": 7}],
+        objects=[
+            {"g": "tree", "x": 1.5, "y": 2.5, "s": 7},
+            {
+                "g": "building",
+                "x": 2.25,
+                "y": 1.5,
+                "s": 8,
+                "fp": [[1.5, 1.0], [3.0, 1.0], [3.0, 2.0]],
+            },
+        ],
     )
     assert m["render"] == {"scale": 0.125}
-    assert m["objects"]["count"] == 1 and m["objects"]["path"] == "objects.json.gz"
-    data = json.loads(gzip.decompress((tmp_path / "objects.json.gz").read_bytes()))
-    assert data == {"version": 1, "instances": [{"g": "tree", "x": 1.5, "y": 2.5, "s": 7}]}
+    assert m["objects"]["count"] == 2 and m["objects"]["path"] == "objects.json.gz"
+    blob = (tmp_path / "objects.json.gz").read_bytes()
+    assert m["objects"]["sha256"] == hashlib.sha256(blob).hexdigest()
+    data = json.loads(gzip.decompress(blob))
+    # version 2: footprints in hundredths of a cell from the anchor
+    assert data == {
+        "version": 2,
+        "instances": [
+            {"g": "tree", "x": 1.5, "y": 2.5, "s": 7},
+            {"g": "building", "x": 2.25, "y": 1.5, "s": 8, "fp": [[-75, -50], [75, -50], [75, 50]]},
+        ],
+    }
     again = write_package(
         tmp_path,
         world_id="t",

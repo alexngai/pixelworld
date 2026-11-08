@@ -1,6 +1,6 @@
 # World package format (v1)
 
-Status: chunk format v1, which replaced v0's one-step slope mask with multi-step corner shapes; readers still accept v0. Manifest format v0. It covers terrain, roads and geology (M1). Instances, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
+Status: chunk format v1, which replaced v0's one-step slope mask with multi-step corner shapes; readers still accept v0. Manifest format v0. Objects file v2, with footprints relative to their anchor; readers still accept v1. It covers terrain, roads and geology (M1). Instances, landmarks and labels are added in later versions (see [roadmap.md](roadmap.md)).
 
 A world package is a directory, or later an archive, containing:
 
@@ -72,12 +72,14 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **Objects:** instances carry `m`, their local metres per cell, and a dam carries `top`, its crest height in steps.
 - **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too.
 - **Render scale (optional, D-032):** `render.scale` in (0, 1] draws each cell at that fraction of a 32×16 px tile, and heights shrink by the same factor. Fine experiment worlds use it to stand in for micro-terrain. `render.tileSize` overrides the bake tile edge (default 32 cells).
-- **Objects (optional, D-034):** `objects.path` points to a gzipped JSON file, `{ "version": 1, "instances": [...] }`. Each instance has:
+- **Objects (optional, D-034):** `objects.path` points to a gzipped JSON file, `{ "version": 2, "instances": [...] }`. Each instance has:
   - `g`: semantic group
-  - `x`, `y`: position in cells
+  - `x`, `y`: position in cells (the anchor)
   - `s`: seed, which picks the variant
   - optional `r`: quarter-turns
-  - optional `fp`: footprint polygon in cells
+  - optional `fp`: footprint polygon, as `[dx, dy]` points in integer hundredths of a cell from the anchor rounded to hundredths. A point is at `((⌊100·x + ½⌋ + dx) / 100, (⌊100·y + ½⌋ + dy) / 100)` cells, with the rounding computed in double precision. Relative points cut the driving level of San Francisco from 8.30 to 6.15 MB.
+    - **Version 1** stored the points in absolute cells with two decimals. Readers still accept it. Version 2 decodes to the same numbers wherever those had at most two decimals, as the pipeline writes them, except that −0 reads back as 0.
+    - **Readers:** `world_format.decode_objects` (Python) and `parseObjects` (TypeScript) return absolute footprints whatever the version. The shared golden files `testdata/world-format/objects-v1.json` and `objects-v2.json` hold the same instances in both versions.
   - optional `hm`: real or depicted height in metres
   - optional `top`: absolute top height in steps (dam crests, bridge decks)
   - optional `id`: landmark registry id (D-051), on a landmark and each of its parts

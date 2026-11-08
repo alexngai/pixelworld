@@ -9,6 +9,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import math
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -285,6 +286,63 @@ def decode_geo(blob: bytes, nx: int, ny: int) -> tuple[np.ndarray, np.ndarray]:
     return q[..., 0], q[..., 1]
 
 
+OBJECTS_FILE = "objects.json.gz"
+# v1 stored footprints in absolute cells (2 decimals); v2 stores each point as
+# integer hundredths of a cell from its instance's anchor
+OBJECTS_VERSION = 2
+READABLE_OBJECTS_VERSIONS = (1, 2)
+
+
+def _hundredths(v: float) -> int:
+    """v in hundredths of a cell, rounded half up: ⌊100·v + ½⌋ in double
+    precision, as packages/world-format computes it, so both sides agree on
+    every anchor (not Python's round(), which rounds half to even)."""
+    return math.floor(v * 100 + 0.5)
+
+
+def encode_objects(instances: list[dict[str, Any]], version: int = OBJECTS_VERSION) -> bytes:
+    """The objects file: deterministic gzip of `{"version", "instances"}` JSON.
+
+    In version 2 a footprint point (px, py) is stored as [⌊100·px + ½⌋ − ⌊100·x + ½⌋,
+    ⌊100·py + ½⌋ − ⌊100·y + ½⌋], hundredths of a cell from the anchor (x, y):
+    short integers that compress better. It decodes to the same points as
+    version 1 wherever they had at most two decimals, as placement writes them.
+    """
+    if version not in READABLE_OBJECTS_VERSIONS:
+        raise ValueError(f"unsupported objects version {version}")
+    if version == 2:
+        out = []
+        for inst in instances:
+            if inst.get("fp"):
+                ax, ay = _hundredths(inst["x"]), _hundredths(inst["y"])
+                inst = {
+                    **inst,
+                    "fp": [[_hundredths(px) - ax, _hundredths(py) - ay] for px, py in inst["fp"]],
+                }
+            out.append(inst)
+        instances = out
+    blob = json.dumps({"version": version, "instances": instances}, separators=(",", ":"))
+    return gzip.compress(blob.encode(), compresslevel=9, mtime=0)
+
+
+def decode_objects(blob: bytes) -> list[dict[str, Any]]:
+    """Instances from an objects file (gzip or plain JSON, version 1 or 2), with
+    footprints in absolute cells whatever the version."""
+    if blob[:2] == b"\x1f\x8b":
+        blob = gzip.decompress(blob)
+    data = json.loads(blob)
+    version = data.get("version")
+    if version not in READABLE_OBJECTS_VERSIONS or not isinstance(data.get("instances"), list):
+        raise ValueError(f"unsupported objects file (version {version!r})")
+    instances = data["instances"]
+    if version == 2:
+        for inst in instances:
+            if inst.get("fp"):
+                ax, ay = _hundredths(inst["x"]), _hundredths(inst["y"])
+                inst["fp"] = [[(ax + dx) / 100, (ay + dy) / 100] for dx, dy in inst["fp"]]
+    return instances
+
+
 def package_hash(manifest: dict[str, Any]) -> str:
     """SHA-256 of the manifest (minus this field) as canonical JSON.
 
@@ -454,10 +512,9 @@ def write_package(
         manifest["micro"] = {"k": int(micro[1])}
     if warp_info is not None:
         manifest["warp"] = warp_info
-    objects_path = out_dir / "objects.json.gz"
+    objects_path = out_dir / OBJECTS_FILE
     if objects is not None:
-        blob = json.dumps({"version": 1, "instances": objects}, separators=(",", ":")).encode()
-        blob = gzip.compress(blob, compresslevel=9, mtime=0)
+        blob = encode_objects(objects)
         objects_path.write_bytes(blob)
         manifest["objects"] = {
             "path": objects_path.name,

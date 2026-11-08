@@ -3,6 +3,7 @@ import {
   decodeChunk,
   maybeGunzip,
   parseManifest,
+  parseObjects,
   type Chunk,
   type ChunkRef,
   type ObjectsFile,
@@ -24,15 +25,16 @@ export async function loadManifest(baseUrl: string): Promise<WorldManifest> {
   return parseManifest(await res.json());
 }
 
-/** Fetch a world's placed objects, if it has any (gzip or plain JSON). */
+/**
+ * Fetch a world's placed objects, if it has any (gzip or plain JSON, version 1
+ * or 2). Footprints come back in absolute cells whichever version was stored.
+ */
 export async function loadObjects(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
   if (!manifest.objects) return null;
   const res = await fetch(withSlash(baseUrl) + manifest.objects.path);
   if (!res.ok) throw new Error(`${manifest.objects.path}: HTTP ${res.status}`);
   const bytes = await maybeGunzip(await res.arrayBuffer());
-  const file = JSON.parse(new TextDecoder().decode(bytes)) as ObjectsFile;
-  if (file.version !== 1 || !Array.isArray(file.instances)) throw new Error("unsupported objects file");
-  return file;
+  return parseObjects(JSON.parse(new TextDecoder().decode(bytes)));
 }
 
 function withSlash(url: string): string {
