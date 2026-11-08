@@ -1,5 +1,5 @@
 {
-  "packageHash": "102c29c9b506c1dbedd040c99e08143ea8a920dff10c5e6adefa89f1c0de7d8f",
+  "packageHash": "98c260e3cc5f541386c847d2ea4bb03315184b9706465a5413c510227cbbe211",
   "cells": [
     618,
     590
@@ -24,9 +24,11 @@
     "building.parking": 43,
     "building.pier": 10,
     "building.residential": 371,
-    "building.rowhouse.edwardian": 9411,
+    "building.rowhouse.edwardian": 4597,
+    "building.rowhouse.edwardian.painted": 4814,
     "building.rowhouse.stucco": 7733,
-    "building.rowhouse.victorian": 9569,
+    "building.rowhouse.victorian": 6346,
+    "building.rowhouse.victorian.pale": 3223,
     "building.tower": 61,
     "building.tower.deco": 109,
     "building.tower.glass": 104,
@@ -34,20 +36,24 @@
     "building.tower.postmodern": 118,
     "building.tower.slab": 129,
     "landmark.bridge.suspension.double": 25,
+    "landmark.gate": 1,
     "landmark.hall.clock": 2,
     "landmark.hall.domed": 1,
     "landmark.tower.column": 1,
     "landmark.tower.obelisk.diagonal": 1,
     "landmark.tower.pyramid": 1,
+    "prop.lanterns": 79,
+    "prop.lanterns.wide": 35,
     "prop.signal": 458,
     "prop.streetlight": 8008,
     "tree": 7806,
     "tree.cypress": 8256,
-    "tree.eucalyptus": 4163
+    "tree.eucalyptus": 4163,
+    "tree.street": 9181
   },
   "roads": {
-    "cells": 62993,
-    "edges": 65898,
+    "cells": 63001,
+    "edges": 65906,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 30,
@@ -57,21 +63,23 @@
   },
   "paths": {
     "segments": 20882,
-    "cells": 103533
+    "cells": 103535
   },
   "rails": {
     "street": 2201,
-    "cable": 929,
+    "cable": 926,
     "train": 689
   },
   "surfaces": {
-    "woodland": 30168,
+    "woodland": 23735,
     "scrub": 39,
     "water": 26428,
-    "desert": 2950,
-    "grass": 7127,
-    "farmland": 14,
-    "urban": 297894
+    "desert": 2047,
+    "grass": 1148,
+    "farmland": 67,
+    "urban": 196331,
+    "lawn": 22173,
+    "yard": 92652
   },
   "routes": {
     "cablecar": 28,
