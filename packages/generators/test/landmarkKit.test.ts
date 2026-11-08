@@ -208,6 +208,47 @@ describe("landmark kit", () => {
     expect(topOf(r, cx + apex, cy)).toBe(-1);
   });
 
+  it("draws the coast's landmarks: a windmill, a lighthouse and a cellhouse", () => {
+    // the windmill: a tower to its cap, sails reaching past it on the windward (west) side only
+    const w = generateModel(style.assets, rampIds, "landmark.windmill", { seed: 1, heightVox: 30 });
+    const c = (w.sx - 1) / 2;
+    expect(topOf(w, c, c)).toBeGreaterThanOrEqual(29);
+    const sailCols = (x0: number, x1: number) => {
+      let n = 0;
+      for (let x = x0; x < x1; x++) for (let y = 0; y < w.sy; y++) for (let z = 0; z < w.sz; z++) if (rampAt(w, x, y, z) === "paint-white") n++;
+      return n;
+    };
+    expect(sailCols(0, Math.floor(c))).toBeGreaterThan(20);
+    expect(sailCols(Math.ceil(c) + 1, w.sx)).toBe(0);
+    let above = 0; // the upper sails rise above the cap
+    for (let y = 0; y < w.sy; y++) for (let x = 0; x < w.sx; x++) if (topOf(w, x, y) > 32) above++;
+    expect(above).toBeGreaterThan(2);
+    // turned to face north, the sails go to −y
+    const n = generateModel({ ...style.assets, "landmark.windmill": { ...style.assets["landmark.windmill"]!, params: { face: 1 } } }, rampIds, "landmark.windmill", {
+      seed: 1,
+      heightVox: 30,
+    });
+    let north = 0;
+    for (let y = 0; y < Math.floor((n.sy - 1) / 2); y++) for (let x = 0; x < n.sx; x++) for (let z = 0; z < n.sz; z++) if (rampAt(n, x, y, z) === "paint-white") north++;
+    expect(north).toBeGreaterThan(20);
+    // the lighthouse: a white shaft, a glazed lantern under a dark cap
+    const l = generateModel(style.assets, rampIds, "landmark.lighthouse", { seed: 1, heightVox: 30 });
+    const lc = (l.sx - 1) / 2;
+    expect(topOf(l, lc, lc)).toBeGreaterThanOrEqual(29);
+    const column = [...Array(l.sz).keys()].map((z) => rampAt(l, lc, lc, z));
+    expect(column.slice(0, 10).every((r) => r === "paint-white" || r === "concrete")).toBe(true);
+    expect(column).toContain("lit");
+    expect(column[topOf(l, lc, lc)]).toBe("roof-slate");
+    // the cellhouse: a long hall with barred windows, its head block taller at the band's east end
+    const h = generateModel(style.assets, rampIds, "landmark.cellhouse", { seed: 1, mask: band(90, 24), heightVox: 16 });
+    expect(topOf(h, 85, 12)).toBeGreaterThan(topOf(h, 45, 12));
+    expect(topOf(h, 45, 12)).toBeGreaterThan(topOf(h, 5, 12));
+    expect(topOf(h, 5, 1)).toBe(-1); // the tail wing is narrower than the band
+    let windows = 0;
+    for (let x = 20; x < 75; x++) for (let z = 0; z < 16; z++) if (rampAt(h, x, 0, z) === "glass") windows++;
+    expect(windows).toBeGreaterThan(100);
+  });
+
   it("owns a big model per voxel column, never merging faces across cells", () => {
     const m = generateModel(style.assets, rampIds, "landmark.bridge.suspension", { seed: 1, mask: band(9, 400), heightVox: 20 });
     const voxel = { h: 1 / 16, v: 1 / 8 };

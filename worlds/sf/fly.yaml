@@ -24,7 +24,8 @@ micro: { k: 4, dem: { overview: 1 } }
 
 objects:
   # only towers and landmarks are drawn from the air: no typology pass, and no
-  # street trees (the driving level's canopy rule would carpet the Bay at 100 m)
+  # street trees (the driving level's canopy rule would carpet the Bay at 100 m).
+  # The landmarks are the driving level's, Alcatraz and the windmills included.
   typology: null
   vegetation: null
   depiction:
