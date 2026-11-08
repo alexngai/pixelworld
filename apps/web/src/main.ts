@@ -576,7 +576,8 @@ async function main() {
           depthRange,
         },
         drawTiles,
-        sprite
+        // marker=0 hides the rover (clean screenshots for evaluation)
+        sprite && params.get("marker") !== "0"
           ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
           : [],
       );

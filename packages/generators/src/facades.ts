@@ -142,10 +142,13 @@ function sideWindows(m: VoxelModel, f: Facade, H: number, fh: number, pane: () =
 }
 
 /**
- * Row houses on narrow lots. params.type: 0 Victorian (bay window, false-front
- * cornice or a Queen Anne gable, by year), 1 Edwardian (stacked bays, heavy
- * cornice), 2 stucco (garage below, a picture window, a tiled eave or a
- * storybook gable).
+ * Row houses on narrow lots. params.type: 0 Victorian (a bay window, a
+ * false front with a cornice over a coloured frieze, now and then a Queen Anne
+ * gable), 1 Edwardian (a wider bay, a heavy cornice with dentils), 2 stucco (a
+ * garage and the entry at the street, a picture window above, a parapet,
+ * sometimes a tiled eave or a storybook gable). Painted-lady colouring: a body
+ * paint, white trim at every floor line, on the bay posts and the cornice, and
+ * an accent on the frieze and the door.
  */
 export const rowhouse: Generator = (ctx) => {
   const { rand, param, mask, hints } = ctx;
@@ -158,12 +161,12 @@ export const rowhouse: Generator = (ctx) => {
   const floors = Math.max(1, Math.min(6, hints?.floors ?? Math.round(H / 4)));
   const fh = Math.max(2, Math.floor(H / floors));
   const year = hints?.year ?? 1900;
-  const queenAnne = type === 0 && (year >= 1888 || rand() < 0.3) && W >= 3;
-  const storybook = type === 2 && rand() < 0.3 && W >= 4;
-  const gable = queenAnne || storybook ? Math.max(1, Math.min(Math.floor(W / 2), Math.round(W * 0.45))) : 0;
-  const m = new VoxelModel(f.sx, f.sy, H + gable + 3);
+  // most Victorian rows are flat-roofed behind false fronts; Queen Annes add a gable
+  const queenAnne = type === 0 && W >= 4 && rand() < (year >= 1888 ? 0.3 : 0.1);
+  const storybook = type === 2 && W >= 4 && rand() < 0.2;
+  const gable = queenAnne || storybook ? Math.max(1, Math.min(Math.floor(W / 2), Math.round(W * 0.4))) : 0;
+  const m = new VoxelModel(f.sx, f.sy, H + gable + 4);
   const p = palette(ctx, m);
-  // stucco houses: a tiled eave and storybook gables (the `eave` role)
   const eaves = ctx.ramps("eave");
   const eave = eaves.length ? m.material(pick(rand, eaves)) : p.roof;
   const roofs = ctx.ramps("roof");
@@ -178,71 +181,76 @@ export const rowhouse: Generator = (ctx) => {
     }
 
   // the bay: on one side of the front, the rest of the front stepped back a voxel
-  const bayW = W >= 3 ? Math.max(1, Math.round(W * (type === 1 ? 0.55 : 0.45))) : 0;
+  const bayW = W >= 3 ? Math.max(1, Math.round(W * (type === 1 ? 0.55 : type === 2 ? 0.6 : 0.45))) : 0;
   const bayLeft = rand() < 0.5;
   const inBay = (a: number) => (bayLeft ? a < bayW : a >= W - bayW);
+  const stuccoBay = type === 2 && rand() < 0.5;
   const bayFrom = type === 2 || floors < 2 ? fh : type === 0 && floors >= 3 ? fh : 0;
-  const recess = f.maxDepth >= 4 && bayW > 0 && type !== 2;
+  const recess = f.maxDepth >= 4 && bayW > 0 && (type !== 2 || stuccoBay);
   if (recess)
     eachFront(f, 0, (x, y, a) => {
       if (!inBay(a)) for (let z = bayFrom; z < H; z++) m.set(x, y, z, 0);
     });
+  const wallAt = (x: number, y: number, a: number, z: number) =>
+    recess && !inBay(a) && z >= bayFrom ? [x - f.front[0], y - f.front[1]] : [x, y];
+  const garage = type === 2 || (W >= 5 && rand() < 0.45);
+  const doorAt = bayLeft ? Math.min(W - 1, bayW + Math.floor((W - bayW) / 2)) : Math.max(0, Math.floor((W - bayW) / 2) - 1);
 
-  const wallAt = (x: number, y: number, a: number) => (recess && !inBay(a) ? [x - f.front[0], y - f.front[1]] : [x, y]);
-  // windows, floor by floor
   for (let k = 0; k < floors; k++) {
     const z0 = k * fh;
     const ground = k === 0;
     eachFront(f, 0, (x, y, a) => {
-      const [wx, wy] = wallAt(x, y, a);
-      for (let z = z0 + 1; z < Math.min(H - 1, z0 + fh); z++) {
-        if (type === 2 && ground) {
-          // the garage door, centred, and the entry stair beside it
-          const door = a >= Math.floor(W * 0.2) && a < Math.ceil(W * 0.75);
-          if (door) onFace(m, f, wx!, wy!, z, p.trim);
+      // the string course: trim along every floor line
+      if (k > 0 && type !== 2) {
+        const [sx, sy] = wallAt(x, y, a, z0);
+        onFace(m, f, sx!, sy!, z0, p.trim);
+      }
+      for (let z = z0 + 1; z < Math.min(H - 2, z0 + fh); z++) {
+        const [wx, wy] = wallAt(x, y, a, z);
+        const top = z === z0 + fh - 1 && fh >= 3; // the lintel row
+        if (ground) {
+          if (garage && (type === 2 ? a >= Math.floor(W * 0.15) && a < Math.ceil(W * 0.7) : inBay(a) && !top)) {
+            onFace(m, f, wx!, wy!, z, type === 2 ? p.trim : p.accent); // the garage door
+          } else if (a === doorAt && !top) onFace(m, f, wx!, wy!, z, p.accent); // the front door
+          else if (!garage && inBay(a) && !top) onFace(m, f, wx!, wy!, z, p.pane());
           continue;
         }
+        if (top) continue;
         if (inBay(a)) {
-          const edge = (bayLeft ? a === bayW - 1 : a === W - bayW) || (bayLeft ? a === 0 : a === W - 1);
+          const edge = a === (bayLeft ? bayW - 1 : W - bayW) || a === (bayLeft ? 0 : W - 1);
           onFace(m, f, wx!, wy!, z, edge && bayW >= 3 && type !== 2 ? p.trim : p.pane());
         } else if (type === 2) {
-          // a picture window across the living floor
-          if (k === 1 || floors === 1) onFace(m, f, wx!, wy!, z, p.pane());
-        } else {
-          const mid = bayLeft ? Math.floor((bayW + W) / 2) : Math.floor((W - bayW) / 2);
-          if (ground && a === mid) onFace(m, f, wx!, wy!, z, p.accent); // the door
-          else if (!ground && (a === mid || W >= 8)) onFace(m, f, wx!, wy!, z, p.pane());
-        }
+          if (W >= 3 && a !== doorAt) onFace(m, f, wx!, wy!, z, p.pane()); // the picture window
+        } else if (a === doorAt || W >= 8) onFace(m, f, wx!, wy!, z, p.pane());
       }
     });
   }
 
-  // the top: a cornice and false front, an eave of tile, or a gable to the street
+  // the top: a frieze and cornice under a false front, or a stucco parapet
   eachFront(f, 0, (x, y, a) => {
-    const [wx, wy] = wallAt(x, y, a);
+    const [wx, wy] = wallAt(x, y, a, H - 1);
     if (type === 2) {
-      m.set(wx!, wy!, H - 1, eave);
+      m.set(wx!, wy!, H - 1, p.body);
+      if (!gable) m.set(wx!, wy!, H, eave); // a parapet, sometimes with a tiled pent roof
       return;
     }
+    if (H >= 6) m.set(wx!, wy!, H - 3, (a + (bayLeft ? 0 : 1)) % 2 === 0 && type === 1 ? p.trim : p.accent);
     m.set(wx!, wy!, H - 2, p.trim);
     m.set(wx!, wy!, H - 1, p.trim);
-    if (type === 1 && (a + (bayLeft ? 0 : 1)) % 2 === 0) m.set(wx!, wy!, H - 3, p.trim); // dentils
   });
   if (gable > 0) {
-    // a pitched roof running back from the street, its gable end on the front
+    // a short pitched roof running back from the street, its gable end on the front
     for (let y = 0; y < f.sy; y++)
       for (let x = 0; x < f.sx; x++) {
         const i = y * f.sx + x;
         const a = f.along[i]!;
-        // where the front is stepped back, the gable stands on the wall behind
         const back = recess && !inBay(a) ? 1 : 0;
         const d = f.depth[i]! - back;
-        if (f.depth[i]! < 0 || d < 0 || d > Math.max(2, Math.min(Math.floor(f.maxDepth * 0.5), W))) continue;
+        if (f.depth[i]! < 0 || d < 0 || d > Math.max(2, Math.floor(W / 2))) continue;
         const rise = Math.min(gable, Math.min(a, W - 1 - a) + 1);
         const r = type === 2 ? eave : gableRoof;
         for (let z = H; z < H + rise; z++) m.set(x, y, z, d === 0 ? (z === H + rise - 1 ? r : p.body) : r);
       }
-    // the attic window, in the gable end
     for (let y = 0; y < f.sy; y++)
       for (let x = 0; x < f.sx; x++) {
         const i = y * f.sx + x;
@@ -251,10 +259,11 @@ export const rowhouse: Generator = (ctx) => {
         if (f.depth[i]! - back === 0 && gable >= 2 && Math.abs(a - (W - 1) / 2) < 1) onFace(m, f, x, y, H, p.pane());
       }
   } else if (type !== 2) {
-    // the false front: a parapet above the flat roof
+    // the false front: a parapet with a raised centre (a pediment) above the flat roof
     eachFront(f, 0, (x, y, a) => {
-      const [wx, wy] = wallAt(x, y, a);
+      const [wx, wy] = wallAt(x, y, a, H);
       m.set(wx!, wy!, H, p.trim);
+      if (W >= 5 && Math.abs(a - (W - 1) / 2) <= W / 6 && m.get(wx!, wy!, H)) m.set(wx!, wy!, H + 1, p.trim);
     });
   }
   sideWindows(m, f, H, fh, p.pane, 3);
@@ -269,7 +278,7 @@ export const rowhouse: Generator = (ctx) => {
  * block (ribbon windows).
  */
 export const block: Generator = (ctx) => {
-  const { param, mask, hints } = ctx;
+  const { rand, param, mask, hints } = ctx;
   if (!mask) throw new Error("block needs a footprint");
   const type = param("type", 0);
   const f = facadeOf(mask, frontDir(mask, hints?.front));
@@ -278,7 +287,7 @@ export const block: Generator = (ctx) => {
   const floors = Math.max(1, Math.min(30, hints?.floors ?? Math.round(H / 4)));
   const fh = Math.max(2, Math.floor(H / floors));
   const pierGable = type === 3 ? Math.max(1, Math.min(4, Math.floor(W / 4))) : 0;
-  const m = new VoxelModel(f.sx, f.sy, H + pierGable + 3);
+  const m = new VoxelModel(f.sx, f.sy, H + Math.max(pierGable, 5) + 3);
   const p = palette(ctx, m);
   massing(m, f, H, p.body, p.roof);
 
@@ -333,18 +342,45 @@ export const block: Generator = (ctx) => {
     }
   });
   if (type === 2) {
-    // balconies: a rail of trim at the foot of every floor, and a green tile eave
+    // balconies: a red rail at the foot of every floor; signs hung down the front
     for (let k = 1; k < floors; k++)
       eachFront(f, 0, (x, y) => {
         if (k * fh + 1 < H - 2) onFace(m, f, x, y, k * fh + 1, p.trim);
       });
+    const signs = ctx.ramps("sign");
+    if (signs.length && W >= 3)
+      eachFront(f, 0, (x, y, a) => {
+        if (a === 1 || (W >= 9 && a === W - 2))
+          for (let z = fh; z < Math.min(H - 3, 3 * fh); z++) onFace(m, f, x, y, z, m.material(signs[(a + z) % signs.length]!));
+      });
+    // a jade tile eave with upturned corners
     const eaves = ctx.ramps("eave");
     const eave = eaves.length ? m.material(eaves[0]!) : p.roof;
     eachFront(f, 0, (x, y, a) => {
       m.set(x, y, H - 2, eave);
       m.set(x, y, H - 1, eave);
-      if (a === 0 || a === W - 1) m.set(x, y, H, eave); // upturned corners
+      if (a === 0 || a === W - 1) m.set(x, y, H, eave);
     });
+    // a pagoda roof on some: two tiers of jade on red posts, near the front
+    if (W >= 5 && f.maxDepth >= 5 && rand() < 0.35) {
+      const pw = Math.max(3, Math.min(W - 2, Math.round(W * 0.5)));
+      const a0 = Math.floor((W - pw) / 2);
+      for (let y = 0; y < f.sy; y++)
+        for (let x = 0; x < f.sx; x++) {
+          const i = y * f.sx + x;
+          const a = f.along[i]!;
+          const d = f.depth[i]!;
+          if (d < 1 || d > pw || a < a0 || a >= a0 + pw) continue;
+          const da = Math.min(a - a0, a0 + pw - 1 - a);
+          const dd = Math.min(d - 1, pw - d);
+          const ring = Math.min(da, dd);
+          m.set(x, y, H, ring === 0 ? p.trim : eave);
+          m.set(x, y, H + 1, eave);
+          if (ring >= 1) m.set(x, y, H + 2, eave);
+          if (ring >= 1 && ring <= 1) m.set(x, y, H + 3, eave);
+          if (ring >= 2) for (let z = H + 2; z < H + 5; z++) m.set(x, y, z, eave);
+        }
+    }
   } else if (type === 0 || type === 1) {
     // the cornice
     eachFront(f, 0, (x, y, a) => {

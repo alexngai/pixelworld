@@ -216,7 +216,7 @@
     },
     "building.chinatown": {
       "generator": "block",
-      "ramps": { "wall": "paint-cream", "wall.butter": "paint-butter", "wall.mint": "paint-mint", "wall.brick": "brick", "trim": "chinatown-red", "eave": "jade", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "ramps": { "wall": "paint-cream", "wall.butter": "paint-butter", "wall.mint": "paint-mint", "wall.brick": "brick", "trim": "chinatown-red", "eave": "jade", "sign": "chinatown-red", "sign.gold": "tower-gold", "roof": "roof-flat", "window": "glass", "lit": "lit" },
       "params": { "type": 2, "litFraction": 0.5 }
     },
     "building.commercial.historic": {
