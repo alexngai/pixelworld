@@ -297,6 +297,7 @@ The point is more room for visual interest; both halves are wanted.
   - Snapping each road on its own: the jogs come from junction positions, so they can't be removed one road at a time.
   - Adding a rotation term to the warp solver: it only helps warped worlds, and it wouldn't straighten roads that are merely noisy.
 - **Neutral by default:** without a `snap:` section, roads are traced as before and outputs are unchanged.
+- **Kept ways (M3.5):** `snap.roads.keep: [{bounds, width?}]` lists boxes whose ways keep every vertex and add no constraints, for streets whose shape is the point (Lombard Street's hairpins on the walking level, drawn 5 m wide with `width` so the bends stay apart).
 
 ### D-050: Roads and paths at their real width (accepted)
 - **Why:** a road was a fixed-pixel decal that never left its cell. At street level (20 m cells), a 50 m boulevard drew 6 m wide, and there were no sidewalks or crosswalks.
@@ -309,7 +310,8 @@ The point is more room for visual interest; both halves are wanted.
 - **Client:**
   - The micro-terrain shader looks at the cells within reach (the widest half-width, rounded up). It draws the nearest way whose half-width covers the pixel, with paths over roads.
   - A road is never narrower than the style's width for its class, so coarse maps keep their road hierarchy while fine ones grow to real width.
-  - Crosswalks are pale stripes.
+  - Crosswalks are pale stripes, on gentle crossings only (M3.5).
+  - Pavement is lit by its way's grade rather than its micro-tiles (M3.5), so a steep street reads as one slope.
   - Without width data, the old in-cell decal is used, so older worlds are unchanged.
 - **Cost:** about 1.6× the software (SwiftShader) bake time on the walking level, from one texel fetch per neighbour cell.
 - **Overture cache:** the cache key now includes the row filter. Two filters over the same box used to share one cache entry, which would have dropped the walking level's new classes.
@@ -426,3 +428,12 @@ The point is more room for visual interest; both halves are wanted.
 - **Rejected alternatives:**
   - **Routes from the straightened source lines in the build:** they would need the whole build (sources, warp, straightening) to refresh routes, and they don't record where rasterizing moved a road.
   - **Steering on the road bits at run time:** the client would need every chunk along a vehicle's way loaded, and decks over water have no road bits.
+
+### D-061: Rails drawn in the street as their own layer (accepted, M3.5)
+- **Why:** San Francisco's cable-car and streetcar lines are part of how its streets look, even without a car on them. Static props would clash with the moving vehicles of the traffic layer (D-060), so the tracks are drawn into the ground.
+- **Data:** an optional `RAIL` chunk layer: connections like `ROAD`, and the kind drawn in bits 12–15. Rules in `sources.rails` pick each Overture rail segment's kind by class, name (or `unnamed`) and a lon/lat box; the first match wins. Tunnels (`is_tunnel` ranges in `rail_flags`) are cut out.
+- **Placement:** street and cable-car tracks move with the straightened roads (D-049) and snap onto the road they run in; trains keep their own way.
+- **Drawn by the style:** `roads.rail` names the ramp. A style without it draws no rails, so other worlds are unchanged.
+- **Two readers of Overture rail:** the traffic layer reads rail segments for routes (`sources/transit.py`, which keeps route names), and this layer reads them for drawing (`overture.rails`, which keeps tunnel ranges). They are separate queries and caches; the routes for street-running lines are matched onto the drawn road graph, so the moving cars run on the tracks.
+- **Known limits:** curving streets (the Embarcadero) draw stepped tracks with short crossing pieces.
+- **Rejected alternative:** parked cable cars and streetcars as props. They would double up with the traffic layer's moving ones. The voxel models made for them (`generators/vehicles.ts`: a cable car with riders on its running boards, a heritage streetcar in paired liveries, an articulated light-rail car) stay registered as `prop.*` groups in the `bay-area` pack, placed by no world, for the traffic layer to adopt in place of its box models (M4).

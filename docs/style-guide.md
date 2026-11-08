@@ -70,6 +70,8 @@ World-anchored patterns follow the terrain through rotations and slopes. Screen-
 - **Pixel-clean:** roads follow the same 8 directions as the grid, so their edges are 2:1, horizontal or vertical lines.
 - **Widths** (half-widths in cells): motorway 0.2, trunk 0.17, primary 0.1, secondary 0.07. Narrowing primary and secondary was needed to stop Las Vegas's arterial grid from overpowering the city.
 - **Colours:** `asphalt` ramp; motorways and trunks get a one-pixel `marking` centre line. Roads are lit like the terrain under them.
+- **Pavement on slopes (M3.5):** where micro-terrain draws a way, its pavement is lit by the way's grade over about two cells, not by its micro-tiles, so a steady climb drawn as flats and ramps reads as one slope instead of stripes. Terrace walls (risers) on pavement take the pavement's colour a shade darker. Crosswalk stripes are drawn only on gentle crossings: on a steep street, screen-space stripes stand up like a fence.
+- **Rails (M3.5, D-061):** a style's `roads.rail` ramp draws the `RAIL` layer on top of the way: two rails about a pixel wide, street tracks on their road's centre line, cable-car tracks with a dark slot between the rails, train tracks on a ballast bed. A style without `roads.rail` draws no rails (the `bay-area` pack uses `bridge-grey`).
 
 ## 5. Ambient occlusion and dithering
 
