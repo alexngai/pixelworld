@@ -24,6 +24,24 @@ import { maybeGunzip, type WorldManifest } from "@pixelworld/world-format";
  */
 
 export const HEADINGS = 16;
+
+/** Parts of the traffic layer that switch on and off on their own. */
+export type TrafficSublayer = "road" | "rail" | "ferry";
+export const TRAFFIC_SUBLAYERS: readonly TrafficSublayer[] = ["road", "rail", "ferry"];
+export const SUBLAYER_LABELS: Record<TrafficSublayer, string> = {
+  road: "road vehicles",
+  rail: "rail and transit",
+  ferry: "ferries",
+};
+const SUBLAYER_OF: Record<VehicleKind, TrafficSublayer> = {
+  car: "road",
+  bus: "road",
+  cablecar: "rail",
+  streetcar: "rail",
+  lightrail: "rail",
+  train: "rail",
+  ferry: "ferry",
+};
 const LIFT = 0.2; // steps above the route, so a car's floor isn't lost in the road surface
 
 export async function loadRoutes(worldUrl: string, manifest: WorldManifest): Promise<RouteNetwork | null> {
@@ -54,6 +72,8 @@ export class TrafficLayer {
   readonly sim: TrafficSim;
   enabled = true;
   paused = false;
+  /** Sublayers drawn; the simulation runs them all, so toggling one changes nothing else. */
+  readonly layers = new Set<TrafficSublayer>(TRAFFIC_SUBLAYERS);
   private readonly sprites = new Map<string, GpuImage | null>();
   private pending = 0;
   /** Milliseconds spent this frame: simulation, and turning poses into sprites. */
@@ -131,6 +151,7 @@ export class TrafficLayer {
     const rs = this.opts.renderScale;
     let complete = true;
     for (const p of this.sim.poses(this.paused ? 1 : this.sim.alpha)) {
+      if (!this.layers.has(SUBLAYER_OF[p.kind])) continue;
       // heading in this view, as a heading in rotation 0
       const k = Math.round((p.heading / (2 * Math.PI)) * HEADINGS);
       const heading = (((k + (HEADINGS / 4) * rotation) % HEADINGS) + HEADINGS) % HEADINGS;

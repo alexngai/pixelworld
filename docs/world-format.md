@@ -105,7 +105,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **Points:** they sit at cell corners `x = min(i·step, cellsX)` and `y = min(j·step, cellsY)`; positions in between are bilinear.
   - **Coding:** each row is delta-coded along x, with the first point absolute.
   - **Use:** clients convert between cells and lon/lat with it, both ways, to carry a place from one level to another.
-- **Routes (optional, D-060):** `routes.path` points to a gzipped JSON file of polylines that ambient traffic follows. See [Routes file](#routes-file-routesjsongz).
+- **Routes (optional layer, D-060):** `routes.path` points to a gzipped JSON file of polylines that ambient traffic follows. See [Optional layers](#optional-layers) and [Routes file](#routes-file-routesjsongz).
 - **Chunk coordinates:** chunk `(cx, cy)` covers cells `[cx·chunkSize, (cx+1)·chunkSize) × [cy·chunkSize, (cy+1)·chunkSize)`.
 
 ## Chunk file (`.pxwc`)
@@ -171,9 +171,20 @@ Optional sections are omitted when they hold only their default value (no water,
 
 **v0 chunks** have a `SLOP` section instead of `CRNR`: a 4-bit mask, 0–14, where bit i means corner i is one step above `BASE`. Readers convert it to a shape where each set bit becomes an offset of 1.
 
+## Optional layers
+
+A layer is extra content on top of the world that the world doesn't need: its own file in the package, listed in the manifest as `<layer>: {path, sha256, version, …}`, with its own version. The chunk format, the objects file and the bake never depend on a layer:
+
+- **Absent:** a package without the layer works exactly as before.
+- **Added on its own:** a layer is written into a built package by its own pipeline command, without rebuilding chunks (traffic: `pixelworld routes <spec>`), and only its manifest entry and the package hash change.
+- **Drawn on top:** clients draw a layer as a dynamic overlay in the compositor, depth-tested against the baked tiles (architecture §8.2). Baked tiles never contain it and nothing is re-baked when it changes.
+- **Switchable:** each layer, and each of its sublayers, turns on and off on its own (a URL parameter, a key, a toggle in the layer panel).
+
+Layers so far: `routes` (ambient traffic, D-060). People, boats or aircraft would follow the same pattern.
+
 ## Routes file (`routes.json.gz`)
 
-Written by `pixelworld routes` (pipeline `routes.py`) from a built package, read by `parseRoutes` in `packages/sim`. Deterministic gzip of JSON with sorted keys:
+The traffic layer (D-060). Sublayers: road vehicles (`net: road`), rail and transit (`net: rail`), ferries (`net: ferry`); the viewer takes `traffic=0/1`, `trafficLayers=road,rail,ferry`, the V key and the layer panel. Written by `pixelworld routes` (pipeline `routes.py`) from a built package, read by `parseRoutes` in `packages/sim`. Deterministic gzip of JSON with sorted keys:
 
 ```jsonc
 {

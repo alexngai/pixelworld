@@ -21,7 +21,15 @@ import {
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
 import { GeoGrid, decodePng, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
-import { TrafficLayer, loadRoutes, rampLookup, type DrawnVehicle } from "./traffic";
+import {
+  SUBLAYER_LABELS,
+  TRAFFIC_SUBLAYERS,
+  TrafficLayer,
+  loadRoutes,
+  rampLookup,
+  type DrawnVehicle,
+  type TrafficSublayer,
+} from "./traffic";
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
 const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
   string,
@@ -68,11 +76,12 @@ interface PixelworldDebug {
     ticks: number;
     time: number;
     counts: Record<string, number>;
+    layers: TrafficSublayer[];
     vehicles: DrawnVehicle[];
   } | null;
   /** Run the traffic simulation forward by whole ticks (seconds of play). */
   trafficStep: (seconds: number) => void;
-  setTraffic: (opts: { enabled?: boolean; paused?: boolean }) => void;
+  setTraffic: (opts: { enabled?: boolean; paused?: boolean; layers?: TrafficSublayer[] }) => void;
   /** Centre the camera on a cell at a height (steps; default the surface there). */
   lookAt: (x: number, y: number, h?: number) => Promise<void>;
 }
@@ -414,7 +423,48 @@ async function main() {
         () => (dirty = true),
       )
     : null;
-  if (traffic) traffic.paused = params.get("trafficPause") === "1";
+  if (traffic) {
+    traffic.paused = params.get("trafficPause") === "1";
+    // trafficLayers=road,rail,ferry: the sublayers shown (default all)
+    const only = params.get("trafficLayers");
+    if (only !== null) {
+      traffic.layers.clear();
+      for (const l of only.split(",")) if ((TRAFFIC_SUBLAYERS as string[]).includes(l)) traffic.layers.add(l as TrafficSublayer);
+    }
+  }
+  // the layer toggles (top right): traffic and each sublayer
+  const layersEl = document.getElementById("layers")!;
+  const layerBoxes = new Map<string, HTMLInputElement>();
+  const syncLayers = () => {
+    if (!traffic) return;
+    layerBoxes.get("traffic")!.checked = traffic.enabled;
+    for (const l of TRAFFIC_SUBLAYERS) {
+      const box = layerBoxes.get(l)!;
+      box.checked = traffic.layers.has(l);
+      box.disabled = !traffic.enabled;
+    }
+  };
+  if (traffic) {
+    const toggle = (key: string, label: string, sub: boolean, onChange: (on: boolean) => void) => {
+      const row = document.createElement("label");
+      if (sub) row.className = "sub";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.onchange = () => {
+        onChange(box.checked);
+        syncLayers();
+        dirty = true;
+      };
+      row.append(box, ` ${label}`);
+      layersEl.append(row);
+      layerBoxes.set(key, box);
+    };
+    toggle("traffic", "Traffic (V)", false, (on) => (traffic.enabled = on));
+    for (const l of TRAFFIC_SUBLAYERS)
+      toggle(l, SUBLAYER_LABELS[l], true, (on) => (on ? traffic.layers.add(l) : traffic.layers.delete(l)));
+    syncLayers();
+    if (params.get("hud") !== "0") layersEl.classList.remove("hidden");
+  }
   function resize() {
     const dpr = fixedSize ? 1 : window.devicePixelRatio || 1;
     const w = fixedSize ? num("w", 640) : Math.round(window.innerWidth * dpr);
@@ -457,10 +507,13 @@ async function main() {
       night = !night;
       applyPalette();
     }
-    else if (k === "h") [hud, help].forEach((el) => el.classList.toggle("hidden"));
+    else if (k === "h") [hud, help, ...(traffic ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "l") switchLevel();
-    else if (k === "v" && traffic) traffic.enabled = !traffic.enabled;
+    else if (k === "v" && traffic) {
+      traffic.enabled = !traffic.enabled;
+      syncLayers();
+    }
     else if (k === "escape") sources.classList.add("hidden");
     else if (k >= "1" && k <= "6") {
       camera.zoom = Number(k);
@@ -772,6 +825,7 @@ async function main() {
             ticks: traffic.sim.ticks,
             time: traffic.sim.time,
             counts: traffic.sim.counts(),
+            layers: [...traffic.layers],
             vehicles: traffic.drawn,
           }
         : null,
@@ -791,10 +845,15 @@ async function main() {
       renderedComplete = false;
       dirty = true;
     },
-    setTraffic: ({ enabled, paused }) => {
+    setTraffic: ({ enabled, paused, layers }) => {
       if (!traffic) return;
       if (enabled !== undefined) traffic.enabled = enabled;
       if (paused !== undefined) traffic.paused = paused;
+      if (layers) {
+        traffic.layers.clear();
+        for (const l of layers) traffic.layers.add(l);
+      }
+      syncLayers();
       renderedComplete = false;
       dirty = true;
     },

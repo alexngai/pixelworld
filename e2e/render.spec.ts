@@ -398,6 +398,29 @@ test.describe("Ambient traffic (D-060)", () => {
     expect(changedNearCentre(withCars, without, 12)).toBeGreaterThan(20);
   });
 
+  test("sublayers switch on and off on their own, from the URL and the layer panel", async ({ page }) => {
+    await open(page, "world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail");
+    const kinds = async () => new Set((await traffic(page)).vehicles.map((v) => v.kind));
+    expect([...(await kinds())].sort()).toEqual(["cablecar"]);
+    // the panel shows with the HUD; ticking road vehicles adds the cars
+    await page.goto(
+      "/?cache=0&w=640&h=360&world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail",
+    );
+    await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
+    await expect(page.locator("#layers")).toBeVisible();
+    await page.getByLabel("road vehicles").check();
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect(await kinds()).toContain("car");
+    // the simulation is the same whichever sublayers are drawn
+    await page.evaluate(() => window.__pixelworld!.setTraffic({ layers: ["rail"] }));
+    await page.evaluate(() => window.__pixelworld!.ready());
+    expect([...(await kinds())].sort()).toEqual(["cablecar"]);
+    // and the whole layer: off leaves the baked world as it was
+    await page.keyboard.press("v");
+    await expect(page.getByLabel("Traffic (V)")).not.toBeChecked();
+    expect((await traffic(page)).vehicles.length).toBe(0);
+  });
+
   test("cable cars and cars on Russian Hill at a fixed time match golden", async ({ page }) => {
     await open(page, "world=/sf/&marker=0&zoom=3&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5");
     await page.evaluate(() => window.__pixelworld!.lookAt(356.7, 203.0));
