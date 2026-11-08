@@ -20,11 +20,15 @@ maxSlope: 3
 
 # Lombard Street's crooked block keeps its hairpins: snapping would straighten
 # them (D-049). It's drawn 5 m wide (its one lane), so the bends stay apart.
-# At 25 m the driving level can't draw them, so only here.
+# True, they swing about 7 m either side of the street's line, less than a
+# cell, so they're drawn twice as wide (but at most 13 m from its line, short
+# of the houses either side), paved in brick, with garden beds between the
+# bends (the lawn's patchwork). At 25 m the driving level can't draw them, so
+# only here.
 snap:
   roads:
     keep:
-      - { bounds: [-122.4197, 37.8019, -122.4179, 37.8023], width: 5 }
+      - { bounds: [-122.4197, 37.8019, -122.4179, 37.8023], width: 5, widen: 2, within: 13, class: brick, surface: farmland }
 
 start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
 

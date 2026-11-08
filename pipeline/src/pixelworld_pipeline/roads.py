@@ -284,6 +284,97 @@ def straighten(
     return Straightened(new_lines, p0, p, int(active.sum()), len(edge_set))
 
 
+@dataclass
+class Swung:
+    """A crooked street's ways swung wider (`swing`): every line, and the
+    street's axis (cells) from one end to the other."""
+
+    lines: list
+    a: np.ndarray
+    b: np.ndarray
+
+
+def swing(
+    lines: list,
+    ids: set[str],
+    street: set[str],
+    factor: float,
+    within: float,
+    taper: float = 1.0,
+) -> Swung | None:
+    """Exaggerate a crooked street's bends sideways (`snap.roads.keep` with
+    `widen`, D-049): Lombard Street's hairpins swing about 7 m either side of
+    its line, less than a cell at 10 m, so drawn true they read as a wide
+    road. The street's axis runs between the two ends of its roads (`street`)
+    farthest apart. Every vertex of the ways in `ids` (the street and the
+    steps beside it) moves `factor` times further from the axis, but never
+    past `within` cells of it (the houses either side) nor nearer than it was,
+    easing in over `taper` cells from each end so the cross streets there keep
+    their line. A vertex another way shares moves with it, so junctions stay
+    joined. None when the street has no roads."""
+    ends = [
+        np.array([xs[k], ys[k]], dtype=np.float64)
+        for seg_id, _, parts in lines
+        if seg_id in street
+        for xs, ys in parts
+        for k in (0, -1)
+    ]
+    if len(ends) < 2:
+        return None
+    a, b = max(
+        ((p, q) for i, p in enumerate(ends) for q in ends[i + 1 :]),
+        key=lambda pq: float(np.hypot(*(pq[0] - pq[1]))),
+    )
+    length = float(np.hypot(*(b - a)))
+    if length < 1e-9:
+        return None
+    u = (b - a) / length
+    n = np.array([-u[1], u[0]])
+
+    def key(x: float, y: float) -> tuple[int, int]:
+        return (round(x * 1e5), round(y * 1e5))
+
+    moved = {
+        key(x, y)
+        for seg_id, _, parts in lines
+        if seg_id in ids
+        for xs, ys in parts
+        for x, y in zip(xs, ys, strict=True)
+    }
+
+    def move(xs: np.ndarray, ys: np.ndarray, every: bool) -> tuple[np.ndarray, np.ndarray]:
+        p = np.column_stack([xs, ys]).astype(np.float64)
+        s = (p - a) @ u
+        o = (p - a) @ n
+        ease = np.clip(np.minimum(s, length - s) / max(taper, 1e-9), 0.0, 1.0)
+        ease = ease * ease * (3 - 2 * ease)
+        wide = o * (1 + (factor - 1) * ease)
+        wide = np.sign(o) * np.maximum(np.abs(o), np.minimum(np.abs(wide), within))
+        on = np.ones(len(p), dtype=bool) if every else np.array([key(*q) in moved for q in p])
+        out = np.where(on[:, None], a + s[:, None] * u + wide[:, None] * n, p)
+        return out[:, 0], out[:, 1]
+
+    out = [
+        (seg_id, rank, [move(xs, ys, seg_id in ids) for xs, ys in parts])
+        for seg_id, rank, parts in lines
+    ]
+    return Swung(out, a, b)
+
+
+def street_band(a: np.ndarray, b: np.ndarray, half: float, shape: tuple[int, int]) -> np.ndarray:
+    """Cells whose centres lie within `half` cells of the segment a–b and between
+    its ends: the ground a swung street's bends sweep (its gardens)."""
+    cy, cx = shape
+    yy, xx = np.mgrid[0:cy, 0:cx]
+    p = np.stack([xx + 0.5 - a[0], yy + 0.5 - a[1]], axis=-1)
+    d = b - a
+    length = float(np.hypot(*d))
+    u = d / max(length, 1e-9)
+    s = p @ u
+    o = p @ np.array([-u[1], u[0]])
+    return (s >= 0) & (s <= length) & (np.abs(o) <= half)
+
+
 def along_edge(path: list[tuple[int, int]], shape: tuple[int, int]) -> list[tuple[int, int]]:
     """A cell path whose brief excursions outside the grid run along its edge.
 

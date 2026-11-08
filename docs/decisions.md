@@ -298,6 +298,8 @@ The point is more room for visual interest; both halves are wanted.
   - Adding a rotation term to the warp solver: it only helps warped worlds, and it wouldn't straighten roads that are merely noisy.
 - **Neutral by default:** without a `snap:` section, roads are traced as before and outputs are unchanged.
 - **Kept ways (M3.5):** `snap.roads.keep: [{bounds, width?}]` lists boxes whose ways keep every vertex and add no constraints, for streets whose shape is the point (Lombard Street's hairpins on the walking level, drawn 5 m wide with `width` so the bends stay apart).
+  - **Depicting a crooked street:** true, Lombard's hairpins swing about 7 m either side of its line, less than a 10 m cell, so they drew as a wide road. A rule's `widen` swings its ways that many times further from the street's axis (the line between its roads' two ends farthest apart), never past `within` metres of it (the houses either side), easing in over a cell at each end so the cross streets keep their line. A vertex another way shares moves with it, so junctions stay joined.
+  - `class` draws the kept roads as a road class of their own (`brick`, below every other class so the streets it meets keep their junctions; the style gives it its ramp), and `surface` gives the cells the bends sweep a surface of their own (the gardens between them).
 
 ### D-050: Roads and paths at their real width (accepted)
 - **Why:** a road was a fixed-pixel decal that never left its cell. At street level (20 m cells), a 50 m boulevard drew 6 m wide, and there were no sidewalks or crosswalks.

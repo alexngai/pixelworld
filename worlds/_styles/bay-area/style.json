@@ -90,7 +90,8 @@
       "residential": { "halfWidth": 0.05, "centerLine": false },
       "unclassified": { "halfWidth": 0.05, "centerLine": false },
       "living_street": { "halfWidth": 0.04, "centerLine": false },
-      "service": { "halfWidth": 0.04, "centerLine": false }
+      "service": { "halfWidth": 0.04, "centerLine": false },
+      "brick": { "halfWidth": 0.04, "centerLine": false, "ramp": "brick" }
     }
   },
   "scatter": {
