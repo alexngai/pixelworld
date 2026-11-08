@@ -1,5 +1,5 @@
 {
-  "packageHash": "e9089765d20169a12493293c0a13b29eb94b1c871973beabbbf87a5fedef2319",
+  "packageHash": "8af27e087f4983e1832f11f74a7a54653eebc54df479a63dbb80f74eaab1e8ee",
   "cells": [
     182,
     412
@@ -22,24 +22,24 @@
     "landmark.sign": 1,
     "landmark.tower.observation": 1,
     "shrub": 9,
-    "tree": 3590,
-    "tree.palm": 248
+    "tree": 3580,
+    "tree.palm": 251
   },
   "roads": {
-    "cells": 5810,
-    "edges": 6057,
+    "cells": 5495,
+    "edges": 5709,
     "discontinuous_edges": 0,
     "steep_edges": 0,
-    "components": 3,
-    "split_segments": 1,
-    "disconnected_junctions": 2,
-    "ok": false
+    "components": 1,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
   },
   "surfaces": {
     "woodland": 3189,
     "scrub": 112,
-    "water": 608,
-    "desert": 6004,
+    "water": 607,
+    "desert": 6005,
     "grass": 1679,
     "farmland": 7,
     "urban": 63385

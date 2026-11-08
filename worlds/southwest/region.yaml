@@ -25,6 +25,20 @@ smoothing:
 # Elastic map (M2): focus areas and pins live in warp.yaml (edited by apps/editor).
 warp: warp.yaml
 
+# Isometric snapping (D-049): streets straighten toward the 8 grid directions,
+# which draw as clean pixel lines (axes as 2:1 lines, diagonals as straight
+# horizontal or vertical ones), and are laid in long runs. Buildings move with
+# their streets and turn to the nearest grid direction. Levels inherit this.
+#   roads.angle: edges within this many degrees of a grid direction run along it
+#   roads.simplify: cells of wiggle removed before snapping
+#   roads.deviation: how far (cells) an in-between road may stray to keep long runs
+#   roads.maxShift: no junction moves further than this (cells)
+#   buildings.angle: footprints within this many degrees of a grid direction turn to it
+#   buildings.follow: objects within this many cells of a road move with it
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+
 # Micro-terrain (M1.6, D-037): 4×4 micro-cells (100 m) per cell, heights in
 # quarter steps, read from the 60 m overview of the 30 m DEM.
 micro:

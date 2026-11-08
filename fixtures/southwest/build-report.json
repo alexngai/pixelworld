@@ -1,5 +1,5 @@
 {
-  "packageHash": "57f36109fe5ead9f5e6dccf02f539ebe4275fd9c8fa5ab46d4cc49d6e711fed2",
+  "packageHash": "d334f69d6a34f36bc5d087d36b94179a5b651ffa7e550672490c2584be7e4893",
   "cells": [
     1155,
     709
@@ -68,8 +68,8 @@
     "landmark.tower.observation": 1
   },
   "roads": {
-    "cells": 24412,
-    "edges": 27092,
+    "cells": 25083,
+    "edges": 27316,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 3,
@@ -78,14 +78,14 @@
     "ok": true
   },
   "surfaces": {
-    "rock": 71744,
+    "rock": 71648,
     "woodland": 122183,
     "forest": 21931,
-    "scrub": 171806,
-    "water": 14336,
-    "desert": 226347,
-    "grass": 142672,
-    "farmland": 414,
-    "urban": 47462
+    "scrub": 171816,
+    "water": 14329,
+    "desert": 226442,
+    "grass": 142670,
+    "farmland": 416,
+    "urban": 47460
   }
 }

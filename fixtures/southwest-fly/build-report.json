@@ -1,5 +1,5 @@
 {
-  "packageHash": "7a017c5e5930e8f3fe309358e1ca36158dd498017ed118997253bfc065de5276",
+  "packageHash": "e260566ada4e99b953fa1e315a67bed18775c69fdd382fb47ea27fee203eabd0",
   "cells": [
     339,
     219
@@ -58,7 +58,7 @@
   },
   "objects": {
     "building.commercial": 10,
-    "building.tower": 39,
+    "building.tower": 38,
     "building.tower.hotel": 4,
     "landmark.dam": 1,
     "landmark.sign": 1,
@@ -66,8 +66,8 @@
     "landmark.tower.observation": 1
   },
   "roads": {
-    "cells": 1920,
-    "edges": 2095,
+    "cells": 2019,
+    "edges": 2156,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 1,
@@ -76,12 +76,12 @@
     "ok": true
   },
   "surfaces": {
-    "rock": 424,
-    "woodland": 12973,
+    "rock": 433,
+    "woodland": 12972,
     "scrub": 18587,
-    "water": 2243,
-    "desert": 22430,
-    "grass": 14197,
+    "water": 2244,
+    "desert": 22420,
+    "grass": 14198,
     "farmland": 19,
     "urban": 3368
   }

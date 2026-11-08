@@ -43,6 +43,8 @@ uv run pixelworld serve ../worlds/southwest/region.yaml
 
 Before M2 this package was uniform: 1028×700 cells at 400 m (M1, 0.63 MB), then with micro-terrain (M1.6, 3.97 MB).
 
+All three levels snap streets and buildings to the 8 grid directions (`snap:` in `region.yaml`, D-049).
+
 This is the driving level of the region's three scale levels (D-046). Its manifest lists them, and `geo.i32.gz` holds the lon/lat of every 4th cell corner, so the client (L key) can move to the same place in another level.
 
 ## southwest-fly, southwest-walk
@@ -56,7 +58,7 @@ The Southwest's other scale levels, built from [`fly.yaml`](../worlds/southwest/
 - **southwest-walk:** the Las Vegas Strip at a uniform 20 m per cell, with 4×4 micro-cells from the 10 m DEM.
   - **Size:** 182×412 cells, 0.52 MB.
   - **Objects:** every building footprint, trees, palms and the two Strip landmarks, at true proportions (`heightStretch` 1).
-  - **Roads:** the build exits with status 1 because of the road report it shares with the M1.5 Strip experiment (one split segment, two disconnected junctions at 20 m cells). The package is still written.
+  - **Roads:** snapping (D-049) gives a clean road report: one network, no split segments, no disconnected junctions. The M1.5 Strip experiment it's built from has one split segment and two disconnected junctions at 20 m cells.
 
 ```sh
 cd pipeline
