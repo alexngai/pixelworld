@@ -23,8 +23,10 @@ widths: { scale: 3.0, minCells: 0.08 }
 micro: { k: 4, dem: { overview: 1 } }
 
 objects:
-  # only towers and landmarks are drawn from the air: no typology pass
+  # only towers and landmarks are drawn from the air: no typology pass, and no
+  # street trees (the driving level's canopy rule would carpet the Bay at 100 m)
   typology: null
+  vegetation: null
   depiction:
     buildings: { scale: 2, minHeightMeters: 60 }
     landmarks: { scale: 3 }
