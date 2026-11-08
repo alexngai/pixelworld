@@ -340,7 +340,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 
 **Known issues and next steps:**
 - **Walking level:**
-  - Roads are one cell (20 m) wide, but Las Vegas Boulevard is about 50 m. Roads need real widths, sidewalks and crossings at this scale.
+  - Roads were one cell (20 m) wide, though Las Vegas Boulevard is about 50 m. Real widths, sidewalks and crosswalks came in M2.7.
   - Its road report was the M1.5 Strip's (1 split segment, 2 disconnected junctions). Snapping (M2.6) cleared it.
 - **Flying level:**
   - There's no vegetation or land-cover scatter yet (warped layouts don't support it).
@@ -379,6 +379,38 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 - **Remaining jogs:** most are on winding highways and in dense city blocks shorter than a cell, where an in-between angle has no clean answer. A looser `snap.roads.angle` or `deviation` trades position for straightness.
 - **Irregular footprints:** buildings whose edges agree on no direction aren't turned.
 - **Footprints near streets:** the shift moves objects with their streets, but doesn't check whether a moved footprint now overlaps a road cell.
+
+### M2.7: Roads and paths at their real width — done
+
+**Goal:** proper widths for roads and paths at every scale level: street-level boulevards that span several cells with sidewalks and crosswalks, and coarse maps that keep a readable road hierarchy (D-050).
+
+![The walking level at Las Vegas Boulevard and Flamingo Road, before and after real widths](images/widths-walk.png)
+
+**What was built:**
+- **Widths per cell:** every road and path class has a typical real width (one carriageway: 14 m for a primary road, 16 m for a motorway, 3 m for a sidewalk), and specs override them under `widths:`.
+  - Each cell stores its widest way's half-width at the local scale (`RWID`, `PWID`), scaled per level (`widths.scale`) and floored (`widths.minCells`).
+  - Road beds flatten the terrain across the full width, and the paved band keeps trees off the road.
+- **A path network:** sidewalks, crosswalks, footways, pedestrian streets, steps, paths and cycleways have their own layers (`PATH`, `PCLS`), straightened together with the roads.
+- **More road classes:** tertiary, residential, unclassified, living streets and service roads, with parking aisles and driveways left out by `sources.roads.excludeSubclasses`.
+- **Client:** the micro-terrain shader draws ways across neighbouring cells within their reach.
+  - Paths draw over roads; sidewalks and footways in pale concrete, crosswalks as stripes.
+  - Roads are never narrower than the style's width for their class, so the driving and flying levels keep their hierarchy.
+
+| Level | Widths | Roads | Paths | Package |
+|---|---|---|---|---|
+| Walking (20 m cells) | real | 23,359 road cells (was 5,495), 9 classes | 11,365 segments over 18,402 cells | 0.60 MB (was 0.51) |
+| Driving | 2× real, at least the style width | unchanged network | — | 6.2 MB |
+| Flying | 4× real, at least the style width | unchanged network | — | 0.51 MB |
+
+- **Road reports:** they stay clean. Junctions beyond the world's edge are no longer counted as disconnected.
+- **Bake cost:** in software rendering (SwiftShader), a walking-level tile takes about 330 ms instead of 205 ms. One texel per neighbour cell, with loops bounded by the actual reach.
+- **Tests:** pytest covers classes, widths, the paved band, road beds, the junction filter and the chunk layers. Vitest covers the codec, style tables and field packing. E2e adds a walking-level golden; the Vegas golden moved by road-edge pixels.
+
+**Known issues:**
+- **Walking-level islands:** service roads that only connect through parking aisles (left out) form 53 small separate networks.
+- **Footways through properties:** paths mapped through casino properties draw across plazas and under buildings.
+- **Lanes:** there are no lane markings beyond a centre line, and no medians.
+- **Pavement over steps:** wide roads are flattened over their whole width, but a pavement band can still cross a micro-terrain step on hilly ground.
 
 ### M3: Detail pass — components and landmarks
 

@@ -297,3 +297,19 @@ The point is more room for visual interest; both halves are wanted.
   - Snapping each road on its own: the jogs come from junction positions, so they can't be removed one road at a time.
   - Adding a rotation term to the warp solver: it only helps warped worlds, and it wouldn't straighten roads that are merely noisy.
 - **Neutral by default:** without a `snap:` section, roads are traced as before and outputs are unchanged.
+
+### D-050: Roads and paths at their real width (accepted)
+- **Why:** a road was a fixed-pixel decal that never left its cell. At street level (20 m cells), a 50 m boulevard drew 6 m wide, and there were no sidewalks or crosswalks.
+- **Pipeline:**
+  - Each road and path class has a typical real width (one carriageway where a road is mapped as two), and specs can override it.
+  - Each cell stores the half-width of its widest way in 1/32 cell (`RWID`, `PWID`): `widths.scale` × real width at the local scale, at least `widths.minCells`.
+  - Road beds flatten micro-terrain across the full width, and the paved band blocks scatter and street trees.
+- **Paths:** footways, sidewalks, crosswalks, pedestrian streets, steps, paths and cycleways form their own network (`PATH`, `PCLS`). Sidewalks run beside roads and crosswalks across them, so one class per cell couldn't hold both. Paths straighten together with roads (D-049), so crossings stay attached.
+- **Classes:** road classes are numbered by priority among those a world uses, so the classic four keep ids 1–4.
+- **Client:**
+  - The micro-terrain shader looks at the cells within reach (the widest half-width, rounded up). It draws the nearest way whose half-width covers the pixel, with paths over roads.
+  - A road is never narrower than the style's width for its class, so coarse maps keep their road hierarchy while fine ones grow to real width.
+  - Crosswalks are pale stripes.
+  - Without width data, the old in-cell decal is used, so older worlds are unchanged.
+- **Cost:** about 1.6× the software (SwiftShader) bake time on the walking level, from one texel fetch per neighbour cell.
+- **Overture cache:** the cache key now includes the row filter. Two filters over the same box used to share one cache entry, which would have dropped the walking level's new classes.

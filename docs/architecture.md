@@ -120,6 +120,7 @@ A region is built as several world packages, one per way of moving through it. E
   | Depiction | `objects.depiction.buildings.scale`, `objects.depiction.landmarks.scale` (or `scale` on one landmark), `objects.depiction.heightStretch` |
   | Data | `sources.dem` and `sources.landcover`: kind and overview |
   | Snapping | `snap.roads` (`angle`, `simplify`, `deviation`, `maxShift`), `snap.buildings` (`angle`, `follow`) (D-049) |
+  | Widths | `widths` (`scale`, `minCells`, per-class `roads`/`paths` metres), `sources.roads.excludeSubclasses`, `sources.paths.classes` (D-050) |
 
 - **Moving between levels:** every level package has a geo grid, the lon/lat of cell corners (D-048). The client turns the rover's cell into lon/lat in one level and back into a cell in the next (the L key). A place outside the next level's area lands at that level's start.
 - **Not a zoom:** zoom enlarges the same baked pixels. A level is a different world, with its own cells, generalization and depiction.

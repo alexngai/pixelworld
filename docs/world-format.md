@@ -36,7 +36,8 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   },
   "heightRange": [2, 57],           // lowest/highest corner height in the world (steps)
   "surfaces": { "0": "none", "1": "rock", "5": "water" },   // id → name
-  "roadClasses": { "1": "secondary", "4": "motorway" },      // id → name (RCLS)
+  "roadClasses": { "1": "secondary", "4": "motorway" },      // id → name (RCLS), numbered by priority
+  "pathClasses": { "5": "sidewalk", "6": "crosswalk" },      // optional (D-050): id → name (PCLS)
   "geology": { "0": "basin-and-range", "1": "colorado-plateau" }, // id → province (GEOL)
   "start": { "x": 193, "y": 388 },  // suggested starting cell
   "style": "desert-southwest",      // default style pack
@@ -132,6 +133,10 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `MHGT` | `i16[]` | no | micro-terrain (M1.6, D-038): see below |
 | `VREF` | `i16[]` | no | vertical caricature (M2, D-041): relief reference height in 1/16 steps (default 0) |
 | `VFAC` | `i16[]` | no | vertical caricature: 1/R in 1/4096 units (default 4096 = none). A drawn height h is the real height `ref + (h − ref)·VFAC/4096` |
+| `RWID` | `u8[]` | no | real widths (D-050): half-width of the widest road through the cell, in 1/32 cell. 0 = draw at the style's fixed width. Clients draw a road at least as wide as the style's width for its class. |
+| `PATH` | `u16[]` | no | path network (footways, sidewalks, crosswalks, …), encoded like `ROAD` |
+| `PCLS` | `u8[]` | no | path class ID (see `manifest.pathClasses`); 0 = none |
+| `PWID` | `u8[]` | no | path half-width, in 1/32 cell |
 
 Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 
