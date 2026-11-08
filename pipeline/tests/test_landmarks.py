@@ -306,3 +306,43 @@ def test_water_under_a_bridge_deck_stays_water():
     gap[:, 6] = False
     under = bridge_decks_over_water(instances, gap, (10, 10))
     assert under[3, 6] and under[3, 4:8].all()
+
+
+def test_micro_terrain_under_a_bridge_deck_is_flat_water():
+    # a causeway across the water on row 4, a step above it; the cells under
+    # the deck (x 2..7) turn back into water after micro-terrain is built
+    from pixelworld_pipeline import micro
+    from pixelworld_pipeline.build import S, water_under_decks
+    from pixelworld_pipeline.gridify import cell_corner_heights
+    from pixelworld_pipeline.roads import CONNECT_MASK, rasterize
+    from pixelworld_pipeline.world_format import NO_WATER
+
+    h, w, k = 8, 10, 4
+    road = rasterize([("r", 1, [(np.array([0.5, 9.5]), np.array([4.5, 4.5]))])], (h, w))
+    on_road = (road.mask & CONNECT_MASK) != 0
+    base = np.where(on_road, 1, 0).astype(np.int16)
+    shape = np.zeros((h, w), dtype=np.uint8)
+    water = np.where(on_road, NO_WATER, 0).astype(np.int16)
+    surface = np.where(on_road, S["urban"], S["water"]).astype(np.uint8)
+    hw = np.where(on_road, 13, 0).astype(np.uint8)  # 0.4 cells either side
+    seabed = np.full((h * k + 1, w * k + 1), -8.0)  # metres, at 2 m per step
+    mc = micro.build_micro(seabed, 2.0, k, base, shape, water, road.mask, hw / 32.0)
+    low = cell_corner_heights(base, shape).min(axis=0)
+    under = np.zeros((h, w), dtype=bool)
+    under[4, 2:8] = True
+    inside = (slice(4 * k + 1, 5 * k), slice(2 * k + 1, 8 * k))  # micro-corners within them
+    assert (mc[inside] == k).all()  # the road bed, which showed through as streaks
+
+    base, shape, water, surface, (mc2, k2) = water_under_decks(
+        under, base, shape, water, surface, low, road, hw, (mc, k)
+    )
+    assert k2 == k and mc2.dtype == np.int16
+    assert (water[under] == 0).all() and (surface[under] == S["water"]).all()
+    assert not road.mask[under].any() and not hw[under].any()
+    # flat at the water level, like every other water cell
+    assert (mc2[4 * k : 5 * k + 1, 2 * k : 8 * k + 1] == 0).all()
+    assert (mc2[: 4 * k + 1] == 0).all() and (mc2[5 * k :] == 0).all()
+    # the road on either shore keeps its bed (the edges it shares with water are water's)
+    for x0, x1 in ((0, 2), (8, 10)):
+        bed = (slice(4 * k + 1, 5 * k), slice(x0 * k + 1, x1 * k - 1))
+        assert (mc2[bed] == mc[bed]).all() and (mc2[bed] == k).all()
