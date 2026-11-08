@@ -41,6 +41,7 @@ objects:
   streetProps:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+  # (the windmills and Alcatraz lie outside this level)
   landmarks: [bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall]
   landmarkDepiction: generic
   # a little taller than true, so the fronts of deep, three-storey row houses

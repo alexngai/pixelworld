@@ -1,6 +1,7 @@
 import { MeshBuilder, type MeshData } from "./mesh";
 import { FACADE_GENERATORS } from "./facades";
 import { LANDMARK_KIT } from "./landmarkKit";
+import { TOWER_GENERATORS } from "./towers";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
 
 /**
@@ -654,7 +655,7 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
     return m;
   },
 };
-Object.assign(GENERATORS, LANDMARK_GENERATORS, FACADE_GENERATORS, LANDMARK_KIT);
+Object.assign(GENERATORS, LANDMARK_GENERATORS, FACADE_GENERATORS, LANDMARK_KIT, TOWER_GENERATORS);
 
 /**
  * Generate one model for a group, as buildObjects would (used by tests and

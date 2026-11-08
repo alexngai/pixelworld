@@ -591,6 +591,209 @@ const tripodMast: Generator = ({ ramp, param, heightVox }) => {
   return m;
 };
 
+/** Distance from the axis in an octagonal plan (a smock mill's or a lighthouse's). */
+const octagon = (dx: number, dy: number) => Math.max(Math.abs(dx), Math.abs(dy), (Math.abs(dx) + Math.abs(dy)) / Math.SQRT2);
+
+/**
+ * A smock windmill: an octagonal tower tapering to a rounded cap, an optional
+ * stage (a gallery) around it, and four lattice sails in an X on the side the
+ * wind comes from, held on spars from a hub at the cap.
+ * params (lengths over the height, to the cap's top): scale (drawn this much
+ * taller than its height, to read over oversized trees; 1), base (the tower's
+ * radius at its foot; 0.17), top (its radius under the cap; 0.09), sail (a
+ * sail's length from the hub; 0.5), gallery (the stage's height; 0 for none),
+ * face (where the sails are: 0 west (−x), 1 north (−y), 2 east, 3 south).
+ * Short sails are drawn solid: a lattice that small reads as noise.
+ * roles: wall (the tower), cap, sail (the lattice), stock (spars and hub;
+ * sail if absent), detail (the stage, the door, bands).
+ */
+const windmill: Generator = ({ ramp, ramps, param, heightVox }) => {
+  const H = Math.max(12, Math.round((heightVox ?? 24) * param("scale", 1)));
+  const R0 = Math.max(2, H * param("base", 0.17));
+  const R1 = Math.max(1.2, H * param("top", 0.09));
+  const L = Math.max(4, Math.round(H * param("sail", 0.5)));
+  const capZ = Math.round(H * 0.8);
+  const hubZ = capZ + Math.max(1, Math.round((H - capZ) * 0.35));
+  const r = (z: number) => R0 + ((R1 - R0) * z) / capZ;
+  // the sails' plane stands clear of the tower wherever they pass it
+  const lowest = Math.max(0, Math.floor(hubZ - L * Math.SQRT1_2));
+  const plane = Math.ceil(Math.max(r(lowest), R1) + 1.5);
+  const half = Math.ceil(Math.max(R0 + 3, L * Math.SQRT1_2 + 1, plane + 1));
+  const size = 2 * half + 1;
+  const m = new VoxelModel(size, size, Math.ceil(hubZ + L * Math.SQRT1_2) + 2);
+  const wall = m.material(ramp("wall"));
+  const cap = m.material(ramp("cap"));
+  const sail = m.material(ramp("sail"));
+  const stock = m.material(ramps("stock")[0] ?? ramp("sail"));
+  const detail = m.material(ramp("detail"));
+  const face = mod(Math.round(param("face", 0)), 4);
+  // local (u toward the sails, w across them) to model coordinates
+  const put = (u: number, w: number, z: number, mat: number) => {
+    const [x, y] = face === 0 ? [half - u, half + w] : face === 1 ? [half + w, half - u] : face === 2 ? [half + u, half - w] : [half - w, half + u];
+    m.set(Math.round(x), Math.round(y), z, mat);
+  };
+  const gz = param("gallery", 0) > 0 ? Math.round(H * param("gallery", 0)) : -1;
+  for (let z = 0; z < capZ; z++) {
+    const rz = r(z);
+    for (let v = -half; v <= half; v++)
+      for (let u = -half; u <= half; u++) {
+        const d = octagon(u, v);
+        if (d <= rz + 0.3) {
+          const door = z < Math.max(2, Math.round(H * 0.08)) && Math.abs(v) < 1 && u > 0 && d > rz - 1;
+          put(u, v, z, door || (gz > 0 && z === gz + 1 && d > rz - 1) ? detail : wall);
+        } else if (z === gz && d <= rz + 2.3) put(u, v, z, detail); // the stage
+        else if (gz > 0 && z === gz + 1 && d > rz + 1.4 && d <= rz + 2.3 && mod(u + v, 2) === 0) put(u, v, z, detail); // its rail
+      }
+  }
+  // the cap: a rounded hood over the top of the tower
+  const capH = H - capZ;
+  for (let z = capZ; z <= H; z++) {
+    const rc = (R1 + 0.6) * Math.sqrt(Math.max(0, 1 - ((z - capZ) / (capH + 0.5)) ** 2));
+    for (let v = -half; v <= half; v++) for (let u = -half; u <= half; u++) if (octagon(u, v) <= rc + 0.2) put(u, v, z, cap);
+  }
+  // the hub on its axle, and four sails in an X: a spar down each, a lattice on its trailing side
+  for (let u = 0; u <= plane; u++) put(u, 0, hubZ, stock);
+  const W = Math.max(1.6, L * 0.2);
+  for (const [ca, sa] of [[1, 1], [-1, 1], [-1, -1], [1, -1]] as const) {
+    const ax = ca * Math.SQRT1_2;
+    const az = sa * Math.SQRT1_2;
+    for (let dz = -L - 1; dz <= L + 1; dz++)
+      for (let w = -L - 1; w <= L + 1; w++) {
+        const s = w * ax + dz * az; // along the arm
+        const t = -w * az + dz * ax; // across it (positive: the trailing side)
+        if (s < 0.5 || s > L + 0.3) continue;
+        const z = hubZ + dz;
+        if (z < 0) continue;
+        if (Math.abs(t) <= 0.55) put(plane, w, z, stock);
+        else if (s >= L * 0.22 && t > 0.55 && t <= W + 0.3) {
+          const frame = L < 20 || t > W - 0.6 || s > L - 0.7 || mod(Math.round(s), 2) === 0;
+          if (frame) put(plane, w, z, sail);
+        }
+      }
+  }
+  return m;
+};
+
+/**
+ * A lighthouse: a tapering tower (octagonal, or square with `square` 1), a
+ * gallery with a rail under a glazed lantern that glows at night, and a
+ * domed cap with a vent.
+ * params: base (the tower's radius at its foot over the height; 0.11), top
+ * (under the gallery; 0.07), square (0 or 1).
+ * roles: wall, detail (gallery, rail and cap), lamp (the lantern's light),
+ * window (its glazing bars; detail if absent).
+ */
+const lighthouse: Generator = ({ ramp, ramps, param, heightVox }) => {
+  const H = Math.max(10, Math.round(heightVox ?? 30));
+  const R0 = Math.max(1.6, H * param("base", 0.11));
+  const R1 = Math.max(1.1, H * param("top", 0.07));
+  const square = param("square", 0) >= 1;
+  const half = Math.ceil(Math.max(R0, R1 + 1.5)) + 1;
+  const size = 2 * half + 1;
+  const m = new VoxelModel(size, size, H + 2);
+  const wall = m.material(ramp("wall"));
+  const detail = m.material(ramp("detail"));
+  const lamp = m.material(ramp("lamp"));
+  const bars = m.material(ramps("window")[0] ?? ramp("detail"));
+  const zt = Math.round(H * 0.74); // the gallery
+  const zl = zt + Math.max(2, Math.round(H * 0.12)); // the lantern's top
+  const dist = (dx: number, dy: number) => (square ? Math.max(Math.abs(dx), Math.abs(dy)) : octagon(dx, dy));
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const dx = x - half;
+      const dy = y - half;
+      const d = dist(dx, dy);
+      for (let z = 0; z < zt; z++) {
+        const rz = R0 + ((R1 - R0) * z) / zt;
+        if (d > rz + 0.3) continue;
+        // a door at the foot, small windows up the shaft
+        const slit = d > rz - 1 && Math.abs(dx) < 0.6 && dy > 0 && (z < 2 || (z % 5 === 3 && z < zt - 2));
+        m.set(x, y, z, slit ? bars : wall);
+      }
+      if (d <= R1 + 1.5) m.set(x, y, zt, detail); // the gallery
+      if (d > R1 + 0.6 && d <= R1 + 1.5 && mod(dx + dy, 2) === 0) m.set(x, y, zt + 1, detail); // its rail
+      const rl = Math.max(0.7, R1 - 0.4);
+      for (let z = zt + 1; z < zl; z++) if (d <= rl + 0.3) m.set(x, y, z, d > rl - 0.8 && mod(dx + dy + z, 3) === 0 ? bars : lamp);
+      // the cap: a low dome, then the vent
+      const rc = rl + 0.5;
+      for (let z = zl; z <= H; z++) {
+        const k = (z - zl) / Math.max(1, H - zl);
+        if (d <= rc * Math.sqrt(Math.max(0, 1 - k * k)) + 0.2 || (d < 0.6 && z <= H)) m.set(x, y, z, detail);
+      }
+    }
+  return m;
+};
+
+/**
+ * A cellhouse along its footprint band (line landmark): a long hall of tall
+ * barred windows under a flat roof with a skylight monitor down its middle and
+ * a parapet, a taller block across its head and a narrower, lower wing at its
+ * tail. The head is the band's east end (along grows toward +x; toward +y
+ * for a band running north–south); `flip` 1 puts it at the west end.
+ * params (lengths over the band's length or the landmark's height): head (the
+ * head block's share of the length; 0.14), tail (the wing's; 0.3), tailWidth
+ * (the wing's width over the band's; 0.45), hall (the hall's height; 0.8),
+ * wing (the wing's height; 0.55).
+ * roles: wall, roof, window, detail (parapets, bands; wall if absent).
+ */
+const cellhouse: Generator = ({ ramp, ramps, param, mask, heightVox, frame }) => {
+  if (!mask) throw new Error("cellhouse needs a footprint");
+  const H = Math.max(6, Math.round(heightVox ?? 16));
+  const m = new VoxelModel(mask.sx, mask.sy, H + 3);
+  const wall = m.material(ramp("wall"));
+  const roof = m.material(ramp("roof"));
+  const glass = m.material(ramp("window"));
+  const detail = m.material(ramps("detail")[0] ?? ramp("wall"));
+  const b = bandAxis(mask, frame);
+  const flip = param("flip", 0) >= 1;
+  const head = param("head", 0.14);
+  const tail = param("tail", 0.3);
+  const tailW = param("tailWidth", 0.45);
+  const hallH = Math.max(4, Math.round(H * param("hall", 0.8)));
+  const wingH = Math.max(3, Math.round(H * param("wing", 0.55)));
+  // per column: which part it belongs to and that part's height (0 outside)
+  const idx = new Int32Array(mask.sx * mask.sy).fill(-1);
+  b.cells.forEach(([x, y], i) => (idx[y * mask.sx + x] = i));
+  const part = (i: number): 0 | 1 | 2 | 3 => {
+    const t = flip ? 1 - b.t[i]! : b.t[i]!;
+    if (t >= 1 - head) return 1; // the head block
+    if (t <= tail) return Math.abs(b.across[i]!) <= b.half * tailW ? 3 : 0; // the wing (or open ground beside it)
+    return 2; // the hall
+  };
+  const heightOf = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= mask.sx || y >= mask.sy) return 0;
+    const i = idx[y * mask.sx + x]!;
+    if (i < 0) return 0;
+    const p = part(i);
+    return p === 1 ? H : p === 2 ? hallH : p === 3 ? wingH : 0;
+  };
+  b.cells.forEach(([x, y], i) => {
+    const h = heightOf(x, y);
+    if (!h) return;
+    const p = part(i);
+    const al = Math.round(b.along[i]!);
+    for (let z = 0; z < h; z++) {
+      // outer wall at this height: a neighbour stands lower
+      const skin = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => heightOf(x + dx!, y + dy!) <= z);
+      let mat = wall;
+      if (skin) {
+        if (p === 1) mat = z > 0 && z % 3 === 1 && mod(al, 2) === 0 ? glass : z === h - 2 ? detail : wall; // a grid of windows
+        else if (z >= 2 && z < h - 1 && mod(al, 3) !== 0 && z % 4 !== 0) mat = glass; // tall barred windows
+        else if (z === 0 || z === h - 1) mat = detail;
+      }
+      m.set(x, y, z, mat);
+    }
+    // roofs: a parapet at the edges, a skylight monitor down the hall
+    const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => heightOf(x + dx!, y + dy!) < h);
+    if (edge) m.set(x, y, h, detail);
+    else if (p === 2 && Math.abs(b.across[i]!) <= Math.max(1, b.half * 0.2)) {
+      m.set(x, y, h, mod(al, 2) === 0 ? glass : roof);
+      m.set(x, y, h + 1, roof);
+    } else m.set(x, y, h - 1, roof);
+  });
+  return m;
+};
+
 export const LANDMARK_KIT: Record<string, Generator> = {
   suspensionBridge,
   pyramidTower,
@@ -600,6 +803,9 @@ export const LANDMARK_KIT: Record<string, Generator> = {
   domedHall,
   rotunda,
   tripodMast,
+  windmill,
+  lighthouse,
+  cellhouse,
 };
 
 export type { GenContext };
