@@ -119,6 +119,40 @@ def cut_road_beds(
     return q
 
 
+def corner_mean(micro_cells: np.ndarray) -> np.ndarray:
+    """Per-micro-cell values → per-micro-corner mean over the touching micro-cells
+    (those inside the grid)."""
+    h, w = micro_cells.shape
+    v = np.zeros((h + 2, w + 2))
+    n = np.zeros((h + 2, w + 2))
+    v[1:-1, 1:-1] = micro_cells
+    n[1:-1, 1:-1] = 1.0
+    quads = ((slice(None, -1), slice(None, -1)), (slice(None, -1), slice(1, None)))
+    quads += ((slice(1, None), slice(None, -1)), (slice(1, None), slice(1, None)))
+    total = sum(v[q] for q in quads)
+    count = sum(n[q] for q in quads)
+    return total / count
+
+
+def smooth_cells(q: np.ndarray, sigma: np.ndarray, k: int) -> np.ndarray:
+    """Smooth micro-corner heights inside the cells where `sigma` (per cell,
+    in micro-cells) is positive: a Gaussian of those cells' own heights
+    (normalized, so ground outside doesn't leak in), blended in by the share
+    of each corner's micro-cells that are smoothed. Lawns then read as one
+    slope rather than as the elevation model's noise, which exaggerated
+    relief turns into gullies."""
+    from scipy import ndimage
+
+    out = q.copy()
+    for s in np.unique(sigma[sigma > 0]):
+        w = corner_mean(expand((sigma == s).astype(np.float64), k))
+        num = ndimage.gaussian_filter(q * w, float(s), mode="nearest")
+        den = ndimage.gaussian_filter(w, float(s), mode="nearest")
+        smooth = np.where(den > 1e-9, num / np.maximum(den, 1e-9), q)
+        out += w * (smooth - q)
+    return out
+
+
 def build_micro(
     corner_m: np.ndarray,
     step_m: float,
@@ -128,17 +162,22 @@ def build_micro(
     water: np.ndarray,
     road_mask: np.ndarray,
     road_half_width: np.ndarray | None = None,
+    smooth: np.ndarray | None = None,
 ) -> np.ndarray:
     """Integer micro-corner heights (micro-steps) from micro-corner elevations.
 
     corner_m: elevation (m) at every micro-corner, shape (K·cy + 1, K·cx + 1).
     base/shape/water/road_mask: the finished cell layers, shape (cy, cx).
+    smooth: optional per-cell smoothing (Gaussian sigma in micro-cells, 0 for
+    none), applied before roads and water are cut in.
     Micro-cells follow from world_format.micro_cells.
     """
     cy, cx = base.shape
     if corner_m.shape != (cy * k + 1, cx * k + 1):
         raise ValueError(f"micro corners {corner_m.shape} don't match {cy}×{cx} cells at K={k}")
     q = corner_m / (step_m / k)
+    if smooth is not None and (smooth > 0).any():
+        q = smooth_cells(q, smooth, k)
     q = flatten_water(q, water, k)
     centre = cell_corner_heights(base, shape).mean(axis=0)
     q = cut_road_beds(q, road_segments(road_mask, centre, road_half_width), k)

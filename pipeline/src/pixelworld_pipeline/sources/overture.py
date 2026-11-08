@@ -271,6 +271,45 @@ def rivers(
     )
 
 
+AREA_COLUMNS = ["id", "subtype", "class", "geometry"]
+
+
+def _areas(
+    release: str, bbox: tuple[float, float, float, float], kind: str, classes: list[str]
+) -> list[dict]:
+    wanted = set(classes)
+
+    def keep(r) -> bool:
+        if r["class"] not in wanted:
+            return False
+        return shapely.from_wkb(r["geometry"]).geom_type in ("Polygon", "MultiPolygon")
+
+    return query(
+        release,
+        "base",
+        kind,
+        bbox,
+        AREA_COLUMNS,
+        keep,
+        filter_tag=f"areas:{','.join(sorted(wanted))}",
+    )
+
+
+def land_use(
+    release: str, bbox: tuple[float, float, float, float], classes: list[str]
+) -> list[dict]:
+    """Land-use polygons of the given classes (base theme `land_use`, from
+    OpenStreetMap's landuse and leisure tags): parks, golf courses, pitches,
+    cemeteries, gardens, residential land, …"""
+    return _areas(release, bbox, "land_use", classes)
+
+
+def land(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
+    """Natural land polygons of the given classes (base theme `land`, from
+    OpenStreetMap's natural tags): grassland, scrub, heath, beach, sand, …"""
+    return _areas(release, bbox, "land", classes)
+
+
 BUILDING_COLUMNS = [
     "id",
     "class",

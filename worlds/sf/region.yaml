@@ -34,8 +34,35 @@ snap:
 # streets at 1.5x their real width, so a 10 m residential street reads
 widths: { scale: 1.5, minCells: 0.1 }
 
-# 6.25 m micro-cells from the 10 m DEM
-micro: { k: 4, dem: { overview: 1 } }
+# 6.25 m micro-cells from the 10 m DEM; lawns smoothed over about 15 m, so
+# a park reads as a grassy slope rather than the elevation model's noise
+micro: { k: 4, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+# The ground WorldCover can't tell apart (M3.5). It sees a park's irrigated
+# lawn and a wild hill as the same grassland, and a block of houses with
+# green backyards as built-up land:
+# - lawn: parks, golf courses, pitches, gardens and cemeteries (Overture's
+#   land use), unless mapped as natural grassland, scrub or beach, or the
+#   park is steeper than 20% (Bernal Heights, Corona Heights and Glen Canyon
+#   stay golden; Twin Peaks has no park polygon). Tree-covered park cells
+#   where the canopy map shows the ground open are lawn too, so a park's
+#   trees stand on its lawn rather than in a wood.
+# - yard: open ground beside houses (backyards, front gardens, the gaps
+#   between rows), some of it left paved
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, golf_course, fairway, green, tee, rough, driving_range, pitch, recreation_ground, stadium, grass, garden, allotments, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+  yard:
+    near: [building.rowhouse, building.house, building.residential, building.apartment]
+    over: [urban, grass, desert]
+    reachMeters: 15
+    paved: 0.3
 
 # WorldCover water is reliable at 10 m; no relief limit (the Bay and the ocean are
 # one water body whose shore corners climb the coastal cliffs)
