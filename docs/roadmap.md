@@ -412,7 +412,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 - **Lanes:** there are no lane markings beyond a centre line, and no medians.
 - **Pavement over steps:** wide roads are flattened over their whole width, but a pavement band can still cross a micro-terrain step on hilly ground.
 
-### M3: Detail pass — components and landmarks
+### M3: Detail pass — components and landmarks — done
 
 **Goal:** the world looks inhabited and the landmarks read instantly.
 
@@ -431,6 +431,59 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 - The Strip, Hoover Dam and the canyon rim are recognizable in blind screenshots.
 - Generated buildings match the style sheet.
 - Painted-over overrides survive a full re-bake.
+
+#### M3 results
+
+![The Strip on the walking level (left) and the driving level (right): lidar towers, canopy trees, street lights, the Eiffel Tower replica and the High Roller](images/m3-strip.png)
+
+![Hoover Dam from downstream with the bypass bridge and intake towers, and the Desert View Watchtower on the canyon rim (driving level, 2×)](images/m3-hoover-rim.png)
+
+![Hero bakes and their paint-overs, 3×: the Strat (lit window band, warning light), Hoover Dam (lift joints) and the Desert View Watchtower (masonry)](images/m3-heroes.png)
+
+**What was built:**
+- **Landmark registry (D-051):** seven landmarks in `worlds/_landmarks/`, referenced by id from every level: the Strat, the Welcome sign, the Eiffel Tower replica, the High Roller, Hoover Dam with four intake towers, the bypass bridge and the Desert View Watchtower. All of them are generic depictions, and `replaces` drops the Overture boxes they stand in for.
+- **Lidar massing (D-052):** 3DEP point clouds (Entwine tiles, cached per box) give 1,199 Strip buildings measured heights. Large complexes get 25 tower parts above their podiums.
+- **Building generator v2** (style guide §13):
+  - roofs from Overture hints: flat, hipped, gabled, pyramidal and dome
+  - setbacks, tower facade patterns, storefronts and sign bands, rooftop equipment, penthouses and spires
+  - glass on the skin only and no overhangs, checked by tests over 192 generated buildings
+  - new generators for a lattice tower, an observation wheel, an arch bridge, intake towers, street lights and traffic signals
+- **Vegetation and props (D-054):**
+  - **Client scatter:** shrubs, trees and boulders by surface, hashed per world cell and scaled per level.
+  - **Walking level:** 5,109 trees from the WRI/Meta canopy height map, palms on Las Vegas Boulevard, and 2,257 street lights and signals.
+- **Hero landmarks (D-053):** `tools/hero-bake.mjs` bakes the Strat, Hoover Dam and the Desert View Watchtower offline in all four rotations on every level that has them (28 bakes). Paint-overs are stamped into every tile bake, and `pixelworld heroes` re-packages them without a rebuild. The paints are the tool's demo touch-ups, standing in for an artist's.
+
+| Exit criterion | Result |
+|---|---|
+| The Strip, Hoover Dam and the canyon rim are recognizable in blind screenshots | Mostly met (table below). Hoover Dam and the Strip were named in every view. Grand Canyon Village was named as the South Rim, but Desert View was not. |
+| Generated buildings match the style sheet | Met. Unit tests check the style-guide rules on 192 generated buildings: footprint, overhangs, glass on the skin, style ramps, pyramids and setbacks. |
+| Painted-over overrides survive a full re-bake | Met. E2e bakes every tile fresh (`cache=0`): painted pixels appear, `?paint=0` removes them, and a fresh in-browser hero bake equals the stored one. `hero-bake --check` reports all 12 driving-level bakes unchanged. A re-bake re-registers each paint to its landmark's new silhouette (unit-tested). |
+
+**Blind screenshots.** A fresh-context agent saw nine unlabelled 640×360 views in shuffled order, two of them decoys, with no hint of the region. It was asked to name each place from the pixels alone.
+
+| View | Its best guess | Confidence |
+|---|---|---|
+| Hoover Dam, driving, 2× | Hoover Dam and the bypass bridge | 90 |
+| Hoover Dam, driving, 1× | Hoover Dam and Black Canyon | 90 |
+| The Strip, walking | the Strip around Caesars, the Flamingo and the High Roller | 75 |
+| The Strip, driving | the Strip around the High Roller and Paris | 75 |
+| The Strip, flying | the Strip's landmark cluster | 50 |
+| Grand Canyon Village, driving | the Grand Canyon South Rim | 45 |
+| Desert View, driving, 2× | Sedona (second guess: Red Rock Canyon) | 25 |
+| Decoy: forest and ridge | no famous place | 10 |
+| Decoy: desert suburb | no famous place | 15 |
+
+The evaluator noted that once it saw Las Vegas, it suspected the whole set was in the Southwest, so the rim guesses were partly helped by that.
+
+**Known issues and next steps:**
+- **Hoover Dam's proportions:** the dam reads as a "thick cylinder" rather than a wall across the canyon, because the relief cap of 4 (M2's Black Canyon issue) makes it 17 steps tall on a 3-cell crest.
+  - Lake Mead meets the dam 17 steps below its crest. The lake is flat at the level of its real surface where relief isn't exaggerated, while the canyon around the dam is exaggerated up to the cap.
+  - Both want a lower relief cap per feature, or a reservoir rule.
+- **Desert View:** the watchtower is too small to read at 150 m cells, and the blocky red strata suggested Sedona. A larger depiction or a tower-and-rim focus would help.
+- **Flying level:** only towers of 80 m or more and landmarks are drawn, so the Strip reads as models on an empty plain. A low-rise texture (blocks) would carry the city.
+- **Paint-overs** are the tool's demo touch-ups. An artist pass on the three heroes is still to do.
+- **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
+- **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
 
 ### M4: Drive, fly, build
 
@@ -471,7 +524,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 and M1.6 are done; M2 is next.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between); M4 is next.
 
 ## 3. Technology tracks
 
