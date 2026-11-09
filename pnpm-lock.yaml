@@ -50,6 +50,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/world-format
 
+  examples/minimal-viewer:
+    dependencies:
+      '@pixelworld/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworld/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+
   packages/bake:
     dependencies:
       '@pixelworld/generators':
