@@ -538,3 +538,15 @@ The point is more room for visual interest; both halves are wanted.
 - **Rules:** typology rules gain `classes:` (class codes, exact or by prefix) and `roofs:` (facts or Overture roof shapes). In most cities the iconic building type is a class code, not a year and a use.
 - **Python API:** `pixelworld_pipeline.build(spec, out_dir=None, …)` beside the CLI. `pixelworld plugins [spec]` lists the plugins, and the ones a spec names.
 - **Neutral:** San Francisco and the Southwest rebuild byte for byte.
+
+### D-069: An engine API the viewer and games are clients of (accepted, M4)
+- **Why:** pixelworld is a library (library.md, D1: engine first). The viewer's 940-line `main.ts` held the engine's assembly and the app's behaviour together, so a game could only copy it.
+- **`@pixelworld/engine`:** `createWorldView({canvas, worldUrl, style, layers, controller, camera, …})` loads and streams a world, bakes and caches tiles, composites, and runs a lazy frame loop: it redraws only when something changed. It owns no input, DOM UI or URL parsing.
+- **Extension points:**
+  - **Layers** (`Layer`): `init` (skipped where a world has nothing for it), `update`, `sprites`, an optional screen pass, sublayers, `serialize`/`restore`. `fogLayer()` lives in the engine; `trafficLayer()` lives in `@pixelworld/sim` and uses only the engine's types.
+  - **Entities:** models (boxes, or a style group with a seed and size) baked per rotation and heading, depth-tested; the rover is one.
+  - **Controllers:** the app forwards input, or the controller listens on targets it's given; `roverController()` is the first, with the viewer's keys.
+  - **Queries:** `heightAt`, `surfaceAt`, `roadAt` (class, width, lanes, one-way, divided), `pick` (screen to cell), lon/lat ↔ cell, `elevationAt`.
+- **The viewer:** `apps/web` is now a client of the engine, about 430 lines (URL parameters, HUD, layer panel, levels, the debug API with the same shape). Every golden is unchanged, and nine scenes compared pixel for pixel are identical before and after.
+- **Proof:** `examples/minimal-viewer` (about 45 lines: San Francisco, the rover, traffic, queries under the pointer) uses only the engine and the traffic layer.
+- **Later:** traffic's sprites as entities; more screen passes; `pick` against buildings; edits; the export CLI; npm packaging; level switching without a reload.
