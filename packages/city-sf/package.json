@@ -1,0 +1,15 @@
+{
+  "name": "pixelworld-city-sf",
+  "description": "San Francisco's city pack for pixelworld: its facades, towers and Chinatown generators",
+  "license": "MIT OR Apache-2.0",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./worker": "./src/worker.ts"
+  },
+  "dependencies": {
+    "@pixelworld/generators": "workspace:*"
+  }
+}

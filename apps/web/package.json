@@ -12,6 +12,7 @@
   "dependencies": {
     "@pixelworld/engine": "workspace:*",
     "@pixelworld/sim": "workspace:*",
-    "@pixelworld/world-format": "workspace:*"
+    "@pixelworld/world-format": "workspace:*",
+    "pixelworld-city-sf": "workspace:*"
   }
 }

@@ -1,6 +1,14 @@
-import { createWorldView, fogLayer, roverController, type RoverOptions, type TileBake } from "@pixelworld/engine";
+import {
+  createWorldView,
+  fogLayer,
+  roverController,
+  type PluginDescriptor,
+  type RoverOptions,
+  type TileBake,
+} from "@pixelworld/engine";
 import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworld/sim";
 import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+import { cityPlugin } from "pixelworld-city-sf";
 
 /**
  * The reference viewer (`@pixelworld/viewer`), a client of the engine: the
@@ -20,6 +28,11 @@ function stylePack(id: string): object {
   if (!json) throw new Error(`no style pack ${id}`);
   return json;
 }
+
+// The plugins the viewer can load, by name (D-071). A style pack names the ones its
+// generators come from ("plugins"), and the view loads those: San Francisco's city pack
+// for the bay-area pack, nothing for the Southwest.
+const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin };
 
 /** Test/debug hooks (used by the Playwright suite in e2e/). */
 interface PixelworldDebug {
@@ -186,6 +199,7 @@ async function main() {
     },
     layers: [...(traffic ? [traffic] : []), fog],
     controller: rover,
+    plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
     // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
     recordBakes: params.get("bench") === "1",
     onError: (m) => {

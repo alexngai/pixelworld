@@ -1,8 +1,5 @@
 import type { GenContext, Generator } from "./assets";
-import { CHINATOWN_GENERATORS } from "./chinatown";
-import { FACADE_GENERATORS } from "./facades";
 import { LANDMARK_KIT } from "./landmarkKit";
-import { TOWER_GENERATORS } from "./towers";
 import { TREE_GENERATORS } from "./trees";
 import { VEHICLE_MODEL_GENERATORS } from "./vehicleModels";
 import { VEHICLE_GENERATORS } from "./vehicles";
@@ -11,9 +8,10 @@ import { VoxelModel } from "./voxel";
 /**
  * The built-in generators (D-030): vegetation, rocks, city blocks, the generic
  * building, dams, towers, signs, the landmark kit's generic landmarks, street
- * props and vehicles, and (for now) San Francisco's facades, towers and
- * Chinatown. Plugins add more (plugins.ts). The registry (registry.ts) reads
- * this table the first time a generator is looked up.
+ * props and vehicles. Region-specific generators come from plugins
+ * (docs/plugins.md §9), such as San Francisco's facades, towers and Chinatown
+ * in the city pack pixelworld-city-sf. The registry (registry.ts) reads this
+ * table the first time a generator is looked up.
  */
 
 /** A well-mixed hash of two integers and a salt (city blocks pick their kind by place). */
@@ -703,12 +701,9 @@ export function builtinGenerators(): Record<string, Generator> {
     {},
     GENERATORS,
     LANDMARK_GENERATORS,
-    FACADE_GENERATORS,
     LANDMARK_KIT,
-    TOWER_GENERATORS,
     TREE_GENERATORS,
     VEHICLE_GENERATORS,
     VEHICLE_MODEL_GENERATORS,
-    CHINATOWN_GENERATORS,
   );
 }

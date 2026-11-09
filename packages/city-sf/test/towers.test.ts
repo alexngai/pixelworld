@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { generateModel, type AssetCatalog, type VoxelModel } from "../src/index";
+import { generateModel, type AssetCatalog, type VoxelModel } from "@pixelworld/generators";
+import { register } from "../src/index";
 import { footprintDepth } from "../src/towers";
+
+await register(); // the city pack's generators, on this thread
 
 /**
  * San Francisco's towers (towers.ts) under the style guide's building rules
