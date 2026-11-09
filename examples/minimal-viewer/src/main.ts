@@ -2,6 +2,8 @@ import { createWorldView, roverController } from "@pixelworld/engine";
 import { trafficLayer } from "@pixelworld/sim";
 // the world names its style pack ("bay-area"); a page brings the packs it uses
 import bayArea from "../../../worlds/_styles/bay-area/style.json";
+// and the plugins whose generators the pack names: San Francisco's city pack
+import { cityPlugin } from "@pixelworlds/city-sf";
 
 /**
  * A minimal client of the engine: San Francisco's driving level, the rover
@@ -16,6 +18,7 @@ async function main() {
     canvas,
     worldUrl: "/sf/",
     style: bayArea,
+    plugins: [cityPlugin],
     layers: [trafficLayer()],
     // Russian Hill, where the cable cars climb Hyde Street
     controller: roverController({ start: { lon: -122.4195, lat: 37.8 }, listen: { keys: window, pointer: canvas } }),

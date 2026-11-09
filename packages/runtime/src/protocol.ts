@@ -73,7 +73,24 @@ export interface BakeObjectsMessage {
   slice: TerrainSlice;
 }
 
-export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage;
+/** A plugin for the bake worker to import (docs/plugins.md §9): an absolute module URL. */
+export interface PluginRef {
+  name: string;
+  url: string;
+}
+
+/**
+ * Import plugins and register them in the worker before its first bake (D-071).
+ * Messages that arrive meanwhile wait; the worker answers `pluginsLoaded`, or
+ * an `error` with this id.
+ */
+export interface LoadPluginsMessage {
+  type: "loadPlugins";
+  id: number;
+  plugins: PluginRef[];
+}
+
+export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | LoadPluginsMessage;
 
 export interface BakeStats {
   meshMs: number;
@@ -100,7 +117,14 @@ export interface ErrorMessage {
   message: string;
 }
 
-export type FromWorker = BakedMessage | ReadyMessage | ErrorMessage;
+/** The plugins a worker registered, and the generators each added. */
+export interface PluginsLoadedMessage {
+  type: "pluginsLoaded";
+  id: number;
+  plugins: { name: string; generators: string[] }[];
+}
+
+export type FromWorker = BakedMessage | ReadyMessage | ErrorMessage | PluginsLoadedMessage;
 
 /** Typed arrays of a slice, for transferring to the worker without copying. */
 export function sliceTransferables(slice: TerrainSlice): Transferable[] {

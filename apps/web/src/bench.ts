@@ -4,7 +4,8 @@
  * fog, and reads memory. Each case loads the app in an iframe with `bench=1`
  * (which keeps every tile's bake timings) and drives its debug API
  * (`window.__pixelworld`), as the e2e tests do. Without `bench=1` the app is
- * unchanged.
+ * unchanged. The app loads the generator plugins each world's style pack
+ * names (San Francisco's city pack, D-071), so its bakes are timed with them.
  *
  * Parameters: cases=sw-drive,sf-walk (default all), w=1280&h=720 (the canvas),
  * draws=20 (redraws per frame timing), sample=1500 (ms of animation frames

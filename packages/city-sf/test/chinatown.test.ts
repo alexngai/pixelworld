@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CHINATOWN_GENERATORS } from "../src/chinatown";
-import { generateModel, type AssetCatalog, type VoxelModel } from "../src/index";
+import { generateModel, type AssetCatalog, type VoxelModel } from "@pixelworld/generators";
+import { register } from "../src/index";
+
+await register(); // the city pack's generators, on this thread
 
 /**
  * Chinatown's street pieces: the gate over Grant Avenue and the lanterns

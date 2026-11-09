@@ -13,7 +13,9 @@
  * A paint-over is never overwritten. When a re-bake moves or reshapes a
  * landmark, its paint is re-registered: shifted by the offset that best lines
  * the old silhouette up with the new one. Then `uv run pixelworld heroes
- * <spec>` copies bakes and paints into the package.
+ * <spec>` copies bakes and paints into the package. The bakes come from the
+ * viewer (apps/web), which loads the generator plugins the world's style pack
+ * names (San Francisco's city pack, D-071).
  *
  *   node tools/hero-bake.mjs --world southwest              bake every hero in fixtures/southwest
  *   node tools/hero-bake.mjs --world southwest --check      exit 1 if a fresh bake differs from the stored one

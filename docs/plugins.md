@@ -1,6 +1,6 @@
-# Writing pipeline plugins
+# Writing plugins
 
-The pipeline keeps region-specific data out of its own package (decision D4 in [library.md](library.md)). A city's building records, a country's elevation model or a national land-cover map comes in as a **plugin**: a Python package that registers what it provides under a name, which a region spec then uses. San Francisco's DataSF facts are the first one, in the **city pack** `pixelworld-city-sf` (§6), the template for other cities.
+The pipeline and the generators keep region-specific code out of their own packages (decision D4 in [library.md](library.md)). A city's building records, a country's elevation model or a national land-cover map comes in as a **pipeline plugin**: a Python package that registers what it provides under a name, which a region spec then uses. A city's own building types come in as a **generator plugin**: a TypeScript package that registers generators by name, which a style pack then uses (§9). San Francisco's DataSF facts and its facades, towers and Chinatown are the first ones, in its **city pack** (§6), the template for other cities: the Python distribution `pixelworld-city-sf` and the npm package `@pixelworlds/city-sf`.
 
 This guide covers:
 1. how a region spec names plugins;
@@ -10,7 +10,8 @@ This guide covers:
 5. stage hooks (reserved);
 6. the city pack layout;
 7. the rules every plugin keeps;
-8. the Python API.
+8. the Python API;
+9. generator plugins (TypeScript).
 
 ## 1. How a region spec names plugins
 
@@ -264,7 +265,7 @@ datasf = "pixelworld_city_sf.datasf:DataSFFacts"
 
 **Conventions:**
 - **Names:** the distribution `pixelworld-city-<place>` and the module `pixelworld_city_<place>`. Name plugins after their data (`datasf`, `pluto`, `bag`, `ahn-dtm-05`), not the city, since one dataset can serve a whole country.
-- **Contents:** a pack can hold several plugins: facts sources, terrain and land-cover adapters, and later 3D city model readers. San Francisco's TypeScript generators (facades, towers, Chinatown) and its style pack are meant to join their pack's browser side, which isn't split out yet.
+- **Contents:** a pack can hold several plugins: facts sources, terrain and land-cover adapters, and later 3D city model readers. Its browser half is a TypeScript package of the same name with the city's generators (§9): San Francisco's is `packages/city-sf`. Its style pack (`worlds/_styles/bay-area`) is still with the others, and names the plugin it needs.
 - **In this repository:** a pack lives in `pipeline/plugins/` and is a member of the pipeline's uv workspace (`[tool.uv.workspace] members = ["plugins/*"]`). If a committed world needs it, add it to the pipeline's `plugins` dependency group, which `uv sync` installs by default. Its tests run with the pipeline's (`uv run pytest`), and `uv build --package pixelworld-city-<place>` builds its wheel.
 - **Outside this repository:** a pack is an ordinary package that depends on `pixelworld-pipeline`. `pip install` it next to the pipeline and the registry finds it.
 
@@ -296,3 +297,141 @@ assert report["roads"]["ok"]
 - Returns the build report. Raises `RegionError` for a bad spec and `PluginError` for a missing plugin.
 
 The module of the build stages is still `pixelworld_pipeline.build`: `from pixelworld_pipeline.build import ...` reaches it. The package attribute `pixelworld_pipeline.build` is the API function.
+
+## 9. Generator plugins (TypeScript)
+
+A style pack maps each asset group to a **generator** by name (D-030): `"building.rowhouse.victorian": { "generator": "rowhouse", … }`. `@pixelworld/generators` holds a registry of them. The built-ins cover what every region uses: terrain, trees, rocks, the generic building, city blocks, dams, signs, the landmark kit's generic landmarks, street props and vehicles. A city's own building types come from a **generator plugin** (D-071). San Francisco's is the browser half of its city pack: `@pixelworlds/city-sf` (`packages/city-sf`), with `rowhouse` (Victorians, Edwardians and the Sunset's stucco rows), `block` (apartments, Chinatown, piers), `decoTower`, `sfTower`, and Chinatown's `gate` and `lanterns`.
+
+### 9.1 Using one
+
+A style pack names the plugins its generators come from:
+
+```json
+{ "id": "bay-area", "name": "San Francisco Bay Area", "plugins": ["@pixelworlds/city-sf"], … }
+```
+
+A world view loads them, in its bake worker and on the main thread, before its first bake:
+
+```ts
+import { createWorldView } from "@pixelworld/engine";
+import { cityPlugin } from "@pixelworlds/city-sf";
+
+const view = await createWorldView({ canvas, worldUrl: "/sf/", style: bayArea, plugins: [cityPlugin] });
+
+// or let the style pack choose among the plugins a page has (the viewer does this):
+const PLUGINS = { [cityPlugin.name]: cityPlugin };
+createWorldView({ canvas, worldUrl, style, plugins: (names) => names.flatMap((n) => PLUGINS[n] ?? []) });
+```
+
+- **A plugin the style names but the view doesn't load** is a console warning when the view starts (`the style pack bay-area needs the plugin @pixelworlds/city-sf, which this view didn't load: …`), and each model that needs it fails to bake with a `MissingGeneratorError`.
+- **Without a view** (tests, tools, a page that generates models itself), register a plugin on the thread that generates: `import { register } from "@pixelworlds/city-sf"; register();`. Where the page has its own copy of the generators package (a bundled build), register through that copy: `registerPlugin(plugin)` from it, or `register(api)` with its `pluginApi(name)`.
+- **In this repository:** the viewer (`apps/web`) loads the city pack for the bay-area pack's worlds, so the bench page and the hero bake tool, which drive the viewer, do too. `examples/minimal-viewer` passes it.
+
+### 9.2 The registry
+
+| Function (`@pixelworld/generators`) | What it does |
+|---|---|
+| `registerGenerators(record, { source?, replace? })`, `registerGenerator(name, fn, opts)` | register generators by name, under a source (a plugin's name; default `app`) |
+| `hasGenerator(name)`, `getGenerator(name, group?)` | look one up; `getGenerator` throws a `MissingGeneratorError` |
+| `listGenerators()` | every registered generator and its source, by name; the built-ins' source is `@pixelworld/generators` |
+| `unregisterGenerators(source)` | remove a source's generators (tests, hot reloads) |
+| `definePlugin({ name, register })`, `registerPlugin(plugin)`, `loadPlugin({ name, url })` | plugins: define one in its worker module; register one in this realm; import one by URL and register it |
+
+- **One registry per realm:** the main thread and each bake worker have their own. A plugin is registered in each realm that generates models, once.
+- **Names:** registering a name again from the same source replaces it (a plugin registered twice, a hot reload). A name another source registered, a built-in included, is an error unless `replace: true`. A call with a bad entry registers nothing.
+- **Known plugins:** core knows which generators the plugins published from this repository provide (`KNOWN_PLUGIN_GENERATORS`), as the pipeline's registry knows `datasf`, so their errors say what to load.
+
+**Errors:**
+
+| Case | Message |
+|---|---|
+| A generator of a known plugin that isn't loaded | `no generator named 'rowhouse' (asked for by building.rowhouse.victorian). 'rowhouse' comes with the plugin @pixelworlds/city-sf, which isn't loaded here: pass it to createWorldView({ plugins }), which loads it in the bake worker and on the main thread, or register it with registerPlugin() where models are generated outside a view. See docs/plugins.md.` |
+| A generator nobody provides | `no generator named 'brownstone' (asked for by building.rowhouse.brownstone). No plugin known here provides it: load the plugin that does (…), or register it with registerGenerators(). Registered generators: archBridge, blob, … See docs/plugins.md.` |
+| A name another source has | `generator 'building' is already registered by @pixelworld/generators, so my-city can't register it too (pass { replace: true } to replace it)` |
+| A plugin's module that fails to load | `plugin @pixelworlds/city-sf (https://…/assets/worker-….js) failed to import: …`; `createWorldView` rejects with it |
+| A module that defines no plugin, or another one | `https://… defines no plugin: the module must call definePlugin({ name, register }) (docs/plugins.md §9)`; `https://… defines the plugin x, not y` |
+
+### 9.3 How a plugin reaches the bake worker
+
+Generators run where tiles are meshed: in the bake worker (`@pixelworld/runtime`). Functions can't be posted to a worker, so a plugin travels as a **module URL**:
+
+1. `createWorldView` resolves the plugins (the option, or its function given the style's `plugins`) and makes each URL absolute.
+2. The main thread registers each: the descriptor's `plugin` if it carries one, else it imports the URL.
+3. The bake service starts the worker and, once it is ready, sends `loadPlugins` with the names and URLs, before `init`.
+4. The worker imports each URL in order. The module calls `definePlugin(plugin)`, which announces the plugin to the realm (a list under `Symbol.for("pixelworld.plugins")`). The worker takes the module's exported plugin (its default export, or `register` and `name` exports) or finds the announced one by name, and calls `plugin.register(api)` with an API bound to *its own* registry. Messages that arrive meanwhile wait.
+5. The worker answers `pluginsLoaded` with each plugin's generators, or an `error`; `init` and the bakes follow. A plugin that fails to load fails `createWorldView`.
+6. Without a worker (no WebGL2 in workers), the inline baker uses the main thread's registry, where step 2 put the plugins.
+
+**Why the announcement:** a bundler builds the worker module on its own, and may drop its exports (Vite does for every worker bundle) or give it its own copy of `@pixelworld/generators`. `definePlugin` is a side effect, so it survives either, and the plugin registers through the API it is given, never through its own copy's registry.
+
+### 9.4 Writing one
+
+A plugin package has its generators, a plugin object, the module the worker imports, and a main entry:
+
+```
+packages/city-sf/                       npm: @pixelworlds/city-sf
+├── package.json                        exports "." (src/index.ts) and "./worker" (src/worker.ts)
+├── src/
+│   ├── facades.ts, towers.ts, chinatown.ts   the generators
+│   ├── generators.ts                   PLUGIN_NAME, sfGenerators(): name → generator
+│   ├── plugin.ts                       the plugin: { name, register(api) }
+│   ├── worker.ts                       what the bake worker imports: export default definePlugin(plugin)
+│   └── index.ts                        cityPlugin (the descriptor), register(), the generators
+└── test/                               the generators' tests, and the plugin's (plugin.test.ts)
+```
+
+A sketch for another city:
+
+```ts
+// generators.ts: a generator is (ctx: GenContext) => VoxelModel (GenContext: see assets.ts)
+import { VoxelModel, type Generator } from "@pixelworld/generators";
+export const PLUGIN_NAME = "@my-org/city-nyc";
+const brownstone: Generator = ({ rand, ramp, param, mask, heightVox, hints }) => { /* … */ return new VoxelModel(1, 1, 1); };
+export function cityGenerators(): Record<string, Generator> {
+  return { brownstone }; // a function, so a page that only names the plugin doesn't bundle the generators
+}
+
+// plugin.ts
+import type { Plugin } from "@pixelworld/generators";
+export const plugin: Plugin = { name: PLUGIN_NAME, register: (api) => api.registerGenerators(cityGenerators()) };
+
+// worker.ts: the bake worker imports this module by URL
+import { definePlugin } from "@pixelworld/generators";
+export default definePlugin(plugin);
+
+// index.ts: the main entry
+import { registerPlugin, type PluginDescriptor } from "@pixelworld/generators";
+import workerUrl from "./worker?worker&url"; // Vite: the worker module built on its own, and its URL
+export const cityPlugin: PluginDescriptor = { name: PLUGIN_NAME, url: workerUrl };
+export const register = () => registerPlugin(plugin);
+```
+
+```json
+{ "id": "nyc", "plugins": ["@my-org/city-nyc"], "assets": { "building.rowhouse.brownstone": { "generator": "brownstone", "ramps": { … } } } }
+```
+
+**The descriptor** (`PluginDescriptor`): `name`; `url`, the module a worker imports; optionally `plugin`, the plugin itself, when the page bundles it anyway (the main thread then registers it instead of importing the URL); optionally `version`, which keys the tile cache.
+
+**Rules:**
+- **Register through the API you are handed:** never into the generators package your module imports. The published bake worker is one file with its own registry, and your bundle's copy of the package is not it.
+- **Deterministic:** a generator draws the same model for the same context, in every realm. Use `ctx.rand` (seeded), never `Math.random` or the clock. Baked tiles are cached by package, style, baker and plugin (name and `version`): bump `version` when your plugin draws differently.
+- **Generic depictions:** no names, lettering or logos (D-051), and the style guide's building rules (inside the footprint, no overhangs, glass only on the skin), as the built-ins keep. San Francisco's tests (`packages/city-sf/test`) check them over many footprints and seeds.
+- **Colours come from the style:** a generator asks for ramps by role (`ctx.ramp("wall")`, or `ctx.ramps("wall")` for the `wall.*` variants) and the style pack maps roles to its ramps.
+- **Names:** generators are named for what they draw (`rowhouse`, `brownstone`), the plugin for its npm package (`@pixelworlds/city-sf`; the pipeline half keeps its Python name, `pixelworld-city-sf`).
+
+### 9.5 Shipping one
+
+**The worker module must load on its own:** an ES module that is self-contained, or that imports only absolute URLs. A worker can't resolve a bare `@pixelworld/generators`, so bundle what you import from it (`VoxelModel`, `definePlugin`) into the module. Don't build a plugin into the bake worker itself: it has a size budget, and plugins load by URL.
+- **In this repository (Vite, from source):** `import url from "./worker?worker&url"`. Vite builds the module and its dependencies into one file (`assets/worker-<hash>.js`, 28 KB for San Francisco) and gives its URL; in dev it serves the module from source. The app's Vite config needs only `worker: { format: "es" }`, as the bake worker does.
+- **Published to npm:** build `worker.ts` into one self-contained file (`dist/worker.js`, its dependencies bundled), and have the published entry point the descriptor at it with the standard pattern, which Vite, webpack 5 and Rollup follow, copying the file into the app's build. `?worker&url` is for apps: a library build turns it into a root-absolute `/assets/…` path that the consuming app doesn't serve.
+
+  ```ts
+  export const cityPlugin = { name: PLUGIN_NAME, url: new URL("./worker.js", import.meta.url).href };
+  ```
+
+  If a dev server pre-bundles the package and its worker URL then 404s, exclude the package from pre-bundling (Vite: `optimizeDeps.exclude`).
+- **Anywhere else** (a CDN, plain ESM): any absolute URL of the bundled module works, e.g. `{ name, url: "https://cdn.example.org/@my-org/city-nyc@1.0.0/dist/worker.js" }`.
+
+**A loader of your own** (`loadPlugin` is the one to use) imports by URL with `import(/* @vite-ignore */ /* webpackIgnore: true */ url)`, so that bundlers leave the import to the browser.
+
+**Testing:** register on the test's thread (`await register()`, or `registerPlugin(plugin)`) and generate with `generateModel` (`packages/city-sf/test`). For the worker path, `loadPlugin({ name, url }, importer)` takes an importer in place of `import()`; `packages/runtime/test/plugins.test.ts` runs the worker's message loop with the city pack's module that way.

@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { FACADE_GENERATORS as FACADES, facadeOf } from "../src/facades";
-import { generateModel, type AssetCatalog, type VoxelModel } from "../src/index";
+import { generateModel, type AssetCatalog, type VoxelModel } from "@pixelworld/generators";
+import { register } from "../src/index";
+
+await register(); // the city pack's generators, on this thread
 
 /**
  * Street-facing typologies (D-055) under the style guide's building rules:

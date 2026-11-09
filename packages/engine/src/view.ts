@@ -21,6 +21,7 @@ import { ViewCameraImpl } from "./camera";
 import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
+import { registerOnMainThread, viewPlugins } from "./plugins";
 import { createQuery } from "./queries";
 import { TileGrid } from "./tiles";
 import type {
@@ -60,11 +61,15 @@ interface TileEntry {
  */
 export async function createWorldView(opts: WorldViewOptions): Promise<WorldView> {
   const w = await loadWorld(opts);
+  // plugins with generators (D-071): registered here, and in the bake worker before its first bake
+  const plugins = viewPlugins(opts.plugins, w.styleJson, w.style.id);
+  const mainThread = registerOnMainThread(plugins);
+  mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
   const cache: TileStore | null =
     opts.cache === false ? null : opts.cache === true || opts.cache === undefined ? await TileCache.open() : opts.cache;
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
-  const cacheKey = tileCacheKey(w);
+  const cacheKey = tileCacheKey(w, plugins.descriptors);
   const { store, manifest } = w;
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     if (cache) {
@@ -84,7 +89,13 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
-  const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory);
+  const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
+    plugins: plugins.refs,
+  });
+  await mainThread.catch((e: unknown) => {
+    service.dispose();
+    throw e;
+  });
   const view = new View(opts, w, compositor, service, cache, cacheKey);
   await view.start(opts);
   return view;

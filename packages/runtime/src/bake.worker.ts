@@ -1,5 +1,6 @@
 import { BakeHost } from "./bakeHost";
 import type { FromWorker, ToWorker } from "./protocol";
+import { bakeWorkerLoop } from "./workerLoop";
 
 /** The parts of DedicatedWorkerGlobalScope we use (the webworker lib clashes with DOM). */
 interface WorkerScope {
@@ -19,11 +20,6 @@ try {
   post({ type: "error", message: `worker-init: ${String(e)}` });
 }
 
-scope.onmessage = (ev: MessageEvent<ToWorker>) => {
-  if (!host) {
-    const id = "id" in ev.data ? ev.data.id : undefined;
-    post({ type: "error", id, message: "worker has no WebGL2" });
-    return;
-  }
-  host.handle(ev.data);
-};
+// plugins (loadPlugins) are imported before anything else is handled
+const handle = bakeWorkerLoop(host, post);
+scope.onmessage = (ev: MessageEvent<ToWorker>) => handle(ev.data);

@@ -1,6 +1,7 @@
 {
   "id": "bay-area",
   "name": "San Francisco Bay Area",
+  "plugins": ["@pixelworlds/city-sf"],
   "shades": 6,
   "background": "#1b1d28",
   "silhouette": "#ffe36e",

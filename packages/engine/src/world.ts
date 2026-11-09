@@ -11,7 +11,8 @@ import {
 } from "@pixelworld/runtime";
 import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworld/style";
 import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworld/world-format";
-import type { StyleSource, WorldInfo, WorldViewOptions } from "./types";
+import { pluginsKey } from "./plugins";
+import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -182,8 +183,8 @@ export function bakeInit(w: LoadedWorld, heroes: HeroPaint[], scatter: boolean):
   };
 }
 
-/** The tile cache key: the package, style and baker, so a change to any makes old tiles unreachable. */
-export function tileCacheKey(w: LoadedWorld): (t: TileRequest) => string {
+/** The tile cache key: the package, style, baker and plugins, so a change to any makes old tiles unreachable. */
+export function tileCacheKey(w: LoadedWorld, plugins: PluginDescriptor[] = []): (t: TileRequest) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
@@ -193,6 +194,7 @@ export function tileCacheKey(w: LoadedWorld): (t: TileRequest) => string {
     BAKE_VERSION,
     w.objects ? "objects" : "terrain",
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
+    ...pluginsKey(plugins),
   ];
   return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty)].join("|");
 }

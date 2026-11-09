@@ -1,6 +1,6 @@
 # pixelworld as a library (proposal, for discussion)
 
-**Status:** a draft for the M4 pass, its first steps built: the engine is out of the app (§7, as built), and the npm package `pixelworld` builds, packs and is checked in CI, unpublished (§3.5, [npm.md](npm.md)). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
+**Status:** a draft for the M4 pass, its first steps built: the engine is out of the app (§7, as built), generators come from a public registry that plugins add to (§8), and the npm package `pixelworld` builds, packs and is checked in CI, unpublished (§3.5, [npm.md](npm.md)). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
 - as a **world and asset generator**: real places in, pixel-art worlds, tiles, sprites and models out;
 - as an **engine** to build games and other interaction modes on.
 
@@ -33,6 +33,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
   - **Plugins:** terrain and land-cover sources and facts sources are found by name through entry points ([plugins.md](plugins.md)).
   - **San Francisco's facts (DataSF)** are a separate package, the city pack `pixelworld-city-sf` in `pipeline/plugins/`.
   - **Still built in:** stages, and the Overture, canopy, lidar and transit sources.
+- **Generator plugins (TypeScript):** the generator registry is public, and plugins add generators to it, in the bake worker and on the main thread (§8, [plugins.md](plugins.md) §9). San Francisco's facades, towers and Chinatown are the city pack's browser half, the package `@pixelworlds/city-sf` in `packages/city-sf`.
 - **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON without a schema.
 - **Licences:** MIT OR Apache-2.0 for the code, CC BY 4.0 for the style packs, ODbL for the world packages (§6, D2).
 
@@ -45,13 +46,14 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworld/format` | the world package spec (manifest, chunks, objects, routes, optional layers); codecs; JSON Schemas; version policy | `world-format` |
 | `@pixelworld/grid` | projection, rotations, cells, heights | `grid` |
 | `@pixelworld/style` | the style pack schema, loader, palettes, night and atmosphere | `style` |
-| `@pixelworld/generators` | the voxel model API, the generator registry, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
+| `@pixelworld/generators` | the voxel model API, the generator registry and plugin API, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
 | `@pixelworld/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
 | `@pixelworld/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
 | `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
 | `@pixelworld/style-desert-southwest`, `@pixelworld/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
-| `pixelworld-city-sf` (PyPI) | San Francisco's city pack: DataSF facts (later its generators too) | `pipeline/plugins/pixelworld-city-sf/` |
+| `pixelworld-city-sf` (PyPI) | San Francisco's city pack, pipeline half: DataSF facts | `pipeline/plugins/pixelworld-city-sf/` |
+| `@pixelworlds/city-sf` (npm) | San Francisco's city pack, browser half: its generators (facades, towers, Chinatown) as a plugin | `packages/city-sf` (§8) |
 | `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
 | `@pixelworld/editor` (app) | the warp editor | `apps/editor` |
 
@@ -97,7 +99,7 @@ The engine owns streaming, baking, compositing and the frame loop. It owns no in
 | **Facts sources** (pipeline) | **built:** `factory(region, options)`, then facts per building by projected point: year, storeys, units, use, class code, neighbourhood, roof | entry points (`pixelworld.facts`), selected by `objects.typology.facts` | `datasf`, in the city pack `pixelworld-city-sf` |
 | **3D city models** (pipeline) | footprints, heights and roof shapes from CityJSON or CityGML | entry points | none yet (M5's tier-1 regions) |
 | **Stage hooks** (pipeline) | code run at named points of a build | entry points (`pixelworld.stages`), reserved | none yet |
-| **Generators** | `(ctx) => VoxelModel` for a semantic group | `registerGenerator(name, fn)`; a style pack maps groups to them | buildings, facades, towers, landmarks, trees, vehicles |
+| **Generators** | **built:** `(ctx) => VoxelModel` for a semantic group | `registerGenerators(record, { source })`, or a plugin (`definePlugin`) loaded with `createWorldView({ plugins })` in the bake worker and on the main thread ([plugins.md](plugins.md) §9); a style pack maps groups to them and names the plugins it needs | built in: buildings, landmarks, trees, vehicles; San Francisco's facades, towers and Chinatown in the city pack `@pixelworlds/city-sf` |
 | **Style packs** | palette ramps, surfaces, materials, assets, night, atmosphere | data packages validated by a JSON Schema | desert-southwest, bay-area |
 | **Package layers** | an optional file in the world package, written by its own pipeline command | format registry; pipeline command | `routes` (traffic) |
 | **Runtime layers** | `update(dt)`, `sprites(view)`, an optional screen pass, enable/disable, `serialize()` | `view.layers.add(...)` | traffic, fog |
@@ -149,7 +151,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 2. **Layer interface (done):** traffic and fog become plugins implementing it. The layer panel lists whatever layers a view has.
 3. **Controller interface (done):** the rover becomes the first controller. Queries (`heightAt`, `roadAt`, `pick`) become public.
 4. **Entities (done for the rover):** today's sprite paths (the rover, vehicles) unify into one entity API that bakes models per heading. Traffic still bakes its own vehicle sprites, in one rotation for all four (§7).
-5. **Generator registry:** made public (`registerGenerator`). Region-specific generators (San Francisco's facades, towers and Chinatown) move to a plugin package, or stay built in with clear names.
+5. **Generator registry (done, §8):** made public (`registerGenerators`, `listGenerators`, plugins). San Francisco's facades, towers and Chinatown moved to the city pack's plugin package, `@pixelworlds/city-sf`.
 6. **Style schema:** a JSON Schema for style packs, and validation with useful errors. Packs become data packages.
 7. **Pipeline plugins:** source and facts adapters behind entry points. DataSF moves out as a plugin. A Python API (`pixelworld.build(spec)`) sits beside the CLI.
    - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
@@ -185,7 +187,7 @@ M4's features are built as controllers and plugins on the public API, which prov
   - **Content:** city packs and style packs ship as separate packages anyone can publish.
   - **PyPI:** `pixelworld-pipeline`, matching its import name `pixelworld_pipeline`; `pixelworlds` is an unrelated project.
   - **Before 1.0:** check the project name against the game *Pixel Worlds* for trademarks.
-- **D4, region-specific code, decided: plugins.** San Francisco's facades, towers, Chinatown and DataSF become the first city pack, the template for others.
+- **D4, region-specific code, decided: plugins.** San Francisco's facades, towers, Chinatown and DataSF become the first city pack, the template for others. Built: DataSF (D-068) and the generators (D-071).
 - **D5, the renderer, decided: our compositor; WebGPU later.** Other engines are served by the export path.
   - **A Rust renderer:** not now.
     - **Where tile time goes:** in the software benchmark, most of a walking-level tile's bake time is CPU mesh building in JavaScript (voxel models, greedy meshing, building assembly), not GPU work. A Rust renderer wouldn't speed that up; Rust compiled to WebAssembly for those CPU paths would.
@@ -227,6 +229,7 @@ interface WorldViewOptions {
   recordBakes?: boolean;                              // tile timings for the bench
   onError?: (message: string) => void;
   workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
+  plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]); // generator plugins (§8)
 }
 
 interface WorldView {
@@ -342,3 +345,38 @@ view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.e
 - **`pick`** ignores objects.
 - **Traffic sprites** aren't entities yet (§7.4).
 - **Level switching** still reloads the viewer's page. A view could switch in place with `destroy()` and a new `createWorldView`.
+
+## 8. As built: generator plugins (M4)
+
+Refactor 5 of §4 and the browser half of D4: generators are found by name in a public registry, and a city's own generators come from a plugin. San Francisco's renders pixel for pixel as before, from the city pack. The details, and how to write and ship one, are in [plugins.md](plugins.md) §9 (D-071).
+
+### 8.1 The registry
+
+`@pixelworld/generators`: `registerGenerators(record, { source, replace })`, `registerGenerator`, `hasGenerator`, `getGenerator`, `listGenerators` and `unregisterGenerators`. It starts with the built-ins (`builtins.ts`: everything every region uses) and holds what plugins add, one registry per realm (the main thread, each bake worker). A style asking for a generator that isn't registered fails that model's bake with a `MissingGeneratorError` naming the generator, the group and, for this repository's plugins, the plugin to load.
+
+### 8.2 Plugins
+
+```ts
+// the plugin's worker module (packages/city-sf/src/worker.ts)
+export default definePlugin({ name: "@pixelworlds/city-sf", register: (api) => api.registerGenerators(sfGenerators()) });
+
+// a page
+import { cityPlugin } from "@pixelworlds/city-sf";          // { name, url }: the worker module's URL
+const view = await createWorldView({ canvas, worldUrl: "/sf/", style: bayArea, plugins: [cityPlugin] });
+```
+
+- **The bake worker** gets `loadPlugins` (names and module URLs) before `init`, imports each, registers it, and answers `pluginsLoaded`; messages meanwhile wait. `definePlugin` announces the plugin to the realm, so it is found even when a bundler drops the module's exports (Vite does for worker bundles) or bundles its own copy of the generators package.
+- **The main thread** registers each plugin too (entity models, the inline baker), from the descriptor's `plugin` or by importing its URL. Without a view: `register()` from the pack, or `registerPlugin(plugin)`.
+- **Style packs** name the plugins they need: `"plugins": ["@pixelworlds/city-sf"]` in the bay-area pack. `plugins` may be a function given those names, as the viewer passes; a named plugin that isn't loaded is a warning.
+- **The tile cache key** includes the plugins (name and `version`); without plugins it is unchanged.
+
+### 8.3 What moved where
+
+| From (`packages/generators`) | To |
+|---|---|
+| the generator table in `assets.ts` (`GENERATORS`, `LANDMARK_GENERATORS`, `damProfile`) | `builtins.ts`, read by the registry (`registry.ts`) on first use |
+| `facades.ts` (`rowhouse`, its stucco rows, `block`), `towers.ts` (`decoTower`, `sfTower`), `chinatown.ts` (`gate`, `lanterns`), and their tests | `packages/city-sf` (`@pixelworlds/city-sf`) |
+
+- **Stayed in core:** terrain, trees, rocks, city blocks, the generic building, dams, signs, the landmark kit's generic landmarks (bridges, halls, towers, the windmill, the lighthouse…), the rail props (`cableCar`, `streetcar`: generic vehicles the pipeline stands along any tram line, as the traffic models are) and the vehicle models.
+- **The Southwest** names only built-in generators (a test checks), so its worlds need no plugin.
+- **Bundles:** the city pack's worker module is 28 KB on its own (its generators and the voxel model class); the viewer's main bundle no longer carries San Francisco's generators, and the bake worker's carries only the built-ins.

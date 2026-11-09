@@ -52,6 +52,9 @@ importers:
       '@pixelworld/world-format':
         specifier: workspace:*
         version: link:../../packages/world-format
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../../packages/city-sf
 
   examples/minimal-viewer:
     dependencies:
@@ -61,6 +64,9 @@ importers:
       '@pixelworld/sim':
         specifier: workspace:*
         version: link:../../packages/sim
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../../packages/city-sf
 
   packages/bake:
     dependencies:
@@ -73,6 +79,12 @@ importers:
       '@pixelworld/style':
         specifier: workspace:*
         version: link:../style
+
+  packages/city-sf:
+    dependencies:
+      '@pixelworld/generators':
+        specifier: workspace:*
+        version: link:../generators
 
   packages/engine:
     dependencies:

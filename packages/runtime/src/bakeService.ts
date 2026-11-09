@@ -1,12 +1,13 @@
 import type { Rotation } from "@pixelworld/grid";
 import type { BakedImage } from "@pixelworld/bake";
-import type { Box, ObjectInstance } from "@pixelworld/generators";
+import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworld/generators";
 import { BakeHost } from "./bakeHost";
 import {
   sliceTransferables,
   type BakeStats,
   type FromWorker,
   type InitMessage,
+  type PluginRef,
   type TerrainSlice,
   type ToWorker,
 } from "./protocol";
@@ -42,6 +43,15 @@ interface Transport {
   send(msg: ToWorker, transfer?: Transferable[]): void;
 }
 
+export interface BakeServiceOptions {
+  /**
+   * Plugins the baker needs (D-071): imported in the worker before its first
+   * bake, or on this thread when baking inline. A plugin that fails to load
+   * fails `create`.
+   */
+  plugins?: PluginRef[];
+}
+
 /**
  * Literal `new Worker(new URL(...))` so Vite bundles the worker in builds.
  * The npm build (packages/pixelworld/build.mjs) rewrites the URL to the
@@ -67,12 +77,15 @@ export class BakeService {
   private done = new Set<TileKey>();
   private pendingTile: (TileRequest & { id: number; key: TileKey }) | null = null;
   private spriteJobs = new Map<number, (img: BakedImage | null) => void>();
+  private pluginJobs = new Map<number, { resolve: (p: PluginReport[]) => void; reject: (e: Error) => void }>();
   private spriteQueue: (
     | { id: number; rotation: Rotation; boxes: Box[] }
     | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
   )[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
+  /** The plugins the baker registered, and the generators each added. */
+  plugins: PluginReport[] = [];
   readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
   onTile: (r: TileResult) => void = () => {};
   onError: (message: string) => void = (m) => console.error(m);
@@ -86,12 +99,33 @@ export class BakeService {
     init: InitMessage,
     prepare: (t: TileRequest) => Promise<PreparedTile>,
     workerFactory: (() => Worker) | null = defaultWorkerFactory,
+    options: BakeServiceOptions = {},
   ): Promise<BakeService> {
     const svc = new BakeService(prepare);
+    const plugins = options.plugins ?? [];
     const viaWorker = workerFactory ? await svc.tryWorker(workerFactory) : false;
-    if (!viaWorker) svc.useInline();
+    if (viaWorker) {
+      if (plugins.length)
+        svc.plugins = await svc.loadWorkerPlugins(plugins).catch((e: unknown) => {
+          svc.dispose();
+          throw e;
+        });
+    } else {
+      // the inline baker uses this thread's registry
+      for (const ref of plugins) svc.plugins.push(await loadPlugin(ref));
+      svc.useInline();
+    }
     svc.transport.send(init);
     return svc;
+  }
+
+  /** Have the worker import and register plugins; resolves once it has. */
+  private loadWorkerPlugins(plugins: PluginRef[]): Promise<PluginReport[]> {
+    return new Promise((resolve, reject) => {
+      const id = this.nextId++;
+      this.pluginJobs.set(id, { resolve, reject });
+      this.transport.send({ type: "loadPlugins", id, plugins });
+    });
   }
 
   private tryWorker(factory: () => Worker): Promise<boolean> {
@@ -234,6 +268,14 @@ export class BakeService {
 
   private receive(msg: FromWorker): void {
     if (msg.type === "ready") return;
+    const job = msg.id !== undefined ? this.pluginJobs.get(msg.id) : undefined;
+    if (job) {
+      this.pluginJobs.delete(msg.id!);
+      if (msg.type === "pluginsLoaded") job.resolve(msg.plugins);
+      else if (msg.type === "error") job.reject(new Error(`bake worker: ${msg.message}`));
+      return;
+    }
+    if (msg.type === "pluginsLoaded") return;
     if (msg.type === "error") {
       this.onError(msg.message);
       if (msg.id !== undefined) this.finish(msg.id, null, null, false);
