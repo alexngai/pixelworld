@@ -34,8 +34,10 @@ snap:
   roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
   buildings: { angle: 12, follow: 3 }
 
-# streets at 1.5x their real width, so a 10 m residential street reads
-widths: { scale: 1.5, minCells: 0.1 }
+# streets at 1.5x their real width, so a 10 m residential street reads; a
+# divided road's carriageways with their median between them (Sunset
+# Boulevard, Van Ness), but no lane lines at this scale (M3.5)
+widths: { scale: 1.5, minCells: 0.1, lanes: { lines: false } }
 
 # 6.25 m micro-cells from the 10 m DEM; lawns smoothed over about 15 m, so
 # a park reads as a grassy slope rather than the elevation model's noise

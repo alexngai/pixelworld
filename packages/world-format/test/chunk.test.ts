@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { NO_WATER, TerrainGrid, packShape, shapeFromV0Mask, shapeRise } from "@pixelworld/grid";
+import { LANE_DIVIDED, LANE_ONEWAY, NO_WATER, TerrainGrid, packShape, shapeFromV0Mask, shapeRise } from "@pixelworld/grid";
 import { describe, expect, it } from "vitest";
 import {
   ChunkFormatError,
@@ -108,6 +108,16 @@ describe("chunk codec", () => {
     expect(decodeChunk(bytes.buffer).terrain.rail[9]).toBe(0b0100_0100 | (2 << 12));
     const plain = new TextDecoder().decode(new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: new TerrainGrid(4, 4) })));
     expect(plain).not.toContain("RAIL");
+  });
+
+  it("round-trips lanes and medians (M3.5), and leaves them out when there are none", () => {
+    const grid = new TerrainGrid(4, 4);
+    grid.lane[5] = 4 | LANE_ONEWAY | LANE_DIVIDED; // a four-lane carriageway of a divided road
+    const bytes = new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: grid }));
+    expect(new TextDecoder().decode(bytes)).toContain("LANE");
+    expect(decodeChunk(bytes.buffer).terrain.lane[5]).toBe(4 | LANE_ONEWAY | LANE_DIVIDED);
+    const plain = new TextDecoder().decode(new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: new TerrainGrid(4, 4) })));
+    expect(plain).not.toContain("LANE");
   });
 
   it("rejects corrupt input", () => {

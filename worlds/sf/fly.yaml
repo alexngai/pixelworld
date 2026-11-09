@@ -19,7 +19,7 @@ sources:
   roads:
     classes: [motorway, trunk, primary]
 
-widths: { scale: 3.0, minCells: 0.08 }
+widths: { scale: 3.0, minCells: 0.08, lanes: null } # no medians from the air (M3.5)
 micro: { k: 4, dem: { overview: 1 } }
 # the parks' lawns, but not from the canopy map: at 100 m a wood is a wood
 # (and the 1 m map over the whole Bay is too big to read); no yards without houses

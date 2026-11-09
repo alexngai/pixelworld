@@ -158,6 +158,7 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `PCLS` | `u8[]` | no | path class ID (see `manifest.pathClasses`); 0 = none |
 | `PWID` | `u8[]` | no | path half-width, in 1/32 cell |
 | `RAIL` | `u16[]` | no | rails drawn in the street (M3.5, D-061): connections in bits 0–7, encoded like `ROAD`; what is drawn in bits 12–15 (1 street tracks, 2 cable-car tracks with a slot, 3 a train's tracks on ballast; the highest where kinds meet) |
+| `LANE` | `u8[]` | no | lanes and medians (M3.5, D-065), for the widest road through the cell (the one `RWID` describes): its lane count in bits 0–3 (0 = none), bit 4 one-way (no centre line), bit 5 divided (a carriageway with its partner across a median); bits 6–7 are 0 |
 
 Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 

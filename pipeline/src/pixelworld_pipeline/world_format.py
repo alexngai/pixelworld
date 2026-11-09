@@ -67,6 +67,9 @@ LAYERS = (
     # rails drawn in the street (M3.5): connections like ROAD (bits 0-7) and
     # what is drawn in bits 12-15 (roads.RAIL_KINDS)
     ("rail", b"RAIL", "<u2", 0),
+    # lanes and medians (M3.5): the widest road's lane count in bits 0-3, one-way
+    # in bit 4, divided (a carriageway with a median beside it) in bit 5 (lanes.py)
+    ("lane", b"LANE", "u1", 0),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -133,6 +136,7 @@ class Chunk:
     path_class: np.ndarray = field(default=None)  # uint8 path class id, 0 = none
     path_width: np.ndarray = field(default=None)  # uint8 path half-width, 1/32 cell
     rail: np.ndarray = field(default=None)  # uint16 rail connectivity | kind << 12
+    lane: np.ndarray = field(default=None)  # uint8 lane count | one-way << 4 | divided << 5
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -381,6 +385,7 @@ def write_package(
     path_class: np.ndarray | None = None,
     path_width: np.ndarray | None = None,
     rail: np.ndarray | None = None,
+    lane: np.ndarray | None = None,
     path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
@@ -426,6 +431,7 @@ def write_package(
         "path_class": path_class,
         "path_width": path_width,
         "rail": rail,
+        "lane": lane,
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)

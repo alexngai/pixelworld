@@ -59,6 +59,29 @@ describe("desert-southwest style pack", () => {
     expect(t.asphaltRamp).toBe(p.rampIds.get("asphalt"));
   });
 
+  it("builds lane tables (M3.5): lane lines per class, and none for a style without them", () => {
+    const p = buildPalette(style);
+    const vocab = { surfaces: {}, roadClasses: { "4": "motorway", "1": "residential" } };
+    const t = materialTables(style, p, vocab, (m) => m);
+    expect(t.roads[4 * 4 + 3]).toBe(1);
+    expect(t.roads[1 * 4 + 3]).toBe(0);
+    expect(Array.from(t.lanes)).toEqual([4, 1, 2, 1]);
+    expect(t.laneRamp).toBe(p.rampIds.get("concrete"));
+    const plain = { ...style, roads: { ...style.roads!, lanes: undefined } };
+    const off = materialTables(plain, p, vocab, (m) => m);
+    expect(off.lanes[0]).toBe(-1); // no lanes, no medians: roads draw as before
+    expect(off.laneRamp).toBe(-1);
+  });
+
+  it("rejects lane styles it can't draw", () => {
+    const lanes = (l: object) => ({ ...style, roads: { ...style.roads!, lanes: { ramp: "concrete", minPixels: 4, ...l } } });
+    expect(() => validateStyle(lanes({}))).not.toThrow();
+    expect(() => validateStyle(lanes({ ramp: "nope" }))).toThrow(StyleError);
+    expect(() => validateStyle(lanes({ minPixels: 0 }))).toThrow(StyleError);
+    expect(() => validateStyle(lanes({ dash: [0, 2] }))).toThrow(StyleError);
+    expect(() => validateStyle(lanes({ median: -1 }))).toThrow(StyleError);
+  });
+
   it("builds path tables: a ramp per class, stripes for crosswalks", () => {
     const p = buildPalette(style);
     const vocab = { surfaces: {}, pathClasses: { "1": "footway", "3": "crosswalk", "4": "unknown" } };

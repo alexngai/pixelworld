@@ -8,7 +8,10 @@ micro-terrain is what gets drawn and what vehicles drive on.
 Constraints from the cell layers keep the two consistent:
 - water cells are flat at their water level;
 - roads run on a bed cut along the line between connected road-cell centres,
-  following the cells' road profile, so road decals sit on smooth ground.
+  following the cells' road profile, so road decals sit on smooth ground;
+- sidewalks and crossings beside a road lie on its profile too where the
+  ground under them would step (M3.5), so a pavement band doesn't cross a
+  terrace the road was cut through.
 """
 
 from __future__ import annotations
@@ -17,11 +20,13 @@ import numpy as np
 
 from .gridify import cell_corner_heights, round_half_up
 from .roads import CONNECT_MASK, DIRS
-from .world_format import NO_WATER
+from .world_format import MICRO_MAX_OFFSET, NO_WATER
 
 # Road beds cover micro-corners within this distance (cells) of a road's centre
 # line: a bench about half a cell wide, wider than any road decal.
 ROAD_BED_RADIUS = 0.3
+# How far (cells) beyond its road's bed a sidewalk may lie and still follow it
+PATH_BED_REACH = 1.5
 
 
 def expand(cells: np.ndarray, k: int) -> np.ndarray:
@@ -93,6 +98,85 @@ def cut_road_beds(
     q: np.ndarray, segments: list[tuple[float, ...]], k: int, radius: float = ROAD_BED_RADIUS
 ) -> np.ndarray:
     """Set micro-corners near road centre lines to the road profile (micro-steps)."""
+    return _cut_beds(q, segments, k, radius)[0]
+
+
+def follow_beds(
+    q: np.ndarray,
+    segments: list[tuple[float, ...]],
+    paths: list[tuple[float, ...]],
+    k: int,
+    reach: float = PATH_BED_REACH,
+) -> np.ndarray:
+    """Road beds (`segments`, as cut_road_beds takes them) cut into `q`, and
+    carried on under the paths beside them (`paths`, segments of the same
+    form whose radius covers every micro-cell their band lies on): each path
+    segment takes the road segment nearest its middle, within `reach` cells
+    of that road's bed, and the micro-corners under it that the beds don't
+    cover take that road's profile where they lie along it. A sidewalk then
+    follows its road along and across, rather than the ground's terrace
+    steps, and one between two roads follows its own. Paths further from any
+    road keep their ground."""
+    from scipy.spatial import cKDTree
+
+    out, bed = _cut_beds(q, segments, k)
+    if not segments or not paths:
+        return out
+    roads = np.asarray([s[:7] for s in segments], dtype=np.float64)
+    a, b = roads[:, 0:2], roads[:, 3:5]
+    tree = cKDTree(0.5 * (a + b))
+    best = np.full(q.shape, np.inf)
+    target = np.zeros(q.shape)
+    hc, wc = q.shape
+
+    def along(px, py, j):
+        # where points lie along road segment j (0..1), and how far from it
+        v = b[j] - a[j]
+        t = np.clip(((px - a[j, 0]) * v[0] + (py - a[j, 1]) * v[1]) / float(v @ v), 0.0, 1.0)
+        return t, np.hypot(px - a[j, 0] - v[0] * t, py - a[j, 1] - v[1] * t)
+
+    for ax, ay, _, bx, by, _, r in paths:
+        mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
+        near = tree.query_ball_point((mx, my), reach + 1.0)
+        if not near:
+            continue
+        dist = [float(along(np.array(mx), np.array(my), j)[1]) - roads[j, 6] for j in near]
+        j = near[int(np.argmin(dist))]
+        if min(dist) > reach:
+            continue
+        x0 = max(0, int(np.floor((min(ax, bx) - r) * k)))
+        x1 = min(wc - 1, int(np.ceil((max(ax, bx) + r) * k)))
+        y0 = max(0, int(np.floor((min(ay, by) - r) * k)))
+        y1 = min(hc - 1, int(np.ceil((max(ay, by) + r) * k)))
+        if x1 < x0 or y1 < y0:
+            continue
+        gx, gy = np.meshgrid(np.arange(x0, x1 + 1) / k, np.arange(y0, y1 + 1) / k)
+        vx, vy = bx - ax, by - ay
+        s = np.clip(((gx - ax) * vx + (gy - ay) * vy) / (vx * vx + vy * vy), 0.0, 1.0)
+        d = np.hypot(gx - ax - vx * s, gy - ay - vy * s)
+        # only where the ground under the pavement steps: a terrace (a micro-cell
+        # too steep to slope) touching the band; smooth ground stays as it is
+        h = round_half_up(out[y0 : y1 + 1, x0 : x1 + 1])
+        quad = (h[:-1, :-1], h[:-1, 1:], h[1:, 1:], h[1:, :-1])
+        steep = np.maximum.reduce(quad) - np.minimum.reduce(quad) > MICRO_MAX_OFFSET
+        core = d <= r - 1.0 / k
+        if not (steep & (core[:-1, :-1] | core[:-1, 1:] | core[1:, 1:] | core[1:, :-1])).any():
+            continue
+        sub = best[y0 : y1 + 1, x0 : x1 + 1]
+        take = (d <= r) & (d < sub)
+        sub[take] = d[take]
+        t, _ = along(gx, gy, j)
+        ha, hb = roads[j, 2], roads[j, 5]
+        target[y0 : y1 + 1, x0 : x1 + 1][take] = ((ha + (hb - ha) * t) * k)[take]
+    take = np.isfinite(best) & ~bed
+    out[take] = target[take]
+    return out
+
+
+def _cut_beds(
+    q: np.ndarray, segments: list[tuple[float, ...]], k: int, radius: float = ROAD_BED_RADIUS
+) -> tuple[np.ndarray, np.ndarray]:
+    """cut_road_beds, and the micro-corners it set (the bed)."""
     q = q.copy()
     best = np.full(q.shape, np.inf)
     target = np.zeros(q.shape)
@@ -116,7 +200,7 @@ def cut_road_beds(
         target[y0 : y1 + 1, x0 : x1 + 1][take] = ((ha + (hb - ha) * t) * k)[take]
     on = np.isfinite(best)
     q[on] = target[on]
-    return q
+    return q, on
 
 
 def corner_mean(micro_cells: np.ndarray) -> np.ndarray:
@@ -163,6 +247,8 @@ def build_micro(
     road_mask: np.ndarray,
     road_half_width: np.ndarray | None = None,
     smooth: np.ndarray | None = None,
+    path_mask: np.ndarray | None = None,
+    path_half_width: np.ndarray | None = None,
 ) -> np.ndarray:
     """Integer micro-corner heights (micro-steps) from micro-corner elevations.
 
@@ -170,6 +256,8 @@ def build_micro(
     base/shape/water/road_mask: the finished cell layers, shape (cy, cx).
     smooth: optional per-cell smoothing (Gaussian sigma in micro-cells, 0 for
     none), applied before roads and water are cut in.
+    path_mask/path_half_width: paths that lie on the road beds beside them
+    (sidewalks and crossings; follow_beds).
     Micro-cells follow from world_format.micro_cells.
     """
     cy, cx = base.shape
@@ -180,6 +268,16 @@ def build_micro(
         q = smooth_cells(q, smooth, k)
     q = flatten_water(q, water, k)
     centre = cell_corner_heights(base, shape).mean(axis=0)
-    q = cut_road_beds(q, road_segments(road_mask, centre, road_half_width), k)
+    beds = road_segments(road_mask, centre, road_half_width)
+    if path_mask is not None and (path_mask & CONNECT_MASK).any():
+        # every micro-cell a path's band lies on: its half-width and a micro-cell more
+        hw = np.zeros(path_mask.shape) if path_half_width is None else path_half_width
+        segs = [
+            (*s[:6], max(hw[int(s[1]), int(s[0])], hw[int(s[4]), int(s[3])]) + 1.0 / k)
+            for s in road_segments(path_mask, np.zeros(path_mask.shape))
+        ]
+        q = follow_beds(q, beds, segs, k)
+    else:
+        q = cut_road_beds(q, beds, k)
     q = flatten_water(q, water, k)  # water wins where a road bed touches a shore
     return round_half_up(q).astype(np.int16)
