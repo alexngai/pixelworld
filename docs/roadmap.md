@@ -485,7 +485,7 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 - **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
 - **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
 
-### M3.5: San Francisco — a city by its fabric — in progress (four rounds)
+### M3.5: San Francisco — a city by its fabric — paused after four rounds
 
 **Goal:** a second region recognizable by its ordinary streets, not only by its landmarks. This pulls part of M5 (a second region and style pack) forward.
 
@@ -728,7 +728,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 
 ### M4: Drive, fly, build
 
-**Goal:** make the world playable.
+**Goal:** make the world playable, through a public engine API that other games and interaction modes can use: pixelworld becomes a library and an asset generation tool (proposal: [library.md](library.md)). M4's gameplay is built as controllers and plugins on that API.
 
 - Car on the road network and terrain slopes, with grid collision.
 - Plane with an arcade flight model, drop shadow and canyon collision, on the flying level (M2.5), with take-off and landing moving between levels.
@@ -770,7 +770,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between). M3.5 (San Francisco) has had four rounds: its landmarks pass the blind test, and 2 of its 6 ordinary street views do. M4's ambient traffic is done; the rest of M4 is next.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between). M3.5 (San Francisco) is paused after four rounds: its landmarks pass the blind test, and 2 of its 6 ordinary street views do. M4's ambient traffic is done; the rest of M4 is next, starting with the library proposal ([library.md](library.md)) and the earlier milestones' loose ends.
 
 ## 3. Technology tracks
 
@@ -803,7 +803,7 @@ The current defaults are in parentheses.
 
 1. **Multiplayer:** single-player through M5, but keep the simulation deterministic so it stays possible.
 2. **Hand-authoring budget:** about 10–20 hero landmarks per region.
-3. **Second region:** a tier-1 city with open 3D city models.
+3. **Second region:** a tier-1 city with open 3D city models; candidates are being compared for data as rich as San Francisco's (building records, 3D models, lidar, transit).
 4. **Target devices:** desktop and modern mobile browsers; WebGL2 required.
-5. **Commercial intent and timeline:** affects when legal review happens and which depiction variants are the defaults.
+5. **Commercial intent: fully open source** (decided). Code, style packs and world packages are published under open licences ([library.md](library.md) §3.6); world packages stay ODbL as derived databases.
 6. **Grid building:** core gameplay loop or sandbox tool?
