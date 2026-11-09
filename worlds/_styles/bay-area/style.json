@@ -592,6 +592,14 @@
     "vehicle.ferry": {
       "generator": "ferry",
       "ramps": {"hull.a": "paint-slate", "band.a": "tower-white", "hull.b": "jade", "band.b": "paint-white", "hull.c": "asphalt", "band.c": "chinatown-red", "cabin": "tower-white", "window": "lit", "roof": "concrete", "trim": "bridge-grey"}
+    },
+    "vehicle.car.player": {
+      "generator": "car",
+      "ramps": {"paint.a": "bridge-orange", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete"}
+    },
+    "vehicle.plane": {
+      "generator": "plane",
+      "ramps": {"body.a": "paint-white", "stripe.a": "chinatown-red", "body.b": "paint-butter", "stripe.b": "paint-slate", "body.c": "paint-white", "stripe.c": "bridge-orange", "glass": "glass", "trim": "bridge-grey", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "shadow": "asphalt"}
     }
   },
   "night": {
