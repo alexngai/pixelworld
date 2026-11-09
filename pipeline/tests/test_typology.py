@@ -134,3 +134,97 @@ def test_parts_take_their_buildings_year_and_only_explicit_rules():
     ]
     assert counts == {"building.tower.deco": 2}
     assert insts[1]["yr"] == 1927 and insts[2]["fl"] == 50 and "fr" not in insts[1]
+
+
+def test_class_rules_match_codes_exactly_or_by_prefix():
+    insts = _row(1.0, 5)
+    facts = [
+        {"year": 1895, "stories": 4, "use": "residential", "class": "A4"},
+        {"year": 1910, "stories": 5, "use": "residential", "class": "C7"},
+        {"year": 1925, "stories": 6, "use": "residential", "class": "C"},
+        {"year": 1930, "stories": 3, "use": "residential", "class": "A40"},
+        {
+            "year": 1930,
+            "stories": 3,
+            "use": "residential",
+            "class": 4,
+        },  # a number, as YAML reads it
+    ]
+    spec = {
+        "rules": [
+            {"group": "building.rowhouse.brownstone", "classes": ["A4", "B1"]},
+            {"group": "building.tenement", "classes": ["C*"]},
+            {"group": "building.house", "classes": [4]},
+        ]
+    }
+    f = typology.features(insts, STREET, None, 25.0, facts)
+    assert [g["class"] for g in f] == ["A4", "C7", "C", "A40", "4"]
+    counts = typology.classify(insts, spec, f)
+    assert [i["g"] for i in insts] == [
+        "building.rowhouse.brownstone",
+        "building.tenement",
+        "building.tenement",  # "C*" also matches "C" itself
+        "building.residential",  # A40 is neither A4 nor a C
+        "building.house",
+    ]
+    assert counts == {
+        "building.rowhouse.brownstone": 1,
+        "building.tenement": 2,
+        "building.house": 1,
+    }
+    assert typology.class_matches(["*"], "Z") and not typology.class_matches(["*"], "")
+    # without facts there is no class to match
+    bare = _row(1.0, 1)
+    assert not typology.classify(bare, spec, typology.features(bare, STREET, None, 25.0))
+
+
+def test_roof_rules_use_the_facts_roof_else_overtures():
+    insts = _row(1.0, 4)
+    insts[0]["_roof"] = "mansard"  # Overture's, any shape (rs only holds the drawable ones)
+    insts[1]["rs"] = "gabled"
+    insts[2]["_roof"] = "flat"  # the facts say otherwise: they win
+    facts = [None, None, {"year": 1870, "roof": "mansard"}, None]
+    f = typology.features(insts, STREET, None, 25.0, facts)
+    assert [g.get("roof") for g in f] == ["mansard", "gabled", "mansard", None]
+    spec = {
+        "rules": [
+            {"group": "building.apartment.haussmann", "roofs": ["mansard"]},
+            {"group": "building.house", "roofs": ["gabled", "hipped"]},
+        ]
+    }
+    typology.classify(insts, spec, f)
+    assert [i["g"] for i in insts] == [
+        "building.apartment.haussmann",
+        "building.house",
+        "building.apartment.haussmann",
+        "building.residential",  # no roof shape known: no roof rule matches
+    ]
+
+
+def test_parts_share_their_buildings_class_and_roof():
+    insts = _row(1.0, 2)
+    for inst in insts:
+        inst["_grp"] = "tower"
+        inst["g"] = "building.tower"
+        inst["_roof"] = "flat"
+    facts = [{"year": 1931, "class": "O4"}, None]
+    f = typology.features(insts, STREET, None, 25.0, facts)
+    assert all(g["parts"] and g["class"] == "O4" and g["roof"] == "flat" for g in f)
+    typology.classify(
+        insts,
+        {
+            "rules": [
+                {"group": "building.tower.deco", "from": ["building.tower"], "classes": ["O*"]}
+            ]
+        },
+        f,
+    )
+    assert {i["g"] for i in insts} == {"building.tower.deco"}
+
+
+def test_use_group_takes_normalized_uses_as_they_are():
+    for word in typology.USE_GROUPS:
+        assert typology.use_group(word) == word
+        assert typology.use_group(word.capitalize()) == word
+    assert typology.use_group("Government") == "civic"
+    assert typology.use_group("") == "" and typology.use_group(None) == ""

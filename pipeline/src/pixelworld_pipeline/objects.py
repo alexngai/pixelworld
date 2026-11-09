@@ -682,10 +682,14 @@ ROOF_SHAPES = {"flat", "pyramidal", "dome", "hipped", "half_hipped", "gabled", "
 
 
 def _hints(row: dict) -> dict:
-    """Shape and colour hints from Overture for the building generator (M3)."""
+    """Shape and colour hints from Overture for the building generator (M3).
+    `_roof` keeps any roof shape for typology rules (`roofs:`); like every
+    `_` key it's left out of the package."""
     out: dict[str, Any] = {}
     if row.get("roof_shape") in ROOF_SHAPES:
         out["rs"] = row["roof_shape"]
+    if isinstance(row.get("roof_shape"), str) and row["roof_shape"]:
+        out["_roof"] = row["roof_shape"]
     for key, col in (("fc", "facade_color"), ("rc", "roof_color")):
         v = row.get(col)
         if isinstance(v, str) and v.startswith("#") and len(v) == 7:
