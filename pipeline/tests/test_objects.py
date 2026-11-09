@@ -169,6 +169,103 @@ def test_place_buildings_footprints_parts_and_clear_zones(monkeypatch):
     assert cleared == []
 
 
+def _rect(w: float, d: float, x: float = 0.0, y: float = 0.0):
+    return shapely.box(x, y, x + w, y + d)
+
+
+def test_implausible_footprints_are_tall_specks_with_nothing_to_say_what_they_are():
+    speck = {"id": "t", "class": None, "height": 22.1, "has_parts": False}
+    # Alamo Square's "apartment block": 45 m², 5.7 m wide, 22 m tall
+    assert objects.footprint_width(_rect(5.7, 7.9)) == pytest.approx(5.7)
+    assert objects.implausible_footprint(speck, _rect(5.7, 7.9), {})
+    for keep in (
+        {"class": "apartments"},  # a class says it's a building
+        {"subtype": "civic"},
+        {"names": {"primary": "Conservatory of Flowers"}},
+        {"has_parts": True},  # mapped in parts: someone modelled it
+        {"height": 4.0},  # a restroom or a kiosk
+        {"height": 12.0},  # under 2.5 times its width
+        {"height": None},  # no stated height: drawn at a plausible default
+    ):
+        assert not objects.implausible_footprint(speck | keep, _rect(5.7, 7.9), {}), keep
+    assert not objects.implausible_footprint(speck, _rect(12, 20), {})  # 240 m²: not a speck
+    assert objects.implausible_footprint(speck | {"height": None, "num_floors": 7}, _rect(5, 7), {})
+    # the spec can loosen or tighten the rule
+    assert objects.implausible_footprint(
+        speck | {"height": 12.0}, _rect(5.7, 7.9), {"minAspect": 2}
+    )
+    assert not objects.implausible_footprint(speck, _rect(5.7, 7.9), {"maxArea": 40})
+
+
+def test_place_buildings_drops_tall_specks_in_parks_only(monkeypatch):
+    p = _placement(monkeypatch)
+    lon0, lat0 = -115.193, 36.004
+
+    def box(lon, lat, dlon, dlat):
+        return shapely.box(lon, lat, lon + dlon, lat + dlat)
+
+    def speck(rid, lon, lat, **kw):
+        # about 6 × 7 m, 22 m tall
+        row = {"id": rid, "class": None, "height": 22.0, "has_parts": False}
+        return row | {"geometry": box(lon, lat, 0.00007, 0.00006).wkt} | kw
+
+    rows = [
+        speck("tree", lon0 + 0.0005, lat0 + 0.0005),  # in the park
+        speck("tower", lon0 + 0.003, lat0 + 0.0005),  # the same, outside the park
+        speck("kiosk", lon0 + 0.0010, lat0 + 0.0010, height=3.5),
+        speck("named", lon0 + 0.0015, lat0 + 0.0015, names={"primary": "Bell tower"}),
+        speck("museum", lon0 + 0.0002, lat0 + 0.0002, height=20.0, **{"class": "museum"}),
+    ]
+    park = p.project(box(lon0, lat0, 0.002, 0.002))
+    spec = {"minArea": 15}
+    stats: dict = {}
+    out, _ = objects.place_buildings(
+        p, spec, rows, [], lambda x, y: False, stats=stats, parks=[park]
+    )
+    kept = {o["s"] for o in out}
+    assert kept == {objects._stable_int(r) for r in ("tower", "kiosk", "named", "museum")}
+    assert stats == {"implausible": 1}
+    # without parks, or with the rule off, every footprint stays
+    out, _ = objects.place_buildings(p, spec, rows, [], lambda x, y: False)
+    assert len(out) == 5
+    off = spec | {"implausible": None}
+    out, _ = objects.place_buildings(p, off, rows, [], lambda x, y: False, parks=[park])
+    assert len(out) == 5
+
+
+def test_park_polygons_come_from_the_lawn_classes_or_the_rule_or_a_default(monkeypatch):
+    calls = []
+
+    def land_use(release, box, classes):
+        calls.append((box, tuple(classes)))
+        lon, lat = box[0] + 0.001, box[1] + 0.001
+        return [
+            {
+                "id": f"p{len(calls)}",
+                "geometry": shapely.box(lon, lat, lon + 0.001, lat + 0.001).wkt,
+            }
+        ]
+
+    monkeypatch.setattr(objects.overture, "land_use", land_use)
+    region = Region.from_dict(SPEC | {"sources": {"overture": {"release": "r"}}})
+    boxes = [[-115.2, 36.0, -115.195, 36.005], [-115.195, 36.005, -115.19, 36.01]]
+    parks = objects.park_polygons(region, {}, boxes)
+    assert len(parks) == 2 and all(pk.area > 1000 for pk in parks)  # projected metres
+    assert calls[0] == (tuple(boxes[0]), tuple(objects.PARK_LAND_USE))
+    lawn = Region.from_dict(
+        SPEC
+        | {
+            "sources": {"overture": {"release": "r"}},
+            "ground": {"lawn": {"landUse": ["park", "golf_course"]}},
+        }
+    )
+    objects.park_polygons(lawn, {}, boxes[:1])
+    assert calls[-1][1] == ("park", "golf_course")
+    objects.park_polygons(lawn, {"implausible": {"landUse": ["cemetery"]}}, boxes[:1])
+    assert calls[-1][1] == ("cemetery",)
+    assert objects.park_polygons(lawn, {"implausible": None}, boxes) is None
+
+
 def test_objects_file_is_written_compressed_and_hashed(tmp_path):
     z = np.zeros((4, 4), dtype=np.int16)
     m = write_package(
