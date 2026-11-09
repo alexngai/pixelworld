@@ -76,7 +76,7 @@
     "farmland": { "ramp": "lawn", "pattern": "fields", "density": 0.5 },
     "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
     "snow": { "ramp": "tower-white", "pattern": "sparkle", "density": 0.02 },
-    "lawn": { "ramp": "lawn", "pattern": "speckle", "density": 0.02 },
+    "lawn": { "ramp": "lawn", "pattern": "speckle", "density": 0.02, "light": "slope" },
     "yard": { "ramp": "lawn", "pattern": "fields", "density": 0.6 }
   },
   "roads": {

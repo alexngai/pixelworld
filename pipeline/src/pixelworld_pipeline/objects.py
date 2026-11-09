@@ -8,7 +8,13 @@ from the same spec at different resolutions get the same objects.
 Region spec (all sections optional):
 
     objects:
-      buildings: { minArea: 30, towerMeters: 45, podiumMeters: 15 }
+      buildings:
+        minArea: 30
+        towerMeters: 45
+        podiumMeters: 15
+        # footprints that are likely trees, dropped where they stand in a park
+        # (these are the defaults; `implausible: null` keeps every footprint)
+        implausible: { maxArea: 200, minHeight: 8, minAspect: 2.5, landUse: [park, ...] }
       vegetation:   # scatter by ESA WorldCover class, or where the canopy map has trees
         - { group: tree.pinyon-juniper, landcover: [tree], spacing: 22, density: 0.8 }
         - { group: tree, canopy: 3, spacing: 12, byLandcover: { tree: [tree.cypress] } }
@@ -29,6 +35,14 @@ Region spec (all sections optional):
         heightStretch: 2.5                          # overrides the style pack's
         buildings: { scale: 2, minHeightMeters: 60 } # oversize; keep only tall ones
         landmarks: { scale: 4 }                     # or `scale:` on one landmark
+
+Implausible footprints (M3.5): a speck of a footprint with no class, type or
+name, standing much taller than it is wide inside a park, is almost always a
+tree that machine-made footprints read as a building (a 45 m², 22 m "apartment
+block" in Alamo Square). Real park buildings carry a class or a name (the
+conservatory, a museum), have parts, or are low (restrooms, kiosks), so they
+stay. The parks are Overture land-use polygons: the `landUse` list, else the
+region's `ground.lawn.landUse`, else PARK_LAND_USE.
 
 A depiction scale s draws an object as if its local metres per cell were m / s:
 footprint and height grow by s about the object's anchor. Oversized buildings
@@ -64,6 +78,23 @@ RESIDENTIAL = {
 DEFAULT_HEIGHT = {"residential": 6.0, "small": 3.0, "other": 8.0}
 SMALL = {"garage", "garages", "shed", "carport", "hut", "roof", "kiosk", "toilets"}
 FLOOR_METERS = 3.5
+# Overture land-use classes where a lone, tall speck of a footprint is more
+# likely a tree than a building (when the region names no lawn classes)
+PARK_LAND_USE = [
+    "park",
+    "dog_park",
+    "village_green",
+    "golf_course",
+    "pitch",
+    "recreation_ground",
+    "grass",
+    "garden",
+    "cemetery",
+    "grave_yard",
+    "meadow",
+]
+# the implausible-footprint rule's defaults (see the module docstring)
+IMPLAUSIBLE = {"maxArea": 200.0, "minHeight": 8.0, "minAspect": 2.5}
 
 
 def _seed(region: Region, name: str) -> int:
@@ -721,6 +752,39 @@ def lidar_massing(
     return round(podium, 1), towers
 
 
+def footprint_width(geom) -> float:
+    """The narrow side of a footprint's smallest enclosing rectangle (metres)."""
+    rect = shapely.minimum_rotated_rectangle(geom)
+    if rect.geom_type != "Polygon":
+        return 0.0
+    xy = np.asarray(rect.exterior.coords)
+    sides = np.hypot(*np.diff(xy[:3], axis=0).T)
+    return float(sides.min())
+
+
+def implausible_footprint(row: dict, geom, rule: dict[str, Any]) -> bool:
+    """True for a footprint no building would have (by itself; the caller
+    checks that it stands in a park): no class, type or name, no parts, at
+    most `maxArea` m², and a stated height (Overture's, or its floors) of at
+    least `minHeight` m and `minAspect` times its width."""
+    if row.get("class") or row.get("subtype") or row.get("has_parts"):
+        return False
+    if ((row.get("names") or {}).get("primary") or "").strip():
+        return False
+    rule = IMPLAUSIBLE | rule
+    if geom.area > float(rule["maxArea"]):
+        return False
+    if row.get("height"):
+        height = float(row["height"])
+    elif row.get("num_floors"):
+        height = float(row["num_floors"]) * FLOOR_METERS
+    else:
+        return False  # a default height is plausible by construction
+    if height < float(rule["minHeight"]):
+        return False
+    return height >= float(rule["minAspect"]) * footprint_width(geom)
+
+
 def replaced_by_landmark(row: dict, replaces: set[str]) -> bool:
     """True if a landmark stands in for this building (by Overture id or name)."""
     if not replaces:
@@ -740,16 +804,22 @@ def place_buildings(
     replaces: set[str] | None = None,
     heights: list | None = None,
     stats: dict | None = None,
+    parks: list | None = None,
 ) -> tuple[list[dict], list]:
     """Footprint instances (buildings, and parts of buildings that have them).
     Buildings a landmark replaces (D-051) are left out, with their parts.
     With a lidar height grid (`heights`, D-052), buildings without a height (or
     with one far below what lidar sees) take lidar's, and large footprints whose
-    roofs stand well above their podium get lidar-derived tower parts."""
+    roofs stand well above their podium get lidar-derived tower parts.
+    Implausible footprints (`implausible_footprint`) whose centroid lies in
+    one of the `parks` (projected polygons) are left out; `stats` counts those
+    that would have been drawn."""
     min_area = float(spec.get("minArea", 30))
     tower_m = float(spec.get("towerMeters", 45))
     podium_m = float(spec.get("podiumMeters", 15))
     tolerance = float(spec.get("simplifyMeters", 2))
+    implausible = spec.get("implausible", {})
+    park_tree = shapely.STRtree(parks) if parks and implausible is not None else None
     out: list[dict] = []
     polys = []
     parts_by_building: dict[str, list[dict]] = {}
@@ -757,17 +827,30 @@ def place_buildings(
         if float(part.get("min_height") or 0) <= 3:
             parts_by_building.setdefault(part["building_id"], []).append(part)
 
+    def placed(poly) -> tuple | None:
+        """(projected centroid, cell x, cell y) of a polygon that is drawn
+        (large enough, inside the grid, clear of landmarks), else None."""
+        if poly.geom_type != "Polygon" or poly.area < min_area:
+            return None
+        c = poly.centroid
+        cx, cy = p.to_cells(np.array([c.x]), np.array([c.y]))
+        if not p.inside(cx, cy)[0] or clear(c.x, c.y):
+            return None
+        return c, cx, cy
+
+    def in_park(geom) -> bool:
+        hits = park_tree.query(geom.centroid, predicate="within")
+        return len(hits) > 0
+
     def add(
         row: dict, cls: str | None, height_m: float, group: str, hints: dict, geom=None
     ) -> None:
         geom = geom if geom is not None else p.project(shapely.from_wkt(row["geometry"]))
         for poly in list(geom.geoms) if hasattr(geom, "geoms") else [geom]:
-            if poly.geom_type != "Polygon" or poly.area < min_area:
+            at = placed(poly)
+            if at is None:
                 continue
-            c = poly.centroid
-            cx, cy = p.to_cells(np.array([c.x]), np.array([c.y]))
-            if not p.inside(cx, cy)[0] or clear(c.x, c.y):
-                continue
+            c, cx, cy = at
             polys.append(poly)
             inst = {
                 "g": building_group(cls, height_m, tower_m),
@@ -789,17 +872,22 @@ def place_buildings(
     for row in rows:
         if replaced_by_landmark(row, skip):
             continue
+        geom = p.project(shapely.from_wkt(row["geometry"]))
+        if park_tree is not None and implausible_footprint(row, geom, implausible):
+            if in_park(geom):
+                if stats is not None and any(
+                    placed(g) is not None for g in getattr(geom, "geoms", [geom])
+                ):
+                    stats["implausible"] = stats.get("implausible", 0) + 1
+                continue
         cls = row.get("class")
-        if cls is None and small_house_m2 > 0:
+        if cls is None and small_house_m2 > 0 and geom.area <= small_house_m2:
             # ML-derived footprints carry no class; small ones in a city are houses
-            area = p.project(shapely.from_wkt(row["geometry"])).area
-            if area <= small_house_m2:
-                cls = "house"
+            cls = "house"
         height = _height(row, _kind(cls))
         my_parts = parts_by_building.get(row["id"], []) if row.get("has_parts") else []
         hints = _hints(row)
         if heights and not my_parts:
-            geom = p.project(shapely.from_wkt(row["geometry"]))
             got = None
             for grid in heights:  # the first grid that covers the footprint
                 got = lidar_massing(geom, grid, row.get("height"), spec.get("lidar") or {})
@@ -818,12 +906,30 @@ def place_buildings(
                     add(row, cls, podium, row["id"], hints, geom)
                 continue
         if my_parts:
-            add(row, cls, min(height, podium_m), row["id"], {})
+            add(row, cls, min(height, podium_m), row["id"], {}, geom)
             for part in sorted(my_parts, key=lambda r: r["id"]):
                 add(part, cls, _height(part, "other"), row["id"], hints)
         else:
-            add(row, cls, height, row["id"], hints)
+            add(row, cls, height, row["id"], hints, geom)
     return out, polys
+
+
+def park_polygons(region: Region, spec: dict[str, Any], boxes: list) -> list | None:
+    """Projected park polygons for the implausible-footprint rule, over the
+    buildings' lon/lat boxes; None where the spec turns the rule off."""
+    from .ground import project_rows
+
+    rule = spec.get("implausible", {})
+    if rule is None:
+        return None
+    lawn = (region.ground or {}).get("lawn") or {}
+    classes = list(rule.get("landUse") or lawn.get("landUse") or PARK_LAND_USE)
+    release = region.sources["overture"]["release"]
+    rows: dict[str, dict] = {}
+    for box in boxes:
+        for r in overture.land_use(release, tuple(box), classes):
+            rows[r["id"]] = r
+    return project_rows(region, [rows[k] for k in sorted(rows)])
 
 
 def type_buildings(region: Region, found: list[dict], spec: dict, streets, water) -> list[dict]:
@@ -1189,7 +1295,11 @@ def place(
             replaces,
             heights=grids or None,
             stats=lidar_stats,
+            parks=park_polygons(region, spec["buildings"], boxes),
         )
+        dropped = lidar_stats.pop("implausible", 0)
+        if dropped:
+            print(f"buildings: dropped {dropped} implausible footprints in parks")
         if lidar_stats:
             print(f"lidar: {lidar_stats}")
         if snap is not None:

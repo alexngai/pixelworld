@@ -32,6 +32,7 @@ import {
   type TrafficSublayer,
 } from "./traffic";
 import { FogLayer } from "./fog";
+import type { TileBake } from "./benchReport";
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
 const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
   string,
@@ -92,6 +93,10 @@ interface PixelworldDebug {
   setFog: (opts: { enabled?: boolean; paused?: boolean; time?: number }) => void;
   /** Draw the current frame n times, waiting for the GPU each time: mean milliseconds per frame. */
   timeFrames: (n: number) => number;
+  /** Set the zoom (integer upscale of the baked tiles), as the 1–6 keys do. */
+  setZoom: (zoom: number) => void;
+  /** Every tile baked so far, with its timings: only with bench=1 (apps/web/bench.html), else empty. */
+  tileBakes: () => TileBake[];
 }
 declare global {
   interface Window {
@@ -315,7 +320,13 @@ async function main() {
   const tiles = new Map<TileKey, TileEntry>();
   let gpuBytes = 0;
   let frameNo = 0;
+  // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
+  const tileBakes: TileBake[] | null = params.get("bench") === "1" ? [] : null;
   service.onTile = (res) => {
+    if (tileBakes && res.stats) {
+      const { meshMs, bakeMs, vertices } = res.stats;
+      tileBakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
+    }
     if (res.image) {
       const img = compositor.upload(res.image);
       const bytes = res.image.width * res.image.height * 4;
@@ -928,6 +939,13 @@ async function main() {
       }
       return (performance.now() - t0) / n;
     },
+    setZoom: (zoom) => {
+      camera.zoom = Math.max(1, Math.round(zoom));
+      zoomFromParams = true;
+      renderedComplete = false;
+      dirty = true;
+    },
+    tileBakes: () => (tileBakes ? tileBakes.slice() : []),
   };
 
   requestAnimationFrame(frame);

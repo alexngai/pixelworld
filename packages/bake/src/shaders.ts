@@ -243,6 +243,32 @@ vec2 wayGrade(ivec2 c, int mask, bool path) {
   return inverse(a) * b;
 }
 
+// Height (micro-steps) of the drawn micro-terrain at micro-coordinates p,
+// clamped to the slice (its margin keeps every owned pixel's ring inside).
+float microHeightAt(vec2 p) {
+  vec2 q = clamp(p, vec2(0.0), vec2(microSize()));
+  ivec2 m = clamp(ivec2(floor(q)), ivec2(0), microSize() - 1);
+  return topHeight(cornersAt(m), clamp(q - vec2(m), 0.0, 1.0));
+}
+
+// The ground's slope around a point in world cells (micro-steps per cell, x
+// and y): a plane fitted to the drawn heights on a 3×3 ring SLOPE_CELLS apart,
+// so a slope drawn as flats and risers (heights are whole micro-steps) reads
+// as one slope, as pavement does with its way's grade.
+const float SLOPE_CELLS = 1.0;
+vec2 smoothGrade(vec2 grid) {
+  vec2 p = (grid - vec2(uSliceOrigin)) * float(uK);
+  float r = SLOPE_CELLS * float(uK);
+  vec2 g = vec2(0.0);
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      if (i == 0 && j == 0) continue;
+      g += vec2(float(i), float(j)) * microHeightAt(p + vec2(float(i), float(j)) * r);
+    }
+  }
+  return g / (6.0 * SLOPE_CELLS);  // least squares: Σ i² = 6 per axis over the ring
+}
+
 // Real widths (D-050): a road or path can be wider than its cells, so look at
 // the cells within reach and take the nearest way (relative to its half-width)
 // that covers this point. Roads are at least the style's width for their class.
@@ -361,13 +387,13 @@ void main() {
   bool riser = false;
   float railShade = 0.0;
 #ifdef FIELD_WAYS
+  bool paved = false;
   if (uWayReach > 0) {
     realWidths = true;
     // Pavement is lit by its way's grade rather than its micro-tiles, so a
     // steep street drawn as flats and ramps reads as one slope, not stripes.
     // Terrace walls (risers) on pavement take the pavement a shade darker
     // rather than pale strata.
-    bool paved = false;
     vec3 gradeN;
     if (kind != 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN);
     if (paved) {
@@ -375,6 +401,22 @@ void main() {
       riser = vertical;
     }
     if (!vertical && mat < 100) railShade = railsDecal(ramp, pattern);
+  }
+  // Surfaces the style lights by slope (lawns, smoothed in the micro-terrain):
+  // lit by the ground's slope over about a cell rather than by each micro-tile,
+  // so a sloped lawn drawn in height steps reads as one slope, not stripes. Its
+  // risers take its own colour a shade darker, as pavement's do. Other
+  // surfaces keep their terraces.
+  if (!paved && kind != 3 && mat < 100 && uSurfaces[mat].w > 0.5) {
+    vec2 g = smoothGrade(vGrid) * uStepWorld / float(uK);
+    vec3 sn = normalize(vec3(-g, 1.0));
+    n = vec3(uRot * sn.xy, sn.z);
+    int own = int(uSurfaces[mat].x);
+    if (vertical && own >= 0) {
+      ramp = own;
+      pattern = 0;
+      riser = true;
+    }
   }
 #endif
   if (!realWidths && roadMask != 0 && !vertical && mat < 100) {

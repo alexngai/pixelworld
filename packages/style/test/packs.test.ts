@@ -21,4 +21,13 @@ describe("every style pack", () => {
       for (const g of ["building.residential", "building.commercial", "building.tower", "tree", "shrub"])
         expect(Object.keys(style.assets ?? {})).toContain(g);
     });
+
+  it("lights San Francisco's smoothed lawns by slope and keeps the Southwest's terraces", () => {
+    const lit = (id: string) =>
+      Object.entries((packs.find(([p]) => p === id)![1] as StylePack).surfaces)
+        .filter(([, s]) => s.light === "slope")
+        .map(([name]) => name);
+    expect(lit("bay-area")).toEqual(["lawn"]);
+    expect(lit("desert-southwest")).toEqual([]);
+  });
 });

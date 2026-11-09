@@ -325,9 +325,9 @@ packages/generators/      terrain and object meshes (buildings, networks, vegeta
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
 packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models (flight†, building†, cell occupancy†)
-apps/web/                 player app
+apps/web/                 player app; bench.html, the benchmark page
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
-tools/                    headless offline baking (Playwright): hero-bake.mjs
+tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs
 e2e/                      Playwright golden-image and behaviour tests
 ```
 
@@ -337,4 +337,27 @@ e2e/                      Playwright golden-image and behaviour tests
 - **Format:** cross-language round-trip tests on golden chunk files.
 - **Bake:** golden-image tests in headless Chromium on SwiftShader, with a small tolerance (`e2e/`). Behaviour tests check that every rotation is hole-free, that sub-pixel scrolling moves the image rigidly (no shimmer), and that occluded players show a silhouette. GPU rasterization isn't guaranteed to be bit-identical across devices, so goldens come from software rendering only. Hero assets are baked offline only, so they are pixel-exact.
 - **Art review:** each milestone ends with a screenshot review at 1× zoom against a style reference sheet.
-- **Performance budgets:** targets are 60 fps compositing on a mid-range laptop and recent phones, and tile bake time low enough that streaming never shows holes at normal driving speed. M0 measurements are in [roadmap.md](roadmap.md#m0-results).
+- **Performance budgets:** targets are 60 fps compositing on a mid-range laptop and recent phones, and tile bake time low enough that streaming never shows holes at normal driving speed. M0 measurements are in [roadmap.md](roadmap.md#m0-results); the benchmark page below measures them on any machine.
+
+### Benchmarks
+
+`apps/web/bench.html` measures tile bakes, frames and memory on the machine and GPU it runs on.
+
+- **On your desktop:** run `pnpm bench`. It starts the dev server and opens http://localhost:5173/bench.html (if `pnpm dev` is already running, open that address instead). Press **Run**, keep the tab in front (browsers slow animation frames in background tabs) and don't edit sources meanwhile (the dev server would reload the page). It takes a few minutes. Then **Copy text** or **Copy JSON**. The report's GPU line names the renderer the bake worker got; if it says SwiftShader or llvmpipe, the browser isn't using the GPU (check `chrome://gpu`).
+- **Headless:** `pnpm bench:headless` (`tools/bench.mjs`) runs the page in Playwright's Chromium on SwiftShader and prints the report. Options: `--out report.json` (also writes `report.txt`), `--cases sw-drive,sf-walk`, `--size 1280x720`, `--gpu --headed` for the system GPU in a window, `--url` for a running server.
+- **Cases:** the Southwest's driving level at Grand Canyon Village (rotation 2) and walking level on the Strip; San Francisco's driving level over the Outer Sunset, in fog, and walking level at Alamo Square. Each loads the app in an iframe on a 1280×720 canvas with the tile cache off and `bench=1`, which keeps every tile's timings (without it the app is unchanged), at zoom 3, then 2, then 1. Each zoom bakes the tiles its wider view adds.
+- **Measures:**
+  - **Tile bakes:** mesh (the tile's geometry and objects, built in the bake worker on the CPU) plus bake (the GPU passes, until the pixels are read back), per tile, as the running app bakes them. Each case's first tile compiles the shaders and is reported apart.
+  - **Frames,** with no layers, traffic, fog and both: `draw` redraws one frame 20 times, waiting for the GPU each time; `frame` is the 95th-percentile interval between animation frames over 1.5 s while the layers move (60 Hz displays cap it at 16.7 ms); `cpu` is the main thread's time per frame (compositor and traffic simulation).
+  - **Memory** after each zoom: baked tile textures on the GPU, the page's JavaScript heap (Chromium only, without the worker's), chunks loaded and vehicle sprites.
+
+**Software baseline** (SwiftShader, 4 cores, headless Chromium 153, 9 November 2026, the committed packages): per tile, median and 95th percentile of mesh + bake over all zooms.
+
+| Case | Tiles | Tile median / p95 | Mesh median | First tile | Draw, no layers, 3× / 1× | Tile textures at 1× |
+|---|---|---|---|---|---|---|
+| Southwest, driving, Grand Canyon Village | 17 | 1.8 / 2.7 s | 19 ms | 3.0 s | 22 / 82 ms | 46 MB |
+| Southwest, walking, the Strip | 14 | 9.3 / 25.2 s | 5.3 s | 11.0 s | 18 / 71 ms | 32 MB |
+| San Francisco, driving, Outer Sunset | 16 | 7.8 / 12.1 s | 1.6 s | 9.7 s | 27 / 18 ms (44 with fog) | 33 MB |
+| San Francisco, walking, Alamo Square | 16 | 4.7 / 9.9 s | 1.8 s | 3.4 s | 9 / 72 ms | 37 MB |
+
+- **Reading it:** software rendering shares four cores between the bake worker and the page, which keeps redrawing while tiles stream in, so these bakes are slower than M1.6's isolated measurements (256–322 ms) and their draw times are noisy. The page's heap stayed at 51 MB. The desktop budget is 50 ms per tile on a GPU (M1.6). A GPU speeds up only the bake part: the mesh part is JavaScript on the CPU, and on the walking levels it is already most of a tile's time here (the Strip's casino towers take seconds per tile).

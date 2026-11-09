@@ -110,6 +110,21 @@ describe("desert-southwest style pack", () => {
     expect(() => buildPalette(dayOnly, "night")).toThrow(StyleError);
   });
 
+  it("lights surfaces by micro-tile unless a surface asks for its slope", () => {
+    const p = buildPalette(style);
+    const vocab = { surfaces: { "1": "rock", "2": "grass", "3": "urban" } };
+    // the Southwest's surfaces keep their terraces
+    const t = materialTables(style, p, vocab, (m) => m);
+    expect([1, 2, 3].map((id) => t.surfaces[id * 4 + 3])).toEqual([0, 0, 0]);
+    const grass = { ...style.surfaces.grass!, light: "slope" as const };
+    const sloped = { ...style, surfaces: { ...style.surfaces, grass } };
+    expect(() => validateStyle(sloped)).not.toThrow();
+    const s = materialTables(sloped, p, vocab, (m) => m);
+    expect([1, 2, 3].map((id) => s.surfaces[id * 4 + 3])).toEqual([0, 1, 0]);
+    const bad = { ...style, surfaces: { ...style.surfaces, grass: { ...grass, light: "smooth" } } };
+    expect(() => validateStyle(bad as unknown as StylePack)).toThrow(/light must be/);
+  });
+
   it("rejects broken packs", () => {
     expect(() => validateStyle({ ...style, defaultStrata: "nope" })).toThrow(StyleError);
     expect(() =>
