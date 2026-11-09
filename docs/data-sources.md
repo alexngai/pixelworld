@@ -42,7 +42,9 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 | Rail and ferry lines (M3.5) | Overture `transportation/segment`, subtypes rail and water | rails drawn in the street (D-061) and traffic routes (D-060) |
 | Parks and natural land (M3.5) | Overture `base/land_use` (park, golf, pitch, garden, cemetery, …) and `base/land` (grassland, scrub, heath, beach) | polygons moved with the straightened roads; lawn surfaces where the spec's `ground` section asks (D-062) |
 | Lakes | WorldCover water class, flattened per water body | — |
+| Building facts (San Francisco, D-055) | DataSF assessor roll and parcels | the `datasf` facts source, in the city pack `pixelworld-city-sf` (`pipeline/plugins/pixelworld-city-sf/`): Socrata API, paged, cached in `pipeline/.cache/datasf/` |
 
+- **Plugins:** elevation and land cover are read through source adapters, and building facts through facts sources, all found by name ([plugins.md](plugins.md)). A new region's national DEM or city records come in as a plugin. 3DEP and WorldCover are built in.
 - **Why Overture rather than OSM extracts:** releases are versioned, so builds are reproducible from the spec alone, and GeoParquet supports bounding-box range reads. (Geofabrik and Overpass were also unreachable from the build environment at the time.)
 - **NLCD isn't used yet:** WorldCover is global, so the same code serves non-US regions in M5.
 
@@ -101,7 +103,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | Overture buildings | footprints merged from OSM, Microsoft, Google Open Buildings and others; heights where known | global | ODbL |
 | Microsoft building footprints | ML footprints, some heights | global | ODbL |
 | Google Open Buildings (incl. 2.5D) | ML footprints; heights in some areas | Global South focus | CC BY 4.0 / ODbL |
-| DataSF assessor roll and parcels | year built, storeys, units, use and neighbourhood per lot; lot polygons | San Francisco | ODC PDDL 1.0 |
+| DataSF assessor roll and parcels | year built, storeys, units, use, property class and neighbourhood per lot; lot polygons. Read by the `datasf` facts source in the city pack `pixelworld-city-sf` | San Francisco | ODC PDDL 1.0 |
 
 ### Vector features and POIs
 

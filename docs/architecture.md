@@ -168,6 +168,7 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 
 **M1 implementation** (`pipeline/src/pixelworld_pipeline/`):
 - **Sources** (`sources/`): rasters are read from cloud-optimized GeoTIFF overviews over HTTP range requests, mean-resampled for elevation and mode-resampled for land cover. Overture GeoParquet is read the same way: a one-time index of every file's row-group bounding boxes (footers only), then only the intersecting row groups and columns.
+- **Plugins** (`plugins.py`, [plugins.md](plugins.md)): the spec names its elevation and land-cover sources and its building facts source, and the registry finds each by name: built in, or from an installed package's entry points. San Francisco's DataSF facts are the city pack `pipeline/plugins/pixelworld-city-sf`.
 - **Corner field:** every height decision works on one integer corner-height grid before cells are formed:
   1. Elevation is converted to steps.
   2. Lakes are flattened per water body.
@@ -319,6 +320,7 @@ assets/†                  hero models (.vox), palettes
 fixtures/                 committed world packages served by the dev app (M0 slice, Southwest)
 testdata/                 cross-language golden files
 pipeline/                 Python geo pipeline (uv-managed package + CLI)
+pipeline/plugins/         pipeline plugins in the uv workspace: city packs (pixelworld-city-sf)
 packages/grid/            coordinates, projection, rotations, cell model
 packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables

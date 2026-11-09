@@ -5,6 +5,7 @@
 | [architecture.md](architecture.md) | The target architecture: grid, coordinate spaces, geo pipeline, warp, generators, baking, runtime, gameplay, repo layout |
 | [roadmap.md](roadmap.md) | Technology choices, milestones with exit criteria, per-technology tracks, risks, open questions |
 | [data-sources.md](data-sources.md) | Allowed and forbidden sources, how semantic layers are fused, coverage tiers, licensing, depiction policy |
+| [plugins.md](plugins.md) | Writing pipeline plugins: facts sources, source adapters, the registry's entry points, the city pack layout, the Python API |
 | [decisions.md](decisions.md) | Decision log: what we decided, why, and whether it's settled |
 | [style-guide.md](style-guide.md) | The art rules every baked pixel follows: palette, light, materials, outlines, dithering |
 | [world-format.md](world-format.md) | World package format v0: manifest and chunk binary layout |
