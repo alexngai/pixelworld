@@ -38,6 +38,15 @@ importers:
 
   apps/editor: {}
 
+  apps/game:
+    dependencies:
+      '@pixelworld/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworld/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+
   apps/web:
     dependencies:
       '@pixelworld/engine':
