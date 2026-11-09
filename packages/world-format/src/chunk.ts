@@ -80,6 +80,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const pclsS = section("PCLS", 1, false);
   const pwidS = section("PWID", 1, false);
   const railS = section("RAIL", 2, false);
+  const laneS = section("LANE", 1, false);
   const micro = decodeMicro(view, sections.get("MHGT"), size);
 
   const base = new Int16Array(n);
@@ -103,6 +104,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const pathWidth = bytesOf(pwidS);
   const rail = new Uint16Array(n);
   if (railS) for (let i = 0; i < n; i++) rail[i] = view.getUint16(railS.offset + i * 2, true);
+  const lane = bytesOf(laneS);
   const shape = new Uint8Array(buffer.slice(shapeS.offset, shapeS.offset + n));
   const surface = new Uint8Array(buffer.slice(surfS.offset, surfS.offset + n));
   if (version === 0) {
@@ -134,6 +136,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
       pathClass,
       pathWidth,
       rail,
+      lane,
       micro,
     }),
   };
@@ -212,6 +215,7 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.pathClass)) payloads.push(["PCLS", terrain.pathClass.slice()]);
   if (any(terrain.pathWidth)) payloads.push(["PWID", terrain.pathWidth.slice()]);
   if (any(terrain.rail)) payloads.push(["RAIL", u16(terrain.rail)]);
+  if (any(terrain.lane)) payloads.push(["LANE", terrain.lane.slice()]);
   if (terrain.micro) payloads.push(["MHGT", encodeMicro(terrain.micro, size)]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;

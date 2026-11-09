@@ -120,13 +120,15 @@ uniform vec4 uStrataMin[16];     // 4 sets × 16 bands of lower bounds (steps)
 uniform ivec4 uStrataRamp[16];
 uniform ivec4 uStrataCount;
 uniform ivec4 uProvinceSet[4];   // geology id → strata set
-uniform vec4 uRoads[16];         // per road class: half width (cells), centre line, ramp (-1 asphalt)
+uniform vec4 uRoads[16];         // per road class: half width (cells), centre line, ramp (-1 asphalt), lane lines
 uniform int uAsphaltRamp;
 uniform int uMarkingRamp;
 #ifdef FIELD_WAYS
-uniform isampler2D uFieldWays;   // W × H: road mask, class | half-width << 8, path mask, class | half-width << 8
+uniform isampler2D uFieldWays;   // W × H: road connections | lanes << 8, class | half-width << 8, path mask, class | half-width << 8
 uniform int uWayReach;           // cells a road or path can reach beyond its own; 0 = style widths
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
+uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
+uniform int uLaneRamp;           // lane lines and median kerbs
 #endif
 
 out vec4 oG;
@@ -173,10 +175,62 @@ float roadDistance(vec2 local, int mask) {
   return d;
 }
 
+const ivec2 DIRS8[8] = ivec2[8](ivec2(0, -1), ivec2(1, -1), ivec2(1, 0), ivec2(1, 1),
+  ivec2(0, 1), ivec2(-1, 1), ivec2(-1, 0), ivec2(-1, -1));
+
+int degree8(int mask) {
+  int n = 0;
+  for (int i = 0; i < 8; i++) n += (mask >> i) & 1;
+  return n;
+}
+
+// The nearest point q (cell-local) on a cell's centre-to-neighbour strips, and
+// that strip's direction: roadDistance with the geometry a lane or median needs.
+float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
+  float d = 1e9;
+  q = vec2(0.5);
+  dir = vec2(1.0, 0.0);
+  for (int i = 0; i < 8; i++) {
+    if (((mask >> i) & 1) == 0) continue;
+    vec2 ab = vec2(DIRS8[i]) * 0.5;
+    float t = clamp(dot(local - 0.5, ab) / dot(ab, ab), 0.0, 1.0);
+    vec2 p = vec2(0.5) + ab * t;
+    float di = length(local - p);
+    if (di < d) { d = di; q = p; dir = normalize(ab); }
+  }
+  return d;
+}
+
 #ifdef FIELD_WAYS
 uniform mat2 uRot;
 uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
 uniform int uRailRamp;           // -1: the style draws no rails
+
+// Where a track bends in a cell (two connections that aren't opposite), its
+// point there moves a quarter cell toward the inside of the bend, so a track
+// that steps from run to run along a curving or slanted street cuts its
+// corners and reads as one line (M3.5). Straight runs keep the cell centre.
+vec2 railBend(int mask) {
+  vec2 s = vec2(0.0);
+  for (int i = 0; i < 8; i++)
+    if (((mask >> i) & 1) == 1) s += vec2(DIRS8[i]);
+  return degree8(mask) == 2 ? s * 0.25 : vec2(0.0);
+}
+
+// Distance to a rail cell's track: from its (bent) point to halfway to each
+// neighbour's, so neighbouring cells meet on the same point.
+float railDistance(vec2 local, ivec2 c, int mask) {
+  vec2 p = vec2(0.5) + railBend(mask);
+  float d = 1e9;
+  for (int i = 0; i < 8; i++) {
+    if (((mask >> i) & 1) == 0) continue;
+    ivec2 n = c + DIRS8[i];
+    bool nOk = n.x >= 0 && n.y >= 0 && n.x < uSliceSize.x && n.y < uSliceSize.y;
+    vec2 q = vec2(0.5) + vec2(DIRS8[i]) + (nOk ? railBend(texelFetch(uFieldRails, n, 0).r & 255) : vec2(0.0));
+    d = min(d, segDist(local, p, 0.5 * (p + q)));
+  }
+  return d;
+}
 
 // Rails in the street (M3.5), on tops over the way decal: a track along each
 // rail line (street tracks on their road's drawn centre line), cable-car
@@ -194,8 +248,9 @@ float railsDecal(inout int ramp, inout int pattern) {
       int r = texelFetch(uFieldRails, c, 0).r;
       if ((r & 255) == 0) continue;
       vec2 local = vGrid - vec2(uSliceOrigin + c);
-      if (length(max(max(-local, local - 1.0), 0.0)) > 0.3) continue;
-      float d = roadDistance(local, r & 255);
+      // a bent track strays up to a quarter cell (and its ballast a little more) past its cell
+      if (length(max(max(-local, local - 1.0), 0.0)) > 0.45) continue;
+      float d = railDistance(local, c, r & 255);
       if (d < best) { best = d; kind = (r >> 12) & 15; }
     }
   }
@@ -207,6 +262,37 @@ float railsDecal(inout int ramp, inout int pattern) {
   if (kind == 2 && best < 0.03) { ramp = uAsphaltRamp; pattern = 0; return -2.0; }  // the cable's slot
   if (kind == 3 && best < GAUGE + 0.08) { ramp = uRailRamp; pattern = 0; return -2.0; }  // ballast
   return 0.0;
+}
+
+// Distance to a road cell's centre line with its bends cut as a track's are
+// (railBend), and the direction of its nearest piece: lane lines follow it,
+// so where a road steps from run to run they bend across the step.
+float bentWayDistance(vec2 local, ivec2 c, int mask, out vec2 dir) {
+  vec2 p = vec2(0.5) + railBend(mask);
+  float d = 1e9;
+  dir = vec2(1.0, 0.0);
+  for (int i = 0; i < 8; i++) {
+    if (((mask >> i) & 1) == 0) continue;
+    ivec2 n = c + DIRS8[i];
+    bool nOk = n.x >= 0 && n.y >= 0 && n.x < uSliceSize.x && n.y < uSliceSize.y;
+    vec2 q = vec2(0.5) + vec2(DIRS8[i]) + (nOk ? railBend(texelFetch(uFieldWays, n, 0).x & 255) : vec2(0.0));
+    vec2 m = 0.5 * (p + q);
+    float di = segDist(local, p, m);
+    if (di < d) { d = di; dir = normalize(m - p); }
+  }
+  return d;
+}
+
+// Half-width (cells) of a band along world direction dir that draws one
+// pixel thick on screen: one pixel per column along a 2:1 line, one per row
+// along a vertical one, in every rotation (lane and centre lines, M3.5).
+float onePixel(vec2 dir) {
+  vec2 d = uRot * dir;
+  vec2 n = vec2(-d.y, d.x);
+  vec2 l = vec2(16.0 * (d.x - d.y), 8.0 * (d.x + d.y));  // screen px per render unit along
+  vec2 m = vec2(16.0 * (n.x - n.y), 8.0 * (n.x + n.y));  // and across
+  float across = abs(l.x * m.y - l.y * m.x) / length(l);
+  return 0.5 * max(abs(l.x), abs(l.y)) / length(l) / (across * uScale);
 }
 
 // Height (micro-steps) at a slice cell's centre, on the drawn micro-terrain.
@@ -274,45 +360,88 @@ vec2 smoothGrade(vec2 grid) {
 // that covers this point. Roads are at least the style's width for their class.
 // Paths (sidewalks, crosswalks) draw over roads.
 // The way drawn at a point (face kind: 0 flat top, 1 sloped top, 2 wall), with
-// its grade as a normal (rotated like vNormal). Crosswalk stripes are drawn on
-// gentle crossings only: on a steep street, screen-space stripes stand up like a
-// fence. On a riser (a terrace wall) stripes and centre lines are left off.
-void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out vec3 gradeN) {
+// its grade as a normal (rotated like vNormal) and a shade change. Crosswalk
+// stripes are drawn on gentle crossings only: on a steep street, screen-space
+// stripes stand up like a fence. On a riser (a terrace wall) stripes, centre
+// lines and lane lines are left off.
+//
+// Lanes (M3.5): where a road's cells count its lanes (the LANE byte), dashed
+// lines divide it into lanes at least uLanes.x pixels wide (fewer, wider lanes
+// where they're narrower), with a centre line in the marking ramp on a two-way
+// road. Medians: between two carriageways of a divided road, kerbs along the
+// ground between them, or a paved strip carved between them where they meet.
+void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out vec3 gradeN, out float shade) {
   bool riser = kind == 2;
   paved = false;
   gradeN = vec3(0.0, 0.0, 1.0);
+  shade = 0.0;
   ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
   float roadBest = 2.0;
   float roadD = 0.0;
   int roadCls = 0;
   ivec2 roadCell = ivec2(0);
   int roadMask = 0;
+  int roadLane = 0;
+  float roadHw = 0.0;
   float pathBest = 2.0;
   int pathCls = 0;
   ivec2 pathCell = ivec2(0);
   int pathMask = 0;
+  // medians: the nearest divided carriageway's centre line (A), and the nearest
+  // one across the pixel from it (B): distance, offset to it, half-width, lanes
+  bool medians = uLanes.x >= 0.0 && uLanes.w > 0.0;
+  float mdA = 1e9;
+  float mdB = 1e9;
+  vec2 mvA = vec2(0.0);
+  vec2 mvB = vec2(0.0);
+  float mhA = 0.0;
+  float mhB = 0.0;
+  int mnA = 0;
+  int mnB = 0;
+  ivec2 mcA = ivec2(0);
+  int mmA = 0;
+  vec2 mdirA = vec2(1.0, 0.0);
   int reach = min(uWayReach, 3);
+  // between a divided road's carriageways, look out for both (NEAR_MEDIAN, terrainField)
+  if (medians) reach = max(reach, (texelFetch(uFieldWays, own, 0).z >> 12) & 3);
   for (int dy = -reach; dy <= reach; dy++) {
     for (int dx = -reach; dx <= reach; dx++) {
       ivec2 c = own + ivec2(dx, dy);
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
-      if (w.x == 0 && w.z == 0) continue;
+      if (w.x == 0 && (w.z & 0x0fff) == 0) continue;
       vec2 local = vGrid - vec2(uSliceOrigin + c);
       // a way's strips stay inside its cell: skip cells further than its half-width
       float gap = length(max(max(-local, local - 1.0), 0.0));
       if (w.x != 0) {
         int cls = w.y & 255;
+        int mask = w.x & 255;
+        int lane = (w.x >> 8) & 255;
         // never narrower than the style's width for the class: coarse maps keep
         // their road hierarchy, fine ones grow roads to their real width
         float hw = max(float(w.y >> 8) / 32.0, uRoads[cls].x);
         if (gap <= hw) {
           // centre-to-neighbour strips only: crossing flags would extend past the cell
-          float d = roadDistance(local, w.x & 255);
-          if (d <= hw && d / hw < roadBest) { roadBest = d / hw; roadD = d; roadCls = cls; roadCell = c; roadMask = w.x & 255; }
+          float d = roadDistance(local, mask);
+          if (d <= hw && d / hw < roadBest) {
+            roadBest = d / hw; roadD = d; roadCls = cls; roadCell = c; roadMask = mask; roadLane = lane; roadHw = hw;
+          }
+        }
+        if (medians && (lane & 32) != 0 && degree8(mask) == 2) {
+          vec2 q;
+          vec2 dir;
+          float d = wayNearest(local, mask, q, dir);
+          vec2 v = q - local;
+          if (d < mdA) {
+            if (mdA < 1e8 && dot(v, mvA) < -0.5 * d * mdA) { mdB = mdA; mvB = mvA; mhB = mhA; mnB = mnA; }
+            else if (mdB < 1e8 && dot(v, mvB) >= -0.5 * d * mdB) mdB = 1e9;  // B was on this side
+            mdA = d; mvA = v; mhA = hw; mnA = lane & 15; mcA = c; mmA = mask; mdirA = dir;
+          } else if (d < mdB && dot(v, mvA) < -0.5 * d * mdA) {
+            mdB = d; mvB = v; mhB = hw; mnB = lane & 15;
+          }
         }
       }
-      if (w.z != 0) {
+      if ((w.z & 0x0fff) != 0) {
         float hw = float(w.w >> 8) / 32.0;
         if (hw > 0.0 && gap <= hw) {
           float d = roadDistance(local, w.z & 255);
@@ -321,13 +450,29 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       }
     }
   }
+  // a median: 1 its kerb, 2 a paved strip, 3 the ground between carriageways;
+  // never over a cross street or a junction
+  int median = 0;
+  bool onCarriageway = roadCls == 0 || ((roadLane & 32) != 0 && degree8(roadMask) == 2);
+  if (mdB < 1e8 && onCarriageway) {
+    // a strip carved where they meet is uLanes.w lanes across; without lane
+    // counts nothing is carved, and only the ground between them is kerbed
+    float strip = mnA > 0 && mnB > 0 ? uLanes.w * (mhA / float(mnA) + mhB / float(mnB)) : 0.0;
+    float between = mdA + mdB - mhA - mhB;  // ground between the two asphalt edges
+    float halfW = 0.5 * max(between, strip);
+    float off = 0.5 * abs((mdA - mhA) - (mdB - mhB));  // from the middle of that gap
+    float kerb = 2.0 * onePixel(mdirA);  // a pixel wide
+    if (off <= halfW && halfW > kerb) median = off > halfW - kerb ? 1 : (between >= strip ? 3 : 2);
+  }
   bool path = pathCls > 0 && uPaths[pathCls].x >= 0.0;
-  if (!path && roadCls == 0) return;
+  if (!path && median == 3) return;  // the ground between carriageways stays as it is
+  if (!path && roadCls == 0 && median == 0) return;
   paved = true;
   // the road's grade where a road runs here (sidewalks and crossings lie on
   // its bed; a crossing runs across the climb), else the path's own; in
   // micro-steps per cell → rise per run in world units
-  vec2 g = (roadCls > 0 ? wayGrade(roadCell, roadMask, false) : wayGrade(pathCell, pathMask, true)) * uStepWorld / float(uK);
+  vec2 g = (roadCls > 0 ? wayGrade(roadCell, roadMask, false)
+    : !path ? wayGrade(mcA, mmA, false) : wayGrade(pathCell, pathMask, true)) * uStepWorld / float(uK);
   vec3 n = normalize(vec3(-g, 1.0));
   gradeN = vec3(uRot * n.xy, n.z);
   pattern = 0;
@@ -339,10 +484,54 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
     bool gentle = length(g) <= 0.35 * uStepWorld && kind != 2 && (roadCls > 0 || kind == 0);
     bool gap = pc.y > 0.5 && gentle && ((ap.x >> 1) & 1) == 1;
     ramp = gap ? uAsphaltRamp : int(pc.x);
-  } else {
-    vec4 rc = uRoads[roadCls];
-    ramp = (rc.y > 0.5 && !riser && roadD * uScale < 0.022) ? uMarkingRamp : (rc.z >= 0.0 ? int(rc.z) : uAsphaltRamp);
+    return;
   }
+  if (median > 0) {
+    // kerbs a shade lighter than the strip they edge
+    ramp = uLaneRamp >= 0 ? uLaneRamp : uAsphaltRamp;
+    shade = median == 1 ? (riser ? 0.0 : 1.0) : -1.0;
+    return;
+  }
+  vec4 rc = uRoads[roadCls];
+  ramp = rc.z >= 0.0 ? int(rc.z) : uAsphaltRamp;
+  if (riser) return;
+  int lanes = roadLane & 15;
+  if (roadLane == 0 || uLanes.x < 0.0) {
+    // no lane data: the style's centre line on its classes
+    if (rc.y > 0.5 && roadD * uScale < 0.022) ramp = uMarkingRamp;
+    return;
+  }
+  if (rc.w < 0.5 || lanes < 2 || degree8(roadMask) != 2) return;
+  // as many lanes as are at least uLanes.x pixels across (a cell is about 16 px
+  // across a way), an even number on a two-way road; none below two
+  bool oneway = (roadLane & 16) != 0;
+  int drawn = min(lanes, int(floor(2.0 * roadHw * uScale * 16.0 / uLanes.x)));
+  if (!oneway) drawn -= drawn & 1;
+  if (drawn < 2) return;
+  float lw = 2.0 * roadHw / float(drawn);
+  // lanes run along the road's centre line with its steps cut (bentWayDistance),
+  // over the road's own cells around the nearest one
+  float bd = 1e9;
+  vec2 dir = vec2(1.0, 0.0);
+  for (int dy = -1; dy <= 1; dy++) {
+    for (int dx = -1; dx <= 1; dx++) {
+      ivec2 c = roadCell + ivec2(dx, dy);
+      if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
+      ivec4 w = texelFetch(uFieldWays, c, 0);
+      int m = w.x & 255;
+      if (m == 0 || ((w.x >> 8) & 255) != roadLane || (w.y & 255) != roadCls || degree8(m) > 2) continue;
+      vec2 dd;
+      float d = bentWayDistance(vGrid - vec2(uSliceOrigin + c), c, m, dd);
+      if (d < bd) { bd = d; dir = dd; }
+    }
+  }
+  float t = (roadHw - bd) / lw;  // lanes in from the nearer edge
+  float k = floor(t + 0.5);
+  if (k < 1.0 || abs(t - k) * lw > onePixel(dir)) return;
+  if (!oneway && int(k) * 2 == drawn) { ramp = uMarkingRamp; return; }  // the centre line
+  // dashes along the road, anchored to the world
+  float period = (uLanes.y + uLanes.z) * lw;
+  if (fract(dot(vGrid, dir) / period) * (uLanes.y + uLanes.z) < uLanes.y && uLaneRamp >= 0) ramp = uLaneRamp;
 }
 #endif
 
@@ -395,12 +584,14 @@ void main() {
     // Terrace walls (risers) on pavement take the pavement a shade darker
     // rather than pale strata.
     vec3 gradeN;
-    if (kind != 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN);
+    float wayShade = 0.0;
+    if (kind != 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN, wayShade);
+    railShade += wayShade;
     if (paved) {
       n = gradeN;
       riser = vertical;
     }
-    if (!vertical && mat < 100) railShade = railsDecal(ramp, pattern);
+    if (!vertical && mat < 100) railShade += railsDecal(ramp, pattern);
   }
   // Surfaces the style lights by slope (lawns, smoothed in the micro-terrain):
   // lit by the ground's slope over about a cell rather than by each micro-tile,

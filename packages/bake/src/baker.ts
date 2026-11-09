@@ -446,6 +446,8 @@ export class Baker {
       gl.uniform1i(u.loc("uAsphaltRamp"), t.asphaltRamp);
       gl.uniform1i(u.loc("uMarkingRamp"), t.markingRamp);
       gl.uniform1i(u.loc("uRailRamp"), t.railRamp);
+      gl.uniform4fv(u.loc("uLanes"), t.lanes);
+      gl.uniform1i(u.loc("uLaneRamp"), t.laneRamp);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);

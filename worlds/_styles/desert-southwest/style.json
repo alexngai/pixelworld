@@ -97,12 +97,13 @@
   "roads": {
     "asphalt": "asphalt",
     "marking": "marking",
+    "lanes": { "ramp": "concrete", "minPixels": 4, "dash": [1, 2], "median": 1 },
     "classes": {
-      "motorway": { "halfWidth": 0.2, "centerLine": true },
-      "trunk": { "halfWidth": 0.17, "centerLine": true },
-      "primary": { "halfWidth": 0.1, "centerLine": false },
-      "secondary": { "halfWidth": 0.07, "centerLine": false },
-      "tertiary": { "halfWidth": 0.06, "centerLine": false },
+      "motorway": { "halfWidth": 0.2, "centerLine": true, "lanes": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true, "lanes": true },
+      "primary": { "halfWidth": 0.1, "centerLine": false, "lanes": true },
+      "secondary": { "halfWidth": 0.07, "centerLine": false, "lanes": true },
+      "tertiary": { "halfWidth": 0.06, "centerLine": false, "lanes": true },
       "residential": { "halfWidth": 0.05, "centerLine": false },
       "unclassified": { "halfWidth": 0.05, "centerLine": false },
       "living_street": { "halfWidth": 0.04, "centerLine": false },

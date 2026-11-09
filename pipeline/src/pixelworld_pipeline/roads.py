@@ -496,10 +496,12 @@ def rail_layer(
 
     lines: (id, kind, parts in cells). With `on_road`, street and cable-car
     tracks run along the roads they're in (onto_roads), on their drawn centre
-    lines (a street's two tracks often merge into one there); trains keep
-    their own cells."""
+    lines, and a street's second track joins the first wherever it runs in the
+    cells beside it, so the pair draws as one line rather than two that step
+    across to each other; trains keep their own cells."""
     cy, cx = shape
     out = np.zeros(shape, dtype=np.uint16)
+    laid: dict[int, np.ndarray] = {}  # kind → cells its street tracks already take
 
     def inside(c: tuple[int, int]) -> bool:
         return 0 <= c[0] < cx and 0 <= c[1] < cy
@@ -509,6 +511,12 @@ def rail_layer(
             path = along_edge(cell_path(xs, ys, deviation), shape)
             if on_road is not None and kind != RAIL_KINDS["train"]:
                 path = onto_roads(path, on_road)
+                mine = laid.setdefault(kind, np.zeros(shape, dtype=bool))
+                if mine.any():
+                    path = onto_roads(path, mine)
+                for c in path:
+                    if inside(c):
+                        mine[c[1], c[0]] = True
             for c in path:
                 if inside(c):
                     old = int(out[c[1], c[0]]) >> RAIL_KIND_SHIFT
@@ -559,6 +567,8 @@ class RoadLayer:
     cls: np.ndarray  # uint8 (cy, cx)
     # widest way through each cell, metres (0 where none or widths weren't given)
     width: np.ndarray | None = None
+    # the widest way's LANE byte (lanes.py), where lanes were given
+    lanes: np.ndarray | None = None
     # segment id → cells (inside the grid), for validation
     segment_cells: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
 
@@ -569,6 +579,7 @@ def rasterize(
     deviation: float | None = None,
     widths: dict[str, float] | None = None,
     rank_of=None,
+    lanes: dict[str, int] | None = None,
 ) -> RoadLayer:
     """lines: (id, class rank ≥ 1, parts as (xs, ys) in cell coords).
 
@@ -576,20 +587,22 @@ def rasterize(
     (octilinear_path) between the cells of its vertices; otherwise the line is
     traced cell by cell (trace_cells). A line straying just past the grid's edge
     and back runs along the edge (along_edge). `widths` (segment id → metres) records the
-    widest way in each cell. The class number written to a cell is the line's
+    widest way in each cell, and `lanes` (segment id → LANE byte, with
+    `widths`) that way's lanes. The class number written to a cell is the line's
     class; with `rank_of` (class → priority) the higher-priority class wins,
     else the larger number does."""
     cy, cx = shape
     mask = np.zeros(shape, dtype=np.uint16)
     cls = np.zeros(shape, dtype=np.uint8)
     width = np.zeros(shape, dtype=np.float32) if widths is not None else None
-    layer = RoadLayer(mask, cls, width=width)
+    lane = np.zeros(shape, dtype=np.uint8) if widths is not None and lanes is not None else None
+    layer = RoadLayer(mask, cls, width=width, lanes=lane)
     rank = rank_of or (lambda c: c)
 
     def inside(c: tuple[int, int]) -> bool:
         return 0 <= c[0] < cx and 0 <= c[1] < cy
 
-    def mark(c: tuple[int, int], bit: int, klass: int, w: float = 0.0) -> None:
+    def mark(c: tuple[int, int], bit: int, klass: int, w: float = 0.0, ln: int = 0) -> None:
         if inside(c):
             mask[c[1], c[0]] |= 1 << bit
             old = int(cls[c[1], c[0]])
@@ -597,9 +610,12 @@ def rasterize(
                 cls[c[1], c[0]] = klass
             if width is not None and w > width[c[1], c[0]]:
                 width[c[1], c[0]] = w
+                if lane is not None:
+                    lane[c[1], c[0]] = ln
 
     for seg_id, klass, parts in lines:
         w = float(widths.get(seg_id, 0.0)) if widths is not None else 0.0
+        ln = int(lanes.get(seg_id, 0)) if lanes is not None else 0
         visited: list[tuple[int, int]] = []
         for xs, ys in parts:
             path = along_edge(cell_path(xs, ys, deviation), shape)
@@ -607,12 +623,12 @@ def rasterize(
                 dx, dy = b[0] - a[0], b[1] - a[1]
                 if max(abs(dx), abs(dy)) != 1 or not (inside(a) and inside(b)):
                     continue
-                mark(a, DIR_INDEX[(dx, dy)], klass, w)
-                mark(b, DIR_INDEX[(-dx, -dy)], klass, w)
+                mark(a, DIR_INDEX[(dx, dy)], klass, w, ln)
+                mark(b, DIR_INDEX[(-dx, -dy)], klass, w, ln)
                 if dx and dy:  # diagonal: flag the corner for the two other cells
                     px, py = a[0] + (dx > 0), a[1] + (dy > 0)
                     for o in ((a[0] + dx, a[1]), (a[0], a[1] + dy)):
-                        mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], klass, w)
+                        mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], klass, w, ln)
             visited.extend(c for c in path if inside(c))
         layer.segment_cells[seg_id] = visited
     return layer
@@ -788,6 +804,70 @@ def validate(
         split_segments=split,
         disconnected_junctions=disconnected,
     )
+
+
+def joining_segments(rows: list[dict], extra: list[dict], max_steps: int = 8) -> list[dict]:
+    """The `extra` segments (parking aisles, left out of the network) on the
+    shortest way, by connectors, from each island of `rows` to their largest
+    network: a service road that only connects through a car park's aisles
+    then joins the streets through as few of them as it needs (at most
+    `max_steps`). Islands with no such way stay as they are."""
+    from collections import deque
+
+    conns = {r["id"]: [c["connector_id"] for c in r.get("connectors") or []] for r in rows + extra}
+    by_conn: dict[str, list[str]] = defaultdict(list)
+    for seg, cs in conns.items():
+        for c in cs:
+            by_conn[c].append(seg)
+    parent = {r["id"]: r["id"] for r in rows}
+
+    def find(a: str) -> str:
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for segs in by_conn.values():
+        mine = [s for s in segs if s in parent]
+        for s in mine[1:]:
+            parent[find(s)] = find(mine[0])
+    groups: dict[str, list[str]] = defaultdict(list)
+    for r in rows:
+        groups[find(r["id"])].append(r["id"])
+    if len(groups) < 2:
+        return []
+    main = max(sorted(groups), key=lambda g: len(groups[g]))
+    is_extra = {r["id"] for r in extra}
+    # 0-1 breadth-first search over connectors from the main network: a road
+    # costs nothing, an extra segment one step
+    dist = {c: 0 for s in groups[main] for c in conns[s]}
+    via: dict[str, tuple[str, str]] = {}
+    queue = deque(sorted(dist))
+    while queue:
+        c = queue.popleft()
+        for s in by_conn[c]:
+            step = 1 if s in is_extra else 0
+            d = dist[c] + step
+            if d > max_steps:
+                continue
+            for c2 in conns[s]:
+                if c2 != c and d < dist.get(c2, max_steps + 1):
+                    dist[c2] = d
+                    via[c2] = (s, c)
+                    (queue.appendleft if step == 0 else queue.append)(c2)
+    picked: set[str] = set()
+    for g in sorted(groups):
+        if g == main:
+            continue
+        best = min(((dist[c], c) for s in groups[g] for c in conns[s] if c in dist), default=None)
+        if best is None or best[0] == 0:
+            continue
+        c = best[1]
+        while c in via:
+            s, c = via[c]
+            if s in is_extra:
+                picked.add(s)
+    return [r for r in extra if r["id"] in picked]
 
 
 def junction_index(segments: list[dict], inside=None) -> dict[str, list[str]]:

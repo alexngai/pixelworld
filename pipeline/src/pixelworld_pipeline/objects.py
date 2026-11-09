@@ -1003,6 +1003,107 @@ def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
     return out
 
 
+_DIRS = ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1))
+
+
+def road_strips(mask: np.ndarray, half_width: np.ndarray) -> list:
+    """The drawn asphalt (D-050) as polygons in cells: each road cell's
+    centre-to-neighbour strips, buffered by its half-width, as the client
+    draws them."""
+    out = []
+    ys, xs = np.nonzero(mask & 0xFF)
+    for y, x in zip(ys.tolist(), xs.tolist(), strict=True):
+        m, r = int(mask[y, x]), float(half_width[y, x])
+        if r <= 0:
+            continue
+        for i, (dx, dy) in enumerate(_DIRS):
+            if (m >> i) & 1:
+                a = (x + 0.5, y + 0.5)
+                out.append(
+                    shapely.LineString([a, (a[0] + 0.5 * dx, a[1] + 0.5 * dy)]).buffer(
+                        r, quad_segs=2
+                    )
+                )
+    return out
+
+
+def clear_of_roads(
+    instances: list[dict],
+    strips: list,
+    nudge: float,
+    min_share: float = 0.05,
+    min_area: float = 0.01,
+) -> tuple[list[dict], dict[str, int]]:
+    """Buildings moved off the drawn roads (D-049, D-050): the shift moves a
+    building with its streets, and roads are drawn at their real width along
+    straightened lines, so a footprint can end up over asphalt. A building
+    whose footprint (with its parts) overlaps the asphalt by `min_share` of its
+    area (and at least `min_area` cells²) moves away from it, whole, up to
+    `nudge` cells: along the line from the overlap to its centre, by the
+    smallest step that clears it. One still over the road after that is
+    trimmed: each footprint loses the asphalt, keeping its largest piece."""
+    stats = {"nudged": 0, "trimmed": 0}
+    if not strips:
+        return instances, stats
+    tree = shapely.STRtree(strips)
+
+    def asphalt(geom):
+        hit = tree.query(geom, predicate="intersects")
+        return shapely.union_all([strips[i] for i in hit]) if len(hit) else None
+
+    def over(geom) -> float:
+        a = asphalt(geom)
+        return 0.0 if a is None else geom.intersection(a).area
+
+    groups: dict[str, list[int]] = {}
+    for i, inst in enumerate(instances):
+        if inst.get("fp") and inst["g"].startswith("building"):
+            groups.setdefault(inst.get("_grp", str(i)), []).append(i)
+    out = list(instances)
+    for members in groups.values():
+        polys = [shapely.Polygon(out[i]["fp"]).buffer(0) for i in members]
+        shape = shapely.union_all(polys)
+        road = asphalt(shape)
+        if road is None or shape.area <= 0:
+            continue
+        lap = shape.intersection(road)
+        if lap.area < max(min_area, min_share * shape.area):
+            continue
+        away = np.array([shape.centroid.x - lap.centroid.x, shape.centroid.y - lap.centroid.y])
+        length = float(np.hypot(*away))
+        moved = None
+        if length > 1e-6 and nudge > 0:
+            away /= length
+            for step in np.linspace(nudge / 8, nudge, 8):
+                v = away * step
+                if over(shapely.transform(shape, lambda c, v=v: c + v)) <= 0.1 * lap.area:
+                    moved = v
+                    break
+        if moved is not None:
+            stats["nudged"] += 1
+            for i in members:
+                inst = out[i]
+                fp = np.asarray(inst["fp"]) + moved
+                out[i] = {
+                    **inst,
+                    "x": round(float(inst["x"] + moved[0]), 3),
+                    "y": round(float(inst["y"] + moved[1]), 3),
+                    "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
+                }
+            continue
+        stats["trimmed"] += 1
+        for i, poly in zip(members, polys, strict=True):
+            rest = poly.difference(road).simplify(0.02)
+            pieces = list(rest.geoms) if hasattr(rest, "geoms") else [rest]
+            pieces = [g for g in pieces if g.geom_type == "Polygon" and g.area > 0]
+            if not pieces:
+                continue  # wholly on the road: left as it is rather than lost
+            best = max(pieces, key=lambda g: g.area)
+            ring = np.asarray(best.exterior.coords)[:-1]
+            out[i] = {**out[i], "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in ring]}
+    return out, stats
+
+
 def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) -> list[dict]:
     """Apply a level's building depiction: drop buildings lower than
     `minHeightMeters` and draw the rest `scale` times their size about the
@@ -1221,12 +1322,14 @@ def place(
     shift=None,
     streets: list | None = None,
     water: np.ndarray | None = None,
+    roads: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
     streets (the straightened road lines in cells) and water (a cell mask) feed
-    the building typology (D-055).
+    the building typology (D-055). roads (the road mask and half-widths in
+    cells) are what `snap.buildings.clearRoads` keeps buildings off.
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
@@ -1304,6 +1407,11 @@ def place(
             print(f"lidar: {lidar_stats}")
         if snap is not None:
             found = snap_buildings(found, snap)
+        clear_spec = (snap or {}).get("clearRoads")
+        if clear_spec and roads is not None:
+            nudge = float(clear_spec.get("nudgeMeters", 5.0)) / p.m
+            found, cleared = clear_of_roads(found, road_strips(*roads), nudge)
+            print(f"buildings off the roads: {cleared}")
         if spec.get("typology"):
             found = type_buildings(region, found, spec["typology"], streets, water)
         instances += depict_buildings(p, found, depiction.get("buildings", {}))

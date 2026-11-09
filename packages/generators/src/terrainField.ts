@@ -1,4 +1,14 @@
-import { NO_WATER, TerrainGrid } from "@pixelworld/grid";
+import { LANE_DIVIDED, NO_WATER, TerrainGrid } from "@pixelworld/grid";
+
+/** The most cells the decal looks out for a median's two carriageways (M3.5). */
+export const MEDIAN_REACH = 3;
+/**
+ * ways[i * 4 + 2] (the path mask) bits 12-13: how far a cell between a
+ * divided road's two carriageways looks out for them (2 or 3 cells; 0 for
+ * other cells; flagMedians). NEAR_MEDIAN masks it.
+ */
+export const NEAR_MEDIAN = 0x3000;
+const MEDIAN_SHIFT = 12;
 
 /**
  * Micro-terrain prepared for the GPU (M1.6): the baker builds the geometry in
@@ -21,14 +31,16 @@ export interface TerrainField {
   vmap: Int16Array;
   /**
    * Per cell (D-050), everything the road and path decal needs in one texel:
-   * road mask, road class | half-width << 8, path mask, path class |
-   * half-width << 8 (half-widths in 1/32 cell, at most 127; 0 = style width).
+   * road connections | lanes << 8 (the LANE byte, M3.5), road class |
+   * half-width << 8, path mask | NEAR_MEDIAN, path class | half-width << 8
+   * (half-widths in 1/32 cell, at most 127; 0 = style width).
    */
   ways: Int16Array;
   /**
    * How many cells a road or path can reach beyond its own (the widest
-   * half-width, rounded up), so the shader knows how far to look. 0 when the
-   * world has no real widths: roads keep the style's fixed in-cell decal.
+   * half-width, rounded up), so the shader knows how far to look; cells
+   * flagged NEAR_MEDIAN look MEDIAN_REACH out. 0 when the world has no real
+   * widths: roads keep the style's fixed in-cell decal.
    */
   wayReach: number;
   /**
@@ -73,6 +85,61 @@ export interface TerrainFieldOptions {
   floor?: number;
 }
 
+const DIRS8 = [
+  [0, -1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1],
+] as const;
+
+/**
+ * Flag the cells between a divided road's two carriageways (NEAR_MEDIAN in
+ * the path mask), with a cell's margin, so only they pay for the decal's
+ * longer look for a median (M3.5): from each carriageway cell, across its
+ * road, up to twice MEDIAN_REACH cells to the next carriageway cell.
+ */
+function flagMedians(grid: TerrainGrid, ways: Int16Array, divided: number[]): void {
+  const w = grid.width;
+  const h = grid.height;
+  const isDivided = new Uint8Array(w * h);
+  for (const i of divided) isDivided[i] = 1;
+  const flag = (x: number, y: number, reach: number) => {
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = (ny * w + nx) * 4 + 2;
+        const had = (ways[j]! & NEAR_MEDIAN) >> MEDIAN_SHIFT;
+        if (reach > had) ways[j] = (ways[j]! & ~NEAR_MEDIAN) | (reach << MEDIAN_SHIFT);
+      }
+  };
+  for (const i of divided) {
+    const x = i % w;
+    const y = (i - x) / w;
+    const m = grid.road[i]! & 0xff;
+    const along = DIRS8.findIndex((_, d) => ((m >> d) & 1) === 1);
+    if (along < 0) continue;
+    // across the road: the directions a quarter turn either side of it
+    for (const turn of [2, 6]) {
+      const [dx, dy] = DIRS8[(along + turn) % 8]!;
+      for (let s = 1; s <= 2 * MEDIAN_REACH; s++) {
+        const nx = x + dx * s;
+        const ny = y + dy * s;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) break;
+        if (!isDivided[ny * w + nx]) continue;
+        // neighbouring carriageways are found from anywhere between them two cells out
+        for (let t = 0; t <= s; t++) flag(x + dx * t, y + dy * t, Math.min(s + 1, MEDIAN_REACH));
+        break;
+      }
+    }
+  }
+}
+
 /** Prepare a grid that has micro-terrain for GPU drawing. */
 export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOptions = {}): TerrainField {
   const m = grid.micro;
@@ -110,15 +177,20 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
   const vmap = new Int16Array(n * 2);
   const ways = new Int16Array(n * 4);
   let widest = 0;
+  const divided: number[] = [];
   for (let i = 0; i < n; i++) {
     const rw = Math.min(127, grid.roadWidth[i]!);
     const pw = Math.min(127, grid.pathWidth[i]!);
-    ways[i * 4] = grid.road[i]! & 0x0fff;
+    // the decal needs a road's connections only, so its lanes take the high byte
+    const lane = rw > 0 ? grid.lane[i]! : 0;
+    ways[i * 4] = (grid.road[i]! & 0xff) | (lane << 8);
     ways[i * 4 + 1] = grid.roadClass[i]! | (rw << 8);
     ways[i * 4 + 2] = grid.path[i]! & 0x0fff;
     ways[i * 4 + 3] = grid.pathClass[i]! | (pw << 8);
     widest = Math.max(widest, rw, pw);
+    if (lane & LANE_DIVIDED) divided.push(i);
   }
+  flagMedians(grid, ways, divided);
   for (let i = 0; i < n; i++) {
     vmap[i * 2] = grid.vref[i]!;
     vmap[i * 2 + 1] = grid.vfac[i]!;

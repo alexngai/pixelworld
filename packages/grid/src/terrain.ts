@@ -214,12 +214,23 @@ export interface TerrainLayers {
    * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
    */
   rail: Uint16Array;
+  /**
+   * Lanes and medians (M3.5), for the widest road through the cell: its lane
+   * count in bits 0-3 (0 = none), one-way in bit 4 (LANE_ONEWAY), and in bit
+   * 5 a carriageway with a median beside it (LANE_DIVIDED).
+   */
+  lane: Uint8Array;
 }
 
 /** What a rail cell draws (TerrainLayers.rail >> 12): a street's pair of tracks, the same with cable slots, a train's track. */
 export const RAIL_STREET = 1;
 export const RAIL_CABLE = 2;
 export const RAIL_TRAIN = 3;
+
+/** TerrainLayers.lane: the lane count's bits, and the one-way and divided flags. */
+export const LANE_COUNT = 0x0f;
+export const LANE_ONEWAY = 0x10;
+export const LANE_DIVIDED = 0x20;
 
 /** VFAC value meaning "no relief exaggeration". */
 export const VFAC_ONE = 4096;
@@ -290,6 +301,7 @@ export function copyCells(
       b.pathClass[di] = a.pathClass[si]!;
       b.pathWidth[di] = a.pathWidth[si]!;
       b.rail[di] = a.rail[si]!;
+      b.lane[di] = a.lane[si]!;
     }
   }
   const ma = src.micro;
@@ -334,6 +346,8 @@ export class TerrainGrid {
   readonly pathWidth: Uint8Array;
   /** Rails drawn in the street (see TerrainLayers). */
   readonly rail: Uint16Array;
+  /** Lanes and medians (see TerrainLayers). */
+  readonly lane: Uint8Array;
   /** Micro-terrain, or null for cell-only terrain. */
   readonly micro: MicroLayers | null;
 
@@ -357,6 +371,7 @@ export class TerrainGrid {
     this.pathClass = layers?.pathClass ?? new Uint8Array(n);
     this.pathWidth = layers?.pathWidth ?? new Uint8Array(n);
     this.rail = layers?.rail ?? new Uint16Array(n);
+    this.lane = layers?.lane ?? new Uint8Array(n);
     for (const [name, arr] of Object.entries(this.layers())) {
       if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
     }
@@ -393,6 +408,7 @@ export class TerrainGrid {
       pathClass: this.pathClass,
       pathWidth: this.pathWidth,
       rail: this.rail,
+      lane: this.lane,
     };
   }
 

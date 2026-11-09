@@ -134,6 +134,9 @@ def query(
 
 
 ROAD_COLUMNS = ["id", "subtype", "class", "subclass", "connectors", "geometry"]
+# what lanes and medians need (M3.5): names pair a divided road's carriageways,
+# access restrictions say which ways are one-way, width rules give mapped widths
+LANE_COLUMNS = ["names", "access_restrictions", "width_rules"]
 
 
 def roads(
@@ -141,9 +144,11 @@ def roads(
     bbox: tuple[float, float, float, float],
     classes: list[str],
     exclude_subclasses: list[str] | None = None,
+    lanes: bool = False,
 ) -> list[dict]:
     """Road segments of the given classes (links/ramps and `exclude_subclasses`,
-    e.g. parking aisles, left out)."""
+    e.g. parking aisles, left out). With `lanes`, also their names, access
+    restrictions and width rules (LANE_COLUMNS), in a cache entry of their own."""
     wanted = set(classes)
     skip = {"link", *(exclude_subclasses or [])}
     return query(
@@ -151,9 +156,29 @@ def roads(
         "transportation",
         "segment",
         bbox,
-        ROAD_COLUMNS,
+        ROAD_COLUMNS + (LANE_COLUMNS if lanes else []),
         lambda r: r["subtype"] == "road" and r["class"] in wanted and r.get("subclass") not in skip,
         filter_tag=f"roads:{','.join(sorted(wanted))}:skip:{','.join(sorted(skip))}",
+    )
+
+
+def road_subclasses(
+    release: str,
+    bbox: tuple[float, float, float, float],
+    subclasses: list[str],
+    lanes: bool = False,
+) -> list[dict]:
+    """Road segments of the given subclasses only (e.g. parking aisles, to join
+    service roads that only connect through them), with the columns `roads` reads."""
+    wanted = set(subclasses)
+    return query(
+        release,
+        "transportation",
+        "segment",
+        bbox,
+        ROAD_COLUMNS + (LANE_COLUMNS if lanes else []),
+        lambda r: r["subtype"] == "road" and r.get("subclass") in wanted,
+        filter_tag=f"road-subclasses:{','.join(sorted(wanted))}",
     )
 
 

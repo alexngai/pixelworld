@@ -19,6 +19,7 @@ import shapely
 
 from . import ground as ground_stage
 from . import importance as importance_stage
+from . import lanes as lane_stage
 from . import micro as micro_stage
 from . import objects as object_stage
 from . import roads as road_stage
@@ -70,6 +71,9 @@ ROAD_ORDER = (
     "motorway",
 )
 PATH_ORDER = ("path", "cycleway", "steps", "footway", "sidewalk", "crosswalk", "pedestrian")
+# paths that lie on the bed of the road they belong to (micro.follow_beds); footways,
+# pedestrian streets and plazas keep their own ground
+PATHS_ON_ROAD_BEDS = ("sidewalk", "crosswalk")
 # Typical full widths in metres (D-050); one carriageway where roads are mapped
 # as two (motorways, divided boulevards). Region specs override them (widths:).
 ROAD_WIDTH_M = {
@@ -223,6 +227,8 @@ def water_under_decks(
 
     road.mask[under] = 0
     road.cls[under] = 0
+    if road.lanes is not None:
+        road.lanes[under] = 0
     if road_hw is not None:
         road_hw[under] = 0
     # the level of the water around (cells land cover took for land have none)
@@ -249,6 +255,31 @@ def paved_band(on_road: np.ndarray, half_width: np.ndarray) -> np.ndarray:
         return np.zeros_like(on_road)
     dist, (iy, ix) = ndimage.distance_transform_edt(~on_road, return_indices=True)
     return dist <= half_width[iy, ix]
+
+
+def way_widths(
+    rows: list[dict], class_m: dict[str, float], rules: list[dict[str, Any]]
+) -> tuple[dict[str, float], dict[str, int]]:
+    """Each road's width in metres (D-050) and the lane counts rules give: its
+    class's width, or what Overture's `width_rules` say where mapped, or, over
+    both, the first `widths.ways` rule it matches (by name, lon/lat box and
+    one-way, lanes.way_rule): its `meters` and optionally `lanes`."""
+    widths: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for r in rows:
+        w = class_m[r["class"]]
+        mapped = lane_stage.mapped_width(r)
+        if mapped is not None and 2.0 <= mapped <= 80.0:
+            w = mapped
+        if rules:
+            mid = shapely.from_wkt(r["geometry"]).interpolate(0.5, normalized=True)
+            rule = lane_stage.way_rule(rules, r, (mid.x, mid.y))
+            if rule is not None:
+                w = float(rule.get("meters", w))
+                if "lanes" in rule:
+                    counts[r["id"]] = int(rule["lanes"])
+        widths[r["id"]] = w
+    return widths, counts
 
 
 def class_ids(classes: list[str], order: tuple[str, ...]) -> dict[int, str]:
@@ -630,9 +661,27 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
     kept_classes = [rule["class"] for rule in keep_rules if "class" in rule]
     road_ids = class_ids(list(dict.fromkeys(road_spec["classes"] + kept_classes)), ROAD_ORDER)
     road_id = {c: i for i, c in road_ids.items()}
+    widths = region.widths
+    # lanes and medians (M3.5) need names and one-way restrictions; so do width rules
+    lane_spec = (widths or {}).get("lanes")
+    way_rules = list((widths or {}).get("ways") or [])
     road_rows = overture.roads(
-        release, bbox, road_spec["classes"], road_spec.get("excludeSubclasses")
+        release,
+        bbox,
+        road_spec["classes"],
+        road_spec.get("excludeSubclasses"),
+        lanes=bool(lane_spec or way_rules),
     )
+    if road_spec.get("joinIslands"):
+        # service roads that only connect through left-out subclasses (parking
+        # aisles) join the network through as few of those as they need (M3.5)
+        extra = overture.road_subclasses(
+            release, bbox, road_spec["joinIslands"], lanes=bool(lane_spec or way_rules)
+        )
+        extra = [r for r in extra if r["class"] in road_spec["classes"]]
+        joined = road_stage.joining_segments(road_rows, extra)
+        road_rows = sorted(road_rows + joined, key=lambda r: r["id"])
+        print(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
     path_ids: dict[int, str] = {}
     path_rows: list[dict] = []
     if "paths" in region.sources:
@@ -707,18 +756,31 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             f"snap: {straight.constrained}/{straight.edges} road edges made octilinear, "
             f"nodes moved p99 {np.percentile(moved, 99) if len(moved) else 0:.2f} cells"
         )
-    widths = region.widths
     road_w = path_w = None
+    lane_b = None
     if widths is not None:
         rw = ROAD_WIDTH_M | {k: float(v) for k, v in (widths.get("roads") or {}).items()}
         pw = PATH_WIDTH_M | {k: float(v) for k, v in (widths.get("paths") or {}).items()}
-        road_w = {r["id"]: rw[r["class"]] for r in road_rows}
+        road_w, lane_counts = way_widths(road_rows, rw, way_rules)
         path_w = {r["id"]: pw[overture.path_class(r)] for r in path_rows}
         # a kept road may be drawn narrower than its class (a crooked street's one lane)
         for seg_id in road_w.keys() & keep.keys():
             if "width" in keep[seg_id]:
                 road_w[seg_id] = float(keep[seg_id]["width"])
-    road_layer = road_stage.rasterize(road_lines, (cy, cx), deviation=deviation, widths=road_w)
+        if lane_spec:
+            lane_b = lane_stage.lane_bytes(
+                road_lines_mapped,
+                road_rows,
+                road_w,
+                lane_spec,
+                region.meters_per_cell,
+                lane_counts,
+            )
+    road_layer = road_stage.rasterize(
+        road_lines, (cy, cx), deviation=deviation, widths=road_w, lanes=lane_b
+    )
+    if road_layer.lanes is not None:
+        print(f"lanes: {lane_stage.report(road_layer.lanes)}")
     path_layer = (
         road_stage.rasterize(path_lines, (cy, cx), deviation=deviation, widths=path_w)
         if path_rows
@@ -823,6 +885,11 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             for name, metres in region.micro["smooth"].items():
                 (sid,) = ground_stage.surface_ids(surface_names, [name])
                 sigma[surface == sid] = float(metres) / (region.meters_per_cell / k)
+        # sidewalks and crossings lie on the bed of their road (M3.5)
+        path_bed = None
+        if path_layer is not None and path_hw is not None:
+            on_bed = [i for i, c in path_ids.items() if c in PATHS_ON_ROAD_BEDS]
+            path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
         mc = micro_stage.build_micro(
             micro_m,
             step_m,
@@ -833,6 +900,8 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             road_layer.mask,
             None if road_hw is None else road_hw / 32.0,
             sigma,
+            path_bed,
+            None if path_hw is None else path_hw / 32.0,
         )
         micro = (mc, k)
         print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
@@ -860,6 +929,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             shift=road_shift,
             streets=road_lines,
             water=is_water,
+            roads=None if road_hw is None else (road_layer.mask, road_hw / 32.0),
         )
         print(f"objects: {object_counts}")
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
@@ -940,6 +1010,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         path_class=None if path_layer is None else path_layer.cls,
         path_width=path_hw,
         rail=rail,
+        lane=road_layer.lanes,
         path_classes=path_ids or None,
         geology=geology,
         vref=vref,
@@ -1006,6 +1077,7 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
             if rail is not None
             else {}
         ),
+        **({"lanes": lane_stage.report(road_layer.lanes)} if road_layer.lanes is not None else {}),
         "surfaces": {
             surface_names[int(k)]: int(v)
             for k, v in zip(*np.unique(surface, return_counts=True), strict=True)

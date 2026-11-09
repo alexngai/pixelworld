@@ -23,10 +23,18 @@ sources:
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
     excludeSubclasses: [parking_aisle, driveway]
+    # service roads that only connect through a car park's aisles join the
+    # streets through as few aisles as they need (M3.5)
+    joinIslands: [parking_aisle]
   paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
 
-# true widths (D-050): a 14 m carriageway spans most of a 20 m cell
-widths: { scale: 1.0, minCells: 0.1 }
+# true widths (D-050): a 14 m carriageway spans most of a 20 m cell; lane
+# counts from each way's width (3.5 m lanes) and a median between the two
+# carriageways of a divided road (Las Vegas Boulevard, I-15) (M3.5)
+widths: { scale: 1.0, minCells: 0.1, lanes: { meters: 3.5 } }
+# buildings the shift leaves over a drawn road move off it, up to 5 m, or
+# lose the part over it (M3.5)
+snap: { buildings: { clearRoads: { nudgeMeters: 5 } } }
 micro: { k: 4, dem: { overview: 1 } }
 
 # keep lakes and big pools (the fountain lake), drop specks

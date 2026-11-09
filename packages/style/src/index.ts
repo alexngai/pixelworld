@@ -49,6 +49,30 @@ export interface RoadClassStyle {
   centerLine: boolean;
   /** Surface ramp; the style's asphalt if absent. */
   ramp?: string;
+  /** Lane lines where the world counts lanes and they are wide enough (`roads.lanes`, M3.5). */
+  lanes?: boolean;
+}
+
+/**
+ * Lane lines and medians (M3.5), on worlds whose roads carry lane counts and
+ * carriageway pairs (the LANE layer). Without it, roads draw as before.
+ */
+export interface LaneStyle {
+  /** Dashed lane lines and median kerbs; centre lines stay in the `marking` ramp. */
+  ramp: string;
+  /**
+   * The narrowest lane drawn, in pixels across: a road whose lanes are
+   * narrower draws fewer, wider ones, and none below two.
+   */
+  minPixels: number;
+  /** Dash and gap along a lane line, in lane widths. */
+  dash?: [number, number];
+  /**
+   * Medians between a divided road's carriageways: kerbs along the ground
+   * between them, or, where they meet, a paved strip this many lane widths
+   * across carved between them. 0 or absent: no medians.
+   */
+  median?: number;
 }
 
 /** A path class (footway, sidewalk, crosswalk, …), drawn at its real width (D-050). */
@@ -74,7 +98,13 @@ export interface StylePack {
   provinces?: Record<string, string>;
   surfaces: Record<string, SurfaceStyle>;
   /** `rail`: the ramp rails in the street are drawn in (M3.5); without it, no rails. */
-  roads?: { asphalt: string; marking: string; rail?: string; classes: Record<string, RoadClassStyle> };
+  roads?: {
+    asphalt: string;
+    marking: string;
+    rail?: string;
+    lanes?: LaneStyle;
+    classes: Record<string, RoadClassStyle>;
+  };
   paths?: { classes: Record<string, PathClassStyle> };
   /** Semantic asset groups → generator, role ramps and parameters (D-030). */
   assets?: Record<string, AssetStyle>;
@@ -219,8 +249,17 @@ export function validateStyle(style: StylePack): StylePack {
       throw new StyleError(`surface ${name}: light must be "tiles" or "slope"`);
   }
   if (style.roads) {
-    for (const r of [style.roads.asphalt, style.roads.marking, ...(style.roads.rail ? [style.roads.rail] : [])])
+    const extra = [style.roads.rail, style.roads.lanes?.ramp].filter((r): r is string => !!r);
+    for (const r of [style.roads.asphalt, style.roads.marking, ...extra])
       if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
+    const lanes = style.roads.lanes;
+    if (lanes) {
+      if (!(lanes.minPixels > 0)) throw new StyleError("roads.lanes.minPixels must be > 0");
+      if (lanes.dash && !(lanes.dash.length === 2 && lanes.dash[0] > 0 && lanes.dash[1] >= 0))
+        throw new StyleError("roads.lanes.dash must be [dash > 0, gap ≥ 0]");
+      if (lanes.median !== undefined && !(lanes.median >= 0))
+        throw new StyleError("roads.lanes.median must be ≥ 0");
+    }
     for (const [name, c] of Object.entries(style.roads.classes))
       if (c.ramp && !(c.ramp in style.ramps)) throw new StyleError(`road class ${name} uses undefined ramp ${c.ramp}`);
   }
@@ -346,7 +385,7 @@ export interface MaterialTables {
   strataCount: Int32Array;
   /** Geology province id → strata set index. */
   provinceSet: Int32Array;
-  /** Per road class id: (half width in cells, centre line 0/1, ramp or -1 for asphalt, 0). */
+  /** Per road class id: (half width in cells, centre line 0/1, ramp or -1 for asphalt, lane lines 0/1). */
   roads: Float32Array;
   /** Per path class id: (ramp or -1 if unstyled, stripes 0/1, 0, 0). */
   paths: Float32Array;
@@ -354,6 +393,20 @@ export interface MaterialTables {
   markingRamp: number;
   /** Ramp the rails in the street are drawn in (M3.5), -1 if the style has none. */
   railRamp: number;
+  /**
+   * Lane lines and medians (M3.5): (narrowest lane in pixels or -1 for none,
+   * dash and gap in lane widths, median strip in lane widths).
+   */
+  lanes: Float32Array;
+  /** Ramp lane lines and median kerbs are drawn in. */
+  laneRamp: number;
+}
+
+/** The shader's lane settings (MaterialTables.lanes); x = -1 turns lanes and medians off. */
+function laneTable(lanes: LaneStyle | undefined): Float32Array {
+  if (!lanes) return Float32Array.of(-1, 1, 2, 0);
+  const [dash, gap] = lanes.dash ?? [1, 2];
+  return Float32Array.of(lanes.minPixels, dash, gap, lanes.median ?? 0);
 }
 
 export function materialTables(
@@ -375,6 +428,8 @@ export function materialTables(
     asphaltRamp: palette.rampIds.get(style.roads?.asphalt ?? "") ?? 0,
     markingRamp: palette.rampIds.get(style.roads?.marking ?? "") ?? 0,
     railRamp: palette.rampIds.get(style.roads?.rail ?? "") ?? -1,
+    lanes: laneTable(style.roads?.lanes),
+    laneRamp: palette.rampIds.get(style.roads?.lanes?.ramp ?? "") ?? -1,
   };
   const ramp = (name: string) => palette.rampIds.get(name)!;
 
@@ -409,7 +464,12 @@ export function materialTables(
     // Widths are in render units; on fine worlds a road fills at most its own cells.
     if (r)
       t.roads.set(
-        [Math.min(0.5, r.halfWidth / renderScale), r.centerLine ? 1 : 0, r.ramp ? ramp(r.ramp) : -1, 0],
+        [
+          Math.min(0.5, r.halfWidth / renderScale),
+          r.centerLine ? 1 : 0,
+          r.ramp ? ramp(r.ramp) : -1,
+          r.lanes ? 1 : 0,
+        ],
         Number(id) * 4,
       );
   }

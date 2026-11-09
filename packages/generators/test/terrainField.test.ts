@@ -1,6 +1,6 @@
-import { TerrainGrid, emptyMicro } from "@pixelworld/grid";
+import { LANE_DIVIDED, LANE_ONEWAY, TerrainGrid, emptyMicro } from "@pixelworld/grid";
 import { describe, expect, it } from "vitest";
-import { buildTerrainField, forEachFieldPoint } from "../src/index";
+import { NEAR_MEDIAN, buildTerrainField, forEachFieldPoint } from "../src/index";
 
 /** A 2×1-cell grid at k=2 (4×2 micro-cells) whose east half stands 6 micro-steps higher. */
 function stepGrid(): TerrainGrid {
@@ -37,6 +37,46 @@ describe("terrain fields", () => {
     // road mask, class | width << 8, path mask, class | width << 8
     expect(Array.from(f.ways)).toEqual([0x0004, 2 | (40 << 8), 0, 0, 0, 0, 0x0040, 2 | (5 << 8)]);
     expect(f.wayReach).toBe(2);
+  });
+
+  it("packs lanes over the road's connections (M3.5)", () => {
+    const g = stepGrid();
+    g.road.set([0x0044 | (1 << 9), 0]); // east and west, and a crossing flag the decal doesn't use
+    g.roadWidth.set([16, 0]); // half a cell
+    g.lane.set([4 | LANE_ONEWAY, 3]); // no width in the second cell: nothing to draw there
+    const f = buildTerrainField(g, { offset: [0, 0], world: { width: 2, height: 1 } });
+    expect(f.ways[0]).toBe(0x0044 | ((4 | LANE_ONEWAY) << 8));
+    expect(f.ways[4]).toBe(0);
+    expect([f.ways[2], f.ways[6]]).toEqual([0, 0]);
+    expect(f.wayReach).toBe(1);
+  });
+
+  it("flags the cells between a divided road's carriageways, and only those (M3.5)", () => {
+    // two east-west carriageways of a divided road, in rows 1 and 4 of a 9×7 grid
+    const k = 2;
+    const g = new TerrainGrid(9, 7, { micro: emptyMicro(k, 9, 7) });
+    for (const row of [1, 4])
+      for (let x = 0; x < 9; x++) {
+        const i = row * 9 + x;
+        g.road[i] = 0x44;
+        g.roadWidth[i] = 8;
+        g.lane[i] = 2 | LANE_ONEWAY | LANE_DIVIDED;
+      }
+    const f = buildTerrainField(g, { offset: [0, 0], world: { width: 9, height: 7 } });
+    const near = (x: number, y: number) => (f.ways[(y * 9 + x) * 4 + 2]! & NEAR_MEDIAN) !== 0;
+    // rows 0 to 5: the two carriageways, the median between them and a cell's margin;
+    // three cells apart, they look three cells out
+    for (let y = 0; y < 7; y++) expect(near(4, y)).toBe(y <= 5);
+    expect((f.ways[(2 * 9 + 4) * 4 + 2]! & NEAR_MEDIAN) >> 12).toBe(3);
+    // a carriageway whose partner is out of reach flags nothing
+    const lone = new TerrainGrid(9, 7, { micro: emptyMicro(k, 9, 7) });
+    for (let x = 0; x < 9; x++) {
+      lone.road[9 + x] = 0x44;
+      lone.roadWidth[9 + x] = 8;
+      lone.lane[9 + x] = 2 | LANE_ONEWAY | LANE_DIVIDED;
+    }
+    const l = buildTerrainField(lone, { offset: [0, 0], world: { width: 9, height: 7 } });
+    expect(Array.from({ length: 63 }, (_, i) => l.ways[i * 4 + 2]! & NEAR_MEDIAN).every((v) => v === 0)).toBe(true);
   });
 
   it("packs rails drawn in the street (M3.5): connections and what is drawn", () => {
