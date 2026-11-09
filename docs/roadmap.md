@@ -161,7 +161,7 @@ Every variant uses the same 160 m/cell layout on screen. The K=4 and K=8 worlds 
 - Street-tree counts vary with K, because road cells block more ground at coarse cells.
 - At night the streets stay dark: there are no street lights yet.
 
-### M1.6: Micro-terrain — done (desktop GPU timing to confirm)
+### M1.6: Micro-terrain — done (desktop GPU timing: run `pnpm bench`)
 
 **Goal:** pixel-resolution terrain everywhere, without changing the gameplay grid.
 
@@ -378,7 +378,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 **Known issues:**
 - **Remaining jogs:** most are on winding highways and in dense city blocks shorter than a cell, where an in-between angle has no clean answer. A looser `snap.roads.angle` or `deviation` trades position for straightness.
 - **Irregular footprints:** buildings whose edges agree on no direction aren't turned.
-- **Footprints near streets:** the shift moves objects with their streets, but doesn't check whether a moved footprint now overlaps a road cell.
+- **Footprints near streets:** the shift moves objects with their streets, but doesn't check whether a moved footprint now overlaps a road cell. *Fixed on walking levels:* `snap.buildings.clearRoads` nudges or trims them. Driving levels draw roads 1.5–2× real width, so clearing there would reshape the city.
 
 ### M2.7: Roads and paths at their real width — done
 
@@ -407,10 +407,10 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 - **Tests:** pytest covers classes, widths, the paved band, road beds, the junction filter and the chunk layers. Vitest covers the codec, style tables and field packing. E2e adds a walking-level golden; the Vegas golden moved by road-edge pixels.
 
 **Known issues:**
-- **Walking-level islands:** service roads that only connect through parking aisles (left out) form 53 small separate networks.
+- **Walking-level islands:** service roads that only connect through parking aisles (left out) form 53 small separate networks. *Reduced:* `sources.roads.joinIslands` adds the fewest parking aisles to join them, leaving 28 in the Southwest and 21 in San Francisco; the rest connect only through driveways or ramps.
 - **Footways through properties:** paths mapped through casino properties draw across plazas and under buildings.
-- **Lanes:** there are no lane markings beyond a centre line, and no medians.
-- **Pavement over steps:** wide roads are flattened over their whole width, but a pavement band can still cross a micro-terrain step on hilly ground.
+- **Lanes:** there are no lane markings beyond a centre line, and no medians. *Fixed (D-065):* dashed lane lines and medians from way widths and one-way pairs.
+- **Pavement over steps:** wide roads are flattened over their whole width, but a pavement band can still cross a micro-terrain step on hilly ground. *Mostly fixed:* sidewalks take their road's profile; steps crossed per 100 cells fell by half.
 
 ### M3: Detail pass — components and landmarks — done
 
@@ -656,7 +656,7 @@ Three more agents in worktrees, merged with the traffic thread (D-060) and rebui
 - **Traffic scale:** a car is drawn at least 0.55 cells long, so on the flying level it is 55 m long and dwarfs the bridges.
 - **The walking level has no sidewalk trees:** its `streetTrees` list holds only lights and signals.
 - **Lombard's hairpins** don't read at 10 m cells; a depiction that widens the bends and paints the block brick red may.
-- **Curving rails** (the Embarcadero) draw as steps.
+- **Curving rails** (the Embarcadero) draw as steps. *Fixed:* tracks cut corners and a street's tracks join.
 - **Heroes:** none of the San Francisco landmarks are heroes (D-053) yet.
 
 #### Fourth round: ground, fronts, fog, landmarks
@@ -719,11 +719,11 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - **Fog over the inner avenues:** lighter, with more gaps, so the rows keep their colour.
 - **The Dragon Gate:** larger, or seen down Grant Avenue.
 - **Data:**
-  - A 7-storey "building" in the middle of Alamo Square is a 45 m², 22 m Overture footprint, likely a tree, matched to the park's parcel.
-  - Sloped lawns still band in their micro-terrain steps.
+  - A 7-storey "building" in the middle of Alamo Square is a 45 m², 22 m Overture footprint, likely a tree, matched to the park's parcel. *Fixed:* `objects.buildings.implausible` drops tiny, tall, unclassed footprints in parks (D-062).
+  - Sloped lawns still band in their micro-terrain steps. *Fixed:* lawns are lit by their smoothed slope (`light: "slope"`).
 - **Carried over:**
   - Lombard's bends read only from some rotations.
-  - Curving rails draw as steps.
+  - Curving rails draw as steps (since fixed).
   - None of the San Francisco landmarks are heroes yet.
 
 ### M4: Drive, fly, build
