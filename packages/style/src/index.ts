@@ -28,6 +28,13 @@ export interface SurfaceStyle {
   ramp: string; // ramp name, or "strata"
   pattern: PatternName;
   density?: number;
+  /**
+   * How micro-terrain tops are lit: by each micro-tile ("tiles", the default:
+   * terraces read as steps), or by the ground's slope over about a cell
+   * ("slope": a smoothed surface such as a lawn reads as one slope, and its
+   * risers take its own colour a shade darker rather than pale strata).
+   */
+  light?: "tiles" | "slope";
 }
 
 export interface StrataBand {
@@ -208,6 +215,8 @@ export function validateStyle(style: StylePack): StylePack {
     if (s.ramp !== "strata" && !(s.ramp in style.ramps))
       throw new StyleError(`surface ${name} uses undefined ramp ${s.ramp}`);
     if (!(s.pattern in PATTERNS)) throw new StyleError(`surface ${name}: unknown pattern`);
+    if (s.light !== undefined && s.light !== "tiles" && s.light !== "slope")
+      throw new StyleError(`surface ${name}: light must be "tiles" or "slope"`);
   }
   if (style.roads) {
     for (const r of [style.roads.asphalt, style.roads.marking, ...(style.roads.rail ? [style.roads.rail] : [])])
@@ -329,7 +338,7 @@ export interface WorldVocabulary {
  * uniform arrays (an array of scalars costs a whole vector slot per element).
  */
 export interface MaterialTables {
-  /** Per surface id: (ramp or RAMP_STRATA, pattern, density, 0). */
+  /** Per surface id: (ramp or RAMP_STRATA, pattern, density, 1 if lit by slope else 0). */
   surfaces: Float32Array;
   /** Strata band lower bounds in steps, set s band i at s*MAX_STRATA + i. */
   strataMin: Float32Array;
@@ -374,7 +383,7 @@ export function materialTables(
     const name = world.surfaces[String(id)];
     const s = (name !== undefined ? style.surfaces[name] : undefined) ?? fallback;
     t.surfaces.set(
-      [s.ramp === "strata" ? RAMP_STRATA : ramp(s.ramp), PATTERNS[s.pattern], s.density ?? 0, 0],
+      [s.ramp === "strata" ? RAMP_STRATA : ramp(s.ramp), PATTERNS[s.pattern], s.density ?? 0, s.light === "slope" ? 1 : 0],
       id * 4,
     );
   }
