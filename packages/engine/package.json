@@ -1,0 +1,18 @@
+{
+  "name": "@pixelworld/engine",
+  "license": "MIT OR Apache-2.0",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pixelworld/bake": "workspace:*",
+    "@pixelworld/generators": "workspace:*",
+    "@pixelworld/grid": "workspace:*",
+    "@pixelworld/runtime": "workspace:*",
+    "@pixelworld/style": "workspace:*",
+    "@pixelworld/world-format": "workspace:*"
+  }
+}

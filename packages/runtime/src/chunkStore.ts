@@ -151,6 +151,12 @@ export class ChunkStore {
     return chunk ? { chunk, lx: x - cx * s, ly: y - cy * s } : null;
   }
 
+  /** The loaded terrain holding a cell and the cell's index in it, or null (outside, or not loaded). */
+  cell(x: number, y: number): { terrain: TerrainGrid; i: number } | null {
+    const c = this.cellOf(Math.floor(x), Math.floor(y));
+    return c ? { terrain: c.chunk.terrain, i: c.chunk.terrain.index(c.lx, c.ly) } : null;
+  }
+
   /** Terrain surface height at a continuous world position, or null if not loaded. */
   surfaceHeightAt(x: number, y: number): number | null {
     const c = this.cellOf(Math.floor(x), Math.floor(y));

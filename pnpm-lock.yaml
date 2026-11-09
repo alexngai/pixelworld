@@ -74,6 +74,27 @@ importers:
         specifier: workspace:*
         version: link:../style
 
+  packages/engine:
+    dependencies:
+      '@pixelworld/bake':
+        specifier: workspace:*
+        version: link:../bake
+      '@pixelworld/generators':
+        specifier: workspace:*
+        version: link:../generators
+      '@pixelworld/grid':
+        specifier: workspace:*
+        version: link:../grid
+      '@pixelworld/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@pixelworld/style':
+        specifier: workspace:*
+        version: link:../style
+      '@pixelworld/world-format':
+        specifier: workspace:*
+        version: link:../world-format
+
   packages/generators:
     dependencies:
       '@pixelworld/grid':
