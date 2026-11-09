@@ -290,7 +290,7 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 | 800 m | 963×525 | 576 cells | ≤ 0.1% |
 | 1200 m | 879×424 | 513 cells | ≤ 0.6% |
 
-Which drive length is right depends on vehicle speed, which M4 sets; the editor's background field changes it in seconds.
+Which drive length is right depends on vehicle speed, which M4 sets; the editor's background field changes it in seconds. *M4 set it (D-070): at the game's pace the 718-cell layout is a drive of under four minutes by road, so the 500 m background stays.*
 
 **Known issues:**
 - **Transition rings:** stretched cells smear terrain and land cover around the Strip, visible as rings in the warp preview.
@@ -346,7 +346,7 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
   - There's no vegetation or land-cover scatter yet (warped layouts don't support it). *Done since M3: the client scatters by surface on every level, at 0.6 when flying (D-054).*
   - The dam is at real size, so it's tiny.
   - The heights of oversized towers want tuning against the terrain's relief. *Tuned: the level's cells had no relief until the D-041 fix; towers are now stretched 1.5× rather than 2.5×.*
-- **Moving between levels** is a page reload. A seamless transition (take-off and landing) belongs with M4's vehicles.
+- **Moving between levels** is a page reload. A seamless transition (take-off and landing) belongs with M4's vehicles. *Done in the example game: a new view replaces the old one on the same canvas (D-070); the viewer still reloads.*
 - **Editor:** it previews any level's warp (`pixelworld serve worlds/southwest/fly.yaml`). It only saves a warp file the spec owns, so a level that inherits its warp is tuned in its spec file. Depiction and generalization sliders would make tuning faster.
 
 ### M2.6: Snapping to the isometric directions — done
@@ -758,6 +758,15 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - Plane with an arcade flight model, drop shadow and canyon collision, on the flying level (M2.5), with take-off and landing moving between levels.
 - Occlusion silhouettes.
 - Speeds tuned to the compressed layout.
+- **The example game (D-070), done:** `apps/game` (`@pixelworld/game`), built only on the engine's public API ([library.md](library.md) §7.10).
+  - **Car:** arcade physics on the drawn roads and terrain: top speeds by road class (motorway 11 cells/s on the Southwest driving level) and surface off-road, nothing on water, slopes slowing climbs, cliffs; bridge decks from the routes; collisions with buildings (`query.objectsAt`) and traffic (`vehiclesNear`); a road assist; a chase camera with a look-ahead; the style's player car with a silhouette.
+  - **Plane:** an arcade flight model on the flying level (throttle, pitch, bank), a dithered drop shadow on the ground below, terrain, canyon and tower collisions with a reset; `vehicle.plane` in both style packs.
+  - **Between levels:** a take-off (fast on a long straight road, T) and a landing (low and slow over a road) load the other level at the same lon/lat in a view that replaces the old one on the same canvas without a flash (`createWorldView({ replace })`); no page reload.
+  - **Pace:** speeds in cells per second, scaled per level by its metres per cell. The scripted run, Las Vegas Boulevard → Hoover Dam → the South Rim, takes 3 min 31 s of play for 1,317 cells; the canyon flight 48 s, landing on I-40 at Williams.
+  - **HUD:** speed, level, nearest landmark or town, minimap, key help. Starts on Las Vegas Boulevard and the Embarcadero; `?world=`, `?start=lon,lat`, `?run=1`.
+  - **Tests:** unit tests for the physics, roads, decks, route planner, pilots and controllers; `e2e/game.spec.ts` scripts the Strip, a building, take-off, flight over the shadow and landing.
+  - **Frames:** under SwiftShader at 1280×720 with traffic, the real-time run's frames have a median and 95th percentile of 16.7 and 16.8 ms; 2.6% take over 20 ms, while tiles bake in software and at the two level changes.
+  - **Left:** the car doesn't join traffic's routes or obey junctions, and traffic doesn't yield to it; no runways; the 60 fps check on a desktop GPU (`?run=1` reports its frame times).
 - Grid building mode (place and remove) with local re-bake.
 - Palette LUT variants (day/night) and water palette cycling.
 - **Ambient traffic (D-060), done:**

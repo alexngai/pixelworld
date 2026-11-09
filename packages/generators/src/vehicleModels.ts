@@ -627,4 +627,137 @@ const ferry: Generator = (ctx) => {
   return m;
 };
 
-export const VEHICLE_MODEL_GENERATORS: Record<string, Generator> = { car, bus, cableTram, tram, train, ferry };
+/** A symmetric band across a model `W` wide: [v0, v1) of about `w` columns, about the centre line. */
+function band(W: number, w: number): [number, number] {
+  let n = Math.max(1, Math.min(W, Math.round(w)));
+  if ((W - n) % 2) n = n + 1 <= W ? n + 1 : n - 1; // same parity as W, so it sits on the centre line
+  const v0 = (W - n) / 2;
+  return [v0, v0 + n];
+}
+
+/** The plane's own shape: a high-wing single-engine light aircraft. */
+function planeModel(ctx: GenContext, L: number, W: number, H: number): VoxelModel {
+  const [bodyId, stripeId] = livery(ctx, "body", "stripe");
+  const m = new VoxelModel(L, W, H);
+  const body = m.material(bodyId);
+  const stripe = m.material(stripeId);
+  const f = (x: number) => Math.round(x * L);
+  if (L < 8 || W < 6 || H < 3) {
+    // too small for detail: a fuselage, a wing and a tailplane
+    const [c0, c1] = band(W, 1);
+    put(m, 0, L, c0, c1, 0, Math.min(H, 2), body);
+    put(m, f(0.45), Math.max(f(0.45) + 1, f(0.7)), 0, W, Math.min(H, 2) - 1, Math.min(H, 2), body);
+    const [t0, t1] = band(W, W * 0.4);
+    put(m, 0, Math.max(1, f(0.15)), t0, t1, Math.min(H, 2) - 1, Math.min(H, 2), stripe);
+    return m;
+  }
+  const glass = m.material(ctx.ramp("glass"));
+  const trim = m.material(first(ctx, "trim", "tyre"));
+  const tyre = m.material(ctx.ramp("tyre"));
+  const light = m.material(first(ctx, "light", "glass"));
+  const tail = m.material(first(ctx, "tail", "stripe"));
+  // the fuselage: a box from the firewall back, narrowing and rising into a tail boom
+  const top = Math.max(2, Math.min(H - 2, Math.round(H * 0.55))); // the cabin roof (z), where the wing sits
+  const [fv0, fv1] = band(W, Math.max(2, W * 0.16));
+  const [bv0, bv1] = band(W, 1);
+  const boom = f(0.38); // the cabin ends here; the boom runs aft
+  for (let u = 0; u < L - 1; u++) {
+    const t = u < boom ? u / Math.max(1, boom) : 1; // 0 at the tail, 1 at the cabin
+    const [v0, v1] = u < boom ? (t < 0.5 ? [bv0, bv1] : band(W, Math.max(1, (fv1 - fv0) * t))) : [fv0, fv1];
+    const z0 = u < boom ? Math.round((1 - t) * (top - 2)) + 1 : 1;
+    put(m, u, u + 1, v0, v1, z0, top, body);
+  }
+  // a stripe down each side, on the fuselage's outermost voxels
+  const sz = Math.max(1, Math.round(top * 0.45));
+  for (let u = 1; u < L - 1; u++) {
+    let lo = -1;
+    let hi = -1;
+    for (let v = 0; v < W; v++)
+      if (m.get(u, v, sz)) {
+        if (lo < 0) lo = v;
+        hi = v;
+      }
+    if (lo >= 0) {
+      m.set(u, lo, sz, stripe);
+      m.set(u, hi, sz, stripe);
+    }
+  }
+  // the cabin's side windows between frames, and the windscreen at its front
+  const c0 = f(0.52);
+  const c1 = Math.min(L - 3, f(0.76));
+  for (let u = c0; u < c1; u++)
+    for (const v of [fv0, fv1 - 1]) for (let z = sz + 1; z < top; z++) if ((u - c0) % 3 !== 2 || u === c1 - 1) m.set(u, v, z, glass);
+  for (let v = fv0; v < fv1; v++) for (let z = sz + 1; z < top; z++) m.set(c1, v, z, glass);
+  // the cowling ahead of it sits a voxel lower, then the propeller: a hub on the nose, its blades a cross
+  put(m, c1 + 1, L - 1, fv0, fv1, top - 1, top, 0);
+  const hub = Math.max(1, Math.floor(top / 2));
+  const blade = Math.max(1, Math.round(W * 0.12));
+  put(m, L - 1, L, ...band(W, 2 * blade + 1), hub, hub + 1, trim);
+  put(m, L - 1, L, bv0, bv1, Math.max(0, hub - blade), Math.min(H, hub + blade + 1), trim);
+  // the wing on the cabin roof, its tips in the stripe and navigation lights at the ends
+  const w0 = f(0.5);
+  const w1 = Math.max(w0 + 2, f(0.72));
+  put(m, w0, w1, 0, W, top, top + 1, body);
+  for (const v of [0, W - 1]) {
+    put(m, w0, w1, v, v + 1, top, top + 1, stripe);
+    m.set(w1 - 1, v, top, light);
+  }
+  // struts from the fuselage's sides up and out to the wing, in face-joined steps
+  for (let k = 0; fv0 - 1 - k >= 0 && sz + k < top; k++) {
+    const v = fv0 - 1 - k;
+    const z = sz + k;
+    for (const s of [v, W - 1 - v]) {
+      m.set(w0 + 1, s, z, trim);
+      if (z + 1 < top) m.set(w0 + 1, s, z + 1, trim);
+    }
+  }
+  // the tail: a tailplane and a fin in the stripe, a light at the top
+  const tw = Math.max(1, f(0.16));
+  const [s0, s1] = band(W, W * 0.42);
+  const tz = Math.min(H - 2, top - 1);
+  put(m, 0, tw, s0, s1, tz, tz + 1, body);
+  put(m, 0, Math.max(1, tw - 1), bv0, bv1, tz + 1, H, stripe);
+  put(m, 0, 1, bv0, bv1, H - 1, H, tail);
+  // the landing gear: main wheels on legs, a nose wheel
+  const g = Math.round((w0 + w1) / 2);
+  for (const v of [Math.max(0, fv0 - 1), Math.min(W - 1, fv1)]) {
+    m.set(g, v, 0, tyre);
+    m.set(g, v, 1, trim);
+  }
+  put(m, L - 2, L - 1, bv0, bv1, 0, 1, tyre);
+  return m;
+}
+
+/**
+ * A light aircraft (M4's player plane): a high-wing single-engine plane with
+ * a cabin, a strut-braced wing, a tailplane and fin, a propeller and fixed
+ * gear, painted in a body colour with a stripe. Generic: no registration,
+ * lettering or emblems. It faces +x; `ctx.size` is length × wingspan ×
+ * height (voxels).
+ *
+ * `part` 1 is its drop shadow: the plane's outline seen from above, one
+ * voxel thick, dithered (every other voxel, so the ground shows through), in
+ * the `shadow` ramp.
+ * roles: body.*, stripe.* (paired liveries, by seed), glass, trim (propeller,
+ * struts, gear legs), tyre, light (navigation lights), tail (the fin's
+ * light), shadow.
+ */
+const plane: Generator = (ctx) => {
+  const { L, W, H } = sizeOf(ctx, [20, 22, 7]);
+  const model = planeModel(ctx, L, W, H);
+  if (ctx.part !== 1) return model;
+  const shadow = new VoxelModel(L, W, 1);
+  const s = shadow.material(first(ctx, "shadow", "tyre"));
+  for (let u = 0; u < L; u++)
+    for (let v = 0; v < W; v++) {
+      if ((u + v) % 2) continue;
+      for (let z = 0; z < model.sz; z++)
+        if (model.get(u, v, z)) {
+          shadow.set(u, v, 0, s);
+          break;
+        }
+    }
+  return shadow;
+};
+
+export const VEHICLE_MODEL_GENERATORS: Record<string, Generator> = { car, bus, cableTram, tram, train, ferry, plane };

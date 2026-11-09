@@ -165,6 +165,24 @@ describe("the camera", () => {
   });
 });
 
+describe("disposing entities", () => {
+  it("releases every sprite, and drops ones that arrive afterwards", async () => {
+    const t = entities();
+    t.list.add({ model: { boxes: [BOX], key: "a" }, x: 1, y: 1 });
+    t.list.add({ model: { boxes: [BOX], key: "b" }, x: 2, y: 2 });
+    t.list.request(0);
+    t.jobs[0]!.done(t.sprite(1));
+    await t.flush();
+    t.list.dispose();
+    expect(t.released).toEqual([t.sprite(1)]);
+    expect(t.list.list()).toEqual([]);
+    expect(t.list.spriteCount).toBe(0);
+    t.jobs[1]!.done(t.sprite(2)); // still baking when the view went away
+    await t.flush();
+    expect(t.released).toEqual([t.sprite(1), t.sprite(2)]);
+  });
+});
+
 describe("the tile grid", () => {
   it("lists the tiles around a view, visible first and nearest first", () => {
     // 32×32 tiles of 4 cells, flat at 0

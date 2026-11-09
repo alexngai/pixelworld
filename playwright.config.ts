@@ -3,6 +3,8 @@ import { defineConfig } from "@playwright/test";
 // PW_PORT: run beside another checkout's dev server
 const PORT = Number(process.env.PW_PORT ?? 5199);
 export const EDITOR_PORT = 5198;
+// the example game (apps/game, e2e/game.spec.ts); PW_GAME_PORT, else two below PW_PORT
+export const GAME_PORT = Number(process.env.PW_GAME_PORT ?? PORT - 2);
 
 /**
  * Golden-image and behaviour tests for the baked renderer. Rendering uses
@@ -39,6 +41,12 @@ export default defineConfig({
       // the editor; its /api is mocked per test (e2e/editor.spec.ts)
       command: `pnpm --filter @pixelworld/editor exec vite --port ${EDITOR_PORT} --strictPort`,
       url: `http://localhost:${EDITOR_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: `pnpm --filter @pixelworld/game exec vite --port ${GAME_PORT} --strictPort`,
+      url: `http://localhost:${GAME_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

@@ -165,17 +165,40 @@ export class Compositor {
     this.gl.deleteTexture(img.texture);
   }
 
+  private releaseTarget(): void {
+    const gl = this.gl;
+    const t = this.target;
+    if (!t) return;
+    gl.deleteFramebuffer(t.fb);
+    gl.deleteTexture(t.color);
+    gl.deleteRenderbuffer(t.depth);
+    if (t.fogFb) gl.deleteFramebuffer(t.fogFb);
+    if (t.fogColor) gl.deleteTexture(t.fogColor);
+    this.target = null;
+  }
+
+  /**
+   * Let go of the compositor's own GPU objects (programs, frame targets,
+   * palette, fog pass). The canvas's context stays: another compositor may
+   * share it (a view replacing another on the same canvas). Textures handed
+   * out by `upload` are the owner's to release.
+   */
+  dispose(): void {
+    const gl = this.gl;
+    this.releaseTarget();
+    if (this.paletteTex) gl.deleteTexture(this.paletteTex);
+    this.paletteTex = null;
+    this.fogPass?.dispose();
+    this.fogPass = null;
+    gl.deleteProgram(this.quadProg);
+    gl.deleteProgram(this.palProg);
+    gl.deleteVertexArray(this.vao);
+  }
+
   private ensureTarget(w: number, h: number) {
     const gl = this.gl;
     if (this.target && this.target.w === w && this.target.h === h) return this.target;
-    if (this.target) {
-      const t = this.target;
-      gl.deleteFramebuffer(t.fb);
-      gl.deleteTexture(t.color);
-      gl.deleteRenderbuffer(t.depth);
-      if (t.fogFb) gl.deleteFramebuffer(t.fogFb);
-      if (t.fogColor) gl.deleteTexture(t.fogColor);
-    }
+    this.releaseTarget();
     const color = rgba8Texture(gl, w, h);
     const fb = framebuffer(gl, color, null);
     const depth = gl.createRenderbuffer()!;

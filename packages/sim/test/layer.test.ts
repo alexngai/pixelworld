@@ -165,4 +165,38 @@ describe("the traffic layer", () => {
     }
     expect(b.sim.serialize()).toEqual(a.sim.serialize());
   });
+
+  it("tells a game which vehicles are near a place, with their size, while they are shown", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const { ctx } = context();
+    await layer.init(ctx);
+    const all = layer.sim.poses(1);
+    const v = all.find((p) => p.kind === "car")!;
+    const near = layer.vehiclesNear(v.x, v.y, 0.01);
+    expect(near.map((n) => n.id)).toContain(v.id);
+    const me = near.find((n) => n.id === v.id)!;
+    expect(me).toMatchObject({ x: v.x, y: v.y, heading: v.heading, kind: "car" });
+    // a car at 25 m per cell is drawn at least 0.55 cells long, narrower than long
+    expect(me.length).toBeGreaterThanOrEqual(0.55);
+    expect(me.width).toBeLessThan(me.length);
+    expect(layer.vehiclesNear(v.x, v.y, 100).length).toBe(all.length);
+    layer.setSublayerEnabled("road", false);
+    expect(layer.vehiclesNear(v.x, v.y, 100).every((n) => n.kind === "cablecar")).toBe(true);
+    layer.setEnabled(false);
+    expect(layer.vehiclesNear(v.x, v.y, 100)).toEqual([]);
+  });
+
+  it("releases its sprites when it leaves a view", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const { ctx, bakes, frame } = context();
+    const released: Sprite[] = [];
+    ctx.releaseSprite = (s) => released.push(s);
+    await layer.init(ctx);
+    layer.sprites(frame());
+    for (const b of bakes) b.done({ texture: {}, image: {} } as unknown as Sprite);
+    await flush();
+    layer.dispose();
+    expect(released.length).toBe(bakes.length);
+    expect(layer.spriteCount).toBe(0);
+  });
 });

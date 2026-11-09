@@ -74,6 +74,14 @@ export interface WorldViewOptions {
   controller?: Controller;
   /** Keep every tile bake's timings (`WorldView.tileBakes`), for benchmarks. */
   recordBakes?: boolean;
+  /**
+   * A view on the same canvas to take over from (another level, another
+   * world), without a flash: it keeps drawing while this view loads and
+   * bakes, and this view draws nothing until its first frame is complete
+   * (every visible tile and sprite baked). It then destroys the old view and
+   * draws in its place, in the same animation frame.
+   */
+  replace?: WorldView;
   /** Bake errors (default: console.error). */
   onError?: (message: string) => void;
   /**
@@ -270,6 +278,50 @@ export interface WorldQuery {
   metersPerCellAt(x: number, y: number): number;
   /** Load the terrain under a rectangle of cells, so queries answer there. */
   ensure(x0: number, y0: number, x1: number, y1: number): Promise<void>;
+  /**
+   * Placed objects standing at a point (occupancy): those whose footprint
+   * contains it, and footprint-less ones (trees, towers drawn from an anchor)
+   * in its cell. Empty without objects (`objects: false`) or outside the world.
+   */
+  objectsAt(x: number, y: number): ObjectHit[];
+  /** The world's registry landmarks (objects with an id), one per id. */
+  landmarks(): LandmarkInfo[];
+}
+
+/** A placed object at a point (`WorldQuery.objectsAt`). */
+export interface ObjectHit {
+  /** Semantic group (`building.tower`, `landmark.bridge.arch`, `tree.conifer`). */
+  group: string;
+  /** Landmark registry id, or null. */
+  id: string | null;
+  /** The anchor (cells). */
+  x: number;
+  y: number;
+  /** Bounds in cells [x0, y0, x1, y1]: the footprint's, or the anchor's cell. */
+  bounds: [number, number, number, number];
+  /** Whether it has a footprint (else it occupies its anchor's cell). */
+  footprint: boolean;
+  /** Where it is built (steps), or null where the terrain isn't loaded. */
+  base: number | null;
+  /**
+   * Its drawn top (steps), estimated: a crest where it has one, else its real
+   * height at the object voxel scale and the level's stretch. Null where the
+   * world doesn't say (trees, props, city blocks).
+   */
+  top: number | null;
+}
+
+/** A registry landmark in the world (`WorldQuery.landmarks`). */
+export interface LandmarkInfo {
+  /** Registry id (`hoover-dam`); names are for people and live in the registry. */
+  id: string;
+  /** The group of its largest part. */
+  group: string;
+  /** The middle of its parts' anchors (cells). */
+  x: number;
+  y: number;
+  /** Placed parts (a bridge's spans, a dam's intake towers). */
+  parts: number;
 }
 
 // ---------------------------------------------------------------- entities

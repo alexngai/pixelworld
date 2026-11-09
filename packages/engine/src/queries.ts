@@ -11,7 +11,7 @@ import {
 } from "@pixelworld/grid";
 import type { StylePack } from "@pixelworld/style";
 import type { WorldManifest } from "@pixelworld/world-format";
-import type { PickResult, RoadInfo, SurfaceInfo, WorldQuery } from "./types";
+import type { LandmarkInfo, ObjectHit, PickResult, RoadInfo, SurfaceInfo, WorldQuery } from "./types";
 
 /** The loaded terrain the queries read (a ChunkStore). */
 export interface QuerySource {
@@ -50,6 +50,12 @@ export interface QueryWorld {
   heightRange: [number, number];
 }
 
+/** Placed objects for occupancy queries (an ObjectIndex). */
+export interface ObjectSource {
+  at(x: number, y: number): ObjectHit[];
+  landmarks(): LandmarkInfo[];
+}
+
 /** Height resolution of `pick`'s march along the view ray (steps). */
 const PICK_STEP = 1 / 8;
 
@@ -58,6 +64,7 @@ export function createQuery(
   world: QueryWorld,
   geo: GeoSource | null,
   view: () => PickView,
+  objects: ObjectSource | null = null,
 ): WorldQuery {
   const rs = world.renderScale;
   const { metersPerStep, elevationDatumMeters } = world.manifest.scale;
@@ -167,5 +174,8 @@ export function createQuery(
     metersPerCellAt: (x, y) => src.metersPerCellAt(x, y),
 
     ensure: (x0, y0, x1, y1) => src.ensureRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1)),
+
+    objectsAt: (x, y) => (objects ? objects.at(x, y) : []),
+    landmarks: () => (objects ? objects.landmarks() : []),
   };
 }

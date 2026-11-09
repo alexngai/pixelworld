@@ -145,3 +145,82 @@ describe("traffic vehicle models", () => {
     }
   });
 });
+
+/**
+ * The player's vehicles (M4): a car in the pack's player paint, and a light
+ * aircraft with its drop shadow (`vehicle.plane`, part 1).
+ */
+describe("player vehicles", () => {
+  const PLANE_SIZES: [number, number, number][] = [
+    [20, 22, 7], // the flying levels
+    [12, 13, 5],
+    [6, 6, 2], // too small for detail
+  ];
+
+  for (const p of PACKS)
+    it(`${p.name}: a plane fills its size, uses the pack's ramps and hangs together`, () => {
+      const ramps = new Set(p.rampIds.values());
+      for (const size of PLANE_SIZES)
+        for (let seed = 1; seed <= 12; seed++) {
+          const m = model(p, "plane", seed, size);
+          const what = `plane ${size.join("×")} seed ${seed}`;
+          expect([m.sx, m.sy, m.sz], what).toEqual(size);
+          for (const id of m.materials.slice(1)) expect(ramps.has(id), what).toBe(true);
+          expect(loose(m), what).toBe(0);
+          // the wing spans the model
+          const wingZ = size[2] > 3 ? Math.max(2, Math.min(size[2] - 2, Math.round(size[2] * 0.55))) : 1;
+          let span = 0;
+          for (let v = 0; v < m.sy; v++)
+            for (let u = 0; u < m.sx; u++)
+              if (m.get(u, v, wingZ)) {
+                span++;
+                break;
+              }
+          expect(span, what).toBe(m.sy);
+          // symmetric about its centre line (the propeller's blades aside)
+          for (let z = 0; z < m.sz; z++)
+            for (let v = 0; v < m.sy; v++)
+              for (let u = 0; u < m.sx - 1; u++) expect(!!m.get(u, v, z), `${what} at ${u},${v},${z}`).toBe(!!m.get(u, m.sy - 1 - v, z));
+        }
+    });
+
+  it("planes come in several liveries by seed", () => {
+    const p = PACKS[0]!;
+    const liveries = new Set<string>();
+    for (let seed = 1; seed <= 24; seed++) liveries.add(model(p, "plane", seed, [20, 22, 7]).materials.join(","));
+    expect(liveries.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("a plane's shadow is its outline from above, one voxel thick and dithered", () => {
+    for (const p of PACKS) {
+      const plane = model(p, "plane", 3, [20, 22, 7]);
+      const shadow = model(p, "plane", 3, [20, 22, 7], 1);
+      expect([shadow.sx, shadow.sy, shadow.sz]).toEqual([20, 22, 1]);
+      expect(shadow.materials.slice(1)).toEqual([p.rampIds.get("asphalt")]);
+      let outline = 0;
+      for (let v = 0; v < 22; v++)
+        for (let u = 0; u < 20; u++) {
+          let any = false;
+          for (let z = 0; z < plane.sz; z++) any ||= plane.get(u, v, z) > 0;
+          if (any) outline++;
+          const s = shadow.get(u, v, 0) > 0;
+          // every other voxel of the outline, so the ground shows through
+          expect(s).toBe(any && (u + v) % 2 === 0);
+          if (s) expect(shadow.get(u + 1, v, 0) || shadow.get(u, v + 1, 0)).toBe(0);
+        }
+      expect(shadow.count()).toBeGreaterThan(outline * 0.4);
+    }
+  });
+
+  it("the player's car is a car in the pack's own player paint", () => {
+    for (const p of PACKS) {
+      const paint = p.rampIds.get(p.name === "bay-area" ? "bridge-orange" : "neon-cyan")!;
+      for (let seed = 1; seed <= 8; seed++) {
+        const m = generateModel(p.assets, p.rampIds, "vehicle.car.player", { seed, size: { length: 11, width: 5, height: 5 } });
+        expect([m.sx, m.sy]).toEqual([11, 5]);
+        expect(m.materials).toContain(paint);
+        expect(loose(m)).toBe(0);
+      }
+    }
+  });
+});

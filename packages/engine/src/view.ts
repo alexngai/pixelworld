@@ -21,6 +21,7 @@ import { ViewCameraImpl } from "./camera";
 import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
+import { ObjectIndex } from "./objects";
 import { registerOnMainThread, viewPlugins } from "./plugins";
 import { createQuery } from "./queries";
 import { TileGrid } from "./tiles";
@@ -143,6 +144,8 @@ class View implements WorldView {
   private stopped = false;
   private readonly frameListeners = new Set<(e: FrameEvent) => void>();
   private readonly bakes: TileBake[] | null;
+  /** A view this one takes over from once its first frame is complete (`replace`). */
+  private replacing: WorldView | null;
 
   constructor(
     opts: WorldViewOptions,
@@ -157,13 +160,36 @@ class View implements WorldView {
     this.rs = w.renderScale;
     this.fixedSize = opts.size ?? null;
     this.bakes = opts.recordBakes ? [] : null;
+    this.replacing = opts.replace ?? null;
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
-    this.query = createQuery(store, w, w.geo, () => {
-      const snap = this.cam.snapped();
-      return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
-    });
+    // placed objects for occupancy queries: the ones the style draws, as the bake does
+    const assets = w.style.assets;
+    const objects =
+      w.objects && assets
+        ? new ObjectIndex(
+            w.objects.instances,
+            {
+              cellsX: manifest.cellsX,
+              cellsY: manifest.cellsY,
+              metersPerCell: manifest.scale.metersPerCell,
+              heightStretch: manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1,
+            },
+            (group) => resolveAsset(assets, group) !== null,
+            (x, y) => this.query.heightAt(x, y),
+          )
+        : null;
+    this.query = createQuery(
+      store,
+      w,
+      w.geo,
+      () => {
+        const snap = this.cam.snapped();
+        return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
+      },
+      objects,
+    );
     this.viewCamera = new ViewCameraImpl(this.cam, this.rs, invalidate, {
       ensure: (x, y) => store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1),
       heightAt: (x, y) => this.query.heightAt(x, y),
@@ -288,8 +314,9 @@ class View implements WorldView {
   }
 
   resize(width: number, height: number): void {
-    this.canvas.width = width;
-    this.canvas.height = height;
+    // setting a canvas's size clears it, even to the size it has: a view replacing another keeps its frame
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
     this.ratio = this.fixedSize ? 1 : window.devicePixelRatio || 1;
     this.viewCamera.setCanvasSize(width, height);
   }
@@ -348,7 +375,7 @@ class View implements WorldView {
       } else if (t.visible) complete = false;
     }
 
-    const drawn = this.dirty;
+    let drawn = this.dirty;
     if (this.dirty) {
       const sprites: SpriteInstance[] = [];
       for (const layer of layers) {
@@ -371,22 +398,32 @@ class View implements WorldView {
       const ents = this.entityList.draws(r, info.project);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
-      const frameParams = {
-        left: snap.left,
-        top: snap.top,
-        fracX: snap.fracX,
-        fracY: snap.fracY,
-        zoom: cam.zoom,
-        internalWidth: cam.internalWidth,
-        internalHeight: cam.internalHeight,
-        depthRange: this.depthRange,
-      };
-      this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog);
-      this.redrawLast();
-      this.renderMs = performance.now() - t0;
-      this.dirty = !complete; // keep redrawing while tiles stream in
-      this.renderedComplete = complete;
-      if (complete && this.service.idle) this.readyResolvers.splice(0).forEach((f) => f());
+      if (this.replacing && !complete) {
+        // hold: the view being replaced keeps the canvas until this one has a whole frame
+        drawn = false;
+      } else {
+        if (this.replacing) {
+          const old = this.replacing;
+          this.replacing = null;
+          old.destroy();
+        }
+        const frameParams = {
+          left: snap.left,
+          top: snap.top,
+          fracX: snap.fracX,
+          fracY: snap.fracY,
+          zoom: cam.zoom,
+          internalWidth: cam.internalWidth,
+          internalHeight: cam.internalHeight,
+          depthRange: this.depthRange,
+        };
+        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog);
+        this.redrawLast();
+        this.renderMs = performance.now() - t0;
+        this.dirty = !complete; // keep redrawing while tiles stream in
+        this.renderedComplete = complete;
+        if (complete && this.service.idle) this.readyResolvers.splice(0).forEach((f) => f());
+      }
     }
     this.evict();
 
@@ -532,8 +569,11 @@ class View implements WorldView {
   }
 
   destroy(): void {
+    if (this.stopped) return;
     this.stopped = true;
     cancelAnimationFrame(this.raf);
+    // a view still waiting to take over from another leaves it as it is: its owner keeps it
+    this.replacing = null;
     window.removeEventListener("resize", this.onWindowResize);
     this.resizeObserver?.disconnect();
     void this.controllerHost.use(null);
@@ -542,6 +582,8 @@ class View implements WorldView {
     for (const e of this.gpu.values()) if (e.img) this.compositor.release(e.img);
     this.gpu.clear();
     this.gpuBytes = 0;
+    this.entityList.dispose();
+    this.compositor.dispose();
     this.readyResolvers.splice(0);
     this.frameListeners.clear();
   }

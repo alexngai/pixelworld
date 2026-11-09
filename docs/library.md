@@ -171,6 +171,8 @@ M4's features are built as controllers and plugins on the public API, which prov
 - **Building mode:** a controller plus the edits delta layer, with local re-bake.
 - **Water palette cycling.**
 
+**Built (M4, step 2):** the car and plane controllers, take-off and landing without a reload, and occlusion silhouettes, in the example game `apps/game` (§7.10, D-070). Joining traffic's routes at junctions is left: the car drives free on the drawn roads.
+
 **New exit criteria:**
 - **An example game outside this repo's apps,** using only published packages, runs the Vegas → Hoover Dam → Grand Canyon drive and a canyon flight at 60 fps on desktop.
 - **The export CLI** produces a tile atlas and a vehicle sprite sheet that load in a minimal Godot or Phaser example.
@@ -230,6 +232,7 @@ interface WorldViewOptions {
   onError?: (message: string) => void;
   workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]); // generator plugins (§8)
+  replace?: WorldView;                                // take over from a view on the same canvas (M4, §7.9)
 }
 
 interface WorldView {
@@ -319,11 +322,15 @@ view.query.roadAt(x, y)               // { classId, class, width, connections, l
 view.query.pick(screenX, screenY)     // { x, y, h, cellX, cellY } under a canvas point (CSS px)
 view.query.lonLatToCell(lon, lat); view.query.cellToLonLat(x, y)   // through the geo grid (D-048)
 view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.ensure(x0, y0, x1, y1)
+view.query.objectsAt(x, y)            // placed objects standing there: { group, id, x, y, bounds, footprint, base, top }[]
+view.query.landmarks()                // registry landmarks, one per id: { id, group, x, y, parts }[]
 ```
 
 - **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle.
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
 - **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.
+- **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included); an object without one (a tree, a tower drawn from its anchor) occupies its anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.
+- **Landmarks (`landmarks`, M4):** one entry per registry id at the middle of its parts' anchors, named by its largest part's group. Names are for people and stay in the registry (D-051); the game names them for its HUD.
 
 ### 7.7 What moved where
 
@@ -344,7 +351,31 @@ view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.e
 - **Screen passes:** fog's is the one kind. A general pass (a layer's own shader) comes when a second layer needs one.
 - **`pick`** ignores objects.
 - **Traffic sprites** aren't entities yet (§7.4).
-- **Level switching** still reloads the viewer's page. A view could switch in place with `destroy()` and a new `createWorldView`.
+- **Level switching** still reloads the viewer's page; the game switches in place (§7.9). The viewer could do the same with `replace`.
+
+### 7.9 Replacing a view on one canvas (M4)
+
+Each scale level is its own world package (D-046), so moving between levels means a new view. A view built with `replace: oldView` on the same canvas takes over without a flash:
+
+```ts
+const next = await createWorldView({ canvas, worldUrl: flyingLevel, style, controller: plane, replace: view });
+await next.ready();   // the old view kept the canvas until here, and is now destroyed
+```
+
+- **While it loads and bakes,** the old view keeps drawing (and its controller keeps running). The new view runs its loop (controller, layers, tile and sprite requests) but draws nothing.
+- **On its first complete frame** (every visible tile and sprite baked), it destroys the old view and draws, in the same animation frame. `ready()` resolves after that frame.
+- **The canvas:** both views share its WebGL2 context; each compositor binds what it uses on every frame. A view resizes its canvas only when the size changes (assigning a canvas's size clears it, even to the size it has), so the new view's start-up doesn't blank the old view's frame.
+- **`destroy()`** is idempotent; destroying a view still waiting to take over leaves the old view drawing (its owner keeps it, say after a failed load). It now also lets go of entity sprites and the compositor's own GPU objects (programs, frame targets, palette, fog pass), so swapping levels many times doesn't leak them. Traffic's layer releases its vehicle sprites when it leaves a view (`dispose`).
+- **Cost:** two views' tiles are on the GPU for a moment (each within its own 192 MB budget), and two bake workers run while the new level bakes.
+
+### 7.10 The example game (`apps/game`, M4)
+
+`@pixelworld/game` is M4's example client (D-070): a car on the driving levels, a plane on the flying levels, and take-off and landing between them, built only on `@pixelworld/engine`, `@pixelworld/sim` and the style packs (no runtime or engine internals). `pnpm --filter @pixelworld/game dev` (port 5252).
+
+- **Controllers:** `CarController` and `PlaneController` implement `Controller`: they own their entities (the style's `vehicle.car.player`, and `vehicle.plane` with its shadow, `part` 1), step pure physics (`car.ts`, `plane.ts`) against the world as the queries read it, and drive the camera. A script steps them with a fixed dt through `step(dt, input)` while `paused`.
+- **What it reads:** `heightAt`, `surfaceAt` and `roadAt` for speeds and slopes; `objectsAt` for buildings and towers; traffic's `vehiclesNear` for collisions; the routes (`loadRoutes`, `RouteNetwork`) for the roads' graded surfaces and bridge decks, the autopilot's road plans and the minimap; `lonLatToCell`/`cellToLonLat` to carry a place and a heading between levels; `landmarks()` for place names.
+- **Engine additions it needed:** `query.objectsAt` and `query.landmarks` (§7.6), `createWorldView({ replace })` (§7.9), and traffic's `vehiclesNear`. Everything else was already public.
+- **Also in `@pixelworld/sim`:** `TrafficLayer.vehiclesNear(x, y, radius)` returns the shown vehicles' cars near a place with their size in plan (`modelSize`), for collisions; a switched-off layer or hidden sublayer has none.
 
 ## 8. As built: generator plugins (M4)
 
