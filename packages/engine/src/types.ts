@@ -1,5 +1,5 @@
 import type { BakedImage } from "@pixelworld/bake";
-import type { Box } from "@pixelworld/generators";
+import type { Box, PluginDescriptor } from "@pixelworld/generators";
 import type { Rotation } from "@pixelworld/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworld/runtime";
 import type { Palette, StylePack } from "@pixelworld/style";
@@ -11,7 +11,7 @@ import type { WorldManifest } from "@pixelworld/world-format";
  * steps, screen positions in internal (render) pixels before the zoom.
  */
 
-export type { Box, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+export type { Box, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
 
 /** A baked sprite on the GPU (from `LayerContext.bakeSprite`); opaque to layers. */
 export type Sprite = GpuImage;
@@ -76,6 +76,14 @@ export interface WorldViewOptions {
   recordBakes?: boolean;
   /** Bake errors (default: console.error). */
   onError?: (message: string) => void;
+  /**
+   * Plugins with generators the world's style uses (D-071), such as the city
+   * pack pixelworld-city-sf's `cityPlugin`: loaded in the bake worker and on
+   * the main thread before the first bake. Or a function given the plugins the
+   * style pack names (its `plugins`) that returns the ones to load. A plugin the
+   * style names but the view doesn't load is warned about.
+   */
+  plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]);
 }
 
 /** What the view knows about its world (read-only). */
