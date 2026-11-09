@@ -526,3 +526,15 @@ The point is more room for visual interest; both halves are wanted.
 - **Rejected alternatives:**
   - A surface pattern in the bake shader: flat, with no height or shadow, and the shader is shared by every level.
   - Client scatter by surface: a style's scatter applies to every level of a region, and the walking level's open built-up cells (car parks, plazas) would fill with blocks.
+
+### D-068: Pipeline plugins through a registry of entry points (accepted, M4)
+- **Why:** a city's records (DataSF's assessor roll) and a region's elevation and land cover were hard-wired into the pipeline, so a second city or a non-US region meant editing it. As a library (library.md, D4), cities and data sources must be addable as packages.
+- **Registry** (`pixelworld_pipeline/plugins.py`): groups of Python entry points.
+  - `pixelworld.facts`: per-building facts sources, answering year, storeys, use, neighbourhood, class code and roof for projected points.
+  - `pixelworld.sources`: raster sources with a role (terrain, land cover), a resolution, overviews and attribution. They either list GeoTIFFs or fill a grid; the pipeline keeps reprojection, resampling, block pyramids and caching.
+  - `pixelworld.stages`: reserved.
+- **Resolution:** names registered in the process come first, then installed entry points, then built-ins (USGS 3DEP at 1 and 1/3 arc-second, ESA WorldCover 2021). Specs name plugins as before (`sources.dem.kind`, `objects.typology.facts: datasf` or `{plugin: …, options}`). A build checks every name its spec uses before fetching anything. A missing plugin fails with the list of installed ones.
+- **City packs:** DataSF moved into `pixelworld-city-sf`, a separate distribution in `pipeline/plugins/`. It is a uv workspace member, installed by default for development. San Francisco's TypeScript generators will join it.
+- **Rules:** typology rules gain `classes:` (class codes, exact or by prefix) and `roofs:` (facts or Overture roof shapes). In most cities the iconic building type is a class code, not a year and a use.
+- **Python API:** `pixelworld_pipeline.build(spec, out_dir=None, …)` beside the CLI. `pixelworld plugins [spec]` lists the plugins, and the ones a spec names.
+- **Neutral:** San Francisco and the Southwest rebuild byte for byte.

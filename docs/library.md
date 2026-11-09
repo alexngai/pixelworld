@@ -48,7 +48,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworld/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `runtime` + most of `apps/web/main.ts` |
 | `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim` + `apps/web/traffic.ts` |
 | `@pixelworld/style-desert-southwest`, `@pixelworld/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
-| `pixelworld` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
+| `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
 | `pixelworld-city-sf` (PyPI) | San Francisco's city pack: DataSF facts (later its generators too) | `pipeline/plugins/pixelworld-city-sf/` |
 | `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
 | `@pixelworld/editor` (app) | the warp editor | `apps/editor` |
@@ -118,7 +118,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
   - `exports` maps;
   - the bake worker shipped as a module worker resolved with `new URL(..., import.meta.url)`, which works in Vite, webpack and plain ESM;
   - semver per package with changesets, released from CI.
-- **PyPI:** `pixelworld`, with extras for heavy sources (`[lidar]`, `[cityjson]`).
+- **PyPI:** `pixelworld-pipeline`, with extras for heavy sources (`[lidar]`, `[cityjson]`), and city packs as their own distributions (`pixelworld-city-sf`).
 - **The world format:** versioned on its own. The manifest carries the format version; readers accept older minor versions; conformance tests run both codecs over the same files.
 - **Prebuilt worlds:** the San Francisco and Southwest packages as data releases (ODbL), with their attribution manifests.
 - **Docs:**
