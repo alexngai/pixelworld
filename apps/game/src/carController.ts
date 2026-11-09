@@ -204,11 +204,17 @@ export class CarController implements Controller {
     return true;
   }
 
-  /** The take-off roll, drawn only: on along the heading at its speed, rising `climb` steps a second. */
+  /**
+   * The take-off, drawn only: on along the heading, slowing (it stays where
+   * the view has its tiles while the flying level loads), and rising `climb`
+   * steps a second, up to 3.
+   */
   coast(dt: number, climb: number): void {
     const s = this.state;
     const view = this.view;
     if (!view) return;
+    s.speed *= Math.exp(-dt / 0.4);
+    if (this.lift >= 3) climb = 0;
     s.x = Math.max(0.5, Math.min(view.world.cellsX - 0.5, s.x + Math.cos(s.heading) * s.speed * dt));
     s.y = Math.max(0.5, Math.min(view.world.cellsY - 0.5, s.y + Math.sin(s.heading) * s.speed * dt));
     s.h = Math.max(s.h, view.query.heightAt(s.x, s.y) ?? s.h);

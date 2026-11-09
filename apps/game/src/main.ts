@@ -2,7 +2,7 @@ import type { CarInput } from "./car";
 import { Game } from "./game";
 import { blocksCar } from "./ground";
 import type { PlaneInput } from "./plane";
-import { roadUnder } from "./roads";
+import { nearestRoad, roadUnder } from "./roads";
 import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample } from "./run";
 
 /**
@@ -43,11 +43,15 @@ export interface GameDebug {
   driveTo(lon: number, lat: number, opts?: { dt?: number; maxSeconds?: number; stop?: boolean }): Promise<{ planned: number; byClass: Record<string, number>; samples: Sample[]; reached: boolean }>;
   takeOff(force?: boolean): Promise<boolean>;
   land(force?: boolean): Promise<boolean>;
+  /** Fly a landing approach to the nearest road within a radius (cells) of the plane: the cell, or null without one. */
+  approachRoad(radius: number): { x: number; y: number } | null;
   place(x: number, y: number, heading?: number): void;
   /** A building near a place whose footprint isn't over a road: its anchor and bounds. */
   findBuilding(x: number, y: number, radius: number): { x: number; y: number; bounds: [number, number, number, number]; group: string } | null;
   heightAt(x: number, y: number): number | null;
   roadAt(x: number, y: number): string | null;
+  /** The groups of the placed objects standing at a point. */
+  objectsAt(x: number, y: number): string[];
   run(dt?: number): Promise<RunReport>;
   frames(): ReturnType<Game["frames"]["summary"]>;
   resetFrames(): void;
@@ -116,6 +120,12 @@ async function main() {
     },
     takeOff: (force) => game.takeOff(force),
     land: (force) => game.land(force),
+    approachRoad: (radius) => {
+      const p = game.plane?.state;
+      const road = p ? nearestRoad(game.view.query, p.x, p.y, radius) : null;
+      if (!road || !game.approach(road.x, road.y)) return null;
+      return { x: road.x, y: road.y };
+    },
     place: (x, y, heading) => {
       if (game.mode === "car") game.car?.place(x, y, heading);
     },
@@ -137,6 +147,7 @@ async function main() {
       return best;
     },
     heightAt: (x, y) => game.view.query.heightAt(x, y),
+    objectsAt: (x, y) => game.view.query.objectsAt(x, y).map((o) => o.group),
     roadAt: (x, y) => game.view.query.roadAt(x, y)?.class ?? null,
     run: (dt) =>
       scriptedRun(game, {

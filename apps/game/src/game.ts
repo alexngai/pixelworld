@@ -36,6 +36,41 @@ export interface GameOptions {
 
 export type Mode = "car" | "plane";
 
+/** What the HUD shows and tests read (`Game.info`). Cells, steps, radians, cells per second. */
+export interface GameState {
+  mode: Mode;
+  /** The level's label ("Driving", "Flying") and the package's id. */
+  level: string;
+  world: string;
+  x: number;
+  y: number;
+  h: number;
+  heading: number;
+  speed: number;
+  /** The gauge speed (tuning.ts GAUGE_KMH). */
+  kmh: number;
+  cellsPerSecond: number;
+  lonLat: [number, number] | null;
+  /** The nearest named place, with its distance when over a kilometre. */
+  place: string | null;
+  /** The drawn ground under the vehicle (steps). */
+  ground: number | null;
+  // the car's
+  road?: string | null;
+  assist?: boolean;
+  canTakeOff?: boolean;
+  blocked?: string | null;
+  bump?: { reason: string; what: string | null; t: number } | null;
+  // the plane's
+  agl?: number | null;
+  aglMeters?: number | null;
+  altitudeMeters?: number | null;
+  throttle?: number;
+  shadow?: { x: number; y: number; h: number };
+  canLand?: boolean;
+  crashes?: number;
+}
+
 /** Frame intervals seen, for the HUD and the run's report. */
 export class FrameStats {
   private readonly times: number[] = [];
@@ -199,7 +234,7 @@ export class Game {
   }
 
   /** What the HUD and tests read. */
-  info() {
+  info(): GameState {
     const view = this.view;
     const m = view.world.manifest;
     const c = this.controller;
@@ -225,13 +260,16 @@ export class Game {
     if (this.mode === "plane" && this.plane) {
       const p = this.plane;
       const agl = p.agl;
+      // real metres, undoing the level's vertical caricature (D-041)
+      const altitude = view.query.elevationAt(s.x, s.y, s.h);
+      const under = agl === null ? null : view.query.elevationAt(s.x, s.y, s.h - agl);
       return {
         ...base,
         agl,
-        aglMeters: agl === null ? null : agl * m.scale.metersPerStep,
-        altitudeMeters: view.query.elevationAt(s.x, s.y, s.h),
+        aglMeters: altitude === null || under === null ? null : altitude - under,
+        altitudeMeters: altitude,
         throttle: p.state.throttle,
-        shadow: { x: p.shadow.x, y: p.shadow.y, h: p.shadow.h },
+        shadow: p.shadowPose ?? undefined,
         canLand: p.canLand,
         crashes: p.crashes,
       };
@@ -304,6 +342,14 @@ export class Game {
     }
     const car = this.car;
     this.hud?.say(car?.outside ? "That place is outside the driving map: starting at its start." : `Landed · ${levelLabel(this.manifest)} level`, 2.5);
+    return true;
+  }
+
+  /** A landing approach: fly low and slow to a place (cells) and circle it; over a road, the plane lands. */
+  approach(x: number, y: number): boolean {
+    const plane = this.plane;
+    if (this.mode !== "plane" || !plane) return false;
+    plane.flyRoute([{ x, y, agl: 0.8, speed: 3.2 * plane.params.pace }]);
     return true;
   }
 

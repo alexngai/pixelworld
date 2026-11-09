@@ -79,6 +79,12 @@ export class PlaneController implements Controller {
     return this.shadowEntity;
   }
 
+  /** Where the shadow lies, or null when the controller isn't attached (a level change took it away). */
+  get shadowPose(): { x: number; y: number; h: number } | null {
+    const s = this.shadowEntity;
+    return s ? { x: s.x, y: s.y, h: s.h } : null;
+  }
+
   get fly(): FlyWorld {
     if (!this.world) throw new Error("the plane controller isn't attached to a view");
     return this.world;
