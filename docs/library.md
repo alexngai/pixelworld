@@ -156,11 +156,24 @@ M4's features are built as controllers and plugins on the public API, which prov
 - **An example game outside this repo's apps,** using only published packages, runs the Vegas → Hoover Dam → Grand Canyon drive and a canyon flight at 60 fps on desktop.
 - **The export CLI** produces a tile atlas and a vehicle sprite sheet that load in a minimal Godot or Phaser example.
 
-## 6. Decisions to discuss
+## 6. Decisions
 
-- **D1, the primary consumer first:** web game developers embedding the engine, or other engines consuming exported assets? Both are in scope; the order sets M4's first steps. *Proposal:* the engine first (M4's gameplay needs it), with the export CLI shortly after.
-- **D2, code licence:** Apache-2.0 or MIT? *Proposal:* Apache-2.0.
-- **D3, packaging:** many scoped packages, one umbrella package with subpath exports, or both? *Proposal:* scoped packages plus a thin umbrella.
-- **D4, region-specific code:** San Francisco's facades, towers, Chinatown and DataSF become plugins, or stay built in? *Proposal:* plugins, as the template for a city pack (style pack, generators and facts source together).
-- **D5, the renderer:** WebGL2 only (WebGPU later), or also an adapter that hands baked tiles to Three.js, Pixi or Phaser? *Proposal:* our compositor only for now; the export path covers other engines.
-- **D6, prebuilt worlds:** publish the San Francisco and Southwest packages as ODbL data releases now, or wait until the format is declared stable (1.0)?
+- **D1, the primary consumer, decided: the engine first.** M4 is an example client of the engine: a game with flying and driving, built only on the public API. The export CLI follows.
+- **D2, licences:**
+  - **World packages:** ODbL 1.0, decided.
+  - **Style packs and art:** CC-BY-4.0, decided.
+  - **Code: open.** The choice is Apache-2.0 (an explicit patent licence from contributors, which ends for anyone who sues over patents in the work), MIT (short, no patent terms), or both as "MIT OR Apache-2.0", as Rust and Bevy do. *Proposal:* MIT OR Apache-2.0.
+- **D3, packaging: open.** Everything browser-side builds to about 260 KB of JavaScript (89 KB gzipped), with both style packs and every generator, plus a 145 KB bake worker. That's small enough for one package.
+  - *Proposal:* one npm package, `pixelworld`, with subpath exports (`pixelworld/engine`, `pixelworld/format`, `pixelworld/generators`, `pixelworld/traffic`, …).
+  - Content ships separately as packages anyone can publish: city packs (a style pack, generators and a facts source) and style packs.
+  - On PyPI, `pixelworld-pipeline`, matching its import name `pixelworld_pipeline`; `pixelworlds` is an unrelated project.
+- **D4, region-specific code, decided: plugins.** San Francisco's facades, towers, Chinatown and DataSF become the first city pack, the template for others.
+- **D5, the renderer, decided: our compositor; WebGPU later.** Other engines are served by the export path.
+  - **A Rust renderer:** not now.
+    - **Where tile time goes:** in the software benchmark, most of a walking-level tile's bake time is CPU mesh building in JavaScript (voxel models, greedy meshing, building assembly), not GPU work. A Rust renderer wouldn't speed that up; Rust compiled to WebAssembly for those CPU paths would.
+    - **Order:**
+      1. Measure on real GPUs (`pnpm bench`).
+      2. Spread meshing over more workers.
+      3. If it still dominates, move meshing and generators into a Rust crate compiled to WebAssembly behind the same TypeScript API.
+    - **A native Rust renderer** (wgpu, Bevy or Godot plugins) can come later, reading the same world format.
+- **D6, prebuilt worlds, decided: wait until the world format is declared stable (1.0).**

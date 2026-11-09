@@ -728,7 +728,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 
 ### M4: Drive, fly, build
 
-**Goal:** make the world playable, through a public engine API that other games and interaction modes can use: pixelworld becomes a library and an asset generation tool (proposal: [library.md](library.md)). M4's gameplay is built as controllers and plugins on that API.
+**Goal:** make the world playable, through a public engine API that other games and interaction modes can use: pixelworld becomes a library and an asset generation tool ([library.md](library.md)). The engine comes first; M4's flying and driving game is an example client built only on its public API.
 
 - Car on the road network and terrain slopes, with grid collision.
 - Plane with an arcade flight model, drop shadow and canyon collision, on the flying level (M2.5), with take-off and landing moving between levels.

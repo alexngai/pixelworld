@@ -1,5 +1,5 @@
 {
-  "packageHash": "d134a613cc1cf7d5517671c8b1d85790610de63e987875205ba54f2690e37854",
+  "packageHash": "da03c089711746b381693f11444b2e50d393b22b38037f2a5d7a02ddb3905a9e",
   "cells": [
     584,
     645
@@ -14,7 +14,7 @@
     "riverLines": 4
   },
   "objects": {
-    "building.apartment.bay": 3245,
+    "building.apartment.bay": 3244,
     "building.apartment.modern": 5297,
     "building.chinatown": 924,
     "building.commercial": 3502,
@@ -23,7 +23,7 @@
     "building.industrial": 2884,
     "building.parking": 54,
     "building.pier": 123,
-    "building.residential": 521,
+    "building.residential": 508,
     "building.rowhouse.edwardian": 17543,
     "building.rowhouse.edwardian.painted": 9418,
     "building.rowhouse.stucco": 82002,
@@ -49,9 +49,9 @@
     "landmark.tower.pyramid": 1,
     "landmark.windmill": 2,
     "tree": 14615,
-    "tree.cypress": 31954,
-    "tree.eucalyptus": 15726,
-    "tree.street": 19332
+    "tree.cypress": 31957,
+    "tree.eucalyptus": 15729,
+    "tree.street": 19333
   },
   "roads": {
     "cells": 63332,
@@ -64,9 +64,14 @@
     "ok": true
   },
   "rails": {
-    "street": 2483,
-    "cable": 399,
+    "street": 2121,
+    "cable": 348,
     "train": 827
+  },
+  "lanes": {
+    "counted": 0,
+    "oneway": 23962,
+    "divided": 14332
   },
   "surfaces": {
     "woodland": 35342,
