@@ -6,7 +6,7 @@ Three small projects that use `pixelworld` the way a project outside this reposi
 |---|---|---|
 | [`vite/`](vite/) | Vite 8, TypeScript | the dev server and a production build; the package's types checked with `skipLibCheck` off |
 | [`webpack/`](webpack/) | webpack 5 | a production build; webpack emits the worker as its own chunk, with no configuration |
-| [`esm/`](esm/) | none | the package's files served as they are, with an import map; `?workerUrl=` tries the `workerUrl` option |
+| [`esm/`](esm/) | none | `index.html`: the package's files served as they are, with an import map (`?workerUrl=` tries the `workerUrl` option); `cdn.html`: the package from another origin, as from a CDN, with the worker started from a `blob:` URL |
 
 They aren't workspace packages (`pnpm-workspace.yaml` lists `examples/*`, not `examples/*/*`), and they don't hold the world or style pack they draw: the test copies them in.
 

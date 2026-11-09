@@ -61,9 +61,10 @@ async function freePort() {
   });
 }
 
-/** A static file server over one or more roots, as a CDN or `python -m http.server` would serve them. */
-async function serve(roots) {
+/** A static file server over one or more roots, as `python -m http.server` (or, with `cors`, a CDN) would serve them. */
+async function serve(roots, { cors = false } = {}) {
   const server = createServer(async (req, res) => {
+    if (cors) res.setHeader("access-control-allow-origin", "*");
     const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
     for (const root of roots) {
       let file = join(root, path);
@@ -187,15 +188,21 @@ const consumers = {
     await mkdir(join(dir, "vendor"), { recursive: true });
     await cp(join(dir, "node_modules/pixelworld/dist/bake.worker.js"), join(dir, "vendor/bake.worker.js"));
     const site = await serve([dir]);
+    // the package's dist/ on another origin, as a CDN serves it (cdn.html wraps the worker in a blob: URL)
+    const cdn = await serve([join(dir, "node_modules/pixelworld/dist")], { cors: true });
     try {
       return [
         await check(browser, "esm", site.url, { expectWorker: /node_modules\/pixelworld\/dist\/bake\.worker\.js$/ }),
         await check(browser, "esm-workerUrl", `${site.url}?workerUrl=/vendor/bake.worker.js`, {
           expectWorker: /\/vendor\/bake\.worker\.js$/,
         }),
+        await check(browser, "esm-cdn", `${site.url}cdn.html?cdn=${encodeURIComponent(cdn.url.replace("localhost", "127.0.0.1"))}`, {
+          expectWorker: /^blob:/,
+        }),
       ];
     } finally {
       site.close();
+      cdn.close();
     }
   },
 };

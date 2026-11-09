@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pixelworld from a CDN · plain ESM</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1e1c2b;
+        color: #e8dcbc;
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        image-rendering: pixelated;
+      }
+      #status {
+        position: fixed;
+        left: 8px;
+        bottom: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: rgba(20, 19, 32, 0.78);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="world"></canvas>
+    <div id="status">loading…</div>
+    <script type="module">
+      // The package from another origin, as from a CDN (?cdn= overrides it; the consumer test serves its own).
+      const cdn = new URLSearchParams(location.search).get("cdn") ?? "https://cdn.jsdelivr.net/npm/pixelworld@0.1/dist/";
+      const { createWorldView, roverController } = await import(`${cdn}engine.js`);
+
+      // Browsers start workers only from the page's own origin. A blob: URL is the page's,
+      // and a module worker started from it can import the CDN's worker (served with CORS).
+      const workerUrl = URL.createObjectURL(
+        new Blob([`import ${JSON.stringify(`${cdn}bake.worker.js`)};`], { type: "text/javascript" }),
+      );
+
+      const canvas = document.querySelector("#world");
+      const status = document.querySelector("#status");
+      try {
+        const view = await createWorldView({
+          canvas,
+          worldUrl: "./worlds/grand-canyon-m0/",
+          style: (id) => fetch(`./styles/${id}/style.json`).then((r) => r.json()),
+          camera: { rotation: 1 },
+          controller: roverController({ listen: { keys: window, pointer: canvas } }),
+          workerUrl,
+        });
+        await view.ready();
+        const { bakeMode, tilesBaked } = view.stats();
+        status.textContent = `${view.world.manifest.name} · ${tilesBaked} tiles baked (${bakeMode}) · from a CDN`;
+        document.body.dataset.bakeMode = bakeMode; // read by the consumer test
+        Object.assign(window, { view });
+      } catch (e) {
+        status.textContent = `error: ${String(e)}`;
+        document.body.dataset.error = String(e);
+      }
+    </script>
+  </body>
+</html>
