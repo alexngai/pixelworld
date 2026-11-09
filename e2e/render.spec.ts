@@ -263,6 +263,8 @@ test.describe("Scale levels (D-046)", () => {
   });
 
   test("switching levels keeps the rover at the same place", async ({ page }) => {
+    // three levels baked in software rendering: about 3 minutes on a CI runner, near the default limit
+    test.setTimeout(480_000);
     await open(page, "zoom=1&rot=0"); // driving, at the Strip
     expect(await level(page)).toBe("drive");
     const strip = await lonLat(page);
@@ -276,6 +278,7 @@ test.describe("Scale levels (D-046)", () => {
   });
 
   test("a place outside the walking level starts at its start instead", async ({ page }) => {
+    test.setTimeout(480_000); // two levels baked in software rendering
     await open(page, "zoom=1&rot=2&rover=913.8,401.6"); // Grand Canyon Village
     await switchTo(page, "walk");
     expect(await level(page)).toBe("walk");
