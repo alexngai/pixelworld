@@ -220,4 +220,12 @@ export class Entities implements EntityList {
   get spriteCount(): number {
     return this.sprites.size;
   }
+
+  /** Let go of every sprite (the view is going away); sprites still baking are dropped when they arrive. */
+  dispose(): void {
+    for (const s of this.sprites.values()) if (s) this.deps.release(s);
+    this.sprites.clear();
+    this.boxes.clear();
+    this.items.splice(0);
+  }
 }

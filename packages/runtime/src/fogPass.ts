@@ -144,6 +144,16 @@ export class FogPass {
     this.fieldSize = [field.width * field.cellsPerTexel, field.height * field.cellsPerTexel];
   }
 
+  /** Let go of the pass's GPU objects. */
+  dispose(): void {
+    const gl = this.gl;
+    for (const t of [this.fieldTex, this.lutTex, this.noiseTex]) if (t) gl.deleteTexture(t);
+    gl.deleteProgram(this.prog);
+    this.fieldTex = null;
+    this.lutTex = null;
+    this.lut = null;
+  }
+
   /** Draw into the bound framebuffer: the frame's indices with fog. */
   draw(fog: FogFrame, frame: WebGLTexture, origin: [number, number], depthRange: [number, number]): void {
     const gl = this.gl;
