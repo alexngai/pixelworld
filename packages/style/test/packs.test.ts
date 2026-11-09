@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 import { INDEX_SILHOUETTE, buildPalette, paletteIndex, validateStyle, type StylePack } from "../src/index";
 
 const ROOT = join(__dirname, "../../../worlds/_styles");
-const packs = readdirSync(ROOT).map((id) => [id, JSON.parse(readFileSync(join(ROOT, id, "style.json"), "utf8"))] as const);
+// every directory is a pack (the licence file beside them isn't)
+const packs = readdirSync(ROOT, { withFileTypes: true })
+  .filter((e) => e.isDirectory())
+  .map((e) => [e.name, JSON.parse(readFileSync(join(ROOT, e.name, "style.json"), "utf8"))] as const);
 
 describe("every style pack", () => {
   it("is found", () => expect(packs.map(([id]) => id)).toEqual(expect.arrayContaining(["bay-area", "desert-southwest"])));
