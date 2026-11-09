@@ -47,13 +47,13 @@
     "limit": "1 KB"
   },
   {
-    "name": "bake worker (dist/bake.worker.js), gzipped",
+    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it, gzipped",
     "path": "dist/bake.worker.js",
     "gzip": true,
     "limit": "60 KB"
   },
   {
-    "name": "bake worker (dist/bake.worker.js), minified (D3: 145 KB)",
+    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it (D3: 145 KB)",
     "path": "dist/bake.worker.js",
     "gzip": false,
     "brotli": false,

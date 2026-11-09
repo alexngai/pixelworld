@@ -7,12 +7,16 @@
 //   and their declarations are bundled into dist/*.d.ts (tsconfig.build.json
 //   maps them to source). Not minified: consumers' bundlers minify, and
 //   readable chunks tree-shake and debug better.
-// - The bake worker: a second build, one self-contained, minified module
-//   worker, dist/bake.worker.js, beside the engine's chunks. The engine
-//   creates it with a literal
+// - The bake worker: a second build, one self-contained module worker,
+//   dist/bake.worker.js, beside the engine's chunks. The engine creates it
+//   with a literal
 //   `new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })`,
 //   which Vite, webpack 5 and plain ESM all resolve. In the workspace the same
 //   line names ./bake.worker.ts; the plugin below rewrites only that URL.
+//   Its syntax and names are minified, not its whitespace: esbuild drops
+//   comments when it minifies whitespace, and a dynamic import(url) (plugins)
+//   needs its /* webpackIgnore: true */ to reach webpack. Consumers' bundlers
+//   minify it fully (Vite's build: 145 KB).
 //
 // Run: pnpm --filter pixelworld build (`pnpm pack` runs it too, as prepack).
 // Types are checked by the workspace's `pnpm typecheck`, not here.
@@ -31,6 +35,8 @@ const WORKER_ENTRY = here("../runtime/src/bake.worker.ts");
 const WORKER_SRC = /new URL\(\s*(["'])\.\/bake\.worker\.ts\1\s*,\s*import\.meta\.url\s*\)/g;
 const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })';
 const PRIVATE_IMPORT = /(?:from|import)\s*\(?\s*["']@pixelworld\//;
+/** A dynamic import: its leading comments, and the quote if its specifier is a literal. */
+const DYNAMIC_IMPORT = /(?<![\w$.])import\s*\(((?:\s|\/\*[\s\S]*?\*\/)*)(["'`])?/g;
 
 /** Rewrites the worker's source URL (.ts) to the built file (.js) in the one module that names it. */
 const workerUrlPlugin = {
@@ -61,7 +67,14 @@ await rm(DIST, { recursive: true, force: true });
 await Promise.all(["LICENSE-MIT", "LICENSE-APACHE"].map((f) => copyFile(ROOT + f, here(f))));
 
 await build({ ...common, entry, splitting: true, dts: { entry }, esbuildPlugins: [workerUrlPlugin] });
-await build({ ...common, entry: { "bake.worker": WORKER_ENTRY }, splitting: false, minify: true, dts: false });
+await build({
+  ...common,
+  entry: { "bake.worker": WORKER_ENTRY },
+  splitting: false,
+  minifySyntax: true,
+  minifyIdentifiers: true,
+  dts: false,
+});
 // `pixelworld/bake.worker.js` is exported for copying (workerUrl), not importing; it still declares itself
 await writeFile(
   DIST + "bake.worker.d.ts",
@@ -75,8 +88,13 @@ const withLiteral = [];
 for (const f of files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts"))) {
   const text = await readFile(DIST + f, "utf8");
   if (text.includes(WORKER_LITERAL)) withLiteral.push(f);
-  if (text.includes("bake.worker.ts")) throw new Error(`dist/${f} still names bake.worker.ts`);
+  if (/["'`][^"'`]*bake\.worker\.ts["'`]/.test(text)) throw new Error(`dist/${f} still loads bake.worker.ts`);
   if (PRIVATE_IMPORT.test(text)) throw new Error(`dist/${f} imports a private @pixelworld package`);
+  // webpack would make import(url) a context module of dist/ and fail at run time
+  for (const [, comments, quote] of f.endsWith(".js") ? text.matchAll(DYNAMIC_IMPORT) : []) {
+    if (!quote && !/webpackIgnore:\s*true/.test(comments))
+      throw new Error(`dist/${f}: a dynamic import(url) needs /* @vite-ignore */ /* webpackIgnore: true */ before its URL`);
+  }
 }
 if (withLiteral.length !== 1) throw new Error(`expected the worker literal in one file, found it in [${withLiteral}]`);
 for (const f of [...ENTRIES.flatMap((n) => [`${n}.js`, `${n}.d.ts`]), "bake.worker.js"]) {

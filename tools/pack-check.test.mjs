@@ -77,7 +77,7 @@ describe("pack-check tool", () => {
     files.set("dist/engine.js", Buffer.from(`new Worker(new URL("./bake.worker.ts", import.meta.url))`));
     const problems = checkPackage(files);
     expect(problems).toContain("the worker literal is in 0 files, not one");
-    expect(problems).toContain("dist/engine.js names bake.worker.ts");
+    expect(problems).toContain("dist/engine.js loads bake.worker.ts");
   });
 
   it("measures sizes against the budgets", () => {

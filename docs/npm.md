@@ -59,7 +59,7 @@ Working projects, each built and run against the packed package in CI: [examples
 | `pixelworld/grid` | the projection, rotations, cells, corner heights, road and rail bits | 0.2 KB for `project` |
 | `pixelworld/style` | style packs: validation, palettes, materials, night and atmosphere | |
 | `pixelworld/generators` | voxel models, meshing, terrain fields, object building and the generators | |
-| `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 52 KB (145 KB minified) |
+| `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 52 KB (145 KB minified) bundled; 61 KB as shipped (§7) |
 
 - **Everything** (all six entry points) is 87 KB gzipped (D3 estimated 89 KB).
 - **Shared code is shared:** the entry points are built together with code splitting, so an app importing `pixelworld/engine` and `pixelworld/traffic` gets one copy of what they have in common (one generator registry, one set of classes).
@@ -127,7 +127,7 @@ await createWorldView({ canvas, worldUrl, style, workerUrl });
 ## 7. In this repository
 
 - **The package:** `packages/pixelworld`. Its `src/` re-exports the workspace packages (`@pixelworld/engine`, `@pixelworld/sim` and the rest), which stay private TypeScript sources. In the workspace its `exports` point at `src/`, so apps, examples, vitest and `pnpm typecheck` use source as before; `publishConfig.exports` points the packed manifest at `dist/`.
-- **The build:** `pnpm package:build` (also run by `pnpm pack`) runs `packages/pixelworld/build.mjs`: tsup over esbuild, one split ESM build of the six entry points with bundled declarations, then the worker as one minified file. It checks the worker literal, the entry files, and that nothing imports a private package. See [library.md §3.5](library.md#35-publishing).
+- **The build:** `pnpm package:build` (also run by `pnpm pack`) runs `packages/pixelworld/build.mjs`: tsup over esbuild, one split ESM build of the six entry points with bundled declarations, then the worker as one file, minified but for whitespace (196 KB; bundlers minify it to 145 KB), because esbuild drops comments with whitespace and a dynamic `import(url)` needs its `/* webpackIgnore: true */` to reach webpack. It checks the worker literal, the entry files, that nothing imports a private package, and that every dynamic `import(url)` carries `/* @vite-ignore */ /* webpackIgnore: true */`. See [library.md §3.5](library.md#35-publishing).
 - **The checks**, each also in CI's npm package job:
 
 | Command | Checks |

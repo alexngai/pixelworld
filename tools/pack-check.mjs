@@ -23,12 +23,15 @@ const REPO = fileURLToPath(new URL("..", import.meta.url));
 export const SUBPATHS = ["engine", "format", "grid", "style", "generators", "traffic"];
 export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })';
 
-/** Size budgets in bytes (docs/library.md D3: ~260 KB of JS and a 145 KB worker, before source maps). */
+/**
+ * Size budgets in bytes for what the tarball ships (D3: ~260 KB of JS and a 145 KB worker, minified;
+ * here the library is unminified and the worker minified but for whitespace, see build.mjs).
+ */
 export const BUDGETS = {
   tarball: 750 * 1024, // gzipped .tgz, with source maps
   unpacked: 2.75 * 1024 * 1024, // everything, as installed
-  js: 650 * 1024, // dist/*.js without maps: the library chunks and the worker
-  worker: 160 * 1024, // dist/bake.worker.js, minified
+  js: 700 * 1024, // dist/*.js without maps: the library chunks and the worker
+  worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
 };
 
 const ALLOWED = [/^package\.json$/, /^README\.md$/, /^LICENSE-(MIT|APACHE)$/, /^CHANGELOG\.md$/, /^dist\/[\w.-]+\.(js|js\.map|d\.ts)$/];
@@ -96,7 +99,7 @@ export function checkPackage(files, { licences = null } = {}) {
     if (!/\.(js|d\.ts)$/.test(f)) continue;
     const text = b.toString("utf8");
     if (/(?:from|import)\s*\(?\s*["']@pixelworld\//.test(text)) problems.push(`${f} imports a private @pixelworld package`);
-    if (text.includes("bake.worker.ts")) problems.push(`${f} names bake.worker.ts`);
+    if (/["'`][^"'`]*bake\.worker\.ts["'`]/.test(text)) problems.push(`${f} loads bake.worker.ts`);
   }
 
   if (licences) for (const [f, text] of Object.entries(licences)) if (has(f) && !files.get(f).equals(text)) problems.push(`${f} differs from the repository's`);
