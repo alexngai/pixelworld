@@ -8,6 +8,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/dist/**",
       "pipeline/**",
+      ".claude/**", // agents' git worktrees: other copies of the repo
       "test-results/**",
       "playwright-report/**",
     ],
