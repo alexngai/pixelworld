@@ -62,7 +62,10 @@
         "types": "./dist/traffic.d.ts",
         "import": "./dist/traffic.js"
       },
-      "./bake.worker.js": "./dist/bake.worker.js",
+      "./bake.worker.js": {
+        "types": "./dist/bake.worker.d.ts",
+        "default": "./dist/bake.worker.js"
+      },
       "./package.json": "./package.json"
     }
   },

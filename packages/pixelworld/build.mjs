@@ -16,7 +16,7 @@
 //
 // Run: pnpm --filter pixelworld build (`pnpm pack` runs it too, as prepack).
 // Types are checked by the workspace's `pnpm typecheck`, not here.
-import { copyFile, readFile, readdir, rm } from "node:fs/promises";
+import { copyFile, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { build } from "tsup";
 
@@ -62,6 +62,12 @@ await Promise.all(["LICENSE-MIT", "LICENSE-APACHE"].map((f) => copyFile(ROOT + f
 
 await build({ ...common, entry, splitting: true, dts: { entry }, esbuildPlugins: [workerUrlPlugin] });
 await build({ ...common, entry: { "bake.worker": WORKER_ENTRY }, splitting: false, minify: true, dts: false });
+// `pixelworld/bake.worker.js` is exported for copying (workerUrl), not importing; it still declares itself
+await writeFile(
+  DIST + "bake.worker.d.ts",
+  "// The bake worker: a module worker script to start, not a module to import. Start it with\n" +
+    '// new Worker(url, { type: "module" }), or pass its URL to createWorldView as `workerUrl`.\nexport {};\n',
+);
 
 // What consumers depend on, checked here rather than found broken downstream.
 const files = await readdir(DIST);

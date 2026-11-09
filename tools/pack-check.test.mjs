@@ -6,7 +6,7 @@ function goodPackage() {
   const exports = Object.fromEntries(
     SUBPATHS.map((s) => [`./${s}`, { types: `./dist/${s}.d.ts`, import: `./dist/${s}.js` }]),
   );
-  exports["./bake.worker.js"] = "./dist/bake.worker.js";
+  exports["./bake.worker.js"] = { types: "./dist/bake.worker.d.ts", default: "./dist/bake.worker.js" };
   const pkg = {
     name: "pixelworld",
     version: "0.1.0",

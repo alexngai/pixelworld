@@ -86,7 +86,8 @@ export function checkPackage(files, { licences = null } = {}) {
     }
     if (has(`dist/${sub}.js`) && !has(`dist/${sub}.js.map`)) problems.push(`dist/${sub}.js has no source map`);
   }
-  if (pkg.exports?.["./bake.worker.js"] !== "./dist/bake.worker.js") problems.push('no export "./bake.worker.js"');
+  const worker = pkg.exports?.["./bake.worker.js"];
+  if ((worker?.default ?? worker) !== "./dist/bake.worker.js") problems.push('no export "./bake.worker.js" of dist/bake.worker.js');
 
   // the worker: created with a literal URL from a file beside it, so bundlers pick it up
   const creators = [...files].filter(([f, b]) => /^dist\/[^/]+\.js$/.test(f) && b.toString("utf8").includes(WORKER_LITERAL));
