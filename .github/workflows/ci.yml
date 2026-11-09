@@ -30,6 +30,39 @@ jobs:
             test-results/
           retention-days: 7
 
+  package:
+    # The npm package (docs/npm.md). Builds and packs `pixelworld` and checks
+    # the tarball on every push; publishing stays manual (no tokens here).
+    name: npm package (build, pack, size, consumers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Pack (builds dist/ first)
+        run: pnpm --filter pixelworld pack --pack-destination "$RUNNER_TEMP/pack"
+      - name: Tarball contents, manifest and size budgets
+        run: node tools/pack-check.mjs "$RUNNER_TEMP"/pack/pixelworld-*.tgz
+      - name: Bundle size budgets (size-limit, gzipped)
+        run: pnpm package:size
+      - name: API reference
+        run: pnpm docs:api
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Consumers outside the workspace (Vite dev and build, webpack 5, plain ESM)
+        run: node tools/consumers.mjs --tarball "$RUNNER_TEMP"/pack/pixelworld-*.tgz --out "$RUNNER_TEMP/consumers"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixelworld-npm
+          path: |
+            ${{ runner.temp }}/pack/*.tgz
+            ${{ runner.temp }}/consumers/screenshots/
+          retention-days: 7
+
   pipeline:
     name: Pipeline (ruff, pytest)
     runs-on: ubuntu-latest

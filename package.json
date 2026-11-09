@@ -21,6 +21,7 @@
     "package:build": "pnpm --filter pixelworld build",
     "package:check": "node tools/pack-check.mjs",
     "package:size": "pnpm --filter pixelworld size",
+    "package:consumers": "node tools/consumers.mjs",
     "docs:api": "pnpm --filter pixelworld docs",
     "changeset": "changeset",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
