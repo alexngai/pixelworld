@@ -78,7 +78,7 @@ export interface WorldViewOptions {
   onError?: (message: string) => void;
   /**
    * Plugins with generators the world's style uses (D-071), such as the city
-   * pack pixelworld-city-sf's `cityPlugin`: loaded in the bake worker and on
+   * pack @pixelworlds/city-sf's `cityPlugin`: loaded in the bake worker and on
    * the main thread before the first bake. Or a function given the plugins the
    * style pack names (its `plugins`) that returns the ones to load. A plugin the
    * style names but the view doesn't load is warned about.

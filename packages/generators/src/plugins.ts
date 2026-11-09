@@ -3,7 +3,7 @@ import { hasGenerator, registerGenerators, unregisterGenerators } from "./regist
 
 /**
  * Plugins (D-071, docs/plugins.md §9): packages that add generators, such as
- * the city pack pixelworld-city-sf. A plugin is registered once in every
+ * the city pack @pixelworlds/city-sf. A plugin is registered once in every
  * realm that generates models: each bake worker (which imports the plugin's
  * module by URL before its first bake) and the main thread (entities, the
  * inline baker, tests).
@@ -34,12 +34,12 @@ export interface Plugin {
 
 /** How a world view finds a plugin (createWorldView({ plugins })). */
 export interface PluginDescriptor {
-  /** The plugin's name, e.g. "pixelworld-city-sf". */
+  /** The plugin's name, e.g. "@pixelworlds/city-sf". */
   name: string;
   /**
-   * An ES module that defines the plugin with `definePlugin`, self-contained
-   * or importing only absolute URLs (a bundled file): the bake worker imports
-   * it. Relative URLs resolve against the page.
+   * An ES module that defines the plugin (`definePlugin`, or a `register`
+   * export), self-contained or importing only absolute URLs (a bundled file):
+   * the bake worker imports it. Relative URLs resolve against the page.
    */
   url: string | URL;
   /** The plugin itself, when the page has it already: registered on the main thread instead of importing `url` there. */
@@ -145,11 +145,22 @@ export function unregisterPlugin(name: string): void {
   unregisterGenerators(name);
 }
 
-const nativeImport = (url: string): Promise<unknown> => import(/* @vite-ignore */ url);
+// both comments: bundlers must leave this import to the browser (webpack would emit a broken chunk)
+const nativeImport = (url: string): Promise<unknown> => import(/* @vite-ignore */ /* webpackIgnore: true */ url);
+
+/** The plugin a module exports: as its default export, or as named `register` (and `name`) exports. */
+function exportedPlugin(mod: unknown, name: string): Plugin | null {
+  const m = mod as { default?: unknown; name?: unknown; register?: unknown } | null;
+  if (isPlugin(m?.default)) return m.default;
+  if (typeof m?.register === "function")
+    return { name: typeof m.name === "string" ? m.name : name, register: m.register as Plugin["register"] };
+  return null;
+}
 
 /**
- * Import a plugin's module and register the plugin it defines (its default
- * export, or what it announced with definePlugin), once per URL. `url` must
+ * Import a plugin's module and register the plugin it defines (what it
+ * exports: a default plugin, or `register` and `name`; else what it announced
+ * with definePlugin), once per URL. `url` must
  * be absolute where the realm has no base (a worker resolves against its own
  * script). `importer` replaces `import()` (tests).
  */
@@ -167,9 +178,8 @@ export function loadPlugin(
     } catch (e) {
       throw new PluginError(`plugin ${ref.name} (${ref.url}) failed to import: ${e instanceof Error ? e.message : String(e)}`);
     }
-    const exported = (mod as { default?: unknown } | null)?.default;
     const all = announced();
-    const plugin = isPlugin(exported) ? exported : all.findLast((p) => p.name === ref.name);
+    const plugin = exportedPlugin(mod, ref.name) ?? all.findLast((p) => p.name === ref.name);
     if (!plugin) {
       const other = all.slice(before)[0];
       throw new PluginError(

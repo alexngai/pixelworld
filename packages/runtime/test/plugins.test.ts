@@ -10,7 +10,7 @@ import { bakeWorkerLoop, type BakeHandler } from "../src/workerLoop";
  * modules "imported by URL" from the city pack's own worker module.
  */
 
-const CITY_SF = { name: "pixelworld-city-sf", url: "https://example.test/assets/worker-sf.js" };
+const CITY_SF = { name: "@pixelworlds/city-sf", url: "https://example.test/assets/worker-sf.js" };
 /** `import(url)` in the worker: the city pack's module for its URL (a bundle that keeps no exports). */
 const importCityPack = async (url: string): Promise<unknown> => {
   if (url !== CITY_SF.url) throw new Error(`Failed to fetch dynamically imported module: ${url}`);
@@ -57,16 +57,16 @@ describe("the bake worker's plugins", () => {
     handle({ type: "bakeSprite", id: 2, rotation: 0, boxes: [] });
     expect(handled).toEqual([]);
     await vi.waitFor(() => expect(posted.length).toBeGreaterThan(0), { timeout: 10_000 });
-    expect(posted).toEqual([{ type: "pluginsLoaded", id: 1, plugins: [{ name: "pixelworld-city-sf", generators: SF_GENERATORS }] }]);
+    expect(posted).toEqual([{ type: "pluginsLoaded", id: 1, plugins: [{ name: "@pixelworlds/city-sf", generators: SF_GENERATORS }] }]);
     expect(handled).toEqual(["init", "bakeSprite"]);
-    for (const g of SF_GENERATORS) expect(listGenerators().find((e) => e.name === g)?.source).toBe("pixelworld-city-sf");
+    for (const g of SF_GENERATORS) expect(listGenerators().find((e) => e.name === g)?.source).toBe("@pixelworlds/city-sf");
   });
 
   it("answers a plugin that fails to load with an error, and goes on", async () => {
     const posted: FromWorker[] = [];
     const handled: string[] = [];
     const handle = bakeWorkerLoop({ handle: (m) => handled.push(m.type) }, (m) => posted.push(m), { importPlugin: importCityPack });
-    handle({ type: "loadPlugins", id: 7, plugins: [{ name: "pixelworld-city-nyc", url: "https://example.test/nyc.js" }] });
+    handle({ type: "loadPlugins", id: 7, plugins: [{ name: "@pixelworlds/city-nyc", url: "https://example.test/nyc.js" }] });
     handle(init);
     await vi.waitFor(() => expect(posted.length).toBeGreaterThan(0), { timeout: 10_000 });
     expect(posted).toEqual([
@@ -74,7 +74,7 @@ describe("the bake worker's plugins", () => {
         type: "error",
         id: 7,
         message:
-          "plugin pixelworld-city-nyc (https://example.test/nyc.js) failed to import: " +
+          "plugin @pixelworlds/city-nyc (https://example.test/nyc.js) failed to import: " +
           "Failed to fetch dynamically imported module: https://example.test/nyc.js",
       },
     ]);
@@ -90,7 +90,7 @@ describe("BakeService with plugins", () => {
     const factory = () => (worker = new FakeWorker(importCityPack)) as unknown as Worker;
     const svc = await BakeService.create(init, prepare, factory, { plugins: [CITY_SF] });
     expect(svc.mode).toBe("worker");
-    expect(svc.plugins).toEqual([{ name: "pixelworld-city-sf", generators: SF_GENERATORS }]);
+    expect(svc.plugins).toEqual([{ name: "@pixelworlds/city-sf", generators: SF_GENERATORS }]);
     await tick();
     expect(worker!.handled).toEqual(["init"]); // loadPlugins went to the loop, not the baker
     svc.dispose();
@@ -99,9 +99,9 @@ describe("BakeService with plugins", () => {
   it("fails to start when a plugin doesn't load", async () => {
     let worker: FakeWorker | null = null;
     const factory = () => (worker = new FakeWorker(importCityPack)) as unknown as Worker;
-    const bad = { name: "pixelworld-city-sf", url: "https://example.test/missing.js" };
+    const bad = { name: "@pixelworlds/city-sf", url: "https://example.test/missing.js" };
     await expect(BakeService.create(init, prepare, factory, { plugins: [bad] })).rejects.toThrow(
-      "bake worker: plugin pixelworld-city-sf (https://example.test/missing.js) failed to import",
+      "bake worker: plugin @pixelworlds/city-sf (https://example.test/missing.js) failed to import",
     );
     expect(worker!.terminated).toBe(true);
     expect(worker!.handled).toEqual([]);

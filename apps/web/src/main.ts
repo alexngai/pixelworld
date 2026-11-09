@@ -8,7 +8,7 @@ import {
 } from "@pixelworld/engine";
 import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworld/sim";
 import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
-import { cityPlugin } from "pixelworld-city-sf";
+import { cityPlugin } from "@pixelworlds/city-sf";
 
 /**
  * The reference viewer (`@pixelworld/viewer`), a client of the engine: the

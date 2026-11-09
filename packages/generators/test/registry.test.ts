@@ -94,9 +94,9 @@ describe("the generator registry", () => {
     }
     expect(err).toBeInstanceOf(MissingGeneratorError);
     const e = err as MissingGeneratorError;
-    expect([e.generator, e.group, e.plugin]).toEqual(["rowhouse", "building.rowhouse.victorian", "pixelworld-city-sf"]);
+    expect([e.generator, e.group, e.plugin]).toEqual(["rowhouse", "building.rowhouse.victorian", "@pixelworlds/city-sf"]);
     expect(e.message).toMatch(/no generator named 'rowhouse' \(asked for by building\.rowhouse\.victorian\)/);
-    expect(e.message).toMatch(/comes with the plugin pixelworld-city-sf.*createWorldView\(\{ plugins \}\)/);
+    expect(e.message).toMatch(/comes with the plugin @pixelworlds\/city-sf.*createWorldView\(\{ plugins \}\)/);
   });
 
   it("lists what is registered when no known plugin has the generator", () => {
@@ -127,9 +127,9 @@ describe("style packs and plugins", () => {
 
   it("the bay-area pack names the city pack its other generators come with", () => {
     const sf = pack("bay-area");
-    expect(sf.plugins).toEqual(["pixelworld-city-sf"]);
+    expect(sf.plugins).toEqual(["@pixelworlds/city-sf"]);
     const missing = [...named(sf)].filter((g) => !hasGenerator(g)).sort();
     expect(missing).toEqual(Object.keys(KNOWN_PLUGIN_GENERATORS).sort());
-    for (const g of missing) expect(KNOWN_PLUGIN_GENERATORS[g]).toBe("pixelworld-city-sf");
+    for (const g of missing) expect(KNOWN_PLUGIN_GENERATORS[g]).toBe("@pixelworlds/city-sf");
   });
 });

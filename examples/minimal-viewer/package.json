@@ -12,6 +12,6 @@
   "dependencies": {
     "@pixelworld/engine": "workspace:*",
     "@pixelworld/sim": "workspace:*",
-    "pixelworld-city-sf": "workspace:*"
+    "@pixelworlds/city-sf": "workspace:*"
   }
 }

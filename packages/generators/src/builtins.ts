@@ -10,7 +10,7 @@ import { VoxelModel } from "./voxel";
  * building, dams, towers, signs, the landmark kit's generic landmarks, street
  * props and vehicles. Region-specific generators come from plugins
  * (docs/plugins.md §9), such as San Francisco's facades, towers and Chinatown
- * in the city pack pixelworld-city-sf. The registry (registry.ts) reads this
+ * in the city pack @pixelworlds/city-sf. The registry (registry.ts) reads this
  * table the first time a generator is looked up.
  */
 

@@ -6,7 +6,7 @@ import { builtinGenerators } from "./builtins";
  * asset's `generator` → the function that draws it. It holds the built-in
  * generators (builtins.ts) and whatever plugins registered, such as San
  * Francisco's facades, towers and Chinatown from the city pack
- * pixelworld-city-sf. Each realm has its own: the main thread, and every
+ * @pixelworlds/city-sf. Each realm has its own: the main thread, and every
  * bake worker (a plugin is registered in each, docs/plugins.md §9).
  */
 
@@ -19,12 +19,12 @@ export const BUILTIN_SOURCE = "@pixelworld/generators";
  * says what to load (as the pipeline's registry does for `datasf`).
  */
 export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
-  rowhouse: "pixelworld-city-sf",
-  block: "pixelworld-city-sf",
-  decoTower: "pixelworld-city-sf",
-  sfTower: "pixelworld-city-sf",
-  gate: "pixelworld-city-sf",
-  lanterns: "pixelworld-city-sf",
+  rowhouse: "@pixelworlds/city-sf",
+  block: "@pixelworlds/city-sf",
+  decoTower: "@pixelworlds/city-sf",
+  sfTower: "@pixelworlds/city-sf",
+  gate: "@pixelworlds/city-sf",
+  lanterns: "@pixelworlds/city-sf",
 };
 
 export interface GeneratorInfo {

@@ -3,8 +3,8 @@ import { CHINATOWN_GENERATORS } from "./chinatown";
 import { FACADE_GENERATORS } from "./facades";
 import { TOWER_GENERATORS } from "./towers";
 
-/** The plugin's name: the npm package's, the Python distribution's, and what style packs name in `plugins`. */
-export const PLUGIN_NAME = "pixelworld-city-sf";
+/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is pixelworld-city-sf). */
+export const PLUGIN_NAME = "@pixelworlds/city-sf";
 
 /**
  * San Francisco's generators (D-055): the street fabric (`rowhouse`, whose

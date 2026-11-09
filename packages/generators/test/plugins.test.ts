@@ -61,11 +61,19 @@ describe("plugins", () => {
     unregisterPlugin("plugin-b");
   });
 
-  it("takes a module's default export", async () => {
+  it("takes a module's default export, or its register and name", async () => {
     const plugin = samplePlugin("plugin-c");
     const report = await loadPlugin({ name: "plugin-c", url: "https://example.test/c.js" }, async () => ({ default: plugin }));
     expect(report.name).toBe("plugin-c");
     unregisterPlugin("plugin-c");
+    // export const name = …; export function register(api) { … }
+    const named = samplePlugin("plugin-c2");
+    const r2 = await loadPlugin({ name: "plugin-c2", url: "https://example.test/c2.js" }, async () => ({
+      name: named.name,
+      register: named.register,
+    }));
+    expect(r2).toEqual({ name: "plugin-c2", generators: ["plugin-c2Gen"] });
+    unregisterPlugin("plugin-c2");
   });
 
   it("registers into the loader's registry, not the plugin's own copy of the package", async () => {

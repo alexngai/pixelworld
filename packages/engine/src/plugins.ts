@@ -8,7 +8,7 @@ import type { WorldViewOptions } from "./types";
  * service loads them in its worker.
  */
 
-/** The plugins a style pack names (`"plugins": ["pixelworld-city-sf"]`). */
+/** The plugins a style pack names (`"plugins": ["@pixelworlds/city-sf"]`). */
 export function stylePlugins(style: object): string[] {
   const p = (style as { plugins?: unknown }).plugins;
   return Array.isArray(p) ? p.filter((n): n is string => typeof n === "string") : [];

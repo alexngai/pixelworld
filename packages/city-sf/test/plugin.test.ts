@@ -10,9 +10,9 @@ const bayArea = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../worlds/_styles/bay-area/style.json", import.meta.url)), "utf8"),
 ) as { plugins?: string[]; assets: AssetCatalog };
 
-describe("pixelworld-city-sf", () => {
+describe("@pixelworlds/city-sf", () => {
   it("is the plugin core names for San Francisco's generators", () => {
-    expect(PLUGIN_NAME).toBe("pixelworld-city-sf");
+    expect(PLUGIN_NAME).toBe("@pixelworlds/city-sf");
     const known = Object.entries(KNOWN_PLUGIN_GENERATORS).filter(([, p]) => p === PLUGIN_NAME).map(([g]) => g);
     expect(Object.keys(sfGenerators()).sort()).toEqual(known.sort());
     expect(cityPlugin.name).toBe(PLUGIN_NAME);
@@ -25,7 +25,15 @@ describe("pixelworld-city-sf", () => {
     expect(report).toEqual({ name: PLUGIN_NAME, generators: Object.keys(sfGenerators()).sort() });
     for (const g of Object.keys(sfGenerators())) expect(listGenerators().find((e) => e.name === g)?.source).toBe(PLUGIN_NAME);
     expect(await register()).toBe(report); // registered once per realm, whichever way
-    expect((await import("../src/worker")).default).toBe(plugin);
+    const mod = await import("../src/worker");
+    expect([mod.default, mod.name, mod.register]).toEqual([plugin, PLUGIN_NAME, plugin.register]);
+  });
+
+  it("registers through a registry's API it is handed", async () => {
+    const got: string[] = [];
+    const api = { apiVersion: 1, hasGenerator: () => false, registerGenerators: (r: object) => void got.push(...Object.keys(r)) };
+    await register(api);
+    expect(got.sort()).toEqual(Object.keys(sfGenerators()).sort());
   });
 
   it("covers every generator the bay-area pack names that core doesn't", () => {
