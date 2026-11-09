@@ -76,6 +76,14 @@ export interface WorldViewOptions {
   recordBakes?: boolean;
   /** Bake errors (default: console.error). */
   onError?: (message: string) => void;
+  /**
+   * Where to load the bake worker from, for setups that can't serve it beside
+   * the engine: a module worker script, such as a copy of the package's
+   * `bake.worker.js` on your own origin (or a `blob:` URL). Default: the
+   * worker shipped with the engine, `new URL("./bake.worker.js", import.meta.url)`,
+   * which Vite, webpack 5 and plain ESM resolve themselves (docs/npm.md).
+   */
+  workerUrl?: string | URL;
 }
 
 /** What the view knows about its world (read-only). */

@@ -82,7 +82,9 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
       slice: { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro },
     };
   };
-  const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare);
+  const { workerUrl } = opts;
+  const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
+  const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory);
   const view = new View(opts, w, compositor, service, cache, cacheKey);
   await view.start(opts);
   return view;
