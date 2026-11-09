@@ -3,8 +3,24 @@ assessor's secured property tax roll (year built, storeys, units, use) joined
 to parcel polygons, so every building in the city can be typed by its age and
 use (building typologies, D-055).
 
-Datasets are read through the Socrata API, paged, and cached under
-.cache/datasf as gzipped JSON.
+The `datasf` facts source (DataSFFacts) is registered through the
+`pixelworld.facts` entry point. A region names it in its typology section:
+
+    objects:
+      typology:
+        facts: datasf
+        # or with options:
+        facts: { plugin: datasf, rollYear: "2025", classCodes: true }
+
+Options:
+- rollYear: the closed roll year (default: the latest one, asked of DataSF).
+- classCodes: give `class` as the property class code (D, F, A5, OC, …; one
+  more download, cached) rather than its definition ("Dwelling", "Flats &
+  Duplex", …), so `classes:` rules can match codes and their prefixes. The
+  definition is kept as `classDefinition`.
+
+Datasets are read through the Socrata API, paged, and cached in the shared
+download cache under datasf/ as gzipped JSON.
 """
 
 from __future__ import annotations
@@ -19,7 +35,8 @@ import numpy as np
 import shapely
 from rasterio.warp import transform as transform_points
 
-from .http import CACHE_ROOT, get
+from pixelworld_pipeline.facts import FactsSource
+from pixelworld_pipeline.sources.http import cache_dir, get
 
 BASE = "https://data.sf.gov/resource/"
 ASSESSOR = "wv5m-vpq2"  # Assessor Historical Secured Property Tax Rolls
@@ -47,7 +64,7 @@ ASSESSOR_COLUMNS = [
 
 def _soql(dataset: str, params: dict[str, str], name: str) -> list[dict]:
     """Every row of a SoQL query, paged; cached by name."""
-    path = CACHE_ROOT / "datasf" / f"{name}.json.gz"
+    path = cache_dir("datasf") / f"{name}.json.gz"
     if path.exists():
         return json.loads(gzip.decompress(path.read_bytes()))
     rows: list[dict] = []
@@ -81,6 +98,21 @@ def assessor_roll(year: str) -> list[dict]:
     )
 
 
+def class_codes(year: str) -> dict[str, str]:
+    """The property class code per block and lot ("0010001" → "C1"), the most
+    common where a lot has several records."""
+    rows = _soql(
+        ASSESSOR,
+        {"$select": "block,lot,property_class_code", "$where": f"closed_roll_year='{year}'"},
+        f"assessor-{year}-class-codes",
+    )
+    by_lot: dict[str, Counter] = {}
+    for r in rows:
+        key = f"{r.get('block', '')}{r.get('lot', '')}"
+        by_lot.setdefault(key, Counter())[r.get("property_class_code") or ""] += 1
+    return {k: c.most_common(1)[0][0] for k, c in by_lot.items()}
+
+
 def parcels() -> list[dict]:
     return _soql(
         PARCELS,
@@ -100,7 +132,8 @@ def aggregate(records: list[dict]) -> dict[str, Any]:
     """One map lot's facts from its assessor records (condominium units share a lot).
 
     year: the earliest plausible year built; stories: the most; units: the sum;
-    use: the most common use (by records)."""
+    use: the most common use (by records); class: the most common property
+    class (its code where the records carry one, else its definition)."""
     if not records:
         return {
             "year": None,
@@ -115,7 +148,7 @@ def aggregate(records: list[dict]) -> dict[str, Any]:
     years = [y for y in years if 1840 <= y <= 2100]
     uses = Counter(r.get("use_definition") or "" for r in records)
     classes = Counter(r.get("property_class_code_definition") or "" for r in records)
-    return {
+    out = {
         "year": min(years) if years else None,
         "stories": max((_num(r.get("number_of_stories")) for r in records), default=0.0),
         "units": sum(_num(r.get("number_of_units")) for r in records),
@@ -126,17 +159,26 @@ def aggregate(records: list[dict]) -> dict[str, Any]:
         ][0],
         "hood": Counter(r.get("analysis_neighborhood") or "" for r in records).most_common(1)[0][0],
     }
+    if any("property_class_code" in r for r in records):
+        codes = Counter(r.get("property_class_code") or "" for r in records)
+        out["classDefinition"] = out["class"]
+        out["class"] = codes.most_common(1)[0][0]
+    return out
 
 
 class ParcelFacts:
     """Assessor facts per map lot, looked up by projected point."""
 
-    def __init__(self, crs, year: str | None = None):
-        year = year or latest_roll_year()
+    def __init__(self, crs, year: str | None = None, with_class_codes: bool = False):
+        year = str(year) if year else latest_roll_year()
         self.year = year
+        codes = class_codes(year) if with_class_codes else None
         by_lot: dict[str, list[dict]] = {}
         for r in assessor_roll(year):
-            by_lot.setdefault(f"{r.get('block', '')}{r.get('lot', '')}", []).append(r)
+            key = f"{r.get('block', '')}{r.get('lot', '')}"
+            if codes is not None:
+                r = {**r, "property_class_code": codes.get(key, "")}
+            by_lot.setdefault(key, []).append(r)
         lots: dict[str, dict] = {}  # mapblklot → geometry
         members: dict[str, list[str]] = {}
         for p in parcels():
@@ -168,3 +210,30 @@ class ParcelFacts:
             if out[i] is None or (self.facts[j]["year"] and not out[i].get("year")):
                 out[i] = self.facts[j]
         return out
+
+
+OPTIONS = ("rollYear", "classCodes")
+
+
+class DataSFFacts(FactsSource):
+    """The `datasf` facts source: San Francisco's secured roll, per map lot."""
+
+    attribution = ATTRIBUTION
+
+    def __init__(self, region, options: dict[str, Any] | None = None):
+        super().__init__(region, options)
+        unknown = sorted(set(self.options) - set(OPTIONS))
+        if unknown:
+            raise ValueError(
+                f"datasf facts: unknown option(s) {', '.join(unknown)} "
+                f"(it takes {', '.join(OPTIONS)})"
+            )
+        self.parcels = ParcelFacts(
+            region.crs, self.options.get("rollYear"), bool(self.options.get("classCodes"))
+        )
+
+    def at(self, xs: np.ndarray, ys: np.ndarray) -> list[dict | None]:
+        return self.parcels.at(xs, ys)
+
+    def summary(self) -> str:
+        return f"DataSF assessor roll {self.parcels.year}"

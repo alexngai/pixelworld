@@ -17,11 +17,13 @@ from typing import Any
 import numpy as np
 import shapely
 
+from . import facts as facts_sources
 from . import ground as ground_stage
 from . import importance as importance_stage
 from . import lanes as lane_stage
 from . import micro as micro_stage
 from . import objects as object_stage
+from . import plugins
 from . import roads as road_stage
 from .gridify import (
     STEP_WORLD,
@@ -35,7 +37,7 @@ from .gridify import (
 )
 from .layout import UniformLayout, WarpedLayout, WarpSpec
 from .region import Region
-from .sources import overture
+from .sources import overture, rasters
 from .world_format import NO_WATER, write_package
 
 SURFACES = {
@@ -305,27 +307,13 @@ def half_width_cells(
 CLIFF_DROP_METERS = 80.0
 FOREST_ABOVE_METERS = 2300.0
 
+# Attribution of the built-in vector and lidar sources; raster sources (terrain,
+# land cover) and facts sources carry their own (`attribution` on the plugin).
 ATTRIBUTION = {
     "usgs-3dep-lidar": {
         "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
         "license": "Public domain",
         "url": "https://www.usgs.gov/3d-elevation-program",
-    },
-    "usgs-3dep-1arcsec": {
-        "name": "USGS 3D Elevation Program (3DEP) 1 arc-second DEM",
-        "license": "Public domain",
-        "url": "https://www.usgs.gov/3d-elevation-program",
-    },
-    "usgs-3dep-13arcsec": {
-        "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
-        "license": "Public domain",
-        "url": "https://www.usgs.gov/3d-elevation-program",
-    },
-    "esa-worldcover-2021": {
-        "name": "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data "
-        "(2021) processed by ESA WorldCover consortium",
-        "license": "CC BY 4.0",
-        "url": "https://esa-worldcover.org",
     },
     "overture": {
         "name": "© OpenStreetMap contributors, Overture Maps Foundation "
@@ -650,8 +638,20 @@ def make_layout(region: Region, region_path: Path | None = None):
     return UniformLayout(region)
 
 
-def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) -> dict:
-    region = Region.load(region_path)
+def build(
+    region_path: Path,
+    out_dir: Path,
+    compress: bool = True,
+    layout=None,
+    region: Region | None = None,
+) -> dict:
+    """Build the world package of the region spec at `region_path` into
+    `out_dir`; returns the build report. `region` is the spec already loaded
+    (pixelworld_pipeline.build passes specs given as dicts that way): then
+    `region_path` only places the spec, for the files beside it (the landmark
+    registry, importance.json)."""
+    region = region or Region.load(region_path)
+    plugins.check(region)  # a missing plugin fails now, not minutes in
     layout = layout or make_layout(region, region_path)
     cx, cy = layout.cells
     if layout.warped:
@@ -994,18 +994,17 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         surface[yard] = surface_id["yard"]
         print(f"ground: {int(yard.sum())} yard cells")
     attribution = [
-        ATTRIBUTION[region.sources["dem"]["kind"]],
-        ATTRIBUTION[region.sources["landcover"]["kind"]],
+        rasters.source(region.sources["dem"]["kind"], "terrain").attribution,
+        rasters.source(region.sources["landcover"]["kind"], "landcover").attribution,
         ATTRIBUTION["overture"],
     ]
     if region.objects and "buildings" in region.objects:
         attribution.append(ATTRIBUTION["overture-buildings"])
         if region.objects["buildings"].get("lidar"):
             attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
-    if region.objects and (region.objects.get("typology") or {}).get("facts") == "datasf":
-        from .sources.datasf import ATTRIBUTION as DATASF_ATTRIBUTION
-
-        attribution.append(DATASF_ATTRIBUTION)
+    if region.objects:
+        # the facts source plugin's own entry (DataSF's, for San Francisco)
+        attribution += facts_sources.attribution(region.objects.get("typology"))
     if region.objects and any("canopy" in r for r in (region.objects.get("vegetation") or [])):
         from .sources.canopy import ATTRIBUTION as CANOPY_ATTRIBUTION
 
