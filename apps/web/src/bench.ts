@@ -95,9 +95,16 @@ function withTimeout<T>(p: Promise<T>, what: string): Promise<T> {
 async function appIn(frame: HTMLIFrameElement): Promise<Api> {
   const t0 = performance.now();
   while (performance.now() - t0 < opt.timeoutMs) {
-    const win = frame.contentWindow;
-    if (win?.__pixelworld) return win.__pixelworld;
-    const hud = win?.document.getElementById("hud")?.textContent ?? "";
+    let win: Window | null;
+    let hud: string;
+    try {
+      win = frame.contentWindow;
+      if (win?.__pixelworld) return win.__pixelworld;
+      hud = win?.document.getElementById("hud")?.textContent ?? "";
+    } catch {
+      // the browser's error page stands in for the app: it never loaded
+      throw new Error("the app's page did not load (is the dev server still running?)");
+    }
     if (hud.startsWith("error:") || hud.startsWith("bake error:")) throw new Error(hud);
     await sleep(100);
   }
@@ -134,6 +141,7 @@ async function frameSamples(win: Window, api: Api): Promise<FrameSample[]> {
     api.setTraffic({ enabled: c.traffic });
     api.setFog({ enabled: c.fog });
     await withTimeout(api.ready(), "frame");
+    api.timeFrames(Math.max(2, Math.round(opt.draws / 4))); // warm up: first draws at a new size are slow
     const drawMs = api.timeFrames(opt.draws);
     const { intervals, cpu } = await sampleFrames(win, api, opt.sampleMs);
     const moving = c.traffic || c.fog; // with nothing moving the frame isn't redrawn
