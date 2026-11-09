@@ -126,9 +126,15 @@ importers:
 
   packages/sim:
     dependencies:
+      '@pixelworld/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@pixelworld/generators':
         specifier: workspace:*
         version: link:../generators
+      '@pixelworld/world-format':
+        specifier: workspace:*
+        version: link:../world-format
 
   packages/style: {}
 
