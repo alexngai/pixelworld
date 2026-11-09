@@ -149,7 +149,7 @@ export class CarPilot {
     this.path = new Path(smoothPath(points));
     const p = this.path.points;
     this.kappa = new Float64Array(p.length);
-    const span = 3; // points either side (0.75 cells)
+    const span = 6; // points either side (1.5 cells): the bend a car takes, not the stairs' ripple
     for (let i = 0; i < p.length; i++) {
       const a = p[Math.max(0, i - span)]!;
       const m = p[i]!;

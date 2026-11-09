@@ -130,6 +130,30 @@ describe("the world for the car", () => {
     expect(car.h).toBe(2);
   });
 
+  it("rides a road's graded surface from its route, through a cut the terrain beside it stands over", () => {
+    // ground at 4, a road cut down to 1.5 in its middle (as traffic's route says)
+    const w = new FakeWorld(30, 10, () => ({ h: 4 }));
+    const routes: RoutesFile = {
+      version: 1,
+      nodes: [[2.5, 5.5, 4], [27.5, 5.5, 4]],
+      routes: [{ net: "road", cls: "primary", a: 0, b: 1, pts: [2.5, 5.5, 4, 12.5, 5.5, 1.5, 17.5, 5.5, 1.5, 27.5, 5.5, 4] }],
+    };
+    const d = drive(w, new RouteNetwork(parseRoutes(routes)));
+    expect(d.groundAt(15, 5.5, 1.5)).toBe(1.5); // in the cut
+    expect(d.groundAt(7.5, 5.6, 3)).toBeCloseTo(2.75, 9); // down its ramp
+    expect(d.groundAt(15, 8, 1.5)).toBe(4); // beside the road
+    expect(d.groundAt(15, 5.5, 4)).toBe(4); // a car up on the bank isn't in the cut
+    expect(d.topSpeedAt(15, 5.6, 1.5)).toBe(roadSpeed("primary"));
+    const car: CarState = { x: 3, y: 5.5, h: 4, heading: 0, speed: 0, steer: 0 };
+    let lowest = 4;
+    for (let i = 0; i < 240; i++) {
+      driveCar(car, { ...NO_INPUT, throttle: 1 }, d, { pace: 1, length: 0.6, width: 0.3 }, 1 / 30);
+      lowest = Math.min(lowest, car.h);
+    }
+    expect(car.x).toBeGreaterThan(25);
+    expect(lowest).toBe(1.5);
+  });
+
   it("gives the plane the top of the water or the ground, and towers' tops", () => {
     const w = world();
     w.cell(36, 8)!.water = 3;

@@ -47,13 +47,15 @@ export function surfaceSpeed(name: string): number {
   return OFFROAD_SPEED * (SURFACE_FACTOR[name] ?? SURFACE_FACTOR_DEFAULT);
 }
 
-/** A point on a bridge deck route. */
+/** A point on a road's surface or a bridge deck. */
 export interface DeckHit {
   h: number;
   cls: string;
+  /** A deck, over whatever is under it (else a road on the ground). */
+  deck: boolean;
 }
 
-/** A straight piece of deck: from (ax, ay, ah) to (bx, by, bh), driven within `reach` cells of its line. */
+/** A straight piece of road surface: from (ax, ay, ah) to (bx, by, bh), driven within `reach` cells of its line. */
 interface DeckSegment {
   ax: number;
   ay: number;
@@ -63,24 +65,34 @@ interface DeckSegment {
   bh: number;
   reach: number;
   cls: string;
+  /** A deck (or a join across a gap): over whatever is under it. */
+  deck: boolean;
 }
 
 const DECK_BUCKET = 8;
 
 /**
- * Bridge decks for the car: the traffic routes marked `deck`, at their own
- * height over water and canyons (D-060); and joins across the road network's
- * gaps, where two routes' ends stop a cell or two apart at about one height
- * (a deck's routes stopping short of each other, a road cut by a river's
- * water). The road-route planner joins the same gaps (route.ts), so the car
- * can drive what it plans.
+ * The roads' surfaces for the car, from traffic's routes (D-060): every
+ * vertex carries the drawn surface's height, or a bridge deck's, so a route
+ * is the road's graded profile, the one traffic drives. A car on a road rides
+ * it; the micro-terrain beside a road cut into a slope, or a dip where a
+ * deck meets the land, doesn't stop it.
+ *
+ * - **Decks:** routes marked `deck`, at their own height over water and
+ *   canyons; and joins across the road network's gaps, where two routes' ends
+ *   stop a cell or two apart at about one height (a deck's routes stopping
+ *   short of each other, a road cut by a river's water). The road-route
+ *   planner joins the same gaps (route.ts), so the car can drive what it plans.
+ * - **Heights:** a surface counts only near the car's height (from 1.5 steps
+ *   below to 1 above): a car on a bridge or an overpass, not one under it.
  */
 export class Decks {
   private readonly buckets = new Map<number, DeckSegment[]>();
   private segments = 0;
 
-  constructor(net: RouteNetwork | null, opts: { margin?: number; gap?: number } = {}) {
+  constructor(net: RouteNetwork | null, opts: { margin?: number; roadMargin?: number; gap?: number } = {}) {
     const margin = opts.margin ?? 0.45;
+    const roadMargin = opts.roadMargin ?? 0.25;
     const gap = opts.gap ?? 2.5;
     const ends: { x: number; y: number; h: number; route: number; cls: string; width: number }[] = [];
     for (const r of net?.routes ?? []) {
@@ -88,9 +100,10 @@ export class Decks {
       const n = r.pts.length;
       ends.push({ x: r.pts[0]!, y: r.pts[1]!, h: r.pts[2]!, route: r.id, cls: r.cls, width: r.width });
       ends.push({ x: r.pts[n - 3]!, y: r.pts[n - 2]!, h: r.pts[n - 1]!, route: r.id, cls: r.cls, width: r.width });
-      if (!r.deck) continue;
+      // a deck is driven a little wider than its line (its abutments); a road on its asphalt
+      const reach = r.deck ? Math.max(r.width, 0.35) + margin : Math.max(r.width, 0.125) + roadMargin;
       for (let i = 0; i + 5 < n; i += 3)
-        this.add(r.pts[i]!, r.pts[i + 1]!, r.pts[i + 2]!, r.pts[i + 3]!, r.pts[i + 4]!, r.pts[i + 5]!, Math.max(r.width, 0.35) + margin, r.cls);
+        this.add(r.pts[i]!, r.pts[i + 1]!, r.pts[i + 2]!, r.pts[i + 3]!, r.pts[i + 4]!, r.pts[i + 5]!, reach, r.cls, r.deck);
     }
     // joins across gaps, found through a grid of the ends
     const grid = new Map<string, number[]>();
@@ -110,13 +123,13 @@ export class Decks {
             const d = Math.hypot(a.x - b.x, a.y - b.y);
             // ends at one node are joined already; far or at other heights, they aren't one road
             if (d < 0.5 || d > gap || Math.abs(a.h - b.h) > 1) continue;
-            this.add(a.x, a.y, a.h, b.x, b.y, b.h, Math.max(a.width, b.width, 0.35) + margin, a.cls);
+            this.add(a.x, a.y, a.h, b.x, b.y, b.h, Math.max(a.width, b.width, 0.35) + margin, a.cls, true);
           }
     });
   }
 
-  private add(ax: number, ay: number, ah: number, bx: number, by: number, bh: number, reach: number, cls: string): void {
-    const seg: DeckSegment = { ax, ay, ah, bx, by, bh, reach, cls: cls || "road" };
+  private add(ax: number, ay: number, ah: number, bx: number, by: number, bh: number, reach: number, cls: string, deck: boolean): void {
+    const seg: DeckSegment = { ax, ay, ah, bx, by, bh, reach, cls: cls || "road", deck };
     this.segments++;
     const x0 = Math.floor((Math.min(ax, bx) - reach) / DECK_BUCKET);
     const x1 = Math.floor((Math.max(ax, bx) + reach) / DECK_BUCKET);
@@ -131,15 +144,15 @@ export class Decks {
       }
   }
 
-  /** Deck segments known. */
+  /** Surface segments known. */
   get count(): number {
     return this.segments;
   }
 
   /**
-   * The deck under a point within its half-width (and the margin), whose
-   * height there is near `h` (from 1.5 steps below to 1 above): a car on the
-   * bridge, not one in the canyon under it.
+   * The road or deck under a point within its reach, whose height there is
+   * near `h` (from 1.5 steps below to 1 above): a car on the bridge, not one
+   * in the canyon under it. The nearest line wins.
    */
   at(x: number, y: number, h: number): DeckHit | null {
     const list = this.buckets.get((Math.floor(y / DECK_BUCKET) + 1024) * 4096 + (Math.floor(x / DECK_BUCKET) + 1024));
@@ -153,7 +166,7 @@ export class Decks {
       const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - s.ax) * (s.bx - s.ax) + (y - s.ay) * (s.by - s.ay)) / len2)) : 0;
       const dh = s.ah + (s.bh - s.ah) * t;
       if (dh < h - 1.5 || dh > h + 1) continue;
-      best = { h: dh, cls: s.cls };
+      best = { h: dh, cls: s.cls, deck: s.deck };
       bestD = d;
     }
     return best;
@@ -174,23 +187,25 @@ export class DriveWorld implements CarWorld {
   ) {}
 
   /**
-   * A bridge deck at a point near the car's height: a deck route (traffic's),
-   * else a bridge landmark's footprint at its deck height (its top), which
-   * also spans the gaps between a bridge's deck routes.
+   * The road surface or bridge deck at a point near the car's height: a
+   * route's (traffic's), else a bridge landmark's footprint at its deck height
+   * (its top), which also spans the gaps between a bridge's deck routes.
    */
   deckAt(x: number, y: number, h: number): DeckHit | null {
     const deck = this.decks.at(x, y, h);
     if (deck) return deck;
     for (const o of this.q.objectsAt(x, y))
-      if (o.group.startsWith("landmark.bridge") && o.top !== null && o.top >= h - 1.5 && o.top <= h + 1) return { h: o.top, cls: "bridge" };
+      if (o.group.startsWith("landmark.bridge") && o.top !== null && o.top >= h - 1.5 && o.top <= h + 1) return { h: o.top, cls: "bridge", deck: true };
     return null;
   }
 
+  /** The height to drive on: a road's graded surface, a deck over what is under it, else the drawn ground. */
   groundAt(x: number, y: number, h: number): number | null {
     const g = this.q.heightAt(x, y);
     if (g === null) return null;
-    const deck = this.deckAt(x, y, h);
-    return deck ? Math.max(g, deck.h) : g;
+    const s = this.deckAt(x, y, h);
+    if (!s) return g;
+    return s.deck ? Math.max(g, s.h) : s.h;
   }
 
   onRoad(x: number, y: number, h: number): boolean {
@@ -200,7 +215,7 @@ export class DriveWorld implements CarWorld {
   /** The road the car is on at a point, if any: a drawn road's asphalt, or a deck. */
   roadClassAt(x: number, y: number, h: number): string | null {
     const deck = this.deckAt(x, y, h);
-    if (deck && deck.h >= (this.q.heightAt(x, y) ?? -Infinity) - 0.05) return deck.cls;
+    if (deck && (!deck.deck || deck.h >= (this.q.heightAt(x, y) ?? -Infinity) - 0.05)) return deck.cls;
     const road = roadUnder(this.q, x, y, 0.25);
     return road ? (road.class ?? "road") : null;
   }
@@ -208,7 +223,7 @@ export class DriveWorld implements CarWorld {
   topSpeedAt(x: number, y: number, h: number): number {
     const deck = this.deckAt(x, y, h);
     const ground = this.q.heightAt(x, y);
-    if (deck && ground !== null && deck.h >= ground - 0.05) return roadSpeed(deck.cls);
+    if (deck && ground !== null && (!deck.deck || deck.h >= ground - 0.05)) return roadSpeed(deck.cls);
     const surface = this.q.surfaceAt(x, y);
     if (!surface) return 0;
     // a road's asphalt over a narrow channel is still road (the drawn network breaks at water, D-060)

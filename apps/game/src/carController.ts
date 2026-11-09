@@ -55,6 +55,11 @@ export class CarController implements Controller {
   frozen = false;
   /** Keep to the road while the wheel is straight. */
   assist = true;
+  /**
+   * Bump into traffic. The scripted run turns it off: its autopilot doesn't
+   * overtake, and traffic doesn't yield to the player.
+   */
+  collideTraffic = true;
   /** The camera follows the car. */
   follow: boolean;
   /** Raise the drawn car (steps): it lifts off at a take-off. */
@@ -113,7 +118,10 @@ export class CarController implements Controller {
     };
     const perCell = 16 * view.world.renderScale;
     this.params = { pace: k, length: size.length / perCell, width: size.width / perCell };
-    this.world = new DriveWorld(view.query, view.world.cellsX, view.world.cellsY, new Decks(this.opts.routes ?? null), this.opts.traffic ?? (() => null));
+    const traffic = this.opts.traffic;
+    this.world = new DriveWorld(view.query, view.world.cellsX, view.world.cellsY, new Decks(this.opts.routes ?? null), () =>
+      this.collideTraffic && traffic ? traffic() : null,
+    );
 
     // from another level (a landing): the place and heading through this level's geo grid
     const posed = this.opts.pose ? geoToPose(view.query, this.opts.pose) : null;
@@ -180,15 +188,18 @@ export class CarController implements Controller {
     return { x: px, y: py };
   }
 
-  /** Put the car at a place (cells), on the ground, facing `heading` (default: as it was), stopped. */
-  place(x: number, y: number, heading = this.state.heading): void {
+  /**
+   * Put the car at a place (cells) facing `heading` (default: as it was),
+   * stopped, on the ground there, or on a bridge deck near height `near`.
+   */
+  place(x: number, y: number, heading = this.state.heading, near?: number): void {
     const q = this.view?.query;
     this.state.x = x;
     this.state.y = y;
     this.state.heading = heading;
     this.state.speed = 0;
     this.state.steer = 0;
-    this.state.h = this.world?.groundAt(x, y, q?.heightAt(x, y) ?? this.state.h) ?? this.state.h;
+    this.state.h = this.world?.groundAt(x, y, near ?? q?.heightAt(x, y) ?? this.state.h) ?? this.state.h;
     this.bob.reset();
     this.pilot = null;
     this.draw(0);

@@ -45,7 +45,11 @@ export interface GameDebug {
   land(force?: boolean): Promise<boolean>;
   /** Fly a landing approach to the nearest road within a radius (cells) of the plane: the cell, or null without one. */
   approachRoad(radius: number): { x: number; y: number } | null;
-  place(x: number, y: number, heading?: number): void;
+  /**
+   * Put the vehicle at a place (cells) facing `heading`: the car stopped on the
+   * ground (or a deck near `h`), the plane at height `h` (default 2 steps up), level, at cruise.
+   */
+  place(x: number, y: number, heading?: number, h?: number): void;
   /** A building near a place whose footprint isn't over a road: its anchor and bounds. */
   findBuilding(x: number, y: number, radius: number): { x: number; y: number; bounds: [number, number, number, number]; group: string } | null;
   heightAt(x: number, y: number): number | null;
@@ -126,8 +130,9 @@ async function main() {
       if (!road || !game.approach(road.x, road.y)) return null;
       return { x: road.x, y: road.y };
     },
-    place: (x, y, heading) => {
-      if (game.mode === "car") game.car?.place(x, y, heading);
+    place: (x, y, heading, h) => {
+      if (game.mode === "car") game.car?.place(x, y, heading, h);
+      else game.plane?.place(x, y, heading, h);
     },
     findBuilding: (x, y, radius) => {
       const q = game.view.query;
@@ -167,6 +172,8 @@ async function main() {
     stats: () => game.view.stats(),
   };
 
+  // paused=1: the vehicles wait for a script (tests, screenshots)
+  if (params.get("paused") === "1") game.pause(true);
   game.hud?.say(`${game.mode === "car" ? "Drive" : "Fly"} · H for keys`, 4);
   if (params.get("run") === "1" && game.manifest.id.startsWith("southwest")) {
     const report = await scriptedRun(game);

@@ -143,6 +143,17 @@ export class PlaneController implements Controller {
     this.keys.clear();
   }
 
+  /** Put the plane at a place (cells) facing `heading`, at height `h` (default 2 steps over the ground), level, at cruise. */
+  place(x: number, y: number, heading = this.state.heading, h?: number): void {
+    const ground = this.world?.groundAt(x, y) ?? this.state.h - 2;
+    const cruise = PLANE.cruiseSpeed * this.params.pace;
+    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, bank: 0, throttle: throttleFor(cruise, this.params.pace) });
+    this.pilot = null;
+    this.history.length = 0;
+    this.remember();
+    this.draw(0);
+  }
+
   /** Fly through waypoints (cells, heights over the ground), as the scripted run does; null stops. */
   flyRoute(waypoints: readonly Waypoint[] | null): FlightPilot | null {
     this.pilot = waypoints?.length ? new FlightPilot(waypoints) : null;

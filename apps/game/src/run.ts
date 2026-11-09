@@ -214,6 +214,8 @@ export async function scriptedRun(
 
   const driveLeg = async (stop: RunStop, stopAtEnd: boolean, until?: () => boolean): Promise<LegReport> => {
     const car = game.car!;
+    // the autopilot doesn't overtake and traffic doesn't yield: it drives through traffic
+    car.collideTraffic = false;
     // a leg that leads on into the next one doesn't brake at its end
     const plan = routeTo(game, stop, { stop: stopAtEnd });
     const pilot = car.following;

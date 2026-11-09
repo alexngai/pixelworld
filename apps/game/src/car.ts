@@ -168,10 +168,12 @@ export function stepCar(s: CarState, input: CarInput, world: CarWorld, p: CarPar
   else if (!blocked && world.topSpeedAt(lx, ly, s.h) <= 0) blocked = "water";
   else if (!blocked) {
     // roads are cut into the terrain: what they climb, the car climbs
-    const grade = world.onRoad(lx, ly, s.h) ? CAR.roadMaxGrade : CAR.maxGrade;
+    const road = world.onRoad(lx, ly, s.h);
+    const grade = road ? CAR.roadMaxGrade : CAR.maxGrade;
     if (Math.abs(lead! - (trail ?? s.h)) > grade * (p.length + Math.abs(dist)) + 0.05) blocked = "cliff";
-    // and the middle doesn't drop or jump (a deck's edge under the car)
-    else if (Math.abs(ground! - s.h) > grade * Math.abs(dist) + 0.35) blocked = "cliff";
+    // and the middle doesn't drop or jump (a deck's edge under the car); a road's surfaces
+    // may meet a little apart in height at a junction
+    else if (Math.abs(ground! - s.h) > grade * Math.abs(dist) + (road ? CAR.roadStep : CAR.step)) blocked = "cliff";
   }
   if (!blocked) blocked = world.obstacle({ x: nx, y: ny, heading: s.heading, length: p.length, width: p.width, dir });
   if (blocked) {

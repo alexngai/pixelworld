@@ -72,7 +72,7 @@ export const CAR = {
   overSpeedDecel: 7,
   /** Turn rate at full lock (rad/s), at low and at top speed (it falls linearly with speed up to `turnFadeSpeed`). */
   turnRate: 2.6,
-  turnRateFast: 1.25,
+  turnRateFast: 1.6,
   turnFadeSpeed: 11,
   /** Speed (cells/s) below which steering is weaker (a car turns as it rolls). */
   turnGripSpeed: 1.2,
@@ -86,6 +86,9 @@ export const CAR = {
    * bridge's abutment can dip; a road is never a cliff unless it is this steep.
    */
   roadMaxGrade: 4.5,
+  /** The most the ground may step under the car's middle in one move (steps), off-road and on a road. */
+  step: 0.35,
+  roadStep: 0.8,
   /** Climbing at the steepest drivable grade keeps this share of the top speed. */
   climbKeep: 0.6,
   /** Gravity along a slope (cells/s² per step/cell of grade). */

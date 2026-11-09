@@ -559,10 +559,8 @@ class View implements WorldView {
     if (this.stopped) return;
     this.stopped = true;
     cancelAnimationFrame(this.raf);
-    // a view still waiting to take over from another lets it go too
-    const replacing = this.replacing;
+    // a view still waiting to take over from another leaves it as it is: its owner keeps it
     this.replacing = null;
-    replacing?.destroy();
     window.removeEventListener("resize", this.onWindowResize);
     this.resizeObserver?.disconnect();
     void this.controllerHost.use(null);
