@@ -152,14 +152,15 @@ Publishing is manual: CI builds, packs and checks on every push, and holds no to
 ```sh
 pnpm install --frozen-lockfile
 pnpm changeset version          # bumps packages/pixelworld/package.json, writes its CHANGELOG.md
-git commit -am "Release pixelworld $(node -p 'require("./packages/pixelworld/package.json").version')"
+git add -A .changeset packages/pixelworld
+git commit -m "Release pixelworld $(node -p 'require("./packages/pixelworld/package.json").version')"
 pnpm check && pnpm package:check && pnpm package:size && pnpm package:consumers
 cd packages/pixelworld
 pnpm publish --access public    # prepack builds dist/; asks for your npm 2FA code
 git tag "pixelworld@$(node -p 'require("./package.json").version')" && git push --follow-tags
 ```
 
-- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `pnpm package:check` catches it.
+- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` rejects one.
 - **Check first:** `pnpm pack` writes the tarball `pnpm publish` would upload; `node tools/pack-check.mjs pixelworld-x.y.z.tgz` and `node tools/consumers.mjs --tarball pixelworld-x.y.z.tgz` check it.
 
 **The Python distributions** (`pixelworld-pipeline` and the city pack `pixelworld-city-sf`) are released by hand too. Bump the versions, build, check, then upload the pipeline first, since the city pack depends on it:
