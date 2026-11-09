@@ -803,7 +803,7 @@ The current defaults are in parentheses.
 
 1. **Multiplayer:** single-player through M5, but keep the simulation deterministic so it stays possible.
 2. **Hand-authoring budget:** about 10–20 hero landmarks per region.
-3. **Second region:** a tier-1 city with open 3D city models; candidates are being compared for data as rich as San Francisco's (building records, 3D models, lidar, transit).
+3. **Second region:** a tier-1 city with open 3D city models; candidates compared in [second-region.md](second-region.md): Amsterdam (3D BAG, BAG, AHN), New York (PLUTO, footprints, lidar) and Paris (APUR, BD TOPO) score highest, with Montréal close.
 4. **Target devices:** desktop and modern mobile browsers; WebGL2 required.
 5. **Commercial intent: fully open source** (decided). Code, style packs and world packages are published under open licences ([library.md](library.md) §3.6); world packages stay ODbL as derived databases.
 6. **Grid building:** core gameplay loop or sandbox tool?
