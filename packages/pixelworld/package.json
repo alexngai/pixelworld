@@ -1,0 +1,93 @@
+{
+  "name": "pixelworld",
+  "version": "0.0.0",
+  "description": "Pixel-art isometric worlds from open data: a browser engine, the world format, generators and traffic.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexngai/pixelworld.git",
+    "directory": "packages/pixelworld"
+  },
+  "homepage": "https://github.com/alexngai/pixelworld/blob/main/docs/npm.md",
+  "bugs": "https://github.com/alexngai/pixelworld/issues",
+  "keywords": [
+    "pixel-art",
+    "isometric",
+    "voxel",
+    "map",
+    "open-data",
+    "openstreetmap",
+    "webgl2",
+    "game-engine",
+    "world-generator",
+    "procedural"
+  ],
+  "sideEffects": [
+    "./dist/bake.worker.js"
+  ],
+  "exports": {
+    "./engine": "./src/engine.ts",
+    "./format": "./src/format.ts",
+    "./grid": "./src/grid.ts",
+    "./style": "./src/style.ts",
+    "./generators": "./src/generators.ts",
+    "./traffic": "./src/traffic.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      "./engine": {
+        "types": "./dist/engine.d.ts",
+        "import": "./dist/engine.js"
+      },
+      "./format": {
+        "types": "./dist/format.d.ts",
+        "import": "./dist/format.js"
+      },
+      "./grid": {
+        "types": "./dist/grid.d.ts",
+        "import": "./dist/grid.js"
+      },
+      "./style": {
+        "types": "./dist/style.d.ts",
+        "import": "./dist/style.js"
+      },
+      "./generators": {
+        "types": "./dist/generators.d.ts",
+        "import": "./dist/generators.js"
+      },
+      "./traffic": {
+        "types": "./dist/traffic.d.ts",
+        "import": "./dist/traffic.js"
+      },
+      "./bake.worker.js": "./dist/bake.worker.js",
+      "./package.json": "./package.json"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "prepack": "node build.mjs",
+    "size": "size-limit",
+    "docs": "typedoc"
+  },
+  "devDependencies": {
+    "@pixelworld/engine": "workspace:*",
+    "@pixelworld/generators": "workspace:*",
+    "@pixelworld/grid": "workspace:*",
+    "@pixelworld/sim": "workspace:*",
+    "@pixelworld/style": "workspace:*",
+    "@pixelworld/world-format": "workspace:*",
+    "@size-limit/preset-small-lib": "14.3.0",
+    "size-limit": "14.3.0",
+    "tsup": "9.0.0",
+    "typedoc": "0.28.20"
+  }
+}

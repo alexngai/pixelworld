@@ -2,3 +2,7 @@ packages:
   - "packages/*"
   - "apps/*"
   - "examples/*"
+
+# esbuild (the npm package build, through tsup) checks its platform binary on install
+onlyBuiltDependencies:
+  - esbuild
