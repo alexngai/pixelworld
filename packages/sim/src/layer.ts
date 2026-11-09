@@ -2,7 +2,7 @@ import type { FrameInfo, Layer, LayerContext, Sprite, SpriteDraw, Sublayer } fro
 import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, type VoxelModel } from "@pixelworld/generators";
 import { maybeGunzip, type WorldManifest } from "@pixelworld/world-format";
 import type { VehicleKind } from "./catalog";
-import { vehicleBoxes, vehicleVoxels, type RampLookup } from "./models";
+import { modelSize, vehicleBoxes, vehicleVoxels, type RampLookup } from "./models";
 import { RouteNetwork, parseRoutes } from "./routes";
 import { TICK, TrafficSim, type Pose, type SimState } from "./sim";
 
@@ -92,6 +92,13 @@ export interface DrawnVehicle extends Pose {
   sx: number;
   sy: number;
   depth: number;
+}
+
+/** A vehicle's car near a place (`TrafficLayer.vehiclesNear`): its pose and its size in plan (cells). */
+export interface NearbyVehicle extends Pose {
+  /** Along its heading, and across. */
+  length: number;
+  width: number;
 }
 
 /** A palette ramp lookup by name with fallbacks. */
@@ -285,6 +292,10 @@ export class TrafficLayer implements Layer {
     this.pending++;
     void this.ctx.bakeSprite(0, this.boxes(kind, variant, part, heading)).then((img) => {
       this.pending--;
+      if (!this.baked.has(key)) {
+        if (img) this.ctx?.releaseSprite(img); // the layer left its view meanwhile
+        return;
+      }
       if (img) this.baked.set(key, img);
     });
   }
@@ -319,6 +330,34 @@ export class TrafficLayer implements Layer {
   /** Vehicle sprites baked or baking. */
   get spriteCount(): number {
     return this.baked.size;
+  }
+
+  /**
+   * The vehicles' cars within a radius of a place (cells), where they are
+   * drawn: for a game's collisions. Hidden sublayers and a switched-off layer
+   * have none (what can't be seen can't be hit).
+   */
+  vehiclesNear(x: number, y: number, radius: number): NearbyVehicle[] {
+    if (!this.on || !this.simulation) return [];
+    const out: NearbyVehicle[] = [];
+    const sizes = new Map<VehicleKind, { length: number; width: number }>();
+    for (const p of this.sim.poses(this.hold ? 1 : this.sim.alpha)) {
+      if (!this.shown.has(SUBLAYER_OF[p.kind])) continue;
+      if (Math.hypot(p.x - x, p.y - y) > radius) continue;
+      let size = sizes.get(p.kind);
+      if (!size) {
+        const m = modelSize(p.kind, this.sim.scale);
+        sizes.set(p.kind, (size = { length: m.length, width: m.width }));
+      }
+      out.push({ ...p, ...size });
+    }
+    return out;
+  }
+
+  /** Let go of the vehicle sprites (the layer leaves its view). */
+  dispose(): void {
+    for (const s of this.baked.values()) if (s) this.ctx?.releaseSprite(s);
+    this.baked.clear();
   }
 
   serialize(): TrafficLayerState {
