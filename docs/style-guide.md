@@ -160,7 +160,8 @@ Objects are voxel models generated per semantic group (D-030) and baked with the
   | `palm` | `tree.palm` | `reach` sets frond length |
   | `boulder` | `rock.boulder` | |
   | `building` | `building.residential`, `building.commercial`, `building.parking`, `building.tower`, `building.tower.hotel` | `style` 0 hip roof, 1 low-rise with parapet and a window band, 2 tower with a window grid and crown |
-  | `lookoutTower` | `landmark.tower.lookout` | round stone tower, slits, crenellation, optional round room |
+  | `lookoutTower` | `landmark.tower.lookout` | round stone tower, slits, crenellation, optional round room; `radiusPerHeight` widens it with its height |
+  | `cityBlocks` | `city.blocks` | a coarse level's built-up cell: blocks of low buildings between one-voxel streets on the world's voxel grid (`pitch`), each block houses, a commercial box, apartments, a park or a lot, by place (D-067) |
   | `observationTower` | `landmark.tower.observation` | generic shaft, legs and pod; no replica |
   | `sign` | `landmark.sign` | generic diamond roadside sign with a neon rim |
 
@@ -189,7 +190,7 @@ Objects are voxel models generated per semantic group (D-030) and baked with the
 Buildings come from data, Overture footprints with lidar heights and massing (D-052), and are drawn by the `building` generator (v2). Landmarks come from the registry (D-051) and have generators of their own. A style pack can draw typed buildings with generators of its own: San Francisco's are in §15.
 
 **Massing**
-- **Heights:** real metres × `heightStretch` (2.5 when driving and flying, 1.0 when walking).
+- **Heights:** real metres × `heightStretch` (2.5 when driving, 1.5 when flying, where towers and landmarks are drawn 3× and 5×, and 1.0 when walking).
 - **Lidar towers:** large complexes get tower parts where lidar sees roofs well above the podium, so Caesars, the Venetian, Excalibur and New York-New York keep their skylines.
 - **Setbacks:** towers 30 voxels or taller step back once or twice in their top third (about 60% of towers, by seed).
 - **No overhangs:** every voxel rests on another. Buildings stay inside their footprint, and nothing floats.
@@ -222,7 +223,7 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 | `landmark.tower.lattice` | `latticeTower` | the Eiffel Tower replica at Paris Las Vegas: four legs, base arches, two lit platforms, a spire |
 | `landmark.wheel` | `wheel` | the High Roller: rim, spokes, 28 lit cabins, A-frame legs |
 | `landmark.sign` | `sign` | the Welcome sign: a diamond with a neon rim, no lettering |
-| `landmark.dam` | `dam` | Hoover Dam, bowed upstream |
+| `landmark.dam` | `dam` | Hoover Dam, bowed upstream: a sheer upstream face, the downstream face battered from its foot to a thin crest (`crest`, `batter`, D-066) |
 | `landmark.dam.intake` | `intakeTower` | its four intake towers in the lake |
 | `landmark.bridge.arch` | `archBridge` | the Hoover Dam bypass bridge: arch rib, columns, deck |
 | `landmark.tower.lookout` | `lookoutTower` | the Desert View Watchtower |

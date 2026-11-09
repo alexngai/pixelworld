@@ -1,13 +1,13 @@
 {
-  "packageHash": "874a99dfbd9310c0fc59a9ff5325f6f2c9563b63c4075902bd0d54d67f41d8d8",
+  "packageHash": "7370e793c07f308c217e281a08d99740a632e06af68125553bcb40c2ffcdaf69",
   "cells": [
     1155,
     709
   ],
   "chunks": 228,
   "heightRange": [
-    0,
-    102
+    -10,
+    60
   ],
   "inputs": {
     "roadSegments": 26298,
@@ -54,7 +54,7 @@
       }
     ],
     "pins": [],
-    "solveSeconds": 18.407
+    "solveSeconds": 22.344
   },
   "objects": {
     "building.commercial": 2694,
@@ -82,13 +82,13 @@
     "ok": true
   },
   "surfaces": {
-    "rock": 71648,
+    "rock": 56472,
     "woodland": 122183,
     "forest": 21931,
-    "scrub": 171816,
-    "water": 14329,
-    "desert": 226442,
-    "grass": 142670,
+    "scrub": 175111,
+    "water": 14330,
+    "desert": 233297,
+    "grass": 147695,
     "farmland": 416,
     "urban": 47460
   },

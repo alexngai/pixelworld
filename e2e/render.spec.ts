@@ -288,7 +288,8 @@ test.describe("Hero landmarks (D-053)", () => {
   /** Hoover Dam from downstream: the bypass bridge in front, the intake towers and Lake Mead behind. */
   async function openDam(page: Page, extra = "") {
     await open(page, "zoom=2&rot=3&rover=383.5,452" + extra);
-    await page.evaluate(() => window.__pixelworld!.pan(0, -120));
+    // the dam stands a wall's height above the river now, not a tower's (relief cap, reservoir)
+    await page.evaluate(() => window.__pixelworld!.pan(0, -40));
     await page.evaluate(() => window.__pixelworld!.ready());
   }
 

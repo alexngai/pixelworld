@@ -11,10 +11,10 @@
       "x": 0,
       "y": 0,
       "path": "chunks/0_0.pxwc.gz",
-      "sha256": "dc8f6061b44f7006806426b94eeda0a16c43cebbd52723e4d52e92e7e498fce1",
+      "sha256": "5092d557234614f66b2dcd973313cf6c218fa2f3de3770f96ae694a669519c4a",
       "heightRange": [
-        0,
-        14
+        3,
+        13
       ],
       "metersPerCell": 1342.7
     },
@@ -22,10 +22,10 @@
       "x": 1,
       "y": 0,
       "path": "chunks/1_0.pxwc.gz",
-      "sha256": "c7e2140b950a77067fc32e9239d97b4a43af185713deadf7e46d61600e92b61d",
+      "sha256": "7014bff0a69479ac8db203ff6caaa8fda02c7b26d97af15e13f4bc00831a4851",
       "heightRange": [
-        0,
-        14
+        1,
+        13
       ],
       "metersPerCell": 1328.8
     },
@@ -33,10 +33,10 @@
       "x": 2,
       "y": 0,
       "path": "chunks/2_0.pxwc.gz",
-      "sha256": "b6aaced7ac4b8b46280f0b4d32f1831fd36382818dd4f3979892b60d11983387",
+      "sha256": "ab0baad3a618071dfc320fc7284b8f1e1618f39914828868e16e5b1b9bbb3cd6",
       "heightRange": [
-        0,
-        14
+        1,
+        13
       ],
       "metersPerCell": 1328.1
     },
@@ -44,10 +44,10 @@
       "x": 3,
       "y": 0,
       "path": "chunks/3_0.pxwc.gz",
-      "sha256": "6ae2d7993917d8013ae05a6dfb2f8dc5c5d5508bd7d9562d5b91a62b2807a5e9",
+      "sha256": "7657a46c13b898613e7f682c0365c42eaa0fb6f3817dcd62bc03e9fd55b48455",
       "heightRange": [
-        0,
-        14
+        3,
+        13
       ],
       "metersPerCell": 1304.1
     },
@@ -55,10 +55,10 @@
       "x": 4,
       "y": 0,
       "path": "chunks/4_0.pxwc.gz",
-      "sha256": "0c28e7b7ddfd7dc74ed18403ac73f876131f7e92c3d22f34b24f0347f3341e04",
+      "sha256": "f9a93e03b39502f1e6941f76ca3cc290048f8b086c001e288bd2aaaf717d6622",
       "heightRange": [
-        0,
-        14
+        4,
+        12
       ],
       "metersPerCell": 1321.0
     },
@@ -66,10 +66,10 @@
       "x": 5,
       "y": 0,
       "path": "chunks/5_0.pxwc.gz",
-      "sha256": "a445256d38cb1d19896e0cc6f669b1db66b6723e62e3af13746f320072378b51",
+      "sha256": "d08e47b4d7c11970813521996b930c1ecd9fc47386d1a7fab4122192b3e893fb",
       "heightRange": [
-        0,
-        11
+        3,
+        10
       ],
       "metersPerCell": 1299.5
     },
@@ -77,10 +77,10 @@
       "x": 0,
       "y": 1,
       "path": "chunks/0_1.pxwc.gz",
-      "sha256": "686ed857f666036e2924ef941b81dfd1cfe954c2a38af66fa6f2ee93d77a04a5",
+      "sha256": "c68657385ba4cc2636e62e8286a06ef183a6688fd8f1485caa27a16806917872",
       "heightRange": [
-        0,
-        16
+        1,
+        15
       ],
       "metersPerCell": 1035.6
     },
@@ -88,10 +88,10 @@
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc.gz",
-      "sha256": "744dcc9854518e34ce3b4b4844c9e0141d03982b1126d841e3acff2c0195b8fe",
+      "sha256": "0bcaa5715348d9bd52609067c5314f7260b0d7f9fa7785b16131cd5e03b898d6",
       "heightRange": [
         0,
-        17
+        11
       ],
       "metersPerCell": 943.7
     },
@@ -99,10 +99,10 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "48d1ce84983ec9507dcc167151153cce2e439126e79a08a667c7a4f5657cf0da",
+      "sha256": "467b6b6aca1eb4c06fbe9a6619816f742980451b57c482fdbb7793bdc082d104",
       "heightRange": [
-        0,
-        11
+        1,
+        10
       ],
       "metersPerCell": 1333.5
     },
@@ -110,10 +110,10 @@
       "x": 3,
       "y": 1,
       "path": "chunks/3_1.pxwc.gz",
-      "sha256": "5d7b33068a809d1132626c19a7d0a38f588a2ed1273240d217a1f8b245e3f626",
+      "sha256": "3d3c0a4b52093d7eed026dba460f76ec7f43fd736cab5c104d7b605e26163888",
       "heightRange": [
-        0,
-        21
+        -1,
+        11
       ],
       "metersPerCell": 1309.3
     },
@@ -121,10 +121,10 @@
       "x": 4,
       "y": 1,
       "path": "chunks/4_1.pxwc.gz",
-      "sha256": "b9e8352b31ff18c4a6f9e83747ef30f5e98147e4c5e399807481dddc93838988",
+      "sha256": "31da625bb3beddaa9c3180e9bc09ae7af0c731483da59d5e1ef89a267bfa94e8",
       "heightRange": [
-        0,
-        26
+        -2,
+        15
       ],
       "metersPerCell": 894.5
     },
@@ -132,10 +132,10 @@
       "x": 5,
       "y": 1,
       "path": "chunks/5_1.pxwc.gz",
-      "sha256": "d689a4fa65651391d1a512d7d2ada9462dead101f1674ea0a4412f5be0d82a2b",
+      "sha256": "9aca5e92709031d20f05f21e77056a26bdbb1f8d536b3828b97d87656d165c4a",
       "heightRange": [
         0,
-        23
+        12
       ],
       "metersPerCell": 1173.5
     },
@@ -143,10 +143,10 @@
       "x": 0,
       "y": 2,
       "path": "chunks/0_2.pxwc.gz",
-      "sha256": "e56530712dc635beeb854c03e8e3b62471c9ca7058439293de9953f681785299",
+      "sha256": "443eb74ff171532babc0770e34445a05a7b5d9937d5e3df33910993804469175",
       "heightRange": [
-        0,
-        12
+        1,
+        11
       ],
       "metersPerCell": 1181.1
     },
@@ -154,10 +154,10 @@
       "x": 1,
       "y": 2,
       "path": "chunks/1_2.pxwc.gz",
-      "sha256": "73cca7aa8f6f2890da75e2bfffbc90c691cab115bcb2fbbe3884177ccc5024d4",
+      "sha256": "6eab685949121aced3e392cbc7954d98e1108a229de44193dfc76faafafe9416",
       "heightRange": [
         0,
-        16
+        9
       ],
       "metersPerCell": 1004.0
     },
@@ -165,10 +165,10 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "644f5fab27f5c0fd7062fe8bc073b867b613740a1ff740263ce75cbdc8504cf6",
+      "sha256": "3f36f862ed9a430f9e7a4bef85919263f5bd5e1465b9561f092f27c72abf9dfd",
       "heightRange": [
-        0,
-        14
+        1,
+        9
       ],
       "metersPerCell": 1347.3
     },
@@ -176,10 +176,10 @@
       "x": 3,
       "y": 2,
       "path": "chunks/3_2.pxwc.gz",
-      "sha256": "b00f9f4b4b62671a7c98a7177f5be9ec95e7db8cd7cdf54553e6fcd850bdd5d2",
+      "sha256": "c231096cee9ed03bd20c78495269db7704ff0d18eeda5d9ce65f1a058e441d0c",
       "heightRange": [
-        0,
-        20
+        1,
+        10
       ],
       "metersPerCell": 1325.1
     },
@@ -187,10 +187,10 @@
       "x": 4,
       "y": 2,
       "path": "chunks/4_2.pxwc.gz",
-      "sha256": "1ae151b2f42e985d58432f69d89dcfb5e493164de25c60bbd656b986a11180f8",
+      "sha256": "11f283df4683455d616bd2269384af81308c536071582d3394811c5d0a086abb",
       "heightRange": [
         0,
-        24
+        13
       ],
       "metersPerCell": 992.3
     },
@@ -198,10 +198,10 @@
       "x": 5,
       "y": 2,
       "path": "chunks/5_2.pxwc.gz",
-      "sha256": "121a161bc16c9271fa905b677671b029e9c97db1a59ca8e5118e1eff418ac7d6",
+      "sha256": "dcf4acd2ff4799516e17f8812de39e18d61719bafc453a8a93cbad6dcd1c5325",
       "heightRange": [
-        0,
-        23
+        4,
+        17
       ],
       "metersPerCell": 1234.6
     },
@@ -209,10 +209,10 @@
       "x": 0,
       "y": 3,
       "path": "chunks/0_3.pxwc.gz",
-      "sha256": "bfc7e8a2cccd52a55223faf43cb9f24e16da3931b8a4c79f6131d02ad394f5a4",
+      "sha256": "fca7d3a9c89c4b9fc13a9c8a170a7424ba98d5d4914f26d6e5ead5b84bb86465",
       "heightRange": [
-        0,
-        11
+        1,
+        10
       ],
       "metersPerCell": 1327.9
     },
@@ -220,10 +220,10 @@
       "x": 1,
       "y": 3,
       "path": "chunks/1_3.pxwc.gz",
-      "sha256": "cc896f3ada6ee590be11a83205e93b8c4d50bac9e7e6786e105be3b9890b6e62",
+      "sha256": "6ec9d78afeadbd29abd7f197909b2d703c3bc869a5bb4928327ed0b36c983396",
       "heightRange": [
         0,
-        8
+        7
       ],
       "metersPerCell": 1294.3
     },
@@ -231,9 +231,9 @@
       "x": 2,
       "y": 3,
       "path": "chunks/2_3.pxwc.gz",
-      "sha256": "3d61ca8bb769ac86a7051fdb310ddd9ad8f9aac7f6cb1165266ce1744188cf2d",
+      "sha256": "9712681b74101aa9e822aec187f092ea23e37466c47df668955c9b1164472113",
       "heightRange": [
-        0,
+        2,
         11
       ],
       "metersPerCell": 1335.0
@@ -242,10 +242,10 @@
       "x": 3,
       "y": 3,
       "path": "chunks/3_3.pxwc.gz",
-      "sha256": "57683ba5c483bb66681bf0f87d2b618e4933002312a943274e03aec224368519",
+      "sha256": "5eae5d6b851291c62c3848b32d84be452679169d5b1dc496b9916c9706ac1387",
       "heightRange": [
-        0,
-        10
+        5,
+        9
       ],
       "metersPerCell": 1360.6
     },
@@ -253,10 +253,10 @@
       "x": 4,
       "y": 3,
       "path": "chunks/4_3.pxwc.gz",
-      "sha256": "a5dc6366d64b330a9ff2b8a4fd3a26ceed67fcd99eab121c253d51a2c842f74d",
+      "sha256": "54d58a377e9107432ce847219f3f49701345a804d07ab7787f8fa68342b09fde",
       "heightRange": [
-        0,
-        14
+        5,
+        12
       ],
       "metersPerCell": 1288.9
     },
@@ -264,10 +264,10 @@
       "x": 5,
       "y": 3,
       "path": "chunks/5_3.pxwc.gz",
-      "sha256": "8f18a05181d12dc1efad8cce1e4f2b1b64c12601d5a0c3397913f2e9bbf7b5ed",
+      "sha256": "2bd96c4447ba30037ae4d2e49bb990c361c43ecaf37eba0ee2dec9154694a3b8",
       "heightRange": [
-        0,
-        16
+        7,
+        13
       ],
       "metersPerCell": 1161.8
     }
@@ -279,8 +279,8 @@
     "verticalExaggeration": 2.5
   },
   "heightRange": [
-    0,
-    26
+    -2,
+    17
   ],
   "surfaces": {
     "0": "none",
@@ -349,14 +349,14 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "8fc812ece7e1a4c4",
+      "region": "cfa0881e2e36b1c8",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 2,
       "bilateral": [
         1.5,
         48.0
       ],
-      "warp": "00d228502a733b3d"
+      "warp": "e184478b1d4dd168"
     }
   },
   "micro": {
@@ -407,12 +407,159 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "1ef82418505ef27d27b28758ed78895e274ffa97289ebee765f3905558491a09",
-    "count": 59
+    "sha256": "0a50cd96c6dc7bc2828bab1f893496a69fbbd929ae9a5b0cd5396571886ffe5f",
+    "count": 2948
   },
   "depiction": {
+    "heightStretch": 1.5,
     "scatter": 0.6
   },
+  "heroes": [
+    {
+      "id": "strat-tower",
+      "rotation": 0,
+      "left": -727,
+      "top": 1248,
+      "width": 17,
+      "height": 117,
+      "depthBase": 172.0,
+      "bake": "heroes/strat-tower/bake-r0.png",
+      "paint": "heroes/strat-tower/paint-r0.png",
+      "sha256": "af296f8287234831cefdc7685e65ff2c4459d60b939d04741293dcd13002fd71"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 1,
+      "left": -2767,
+      "top": -490,
+      "width": 17,
+      "height": 116,
+      "depthBase": -45.0,
+      "bake": "heroes/strat-tower/bake-r1.png",
+      "paint": "heroes/strat-tower/paint-r1.png",
+      "sha256": "210b5639dfb06268bfc028c460a54fbdfd144f15ef490c1ace92410f27a07c1d"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 2,
+      "left": 710,
+      "top": -1510,
+      "width": 17,
+      "height": 116,
+      "depthBase": -173.0,
+      "bake": "heroes/strat-tower/bake-r2.png",
+      "paint": "heroes/strat-tower/paint-r2.png",
+      "sha256": "756b5eb302b9735389bbc692d3d759c368217652b4c27ca32dc4d3a64c6b94eb"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 3,
+      "left": 2750,
+      "top": 228,
+      "width": 17,
+      "height": 117,
+      "depthBase": 45.0,
+      "bake": "heroes/strat-tower/bake-r3.png",
+      "paint": "heroes/strat-tower/paint-r3.png",
+      "sha256": "33e32e4b46122885783c7255e13fef6065494cac4db39612abd6c21ab01389c7"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 0,
+      "left": -418,
+      "top": 1948,
+      "width": 17,
+      "height": 19,
+      "depthBase": 245.0,
+      "bake": "heroes/hoover-dam/bake-r0.png",
+      "paint": "heroes/hoover-dam/paint-r0.png",
+      "sha256": "cb6b7e8446ea62a65c7b9672ed98a29babe27ef4c84244ad20d6f17a3cc4f4ae"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 1,
+      "left": -3950,
+      "top": -222,
+      "width": 24,
+      "height": 13,
+      "depthBase": -26.0,
+      "bake": "heroes/hoover-dam/bake-r1.png",
+      "paint": "heroes/hoover-dam/paint-r1.png",
+      "sha256": "f21c2e2c8456af6ba1c0c25e1d66f2b51cb06fc70f5a0e58d36b2c49b224db4f"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 2,
+      "left": 401,
+      "top": -1990,
+      "width": 17,
+      "height": 19,
+      "depthBase": -247.0,
+      "bake": "heroes/hoover-dam/bake-r2.png",
+      "paint": "heroes/hoover-dam/paint-r2.png",
+      "sha256": "23efe3a9c3944f4b014a182bd61aa549be9f9e91f16d9d2c2f3835fa46ff492f"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 3,
+      "left": 3926,
+      "top": 186,
+      "width": 24,
+      "height": 15,
+      "depthBase": 25.0,
+      "bake": "heroes/hoover-dam/bake-r3.png",
+      "paint": "heroes/hoover-dam/paint-r3.png",
+      "sha256": "0a827bd1f65a6a84bd38dcc3330bc5c7c8f2eb17c3d2c77ad7bf94528a036f82"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 0,
+      "left": 3066,
+      "top": 3418,
+      "width": 18,
+      "height": 42,
+      "depthBase": 447.0,
+      "bake": "heroes/desert-view-watchtower/bake-r0.png",
+      "paint": "heroes/desert-view-watchtower/paint-r0.png",
+      "sha256": "db75703a3d4cf0e7c692d39f2d9a3ce78b7d4ba4ae028549ccb03ba68f340b42"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 1,
+      "left": -7111,
+      "top": 1404,
+      "width": 18,
+      "height": 42,
+      "depthBase": 195.0,
+      "bake": "heroes/desert-view-watchtower/bake-r1.png",
+      "paint": "heroes/desert-view-watchtower/paint-r1.png",
+      "sha256": "2b2c6c5e4784fab31fbda7162ceeb546e6ea967aff8cf15736589dcaff217b00"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 2,
+      "left": -3084,
+      "top": -3682,
+      "width": 18,
+      "height": 39,
+      "depthBase": -441.0,
+      "bake": "heroes/desert-view-watchtower/bake-r2.png",
+      "paint": "heroes/desert-view-watchtower/paint-r2.png",
+      "sha256": "9bb0fb78c9319dde6445a16df25ee24353c220ea1d61c5d085d9818be0122089"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 3,
+      "left": 7093,
+      "top": -1668,
+      "width": 18,
+      "height": 39,
+      "depthBase": -189.0,
+      "bake": "heroes/desert-view-watchtower/bake-r3.png",
+      "paint": "heroes/desert-view-watchtower/paint-r3.png",
+      "sha256": "53f0b8da2d0b2adb0163a490abd7e8af16b173b88e7a48fa4d2a5f480c11d21c"
+    }
+  ],
   "level": "fly",
   "levels": [
     {
@@ -440,157 +587,11 @@
     ],
     "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
   },
-  "packageHash": "b15eed8225bc8f2c30a5726eff6c0bec7f1e51a09a71346819ae7fd4c64c956b",
-  "heroes": [
-    {
-      "id": "strat-tower",
-      "rotation": 0,
-      "left": -727,
-      "top": 1120,
-      "width": 17,
-      "height": 187,
-      "depthBase": 175.0,
-      "bake": "heroes/strat-tower/bake-r0.png",
-      "paint": "heroes/strat-tower/paint-r0.png",
-      "sha256": "12a5958796a4a79e90c1aaee7ff0baacee1afbbd50a7cbd6d28de165afe16574"
-    },
-    {
-      "id": "strat-tower",
-      "rotation": 1,
-      "left": -2767,
-      "top": -618,
-      "width": 17,
-      "height": 186,
-      "depthBase": -43.0,
-      "bake": "heroes/strat-tower/bake-r1.png",
-      "paint": "heroes/strat-tower/paint-r1.png",
-      "sha256": "5d04d3b2133ada0be100d823747d4c0c3e9c90b3cfd258d4c741ad1b0af07ece"
-    },
-    {
-      "id": "strat-tower",
-      "rotation": 2,
-      "left": 710,
-      "top": -1638,
-      "width": 17,
-      "height": 186,
-      "depthBase": -170.0,
-      "bake": "heroes/strat-tower/bake-r2.png",
-      "paint": "heroes/strat-tower/paint-r2.png",
-      "sha256": "8f9288b5498ed04027a058fd1684a99ca7ae9d785327540e0b5fd2839faabbbd"
-    },
-    {
-      "id": "strat-tower",
-      "rotation": 3,
-      "left": 2750,
-      "top": 100,
-      "width": 17,
-      "height": 187,
-      "depthBase": 47.0,
-      "bake": "heroes/strat-tower/bake-r3.png",
-      "paint": "heroes/strat-tower/paint-r3.png",
-      "sha256": "2781fcce1ddfeae1f4e27b7da9f00815fa9abc81319aec5fc7b61b2c727db8c1"
-    },
-    {
-      "id": "hoover-dam",
-      "rotation": 0,
-      "left": -415,
-      "top": 1915,
-      "width": 14,
-      "height": 52,
-      "depthBase": 245.0,
-      "bake": "heroes/hoover-dam/bake-r0.png",
-      "paint": "heroes/hoover-dam/paint-r0.png",
-      "sha256": "57c80c4d67ce02e588002d80c625d8ecb916770c0f869a7447c48fc65135e9de"
-    },
-    {
-      "id": "hoover-dam",
-      "rotation": 1,
-      "left": -3950,
-      "top": -255,
-      "width": 24,
-      "height": 46,
-      "depthBase": -26.0,
-      "bake": "heroes/hoover-dam/bake-r1.png",
-      "paint": "heroes/hoover-dam/paint-r1.png",
-      "sha256": "ad7cddbc37b11c3f5447a233ee0b4df20d6bec3d16acdc56da059d77f436465c"
-    },
-    {
-      "id": "hoover-dam",
-      "rotation": 2,
-      "left": 401,
-      "top": -2023,
-      "width": 14,
-      "height": 52,
-      "depthBase": -247.0,
-      "bake": "heroes/hoover-dam/bake-r2.png",
-      "paint": "heroes/hoover-dam/paint-r2.png",
-      "sha256": "6983d45a661d553611bb884b4bc3070b97a5186a6998502d2e94f0ed9b4bc442"
-    },
-    {
-      "id": "hoover-dam",
-      "rotation": 3,
-      "left": 3926,
-      "top": 153,
-      "width": 24,
-      "height": 47,
-      "depthBase": 25.0,
-      "bake": "heroes/hoover-dam/bake-r3.png",
-      "paint": "heroes/hoover-dam/paint-r3.png",
-      "sha256": "f2b1e27dc0d802184310d000a712047f7915fe8a7b41c620928671556667ad7a"
-    },
-    {
-      "id": "desert-view-watchtower",
-      "rotation": 0,
-      "left": 3067,
-      "top": 3339,
-      "width": 15,
-      "height": 36,
-      "depthBase": 450.0,
-      "bake": "heroes/desert-view-watchtower/bake-r0.png",
-      "paint": "heroes/desert-view-watchtower/paint-r0.png",
-      "sha256": "7a4220baff5e58016b5a06a3f53e6ceea6efa43b3cda5ab16221b22216badaa0"
-    },
-    {
-      "id": "desert-view-watchtower",
-      "rotation": 1,
-      "left": -7109,
-      "top": 1325,
-      "width": 15,
-      "height": 36,
-      "depthBase": 199.0,
-      "bake": "heroes/desert-view-watchtower/bake-r1.png",
-      "paint": "heroes/desert-view-watchtower/paint-r1.png",
-      "sha256": "eec4130f85ae603991d0e1f097721ad018a9a0ed34f9051021e00d692c89bd5a"
-    },
-    {
-      "id": "desert-view-watchtower",
-      "rotation": 2,
-      "left": -3082,
-      "top": -3761,
-      "width": 15,
-      "height": 34,
-      "depthBase": -437.0,
-      "bake": "heroes/desert-view-watchtower/bake-r2.png",
-      "paint": "heroes/desert-view-watchtower/paint-r2.png",
-      "sha256": "de032c25e731c80c443a84f4a5703f0955368f1c495857df106b474da2a8f079"
-    },
-    {
-      "id": "desert-view-watchtower",
-      "rotation": 3,
-      "left": 7094,
-      "top": -1747,
-      "width": 15,
-      "height": 33,
-      "depthBase": -186.0,
-      "bake": "heroes/desert-view-watchtower/bake-r3.png",
-      "paint": "heroes/desert-view-watchtower/paint-r3.png",
-      "sha256": "11e626fdee1c8721d9dfe1b45e5a39ccc518e7eeebaa9908f9f1d1957ff19f5f"
-    }
-  ],
+  "packageHash": "c7f06a21aa96bcf0de3a08e4141155e63cfecbf4cb13ceb377d7848dbae23173",
   "routes": {
     "path": "routes.json.gz",
-    "sha256": "51a3fcefb2a4777eff466a9c7f553303789a5ad7430848a0d6cfc44f3e74bc33",
+    "sha256": "596e06628b110268524a6aee7e61856168fc4319a9d6a0919fb4b2644e500c44",
     "version": 1,
-    "count": 478
+    "count": 479
   }
 }

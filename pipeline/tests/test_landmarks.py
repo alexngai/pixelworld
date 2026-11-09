@@ -111,6 +111,29 @@ def test_line_landmarks_place_parts_upstream_with_their_crest(registry):
     assert fp[:, 1].min() < dam["y"] - 0.5  # bows the same way
 
 
+def test_a_dam_knows_its_upstream_face_and_holds_its_lake_under_the_crest(registry):
+    r = _region(registry, {"landmarks": [{"id": "dam", "reservoir": 12}]})
+    assert r.objects["landmarks"][0]["reservoir"] == 12
+    blocked = np.zeros(r.cells[::-1], dtype=bool)
+    out, _ = objects.place(r, blocked, [], heights=lambda x, y, m: m / 10.0)
+    dam = next(i for i in out if i["g"] == "landmark.dam")
+    # its abutment line (west → east) and half its 20 m thickness, in 20 m cells
+    ax, ay, bx, by = dam["ln"]
+    assert bx > ax and abs(by - ay) < 0.01 and dam["lw"] == pytest.approx(0.5, abs=0.01)
+    # the lake behind it: points north of the dam (upstream), raised to just under
+    # the crest: (300 − 12) m at 10 m a step, rounded down
+    ((xs, ys, level),) = objects.reservoirs(r, None, blocked.shape, lambda x, y, m: m / 10.0)
+    assert level == 28 and dam["top"] == 30.0
+    fp = np.asarray(dam["fp"])
+    assert (ys < ay - 0.5 - 0.49).all() and (ys > fp[:, 1].min() - 2.6).all()
+    assert xs.min() >= ax - 0.5 and xs.max() <= bx + 0.5
+    # no reservoir, no raised lake
+    assert (
+        objects.reservoirs(_region(registry, {"landmarks": ["dam"]}), None, blocked.shape, None)
+        == []
+    )
+
+
 def test_lidar_massing_finds_podium_and_towers():
     import shapely
     from rasterio.transform import Affine

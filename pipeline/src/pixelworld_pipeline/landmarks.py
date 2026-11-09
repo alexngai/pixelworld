@@ -9,6 +9,7 @@ objects.place uses. A landmark file holds:
     anchor: { lon: -115.1555, lat: 36.1474 }   # or line: [[lon, lat], [lon, lat]]
     height: 350                     # metres (towers, wheels)
     crest: 376                      # metres above sea level (dam crests, bridge decks)
+    reservoir: 10                   # a dam's lake stands this many metres below its crest
     base: 0                         # metres: a long landmark's foot (a bridge's water level)
     snap: true                      # a bridge turns to the grid direction of its road (D-049)
     thickness: 45                   # metres across a line landmark
@@ -92,6 +93,7 @@ def resolve(entry: Any, root: Path | None, variant: str) -> dict[str, Any]:
         ("scale", "scale"),
         ("base", "baseMeters"),
         ("snap", "snap"),
+        ("reservoir", "reservoir"),
     ):
         if src in raw:
             out[dst] = raw[src]

@@ -1245,6 +1245,104 @@ def dam_footprint(
     return [[round(float(x), 2), round(float(y), 2)] for x, y in ring]
 
 
+def taken_cells(instances: list[dict], shape: tuple[int, int], ring: int = 1) -> np.ndarray:
+    """Cells an object stands on: footprints (every cell they touch), and the
+    cell of an object without one with `ring` cells around it (a landmark
+    drawn bigger than its cell)."""
+    from rasterio import features
+    from rasterio.transform import Affine
+
+    out = np.zeros(shape, dtype=bool)
+    polys = [shapely.Polygon(inst["fp"]) for inst in instances if inst.get("fp")]
+    if polys:
+        out |= features.geometry_mask(
+            polys, shape, Affine.identity(), invert=True, all_touched=True
+        )
+    h, w = shape
+    for inst in instances:
+        if inst.get("fp"):
+            continue
+        x, y = int(math.floor(inst["x"])), int(math.floor(inst["y"]))
+        out[max(0, y - ring) : min(h, y + ring + 1), max(0, x - ring) : min(w, x + ring + 1)] = True
+    return out
+
+
+def lowrise(
+    spec: dict[str, Any], built: np.ndarray, blocked: np.ndarray, taken: np.ndarray, mpc=None
+) -> list[dict]:
+    """Low-rise city blocks (`objects.lowrise`): on a coarse level single houses
+    are far below a cell, so built-up land would read as an empty plain around
+    its towers. Every `built` cell that isn't `blocked` (roads, water, cliffs)
+    or `taken` by another object gets one instance of `group` covering the
+    cell, which the style draws as blocks of low buildings between streets.
+
+        lowrise: { group: city.blocks, heightMeters: 8 }
+
+    `heightMeters` is the instances' real height (the generator varies it by
+    block); mpc (warped layouts) gives each its local metres per cell."""
+    group = str(spec.get("group", "city.blocks"))
+    height = float(spec.get("heightMeters", 8.0))
+    ys, xs = np.nonzero(built & ~blocked & ~taken)
+    out = []
+    for y, x in zip(ys.tolist(), xs.tolist(), strict=True):
+        inst = {
+            "g": group,
+            "x": x + 0.5,
+            "y": y + 0.5,
+            "s": _stable_int(f"lowrise|{x}|{y}") & 0x7FFFFFFF,
+            "fp": [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]],
+            "hm": height,
+        }
+        if mpc is not None:
+            inst["m"] = round(float(mpc[y, x]), 2)
+        out.append(inst)
+    return out
+
+
+def reservoirs(
+    region: Region, layout, shape: tuple[int, int], heights
+) -> list[tuple[np.ndarray, np.ndarray, int]]:
+    """Lakes held behind dams: a line landmark with `crestMeters` and `reservoir`
+    (metres below its crest the water stands). For each, the cells just
+    upstream of the dam, (xs, ys), where its lake meets it, and the level in
+    steps the lake is raised to: the drawn height of crest − reservoir, rounded
+    down so the water stays under the crest.
+
+    heights(x, y, metres) → drawn height in steps at a projected point, as
+    for dam crests."""
+    out: list[tuple[np.ndarray, np.ndarray, int]] = []
+    dams = [
+        lm
+        for lm in (region.objects or {}).get("landmarks") or []
+        if "line" in lm and "reservoir" in lm and "crestMeters" in lm
+    ]
+    if not dams:
+        return out
+    p = Placement(region, np.zeros(shape, dtype=bool), layout)
+    for lm in dams:
+        fp = np.asarray(
+            dam_footprint(
+                p, lm["line"], float(lm.get("thicknessM", 60)), float(lm.get("bulge", 0.15))
+            )
+        )
+        m = len(fp) // 2
+        outer, inner = fp[:m], fp[m:][::-1]  # the upstream edge (where it bows), downstream
+        n = outer - inner
+        n /= np.maximum(np.hypot(n[:, 0], n[:, 1]), 1e-9)[:, None]
+        # one to two and a half cells upstream of the upstream face
+        reach = np.arange(0.5, 2.6, 0.5)
+        pts = (outer[None, :, :] + reach[:, None, None] * n[None, :, :]).reshape(-1, 2)
+        # the crest's height is taken where place() takes it: the line's middle
+        (lon0, lat0), (lon1, lat1) = lm["line"]
+        mx, my = transform_points(
+            "EPSG:4326", region.crs, [0.5 * (lon0 + lon1)], [0.5 * (lat0 + lat1)]
+        )
+        surface = float(lm["crestMeters"]) - float(lm["reservoir"])
+        level = math.floor(float(heights(mx[0], my[0], surface)) + 1e-9)
+        out.append((pts[:, 0], pts[:, 1], level))
+    return out
+
+
 SEGMENT_CELLS = 12.0
 
 
@@ -1482,6 +1580,15 @@ def place(
             if snap_deg is not None:
                 fp = np.asarray(inst["fp"])
                 inst["x"], inst["y"] = float(fp[:, 0].mean()), float(fp[:, 1].mean())
+            elif lm["group"].startswith("landmark.dam"):
+                # the abutment line and half-thickness, so the generator knows which
+                # face is upstream (the line's left, where the dam bows)
+                fp = np.asarray(inst["fp"])
+                m = len(fp) // 2
+                a = 0.5 * (fp[0] + fp[-1])
+                b = 0.5 * (fp[m - 1] + fp[m])
+                inst["ln"] = [round(float(v), 3) for v in (*a, *b)]
+                inst["lw"] = round(float(np.hypot(*(fp[0] - a))), 3)
             if heights is not None and "crestMeters" in lm:
                 inst["top"] = round(float(heights(lx, ly, float(lm["crestMeters"]))), 2)
             if heights is not None and "baseMeters" in lm:

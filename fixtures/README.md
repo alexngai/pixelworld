@@ -27,9 +27,9 @@ Surface classes (woodland, forest, scrub, rock, sand) are generated from elevati
 
 The US Southwest on the M2 elastic map, built from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml) and its warp, [`warp.yaml`](../worlds/southwest/warp.yaml).
 
-- **Size:** 1155×709 cells in 228 gzipped chunks. The chunks are 5.63 MB, `objects.json.gz` is 0.30 MB and the hero bakes and paints are 61 KB.
+- **Size:** 1155×709 cells in 228 gzipped chunks. The chunks are 5.61 MB, `objects.json.gz` is 0.22 MB and the hero bakes and paints are 37 KB.
 - **Scale:** cells are about 500 m in the open desert. Focus areas are finer: 100 m on the Las Vegas Strip and at Hoover Dam, 250 m on Lake Mead, 150 m at Grand Canyon Village and Desert View. The manifest records each focus area's achieved scale and every chunk's metres per cell.
-- **Relief:** 2.5× vertical exaggeration (65.3 m per height step), with local relief exaggerated where cells are magnified (D-041). The `VREF`/`VFAC` layers keep strata at real elevations.
+- **Relief:** 2.5× vertical exaggeration (65.3 m per height step), with local relief exaggerated where cells are magnified (D-041), at most 1.6× round Hoover Dam (`reliefMax`). The `VREF`/`VFAC` layers keep strata at real elevations. Lake Mead stands just under the dam's crest (`reservoir`, D-066).
 - **Micro-terrain:** 4×4 micro-cells per cell (`MHGT`, D-038).
 - **Objects:** 5,830 buildings around the Strip and in Grand Canyon Village, with heights and tower parts from 3DEP lidar where Overture's are missing or too low (D-052). Seven registry landmarks (D-051): the Strat, the Welcome to Fabulous Las Vegas sign, the Paris Eiffel Tower replica, the High Roller, Hoover Dam with its intake towers, the bypass bridge and the Desert View Watchtower, all as generic depictions. The client adds shrubs and rocks by surface (D-054).
 - **Hero landmarks:** the Strat, Hoover Dam and the Desert View Watchtower are baked offline and painted over in all four rotations (`heroes/`, D-053). The paints are the tool's demo touch-ups.
@@ -56,9 +56,9 @@ This is the driving level of the region's three scale levels (D-046). Its manife
 The Southwest's other scale levels, built from [`fly.yaml`](../worlds/southwest/fly.yaml) and [`walk.yaml`](../worlds/southwest/walk.yaml). Both extend `region.yaml`.
 
 - **southwest-fly:** the whole region at 1.5 km per cell in open desert, with every focus area 4× coarser than driving: the Strip and Hoover Dam at 400 m, the canyon rim at 600 m.
-  - **Size:** 339×219 cells, 0.50 MB with the hero bakes.
+  - **Size:** 339×219 cells, 0.63 MB with the hero bakes.
   - **Generalization:** motorways and trunks only.
-  - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam). The three hero landmarks are painted over as on the driving level.
+  - **Objects:** towers of 80 m or more drawn 3× their size, where they don't overlap a taller one; landmarks drawn 5× (not the dam); both stretched 1.5× in height. Every other built-up cell is a block of low buildings (2,889 `city.blocks`, D-067). The three hero landmarks are painted over as on the driving level.
 - **southwest-walk:** the Las Vegas Strip at a uniform 20 m per cell, with 4×4 micro-cells from the 10 m DEM.
   - **Size:** 182×412 cells, 0.68 MB with the hero bakes.
   - **Ways:** every street class (no parking aisles or driveways) plus the pedestrian network (sidewalks, crosswalks, footways and more), drawn at real width (D-050).

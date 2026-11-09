@@ -115,9 +115,9 @@ A region is built as several world packages, one per way of moving through it. E
   |---|---|
   | Extent | `bounds`; a walking level covers one district |
   | Layout | `metersPerCell` (the base scale: height step and relief reference), `warp.background`, `warp.focusScale` (multiplies every focus area's target), a warp file of its own, or `warp: null` for a uniform grid |
-  | Relief | `verticalExaggeration`, `warp.vertical` (caricature), `maxSlope`, `micro.k`, `smoothing` |
+  | Relief | `verticalExaggeration`, `warp.vertical` (caricature), `reliefMax` on a focus area (D-041), `maxSlope`, `micro.k`, `smoothing` |
   | Generalization | `sources.roads.classes`, `terrain` rules (e.g. minimum lake area), `objects.buildings` (`minArea`, `bounds`), `objects.depiction.buildings.minHeightMeters` |
-  | Depiction | `objects.depiction.buildings.scale`, `objects.depiction.landmarks.scale` (or `scale` on one landmark), `objects.depiction.heightStretch` |
+  | Depiction | `objects.depiction.buildings.scale`, `objects.depiction.landmarks.scale` (or `scale` on one landmark), `objects.depiction.heightStretch`, `objects.lowrise` (built-up land as city blocks, D-067) |
   | Data | `sources.dem` and `sources.landcover`: kind and overview |
   | Snapping | `snap.roads` (`angle`, `simplify`, `deviation`, `maxShift`), `snap.buildings` (`angle`, `follow`, `clearRoads.nudgeMeters`) (D-049) |
   | Widths | `widths` (`scale`, `minCells`, per-class `roads`/`paths` metres, `ways` rules by name, box and one-way: `meters`, `lanes`), `sources.roads.excludeSubclasses`, `sources.roads.joinIslands`, `sources.paths.classes` (D-050) |

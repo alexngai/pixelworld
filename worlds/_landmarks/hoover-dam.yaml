@@ -4,7 +4,8 @@ wikidata: Q172822
 # the left of its direction, which here is northeast: upstream, toward Lake Mead.
 line: [[-114.73939, 36.01650], [-114.73680, 36.01480]]
 crest: 376          # metres above sea level
-thickness: 45
+reservoir: 10       # Lake Mead stands just under the crest (its level is raised to meet it)
+thickness: 120      # at its foot: the downstream face is battered up to a thin crest
 bulge: 0.15
 clear: 60
 parts:              # the four intake towers in the lake, two by each abutment

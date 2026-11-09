@@ -100,6 +100,61 @@ def test_relief_exaggeration_follows_magnification(layout):
     assert hi - lo == pytest.approx(100 * r[j, i], rel=0.1)
 
 
+def test_a_focus_area_can_cap_its_relief(layout):
+    # the same map, with the core's relief capped: R = 2 instead of 3.2 there
+    capped = dict(WARP["focus"][0], reliefMax=2.0)
+    spec = WarpSpec.from_dict(WARP | {"focus": [capped]})
+    lc = WarpedLayout(layout.region, spec, warp=layout.warp)
+    elev = layout.corner_elevation({"kind": "usgs-3dep-1arcsec"})
+    _, _, r0 = layout.relief(elev)
+    out, ref, r = lc.relief(elev)
+    x, y = layout.lonlat_to_cell([-115.17], [36.11])
+    j, i = int(round(y[0])), int(round(x[0]))
+    assert r0[j, i] > 3.0 and r[j, i] == pytest.approx(2.0)
+    assert np.allclose(out, ref + r * (elev - ref))
+    # never above the uncapped factor, and never peaking in the falloff ring: the
+    # cap holds through the ring (12 km from the centre), then fades out by 20 km
+    sx, sy = lc.corner_source(1)
+    fx, fy = lc._src([-115.17], [36.11])
+    d = np.hypot(sx - fx[0], sy - fy[0])
+    assert (r <= r0 + 1e-12).all() and r[d <= 12_000].max() <= 2.0 + 1e-9
+    assert np.allclose(r[d > 20_000], r0[d > 20_000])
+    # drawn heights (dam crests) use the same factor
+    px, py = lc.source_to_projected(sx, sy)
+    lo = lc.drawn_height(float(px[j, i]), float(py[j, i]), 500.0)
+    hi = lc.drawn_height(float(px[j, i]), float(py[j, i]), 600.0)
+    assert hi - lo == pytest.approx(100 * r[j, i], rel=0.05)
+    # a spec without reliefMax keeps its factors
+    assert np.array_equal(
+        WarpedLayout(layout.region, layout.spec, warp=layout.warp).relief(elev)[2], r0
+    )
+
+
+def test_levels_coarser_than_a_sources_deepest_overview_are_averaged_from_it(monkeypatch, tmp_path):
+    # the 1 arc-second DEM carries overviews down to 8×: a 16× level (480 m) is
+    # read from the 8× one, under a cache key of its own (older caches hold that
+    # level empty, every read of the missing overview having failed)
+    assert rasters.overview_factor("usgs-3dep-1arcsec", 240.0) == (8, 8)
+    assert rasters.overview_factor("usgs-3dep-1arcsec", 480.0) == (16, 8)
+    assert rasters.overview_factor("esa-worldcover-2021", 160.0) == (16, 16)
+    reads = []
+
+    def fake_warp(urls, dst, transform, region, overview, resampling, nodata):
+        reads.append(overview)
+        dst[:] = 500.0
+        return []
+
+    monkeypatch.setattr(rasters, "_warp_tiles", fake_warp)
+    monkeypatch.setattr(rasters, "CACHE_ROOT", tmp_path)
+    region = Region.from_dict(SPEC)
+    block = rasters._block(region, "usgs-3dep-1arcsec", 480.0, 0, 0, "level")
+    assert reads == [8] and (block == 500.0).all()
+    rasters._block(region, "usgs-3dep-1arcsec", 240.0, 0, 0, "level")
+    assert reads == [8, 8]
+    tags = [p.read_text() for p in (tmp_path / "levels").glob("*.tag")]
+    assert len(tags) == 2 and sum("|480.0|0|0|level|from8|" in t for t in tags) == 1
+
+
 def test_a_strait_narrower_than_a_cell_stays_connected(layout, monkeypatch):
     # a north-south water channel 250 m wide where cells span up to ~640 m east-west
     # (stretched in the transition ring): narrower than a cell, but wider than a

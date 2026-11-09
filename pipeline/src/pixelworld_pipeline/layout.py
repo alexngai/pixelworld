@@ -319,20 +319,50 @@ class WarpedLayout:
 
     # ---- vertical caricature ---------------------------------------------------------
 
+    def relief_cap(self, sx: np.ndarray, sy: np.ndarray) -> np.ndarray:
+        """The relief factor's upper bound at source points: `vertical.max`, lowered
+        over focus areas that set their own `reliefMax` (Hoover Dam's Black Canyon,
+        where the full factor made a slot deeper than the dam is long).
+
+        The cap holds over the focus area and its falloff ring, where the scale is
+        still finer than around it, then fades back to `vertical.max` over another
+        falloff. Fading over the ring itself would let the factor peak there, where
+        the cap has risen but the scale hasn't yet coarsened."""
+        hi = float(self.spec.vertical.get("max", 4.0))
+        cap = np.full(np.broadcast(sx, sy).shape, hi)
+        for f in self.spec.focus:
+            if "reliefMax" not in f:
+                continue
+            fx, fy = self._src([f["lon"]], [f["lat"]])
+            falloff = max(float(f.get("falloffKm", f["radiusKm"])) * 1000, 1.0)
+            reach = float(f["radiusKm"]) * 1000 + falloff
+            d = np.hypot(np.asarray(sx) - fx[0], np.asarray(sy) - fy[0])
+            t = np.clip((d - reach) / falloff, 0.0, 1.0)
+            w = 1.0 - t * t * (3.0 - 2.0 * t)
+            cap = np.minimum(cap, hi + w * (min(float(f["reliefMax"]), hi) - hi))
+        return cap
+
+    def _factor(self, scale: np.ndarray, sx: np.ndarray, sy: np.ndarray) -> np.ndarray:
+        """R = (base metres per cell / local metres per cell)^γ, clamped to
+        [vertical.min, the relief cap there]."""
+        v = self.spec.vertical
+        gamma = float(v.get("gamma", 1.0))
+        lo = float(v.get("min", 0.5))
+        r = (self.region.meters_per_cell / np.asarray(scale)) ** gamma
+        return np.maximum(np.minimum(r, self.relief_cap(sx, sy)), lo)
+
     def relief(self, elev: np.ndarray, k: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Exaggerate local relief so magnified areas keep the base proportions.
 
         elev' = ref + R·(elev − ref): ref is the elevation smoothed over
         `referenceSigmaKm` (flat ground stays flat; the regional trend is
         untouched) and R = (base metres per cell / local metres per cell)^γ,
-        clamped. Returns (elev', ref, R) at the same corners.
+        clamped (see relief_cap). Returns (elev', ref, R) at the same corners.
         """
         v = self.spec.vertical
         if not v:
             ones = np.ones_like(elev)
             return elev, elev, ones
-        gamma = float(v.get("gamma", 1.0))
-        lo, hi = float(v.get("min", 0.5)), float(v.get("max", 4.0))
         sigma = float(v.get("referenceSigmaKm", 6.0)) * 1000
         kind = self.region.sources["dem"]["kind"]
         ref_grid = rasters.smoothed_dem(self.region, kind, sigma)
@@ -342,7 +372,7 @@ class WarpedLayout:
         scale = self.corner_scale(1)
         if k != 1:
             scale = np.repeat(np.repeat(scale, k, 0)[: sx.shape[0]], k, 1)[:, : sx.shape[1]]
-        r = np.clip((self.region.meters_per_cell / scale) ** gamma, lo, hi)
+        r = self._factor(scale, sx, sy)
         return ref + r * (elev - ref), ref, r
 
     def drawn_height(self, px: float, py: float, metres: float) -> float:
@@ -357,11 +387,7 @@ class WarpedLayout:
                 rasters.smoothed_dem(self.region, kind, sigma), np.array([px]), np.array([py])
             )[0]
         )
-        cx, cy = self.warp.to_cells(np.array([px - self.x0]), np.array([self.y1 - py]))
-        scale = float(self.warp.scale_at_cells(cx, cy)[0])
-        gamma = float(v.get("gamma", 1.0))
-        r = min(
-            max((self.region.meters_per_cell / scale) ** gamma, float(v.get("min", 0.5))),
-            float(v.get("max", 4.0)),
-        )
+        sx, sy = np.array([px - self.x0]), np.array([self.y1 - py])
+        cx, cy = self.warp.to_cells(sx, sy)
+        r = float(self._factor(self.warp.scale_at_cells(cx, cy), sx, sy)[0])
         return ref + r * (metres - ref)

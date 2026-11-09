@@ -1,13 +1,13 @@
 {
-  "packageHash": "b15eed8225bc8f2c30a5726eff6c0bec7f1e51a09a71346819ae7fd4c64c956b",
+  "packageHash": "c7f06a21aa96bcf0de3a08e4141155e63cfecbf4cb13ceb377d7848dbae23173",
   "cells": [
     339,
     219
   ],
   "chunks": 24,
   "heightRange": [
-    0,
-    26
+    -2,
+    17
   ],
   "inputs": {
     "roadSegments": 2286,
@@ -54,12 +54,13 @@
       }
     ],
     "pins": [],
-    "solveSeconds": 14.882
+    "solveSeconds": 18.885
   },
   "objects": {
     "building.commercial": 9,
     "building.tower": 37,
     "building.tower.hotel": 2,
+    "city.blocks": 2889,
     "landmark.bridge.arch": 1,
     "landmark.dam": 1,
     "landmark.dam.intake": 4,
@@ -80,17 +81,18 @@
     "ok": true
   },
   "surfaces": {
-    "rock": 433,
-    "woodland": 12972,
-    "scrub": 18587,
-    "water": 2244,
-    "desert": 22420,
-    "grass": 14198,
+    "rock": 1951,
+    "woodland": 11019,
+    "forest": 1953,
+    "scrub": 17877,
+    "water": 2246,
+    "desert": 22082,
+    "grass": 13726,
     "farmland": 19,
     "urban": 3368
   },
   "routes": {
-    "road": 410,
+    "road": 411,
     "train": 68
   }
 }
