@@ -272,16 +272,26 @@ Bakes run in two places with the same code:
 ### 8.2 Runtime compositor
 
 1. Draw bake tiles into an **index + depth** framebuffer at the internal resolution. Each tile writes its baked depth.
-2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth. Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test.
-3. Draw the player's silhouette where they are hidden: pixels that fail the depth test are drawn with a dither pattern.
-4. **Atmosphere (fog, D-063):** where a fog layer is in view, a pass recovers each pixel's ground position and height from its screen position and depth (tiles write their depth beside the index), and veils its colour index toward the fog's through per-level lookup tables, dithered on the screen's Bayer pattern. It is skipped when no fog is in view.
+2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth: the runtime layers' sprites (traffic), then the entities' (the rover). Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test.
+3. Draw the silhouette of entities that ask for one (the player) where they are hidden: pixels that fail the depth test are drawn with a dither pattern.
+4. **Atmosphere (fog, D-063):** a layer's screen pass. Where a fog layer is in view, a pass recovers each pixel's ground position and height from its screen position and depth (tiles write their depth beside the index), and veils its colour index toward the fog's through per-level lookup tables, dithered on the screen's Bayer pattern. It is skipped when no fog is in view.
 5. **Palette pass:** index → RGB through a palette LUT. Swapping LUTs gives time of day, seasons, style variants and **palette cycling** (water, lights) almost for free.
 6. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
 
 - **Internal resolution:** chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270).
 - **Zoom:** integer zooms only. Coarser views are separate scale levels (§3.5) with their own generalization and oversized landmarks, not shrunken images.
 
-### 8.3 Full 3D mode (later)
+### 8.3 The engine (the world view as a library)
+
+The client's runtime is a library, `@pixelworld/engine` (library.md §7): `createWorldView({ canvas, worldUrl, style, layers, controller })` streams a world package around the camera, bakes and caches its tiles and composites them as above, in a frame loop that redraws only when something changed. It owns no input handling or UI. Around it:
+
+- **Runtime layers** draw over the baked world without being baked into it: sprites each frame, an optional screen pass, sublayers, and their whole state as JSON. Traffic (`@pixelworld/sim`) and fog (the engine) are layers.
+- **Entities** are depth-tested sprites placed in cells and heights, baked per rotation and heading from boxes or a style group and seed. The rover is one.
+- **Controllers** turn input into entity and camera movement, using **queries** (the drawn ground, surfaces, roads, the cell under a screen point, lon/lat). The rover and free camera are the first, `roverController`.
+
+The reference viewer (`apps/web`) and the examples (`examples/`) are clients of this API only.
+
+### 8.4 Full 3D mode (later)
 
 The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight) using the same materials and palette ramps. It is an optional mode, accepted to be less crisp than the baked isometric view, which remains canonical.
 
@@ -292,7 +302,7 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 - **Flight:** an arcade flight model moving freely in 3D above the grid. Altitude is shown by a drop shadow; collision is checked against cell heights and occupant heights.
 - **Building:** place and remove on the grid using the same generators. Valid placement is checked against slope and occupancy.
 - **Tuning:** speeds are tuned to the compressed layout ("Vegas to the Grand Canyon in about 90 seconds"), not to real-world time.
-- **Ambient traffic (D-060):** `packages/sim` moves cars, buses, cable cars, streetcars, light rail, trains and ferries along the routes the pipeline exports from each built package (`routes.json.gz`: the drawn roads, bridge decks at their height, rail and ferry lines). It steps in fixed ticks from one seeded RNG, keeps a density per kind around the view, and its whole state serializes as JSON. Vehicles are baked once per model and heading, in one view rotation, and drawn by the compositor as depth-tested sprites (§8.2).
+- **Ambient traffic (D-060):** a runtime layer of the world view (`trafficLayer`, §8.3). `packages/sim` moves cars, buses, cable cars, streetcars, light rail, trains and ferries along the routes the pipeline exports from each built package (`routes.json.gz`: the drawn roads, bridge decks at their height, rail and ferry lines). It steps in fixed ticks from one seeded RNG, keeps a density per kind around the view, and its whole state serializes as JSON. Vehicles are baked once per model and heading, in one view rotation, and drawn by the compositor as depth-tested sprites (§8.2).
 
 ## 10. World package format
 
@@ -324,10 +334,12 @@ packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables
 packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks), client scatter
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
-packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera
-packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models (flight†, building†, cell occupancy†)
-apps/web/                 player app; bench.html, the benchmark page
+packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera, fog fields (internal to the engine)
+packages/engine/          the public world view (library.md §7): createWorldView, layers (fog), entities, controllers (the rover), queries
+packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models, the traffic layer (flight†, building†, cell occupancy†)
+apps/web/                 the reference viewer, a client of the engine: URL parameters, HUD, layer panel, levels, debug API; bench.html
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
+examples/                 apps built only on the public packages: minimal-viewer (a world, the rover, traffic)
 tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs
 e2e/                      Playwright golden-image and behaviour tests
 ```

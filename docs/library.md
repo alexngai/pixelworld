@@ -1,6 +1,6 @@
 # pixelworld as a library (proposal, for discussion)
 
-**Status:** a draft for the M4 pass. pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
+**Status:** a draft for the M4 pass, its first step built: the engine is out of the app (§7, as built). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
 - as a **world and asset generator**: real places in, pixel-art worlds, tiles, sprites and models out;
 - as an **engine** to build games and other interaction modes on.
 
@@ -19,7 +19,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 ## 2. What exists today
 
 - **TypeScript packages:** `grid`, `world-format`, `style`, `generators`, `bake`, `runtime` and `sim` are already separate. But they are private, export TypeScript source, and have no build step.
-- **The web app:** `apps/web/src/main.ts` (about 940 lines) holds the engine's assembly and the reference app's behaviour together:
+- **The web app:** until the engine extraction (§7), `apps/web/src/main.ts` (about 940 lines) held the engine's assembly and the reference app's behaviour together:
   - world loading and level switching
   - the tile cache
   - the rover and its keys
@@ -27,6 +27,8 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
   - traffic and fog setup
   - the frame loop
   - the debug API
+
+  It is now a client of `@pixelworld/engine` (about 430 lines: URL parameters, HUD, layer panel, levels, debug API).
 - **The pipeline (Python):** one package with a CLI (`pixelworld build|routes|heroes|serve`). Region specs select sources by name; sources, stages and San Francisco's facts (DataSF) are modules in the same package.
 - **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON without a schema.
 - **No licence file yet.**
@@ -42,8 +44,8 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworld/style` | the style pack schema, loader, palettes, night and atmosphere | `style` |
 | `@pixelworld/generators` | the voxel model API, the generator registry, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
 | `@pixelworld/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
-| `@pixelworld/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `runtime` + most of `apps/web/main.ts` |
-| `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim` + `apps/web/traffic.ts` |
+| `@pixelworld/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
+| `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
 | `@pixelworld/style-desert-southwest`, `@pixelworld/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
 | `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
@@ -53,30 +55,32 @@ An umbrella package `pixelworld` could re-export the browser packages for people
 
 ### 3.2 The engine API, sketched
 
+As built (§7); the names in the first sketch that changed are noted.
+
 ```ts
 import { createWorldView } from "@pixelworld/engine";
-import { trafficLayer } from "@pixelworld/traffic";
+import { trafficLayer } from "@pixelworld/sim";          // @pixelworld/traffic once packaged
 import bayArea from "@pixelworld/style-bay-area";
 
 const view = await createWorldView({
   canvas,
-  world: "https://example.org/worlds/sf/",   // a world package
+  worldUrl: "https://example.org/worlds/sf/",   // a world package (sketched as `world`)
   style: bayArea,
   layers: [trafficLayer({ density: 1 })],
 });
 
-view.camera.lookAt({ lon: -122.4194, lat: 37.7749 });
-view.setRotation(1);
-view.layers.get("traffic")?.setEnabled(false);
+await view.camera.lookAt({ lon: -122.4194, lat: 37.7749 });
+view.camera.rotation = 1;                       // sketched as view.setRotation(1)
+view.layers.enable("traffic", false);           // or view.layers.get("traffic")?.setEnabled(false)
 
 // a game adds its own entities and controllers
-const car = view.entities.add({ model: { generator: "car", seed: 7 }, x: 120.5, y: 88.2 });
-view.controllers.use(myCarController(car));   // owns input; moves the car and the camera
+const car = view.entities.add({ model: { group: "vehicle.car", seed: 7, size }, x: 120.5, y: 88.2 });
+await view.controllers.use(myCarController(car)); // owns input; moves the car and the camera
 
 // queries for gameplay
-view.query.heightAt(x, y);       // drawn surface height
-view.query.roadAt(x, y);         // class, width, connections
-view.query.pick(screenX, screenY); // cell under the pointer
+view.query.heightAt(x, y);         // drawn ground height
+view.query.roadAt(x, y);           // class, width, connections, lanes
+view.query.pick(screenX, screenY); // the ground and cell under the pointer
 ```
 
 The engine owns streaming, baking, compositing and the frame loop. It owns no input, rules or UI.
@@ -132,10 +136,10 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 
 ## 4. The refactors this needs
 
-1. **Engine out of the app:** split `apps/web/main.ts` into `createWorldView` (engine) and the viewer app (rover, HUD, keys, panel, URL parameters). The `__pixelworld` debug API stays in the app, built on the engine's public API.
-2. **Layer interface:** traffic and fog become plugins implementing it. The layer panel lists whatever layers a view has.
-3. **Controller interface:** the rover becomes the first controller. Queries (`heightAt`, `roadAt`, `pick`) become public.
-4. **Entities:** today's sprite paths (the rover, vehicles) unify into one entity API that bakes models per heading.
+1. **Engine out of the app (done, §7):** split `apps/web/main.ts` into `createWorldView` (engine) and the viewer app (rover, HUD, keys, panel, URL parameters). The `__pixelworld` debug API stays in the app, built on the engine's public API.
+2. **Layer interface (done):** traffic and fog become plugins implementing it. The layer panel lists whatever layers a view has.
+3. **Controller interface (done):** the rover becomes the first controller. Queries (`heightAt`, `roadAt`, `pick`) become public.
+4. **Entities (done for the rover):** today's sprite paths (the rover, vehicles) unify into one entity API that bakes models per heading. Traffic still bakes its own vehicle sprites, in one rotation for all four (§7).
 5. **Generator registry:** made public (`registerGenerator`). Region-specific generators (San Francisco's facades, towers and Chinatown) move to a plugin package, or stay built in with clear names.
 6. **Style schema:** a JSON Schema for style packs, and validation with useful errors. Packs become data packages.
 7. **Pipeline plugins:** source and facts adapters behind entry points. DataSF moves out as a plugin. A Python API (`pixelworld.build(spec)`) sits beside the CLI.
@@ -178,3 +182,149 @@ M4's features are built as controllers and plugins on the public API, which prov
       3. If it still dominates, move meshing and generators into a Rust crate compiled to WebAssembly behind the same TypeScript API.
     - **A native Rust renderer** (wgpu, Bevy or Godot plugins) can come later, reading the same world format.
 - **D6, prebuilt worlds, decided: wait until the world format is declared stable (1.0).**
+
+## 7. As built: the engine (M4, step 1)
+
+The engine is out of the app (refactors 1–4 of §4). `apps/web` is now a client of it, and `examples/minimal-viewer` (about 45 lines of app code) uses nothing else. Frames are pixel-identical to before: the e2e goldens are unchanged, and the benchmark's driving case bakes the same 17 tiles from the same chunks into the same tile memory, in the same time within its noise.
+
+### 7.1 Packages
+
+- **`@pixelworld/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `listenTo` and the types. It is built on `@pixelworld/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
+- **`@pixelworld/sim`**: the traffic simulation and its layer, `trafficLayer`. It imports the engine's types only, so the engine knows nothing of traffic. It becomes `pixelworld/traffic` when packaged.
+- **`apps/web`**: the reference viewer.
+- **`examples/minimal-viewer`**: `pnpm example:minimal` (port 5180).
+
+### 7.2 The view
+
+```ts
+createWorldView(opts: WorldViewOptions): Promise<WorldView>
+
+interface WorldViewOptions {
+  canvas: HTMLCanvasElement;
+  worldUrl: string;                                   // a world package
+  style: object | ((id: string) => object | Promise<object>); // a pack, or a resolver for the id the manifest names
+  size?: { width: number; height: number };           // device px; default: follow the canvas on the page
+  renderScale?: number;                               // default the package's
+  cache?: boolean | TileStore;                        // IndexedDB by default
+  objects?: boolean; scatter?: boolean; heroes?: boolean;
+  palette?: "day" | "night";
+  camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
+  layers?: Layer[];
+  controller?: Controller;
+  recordBakes?: boolean;                              // tile timings for the bench
+  onError?: (message: string) => void;
+}
+
+interface WorldView {
+  canvas; world: WorldInfo; camera: ViewCamera; query: WorldQuery;
+  entities: EntityList; layers: LayerRegistry; controllers: ControllerHost; pixelRatio: number;
+  palette: "day" | "night"; hasNight: boolean;
+  ready(): Promise<void>; invalidate(): void; resize(width, height): void;
+  stats(): ViewStats; tileBakes(): TileBake[]; timeFrames(n): number;
+  bakeObject(id): Promise<((BakedImage & { rotation }) | null)[]>; // the hero tool's bake
+  onFrame(listener): () => void;
+  serialize(): ViewState; restore(state: ViewState): void;         // camera + every layer's state
+  destroy(): void;
+}
+
+interface ViewCamera {
+  x; y; h;                       // focus, cells and steps
+  rotation: Rotation; zoom: number; autoZoom: boolean; internalWidth; internalHeight;
+  setFocus(x, y, h): void;
+  lookAt({ x, y, h? } | { lon, lat, h? }): Promise<boolean>;
+  pan(dx, dy): void; rotate(±1): void; screenDirToGrid(dx, dy): [number, number];
+}
+```
+
+- **Start-up:** load the package, style and bake worker; size the canvas; put the camera on the world's start; attach the controller (the rover puts the camera on itself); apply `camera` (a missing coordinate keeps where the controller put it); initialize the layers in order; then start the loop. No frame is drawn before the view is set up, so no tile is baked in the wrong place.
+- **The loop** is the app's, unchanged: controller update, entity sprite requests, layer updates, tiles wanted nearest first, and a redraw only when something changed. `ready()` resolves once a frame is drawn with every visible tile and sprite and nothing is left to bake.
+- **Redraws:** a change through the public API (camera, entities, layers, palette) redraws and makes `ready()` wait. Setting the focus to where it already is doesn't, so a controller that follows something every frame leaves the loop idle.
+
+### 7.3 Layers
+
+```ts
+interface Layer {
+  id; label; enabled; setEnabled(on): void;
+  sublayers?: { id; label }[]; isSublayerEnabled?(id); setSublayerEnabled?(id, on);
+  init(ctx: LayerContext): boolean | Promise<boolean>;      // false: nothing in this world, left out
+  update?(dt, frame: FrameInfo): boolean;                    // while enabled; true: redraw
+  sprites?(frame): { list: SpriteDraw[]; complete: boolean };
+  screenPass?(frame): ScreenPass | null;                     // fog's, today the one kind
+  serialize?(): unknown; restore?(state): void; dispose?(): void;
+}
+interface LayerContext { view; bakeSprite(rotation, boxes): Promise<Sprite | null>; releaseSprite(s); frame(): FrameInfo; invalidate(): void }
+interface FrameInfo { rotation; focus: { x, y, h }; zoom; view: { left, top, width, height }; night; renderScale; project(x, y, h) }
+view.layers: list(), get(id), add(layer), remove(id), enable(id, on?, sublayer?)
+```
+
+- **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. A frame takes the first screen pass any layer offers.
+- **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level.
+- **`trafficLayer({ seed, density, enabled, paused, time, sublayers, routes })`** (sim): D-060; left out without routes. Sublayers road, rail and ferry. Its state is the simulation's JSON with its switches.
+
+### 7.4 Entities
+
+```ts
+view.entities.add({
+  model: { boxes: Box[]; key?: string } | { group: string; seed: number; size?; variant?; part? },
+  x, y, h?,                 // cells, steps (default the ground)
+  heading?, headings?,      // radians; baked headings (16)
+  lift?, silhouette?, visible?,
+}): Entity                  // x, y, h, heading, visible, silhouette, moveTo(x, y, h?), remove()
+```
+
+- **Baking:** lazily, per view rotation and heading, shared by every entity with the same model. Heading 0 bakes the model as given, so the rover's sprite is the same as before.
+- **Hidden entities** are baked too, so showing one is instant, but they don't hold up `ready()`.
+- **Group models** are style assets drawn by their generator at the object voxel scale. Vehicle generators need `size`.
+- **Traffic keeps its own sprites:** it bakes each heading once, in rotation 0, for all four rotations (D-060). Entities bake per rotation, which keeps the rover pixel-identical. Folding traffic into entities, with the rotation-0 trick as an option, is left for later.
+
+### 7.5 Controllers
+
+```ts
+interface Controller {
+  id; attach(view: ControllerView): void | Promise<void>; detach?();
+  update?(dt); keyDown?(e): boolean; keyUp?(e); pointerDown?(e); pointerMove?(e); pointerUp?(); blur?();
+}
+interface ControllerView { canvas; world; camera; entities; query; pixelRatio }   // a test can fake it
+view.controllers.use(controller | null)                     // one at a time
+listenTo(controller, { keys?: EventTarget; pointer?: EventTarget }): () => void
+roverController({ start?: { x?, y? } | { lon, lat }, follow?, visible?, listen? }): RoverController
+```
+
+- **Input:** the app forwards events (the viewer does, since it keeps T, L, V, G, I, H and Esc), or the controller listens on targets it is given (`listen`, as the example does).
+- **The rover controller:** the rover entity, `follow`, `noclip` and `place(x, y)`. Its keys are as before: arrows drive, WASD and drags pan, Q/E rotate, 1–6 zoom, F follows, N is no-clip.
+
+### 7.6 Queries
+
+```ts
+view.query.heightAt(x, y)             // the drawn ground (steps), as the rover rides it
+view.query.surfaceAt(x, y)            // { id, name, waterLevel }
+view.query.roadAt(x, y)               // { classId, class, width, connections, lanes, oneWay, divided }
+view.query.pick(screenX, screenY)     // { x, y, h, cellX, cellY } under a canvas point (CSS px)
+view.query.lonLatToCell(lon, lat); view.query.cellToLonLat(x, y)   // through the geo grid (D-048)
+view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.ensure(x0, y0, x1, y1)
+```
+
+- **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle.
+- **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
+- **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.
+
+### 7.7 What moved where
+
+| From | To |
+|---|---|
+| `apps/web/src/main.ts`: loading the package, style, palette, heroes and the bake worker's init; the tile cache key | `packages/engine/src/world.ts` |
+| the tiles in view and their height estimates | `engine/src/tiles.ts` |
+| the GPU tile budget, the frame loop, `ready()`, stats, frame timing, the hero bake | `engine/src/view.ts` |
+| the camera in cells | `engine/src/camera.ts`, over the runtime's camera |
+| the rover, its keys and drags | `engine/src/rover.ts` |
+| `apps/web/src/fog.ts` | `engine/src/fog.ts` |
+| `apps/web/src/traffic.ts` | `packages/sim/src/layer.ts` |
+| URL parameters, HUD, layer panel, sources, help, levels, `__pixelworld` | still `apps/web/src/main.ts` |
+
+### 7.8 Not yet
+
+- **Edits** (`view.edits`), the export CLI (§3.4) and packaging (§3.5: builds, `exports` maps, the `pixelworld` umbrella). The workspace packages are still private TypeScript sources.
+- **Screen passes:** fog's is the one kind. A general pass (a layer's own shader) comes when a second layer needs one.
+- **`pick`** ignores objects.
+- **Traffic sprites** aren't entities yet (§7.4).
+- **Level switching** still reloads the viewer's page. A view could switch in place with `destroy()` and a new `createWorldView`.
