@@ -27,7 +27,10 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
   - traffic and fog setup
   - the frame loop
   - the debug API
-- **The pipeline (Python):** one package with a CLI (`pixelworld build|routes|heroes|serve`). Region specs select sources by name; sources, stages and San Francisco's facts (DataSF) are modules in the same package.
+- **The pipeline (Python):** one package with a CLI (`pixelworld build|routes|heroes|serve|plugins`) and a Python API (`pixelworld_pipeline.build(spec)`). Region specs select sources by name.
+  - **Plugins:** terrain and land-cover sources and facts sources are found by name through entry points ([plugins.md](plugins.md)).
+  - **San Francisco's facts (DataSF)** are a separate package, the city pack `pixelworld-city-sf` in `pipeline/plugins/`.
+  - **Still built in:** stages, and the Overture, canopy, lidar and transit sources.
 - **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON without a schema.
 - **No licence file yet.**
 
@@ -46,6 +49,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim` + `apps/web/traffic.ts` |
 | `@pixelworld/style-desert-southwest`, `@pixelworld/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
+| `pixelworld-city-sf` (PyPI) | San Francisco's city pack: DataSF facts (later its generators too) | `pipeline/plugins/pixelworld-city-sf/` |
 | `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
 | `@pixelworld/editor` (app) | the warp editor | `apps/editor` |
 
@@ -85,9 +89,10 @@ The engine owns streaming, baking, compositing and the frame loop. It owns no in
 
 | Extension | Interface | Registered by | Examples today |
 |---|---|---|---|
-| **Source adapters** (pipeline) | fetch and cache one kind of data for a box; return rasters or features in a common shape | Python entry points (`pixelworld.sources`), selected by name in the region spec | 3DEP, WorldCover, Overture, canopy, transit |
-| **Facts sources** (pipeline) | per-building facts (year, storeys, use, neighbourhood) by location | entry points (`pixelworld.facts`) | DataSF |
+| **Source adapters** (pipeline) | **built for rasters:** a `RasterSource` of role `terrain` or `landcover` lists the GeoTIFFs for a box (or fills a grid itself); the pipeline reprojects, resamples and caches | Python entry points (`pixelworld.sources`), selected by `sources.dem.kind` and `sources.landcover.kind` ([plugins.md](plugins.md)) | built in: 3DEP (terrain), WorldCover (land cover). Overture, canopy, lidar and transit aren't adapters yet |
+| **Facts sources** (pipeline) | **built:** `factory(region, options)`, then facts per building by projected point: year, storeys, units, use, class code, neighbourhood, roof | entry points (`pixelworld.facts`), selected by `objects.typology.facts` | `datasf`, in the city pack `pixelworld-city-sf` |
 | **3D city models** (pipeline) | footprints, heights and roof shapes from CityJSON or CityGML | entry points | none yet (M5's tier-1 regions) |
+| **Stage hooks** (pipeline) | code run at named points of a build | entry points (`pixelworld.stages`), reserved | none yet |
 | **Generators** | `(ctx) => VoxelModel` for a semantic group | `registerGenerator(name, fn)`; a style pack maps groups to them | buildings, facades, towers, landmarks, trees, vehicles |
 | **Style packs** | palette ramps, surfaces, materials, assets, night, atmosphere | data packages validated by a JSON Schema | desert-southwest, bay-area |
 | **Package layers** | an optional file in the world package, written by its own pipeline command | format registry; pipeline command | `routes` (traffic) |
@@ -139,6 +144,8 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 5. **Generator registry:** made public (`registerGenerator`). Region-specific generators (San Francisco's facades, towers and Chinatown) move to a plugin package, or stay built in with clear names.
 6. **Style schema:** a JSON Schema for style packs, and validation with useful errors. Packs become data packages.
 7. **Pipeline plugins:** source and facts adapters behind entry points. DataSF moves out as a plugin. A Python API (`pixelworld.build(spec)`) sits beside the CLI.
+   - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
+   - **Not yet:** Overture, canopy, lidar and transit as adapters; 3D city models; stage hooks.
 8. **Builds and releases:** package builds, `exports`, changesets, and CI release jobs for npm and PyPI.
 9. **Export CLI:** generalized from the hero bake tool.
 10. **Docs and examples:** the guides above, and an examples workspace that uses only the published packages.

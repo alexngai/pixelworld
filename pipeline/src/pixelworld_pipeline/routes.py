@@ -929,14 +929,20 @@ def write_routes(out_dir: Path, doc: dict[str, Any]) -> dict[str, Any]:
     return manifest["routes"]
 
 
-def refresh_routes(region_path: Path, out_dir: Path) -> dict[str, Any]:
+def refresh_routes(
+    region_path: Path, out_dir: Path, spec: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Routes for a built package, without rebuilding it: the region's rail
-    and ferry lines (Overture, cached) and the package's own roads."""
+    and ferry lines (Overture, cached) and the package's own roads. `spec` is
+    the resolved spec, when it isn't read from `region_path`."""
+    from .landmarks import expand
     from .region import Region, load_spec
     from .sources import transit
 
-    region = Region.load(region_path)
-    rules = load_spec(Path(region_path)).get("routes") or {}
+    if spec is None:
+        spec = load_spec(Path(region_path))
+    region = Region.from_dict(expand(spec, Path(region_path)))
+    rules = spec.get("routes") or {}
     rows = transit.segments(region.sources["overture"]["release"], region.lonlat_envelope())
     doc, report = make_routes(out_dir, rows, rules)
     report["manifest"] = write_routes(out_dir, doc)

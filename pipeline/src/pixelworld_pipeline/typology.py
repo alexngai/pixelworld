@@ -4,24 +4,30 @@ blocks, warehouses) and not only by its landmarks.
 
 Each building gets features from its geometry and the street network (width
 and depth, the share of its outline it shares with neighbours, the side that
-faces the street, corner lots, whether it stands over water) and, where a
-facts source covers it, from public records (year built, storeys, use,
-neighbourhood). Rules in the region spec, matched in order, pick its group;
-the first match wins and unmatched buildings keep their group:
+faces the street, corner lots, whether it stands over water), its roof shape
+(Overture's), and, where a facts source covers it, from public records (year
+built, storeys, use, class code, neighbourhood, roof shape). Facts sources are
+plugins (facts.py, docs/plugins.md). Rules in the region spec, matched in
+order, pick its group; the first match wins and unmatched buildings keep their
+group:
 
     objects:
       typology:
-        facts: datasf                 # optional; San Francisco's assessor roll
+        facts: datasf                 # optional; a facts source plugin (San Francisco's
+                                      # assessor roll), or { plugin: datasf, ...options }
         rules:
           - { group: building.pier, onWater: true }
           - { group: building.rowhouse.victorian, year: [1840, 1906], uses: [residential],
               maxWidth: 11, minParty: 0.15, floors: [2, 4] }
+          - { group: building.rowhouse.brownstone, classes: [A4, "B*"], roofs: [flat] }
 
 Rule fields (all optional): year [from, to) · uses (residential, mixed,
-commercial, industrial, civic) · hoods (neighbourhood names) · minWidth /
-maxWidth / minDepth (metres) · minParty / maxParty (share of the outline) ·
-floors [min, max] · minHeight / maxHeight (metres) · onWater · corner · from
-(groups the rule may replace; default: the generic building groups).
+commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
+facts' class codes: exact, or a prefix ending in `*`) · roofs (roof shapes:
+the facts' where they have one, else Overture's) · minWidth / maxWidth /
+minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
+max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
+rule may replace; default: the generic building groups).
 
 Buildings drawn in parts (Overture's parts, lidar's tower parts) share their
 building's facts, and each part has its own height and storeys but no
@@ -45,11 +51,15 @@ import shapely
 
 GENERIC = ("building.residential", "building.commercial", "building.parking")
 FLOOR_METERS = 3.2
+USE_GROUPS = ("residential", "mixed", "commercial", "industrial", "civic")
 
 
 def use_group(use: str) -> str:
-    """The assessor's use definition as one of a few words rules can name."""
+    """A facts source's use (one of USE_GROUPS, or an assessor's use
+    definition) as one of the few words rules can name."""
     u = (use or "").lower()
+    if u in USE_GROUPS:
+        return u
     if "residential" in u:
         return "residential"
     if "mixed" in u:
@@ -156,6 +166,10 @@ def features(
             f["stories"] = float(fact.get("stories") or 0.0)
             f["use"] = use_group(fact.get("use", ""))
             f["hood"] = fact.get("hood") or ""
+            f["class"] = str(fact.get("class") or "")
+        roof = _roof(inst, fact)
+        if roof:
+            f["roof"] = roof
         f["floors"] = (
             int(round(f["stories"]))
             if f.get("stories")
@@ -175,9 +189,32 @@ def features(
             f["year"] = fact.get("year")
             f["use"] = use_group(fact.get("use", ""))
             f["hood"] = fact.get("hood") or ""
+            f["class"] = str(fact.get("class") or "")
+        roof = _roof(instances[i], fact)
+        if roof:
+            f["roof"] = roof
         f["floors"] = max(1, int(round(f["height"] / FLOOR_METERS)))
         out[i] = f
     return out
+
+
+def _roof(inst: dict, fact: dict | None) -> str:
+    """The roof shape: the facts' where they say, else Overture's (`_roof`, every
+    shape it records; `rs`, the ones the generator draws)."""
+    return str((fact or {}).get("roof") or inst.get("_roof") or inst.get("rs") or "")
+
+
+def class_matches(patterns: list, code: Any) -> bool:
+    """A class code against a rule's `classes`: exact, or a prefix ending in `*`
+    (`[A4, "C*"]` matches A4, C0 … C9, but not A40)."""
+    code = str(code or "")
+    if not code:
+        return False
+    for p in patterns:
+        p = str(p)
+        if code == p or (p.endswith("*") and code.startswith(p[:-1])):
+            return True
+    return False
 
 
 def matches(rule: dict, group: str, f: dict) -> bool:
@@ -195,6 +232,10 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     if "uses" in rule and f.get("use", "") not in rule["uses"]:
         return False
     if "hoods" in rule and f.get("hood", "") not in rule["hoods"]:
+        return False
+    if "classes" in rule and not class_matches(rule["classes"], f.get("class")):
+        return False
+    if "roofs" in rule and f.get("roof", "") not in [str(r) for r in rule["roofs"]]:
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),

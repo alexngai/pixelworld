@@ -1,7 +1,18 @@
 """Raster sources read from cloud-optimized GeoTIFF overviews over HTTP.
 
-Both sources publish 1°–3° tiles with internal overviews, so a 400 km region
-at hundreds of metres per cell needs only a few megabytes per tile.
+A region names its rasters by kind (`sources.dem.kind`, `sources.landcover.kind`),
+and each kind is a source adapter: a `RasterSource` found through the plugin
+registry (entry point group `pixelworld.sources`; see plugins.py and
+docs/plugins.md). There are two roles:
+
+- `terrain`: elevation in metres. Built in: USGS 3DEP 1 and 1/3 arc-second.
+- `landcover`: ESA WorldCover class codes (WORLDCOVER). Built in: WorldCover 2021.
+
+The built-in sources publish 1°–3° tiles with internal overviews, so a 400 km
+region at hundreds of metres per cell needs only a few megabytes per tile. An
+adapter lists the GeoTIFFs covering a lon/lat box (`tiles`); this module
+reprojects them onto the region's grid, caches the result, and samples them
+for warped layouts. An adapter that isn't tiled GeoTIFFs overrides `read_into`.
 """
 
 from __future__ import annotations
@@ -16,6 +27,7 @@ import rasterio
 from rasterio.errors import RasterioIOError
 from rasterio.warp import Resampling, reproject
 
+from .. import plugins
 from ..region import Region
 from .http import CACHE_ROOT, USER_AGENT
 
@@ -49,22 +61,29 @@ def _cache_path(region: Region, name: str, params: str):
     return CACHE_ROOT / region.id / f"{name}-{key}.npy"
 
 
+def _gdal_path(url: str) -> str:
+    """What GDAL opens: remote files through /vsicurl/ (range reads), local ones as they are."""
+    return "/vsicurl/" + url if url.startswith(("http://", "https://")) else url
+
+
 def _warp_tiles(
     urls: Iterable[str],
     dst: np.ndarray,
     transform,
-    region: Region,
+    crs,
     overview: int,
     resampling: Resampling,
     dst_nodata,
 ) -> list[str]:
+    """Reproject each GeoTIFF onto dst in turn (a later tile wins where they
+    overlap); returns the ones that couldn't be opened."""
     missing = []
     level = _overview_level(overview)
     with rasterio.Env(**GDAL_ENV):
         for url in urls:
             try:
                 kwargs = {} if level is None else {"overview_level": level}
-                src = rasterio.open("/vsicurl/" + url, **kwargs)
+                src = rasterio.open(_gdal_path(url), **kwargs)
             except RasterioIOError:
                 missing.append(url)
                 continue
@@ -76,12 +95,92 @@ def _warp_tiles(
                     src_crs=src.crs,
                     src_nodata=src.nodata,
                     dst_transform=transform,
-                    dst_crs=region.crs,
+                    dst_crs=crs,
                     dst_nodata=dst_nodata,
                     init_dest_nodata=False,
                     resampling=resampling,
                 )
     return missing
+
+
+# ---- source adapters ------------------------------------------------------------------------
+
+
+class RasterSource:
+    """A raster source adapter (entry point group `pixelworld.sources`).
+
+    role: `terrain` (elevation in metres, float; gaps are NaN and get filled
+      from their neighbours) or `landcover` (ESA WorldCover class codes, uint8;
+      0 is no data).
+    native_m: the source's pixel size in metres. Warped layouts read a pyramid
+      of levels at native_m × 2^i, each from the overview that matches it.
+    deepest_overview: the largest decimation factor the files' internal
+      overviews reach (None: deep enough for every level). Coarser levels read
+      that overview and average it down.
+    attribution: the manifest's entry for it ({name, license, url}).
+
+    Implement `tiles` for a source published as GeoTIFF tiles (cloud-optimized
+    ones are read over HTTP range requests), or override `read_into` for
+    anything else.
+    """
+
+    role: str = ""
+    native_m: float = 0.0
+    deepest_overview: int | None = None
+    attribution: dict | None = None
+
+    def tiles(self, bounds: tuple[float, float, float, float]) -> list[str]:
+        """URLs (or local paths) of the GeoTIFFs covering a lon/lat box (west,
+        south, east, north). Tiles that don't exist are skipped when read."""
+        raise NotImplementedError(f"{type(self).__name__} lists no tiles")
+
+    def read_into(
+        self,
+        dst: np.ndarray,
+        transform,
+        crs,
+        bounds: tuple[float, float, float, float],
+        overview: int,
+        resampling: Resampling,
+        nodata,
+    ) -> list[str]:
+        """Fill `dst` (pixels on the affine `transform` in `crs`) from the source,
+        read at the overview with decimation factor `overview` (1: full
+        resolution) and resampled with `resampling`. Pixels the source doesn't
+        cover keep their value (`nodata`). `bounds` is the lon/lat box dst
+        covers, with a margin. Returns what couldn't be read (missing tiles),
+        for the build log."""
+        return _warp_tiles(self.tiles(bounds), dst, transform, crs, overview, resampling, nodata)
+
+
+def _roles(names: list[str]) -> dict[str, str]:
+    out = {}
+    for name in names:
+        try:
+            out[name] = getattr(source(name), "role", "")
+        except plugins.PluginError:
+            out[name] = ""
+    return out
+
+
+def source(kind: str, role: str | None = None, *, where: str | None = None) -> RasterSource:
+    """The raster source adapter a region's `kind` names, checked to have `role`."""
+    try:
+        obj = plugins.load(plugins.SOURCES, kind, where=where)
+    except plugins.PluginNotFoundError as e:
+        if role is None:
+            raise
+        same = [n for n, r in _roles(e.available).items() if r == role]
+        raise plugins.PluginNotFoundError(plugins.SOURCES, kind, same, where, role) from None
+    if isinstance(obj, type):
+        obj = obj()
+    if role is not None and getattr(obj, "role", None) != role:
+        at = f" (named by {where})" if where else ""
+        raise plugins.PluginError(
+            f"source '{kind}'{at} is a {getattr(obj, 'role', None) or 'raster'} source, "
+            f"not a {role} source"
+        )
+    return obj
 
 
 # 3DEP DEM products: region-spec kind → (product directory, file prefix).
@@ -103,6 +202,31 @@ def usgs_3dep_tiles(bounds: tuple[float, float, float, float], kind: str) -> lis
                 f"{name}/{prefix}{name}.tif"
             )
     return urls
+
+
+class USGS3DEP(RasterSource):
+    """USGS 3D Elevation Program DEMs (public domain): 1°×1° cloud-optimized
+    GeoTIFFs on the National Map's S3 bucket. US only: the first terrain source."""
+
+    role = "terrain"
+
+    def __init__(self, kind: str, native_m: float, title: str, deepest_overview: int | None = None):
+        self.kind = kind
+        self.native_m = native_m
+        self.deepest_overview = deepest_overview
+        self.attribution = {
+            "name": f"USGS 3D Elevation Program (3DEP) {title} DEM",
+            "license": "Public domain",
+            "url": "https://www.usgs.gov/3d-elevation-program",
+        }
+
+    def tiles(self, bounds: tuple[float, float, float, float]) -> list[str]:
+        return usgs_3dep_tiles(bounds, self.kind)
+
+
+# the 1 arc-second DEM's overviews stop at 8× (240 m)
+USGS_3DEP_1ARCSEC = USGS3DEP("usgs-3dep-1arcsec", 30.0, "1 arc-second", deepest_overview=8)
+USGS_3DEP_13ARCSEC = USGS3DEP("usgs-3dep-13arcsec", 10.0, "1/3 arc-second")
 
 
 def fill_nan_nearest(a: np.ndarray, max_iter: int = 64) -> np.ndarray:
@@ -128,8 +252,7 @@ def dem_corners(region: Region, k: int = 1, spec: dict | None = None) -> np.ndar
     shape (K·cells_y + 1, K·cells_x + 1); `spec` overrides the DEM source.
     """
     spec = spec or region.sources["dem"]
-    if spec["kind"] not in USGS_3DEP:
-        raise ValueError(f"unsupported DEM source {spec['kind']}")
+    src = source(spec["kind"], "terrain", where="sources.dem.kind")
     overview = int(spec.get("overview", 4))
     # average when shrinking the source; bilinear when cells are finer than it
     resampling = Resampling[spec.get("resampling", "average")]
@@ -143,11 +266,12 @@ def dem_corners(region: Region, k: int = 1, spec: dict | None = None) -> np.ndar
         return np.load(path)
     cx, cy = region.cells
     dst = np.full((cy * k + 1, cx * k + 1), np.nan, dtype=np.float32)
-    urls = usgs_3dep_tiles(region.lonlat_envelope(), spec["kind"])
     west, north, _, _ = region.grid
     pm = region.meters_per_cell / k  # corner spacing; pixel centres sit on the corners
     transform = rasterio.Affine(pm, 0, west - pm / 2, 0, -pm, north + pm / 2)
-    missing = _warp_tiles(urls, dst, transform, region, overview, resampling, np.nan)
+    missing = src.read_into(
+        dst, transform, region.crs, region.lonlat_envelope(), overview, resampling, np.nan
+    )
     if missing:
         print(f"  dem: {len(missing)} tiles missing (outside coverage?)")
     gaps = int(np.isnan(dst).sum())
@@ -173,6 +297,26 @@ def esa_worldcover_tiles(bounds: tuple[float, float, float, float]) -> list[str]
     return urls
 
 
+class ESAWorldCover(RasterSource):
+    """ESA WorldCover 2021 (CC BY 4.0): 10 m land cover in 3°×3° cloud-optimized
+    GeoTIFFs on AWS, global: the built-in landcover source."""
+
+    role = "landcover"
+    native_m = 10.0
+    attribution = {
+        "name": "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data "
+        "(2021) processed by ESA WorldCover consortium",
+        "license": "CC BY 4.0",
+        "url": "https://esa-worldcover.org",
+    }
+
+    def tiles(self, bounds: tuple[float, float, float, float]) -> list[str]:
+        return esa_worldcover_tiles(bounds)
+
+
+ESA_WORLDCOVER_2021 = ESAWorldCover()
+
+
 # ESA WorldCover 2021 class codes.
 WORLDCOVER = {
     10: "tree",
@@ -192,16 +336,22 @@ WORLDCOVER = {
 def landcover_cells(region: Region) -> np.ndarray:
     """ESA WorldCover class per cell (mode of the overview pixels), shape (cy, cx)."""
     spec = region.sources["landcover"]
-    if spec["kind"] != "esa-worldcover-2021":
-        raise ValueError(f"unsupported land cover source {spec['kind']}")
+    src = source(spec["kind"], "landcover", where="sources.landcover.kind")
     overview = int(spec.get("overview", 16))
     path = _cache_path(region, "landcover", f"{spec['kind']}|{overview}")
     if path.exists():
         return np.load(path)
     cx, cy = region.cells
     dst = np.zeros((cy, cx), dtype=np.uint8)
-    urls = esa_worldcover_tiles(region.lonlat_envelope())
-    missing = _warp_tiles(urls, dst, region.cell_transform(), region, overview, Resampling.mode, 0)
+    missing = src.read_into(
+        dst,
+        region.cell_transform(),
+        region.crs,
+        region.lonlat_envelope(),
+        overview,
+        Resampling.mode,
+        0,
+    )
     if missing:
         print(f"  landcover: {len(missing)} tiles missing")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,6 +367,7 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
     place objects at the source's own resolution, whatever the cell size.
     """
     spec = region.sources["landcover"]
+    src = source(spec["kind"], "landcover", where="sources.landcover.kind")
     m = region.meters_per_cell
     factor = max(1, round(m / meters))
     px = m / factor
@@ -227,14 +378,8 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
     dst = np.zeros((cy * factor, cx * factor), dtype=np.uint8)
     west, north, _, _ = region.grid
     transform = rasterio.Affine(px, 0, west, 0, -px, north)
-    missing = _warp_tiles(
-        esa_worldcover_tiles(region.lonlat_envelope()),
-        dst,
-        transform,
-        region,
-        1,
-        Resampling.nearest,
-        0,
+    missing = src.read_into(
+        dst, transform, region.crs, region.lonlat_envelope(), 1, Resampling.nearest, 0
     )
     if missing:
         print(f"  landcover (fine): {len(missing)} tiles missing")
@@ -254,18 +399,17 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
 # so re-solving a warp re-uses almost all downloads.
 
 BLOCK_PX = 512
-_NATIVE = {"usgs-3dep-1arcsec": 30.0, "usgs-3dep-13arcsec": 10.0, "esa-worldcover-2021": 10.0}
 _MAX_LEVEL = 4  # 16× native: the coarsest level points sample
-# The deepest overview (decimation factor) a source's COGs carry, where it is
-# shallower than _MAX_LEVEL: the 1 arc-second DEM stops at 8× (240 m). A coarser
-# level is read from that overview and averaged down while reprojecting.
-_DEEPEST_OVERVIEW = {"usgs-3dep-1arcsec": 8}
+# Where a source's `deepest_overview` is shallower than _MAX_LEVEL (the 1
+# arc-second DEM stops at 8×, 240 m), a coarser level is read from that
+# overview and averaged down while reprojecting.
 
 
 def overview_factor(kind: str, res: float) -> tuple[int, int]:
     """(the decimation factor a level at `res` stands for, the overview it is read from)."""
-    factor = max(1, int(round(res / _NATIVE[kind])))
-    return factor, min(factor, _DEEPEST_OVERVIEW.get(kind, factor))
+    src = source(kind)
+    factor = max(1, int(round(res / src.native_m)))
+    return factor, min(factor, src.deepest_overview or factor)
 
 
 def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -> np.ndarray:
@@ -284,7 +428,8 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
     crs_tag = region.crs.to_proj4()
     if path.exists() and path_tag.exists() and path_tag.read_text() == f"{key}|{crs_tag}":
         return np.load(path)
-    is_dem = kind in USGS_3DEP
+    src = source(kind)
+    is_dem = src.role == "terrain"
     dst = np.full((size, size), np.nan if is_dem else 0, dtype=np.float32 if is_dem else np.uint8)
     transform = rasterio.Affine(res, 0, x0, 0, -res, y1)
     # tiles overlapping the block, from its lon/lat envelope
@@ -296,9 +441,8 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
         region.crs, "EPSG:4326", [xs[0], xs[1], xs[0], xs[1]], [ys[0], ys[0], ys[1], ys[1]]
     )
     env = (min(lons) - 0.01, min(lats) - 0.01, max(lons) + 0.01, max(lats) + 0.01)
-    urls = usgs_3dep_tiles(env, kind) if is_dem else esa_worldcover_tiles(env)
     resampling = Resampling.average if is_dem else Resampling.mode
-    _warp_tiles(urls, dst, transform, region, read, resampling, np.nan if is_dem else 0)
+    src.read_into(dst, transform, region.crs, env, read, resampling, np.nan if is_dem else 0)
     if is_dem and np.isnan(dst).any():
         # gaps past the data's edge: grow from valid pixels, then the mean
         if np.isnan(dst).all():
@@ -323,8 +467,9 @@ def sample_points(
 ) -> np.ndarray:
     """Sample a source at projected points (metres): bilinear for elevation,
     nearest for land cover, from the level that matches each point's spacing."""
-    is_dem = kind in USGS_3DEP
-    native = _NATIVE[kind]
+    src = source(kind)
+    is_dem = src.role == "terrain"
+    native = src.native_m
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()
     spacing = np.asarray(spacing, dtype=np.float64)

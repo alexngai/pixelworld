@@ -682,10 +682,14 @@ ROOF_SHAPES = {"flat", "pyramidal", "dome", "hipped", "half_hipped", "gabled", "
 
 
 def _hints(row: dict) -> dict:
-    """Shape and colour hints from Overture for the building generator (M3)."""
+    """Shape and colour hints from Overture for the building generator (M3).
+    `_roof` keeps any roof shape for typology rules (`roofs:`); like every
+    `_` key it's left out of the package."""
     out: dict[str, Any] = {}
     if row.get("roof_shape") in ROOF_SHAPES:
         out["rs"] = row["roof_shape"]
+    if isinstance(row.get("roof_shape"), str) and row["roof_shape"]:
+        out["_roof"] = row["roof_shape"]
     for key, col in (("fc", "facade_color"), ("rc", "roof_color")):
         v = row.get(col)
         if isinstance(v, str) and v.startswith("#") and len(v) == 7:
@@ -933,23 +937,28 @@ def park_polygons(region: Region, spec: dict[str, Any], boxes: list) -> list | N
 
 
 def type_buildings(region: Region, found: list[dict], spec: dict, streets, water) -> list[dict]:
-    """Building typologies (D-055): features, facts and the spec's rules."""
+    """Building typologies (D-055): features, facts and the spec's rules. The
+    facts come from the facts source plugin the spec names (`facts:`)."""
+    from . import facts as facts_sources
     from . import typology
 
     facts = None
-    if spec.get("facts") == "datasf":
-        from .sources import datasf
-
-        pf = datasf.ParcelFacts(region.crs, spec.get("rollYear"))
+    source = facts_sources.open_facts(region, spec)
+    if source is not None:
         has = [i for i, inst in enumerate(found) if "_c" in inst]
         xs = np.array([found[i]["_c"][0] for i in has])
         ys = np.array([found[i]["_c"][1] for i in has])
-        got = pf.at(xs, ys)
+        got = list(source.at(xs, ys))
+        if len(got) != len(has):
+            raise ValueError(f"facts source answered {len(got)} of {len(has)} points")
         facts = [None] * len(found)
         for i, f in zip(has, got, strict=True):
             facts[i] = f
-        on_lot = sum(f is not None for f in got)
-        print(f"typology facts: assessor roll {pf.year}, {on_lot}/{len(has)} buildings on a lot")
+        known = sum(f is not None for f in got)
+        print(
+            f"typology facts: {facts_sources.describe(source)}, "
+            f"{known}/{len(has)} buildings with facts"
+        )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
     counts = typology.classify(found, spec, feats)
     print(f"typology: {counts}")

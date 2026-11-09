@@ -1,8 +1,10 @@
-"""HTTP helpers: a descriptive User-Agent, retries, and range-read file objects."""
+"""HTTP helpers: a descriptive User-Agent, retries, range-read file objects,
+and the download cache."""
 
 from __future__ import annotations
 
 import io
+import os
 import time
 import urllib.error
 import urllib.request
@@ -10,7 +12,28 @@ from pathlib import Path
 
 USER_AGENT = "pixelworld-pipeline/0.1 (+https://github.com/alexngai/pixelworld)"
 REPO = Path(__file__).resolve().parents[4]
-CACHE_ROOT = REPO / "pipeline" / ".cache"
+
+
+def _cache_root() -> Path:
+    """$PIXELWORLD_CACHE; else pipeline/.cache in a checkout of the repository;
+    else (an installed package) the user's cache directory."""
+    if os.environ.get("PIXELWORLD_CACHE"):
+        return Path(os.environ["PIXELWORLD_CACHE"])
+    if (REPO / "pipeline" / "pyproject.toml").is_file():
+        return REPO / "pipeline" / ".cache"
+    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "pixelworld"
+
+
+CACHE_ROOT = _cache_root()
+
+
+def cache_dir(name: str) -> Path:
+    """A source's directory in the shared download cache (made on first use).
+    Plugins keep their downloads here, so every checkout and worktree that
+    links the cache shares them."""
+    path = CACHE_ROOT / name
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def get(

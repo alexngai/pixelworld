@@ -45,6 +45,10 @@ From `sources/datasf.py`, `typology.py`, `objects.py` and `rasters.py`:
 - **Two refactors every candidate needs:**
   1. Turn `if spec.get("facts") == "datasf"` into a registry of facts sources, all returning one normalized dict: `year, stories, units, use, class, hood`, plus optional `roof` and `material`.
   2. Add rule fields `classes:` (a source's native building class: PLUTO `bldgclass`, Boston `BLDG_TYPE`, DC `STRUCT`, Philadelphia `building_code_description`, Helsinki `rakennusaine_s`) and `roofs:`. In most candidates the iconic type is in the class code, not in year plus use.
+- **Status (after this research):** both refactors are done, and DEMs are plugins too ([plugins.md](plugins.md)):
+  - facts sources are plugins (`pixelworld.facts`), and DataSF is the city pack `pixelworld-city-sf`;
+  - `classes:` and `roofs:` are rule fields;
+  - a "DEM kind" below is now a terrain source plugin (`pixelworld.sources`), and 3DEP is the first.
 
 ---
 

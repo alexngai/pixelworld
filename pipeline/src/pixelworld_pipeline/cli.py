@@ -1,15 +1,24 @@
-"""Command-line entry point: `uv run pixelworld build <region.yaml>`."""
+"""Command-line entry point: `uv run pixelworld build <region.yaml>`.
+
+The same builds are available from Python: `pixelworld_pipeline.build(spec)`.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
-from .region import Region
+from .plugins import PluginError
+from .region import Region, RegionError
 
-REPO = Path(__file__).resolve().parents[3]
+
+def default_out(region_path: Path, out: Path | None) -> Path:
+    from .api import default_out_dir
+
+    return out or default_out_dir(Region.load(region_path).id)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,13 +46,40 @@ def main(argv: list[str] | None = None) -> int:
     )
     rts.add_argument("region", type=Path)
     rts.add_argument("--out", type=Path, help="package directory (default: fixtures/<id>)")
+    plg = sub.add_parser(
+        "plugins", help="list the installed plugins (facts sources, source adapters)"
+    )
+    plg.add_argument("region", type=Path, nargs="?", help="also check the plugins a spec names")
     args = parser.parse_args(argv)
+    try:
+        return run(args)
+    except (PluginError, RegionError) as e:
+        print(f"pixelworld: {e}", file=sys.stderr)
+        return 2
+
+
+def run(args: argparse.Namespace) -> int:
+    if args.command == "plugins":
+        from . import plugins
+
+        for group in plugins.GROUPS:
+            print(f"{group} ({plugins.GROUPS[group]}s):")
+            found = plugins.available(group)
+            for name, plugin in found.items():
+                print(f"  {name:24} {plugin.origin:20} {plugin.ref}")
+            if not found:
+                print("  (none)")
+        if args.region:
+            region = Region.load(args.region)
+            plugins.check(region)
+            names = [name for _, name, _ in plugins.spec_plugins(region)]
+            print(f"{args.region}: every plugin it names is installed ({', '.join(names)})")
+        return 0
 
     if args.command == "routes":
         from .routes import refresh_routes
 
-        region = Region.load(args.region)
-        out = args.out or REPO / "fixtures" / region.id
+        out = default_out(args.region, args.out)
         t0 = time.time()
         report = refresh_routes(args.region, out)
         print(json.dumps(report, indent=2))
@@ -53,8 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "heroes":
         from .build import refresh_heroes
 
-        region = Region.load(args.region)
-        out = args.out or REPO / "fixtures" / region.id
+        out = default_out(args.region, args.out)
         heroes = refresh_heroes(args.region, out)
         print(f"{len(heroes)} hero bakes in {out}")
         return 0
@@ -62,8 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "serve":
         from .server import serve
 
-        region = Region.load(args.region)
-        serve(args.region, args.out or REPO / "fixtures" / region.id, args.port)
+        serve(args.region, default_out(args.region, args.out), args.port)
         return 0
 
     if args.command == "importance":
@@ -74,16 +108,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "build":
-        from .build import build
+        from .api import build
 
-        region = Region.load(args.region)
-        out = args.out or REPO / "fixtures" / region.id
+        out = default_out(args.region, args.out)
         t0 = time.time()
-        report = build(args.region, out, compress=not args.no_compress)
-        if not args.no_routes:
-            from .routes import refresh_routes
-
-            report["routes"] = refresh_routes(args.region, out)
+        report = build(args.region, out, compress=not args.no_compress, routes=not args.no_routes)
         print(json.dumps(report, indent=2))
         print(f"wrote {out} in {time.time() - t0:.0f}s")
         return 0 if report["roads"]["ok"] else 1
