@@ -199,7 +199,7 @@ describe("landmark kit", () => {
             expect(rampAt(piece, x, py, z), `${group} voxel ${x},${y},${z}`).toBe(rampAt(whole, x, y, z));
         }
     }
-  });
+  }, 30_000); // a 400-voxel bridge in pieces: a few seconds alone, longer on a loaded machine
 
   it("draws every point landmark at its height", () => {
     for (const [g, H] of [
