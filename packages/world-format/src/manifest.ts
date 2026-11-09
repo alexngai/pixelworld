@@ -1,4 +1,4 @@
-import { TerrainGrid, copyCells, emptyMicro } from "@pixelworld/grid";
+import { TerrainGrid, copyCells, emptyMicro } from "@pixelworlds/grid";
 import type { Chunk } from "./chunk";
 
 /** World package manifest, format v0. Spec: docs/world-format.md. */

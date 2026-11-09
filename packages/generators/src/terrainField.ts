@@ -1,4 +1,4 @@
-import { LANE_DIVIDED, NO_WATER, TerrainGrid } from "@pixelworld/grid";
+import { LANE_DIVIDED, NO_WATER, TerrainGrid } from "@pixelworlds/grid";
 
 /** The most cells the decal looks out for a median's two carriageways (M3.5). */
 export const MEDIAN_REACH = 3;

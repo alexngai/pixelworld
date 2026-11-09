@@ -1,4 +1,4 @@
-import type { ObjectInstance } from "@pixelworld/generators";
+import type { ObjectInstance } from "@pixelworlds/generators";
 import type { LandmarkInfo, ObjectHit } from "./types";
 
 /**

@@ -1,5 +1,5 @@
 {
-  "name": "@pixelworld/game",
+  "name": "@pixelworlds/game",
   "license": "MIT OR Apache-2.0",
   "version": "0.0.0",
   "private": true,
@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pixelworld/engine": "workspace:*",
-    "@pixelworld/sim": "workspace:*",
+    "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*"
   }
 }

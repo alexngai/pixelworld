@@ -1,6 +1,6 @@
-import type { FrameInfo, Layer, LayerContext, Sprite, SpriteDraw, Sublayer } from "@pixelworld/engine";
-import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, type VoxelModel } from "@pixelworld/generators";
-import { maybeGunzip, type WorldManifest } from "@pixelworld/world-format";
+import type { FrameInfo, Layer, LayerContext, Sprite, SpriteDraw, Sublayer } from "@pixelworlds/engine";
+import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, type VoxelModel } from "@pixelworlds/generators";
+import { maybeGunzip, type WorldManifest } from "@pixelworlds/world-format";
 import type { VehicleKind } from "./catalog";
 import { modelSize, vehicleBoxes, vehicleVoxels, type RampLookup } from "./models";
 import { RouteNetwork, parseRoutes } from "./routes";

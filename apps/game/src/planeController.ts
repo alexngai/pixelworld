@@ -1,4 +1,4 @@
-import { listenTo, type Controller, type ControllerView, type Entity, type KeyInput } from "@pixelworld/engine";
+import { listenTo, type Controller, type ControllerView, type Entity, type KeyInput } from "@pixelworlds/engine";
 import { Follow } from "./follow";
 import { FlyWorld } from "./ground";
 import { geoToPose, type GeoPose } from "./levels";

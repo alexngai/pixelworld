@@ -1,4 +1,4 @@
-import type { Box } from "@pixelworld/generators";
+import type { Box } from "@pixelworlds/generators";
 import { KINDS, kindCells, type LevelScale, type VehicleKind } from "./catalog";
 
 /**

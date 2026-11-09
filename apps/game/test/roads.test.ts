@@ -1,4 +1,4 @@
-import { RouteNetwork, parseRoutes, type RoutesFile } from "@pixelworld/sim";
+import { RouteNetwork, parseRoutes, type RoutesFile } from "@pixelworlds/sim";
 import { describe, expect, it } from "vitest";
 import { NO_INPUT, driveCar, type CarState } from "../src/car";
 import { Decks, DriveWorld, FlyWorld, blocksCar, roadSpeed, surfaceSpeed } from "../src/ground";

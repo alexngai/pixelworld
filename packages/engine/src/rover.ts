@@ -1,4 +1,4 @@
-import { roverBoxes } from "@pixelworld/generators";
+import { roverBoxes } from "@pixelworlds/generators";
 import { listenTo } from "./controller";
 import type { Controller, ControllerView, Entity, KeyInput, PointerInput } from "./types";
 

@@ -1,5 +1,5 @@
-import type { BakedImage } from "@pixelworld/bake";
-import type { Rotation } from "@pixelworld/grid";
+import type { BakedImage } from "@pixelworlds/bake";
+import type { Rotation } from "@pixelworlds/grid";
 
 /**
  * A painted-over hero landmark for one rotation (M3, D-053). `bake` is the

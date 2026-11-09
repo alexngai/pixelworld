@@ -1,5 +1,5 @@
-import type { Box } from "@pixelworld/generators";
-import type { Rotation } from "@pixelworld/grid";
+import type { Box } from "@pixelworlds/generators";
+import type { Rotation } from "@pixelworlds/grid";
 import type { Entity, EntityList, EntityModel, EntitySpec, Sprite, SpriteDraw } from "./types";
 
 /**

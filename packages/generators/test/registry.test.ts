@@ -69,7 +69,7 @@ describe("the generator registry", () => {
     registerGenerator("testDot", other, { source: "b" }); // the same function: nothing to do
     expect(() => registerGenerator("testDot", dot, { source: "b" })).toThrow(GeneratorRegistryError);
     expect(() => registerGenerator("testDot", dot, { source: "b" })).toThrow(/already registered by a, so b can't/);
-    expect(() => registerGenerator("building", dot, { source: "b" })).toThrow(/by @pixelworld\/generators/);
+    expect(() => registerGenerator("building", dot, { source: "b" })).toThrow(/by @pixelworlds\/generators/);
     registerGenerator("testDot", dot, { source: "b", replace: true });
     expect(listGenerators().find((g) => g.name === "testDot")?.source).toBe("b");
     unregisterGenerators("b");

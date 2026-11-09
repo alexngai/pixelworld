@@ -83,12 +83,12 @@
     "docs": "typedoc"
   },
   "devDependencies": {
-    "@pixelworld/engine": "workspace:*",
-    "@pixelworld/generators": "workspace:*",
-    "@pixelworld/grid": "workspace:*",
-    "@pixelworld/sim": "workspace:*",
-    "@pixelworld/style": "workspace:*",
-    "@pixelworld/world-format": "workspace:*",
+    "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/generators": "workspace:*",
+    "@pixelworlds/grid": "workspace:*",
+    "@pixelworlds/sim": "workspace:*",
+    "@pixelworlds/style": "workspace:*",
+    "@pixelworlds/world-format": "workspace:*",
     "@size-limit/preset-small-lib": "14.3.0",
     "size-limit": "14.3.0",
     "tsup": "9.0.0",

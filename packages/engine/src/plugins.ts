@@ -1,5 +1,5 @@
-import { loadPlugin, registerPlugin, type PluginDescriptor } from "@pixelworld/generators";
-import type { PluginRef } from "@pixelworld/runtime";
+import { loadPlugin, registerPlugin, type PluginDescriptor } from "@pixelworlds/generators";
+import type { PluginRef } from "@pixelworlds/runtime";
 import type { WorldViewOptions } from "./types";
 
 /**

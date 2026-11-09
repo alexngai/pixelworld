@@ -1,4 +1,4 @@
-import type { FrameInfo, LayerContext, Rotation, Sprite, WorldView } from "@pixelworld/engine";
+import type { FrameInfo, LayerContext, Rotation, Sprite, WorldView } from "@pixelworlds/engine";
 import { describe, expect, it } from "vitest";
 import { RouteNetwork, parseRoutes, trafficLayer, type RoutesFile } from "../src";
 

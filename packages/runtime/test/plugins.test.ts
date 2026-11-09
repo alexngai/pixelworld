@@ -1,4 +1,4 @@
-import { hasGenerator, listGenerators } from "@pixelworld/generators";
+import { hasGenerator, listGenerators } from "@pixelworlds/generators";
 import { describe, expect, it, vi } from "vitest";
 import { BakeService, type FromWorker, type InitMessage, type ToWorker } from "../src/index";
 import { bakeWorkerLoop, type BakeHandler } from "../src/workerLoop";

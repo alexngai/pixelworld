@@ -9,7 +9,7 @@ import type {
   ViewCamera,
   WorldInfo,
   WorldQuery,
-} from "@pixelworld/engine";
+} from "@pixelworlds/engine";
 
 /**
  * A small world for the game's tests, through the engine's public types

@@ -1,4 +1,4 @@
-import { definePlugin } from "@pixelworld/generators";
+import { definePlugin } from "@pixelworlds/generators";
 import { plugin } from "./plugin";
 
 /**

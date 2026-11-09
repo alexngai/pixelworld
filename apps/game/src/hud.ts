@@ -1,4 +1,4 @@
-import type { RouteNetwork } from "@pixelworld/sim";
+import type { RouteNetwork } from "@pixelworlds/sim";
 
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),

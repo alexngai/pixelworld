@@ -1,4 +1,4 @@
-import { NO_WATER, type TerrainGrid } from "@pixelworld/grid";
+import { NO_WATER, type TerrainGrid } from "@pixelworlds/grid";
 import type { ObjectInstance } from "./assets";
 
 /**

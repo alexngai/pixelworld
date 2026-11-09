@@ -1,11 +1,11 @@
-import type { TerrainGrid } from "@pixelworld/grid";
+import type { TerrainGrid } from "@pixelworlds/grid";
 import {
   assembleTerrain,
   decodeChunk,
   maybeGunzip,
   parseManifest,
   type WorldManifest,
-} from "@pixelworld/world-format";
+} from "@pixelworlds/world-format";
 
 export interface LoadedWorld {
   manifest: WorldManifest;

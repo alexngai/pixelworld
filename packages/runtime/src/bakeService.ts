@@ -1,6 +1,6 @@
-import type { Rotation } from "@pixelworld/grid";
-import type { BakedImage } from "@pixelworld/bake";
-import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworld/generators";
+import type { Rotation } from "@pixelworlds/grid";
+import type { BakedImage } from "@pixelworlds/bake";
+import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworlds/generators";
 import { BakeHost } from "./bakeHost";
 import {
   sliceTransferables,

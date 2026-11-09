@@ -5,17 +5,17 @@ import {
   type PluginDescriptor,
   type RoverOptions,
   type TileBake,
-} from "@pixelworld/engine";
-import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworld/sim";
-import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+} from "@pixelworlds/engine";
+import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
+import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
 import { cityPlugin } from "@pixelworlds/city-sf";
 
 /**
- * The reference viewer (`@pixelworld/viewer`), a client of the engine: the
+ * The reference viewer (`@pixelworlds/viewer`), a client of the engine: the
  * URL parameters, the HUD, the layer panel, the sources screen and help,
  * level switching, and the `__pixelworld` debug API the e2e tests, the bench
  * page and the hero tool drive. The world view, its layers and the rover
- * controller come from `@pixelworld/engine` and `@pixelworld/sim`.
+ * controller come from `@pixelworlds/engine` and `@pixelworlds/sim`.
  */
 
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).

@@ -4,4 +4,4 @@
  *
  * @module pixelworld/traffic
  */
-export * from "@pixelworld/sim";
+export * from "@pixelworlds/sim";

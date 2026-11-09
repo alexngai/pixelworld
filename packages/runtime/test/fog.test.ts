@@ -10,7 +10,7 @@ import {
   validateStyle,
   type FogArea,
   type StylePack,
-} from "@pixelworld/style";
+} from "@pixelworlds/style";
 import {
   FOG_NOISE_PERIOD,
   FOG_NOISE_TEXELS,

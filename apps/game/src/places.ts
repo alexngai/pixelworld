@@ -1,4 +1,4 @@
-import type { LandmarkInfo } from "@pixelworld/engine";
+import type { LandmarkInfo } from "@pixelworlds/engine";
 
 /**
  * Place names for the HUD: the world's registry landmarks (named here for

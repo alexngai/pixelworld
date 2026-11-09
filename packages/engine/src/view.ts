@@ -1,6 +1,6 @@
-import type { BakedImage } from "@pixelworld/bake";
-import { generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworld/generators";
-import { project, type Rotation } from "@pixelworld/grid";
+import type { BakedImage } from "@pixelworlds/bake";
+import { generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworlds/generators";
+import { project, type Rotation } from "@pixelworlds/grid";
 import {
   BakeService,
   Camera,
@@ -15,8 +15,8 @@ import {
   type SpriteInstance,
   type TileKey,
   type TileRequest,
-} from "@pixelworld/runtime";
-import { buildPalette } from "@pixelworld/style";
+} from "@pixelworlds/runtime";
+import { buildPalette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
 import { Controllers } from "./controller";
 import { Entities } from "./entities";

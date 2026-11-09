@@ -1,6 +1,6 @@
-import { EDGE_NEIGHBOR, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworld/grid";
-import type { InstancedBatch, MeshData, TerrainField } from "@pixelworld/generators";
-import { SHADES, type MaterialTables } from "@pixelworld/style";
+import { EDGE_NEIGHBOR, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
+import type { InstancedBatch, MeshData, TerrainField } from "@pixelworlds/generators";
+import { SHADES, type MaterialTables } from "@pixelworlds/style";
 import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
 import { Uniforms, compileProgram, createTexture, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
 import {

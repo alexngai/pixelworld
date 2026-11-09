@@ -3,7 +3,7 @@
 // - The library: one esbuild build (through tsup) of every subpath entry with
 //   code splitting, so `pixelworld/engine` and `pixelworld/traffic` share one
 //   copy of what they have in common (one generator registry, one set of
-//   classes). The private workspace packages (@pixelworld/*) are bundled in,
+//   classes). The private workspace packages (@pixelworlds/*) are bundled in,
 //   and their declarations are bundled into dist/*.d.ts (tsconfig.build.json
 //   maps them to source). Not minified: consumers' bundlers minify, and
 //   readable chunks tree-shake and debug better.
@@ -34,7 +34,7 @@ const entry = Object.fromEntries(ENTRIES.map((e) => [e, here(`src/${e}.ts`)]));
 const WORKER_ENTRY = here("../runtime/src/bake.worker.ts");
 const WORKER_SRC = /new URL\(\s*(["'])\.\/bake\.worker\.ts\1\s*,\s*import\.meta\.url\s*\)/g;
 const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })';
-const PRIVATE_IMPORT = /(?:from|import)\s*\(?\s*["']@pixelworld\//;
+const PRIVATE_IMPORT = /(?:from|import)\s*\(?\s*["']@pixelworlds\//;
 /** A dynamic import: its leading comments, and the quote if its specifier is a literal. */
 const DYNAMIC_IMPORT = /(?<![\w$.])import\s*\(((?:\s|\/\*[\s\S]*?\*\/)*)(["'`])?/g;
 
@@ -59,7 +59,7 @@ const common = {
   outDir: DIST,
   clean: false,
   // the private workspace packages are bundled in: the published package has no dependencies
-  noExternal: [/^@pixelworld\//],
+  noExternal: [/^@pixelworlds\//],
   tsconfig: here("tsconfig.build.json"),
 };
 
@@ -89,7 +89,7 @@ for (const f of files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts"))) {
   const text = await readFile(DIST + f, "utf8");
   if (text.includes(WORKER_LITERAL)) withLiteral.push(f);
   if (/["'`][^"'`]*bake\.worker\.ts["'`]/.test(text)) throw new Error(`dist/${f} still loads bake.worker.ts`);
-  if (PRIVATE_IMPORT.test(text)) throw new Error(`dist/${f} imports a private @pixelworld package`);
+  if (PRIVATE_IMPORT.test(text)) throw new Error(`dist/${f} imports a private @pixelworlds package`);
   // webpack would make import(url) a context module of dist/ and fail at run time
   for (const [, comments, quote] of f.endsWith(".js") ? text.matchAll(DYNAMIC_IMPORT) : []) {
     if (!quote && !/webpackIgnore:\s*true/.test(comments))

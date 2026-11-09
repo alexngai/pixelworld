@@ -4,4 +4,4 @@
  *
  * @module pixelworld/generators
  */
-export * from "@pixelworld/generators";
+export * from "@pixelworlds/generators";

@@ -1,5 +1,5 @@
-import { TerrainGrid } from "@pixelworld/grid";
-import { Baker, type BakeScene } from "@pixelworld/bake";
+import { TerrainGrid } from "@pixelworlds/grid";
+import { Baker, type BakeScene } from "@pixelworlds/bake";
 import { applyHeroPaint } from "./heroPaint";
 import {
   BIG_FOOTPRINT_CELLS,
@@ -13,7 +13,7 @@ import {
   objectVoxelScale,
   scaleMesh,
   type ObjectInstance,
-} from "@pixelworld/generators";
+} from "@pixelworlds/generators";
 import type { BakeTileMessage, FromWorker, InitMessage, TerrainSlice, ToWorker, WorldObjects } from "./protocol";
 
 /**

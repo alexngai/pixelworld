@@ -1,4 +1,4 @@
-import type { WorldManifest } from "@pixelworld/engine";
+import type { WorldManifest } from "@pixelworlds/engine";
 import { describe, expect, it } from "vitest";
 import { CarController } from "../src/carController";
 import { Bob, Follow } from "../src/follow";

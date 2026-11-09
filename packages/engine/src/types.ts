@@ -1,9 +1,9 @@
-import type { BakedImage } from "@pixelworld/bake";
-import type { Box, PluginDescriptor } from "@pixelworld/generators";
-import type { Rotation } from "@pixelworld/grid";
-import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworld/runtime";
-import type { Palette, StylePack } from "@pixelworld/style";
-import type { WorldManifest } from "@pixelworld/world-format";
+import type { BakedImage } from "@pixelworlds/bake";
+import type { Box, PluginDescriptor } from "@pixelworlds/generators";
+import type { Rotation } from "@pixelworlds/grid";
+import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
+import type { Palette, StylePack } from "@pixelworlds/style";
+import type { WorldManifest } from "@pixelworlds/world-format";
 
 /**
  * The engine's public types (docs/library.md §3.2–3.3). Units, unless said

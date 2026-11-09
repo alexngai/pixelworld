@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, packShape } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, packShape } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import { occupiedCells, scatterInstances, type ScatterRules } from "../src/index";
 

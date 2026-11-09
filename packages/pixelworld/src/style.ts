@@ -4,4 +4,4 @@
  *
  * @module pixelworld/style
  */
-export * from "@pixelworld/style";
+export * from "@pixelworlds/style";

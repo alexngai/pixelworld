@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, copyCells, emptyMicro } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, copyCells, emptyMicro } from "@pixelworlds/grid";
 import {
   decodeChunk,
   maybeGunzip,
@@ -8,7 +8,7 @@ import {
   type ChunkRef,
   type ObjectsFile,
   type WorldManifest,
-} from "@pixelworld/world-format";
+} from "@pixelworlds/world-format";
 
 type Fetcher = (url: string) => Promise<ArrayBuffer>;
 

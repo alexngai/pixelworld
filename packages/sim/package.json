@@ -1,5 +1,5 @@
 {
-  "name": "@pixelworld/sim",
+  "name": "@pixelworlds/sim",
   "license": "MIT OR Apache-2.0",
   "version": "0.0.0",
   "private": true,
@@ -8,8 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pixelworld/engine": "workspace:*",
-    "@pixelworld/generators": "workspace:*",
-    "@pixelworld/world-format": "workspace:*"
+    "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/generators": "workspace:*",
+    "@pixelworlds/world-format": "workspace:*"
   }
 }

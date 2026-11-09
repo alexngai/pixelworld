@@ -1,4 +1,4 @@
-import { INDEX_SILHOUETTE } from "@pixelworld/style";
+import { INDEX_SILHOUETTE } from "@pixelworlds/style";
 import {
   Uniforms,
   compileProgram,
@@ -6,7 +6,7 @@ import {
   rgba8Texture,
   type BakedImage,
   type GL,
-} from "@pixelworld/bake";
+} from "@pixelworlds/bake";
 import type { FogField } from "./fog";
 import { FogPass, type FogFrame } from "./fogPass";
 

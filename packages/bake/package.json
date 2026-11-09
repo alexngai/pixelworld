@@ -1,5 +1,5 @@
 {
-  "name": "@pixelworld/bake",
+  "name": "@pixelworlds/bake",
   "license": "MIT OR Apache-2.0",
   "version": "0.0.0",
   "private": true,
@@ -8,8 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pixelworld/grid": "workspace:*",
-    "@pixelworld/style": "workspace:*",
-    "@pixelworld/generators": "workspace:*"
+    "@pixelworlds/grid": "workspace:*",
+    "@pixelworlds/style": "workspace:*",
+    "@pixelworlds/generators": "workspace:*"
   }
 }

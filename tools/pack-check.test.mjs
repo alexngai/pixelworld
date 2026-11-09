@@ -61,15 +61,15 @@ describe("pack-check tool", () => {
     const { files, pkg } = goodPackage();
     const bad = withManifest(files, {
       ...pkg,
-      dependencies: { "@pixelworld/engine": "workspace:*" },
+      dependencies: { "@pixelworlds/engine": "workspace:*" },
       publishConfig: { exports: {} },
     });
-    bad.set("dist/traffic.d.ts", Buffer.from(`import { Layer } from "@pixelworld/engine";`));
+    bad.set("dist/traffic.d.ts", Buffer.from(`import { Layer } from "@pixelworlds/engine";`));
     const problems = checkPackage(bad);
     expect(problems).toContain('"dependencies" isn\'t empty: the build bundles everything');
     expect(problems).toContain("package.json still has workspace: ranges");
     expect(problems).toContain("publishConfig.exports wasn't applied (pack with pnpm)");
-    expect(problems).toContain("dist/traffic.d.ts imports a private @pixelworld package");
+    expect(problems).toContain("dist/traffic.d.ts imports a private @pixelworlds package");
   });
 
   it("requires the worker's literal URL in exactly one file", () => {

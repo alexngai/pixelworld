@@ -1,5 +1,5 @@
-import { SUN_DIR, TerrainGrid } from "@pixelworld/grid";
-import { buildTerrainMesh } from "@pixelworld/generators";
+import { SUN_DIR, TerrainGrid } from "@pixelworlds/grid";
+import { buildTerrainMesh } from "@pixelworlds/generators";
 import { describe, expect, it } from "vitest";
 import { lightBasis, lightBounds, pixelRect, screenBounds } from "../src/bounds";
 

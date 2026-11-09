@@ -1,4 +1,4 @@
-import { LANE_DIVIDED, LANE_ONEWAY, TerrainGrid, emptyMicro } from "@pixelworld/grid";
+import { LANE_DIVIDED, LANE_ONEWAY, TerrainGrid, emptyMicro } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import { NEAR_MEDIAN, buildTerrainField, forEachFieldPoint } from "../src/index";
 

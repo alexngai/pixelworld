@@ -28,7 +28,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
   - the frame loop
   - the debug API
 
-  It is now a client of `@pixelworld/engine` (about 430 lines: URL parameters, HUD, layer panel, levels, debug API).
+  It is now a client of `@pixelworlds/engine` (about 430 lines: URL parameters, HUD, layer panel, levels, debug API).
 - **The pipeline (Python):** one package with a CLI (`pixelworld build|routes|heroes|serve|plugins`) and a Python API (`pixelworld_pipeline.build(spec)`). Region specs select sources by name.
   - **Plugins:** terrain and land-cover sources and facts sources are found by name through entry points ([plugins.md](plugins.md)).
   - **San Francisco's facts (DataSF)** are a separate package, the city pack `pixelworld-city-sf` in `pipeline/plugins/`.
@@ -43,19 +43,19 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 
 | Package | Contents | Today |
 |---|---|---|
-| `@pixelworld/format` | the world package spec (manifest, chunks, objects, routes, optional layers); codecs; JSON Schemas; version policy | `world-format` |
-| `@pixelworld/grid` | projection, rotations, cells, heights | `grid` |
-| `@pixelworld/style` | the style pack schema, loader, palettes, night and atmosphere | `style` |
-| `@pixelworld/generators` | the voxel model API, the generator registry and plugin API, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
-| `@pixelworld/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
-| `@pixelworld/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
-| `@pixelworld/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
-| `@pixelworld/style-desert-southwest`, `@pixelworld/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
+| `@pixelworlds/format` | the world package spec (manifest, chunks, objects, routes, optional layers); codecs; JSON Schemas; version policy | `world-format` |
+| `@pixelworlds/grid` | projection, rotations, cells, heights | `grid` |
+| `@pixelworlds/style` | the style pack schema, loader, palettes, night and atmosphere | `style` |
+| `@pixelworlds/generators` | the voxel model API, the generator registry and plugin API, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
+| `@pixelworlds/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
+| `@pixelworlds/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
+| `@pixelworlds/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
+| `@pixelworlds/style-desert-southwest`, `@pixelworlds/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
 | `pixelworld-city-sf` (PyPI) | San Francisco's city pack, pipeline half: DataSF facts | `pipeline/plugins/pixelworld-city-sf/` |
 | `@pixelworlds/city-sf` (npm) | San Francisco's city pack, browser half: its generators (facades, towers, Chinatown) as a plugin | `packages/city-sf` (§8) |
-| `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
-| `@pixelworld/editor` (app) | the warp editor | `apps/editor` |
+| `@pixelworlds/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
+| `@pixelworlds/editor` (app) | the warp editor | `apps/editor` |
 
 D3 settled this as one npm package, `pixelworld`, with an entry point per browser package (`pixelworld/engine`, `pixelworld/traffic`, …), built (§3.5); style packs and city packs are separate packages.
 
@@ -64,9 +64,9 @@ D3 settled this as one npm package, `pixelworld`, with an entry point per browse
 As built (§7); the names in the first sketch that changed are noted.
 
 ```ts
-import { createWorldView } from "@pixelworld/engine";
-import { trafficLayer } from "@pixelworld/sim";          // @pixelworld/traffic once packaged
-import bayArea from "@pixelworld/style-bay-area";
+import { createWorldView } from "@pixelworlds/engine";
+import { trafficLayer } from "@pixelworlds/sim";          // @pixelworlds/traffic once packaged
+import bayArea from "@pixelworlds/style-bay-area";
 
 const view = await createWorldView({
   canvas,
@@ -120,7 +120,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 ### 3.5 Publishing
 
 - **npm, as built:** one package, `pixelworld` (D3), in `packages/pixelworld`. How to use it: [npm.md](npm.md).
-  - **Entry points:** `pixelworld/engine`, `/traffic` (`@pixelworld/sim`), `/format` (`@pixelworld/world-format`), `/grid`, `/style` and `/generators`. Each has ESM, declarations and source maps. `pixelworld/bake.worker.js` is exported for copying the worker.
+  - **Entry points:** `pixelworld/engine`, `/traffic` (`@pixelworlds/sim`), `/format` (`@pixelworlds/world-format`), `/grid`, `/style` and `/generators`. Each has ESM, declarations and source maps. `pixelworld/bake.worker.js` is exported for copying the worker.
   - **Workspace and tarball:** the package's `src/` re-exports the private workspace packages, which stay TypeScript sources without a build. In the workspace its `exports` point at `src/`, so the dev flow is unchanged; `publishConfig.exports` points the packed manifest at `dist/` (pnpm applies it, so publishing is with pnpm).
   - **The build (tsup over esbuild):** one ESM build of all six entry points with code splitting, so entry points share their common code and module state (one generator registry); the private packages bundled in, so the package has no dependencies; their declarations bundled per entry point, with shared declaration chunks. Not minified: consumers' bundlers minify. tsup was chosen over Vite's library mode (which rewrites `new URL(…)` into an expression bundlers can't follow) and over `tsc` (no bundling, and the private packages would have to be published).
   - **The bake worker:** a second build, one self-contained file, `dist/bake.worker.js`, in the same directory as the engine's chunk. The engine creates it with a literal `new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })`: the build rewrites only the source's `./bake.worker.ts`, and checks the literal survived. Its syntax and names are minified, not its whitespace: esbuild drops comments with whitespace, and a dynamic `import(url)` (plugins) needs `/* webpackIgnore: true */`, or webpack turns it into a context module of `dist/` (tried: a warning, an extra chunk, and a failing import); the build fails on a dynamic import without it. Vite (dev and build), webpack 5 and plain ESM resolve it without configuration. Browsers start workers only from the page's origin, so for a CDN or other setups `createWorldView({ workerUrl })` loads it from elsewhere (a copy, or a `blob:` URL that imports it).
@@ -187,6 +187,7 @@ M4's features are built as controllers and plugins on the public API, which prov
 - **D3, packaging, decided:**
   - **npm:** one package, `pixelworld`, with subpath exports (`pixelworld/engine`, `pixelworld/format`, `pixelworld/generators`, `pixelworld/traffic`, …). Everything browser-side builds to about 260 KB of JavaScript (89 KB gzipped), with both style packs and every generator, plus a 145 KB bake worker.
   - **Content:** city packs and style packs ship as separate packages anyone can publish.
+  - **npm names:** the package is the unscoped `pixelworld`. The `@pixelworlds` organization holds the city packs published from this repository (`@pixelworlds/city-sf`) and scopes the workspace's private packages (`@pixelworlds/engine`, `@pixelworlds/sim` and the rest), which are never published under those names. `@pixelworld` was taken.
   - **PyPI:** `pixelworld-pipeline`, matching its import name `pixelworld_pipeline`; `pixelworlds` is an unrelated project.
   - **Before 1.0:** check the project name against the game *Pixel Worlds* for trademarks.
 - **D4, region-specific code, decided: plugins.** San Francisco's facades, towers, Chinatown and DataSF become the first city pack, the template for others. Built: DataSF (D-068) and the generators (D-071).
@@ -206,8 +207,8 @@ The engine is out of the app (refactors 1–4 of §4). `apps/web` is now a clien
 
 ### 7.1 Packages
 
-- **`@pixelworld/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `listenTo` and the types. It is built on `@pixelworld/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
-- **`@pixelworld/sim`**: the traffic simulation and its layer, `trafficLayer`. It imports the engine's types only, so the engine knows nothing of traffic. It becomes `pixelworld/traffic` when packaged.
+- **`@pixelworlds/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `listenTo` and the types. It is built on `@pixelworlds/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
+- **`@pixelworlds/sim`**: the traffic simulation and its layer, `trafficLayer`. It imports the engine's types only, so the engine knows nothing of traffic. It becomes `pixelworld/traffic` when packaged.
 - **`apps/web`**: the reference viewer.
 - **`examples/minimal-viewer`**: `pnpm example:minimal` (port 5180).
 
@@ -370,12 +371,12 @@ await next.ready();   // the old view kept the canvas until here, and is now des
 
 ### 7.10 The example game (`apps/game`, M4)
 
-`@pixelworld/game` is M4's example client (D-070): a car on the driving levels, a plane on the flying levels, and take-off and landing between them, built only on `@pixelworld/engine`, `@pixelworld/sim` and the style packs (no runtime or engine internals). `pnpm --filter @pixelworld/game dev` (port 5252).
+`@pixelworlds/game` is M4's example client (D-070): a car on the driving levels, a plane on the flying levels, and take-off and landing between them, built only on `@pixelworlds/engine`, `@pixelworlds/sim` and the style packs (no runtime or engine internals). `pnpm --filter @pixelworlds/game dev` (port 5252).
 
 - **Controllers:** `CarController` and `PlaneController` implement `Controller`: they own their entities (the style's `vehicle.car.player`, and `vehicle.plane` with its shadow, `part` 1), step pure physics (`car.ts`, `plane.ts`) against the world as the queries read it, and drive the camera. A script steps them with a fixed dt through `step(dt, input)` while `paused`.
 - **What it reads:** `heightAt`, `surfaceAt` and `roadAt` for speeds and slopes; `objectsAt` for buildings and towers; traffic's `vehiclesNear` for collisions; the routes (`loadRoutes`, `RouteNetwork`) for the roads' graded surfaces and bridge decks, the autopilot's road plans and the minimap; `lonLatToCell`/`cellToLonLat` to carry a place and a heading between levels; `landmarks()` for place names.
 - **Engine additions it needed:** `query.objectsAt` and `query.landmarks` (§7.6), `createWorldView({ replace })` (§7.9), and traffic's `vehiclesNear`. Everything else was already public.
-- **Also in `@pixelworld/sim`:** `TrafficLayer.vehiclesNear(x, y, radius)` returns the shown vehicles' cars near a place with their size in plan (`modelSize`), for collisions; a switched-off layer or hidden sublayer has none.
+- **Also in `@pixelworlds/sim`:** `TrafficLayer.vehiclesNear(x, y, radius)` returns the shown vehicles' cars near a place with their size in plan (`modelSize`), for collisions; a switched-off layer or hidden sublayer has none.
 
 ## 8. As built: generator plugins (M4)
 
@@ -383,7 +384,7 @@ Refactor 5 of §4 and the browser half of D4: generators are found by name in a 
 
 ### 8.1 The registry
 
-`@pixelworld/generators`: `registerGenerators(record, { source, replace })`, `registerGenerator`, `hasGenerator`, `getGenerator`, `listGenerators` and `unregisterGenerators`. It starts with the built-ins (`builtins.ts`: everything every region uses) and holds what plugins add, one registry per realm (the main thread, each bake worker). A style asking for a generator that isn't registered fails that model's bake with a `MissingGeneratorError` naming the generator, the group and, for this repository's plugins, the plugin to load.
+`@pixelworlds/generators`: `registerGenerators(record, { source, replace })`, `registerGenerator`, `hasGenerator`, `getGenerator`, `listGenerators` and `unregisterGenerators`. It starts with the built-ins (`builtins.ts`: everything every region uses) and holds what plugins add, one registry per realm (the main thread, each bake worker). A style asking for a generator that isn't registered fails that model's bake with a `MissingGeneratorError` naming the generator, the group and, for this repository's plugins, the plugin to load.
 
 ### 8.2 Plugins
 

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { LANE_DIVIDED, LANE_ONEWAY, NO_WATER, TerrainGrid, packShape, shapeFromV0Mask, shapeRise } from "@pixelworld/grid";
+import { LANE_DIVIDED, LANE_ONEWAY, NO_WATER, TerrainGrid, packShape, shapeFromV0Mask, shapeRise } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import {
   ChunkFormatError,

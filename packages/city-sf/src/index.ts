@@ -1,4 +1,4 @@
-import { registerPlugin, type PluginApi, type PluginDescriptor, type PluginReport } from "@pixelworld/generators";
+import { registerPlugin, type PluginApi, type PluginDescriptor, type PluginReport } from "@pixelworlds/generators";
 import { PLUGIN_NAME } from "./generators";
 import { plugin } from "./plugin";
 // Vite builds the worker module on its own (dependencies included) and gives its URL;

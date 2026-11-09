@@ -6,7 +6,7 @@
     // the private workspace packages, by source, so their declarations are
     // bundled into dist/*.d.ts rather than imported (they aren't published)
     "paths": {
-      "@pixelworld/*": ["../*/src/index.ts"]
+      "@pixelworlds/*": ["../*/src/index.ts"]
     }
   },
   "include": ["src"]

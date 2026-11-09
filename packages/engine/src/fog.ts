@@ -1,5 +1,5 @@
-import { unprojectAtHeight, type Rotation } from "@pixelworld/grid";
-import { fogInView, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworld/runtime";
+import { unprojectAtHeight, type Rotation } from "@pixelworlds/grid";
+import { fogInView, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
 import type { FrameInfo, Layer, LayerContext, ScreenPass } from "./types";
 
 /**

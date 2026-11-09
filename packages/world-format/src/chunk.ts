@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, VFAC_ONE, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworld/grid";
+import { NO_WATER, TerrainGrid, VFAC_ONE, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworlds/grid";
 
 /** Chunk binary codec, format v1 (reads v0). Spec: docs/world-format.md. */
 

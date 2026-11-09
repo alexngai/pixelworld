@@ -1,5 +1,5 @@
-import { createWorldView, roverController } from "@pixelworld/engine";
-import { trafficLayer } from "@pixelworld/sim";
+import { createWorldView, roverController } from "@pixelworlds/engine";
+import { trafficLayer } from "@pixelworlds/sim";
 // the world names its style pack ("bay-area"); a page brings the packs it uses
 import bayArea from "../../../worlds/_styles/bay-area/style.json";
 // and the plugins whose generators the pack names: San Francisco's city pack

@@ -4,4 +4,4 @@
  *
  * @module pixelworld/grid
  */
-export * from "@pixelworld/grid";
+export * from "@pixelworlds/grid";

@@ -1,4 +1,4 @@
-import { TerrainGrid, packShape } from "@pixelworld/grid";
+import { TerrainGrid, packShape } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import { FACE_CLIFF, FACE_SKIRT, buildBoxesMesh, buildTerrainMesh, type MeshData } from "../src/index";
 

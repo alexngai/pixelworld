@@ -1,4 +1,4 @@
-import type { BakedImage } from "@pixelworld/bake";
+import type { BakedImage } from "@pixelworlds/bake";
 
 /**
  * Persistent cache of baked tiles in IndexedDB. Pixels are stored gzip-

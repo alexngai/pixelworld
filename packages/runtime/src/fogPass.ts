@@ -1,5 +1,5 @@
-import { rotationMat2, type Rotation } from "@pixelworld/grid";
-import { Uniforms, compileProgram, createTexture, type GL } from "@pixelworld/bake";
+import { rotationMat2, type Rotation } from "@pixelworlds/grid";
+import { Uniforms, compileProgram, createTexture, type GL } from "@pixelworlds/bake";
 import { FOG_NOISE_PERIOD, FOG_NOISE_TEXELS, fogNoiseTile, type FogField, type FogLut } from "./fog";
 
 /**

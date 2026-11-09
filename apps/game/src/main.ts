@@ -1,4 +1,4 @@
-import type { PluginDescriptor } from "@pixelworld/engine";
+import type { PluginDescriptor } from "@pixelworlds/engine";
 import { cityPlugin } from "@pixelworlds/city-sf";
 import type { CarInput } from "./car";
 import { Game } from "./game";
@@ -9,7 +9,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
 
 /**
  * pixelworld's example game (M4): drive and fly a world package, built only
- * on the public API of `@pixelworld/engine` and `@pixelworld/sim`, the
+ * on the public API of `@pixelworlds/engine` and `@pixelworlds/sim`, the
  * style packs and San Francisco's city pack.
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),

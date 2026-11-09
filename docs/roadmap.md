@@ -758,7 +758,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - Plane with an arcade flight model, drop shadow and canyon collision, on the flying level (M2.5), with take-off and landing moving between levels.
 - Occlusion silhouettes.
 - Speeds tuned to the compressed layout.
-- **The example game (D-070), done:** `apps/game` (`@pixelworld/game`), built only on the engine's public API ([library.md](library.md) §7.10).
+- **The example game (D-070), done:** `apps/game` (`@pixelworlds/game`), built only on the engine's public API ([library.md](library.md) §7.10).
   - **Car:** arcade physics on the drawn roads and terrain: top speeds by road class (motorway 11 cells/s on the Southwest driving level) and surface off-road, nothing on water, slopes slowing climbs, cliffs; bridge decks from the routes; collisions with buildings (`query.objectsAt`) and traffic (`vehiclesNear`); a road assist; a chase camera with a look-ahead; the style's player car with a silhouette.
   - **Plane:** an arcade flight model on the flying level (throttle, pitch, bank), a dithered drop shadow on the ground below, terrain, canyon and tower collisions with a reset; `vehicle.plane` in both style packs.
   - **Between levels:** a take-off (fast on a long straight road, T) and a landing (low and slow over a road) load the other level at the same lon/lat in a view that replaces the old one on the same canvas without a flash (`createWorldView({ replace })`); no page reload.

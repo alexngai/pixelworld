@@ -1,4 +1,4 @@
-import type { WorldManifest } from "@pixelworld/engine";
+import type { WorldManifest } from "@pixelworlds/engine";
 
 /**
  * Moving between scale levels (D-046, D-048): each level is its own world

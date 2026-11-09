@@ -1,4 +1,4 @@
-import type { RoadInfo } from "@pixelworld/engine";
+import type { RoadInfo } from "@pixelworlds/engine";
 
 /**
  * The drawn road network as the game reads it, through `query.roadAt`: each

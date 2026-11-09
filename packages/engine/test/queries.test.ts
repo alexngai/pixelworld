@@ -1,4 +1,4 @@
-import { LANE_DIVIDED, LANE_ONEWAY, TerrainGrid, project, type Rotation } from "@pixelworld/grid";
+import { LANE_DIVIDED, LANE_ONEWAY, TerrainGrid, project, type Rotation } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import { createQuery, type PickView, type QuerySource } from "../src/queries";
 

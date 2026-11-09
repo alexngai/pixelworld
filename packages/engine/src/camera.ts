@@ -1,5 +1,5 @@
-import type { Rotation } from "@pixelworld/grid";
-import type { Camera } from "@pixelworld/runtime";
+import type { Rotation } from "@pixelworlds/grid";
+import type { Camera } from "@pixelworlds/runtime";
 import type { ViewCamera } from "./types";
 
 /** About one internal pixel per this many canvas pixels, when the zoom is "auto". */

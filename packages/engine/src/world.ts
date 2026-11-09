@@ -1,4 +1,4 @@
-import { BAKE_VERSION } from "@pixelworld/bake";
+import { BAKE_VERSION } from "@pixelworlds/bake";
 import {
   ChunkStore,
   hashString,
@@ -8,9 +8,9 @@ import {
   type HeroPaint,
   type InitMessage,
   type TileRequest,
-} from "@pixelworld/runtime";
-import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworld/style";
-import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworld/world-format";
+} from "@pixelworlds/runtime";
+import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
+import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworlds/world-format";
 import { pluginsKey } from "./plugins";
 import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
 

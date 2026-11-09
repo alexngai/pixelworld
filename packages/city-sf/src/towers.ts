@@ -1,4 +1,4 @@
-import { VoxelModel, type GenContext, type Generator } from "@pixelworld/generators";
+import { VoxelModel, type GenContext, type Generator } from "@pixelworlds/generators";
 
 /**
  * Downtown towers by era (San Francisco, D-055): generators for footprint

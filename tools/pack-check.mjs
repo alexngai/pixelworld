@@ -98,7 +98,7 @@ export function checkPackage(files, { licences = null } = {}) {
   for (const [f, b] of files) {
     if (!/\.(js|d\.ts)$/.test(f)) continue;
     const text = b.toString("utf8");
-    if (/(?:from|import)\s*\(?\s*["']@pixelworld\//.test(text)) problems.push(`${f} imports a private @pixelworld package`);
+    if (/(?:from|import)\s*\(?\s*["']@pixelworlds\//.test(text)) problems.push(`${f} imports a private @pixelworlds package`);
     if (/["'`][^"'`]*bake\.worker\.ts["'`]/.test(text)) problems.push(`${f} loads bake.worker.ts`);
   }
 

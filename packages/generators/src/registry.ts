@@ -11,7 +11,7 @@ import { builtinGenerators } from "./builtins";
  */
 
 /** The source the built-in generators are registered under. */
-export const BUILTIN_SOURCE = "@pixelworld/generators";
+export const BUILTIN_SOURCE = "@pixelworlds/generators";
 
 /**
  * Generators that plugins published from this repository provide, and which

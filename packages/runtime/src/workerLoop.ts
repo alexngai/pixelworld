@@ -1,4 +1,4 @@
-import { loadPlugin } from "@pixelworld/generators";
+import { loadPlugin } from "@pixelworlds/generators";
 import type { FromWorker, LoadPluginsMessage, ToWorker } from "./protocol";
 
 /** What bakes (BakeHost), as the loop sees it. */

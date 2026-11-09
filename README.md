@@ -2,7 +2,7 @@
 
 An interactive world built from real places and drawn as isometric pixel art in the browser. Geography is compressed and rearranged around recognizable landmarks, so you can drive from the Las Vegas Strip past Hoover Dam to the Grand Canyon in minutes, then fly through it.
 
-**Status:** M1 (real region at uniform scale) is done. The whole US Southwest, about 410 × 280 km from Las Vegas to the Grand Canyon, is built from real elevation, land-cover and road data. It streams into the browser and is baked into isometric pixel art you can explore in 4 rotations with a placeholder rover. The M0 Grand Canyon slice is still available at `?world=/grand-canyon-m0/`.
+**Status:** the US Southwest (Las Vegas → Hoover Dam → the Grand Canyon, about 410 × 280 km) and San Francisco are built from real elevation, land-cover, road and building data, on an elastic layout with driving, walking and flying levels. They stream into the browser and are baked into isometric pixel art with traffic, fog and day/night palettes, in 4 rotations. The runtime is a library, `pixelworld` on npm (not published yet), with city packs as plugins; M4's example game drives and flies on its public API. The M0 Grand Canyon slice is still available at `?world=/grand-canyon-m0/`.
 
 ![Grand Canyon South Rim, rotation 1](docs/images/m0-south-rim-r1.png)
 
@@ -29,7 +29,7 @@ Press **I** for the data sources and licenses.
 
 URL parameters, useful for repeatable views: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache).
 
-The viewer is built on the engine, `@pixelworld/engine`, which other games can build on too ([library.md §7](docs/library.md#7-as-built-the-engine-m4-step-1)). `pnpm example:minimal` runs the smallest client of it (http://localhost:5180): San Francisco, the rover and traffic, in about 45 lines. `pnpm --filter @pixelworld/game dev` runs M4's example game (http://localhost:5252): drive Las Vegas → Hoover Dam → the Grand Canyon, take off from a straight road and fly the canyon (H for keys; `?world=/sf/` starts on the Embarcadero, `?run=1` drives and flies the run by itself and reports its frame times).
+The viewer is built on the engine, `@pixelworlds/engine`, which other games can build on too ([library.md §7](docs/library.md#7-as-built-the-engine-m4-step-1)). `pnpm example:minimal` runs the smallest client of it (http://localhost:5180): San Francisco, the rover and traffic, in about 45 lines. `pnpm --filter @pixelworlds/game dev` runs M4's example game (http://localhost:5252): drive Las Vegas → Hoover Dam → the Grand Canyon, take off from a straight road and fly the canyon (H for keys; `?world=/sf/` starts on the Embarcadero, `?run=1` drives and flies the run by itself and reports its frame times).
 
 ## Install from npm
 

@@ -5,8 +5,8 @@ import {
   type PluginDescriptor,
   type WorldManifest,
   type WorldView,
-} from "@pixelworld/engine";
-import { loadRoutes, trafficLayer, type RouteNetwork, type TrafficLayer } from "@pixelworld/sim";
+} from "@pixelworlds/engine";
+import { loadRoutes, trafficLayer, type RouteNetwork, type TrafficLayer } from "@pixelworlds/sim";
 import { CarController, type Place } from "./carController";
 import { Hud } from "./hud";
 import { levelLabel, levelUrl, poseToGeo, startFor, type GeoPose } from "./levels";

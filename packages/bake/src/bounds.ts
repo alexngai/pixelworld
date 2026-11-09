@@ -1,5 +1,5 @@
-import { DEPTH_PER_STEP, HALF_H, HALF_W, STEP_PX, STEP_WORLD, rotateXY, type Rotation } from "@pixelworld/grid";
-import { forEachFieldPoint, type CellRect, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworld/generators";
+import { DEPTH_PER_STEP, HALF_H, HALF_W, STEP_PX, STEP_WORLD, rotateXY, type Rotation } from "@pixelworlds/grid";
+import { forEachFieldPoint, type CellRect, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworlds/generators";
 
 /**
  * What a bake draws: plain meshes, instanced batches of repeated objects, and

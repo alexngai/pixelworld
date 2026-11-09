@@ -1,4 +1,4 @@
-import { project, unprojectAtHeight } from "@pixelworld/grid";
+import { project, unprojectAtHeight } from "@pixelworlds/grid";
 import { describe, expect, it } from "vitest";
 import { Camera, cellsScreenRect, worldDepthRange } from "../src/camera";
 

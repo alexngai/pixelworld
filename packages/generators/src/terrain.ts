@@ -7,7 +7,7 @@ import {
   STEP_WORLD,
   TerrainGrid,
   splitDiagonal,
-} from "@pixelworld/grid";
+} from "@pixelworlds/grid";
 import {
   FACE_CLIFF,
   FACE_SKIRT,

@@ -6,7 +6,7 @@ import {
   type FogStyle,
   type Palette,
   type StylePack,
-} from "@pixelworld/style";
+} from "@pixelworlds/style";
 
 /**
  * Fog (an atmosphere layer): where it lies and how thick it is. The style

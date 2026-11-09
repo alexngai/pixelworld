@@ -7,7 +7,7 @@ import {
   rotateXY,
   unprojectAtHeight,
   type Rotation,
-} from "@pixelworld/grid";
+} from "@pixelworlds/grid";
 
 /**
  * Pixel-snapped isometric camera. The view is drawn at integer internal

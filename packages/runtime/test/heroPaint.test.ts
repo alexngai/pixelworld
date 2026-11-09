@@ -1,4 +1,4 @@
-import type { BakedImage } from "@pixelworld/bake";
+import type { BakedImage } from "@pixelworlds/bake";
 import { describe, expect, it } from "vitest";
 import { applyHeroPaint, type HeroPaint } from "../src/heroPaint";
 

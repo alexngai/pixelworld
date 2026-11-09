@@ -541,9 +541,9 @@ The point is more room for visual interest; both halves are wanted.
 
 ### D-069: An engine API the viewer and games are clients of (accepted, M4)
 - **Why:** pixelworld is a library (library.md, D1: engine first). The viewer's 940-line `main.ts` held the engine's assembly and the app's behaviour together, so a game could only copy it.
-- **`@pixelworld/engine`:** `createWorldView({canvas, worldUrl, style, layers, controller, camera, …})` loads and streams a world, bakes and caches tiles, composites, and runs a lazy frame loop: it redraws only when something changed. It owns no input, DOM UI or URL parsing.
+- **`@pixelworlds/engine`:** `createWorldView({canvas, worldUrl, style, layers, controller, camera, …})` loads and streams a world, bakes and caches tiles, composites, and runs a lazy frame loop: it redraws only when something changed. It owns no input, DOM UI or URL parsing.
 - **Extension points:**
-  - **Layers** (`Layer`): `init` (skipped where a world has nothing for it), `update`, `sprites`, an optional screen pass, sublayers, `serialize`/`restore`. `fogLayer()` lives in the engine; `trafficLayer()` lives in `@pixelworld/sim` and uses only the engine's types.
+  - **Layers** (`Layer`): `init` (skipped where a world has nothing for it), `update`, `sprites`, an optional screen pass, sublayers, `serialize`/`restore`. `fogLayer()` lives in the engine; `trafficLayer()` lives in `@pixelworlds/sim` and uses only the engine's types.
   - **Entities:** models (boxes, or a style group with a seed and size) baked per rotation and heading, depth-tested; the rover is one.
   - **Controllers:** the app forwards input, or the controller listens on targets it's given; `roverController()` is the first, with the viewer's keys.
   - **Queries:** `heightAt`, `surfaceAt`, `roadAt` (class, width, lanes, one-way, divided), `pick` (screen to cell), lon/lat ↔ cell, `elevationAt`.
@@ -552,7 +552,7 @@ The point is more room for visual interest; both halves are wanted.
 - **Later:** traffic's sprites as entities; more screen passes; `pick` against buildings; edits; the export CLI; npm packaging; level switching without a reload.
 
 ### D-070: The example game drives and flies on the public engine API, at a paced speed (accepted, M4)
-- **Why:** M4's gameplay is the engine's first real client (library.md §5): a car, a plane and the move between scale levels, built with nothing the engine doesn't publish. `apps/game` (`@pixelworld/game`) imports only `@pixelworld/engine`, `@pixelworld/sim` and the style packs.
+- **Why:** M4's gameplay is the engine's first real client (library.md §5): a car, a plane and the move between scale levels, built with nothing the engine doesn't publish. `apps/game` (`@pixelworlds/game`) imports only `@pixelworlds/engine`, `@pixelworlds/sim` and the style packs.
 - **Engine additions** (additive, library.md §7.6, §7.9):
   - `query.objectsAt(x, y)`: the placed objects standing at a point, with group, landmark id, bounds, base and an estimated drawn top; `query.landmarks()`: one entry per registry id.
   - `createWorldView({ replace })`: a new view on the same canvas draws nothing until its first frame is complete, then destroys the old one in the same animation frame. A take-off or a landing never reloads the page or shows a half-baked world: the old level stays on screen while the new one bakes.
@@ -580,8 +580,8 @@ The point is more room for visual interest; both halves are wanted.
 - **Known limits:** the car doesn't join traffic's routes or obey junctions, and traffic doesn't yield to it; behind slow traffic it bumps until it steers round. The scripted run's autopilot doesn't overtake, so it drives through traffic (`collideTraffic` off). The autopilot cuts corners on the stairs of octilinear roads. Runways aren't in the data, so a take-off needs a straight road. The flying levels have trunk and motorway roads only, so landings are on those.
 
 ### D-071: Generator plugins, and San Francisco's generators as the city pack's browser half (accepted, M4)
-- **Why:** San Francisco's facades, towers and Chinatown were built into `@pixelworld/generators`, so every page carried them and another city's building types meant editing core. As a library (library.md, D4), a city's generators must come as a package, as its facts already do (D-068).
-- **Registry** (`@pixelworld/generators`, `registry.ts`): `registerGenerators(record, { source, replace })`, `hasGenerator`, `getGenerator`, `listGenerators`, `unregisterGenerators`. It starts with the built-ins (`builtins.ts`), read on first use so that importing the package does no work. Registering a name again from the same source replaces it; another source's name, a built-in's included, is an error unless `replace`.
+- **Why:** San Francisco's facades, towers and Chinatown were built into `@pixelworlds/generators`, so every page carried them and another city's building types meant editing core. As a library (library.md, D4), a city's generators must come as a package, as its facts already do (D-068).
+- **Registry** (`@pixelworlds/generators`, `registry.ts`): `registerGenerators(record, { source, replace })`, `hasGenerator`, `getGenerator`, `listGenerators`, `unregisterGenerators`. It starts with the built-ins (`builtins.ts`), read on first use so that importing the package does no work. Registering a name again from the same source replaces it; another source's name, a built-in's included, is an error unless `replace`.
 - **Missing generators:** a `MissingGeneratorError` names the generator and the group that asked for it, and for the plugins published from this repository (`KNOWN_PLUGIN_GENERATORS`) the plugin to load, as the pipeline's registry does for `datasf`.
 - **Plugins:** a plugin is `{ name, register(api) }`. Its module calls `definePlugin(plugin)`; a page passes a descriptor `{ name, url }` (the module's URL) to `createWorldView({ plugins })`, or a function given the plugins the style pack names.
   - **The bake worker** runs the generators, and functions can't be posted to it, so the plugin travels as a URL: `loadPlugins` before `init`, the worker imports each module, registers the plugin through an API bound to its own registry, and answers `pluginsLoaded`. Messages that arrive meanwhile wait. A plugin that fails to load fails `createWorldView`.

@@ -1,5 +1,5 @@
 {
-  "name": "@pixelworld/world-format",
+  "name": "@pixelworlds/world-format",
   "license": "MIT OR Apache-2.0",
   "version": "0.0.0",
   "private": true,
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pixelworld/grid": "workspace:*"
+    "@pixelworlds/grid": "workspace:*"
   }
 }

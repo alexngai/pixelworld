@@ -1,5 +1,5 @@
-import type { ObjectHit, RoadInfo, SurfaceInfo } from "@pixelworld/engine";
-import type { NearbyVehicle, RouteNetwork } from "@pixelworld/sim";
+import type { ObjectHit, RoadInfo, SurfaceInfo } from "@pixelworlds/engine";
+import type { NearbyVehicle, RouteNetwork } from "@pixelworlds/sim";
 import { boxesOverlap, type CarBody, type CarWorld } from "./car";
 import { roadUnder, segmentDistance } from "./roads";
 import { OFFROAD_SPEED, ROAD_SPEED, ROAD_SPEED_DEFAULT, SURFACE_FACTOR, SURFACE_FACTOR_DEFAULT } from "./tuning";

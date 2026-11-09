@@ -1,5 +1,5 @@
 {
-  "name": "@pixelworld/runtime",
+  "name": "@pixelworlds/runtime",
   "license": "MIT OR Apache-2.0",
   "version": "0.0.0",
   "private": true,
@@ -8,10 +8,10 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pixelworld/grid": "workspace:*",
-    "@pixelworld/style": "workspace:*",
-    "@pixelworld/world-format": "workspace:*",
-    "@pixelworld/generators": "workspace:*",
-    "@pixelworld/bake": "workspace:*"
+    "@pixelworlds/grid": "workspace:*",
+    "@pixelworlds/style": "workspace:*",
+    "@pixelworlds/world-format": "workspace:*",
+    "@pixelworlds/generators": "workspace:*",
+    "@pixelworlds/bake": "workspace:*"
   }
 }

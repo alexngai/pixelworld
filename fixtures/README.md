@@ -39,7 +39,7 @@ cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
 # hero landmarks: re-bake (keeps and re-registers the paint-overs), then re-package without a rebuild
 (cd .. && node tools/hero-bake.mjs --world southwest)
 uv run pixelworld heroes ../worlds/southwest/region.yaml
-# or edit the warp interactively: http://localhost:5180 (pnpm --filter @pixelworld/editor dev)
+# or edit the warp interactively: http://localhost:5180 (pnpm --filter @pixelworlds/editor dev)
 uv run pixelworld serve ../worlds/southwest/region.yaml
 ```
 

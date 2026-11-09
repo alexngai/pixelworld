@@ -3,7 +3,7 @@
  * how it is summarised, and the copyable text form. Pure, so it is tested
  * without a browser (apps/web/test/benchReport.test.ts).
  */
-import type { TileBake } from "@pixelworld/engine";
+import type { TileBake } from "@pixelworlds/engine";
 
 /** One baked tile's timings, as the engine records them (`recordBakes`). */
 export type { TileBake };

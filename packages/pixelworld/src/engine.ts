@@ -4,4 +4,4 @@
  *
  * @module pixelworld/engine
  */
-export * from "@pixelworld/engine";
+export * from "@pixelworlds/engine";

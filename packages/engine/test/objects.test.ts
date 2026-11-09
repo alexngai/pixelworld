@@ -1,4 +1,4 @@
-import type { ObjectInstance } from "@pixelworld/generators";
+import type { ObjectInstance } from "@pixelworlds/generators";
 import { describe, expect, it } from "vitest";
 import { ObjectIndex, inPolygon } from "../src/objects";
 import { createQuery, type QuerySource } from "../src/queries";

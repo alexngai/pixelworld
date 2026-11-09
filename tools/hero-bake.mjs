@@ -262,7 +262,7 @@ function heroIds() {
 async function devServer(url) {
   if (url) return { url, stop: () => {} };
   const port = 5197;
-  const child = spawn("pnpm", ["--filter", "@pixelworld/web", "exec", "vite", "--port", String(port), "--strictPort"], {
+  const child = spawn("pnpm", ["--filter", "@pixelworlds/web", "exec", "vite", "--port", String(port), "--strictPort"], {
     cwd: REPO,
     stdio: "ignore",
     detached: true,

@@ -18,7 +18,7 @@ import {
  * Plugins (D-071): what a realm (the main thread, a bake worker) does to
  * register a plugin it is given by URL. The importers here stand in for
  * `import(url)`: a bundled worker module may lose its exports, or carry its
- * own copy of @pixelworld/generators.
+ * own copy of @pixelworlds/generators.
  */
 
 const one: Generator = () => {
@@ -77,7 +77,7 @@ describe("plugins", () => {
   });
 
   it("registers into the loader's registry, not the plugin's own copy of the package", async () => {
-    // a plugin bundled with its own @pixelworld/generators: a second instance of the package
+    // a plugin bundled with its own @pixelworlds/generators: a second instance of the package
     vi.resetModules();
     const copy = (await import("../src/index")) as typeof import("../src/index");
     expect(copy.definePlugin).not.toBe(definePlugin);
@@ -113,7 +113,7 @@ describe("plugins", () => {
   it("reports a plugin whose registration clashes, and can register it later", async () => {
     const clash = samplePlugin("plugin-f", { building: one });
     await expect(registerPlugin(clash)).rejects.toThrow(
-      /plugin plugin-f failed to register: generator 'building' is already registered by @pixelworld\/generators/,
+      /plugin plugin-f failed to register: generator 'building' is already registered by @pixelworlds\/generators/,
     );
     expect(getGenerator("building")).not.toBe(one);
     const fixed = samplePlugin("plugin-f", { plugin_fBuilding: one });

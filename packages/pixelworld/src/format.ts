@@ -4,4 +4,4 @@
  *
  * @module pixelworld/format
  */
-export * from "@pixelworld/world-format";
+export * from "@pixelworlds/world-format";

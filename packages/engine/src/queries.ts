@@ -8,9 +8,9 @@ import {
   unprojectAtHeight,
   type Rotation,
   type TerrainGrid,
-} from "@pixelworld/grid";
-import type { StylePack } from "@pixelworld/style";
-import type { WorldManifest } from "@pixelworld/world-format";
+} from "@pixelworlds/grid";
+import type { StylePack } from "@pixelworlds/style";
+import type { WorldManifest } from "@pixelworlds/world-format";
 import type { LandmarkInfo, ObjectHit, PickResult, RoadInfo, SurfaceInfo, WorldQuery } from "./types";
 
 /** The loaded terrain the queries read (a ChunkStore). */

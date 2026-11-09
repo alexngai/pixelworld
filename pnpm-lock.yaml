@@ -43,88 +43,88 @@ importers:
 
   apps/game:
     dependencies:
-      '@pixelworld/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@pixelworld/sim':
-        specifier: workspace:*
-        version: link:../../packages/sim
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworlds/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
 
   apps/web:
     dependencies:
-      '@pixelworld/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@pixelworld/sim':
-        specifier: workspace:*
-        version: link:../../packages/sim
-      '@pixelworld/world-format':
-        specifier: workspace:*
-        version: link:../../packages/world-format
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworlds/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+      '@pixelworlds/world-format':
+        specifier: workspace:*
+        version: link:../../packages/world-format
 
   examples/minimal-viewer:
     dependencies:
-      '@pixelworld/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@pixelworld/sim':
-        specifier: workspace:*
-        version: link:../../packages/sim
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworlds/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
 
   packages/bake:
     dependencies:
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworld/style':
+      '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
 
   packages/city-sf:
     dependencies:
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
 
   packages/engine:
     dependencies:
-      '@pixelworld/bake':
+      '@pixelworlds/bake':
         specifier: workspace:*
         version: link:../bake
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworld/runtime':
+      '@pixelworlds/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@pixelworld/style':
+      '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
-      '@pixelworld/world-format':
+      '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../world-format
 
   packages/generators:
     dependencies:
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworld/style':
+      '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
 
@@ -132,22 +132,22 @@ importers:
 
   packages/pixelworld:
     devDependencies:
-      '@pixelworld/engine':
+      '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../engine
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworld/sim':
+      '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../sim
-      '@pixelworld/style':
+      '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
-      '@pixelworld/world-format':
+      '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../world-format
       '@size-limit/preset-small-lib':
@@ -165,31 +165,31 @@ importers:
 
   packages/runtime:
     dependencies:
-      '@pixelworld/bake':
+      '@pixelworlds/bake':
         specifier: workspace:*
         version: link:../bake
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworld/style':
+      '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
-      '@pixelworld/world-format':
+      '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../world-format
 
   packages/sim:
     dependencies:
-      '@pixelworld/engine':
+      '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../engine
-      '@pixelworld/generators':
+      '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../generators
-      '@pixelworld/world-format':
+      '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../world-format
 
@@ -197,7 +197,7 @@ importers:
 
   packages/world-format:
     dependencies:
-      '@pixelworld/grid':
+      '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
 

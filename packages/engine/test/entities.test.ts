@@ -1,6 +1,6 @@
-import type { Box } from "@pixelworld/generators";
-import { project, type Rotation } from "@pixelworld/grid";
-import { Camera, type GpuImage } from "@pixelworld/runtime";
+import type { Box } from "@pixelworlds/generators";
+import { project, type Rotation } from "@pixelworlds/grid";
+import { Camera, type GpuImage } from "@pixelworlds/runtime";
 import { describe, expect, it } from "vitest";
 import { ViewCameraImpl } from "../src/camera";
 import { Entities, headingIndex, turnBoxes } from "../src/entities";

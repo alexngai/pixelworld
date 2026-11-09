@@ -1,7 +1,7 @@
-import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworld/grid";
-import type { BakedImage, StyleParams } from "@pixelworld/bake";
+import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworlds/grid";
+import type { BakedImage, StyleParams } from "@pixelworlds/bake";
 import type { HeroPaint } from "./heroPaint";
-import type { AssetCatalog, Box, ObjectInstance, ScatterRules } from "@pixelworld/generators";
+import type { AssetCatalog, Box, ObjectInstance, ScatterRules } from "@pixelworlds/generators";
 
 /** Messages between the main thread and the bake worker. */
 

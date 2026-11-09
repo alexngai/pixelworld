@@ -1,4 +1,4 @@
-import type { RouteNetwork } from "@pixelworld/sim";
+import type { RouteNetwork } from "@pixelworlds/sim";
 import type { Point } from "./roads";
 
 /**

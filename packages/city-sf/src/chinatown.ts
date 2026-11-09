@@ -1,4 +1,4 @@
-import { VoxelModel, type Generator } from "@pixelworld/generators";
+import { VoxelModel, type Generator } from "@pixelworlds/generators";
 
 /**
  * Chinatown's street pieces (M3.5): a ceremonial gate over a street and red

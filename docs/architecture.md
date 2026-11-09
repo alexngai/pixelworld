@@ -192,7 +192,7 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 8. **place:** emit instances for everything gameplay cares about: buildings, trees, props with collision, and landmark stamps (rigid, own scale). Purely decorative scatter (grass tufts, pebbles) is left to the client.
 9. **export:** write the chunked world package plus a manifest.
 
-The editor drives the same stages through a local pipeline server (`uv run pixelworld serve worlds/<id>/region.yaml`, plus `pnpm --filter @pixelworld/editor dev`). A pin or focus edit re-solves the warp and shows a warped preview within seconds, and "Build world" re-exports the whole package (about 1.5 min for the Southwest).
+The editor drives the same stages through a local pipeline server (`uv run pixelworld serve worlds/<id>/region.yaml`, plus `pnpm --filter @pixelworlds/editor dev`). A pin or focus edit re-solves the warp and shows a warped preview within seconds, and "Build world" re-exports the whole package (about 1.5 min for the Southwest).
 
 ## 6. Elastic map (warp)
 
@@ -284,9 +284,9 @@ Bakes run in two places with the same code:
 
 ### 8.3 The engine (the world view as a library)
 
-The client's runtime is a library, `@pixelworld/engine` (library.md §7): `createWorldView({ canvas, worldUrl, style, layers, controller })` streams a world package around the camera, bakes and caches its tiles and composites them as above, in a frame loop that redraws only when something changed. It owns no input handling or UI. Around it:
+The client's runtime is a library, `@pixelworlds/engine` (library.md §7): `createWorldView({ canvas, worldUrl, style, layers, controller })` streams a world package around the camera, bakes and caches its tiles and composites them as above, in a frame loop that redraws only when something changed. It owns no input handling or UI. Around it:
 
-- **Runtime layers** draw over the baked world without being baked into it: sprites each frame, an optional screen pass, sublayers, and their whole state as JSON. Traffic (`@pixelworld/sim`) and fog (the engine) are layers.
+- **Runtime layers** draw over the baked world without being baked into it: sprites each frame, an optional screen pass, sublayers, and their whole state as JSON. Traffic (`@pixelworlds/sim`) and fog (the engine) are layers.
 - **Entities** are depth-tested sprites placed in cells and heights, baked per rotation and heading from boxes or a style group and seed. The rover is one.
 - **Controllers** turn input into entity and camera movement, using **queries** (the drawn ground, surfaces, roads, the cell under a screen point, lon/lat). The rover and free camera are the first, `roverController`.
 
