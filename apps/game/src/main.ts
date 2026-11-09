@@ -49,7 +49,7 @@ export interface GameDebug {
    * Put the vehicle at a place (cells) facing `heading`: the car stopped on the
    * ground (or a deck near `h`), the plane at height `h` (default 2 steps up), level, at cruise.
    */
-  place(x: number, y: number, heading?: number, h?: number): void;
+  place(x: number, y: number, heading?: number, h?: number): Promise<void>;
   /** A building near a place whose footprint isn't over a road: its anchor and bounds. */
   findBuilding(x: number, y: number, radius: number): { x: number; y: number; bounds: [number, number, number, number]; group: string } | null;
   heightAt(x: number, y: number): number | null;
@@ -130,7 +130,8 @@ async function main() {
       if (!road || !game.approach(road.x, road.y)) return null;
       return { x: road.x, y: road.y };
     },
-    place: (x, y, heading, h) => {
+    place: async (x, y, heading, h) => {
+      await game.view.query.ensure(x - 4, y - 4, x + 4, y + 4); // the terrain there, for its heights
       if (game.mode === "car") game.car?.place(x, y, heading, h);
       else game.plane?.place(x, y, heading, h);
     },
