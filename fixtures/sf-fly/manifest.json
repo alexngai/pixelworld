@@ -71,7 +71,7 @@
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc.gz",
-      "sha256": "6fa46f5f9b5e176220e2b92bc7a7d404a97094dff403369ab59c50ce8344128a",
+      "sha256": "90538ffa4afd1bfc8560e093d155c6a04075cb5d737a6698f1998d0d91792593",
       "heightRange": [
         0,
         12
@@ -81,7 +81,7 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "5d495c76a956cfea0c0833d18804c0508ce0a308c928d086b56544383aca9b22",
+      "sha256": "7fa2b785c575ac41686673a6325062240ef9cc02792b1554bd3a1c3b5cee9fba",
       "heightRange": [
         0,
         6
@@ -111,7 +111,7 @@
       "x": 0,
       "y": 2,
       "path": "chunks/0_2.pxwc.gz",
-      "sha256": "2407417ecfed6df70a1bb7ce725301d3bd6f8cd91677235fba9b9b10e56a1178",
+      "sha256": "54fa9acf48ee2b7a91c1cbc5c62b9f81e1c805cdadc5650c01bb059e8cb76224",
       "heightRange": [
         0,
         6
@@ -121,7 +121,7 @@
       "x": 1,
       "y": 2,
       "path": "chunks/1_2.pxwc.gz",
-      "sha256": "92a11e8288a8c94d59de2176f51d0dbb47cf78ca26eef95f8086c3ace9c580a2",
+      "sha256": "c231d301bfcbcca96cc1e4c888db6024976960e238b1b8f0ca488625b0e22f49",
       "heightRange": [
         0,
         14
@@ -131,7 +131,7 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "63fae1292f2466478bcd38549995d992e34b4e826b11a8ce9784284092a51bc0",
+      "sha256": "29538bacf52fa2cf3e5dc1a26602a5c1a1864e7f029ac9398626885c54cdd76f",
       "heightRange": [
         0,
         7
@@ -171,7 +171,7 @@
       "x": 1,
       "y": 3,
       "path": "chunks/1_3.pxwc.gz",
-      "sha256": "c4c3851c929fde5514dbdc3ffb3ee273956f7ac30498d1edc181a1e523e9219a",
+      "sha256": "23e5498121b065860d72273253c7211995a3f1137a9f883954d343e4ced39e2e",
       "heightRange": [
         0,
         18
@@ -181,7 +181,7 @@
       "x": 2,
       "y": 3,
       "path": "chunks/2_3.pxwc.gz",
-      "sha256": "a413f99de933f981975d23113b5545cbe5433c81139619e42477c59bf5686020",
+      "sha256": "17f5c6404d57fa8b75c876a8de79d4e658c41e5d5445cefab4b445f34b7e6a94",
       "heightRange": [
         0,
         8
@@ -282,7 +282,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "ea0fddaf1647553f",
+      "region": "ccfaef7088bb238e",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -331,7 +331,7 @@
     ],
     "sha256": "38a58f9555770f5a9a080ba0519c76a7a85927915ce001be5b16f948795280ba"
   },
-  "packageHash": "83020b8077a3feaba099fb74a63112f5c47ad39c82f7cd416f27d2e56642b457",
+  "packageHash": "e6b9b3a720a1b1ee33e2d57089a53b96246cd08271ac07d52f84eb9b69f9daac",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "fde00762d1e508a2124c49972dcb1943b4e88b24a29b10eaf4ca5e1b0f2b3ec4",

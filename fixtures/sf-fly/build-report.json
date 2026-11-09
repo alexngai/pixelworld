@@ -1,5 +1,5 @@
 {
-  "packageHash": "83020b8077a3feaba099fb74a63112f5c47ad39c82f7cd416f27d2e56642b457",
+  "packageHash": "e6b9b3a720a1b1ee33e2d57089a53b96246cd08271ac07d52f84eb9b69f9daac",
   "cells": [
     274,
     234
@@ -42,8 +42,8 @@
     "ok": true
   },
   "rails": {
-    "street": 544,
-    "cable": 109,
+    "street": 465,
+    "cable": 85,
     "train": 673
   },
   "surfaces": {
