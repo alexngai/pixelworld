@@ -30,14 +30,22 @@ def _merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
 def load_spec(path: Path) -> dict[str, Any]:
     """Read a region spec; `extends: other.yaml` merges this file over another
     (mappings merge key by key, anything else replaces; null removes a section)."""
-    raw = yaml.safe_load(path.read_text())
+    return resolve_spec(yaml.safe_load(Path(path).read_text()), Path(path).parent)
+
+
+def resolve_spec(raw: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+    """A spec's references to other files (`extends:`, `warp: warp.yaml`) read
+    from `base_dir`; returns a new dict (`raw` is left as it is)."""
+    if not isinstance(raw, dict):
+        raise RegionError(f"a region spec is a mapping, not {type(raw).__name__}")
+    raw = dict(raw)
     # `warp: warp.yaml` keeps the editor-managed warp (focus areas, pins) in its own file
     if isinstance(raw.get("warp"), str):
-        raw["warp"] = yaml.safe_load((path.parent / raw["warp"]).read_text())
+        raw["warp"] = yaml.safe_load((Path(base_dir) / raw["warp"]).read_text())
     parent = raw.pop("extends", None)
     if parent is None:
         return raw
-    return _merge(load_spec(path.parent / parent), raw)
+    return _merge(load_spec(Path(base_dir) / parent), raw)
 
 
 @dataclass(frozen=True)
