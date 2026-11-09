@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const PORT = 5199;
+// PW_PORT: run beside another checkout's dev server
+const PORT = Number(process.env.PW_PORT ?? 5199);
 export const EDITOR_PORT = 5198;
 
 /**
