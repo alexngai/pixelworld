@@ -37,6 +37,8 @@ pnpm test:e2e       # Playwright golden images + behaviour tests (headless Chrom
 cd pipeline && uv run ruff check . && uv run pytest
 ```
 
+To measure tile bakes, frames and memory on your own GPU, run `pnpm bench` (it opens the benchmark page in your browser); see [Benchmarks](docs/architecture.md#benchmarks).
+
 To rebuild the Southwest from its region spec (downloads are cached in `pipeline/.cache/`; about 20 s once cached):
 
 ```sh
