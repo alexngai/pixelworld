@@ -562,6 +562,35 @@
       "generator": "streetcar",
       "ramps": { "upper.a": "concrete", "lower.a": "chinatown-red", "roof": "bridge-grey", "window": "glass", "frame": "asphalt" },
       "params": { "length": 30, "width": 4, "joints": 1, "turn": 1 }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {"paint.a": "tower-white", "paint.b": "paint-white", "paint.c": "bridge-grey", "paint.d": "bridge-grey", "paint.e": "roof-slate", "paint.f": "asphalt", "paint.g": "paint-slate", "paint.h": "chinatown-red", "paint.i": "paint-sky", "paint.j": "concrete", "paint.k": "tower-white", "paint.l": "jade", "taxi": "tower-gold", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete", "sign": "lit"}
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {"body.a": "paint-white", "band.a": "chinatown-red", "body.b": "tower-white", "band.b": "bridge-orange", "body.c": "bridge-grey", "band.c": "marker", "window": "lit", "door": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "bridge-grey", "sign": "lit"}
+    },
+    "vehicle.cablecar": {
+      "generator": "cableTram",
+      "ramps": {"body.a": "chinatown-red", "body.b": "brick", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "lit", "tyre": "asphalt", "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand"}
+    },
+    "vehicle.streetcar": {
+      "generator": "tram",
+      "ramps": {"upper.a": "paint-cream", "lower.a": "jade", "upper.b": "paint-cream", "lower.b": "chinatown-red", "upper.c": "paint-butter", "lower.c": "bridge-orange", "upper.d": "paint-cream", "lower.d": "paint-slate", "roof": "bridge-grey", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"}
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "bridge-grey", "upper.b": "concrete", "lower.b": "chinatown-red", "roof": "bridge-grey", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"},
+      "params": {"pantograph": 1, "joints": 1}
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {"loco.a": "bridge-grey", "stripe.a": "chinatown-red", "loco.b": "bridge-orange", "stripe.b": "asphalt", "loco.c": "asphalt", "stripe.c": "tower-gold", "wagon.a": "brick", "wagon.b": "terracotta", "wagon.c": "bridge-grey", "wagon.d": "concrete", "wagon.e": "roof-slate", "container.a": "chinatown-red", "container.b": "paint-sky", "container.c": "jade", "container.d": "tower-gold", "container.e": "tower-white", "container.f": "paint-slate", "coach": "bridge-grey", "band": "chinatown-red", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "asphalt"}
+    },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {"hull.a": "paint-slate", "band.a": "tower-white", "hull.b": "jade", "band.b": "paint-white", "hull.c": "asphalt", "band.c": "chinatown-red", "cabin": "tower-white", "window": "lit", "roof": "concrete", "trim": "bridge-grey"}
     }
   },
   "night": {

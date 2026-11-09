@@ -331,3 +331,13 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
   | the outer avenues: the Sunset, the Richmond, Golden Gate Park's west end, thinning toward Twin Peaks | 0.45 | 2,500 m |
 
   Walking levels get none.
+
+## 17. Traffic vehicles (D-064)
+
+![Vehicle models: car body types, buses, cable cars, streetcars, light rail, a freight train and a passenger train, ferries at driving and walking sizes](images/vehicle-models.png)
+
+- **Same voxels as buildings:** 2×1 px tops and 1 px tall. A car is about 9 × 4 × 5 voxels on the driving and walking levels, a bus 14 × 5 × 11, a ferry 26 × 10 × 11 driving and 64 × 19 × 20 walking.
+- **Read by shape first:** a car's body type shows in its hood, cabin and trunk lengths; a bus's in its long window band and roof units; a cable car's in its open ends and posts; a train's in its locomotive and the mix of wagons behind it.
+- **Paint:** cars mostly neutral (white, silver, grey, black) with a few colours, listed in the pack as `paint.*` (repeat a ramp to make it commoner); transit in paired liveries (`body`/`band`, `upper`/`lower`, `loco`/`stripe`, `hull`/`band`).
+- **Lights:** headlights in `lit-cool` and transit windows in `lit` glow at night; tail lights are `marker` red.
+- **No lettering:** signs, destination boards and the taxi's roof sign are blank.

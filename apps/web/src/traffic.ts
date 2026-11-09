@@ -1,3 +1,4 @@
+import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, type VoxelModel } from "@pixelworld/generators";
 import { project, type Rotation } from "@pixelworld/grid";
 import type { BakeService, Compositor, GpuImage, SpriteInstance } from "@pixelworld/runtime";
 import {
@@ -6,6 +7,7 @@ import {
   TrafficSim,
   parseRoutes,
   vehicleBoxes,
+  vehicleVoxels,
   type Pose,
   type RampLookup,
   type VehicleKind,
@@ -21,6 +23,10 @@ import { maybeGunzip, type WorldManifest } from "@pixelworld/world-format";
  * seen in rotation r is the model turned by θ + r·90° seen in rotation 0
  * (rotateXY), and lighting is view-relative, so 16 headings in one rotation
  * serve all four.
+ *
+ * A vehicle is the style pack's `vehicle.<kind>` asset where the pack has one:
+ * a procedural voxel model (D-064) sized for the level, turned into boxes for
+ * the sprite bake. Packs without vehicle assets get generic box models.
  */
 
 export const HEADINGS = 16;
@@ -59,6 +65,19 @@ export interface TrafficOptions {
   renderScale: number;
   ramp: RampLookup;
   density?: number;
+  /** The style pack's assets and palette ramp ids, for its `vehicle.*` models. */
+  assets?: AssetCatalog;
+  rampIds?: Map<string, number>;
+}
+
+/** Object voxel size in render units (objectVoxelScale at render scale 1, D-010). */
+const VOXEL = { h: 1 / 16, v: 1 / 8 };
+
+/** A small stable hash for model seeds. */
+function seedOf(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 /** A vehicle drawn this frame, for tests: screen position and depth. */
@@ -75,6 +94,7 @@ export class TrafficLayer {
   /** Sublayers drawn; the simulation runs them all, so toggling one changes nothing else. */
   readonly layers = new Set<TrafficSublayer>(TRAFFIC_SUBLAYERS);
   private readonly sprites = new Map<string, GpuImage | null>();
+  private readonly models = new Map<string, VoxelModel>();
   private pending = 0;
   /** Milliseconds spent this frame: simulation, and turning poses into sprites. */
   simMs = 0;
@@ -122,21 +142,45 @@ export class TrafficLayer {
     for (let i = 0; i < n; i++) this.sim.tick();
   }
 
+  /** A consist's cars as models: the head, then up to four kinds of wagon. */
+  private static partKey(part: number): number {
+    return part === 0 ? 0 : 1 + ((part - 1) % 4);
+  }
+
   private key(p: Pose, heading: number): string {
-    const part = p.part === 0 ? 0 : 1 + (p.part % 2);
-    return `${p.kind}/${p.variant}/${part}/${heading}`;
+    return `${p.kind}/${p.variant}/${TrafficLayer.partKey(p.part)}/${heading}`;
+  }
+
+  /** The boxes of one vehicle model at one heading (render units). */
+  private boxes(kind: VehicleKind, variant: number, part: number, heading: number): Box[] {
+    const rs = this.opts.renderScale;
+    const angle = (heading * 2 * Math.PI) / HEADINGS;
+    const { assets, rampIds } = this.opts;
+    const group = `vehicle.${kind}`;
+    if (assets && rampIds && resolveAsset(assets, group)) {
+      const id = `${kind}/${variant}/${part}`;
+      let model = this.models.get(id);
+      if (!model) {
+        model = generateModel(assets, rampIds, group, {
+          seed: seedOf(id),
+          size: vehicleVoxels(kind, this.sim.scale, rs),
+          part,
+          variant,
+        });
+        this.models.set(id, model);
+      }
+      return modelBoxes(model, VOXEL, angle);
+    }
+    return vehicleBoxes(kind, variant, part, angle, this.sim.scale, this.opts.ramp).map((b) =>
+      rs === 1 ? b : { ...b, x0: b.x0 * rs, x1: b.x1 * rs, y0: b.y0 * rs, y1: b.y1 * rs, z0: b.z0 * rs, z1: b.z1 * rs },
+    );
   }
 
   private request(key: string, kind: VehicleKind, variant: number, part: number, heading: number): void {
     if (this.sprites.has(key)) return;
     this.sprites.set(key, null);
     this.pending++;
-    const rs = this.opts.renderScale;
-    const angle = (heading * 2 * Math.PI) / HEADINGS;
-    const boxes = vehicleBoxes(kind, variant, part, angle, this.sim.scale, this.opts.ramp).map((b) =>
-      rs === 1 ? b : { ...b, x0: b.x0 * rs, x1: b.x1 * rs, y0: b.y0 * rs, y1: b.y1 * rs, z0: b.z0 * rs, z1: b.z1 * rs },
-    );
-    void this.service.bakeSprite(0, boxes).then((img) => {
+    void this.service.bakeSprite(0, this.boxes(kind, variant, part, heading)).then((img) => {
       this.pending--;
       if (img) this.sprites.set(key, this.compositor.upload(img));
       this.onSprite();
@@ -157,7 +201,7 @@ export class TrafficLayer {
       const k = Math.round((p.heading / (2 * Math.PI)) * HEADINGS);
       const heading = (((k + (HEADINGS / 4) * rotation) % HEADINGS) + HEADINGS) % HEADINGS;
       const key = this.key(p, heading);
-      this.request(key, p.kind, p.variant, p.part, heading);
+      this.request(key, p.kind, p.variant, TrafficLayer.partKey(p.part), heading);
       const sprite = this.sprites.get(key);
       const s = project(p.x * rs, p.y * rs, (p.h + LIFT) * rs, rotation);
       this.drawn.push({ ...p, sx: s.sx, sy: s.sy, depth: s.depth });

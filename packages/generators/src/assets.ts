@@ -4,6 +4,7 @@ import { FACADE_GENERATORS } from "./facades";
 import { LANDMARK_KIT } from "./landmarkKit";
 import { TOWER_GENERATORS } from "./towers";
 import { TREE_GENERATORS } from "./trees";
+import { VEHICLE_MODEL_GENERATORS } from "./vehicleModels";
 import { VEHICLE_GENERATORS } from "./vehicles";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
 
@@ -110,6 +111,12 @@ export interface GenContext {
    * and the voxel size in cells; for a piece of a long landmark, the whole line.
    */
   frame?: { x0: number; y0: number; voxel: number; line?: { a: [number, number]; b: [number, number]; half: number } };
+  /** Target size in voxels (traffic vehicles, D-064): along, across, up. */
+  size?: { length: number; width: number; height: number };
+  /** Which car of a consist (traffic vehicles): 0 the head, then its wagons. */
+  part?: number;
+  /** The vehicle's variant (traffic vehicles), as the simulation picked it. */
+  variant?: number;
 }
 
 export type Generator = (ctx: GenContext) => VoxelModel;
@@ -666,6 +673,7 @@ Object.assign(
   TOWER_GENERATORS,
   TREE_GENERATORS,
   VEHICLE_GENERATORS,
+  VEHICLE_MODEL_GENERATORS,
   CHINATOWN_GENERATORS,
 );
 
@@ -683,6 +691,9 @@ export function generateModel(
     heightVox?: number;
     hints?: GenContext["hints"];
     frame?: GenContext["frame"];
+    size?: GenContext["size"];
+    part?: number;
+    variant?: number;
   },
 ): VoxelModel {
   const spec = resolveAsset(catalog, group);
@@ -694,6 +705,9 @@ export function generateModel(
   ctx.heightVox = opts.heightVox;
   ctx.hints = opts.hints;
   ctx.frame = opts.frame;
+  ctx.size = opts.size;
+  ctx.part = opts.part;
+  ctx.variant = opts.variant;
   return gen(ctx);
 }
 

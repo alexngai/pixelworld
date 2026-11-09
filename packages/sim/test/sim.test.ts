@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, roadSpeed, vehicleBoxes, type RoutesFile } from "../src";
+import { KINDS, RouteNetwork, TICK, TrafficSim, levelScale, parseRoutes, roadSpeed, vehicleBoxes, vehicleVoxels, type RoutesFile } from "../src";
 
 /**
  * A small town: a 5×5 grid of streets 10 cells apart (primary along y = 20,
@@ -236,5 +236,23 @@ describe("traffic simulation", () => {
     // every kind scales together: a bus is longer than a car
     const len = (k: keyof typeof KINDS) => Math.max(...vehicleBoxes(k, 0, 0, 0, scale, () => 1).map((b) => b.x1));
     expect(len("bus")).toBeGreaterThan(len("car"));
+  });
+});
+
+describe("vehicle voxel sizes (D-064)", () => {
+  it("keep a car legible, buses as wide as cars, and ferries in proportion", () => {
+    const drive = levelScale(25, "drive", { heightStretch: 1.5 });
+    const fly = levelScale(100, "fly", { heightStretch: 2, maxScale: 4 });
+    const car = vehicleVoxels("car", drive);
+    const bus = vehicleVoxels("bus", drive);
+    const ferry = vehicleVoxels("ferry", drive);
+    expect(car).toEqual({ length: 9, width: 4, height: 5 });
+    expect(bus.length).toBeGreaterThan(car.length);
+    expect(bus.width).toBeGreaterThanOrEqual(car.width);
+    expect(bus.height).toBeGreaterThan(car.height);
+    expect(ferry.length).toBeGreaterThan(2 * ferry.width);
+    // a flying level draws them small; a render scale draws them in more voxels
+    expect(vehicleVoxels("car", fly).length).toBeLessThan(car.length);
+    expect(vehicleVoxels("car", drive, 2).length).toBe(18);
   });
 });

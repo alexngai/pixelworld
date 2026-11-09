@@ -245,6 +245,35 @@
     "landmark.dam.intake": {
       "generator": "intakeTower",
       "ramps": { "structure": "concrete", "detail": "limestone", "crest": "roof-flat" }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {"paint.a": "tower-white", "paint.b": "tower-white", "paint.c": "concrete", "paint.d": "iron", "paint.e": "basalt", "paint.f": "asphalt", "paint.g": "marker", "paint.h": "stucco", "paint.i": "ochre", "paint.j": "roof-tile", "paint.k": "concrete", "paint.l": "limestone", "taxi": "tower-gold", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete", "sign": "lit"}
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {"body.a": "tower-white", "band.a": "marker", "body.b": "concrete", "band.b": "neon-cyan", "body.c": "tower-gold", "band.c": "asphalt", "window": "lit", "door": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "iron", "sign": "lit"}
+    },
+    "vehicle.cablecar": {
+      "generator": "cableTram",
+      "ramps": {"body.a": "marker", "trim": "stucco", "accent": "tower-gold", "roof": "roof-flat", "wood": "bark", "window": "lit", "tyre": "asphalt"}
+    },
+    "vehicle.streetcar": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "marker", "upper.b": "stucco", "lower.b": "ochre", "roof": "concrete", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"}
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "iron", "roof": "concrete", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"},
+      "params": {"pantograph": 1, "joints": 1}
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {"loco.a": "ochre", "stripe.a": "marker", "loco.b": "iron", "stripe.b": "tower-gold", "loco.c": "tower-white", "stripe.c": "marker", "wagon.a": "roof-tile", "wagon.b": "ochre", "wagon.c": "iron", "wagon.d": "concrete", "wagon.e": "basalt", "container.a": "marker", "container.b": "neon-cyan", "container.c": "ochre", "container.d": "tower-white", "container.e": "iron", "container.f": "tower-gold", "coach": "concrete", "band": "marker", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "iron"}
+    },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {"hull.a": "iron", "band.a": "tower-white", "hull.b": "tower-white", "band.b": "marker", "cabin": "tower-white", "window": "lit", "roof": "concrete", "trim": "iron"}
     }
   },
   "night": {

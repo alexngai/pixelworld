@@ -31,13 +31,13 @@ export interface KindSpec {
 }
 
 export const KINDS: Record<VehicleKind, KindSpec> = {
-  car: { length: 4.6, width: 1.9, height: 1.5, cars: 1, gap: 0, speed: 12, density: 0.25, max: 150, variants: 8, dwell: 0.5, lane: 1.9 },
-  bus: { length: 12, width: 2.6, height: 3.1, cars: 1, gap: 0, speed: 10, density: 0.012, max: 12, variants: 2, dwell: 1, lane: 1.9 },
-  cablecar: { length: 8.5, width: 2.4, height: 3.2, cars: 1, gap: 0, speed: 4.2, density: 0.06, max: 10, variants: 2, dwell: 6, lane: 1.6 },
+  car: { length: 4.6, width: 1.9, height: 1.5, cars: 1, gap: 0, speed: 12, density: 0.25, max: 150, variants: 24, dwell: 0.5, lane: 1.9 },
+  bus: { length: 12, width: 2.6, height: 3.1, cars: 1, gap: 0, speed: 10, density: 0.012, max: 12, variants: 6, dwell: 1, lane: 1.9 },
+  cablecar: { length: 8.5, width: 2.4, height: 3.2, cars: 1, gap: 0, speed: 4.2, density: 0.06, max: 10, variants: 4, dwell: 6, lane: 1.6 },
   streetcar: { length: 15, width: 2.6, height: 3.3, cars: 1, gap: 0, speed: 8, density: 0.04, max: 8, variants: 4, dwell: 4, lane: 1.6 },
   lightrail: { length: 23, width: 2.7, height: 3.4, cars: 2, gap: 0.6, speed: 11, density: 0.02, max: 6, variants: 2, dwell: 4, lane: 1.8 },
-  train: { length: 20, width: 3, height: 4, cars: 5, gap: 1, speed: 18, density: 0.008, max: 3, variants: 2, dwell: 6, lane: 0 },
-  ferry: { length: 40, width: 10, height: 6, cars: 1, gap: 0, speed: 9, density: 0.02, max: 4, variants: 2, dwell: 8, lane: 0 },
+  train: { length: 20, width: 3, height: 4, cars: 5, gap: 1, speed: 18, density: 0.008, max: 3, variants: 4, dwell: 6, lane: 0 },
+  ferry: { length: 40, width: 10, height: 6, cars: 1, gap: 0, speed: 9, density: 0.02, max: 4, variants: 4, dwell: 8, lane: 0 },
 };
 
 /** Typical speeds (m/s) by road class. */

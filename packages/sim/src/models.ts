@@ -77,6 +77,32 @@ export function modelSize(kind: VehicleKind, scale: LevelScale): ModelSize {
   };
 }
 
+/** Object voxels per cell and per height step at render scale 1 (2×1 px tops, 1 px tall). */
+const VOXELS_PER_CELL = 16;
+const VOXELS_PER_STEP = 8;
+
+/**
+ * A vehicle's size in object voxels for its voxel model (D-064). Its length is
+ * the simulation's (`kindCells`: long kinds enlarged less than a car). Width
+ * and height are enlarged like a car's, but at most 1.6 times as much as the
+ * length, so a bus is as wide as a car and a ferry keeps its proportions.
+ */
+export function vehicleVoxels(
+  kind: VehicleKind,
+  scale: LevelScale,
+  renderScale = 1,
+): { length: number; width: number; height: number } {
+  const k = KINDS[kind];
+  const along = kindCells(scale, kind, k.length) / (k.length / scale.metersPerCell);
+  const across = Math.max(1, Math.min(scale.sizeScale, along * 1.6));
+  const cells = (m: number) => (m / scale.metersPerCell) * across;
+  return {
+    length: Math.max(2, Math.round(kindCells(scale, kind, k.length) * VOXELS_PER_CELL * renderScale)),
+    width: Math.max(1, Math.round(cells(k.width) * VOXELS_PER_CELL * renderScale)),
+    height: Math.max(2, Math.round((cells(k.height) / STEP_CELLS) * scale.heightStretch * VOXELS_PER_STEP * renderScale)),
+  };
+}
+
 /**
  * The boxes of one car of a vehicle: `part` 0 is a consist's head (a train's
  * locomotive), later parts its wagons.

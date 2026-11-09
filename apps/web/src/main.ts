@@ -428,7 +428,14 @@ async function main() {
         manifest,
         service,
         compositor,
-        { seed: num("trafficSeed", 1), renderScale: RS, ramp: rampLookup(palette.rampIds), density: num("trafficDensity", 1) },
+        {
+          seed: num("trafficSeed", 1),
+          renderScale: RS,
+          ramp: rampLookup(palette.rampIds),
+          density: num("trafficDensity", 1),
+          assets: style.assets,
+          rampIds: palette.rampIds,
+        },
         () => (dirty = true),
       )
     : null;

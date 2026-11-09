@@ -1,4 +1,5 @@
 import { DIRECT_RAMP_BASE, FACE_OBJECT, MeshBuilder, type MeshData } from "./mesh";
+import type { VoxelModel, VoxelScale } from "./voxel";
 
 /** Axis-aligned box in object-local grid space (cells, cells, steps). */
 export interface Box {
@@ -48,4 +49,49 @@ export function roverBoxes(bodyRamp: number, cabRamp: number): Box[] {
     { x0: -0.375, y0: -0.25, z0: 0, x1: 0.375, y1: 0.25, z1: 0.75, ramp: bodyRamp },
     { x0: -0.125, y0: -0.25, z0: 0.75, x1: 0.25, y1: 0.25, z1: 1.5, ramp: cabRamp },
   ];
+}
+
+/**
+ * A voxel model as boxes, for sprites baked from boxes (traffic vehicles,
+ * D-064): runs of one material along x merge, and equal runs in neighbouring
+ * rows merge across y. The model is centred on the origin and stands on z = 0;
+ * `rot` turns every box with it.
+ */
+export function modelBoxes(model: VoxelModel, voxel: VoxelScale, rot = 0): Box[] {
+  const out: Box[] = [];
+  const ox = (model.sx * voxel.h) / 2;
+  const oy = (model.sy * voxel.h) / 2;
+  for (let z = 0; z < model.sz; z++) {
+    let open = new Map<string, Box>();
+    for (let y = 0; y < model.sy; y++) {
+      const next = new Map<string, Box>();
+      for (let x = 0; x < model.sx; ) {
+        const m = model.get(x, y, z);
+        if (!m) {
+          x++;
+          continue;
+        }
+        let x1 = x + 1;
+        while (x1 < model.sx && model.get(x1, y, z) === m) x1++;
+        const key = `${x},${x1},${m}`;
+        const prev = open.get(key);
+        if (prev) prev.y1 = (y + 1) * voxel.h - oy;
+        const b = prev ?? {
+          x0: x * voxel.h - ox,
+          x1: x1 * voxel.h - ox,
+          y0: y * voxel.h - oy,
+          y1: (y + 1) * voxel.h - oy,
+          z0: z * voxel.v,
+          z1: (z + 1) * voxel.v,
+          ramp: model.materials[m]!,
+          rot,
+        };
+        if (!prev) out.push(b);
+        next.set(key, b);
+        x = x1;
+      }
+      open = next;
+    }
+  }
+  return out;
 }
