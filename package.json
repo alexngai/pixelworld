@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "bench": "pnpm --filter @pixelworld/web exec vite --open /bench.html",
     "bench:headless": "node tools/bench.mjs",
+    "example:minimal": "pnpm --filter @pixelworld/example-minimal-viewer dev",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

@@ -3,18 +3,10 @@
  * how it is summarised, and the copyable text form. Pure, so it is tested
  * without a browser (apps/web/test/benchReport.test.ts).
  */
+import type { TileBake } from "@pixelworld/engine";
 
-/** One baked tile's timings, as the bake service reports them. */
-export interface TileBake {
-  rotation: number;
-  tx: number;
-  ty: number;
-  /** Preparing the tile's geometry (micro-terrain fields, object meshes) in the bake worker. */
-  meshMs: number;
-  /** Drawing it on the GPU, waiting for the pixels (shadow map, AO, colour, depth). */
-  bakeMs: number;
-  vertices: number;
-}
+/** One baked tile's timings, as the engine records them (`recordBakes`). */
+export type { TileBake };
 
 /** A fixed place to bake and draw: a world, a lon/lat and a rotation. */
 export interface BenchCase {

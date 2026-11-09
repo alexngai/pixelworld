@@ -10,12 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pixelworld/bake": "workspace:*",
-    "@pixelworld/generators": "workspace:*",
-    "@pixelworld/grid": "workspace:*",
-    "@pixelworld/runtime": "workspace:*",
+    "@pixelworld/engine": "workspace:*",
     "@pixelworld/sim": "workspace:*",
-    "@pixelworld/style": "workspace:*",
     "@pixelworld/world-format": "workspace:*"
   }
 }

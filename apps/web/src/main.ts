@@ -1,60 +1,25 @@
-import { project, type Rotation } from "@pixelworld/grid";
-import { BAKE_VERSION } from "@pixelworld/bake";
-import { roverBoxes } from "@pixelworld/generators";
-import {
-  BakeService,
-  Camera,
-  ChunkStore,
-  Compositor,
-  TileCache,
-  cellsScreenRect,
-  hashString,
-  loadManifest,
-  loadObjects,
-  setupFog,
-  tileKey,
-  worldDepthRange,
-  type GpuImage,
-  type PreparedTile,
-  type TileKey,
-  type HeroPaint,
-  type TileRequest,
-} from "@pixelworld/runtime";
-import { buildPalette, materialTables, validateStyle, type StylePack } from "@pixelworld/style";
-import { GeoGrid, decodePng, verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
-import {
-  SUBLAYER_LABELS,
-  TRAFFIC_SUBLAYERS,
-  TrafficLayer,
-  loadRoutes,
-  rampLookup,
-  type DrawnVehicle,
-  type TrafficSublayer,
-} from "./traffic";
-import { FogLayer } from "./fog";
-import type { TileBake } from "./benchReport";
+import { createWorldView, fogLayer, roverController, type RoverOptions, type TileBake } from "@pixelworld/engine";
+import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworld/sim";
+import { verticalExaggeration, type WorldManifest } from "@pixelworld/world-format";
+
+/**
+ * The reference viewer (`@pixelworld/viewer`), a client of the engine: the
+ * URL parameters, the HUD, the layer panel, the sources screen and help,
+ * level switching, and the `__pixelworld` debug API the e2e tests, the bench
+ * page and the hero tool drive. The world view, its layers and the rover
+ * controller come from `@pixelworld/engine` and `@pixelworld/sim`.
+ */
+
 // Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
 const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
   string,
-  unknown
+  object
 >;
-function stylePack(id: string): unknown {
+function stylePack(id: string): object {
   const json = STYLE_PACKS[`../../../worlds/_styles/${id}/style.json`];
   if (!json) throw new Error(`no style pack ${id}`);
   return json;
 }
-
-const TILE_SIZE = 32; // default bake tile edge (cells); manifest render.tileSize overrides
-const MARGIN = 16; // context around a tile, in render units (cells at scale 1)
-const MICRO_MARGIN = 8; // micro-terrain: shadows and AO reach a few cells; 16× the cells cost more
-const PAN_SPEED = 220; // internal px / s
-const DRIVE_SPEED = 3; // cells / s
-// Steepest grade the rover can drive, in height steps per cell travelled. Gentle
-// slopes (1 step per cell, up to 1.41 across a diagonal fold) are drivable;
-// steep slope tiles and cliffs are not.
-const MAX_GRADE = 2;
-const PREFETCH_PX = 96; // bake tiles this far outside the view
-const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the GPU
 
 /** Test/debug hooks (used by the Playwright suite in e2e/). */
 interface PixelworldDebug {
@@ -109,6 +74,14 @@ const num = (key: string, fallback: number) => {
   const v = params.get(key);
   return v === null || v === "" || Number.isNaN(Number(v)) ? fallback : Number(v);
 };
+/** A number parameter, or undefined when it is absent or not a number. */
+const maybeNum = (key: string) => {
+  const v = num(key, NaN);
+  return Number.isNaN(v) ? undefined : v;
+};
+
+/** The key that toggles each layer (the help line and the layer panel name it). */
+const LAYER_KEYS: Record<string, string> = { traffic: "V", fog: "G" };
 
 function renderSources(manifest: WorldManifest, el: HTMLElement): void {
   el.replaceChildren();
@@ -146,20 +119,87 @@ async function main() {
   const help = document.getElementById("help")!;
   const attribution = document.getElementById("attribution")!;
   const sources = document.getElementById("sources")!;
-  const fixedSize = params.has("w") && params.has("h");
-  if (params.get("hud") === "0") {
-    for (const el of [hud, help, attribution]) el.classList.add("hidden");
+  const layersEl = document.getElementById("layers")!;
+  const showHud = params.get("hud") !== "0";
+  if (!showHud) for (const el of [hud, help, attribution]) el.classList.add("hidden");
+
+  // w and h: a fixed canvas (tests, the bench), one canvas pixel per CSS pixel
+  let size: { width: number; height: number } | undefined;
+  if (params.has("w") && params.has("h")) {
+    size = { width: num("w", 640), height: num("h", 360) };
+    canvas.classList.add("fixed");
+    canvas.style.width = `${size.width}px`;
+    canvas.style.height = `${size.height}px`;
   }
 
+  // The rover: from the URL (rover=x,y), a place arriving from another scale level
+  // (at=lon,lat; outside this level the rover starts at the world's start), or the start.
+  const roverParam = params.get("rover");
+  const atParam = params.get("at");
+  let start: RoverOptions["start"];
+  let at: [number, number] | null = null;
+  if (roverParam) {
+    const [x, y] = roverParam.split(",").map(Number);
+    start = { x, y };
+  } else if (atParam) {
+    const [lon, lat] = atParam.split(",").map(Number);
+    at = [lon!, lat!];
+    start = { lon: lon!, lat: lat! };
+  }
+  // fx/fy: the camera looks there instead of following the rover
+  const follow = !(params.has("fx") || params.has("fy"));
+  const rover = roverController({ start, follow, visible: params.get("marker") !== "0" }); // marker=0: clean screenshots
+
+  // Ambient traffic (D-060): on where the package has routes, unless traffic=0;
+  // trafficTime, trafficPause, trafficSeed and trafficDensity fix a scene for tests.
+  const only = params.get("trafficLayers"); // the sublayers shown, e.g. road,rail (default all)
+  const traffic =
+    params.get("traffic") === "0"
+      ? null
+      : trafficLayer({
+          seed: num("trafficSeed", 1),
+          density: num("trafficDensity", 1),
+          paused: params.get("trafficPause") === "1",
+          time: num("trafficTime", 0),
+          sublayers: only === null ? undefined : (only.split(",").filter((l) => (TRAFFIC_SUBLAYERS as string[]).includes(l)) as TrafficSublayer[]),
+        });
+  // Fog (an atmosphere layer): where the style has fog over this world and level; fog=0 starts it off
+  const fog = fogLayer({ enabled: params.get("fog") !== "0", time: num("fogTime", 0), paused: params.get("fogPause") === "1" });
+
   const worldUrl = params.get("world") ?? "/southwest/";
-  const manifest = await loadManifest(worldUrl);
-  const store = new ChunkStore(manifest, worldUrl);
   const worldBase = new URL(worldUrl, location.href);
-  // Lon/lat of cell corners: carries the rover's place between scale levels (D-046).
-  const geo = await GeoGrid.load(manifest, worldBase).catch((e: unknown) => {
-    console.warn("geo grid:", e);
-    return null;
+  const view = await createWorldView({
+    canvas,
+    worldUrl,
+    style: (id) => stylePack(params.get("style") ?? id),
+    size,
+    cache: params.get("cache") !== "0",
+    objects: params.get("objects") !== "0",
+    scatter: params.get("scatter") !== "0",
+    heroes: params.get("paint") !== "0",
+    palette: params.get("palette") === "night" ? "night" : "day",
+    camera: {
+      rotation: num("rot", 0) & 3,
+      zoom: params.has("zoom") ? num("zoom", 3) : "auto",
+      x: maybeNum("fx"),
+      y: maybeNum("fy"),
+    },
+    layers: [...(traffic ? [traffic] : []), fog],
+    controller: rover,
+    // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
+    recordBakes: params.get("bench") === "1",
+    onError: (m) => {
+      console.error(m);
+      hud.textContent = `bake error: ${m}`;
+    },
   });
+  const manifest = view.world.manifest;
+  const trafficOn = traffic && view.layers.get(traffic.id) ? traffic : null;
+  const fogOn = view.layers.get(fog.id) ? fog : null;
+  const arrival =
+    at && view.world.hasGeo && !view.query.lonLatToCell(at[0], at[1]) ? " · that place is outside this level, so starting here" : "";
+
+  // attribution, and the sources screen (I)
   const sourcesButton = document.createElement("button");
   sourcesButton.textContent = "Sources (I)";
   sourcesButton.onclick = () => sources.classList.toggle("hidden");
@@ -168,227 +208,41 @@ async function main() {
   attribution.replaceChildren(short, sourcesButton);
   renderSources(manifest, sources);
 
-  // Render scale: fine worlds draw each cell smaller (render units = cells × RS).
-  const RS = manifest.render?.scale ?? 1;
-  const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
-  const margin = manifest.micro ? MICRO_MARGIN : Math.ceil(MARGIN / RS);
-
-  const objectsFile = params.get("objects") === "0" ? null : await loadObjects(worldUrl, manifest);
-  // Micro-terrain: tops steeper than the style's rock slope are bare strata (D-036).
-  const steepRockParams = () => {
-    const slope = style.terrain?.steepRockSlope;
-    const ids = new Map(Object.entries(manifest.surfaces).map(([id, name]) => [name, Number(id)]));
-    if (!manifest.micro || !slope || !ids.has("rock")) return undefined;
-    // rise over run in micro-steps per micro-cell = slope × metres per cell / metres per step
-    const drop = Math.max(1, Math.round((slope * manifest.scale.metersPerCell) / manifest.scale.metersPerStep));
-    return { drop, rockSurface: ids.get("rock")!, waterSurface: ids.get("water") ?? -1, snowSurface: ids.get("snow") ?? -1 };
-  };
-  const styleJson = stylePack(params.get("style") ?? manifest.style);
-  const baseStyle = validateStyle(styleJson as StylePack);
-  const style =
-    objectsFile && baseStyle.objects?.surfaces
-      ? validateStyle({ ...baseStyle, surfaces: { ...baseStyle.surfaces, ...baseStyle.objects.surfaces } })
-      : baseStyle;
-  const palette = buildPalette(style);
-  let night = params.get("palette") === "night" && !!style.night;
-  const { metersPerStep, elevationDatumMeters } = manifest.scale;
-  // Strata are compared with render-unit heights in the shader.
-  const tables = materialTables(
-    style,
-    palette,
-    manifest,
-    (m) => ((m - elevationDatumMeters) / metersPerStep) * RS,
-    RS,
-  );
-  if (!manifest.heightRange) await store.ensureRect(0, 0, manifest.cellsX, manifest.cellsY);
-  const [minH, maxH] =
-    manifest.heightRange ?? store.slice(0, 0, manifest.cellsX, manifest.cellsY).grid.heightRange();
-  const floor = minH - 2;
-
-  const compositor = new Compositor(canvas);
-  const applyPalette = () => compositor.setPalette(night ? buildPalette(style, "night").rgba : palette.rgba);
-  applyPalette();
-
-  // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the tile cache key.
-  const styleHash = hashString(JSON.stringify({ ...(styleJson as object), atmosphere: undefined }));
-  const cache = params.get("cache") === "0" ? null : await TileCache.open();
-  const cacheKey = (t: TileRequest) =>
-    [
-      manifest.id,
-      manifest.packageHash ?? "nohash",
-      styleHash,
-      BAKE_VERSION,
-      objectsFile ? "objects" : "terrain",
-      tileKey(t.rotation, t.tx, t.ty),
-    ].join("|");
-
-  const prepare = async (t: TileRequest): Promise<PreparedTile> => {
-    if (cache) {
-      const hit = await cache.get(cacheKey(t));
-      if (hit) return { cached: hit };
+  // the layer panel (top right): every layer of the view and its sublayers
+  const boxes = new Map<string, HTMLInputElement>();
+  const syncLayers = () => {
+    for (const layer of view.layers.list()) {
+      boxes.get(layer.id)!.checked = layer.enabled;
+      for (const s of layer.sublayers ?? []) {
+        const box = boxes.get(`${layer.id}/${s.id}`)!;
+        box.checked = layer.isSublayerEnabled?.(s.id) ?? true;
+        box.disabled = !layer.enabled;
+      }
     }
-    const x0 = Math.max(0, t.tx * tileSize - margin);
-    const y0 = Math.max(0, t.ty * tileSize - margin);
-    const x1 = Math.min(manifest.cellsX, (t.tx + 1) * tileSize + margin);
-    const y1 = Math.min(manifest.cellsY, (t.ty + 1) * tileSize + margin);
-    await store.ensureRect(x0, y0, x1, y1);
-    const s = store.slice(x0, y0, x1, y1);
-    return {
-      slice: {
-        x0: s.x0,
-        y0: s.y0,
-        width: s.grid.width,
-        height: s.grid.height,
-        layers: s.grid.layers(),
-        micro: s.grid.micro,
-      },
+  };
+  const toggle = (key: string, label: string, sub: boolean, onChange: (on: boolean) => void) => {
+    const row = document.createElement("label");
+    if (sub) row.className = "sub";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.onchange = () => {
+      onChange(box.checked);
+      syncLayers();
     };
+    row.append(box, ` ${label}`);
+    layersEl.append(row);
+    boxes.set(key, box);
   };
-
-  // Painted-over hero landmarks (M3, D-053): stamped into every tile bake.
-  const heroes: HeroPaint[] = [];
-  if (manifest.heroes?.length && params.get("paint") !== "0") {
-    const png = async (path: string) => decodePng(await (await fetch(new URL(path, worldBase))).arrayBuffer());
-    for (const h of manifest.heroes) {
-      const [bake, paint] = await Promise.all([png(h.bake), png(h.paint)]);
-      heroes.push({ ...h, bake: bake.data, paint: paint.data });
-    }
+  for (const layer of view.layers.list()) {
+    const k = LAYER_KEYS[layer.id];
+    toggle(layer.id, k ? `${layer.label} (${k})` : layer.label, false, (on) => view.layers.enable(layer.id, on));
+    for (const s of layer.sublayers ?? [])
+      toggle(`${layer.id}/${s.id}`, s.label, true, (on) => view.layers.enable(layer.id, on, s.id));
   }
-
-  const service = await BakeService.create(
-    {
-      type: "init",
-      style: {
-        tables,
-        aoStrength: style.ao.strength,
-        outlineThreshold: style.outline.depthThreshold,
-        renderScale: RS,
-        steepRock: steepRockParams(),
-      },
-      tileSize,
-      margin,
-      floor,
-      worldWidth: manifest.cellsX,
-      worldHeight: manifest.cellsY,
-      renderScale: RS,
-      heroes,
-      objects:
-        objectsFile && style.assets
-          ? {
-              instances: objectsFile.instances,
-              catalog: style.assets,
-              rampIds: [...palette.rampIds],
-              metersPerCell: manifest.scale.metersPerCell,
-              // a scale level may draw objects with other proportions (D-047)
-              heightStretch: manifest.depiction?.heightStretch ?? style.objects?.heightStretch ?? 1,
-              variants: style.objects?.variants ?? 6,
-              // decorative vegetation and rocks by surface, where the level asks (M3)
-              scatter:
-                manifest.depiction?.scatter && params.get("scatter") !== "0"
-                  ? {
-                      density: manifest.depiction.scatter,
-                      bySurface: Object.fromEntries(
-                        Object.entries(manifest.surfaces).map(([id, name]) => [Number(id), style.scatter?.[name] ?? []]),
-                      ),
-                    }
-                  : undefined,
-            }
-          : undefined,
-    },
-    prepare,
-  );
-
-  // Tile height ranges (for screen-rect estimates before baking), from the manifest.
-  const tilesX = Math.ceil(manifest.cellsX / tileSize);
-  const tilesY = Math.ceil(manifest.cellsY / tileSize);
-  const tileHeights: [number, number][] = [];
-  for (let ty = 0; ty < tilesY; ty++)
-    for (let tx = 0; tx < tilesX; tx++) {
-      const x0 = tx * tileSize;
-      const y0 = ty * tileSize;
-      const [lo, hi] = store.heightRangeFor(x0, y0, x0 + tileSize, y0 + tileSize);
-      const edge = tx === 0 || ty === 0 || tx === tilesX - 1 || ty === tilesY - 1;
-      tileHeights.push([edge ? floor : lo, hi]);
-    }
-
-  // Baked tiles on the GPU, evicted least-recently-drawn beyond a memory budget.
-  interface TileEntry {
-    img: GpuImage | null;
-    bytes: number;
-    lastDrawn: number;
-  }
-  const tiles = new Map<TileKey, TileEntry>();
-  let gpuBytes = 0;
-  let frameNo = 0;
-  // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
-  const tileBakes: TileBake[] | null = params.get("bench") === "1" ? [] : null;
-  service.onTile = (res) => {
-    if (tileBakes && res.stats) {
-      const { meshMs, bakeMs, vertices } = res.stats;
-      tileBakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
-    }
-    if (res.image) {
-      const img = compositor.upload(res.image);
-      const bytes = res.image.width * res.image.height * 4;
-      gpuBytes += bytes;
-      tiles.set(res.key, { img, bytes, lastDrawn: frameNo });
-      if (!res.fromCache && cache) void cache.put(cacheKey(res), res.image);
-    } else {
-      tiles.set(res.key, { img: null, bytes: 0, lastDrawn: frameNo });
-    }
-    dirty = true;
-  };
-  service.onError = (m) => {
-    console.error(m);
-    hud.textContent = `bake error: ${m}`;
-  };
-  function evict() {
-    if (gpuBytes <= GPU_BUDGET_BYTES) return;
-    const old = [...tiles.entries()]
-      .filter(([, e]) => e.img && e.lastDrawn < frameNo)
-      .sort((a, b) => a[1].lastDrawn - b[1].lastDrawn);
-    for (const [key, e] of old) {
-      if (gpuBytes <= GPU_BUDGET_BYTES * 0.8) break;
-      compositor.release(e.img!);
-      gpuBytes -= e.bytes;
-      tiles.delete(key);
-      service.forget(key);
-    }
-  }
-
-  const sprites = new Map<Rotation, GpuImage | null>();
-  const roverRamp = palette.rampIds.get("marker")!;
-  // the rover's cab: a pale ramp the style names "cab", else its first ramp after the marker
-  const cabRamp = palette.rampIds.get("cab") ?? palette.rampIds.get("coconino") ?? (roverRamp + 1) % palette.rampIds.size;
-  const requestSprite = (r: Rotation) => {
-    if (sprites.has(r)) return;
-    sprites.set(r, null);
-    void service.bakeSprite(r, roverBoxes(roverRamp, cabRamp)).then((img) => {
-      if (img) sprites.set(r, compositor.upload(img));
-      dirty = true;
-    });
-  };
-
-  // Rover: start from the URL, the manifest's start cell, or the world centre.
-  const start = manifest.start ?? {
-    x: Math.floor(manifest.cellsX / 2),
-    y: Math.floor(manifest.cellsY / 2),
-  };
-  const rover = { x: start.x + 0.5, y: start.y + 0.5, h: 0 };
-  const roverParam = params.get("rover");
-  // at=lon,lat: arriving from another scale level; outside this level's area
-  // the rover starts at the world's start instead
-  let arrival = "";
-  const atParam = params.get("at");
-  if (roverParam) {
-    const [rx, ry] = roverParam.split(",").map(Number);
-    rover.x = rx ?? rover.x;
-    rover.y = ry ?? rover.y;
-  } else if (atParam && geo) {
-    const [lon, lat] = atParam.split(",").map(Number);
-    const cell = geo.lonLatToCell(lon!, lat!);
-    if (cell) [rover.x, rover.y] = cell;
-    else arrival = " · that place is outside this level, so starting here";
+  const hasLayers = view.layers.list().length > 0;
+  if (hasLayers) {
+    syncLayers();
+    if (showHud) layersEl.classList.remove("hidden");
   }
 
   const levels = manifest.levels ?? [];
@@ -400,414 +254,87 @@ async function main() {
     const next = new URLSearchParams(location.search);
     next.set("world", new URL(`../${target.world}/`, worldBase).pathname);
     for (const key of ["rover", "fx", "fy", "at"]) next.delete(key);
-    if (geo) {
-      const [lon, lat] = geo.cellToLonLat(rover.x, rover.y);
-      next.set("at", `${lon.toFixed(6)},${lat.toFixed(6)}`);
-    }
+    const ll = view.query.cellToLonLat(rover.rover.x, rover.rover.y);
+    if (ll) next.set("at", `${ll[0].toFixed(6)},${ll[1].toFixed(6)}`);
     location.search = next.toString();
   }
-  const ensureAt = (x: number, y: number) =>
-    store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1);
-  await ensureAt(rover.x, rover.y);
-  rover.h = store.surfaceHeightAt(rover.x, rover.y) ?? 0;
 
-  const camera = new Camera(1, 1);
-  camera.rotation = (num("rot", 0) & 3) as Rotation;
-  let follow = !(params.has("fx") || params.has("fy"));
-  // The camera works in render units; fx/fy in the URL are world cells.
-  const focusX = num("fx", rover.x);
-  const focusY = num("fy", rover.y);
-  if (!follow) await ensureAt(focusX, focusY);
-  camera.fx = focusX * RS;
-  camera.fy = focusY * RS;
-  camera.fh = (follow ? rover.h : (store.surfaceHeightAt(focusX, focusY) ?? rover.h)) * RS;
-  let noclip = false;
-  let zoomFromParams = params.has("zoom");
-
-  let dirty = true;
-  // Ambient traffic (D-060): on where the package has routes, unless traffic=0
-  const routes =
-    params.get("traffic") === "0"
-      ? null
-      : await loadRoutes(worldUrl, manifest).catch((e: unknown) => {
-          console.warn("routes:", e);
-          return null;
-        });
-  const traffic = routes
-    ? new TrafficLayer(
-        routes,
-        manifest,
-        service,
-        compositor,
-        {
-          seed: num("trafficSeed", 1),
-          renderScale: RS,
-          ramp: rampLookup(palette.rampIds),
-          density: num("trafficDensity", 1),
-          assets: style.assets,
-          rampIds: palette.rampIds,
-        },
-        () => (dirty = true),
-      )
-    : null;
-  if (traffic) {
-    traffic.paused = params.get("trafficPause") === "1";
-    // trafficLayers=road,rail,ferry: the sublayers shown (default all)
-    const only = params.get("trafficLayers");
-    if (only !== null) {
-      traffic.layers.clear();
-      for (const l of only.split(",")) if ((TRAFFIC_SUBLAYERS as string[]).includes(l)) traffic.layers.add(l as TrafficSublayer);
-    }
-  }
-  // Fog (an atmosphere layer): where the style pack has fog over this world and level; fog=0 starts it off
-  const fogSetup = setupFog(style, palette, manifest, geo ? (x, y) => geo.cellToLonLat(x, y) : null);
-  const fog = fogSetup ? new FogLayer(fogSetup, RS, floor) : null;
-  if (fog) {
-    compositor.setFogField(fog.setup.field);
-    fog.enabled = params.get("fog") !== "0";
-    // fogTime=s and fogPause=1 fix the drift for tests
-    fog.time = num("fogTime", 0);
-    fog.paused = params.get("fogPause") === "1";
-  }
-  // the layer toggles (top right): traffic and each sublayer, fog
-  const layersEl = document.getElementById("layers")!;
-  const layerBoxes = new Map<string, HTMLInputElement>();
-  const hasLayers = !!traffic || !!fog;
-  const syncLayers = () => {
-    if (traffic) {
-      layerBoxes.get("traffic")!.checked = traffic.enabled;
-      for (const l of TRAFFIC_SUBLAYERS) {
-        const box = layerBoxes.get(l)!;
-        box.checked = traffic.layers.has(l);
-        box.disabled = !traffic.enabled;
-      }
-    }
-    if (fog) layerBoxes.get("fog")!.checked = fog.enabled;
-  };
-  const toggle = (key: string, label: string, sub: boolean, onChange: (on: boolean) => void) => {
-    const row = document.createElement("label");
-    if (sub) row.className = "sub";
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.onchange = () => {
-      onChange(box.checked);
-      syncLayers();
-      dirty = true;
-    };
-    row.append(box, ` ${label}`);
-    layersEl.append(row);
-    layerBoxes.set(key, box);
-  };
-  if (traffic) {
-    toggle("traffic", "Traffic (V)", false, (on) => (traffic.enabled = on));
-    for (const l of TRAFFIC_SUBLAYERS)
-      toggle(l, SUBLAYER_LABELS[l], true, (on) => (on ? traffic.layers.add(l) : traffic.layers.delete(l)));
-  }
-  if (fog) toggle("fog", "Fog (G)", false, (on) => (fog.enabled = on));
-  if (hasLayers) {
-    syncLayers();
-    if (params.get("hud") !== "0") layersEl.classList.remove("hidden");
-  }
-  function resize() {
-    const dpr = fixedSize ? 1 : window.devicePixelRatio || 1;
-    const w = fixedSize ? num("w", 640) : Math.round(window.innerWidth * dpr);
-    const h = fixedSize ? num("h", 360) : Math.round(window.innerHeight * dpr);
-    canvas.width = w;
-    canvas.height = h;
-    if (fixedSize) {
-      canvas.classList.add("fixed");
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-    }
-    camera.canvasWidth = w;
-    camera.canvasHeight = h;
-    if (zoomFromParams) camera.zoom = Math.max(1, Math.round(num("zoom", 3)));
-    else camera.zoom = Math.max(1, Math.round(w / 640));
-    dirty = true;
-  }
-  resize();
-  window.addEventListener("resize", resize);
-  const trafficFocus = () =>
-    traffic?.focus(camera.fx / RS, camera.fy / RS, camera.internalWidth, camera.internalHeight);
-  if (traffic) {
-    trafficFocus();
-    // trafficTime=s: start the simulation that far along (fixed scenes for tests)
-    traffic.step(num("trafficTime", 0));
-  }
-
-  const depthRange = worldDepthRange(manifest.cellsX * RS, manifest.cellsY * RS, floor * RS, maxH * RS);
-
-  // ---- input ----
-  const keys = new Set<string>();
+  // ---- input: the viewer's keys here, the rest to the rover controller ----
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
-    keys.add(k);
-    if (k === "q") camera.rotate(-1);
-    else if (k === "e") camera.rotate(1);
-    else if (k === "f") follow = !follow;
-    else if (k === "n") noclip = !noclip;
-    else if (k === "t" && style.night) {
-      night = !night;
-      applyPalette();
-    }
+    if (k === "t" && view.hasNight) view.palette = view.palette === "night" ? "day" : "night";
     else if (k === "h") [hud, help, ...(hasLayers ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
     else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "l") switchLevel();
-    else if (k === "v" && traffic) {
-      traffic.enabled = !traffic.enabled;
-      syncLayers();
-      renderedComplete = false; // ready() waits for the frame without (or with) vehicles
-    }
-    else if (k === "g" && fog) {
-      fog.enabled = !fog.enabled;
-      syncLayers();
-      renderedComplete = false;
-    }
     else if (k === "escape") sources.classList.add("hidden");
-    else if (k >= "1" && k <= "6") {
-      camera.zoom = Number(k);
-      zoomFromParams = true;
-    }
-    if (k.startsWith("arrow")) e.preventDefault();
-    dirty = true;
-  });
-  window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
-  window.addEventListener("blur", () => keys.clear());
-  let drag: { x: number; y: number } | null = null;
-  canvas.addEventListener("pointerdown", (e) => {
-    drag = { x: e.clientX, y: e.clientY };
-    canvas.setPointerCapture(e.pointerId);
-  });
-  canvas.addEventListener("pointermove", (e) => {
-    if (!drag) return;
-    const scale = (fixedSize ? 1 : window.devicePixelRatio || 1) / camera.zoom;
-    camera.panPixels(-(e.clientX - drag.x) * scale, -(e.clientY - drag.y) * scale);
-    drag = { x: e.clientX, y: e.clientY };
-    follow = false;
-    dirty = true;
-  });
-  canvas.addEventListener("pointerup", () => (drag = null));
-
-  function update(dt: number) {
-    let px = 0;
-    let py = 0;
-    if (keys.has("a")) px -= 1;
-    if (keys.has("d")) px += 1;
-    if (keys.has("w")) py -= 1;
-    if (keys.has("s")) py += 1;
-    if (px || py) {
-      const len = Math.hypot(px, py);
-      camera.panPixels((px / len) * PAN_SPEED * dt, (py / len) * PAN_SPEED * dt);
-      follow = false;
-      dirty = true;
-    }
-    let mx = 0;
-    let my = 0;
-    if (keys.has("arrowleft")) mx -= 2;
-    if (keys.has("arrowright")) mx += 2;
-    if (keys.has("arrowup")) my -= 1;
-    if (keys.has("arrowdown")) my += 1;
-    if (mx || my) {
-      const [gx, gy] = camera.screenDirToGrid(mx, my);
-      const step = (DRIVE_SPEED * dt) / RS; // same on-screen speed at any render scale
-      const tryMove = (nx: number, ny: number) => {
-        if (nx < 0.3 || ny < 0.3 || nx > manifest.cellsX - 0.3 || ny > manifest.cellsY - 0.3)
-          return false;
-        const nh = store.surfaceHeightAt(nx, ny);
-        if (nh === null) return false; // terrain not loaded yet
-        const dist = Math.hypot(nx - rover.x, ny - rover.y);
-        const tooSteep = Math.abs(nh - rover.h) > MAX_GRADE * dist + 0.01;
-        if (!noclip && (store.isWater(nx, ny) || tooSteep)) return false;
-        rover.x = nx;
-        rover.y = ny;
-        rover.h = nh;
-        return true;
-      };
-      // slide along obstacles by trying each axis separately
-      if (!tryMove(rover.x + gx * step, rover.y + gy * step)) {
-        if (!tryMove(rover.x + gx * step, rover.y)) tryMove(rover.x, rover.y + gy * step);
+    else {
+      const layer = view.layers.list().find((l) => LAYER_KEYS[l.id]?.toLowerCase() === k);
+      if (layer) {
+        view.layers.enable(layer.id, !layer.enabled);
+        syncLayers();
       }
-      if (!follow && !keys.has("w") && !keys.has("a") && !keys.has("s") && !keys.has("d"))
-        follow = true;
-      dirty = true;
     }
-    if (follow) {
-      camera.fx = rover.x * RS;
-      camera.fy = rover.y * RS;
-      camera.fh = rover.h * RS;
-    }
-  }
-
-  // ---- frame ----
-  let frames = 0;
-  let fps = 0;
-  let fpsT = performance.now();
-  let lastT = performance.now();
-  let renderedComplete = false;
-  let renderMs = 0;
-  let fogDrawn = false;
-  // the last frame drawn, again (timeFrames)
-  let redraw: (() => void) | null = null;
-  const readyResolvers: (() => void)[] = [];
-
-  function tilesInView(snap: ReturnType<Camera["snapped"]>) {
-    const r = camera.rotation;
-    const viewL = snap.left;
-    const viewT = snap.top;
-    const viewR = snap.left + camera.internalWidth;
-    const viewB = snap.top + camera.internalHeight;
-    const cx = (viewL + viewR) / 2;
-    const cy = (viewT + viewB) / 2;
-    const list: (TileRequest & { visible: boolean; dist: number })[] = [];
-    for (let ty = 0; ty < tilesY; ty++)
-      for (let tx = 0; tx < tilesX; tx++) {
-        const [lo, hi] = tileHeights[ty * tilesX + tx]!;
-        const rect = cellsScreenRect(
-          tx * tileSize * RS,
-          ty * tileSize * RS,
-          Math.min(manifest.cellsX, (tx + 1) * tileSize) * RS,
-          Math.min(manifest.cellsY, (ty + 1) * tileSize) * RS,
-          lo * RS,
-          hi * RS + (objectsFile ? 12 : 0), // tall objects rise up to ~96 px above the terrain
-          r,
-        );
-        const near =
-          rect.right >= viewL - PREFETCH_PX &&
-          rect.left <= viewR + PREFETCH_PX &&
-          rect.bottom >= viewT - PREFETCH_PX &&
-          rect.top <= viewB + PREFETCH_PX;
-        if (!near) continue;
-        const visible =
-          rect.right >= viewL && rect.left <= viewR && rect.bottom >= viewT && rect.top <= viewB;
-        const dist = Math.hypot((rect.left + rect.right) / 2 - cx, (rect.top + rect.bottom) / 2 - cy);
-        list.push({ rotation: r, tx, ty, visible, dist });
-      }
-    list.sort((a, b) => Number(b.visible) - Number(a.visible) || a.dist - b.dist);
-    return list;
-  }
-
-  function frame(now: number) {
-    frameNo++;
-    const dt = Math.min(0.1, (now - lastT) / 1000);
-    lastT = now;
-    update(dt);
-    requestSprite(camera.rotation);
-    if (traffic) {
-      trafficFocus();
-      if (traffic.update(dt)) dirty = true;
-    }
-    if (fog?.update(dt)) dirty = true;
-
-    const snap = camera.snapped();
-    const order = tilesInView(snap);
-    service.want(order);
-
-    const r = camera.rotation;
-    const drawTiles: GpuImage[] = [];
-    let complete = true;
-    for (const t of order) {
-      const entry = tiles.get(tileKey(r, t.tx, t.ty));
-      if (entry) {
-        entry.lastDrawn = frameNo;
-        if (entry.img) drawTiles.push(entry.img);
-      } else if (t.visible) complete = false;
-    }
-    const sprite = sprites.get(r);
-    if (!sprite) complete = false;
-
-    if (dirty) {
-      const p = project(rover.x * RS, rover.y * RS, rover.h * RS, r);
-      const vehicles = traffic?.instances(r);
-      if (vehicles && !vehicles.complete) complete = false;
-      const t0 = performance.now();
-      // fog over the target (one pixel wider than the view, for the sub-pixel offset)
-      const fogView = { left: snap.left, top: snap.top, width: camera.internalWidth + 1, height: camera.internalHeight + 1 };
-      const fogFrame = fog?.frame(r, night, fogView) ?? null;
-      fogDrawn = fogFrame !== null;
-      const frameParams = {
-        left: snap.left,
-        top: snap.top,
-        fracX: snap.fracX,
-        fracY: snap.fracY,
-        zoom: camera.zoom,
-        internalWidth: camera.internalWidth,
-        internalHeight: camera.internalHeight,
-        depthRange,
-      };
-      // marker=0 hides the rover (clean screenshots for evaluation)
-      const spriteList = [
-        ...(vehicles?.list ?? []),
-        ...(sprite && params.get("marker") !== "0"
-          ? [{ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]
-          : []),
-      ];
-      redraw = () => compositor.render(frameParams, drawTiles, spriteList, fogFrame);
-      redraw();
-      renderMs = performance.now() - t0;
-      dirty = !complete; // keep redrawing while tiles stream in
-      renderedComplete = complete;
-      if (complete && service.idle) readyResolvers.splice(0).forEach((f) => f());
-    }
-    evict();
-
-    frames++;
-    if (now - fpsT > 500) {
-      fps = (frames * 1000) / (now - fpsT);
-      frames = 0;
-      fpsT = now;
-      updateHud();
-    }
-    requestAnimationFrame(frame);
-  }
+    rover.keyDown(e);
+  });
+  window.addEventListener("keyup", (e) => rover.keyUp(e));
+  window.addEventListener("blur", () => rover.blur());
+  canvas.addEventListener("pointerdown", (e) => rover.pointerDown(e));
+  canvas.addEventListener("pointermove", (e) => rover.pointerMove(e));
+  canvas.addEventListener("pointerup", () => rover.pointerUp());
 
   function stats() {
-    const t = service.totals;
+    const s = view.stats();
+    const r = rover.rover;
     return {
-      renderer: service.renderer,
-      bakeMode: service.mode,
-      tilesBaked: t.tiles,
-      tilesFromCache: t.fromCache,
-      tilesPerRotation: tilesX * tilesY,
-      chunksLoaded: store.loadedCount,
-      chunksTotal: manifest.chunks.length,
-      gpuTiles: [...tiles.values()].filter((e) => e.img).length,
-      gpuMB: gpuBytes / (1024 * 1024),
-      avgMeshMs: t.tiles ? t.meshMs / t.tiles : 0,
-      avgBakeMs: t.tiles ? t.bakeMs / t.tiles : 0,
-      maxTileMs: t.maxTileMs,
-      fps,
-      rotation: camera.rotation,
-      rover: { x: rover.x, y: rover.y, h: rover.h },
-      cache: cache ? "indexeddb" : "off",
-      metersPerCell: store.metersPerCellAt(rover.x, rover.y),
+      renderer: s.renderer,
+      bakeMode: s.bakeMode,
+      tilesBaked: s.tilesBaked,
+      tilesFromCache: s.tilesFromCache,
+      tilesPerRotation: s.tilesPerRotation,
+      chunksLoaded: s.chunksLoaded,
+      chunksTotal: s.chunksTotal,
+      gpuTiles: s.gpuTiles,
+      gpuMB: s.gpuMB,
+      avgMeshMs: s.avgMeshMs,
+      avgBakeMs: s.avgBakeMs,
+      maxTileMs: s.maxTileMs,
+      fps: s.fps,
+      rotation: view.camera.rotation,
+      rover: { x: r.x, y: r.y, h: r.h },
+      cache: s.cache,
+      metersPerCell: view.query.metersPerCellAt(r.x, r.y),
       level: manifest.level ?? null,
-      renderScale: RS,
-      objects: objectsFile?.instances.length ?? 0,
-      palette: night ? "night" : "day",
-      cacheWrites: cache?.writes ?? 0,
-      // CPU time of the last drawn frame: compositor submission, traffic simulation and sprites
-      renderMs,
-      traffic: traffic
+      renderScale: view.world.renderScale,
+      objects: view.world.objectCount,
+      palette: view.palette,
+      cacheWrites: s.cacheWrites,
+      // CPU time of the last drawn frame: compositor submission and screen passes (traffic's are below)
+      renderMs: s.renderMs,
+      traffic: trafficOn
         ? {
-            enabled: traffic.enabled,
-            vehicles: traffic.sim.vehicles.length,
-            sprites: traffic.drawn.length,
-            simMs: traffic.simMs,
-            drawMs: traffic.drawMs,
-            baked: traffic.spriteCount,
+            enabled: trafficOn.enabled,
+            vehicles: trafficOn.sim.vehicles.length,
+            sprites: trafficOn.drawn.length,
+            simMs: trafficOn.simMs,
+            drawMs: trafficOn.drawMs,
+            baked: trafficOn.spriteCount,
           }
         : null,
-      fog: fog ? { enabled: fog.enabled, drawn: fogDrawn, time: fog.time } : null,
+      fog: fogOn ? { enabled: fogOn.enabled, drawn: fogOn.drawn, time: fogOn.time } : null,
     };
   }
 
+  const RS = view.world.renderScale;
+  const { metersPerStep } = manifest.scale;
+  const style = view.world.style;
   function updateHud() {
     const s = stats();
+    const r = rover.rover;
     // real elevation: undo the vertical caricature of warped worlds
-    const meters = Math.round(store.realHeightAt(rover.x, rover.y, rover.h) * metersPerStep + elevationDatumMeters);
-    const local = manifest.warp ? ` · here ${Math.round(store.metersPerCellAt(rover.x, rover.y))} m/cell (warped)` : "";
+    const meters = Math.round(view.query.elevationAt(r.x, r.y, r.h) ?? 0);
+    const local = manifest.warp ? ` · here ${Math.round(view.query.metersPerCellAt(r.x, r.y))} m/cell (warped)` : "";
     const ve = verticalExaggeration(manifest.scale).toFixed(2);
-    const ll = geo ? geo.cellToLonLat(rover.x, rover.y) : null;
+    const ll = view.query.cellToLonLat(r.x, r.y);
     const where = ll ? ` · ${ll[1].toFixed(4)}°, ${ll[0].toFixed(4)}°` : "";
     hud.textContent = [
       `${manifest.name} · ${manifest.scale.metersPerCell} m/cell${RS !== 1 ? ` drawn at ×${RS}` : ""}${local} · vertical ×${ve} (${metersPerStep.toFixed(1)} m/step)`,
@@ -815,140 +342,85 @@ async function main() {
       ...(levels.length > 1
         ? [`level ${levels.map((l) => (l.name === manifest.level ? `[${l.label ?? l.name}]` : (l.label ?? l.name))).join(" · ")} (L switches)${arrival}`]
         : []),
-      `view  rot ${camera.rotation} · zoom ${camera.zoom}× · ${camera.internalWidth}×${camera.internalHeight} internal`,
-      `rover cell ${Math.floor(rover.x)},${Math.floor(rover.y)}${where} · ${rover.h.toFixed(1)} steps (${meters} m)${noclip ? " · no-clip" : ""}${follow ? " · follow" : ""}`,
+      `view  rot ${view.camera.rotation} · zoom ${view.camera.zoom}× · ${view.camera.internalWidth}×${view.camera.internalHeight} internal`,
+      `rover cell ${Math.floor(r.x)},${Math.floor(r.y)}${where} · ${r.h.toFixed(1)} steps (${meters} m)${rover.noclip ? " · no-clip" : ""}${rover.follow ? " · follow" : ""}`,
       `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,
       `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
       `      ${s.bakeMode} · ${s.renderer}`,
       ...(s.traffic
         ? [
-            `traffic ${s.traffic.enabled ? `${s.traffic.vehicles} vehicles` : "off"} (V toggles) · sim ${s.traffic.simMs.toFixed(1)} ms · draw ${(s.traffic.drawMs + renderMs).toFixed(1)} ms`,
+            `traffic ${s.traffic.enabled ? `${s.traffic.vehicles} vehicles` : "off"} (V toggles) · sim ${s.traffic.simMs.toFixed(1)} ms · draw ${(s.traffic.drawMs + s.renderMs).toFixed(1)} ms`,
           ]
         : []),
       ...(s.fog
-        ? [`fog   ${s.fog.enabled ? (s.fog.drawn ? "on" : "on, none in view") : "off"} (G toggles) · frame ${renderMs.toFixed(1)} ms`]
+        ? [`fog   ${s.fog.enabled ? (s.fog.drawn ? "on" : "on, none in view") : "off"} (G toggles) · frame ${s.renderMs.toFixed(1)} ms`]
         : []),
-      `fps   ${fps.toFixed(0)}`,
+      `fps   ${s.fps.toFixed(0)}`,
     ].join("\n");
   }
+  let hudT = performance.now();
+  view.onFrame(({ now }) => {
+    if (now - hudT <= 500) return;
+    hudT = now;
+    updateHud();
+  });
 
   window.__pixelworld = {
-    ready: () =>
-      renderedComplete && service.idle
-        ? Promise.resolve()
-        : new Promise<void>((resolve) => {
-            dirty = true;
-            readyResolvers.push(resolve);
-          }),
+    ready: () => view.ready(),
     stats,
     pan: (dx, dy) => {
-      camera.panPixels(dx, dy);
-      follow = false;
-      renderedComplete = false;
-      dirty = true;
+      rover.follow = false;
+      view.camera.pan(dx, dy);
     },
     setRover: (x, y) => {
-      rover.x = x;
-      rover.y = y;
-      rover.h = store.surfaceHeightAt(x, y) ?? rover.h;
-      renderedComplete = false;
-      dirty = true;
+      rover.place(x, y);
+      view.invalidate();
     },
-    lonLat: () => (geo ? geo.cellToLonLat(rover.x, rover.y) : null),
+    lonLat: () => view.query.cellToLonLat(rover.rover.x, rover.rover.y),
     switchLevel,
-    bakeHero: async (id) => {
-      // the landmark and its parts (a dam's intake towers)
-      const insts = objectsFile?.instances.filter((o) => o.id === id) ?? [];
-      if (!insts.length) throw new Error(`no landmark ${id} in this world`);
-      // a slice around it, so it stands on the same terrain heights as in the world
-      const pts = insts.flatMap((o) => o.fp ?? [[o.x, o.y] as [number, number]]);
-      const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0]))) - 2);
-      const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1]))) - 2);
-      const x1 = Math.min(manifest.cellsX, Math.ceil(Math.max(...pts.map((p) => p[0]))) + 3);
-      const y1 = Math.min(manifest.cellsY, Math.ceil(Math.max(...pts.map((p) => p[1]))) + 3);
-      await store.ensureRect(x0, y0, x1, y1);
-      const s = store.slice(x0, y0, x1, y1);
-      const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
-      const out = [];
-      for (const r of [0, 1, 2, 3] as const) {
-        const img = await service.bakeObjects(r, insts, slice);
-        out.push(img ? { rotation: r, ...img, pixels: Array.from(img.pixels) } : null);
-      }
-      return out;
-    },
-    palette: () => Array.from(palette.rgba),
+    bakeHero: async (id) =>
+      (await view.bakeObject(id)).map((img) => (img ? { ...img, pixels: Array.from(img.pixels) } : null)),
+    palette: () => Array.from(view.world.palette.rgba),
     traffic: () =>
-      traffic
+      trafficOn
         ? {
-            enabled: traffic.enabled,
-            paused: traffic.paused,
-            ticks: traffic.sim.ticks,
-            time: traffic.sim.time,
-            counts: traffic.sim.counts(),
-            layers: [...traffic.layers],
-            vehicles: traffic.drawn,
+            enabled: trafficOn.enabled,
+            paused: trafficOn.paused,
+            ticks: trafficOn.sim.ticks,
+            time: trafficOn.sim.time,
+            counts: trafficOn.sim.counts(),
+            layers: [...trafficOn.shown],
+            vehicles: trafficOn.drawn,
           }
         : null,
-    trafficStep: (seconds) => {
-      if (!traffic) return;
-      trafficFocus();
-      traffic.step(seconds);
-      renderedComplete = false;
-      dirty = true;
+    trafficStep: (seconds) => trafficOn?.step(seconds),
+    setTraffic: ({ enabled, paused, layers }) => {
+      if (!trafficOn) return;
+      if (enabled !== undefined) view.layers.enable(trafficOn.id, enabled);
+      if (paused !== undefined) trafficOn.setPaused(paused);
+      if (layers) trafficOn.setSublayers(layers);
+      syncLayers();
+      view.invalidate();
     },
     lookAt: async (x, y, h) => {
-      await ensureAt(x, y);
-      follow = false;
-      camera.fx = x * RS;
-      camera.fy = y * RS;
-      camera.fh = (h ?? store.surfaceHeightAt(x, y) ?? camera.fh / RS) * RS;
-      renderedComplete = false;
-      dirty = true;
+      rover.follow = false;
+      await view.camera.lookAt(h === undefined ? { x, y } : { x, y, h });
     },
-    setTraffic: ({ enabled, paused, layers }) => {
-      if (!traffic) return;
-      if (enabled !== undefined) traffic.enabled = enabled;
-      if (paused !== undefined) traffic.paused = paused;
-      if (layers) {
-        traffic.layers.clear();
-        for (const l of layers) traffic.layers.add(l);
-      }
-      syncLayers();
-      renderedComplete = false;
-      dirty = true;
-    },
-    fog: () => (fog ? { enabled: fog.enabled, paused: fog.paused, time: fog.time, drawn: fogDrawn } : null),
+    fog: () => (fogOn ? { enabled: fogOn.enabled, paused: fogOn.paused, time: fogOn.time, drawn: fogOn.drawn } : null),
     setFog: ({ enabled, paused, time }) => {
-      if (!fog) return;
-      if (enabled !== undefined) fog.enabled = enabled;
-      if (paused !== undefined) fog.paused = paused;
-      if (time !== undefined) fog.time = time;
+      if (!fogOn) return;
+      if (enabled !== undefined) view.layers.enable(fogOn.id, enabled);
+      fogOn.set({ paused, time });
       syncLayers();
-      renderedComplete = false;
-      dirty = true;
+      view.invalidate();
     },
-    timeFrames: (n) => {
-      if (!redraw) return NaN;
-      const gl = compositor.gl;
-      const px = new Uint8Array(4);
-      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-      const t0 = performance.now();
-      for (let i = 0; i < n; i++) {
-        redraw();
-        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // waits for the GPU
-      }
-      return (performance.now() - t0) / n;
-    },
+    timeFrames: (n) => view.timeFrames(n),
     setZoom: (zoom) => {
-      camera.zoom = Math.max(1, Math.round(zoom));
-      zoomFromParams = true;
-      renderedComplete = false;
-      dirty = true;
+      view.camera.zoom = zoom;
+      view.invalidate();
     },
-    tileBakes: () => (tileBakes ? tileBakes.slice() : []),
+    tileBakes: () => view.tileBakes(),
   };
-
-  requestAnimationFrame(frame);
 }
 
 main().catch((e: unknown) => {

@@ -55,6 +55,7 @@ export function defaultWorkerFactory(): Worker {
  */
 export class BakeService {
   private transport: Transport;
+  private worker: Worker | null = null;
   private nextId = 1;
   private busy = false;
   private wanted: TileRequest[] = [];
@@ -107,6 +108,7 @@ export class BakeService {
           clearTimeout(timer);
           this.renderer = msg.renderer;
           this.mode = "worker";
+          this.worker = worker;
           this.transport = { send: (m, t = []) => worker.postMessage(m, t) };
           worker.onmessage = (e: MessageEvent<FromWorker>) => this.receive(e.data);
           resolve(true);
@@ -138,6 +140,15 @@ export class BakeService {
         }, 0);
       },
     };
+  }
+
+  /** Stop baking: the worker ends, and nothing more is sent or received. */
+  dispose(): void {
+    this.worker?.terminate();
+    this.worker = null;
+    this.wanted = [];
+    this.spriteQueue = [];
+    this.transport = { send: () => {} };
   }
 
   /** Replace the wanted list (highest priority first). */

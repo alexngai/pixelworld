@@ -8,6 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pixelworld/generators": "workspace:*"
+    "@pixelworld/engine": "workspace:*",
+    "@pixelworld/generators": "workspace:*",
+    "@pixelworld/world-format": "workspace:*"
   }
 }
