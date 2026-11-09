@@ -22,9 +22,16 @@ sources:
 widths: { scale: 4.0, minCells: 0.08 }
 
 # Depiction: oversized landmarks and the tallest towers only, drawn bigger;
-# where enlarged towers would overlap, the taller one stays.
+# where enlarged towers would overlap, the taller one stays. Their heights are
+# stretched less than the style's 2.5 (the terrain's own exaggeration): drawn
+# 3× and 5×, towers stretched as much would stand several times taller against
+# the mountains than they are, and dwarf the ranges round the valley.
 objects:
   depiction:
     buildings: { scale: 3, minHeightMeters: 80 }
     landmarks: { scale: 5 }
+    heightStretch: 1.5
     scatter: 0.6
+  # every other built-up cell is a block of low buildings between streets, so
+  # the cities read as cities from the air rather than towers on a plain
+  lowrise: { group: city.blocks, heightMeters: 8 }

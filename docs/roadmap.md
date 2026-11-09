@@ -294,12 +294,12 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
 
 **Known issues:**
 - **Transition rings:** stretched cells smear terrain and land cover around the Strip, visible as rings in the warp preview.
-- **Black Canyon:** at 100 m cells the relief factor reaches the cap of 4, so the canyon below Hoover Dam is a deep slot. A lower cap per feature is the likely fix.
+- **Black Canyon:** at 100 m cells the relief factor reaches the cap of 4, so the canyon below Hoover Dam is a deep slot. A lower cap per feature is the likely fix. *Fixed: a relief cap per focus area (D-041), see the Southwest loose ends under M3.*
 - **Narrow water on warped layouts:** 3×3 samples per cell can still miss a channel narrower than a third of a stretched cell.
 - **Importance:** it uses Wikidata sitelinks only; pageviews and OSM tags aren't in. The live service rate-limits queries, so the snapshot is committed.
 - **Editor scale brush:** it's circular focus areas only; there's no freehand painting.
 - **Objects:**
-  - Land-cover scatter (vegetation) isn't supported on warped layouts yet.
+  - Land-cover scatter (vegetation) isn't supported on warped layouts yet. *The client's scatter (M3, D-054) covers warped levels; the pipeline's land-cover rules (`objects.vegetation` by `landcover`) still don't.*
   - Buildings are only placed around the Strip.
   - The dam is a plain procedural wedge.
 
@@ -343,9 +343,9 @@ Which drive length is right depends on vehicle speed, which M4 sets; the editor'
   - Roads were one cell (20 m) wide, though Las Vegas Boulevard is about 50 m. Real widths, sidewalks and crosswalks came in M2.7.
   - Its road report was the M1.5 Strip's (1 split segment, 2 disconnected junctions). Snapping (M2.6) cleared it.
 - **Flying level:**
-  - There's no vegetation or land-cover scatter yet (warped layouts don't support it).
+  - There's no vegetation or land-cover scatter yet (warped layouts don't support it). *Done since M3: the client scatters by surface on every level, at 0.6 when flying (D-054).*
   - The dam is at real size, so it's tiny.
-  - The heights of oversized towers want tuning against the terrain's relief.
+  - The heights of oversized towers want tuning against the terrain's relief. *Tuned: the level's cells had no relief until the D-041 fix; towers are now stretched 1.5× rather than 2.5×.*
 - **Moving between levels** is a page reload. A seamless transition (take-off and landing) belongs with M4's vehicles.
 - **Editor:** it previews any level's warp (`pixelworld serve worlds/southwest/fly.yaml`). It only saves a warp file the spec owns, so a level that inherits its warp is tuned in its spec file. Depiction and generalization sliders would make tuning faster.
 
@@ -478,12 +478,36 @@ The evaluator noted that once it saw Las Vegas, it suspected the whole set was i
 **Known issues and next steps:**
 - **Hoover Dam's proportions:** the dam reads as a "thick cylinder" rather than a wall across the canyon, because the relief cap of 4 (M2's Black Canyon issue) makes it 17 steps tall on a 3-cell crest.
   - Lake Mead meets the dam 17 steps below its crest. The lake is flat at the level of its real surface where relief isn't exaggerated, while the canyon around the dam is exaggerated up to the cap.
-  - Both want a lower relief cap per feature, or a reservoir rule.
-- **Desert View:** the watchtower is too small to read at 150 m cells, and the blocky red strata suggested Sedona. A larger depiction or a tower-and-rim focus would help.
-- **Flying level:** only towers of 80 m or more and landmarks are drawn, so the Strip reads as models on an empty plain. A low-rise texture (blocks) would carry the city.
+  - Both want a lower relief cap per feature, or a reservoir rule. *Fixed with both, below.*
+- **Desert View:** the watchtower is too small to read at 150 m cells, and the blocky red strata suggested Sedona. A larger depiction or a tower-and-rim focus would help. *The tower is drawn 8× and keeps its proportions, below.*
+- **Flying level:** only towers of 80 m or more and landmarks are drawn, so the Strip reads as models on an empty plain. A low-rise texture (blocks) would carry the city. *Done: city blocks (D-066), below.*
 - **Paint-overs** are the tool's demo touch-ups. An artist pass on the three heroes is still to do.
 - **Overture hints are sparse:** on the driving level, 83 of 5,830 buildings carry a roof shape and 10 a facade material. Most roofs and facades come from defaults by use.
 - **Occlusion:** tall towers still hide streets behind them in a fixed view. This is for M4's occlusion silhouettes, together with the rotations.
+
+#### Southwest loose ends (with M3.5)
+
+![Hoover Dam from downstream (driving, 2×), the Desert View Watchtower (driving, 2×) and the Strip from the air (flying, 1×), before and after](images/southwest-loose-ends.png)
+
+**What was fixed:**
+- **The relief reference was zero (D-041).** The smoothed reference is read at 480 m, a level the 1 arc-second DEM doesn't carry; every read failed and was cached as zeros. Since M2, relief was exaggerated around sea level rather than the regional trend.
+  - **Driving:** magnified places stood on domes; the canyon rim was drawn at 2.7 × 2,100 m. The height range drops from 0–102 to −10–60 steps, and the flats between focus areas no longer climb into them.
+  - **Flying:** 96% of its cells sample that level, so they were flat at sea level, under micro-terrain that still had relief, with rivers cut to sea level through it. The level now has relief everywhere, and forest above 2,300 m.
+  - **The fix:** a level coarser than a source's deepest overview is averaged from that overview while it is read, under a new cache key.
+- **Hoover Dam:**
+  - **Relief cap:** a focus area's `reliefMax` caps the relief factor over the area and its falloff ring. Hoover Dam's is 1.6, Lake Mead's own. The dam stands 4 steps above the river on a 3-cell crest (17 steps on 3 before), at true proportions at its 100 m cells.
+  - **Reservoir (D-065):** the dam's `reservoir` (10 m) raises Lake Mead to just under the crest: 1 step below it, where it was 17.
+  - **The wall:** the generator stands the upstream face sheer and batters the downstream face from a 120 m foot to a 2-voxel crest, so the dam reads as a thin curved wall with a fanned face. The hero bakes and demo paints were redone on both levels.
+- **The Desert View Watchtower:** drawn 160 m tall (8× its real height, was 4×), and the generator widens it with its height (`radiusPerHeight`), so it reads as a stone tower on the rim, not a post.
+- **City blocks on the flying level (D-066):** 2,889 built-up cells each become blocks of low buildings between streets on the voxel grid, so Las Vegas, Henderson and the smaller towns read as cities from the air. The objects file grows from 4 KB to 37 KB.
+- **Tower heights when flying:** towers (3×) and landmarks (5×) are stretched 1.5× instead of the style's 2.5×, so the skyline stands in proportion to the ranges round the valley.
+- **Scatter when flying:** it already worked; the client's scatter (M3) doesn't depend on the layout.
+- **Tests:** pytest covers the overview fallback and its cache key, relief caps, reservoirs, the dam's line and the city-block placement. Vitest covers the battered dam, city blocks lining up across cells and the tower's proportions. The e2e hero test now frames the lower dam. The Southwest goldens change.
+
+**Known issues and next steps:**
+- **Water stairs below the dam:** the river below the bypass bridge stands 2 steps above the water on either side, where US 93 crosses the canyon floor before its deck takes over. A long lake also still takes one level, so any lake spanning different relief factors meets its shores unevenly.
+- **The dam when flying** is still at real size: 0.7 cells long, a step tall.
+- **The canyon at Desert View** is still mostly red Supai and Hermit strata from the default view, which suggested Sedona. Untested since: no blind test was run this round.
 
 ### M3.5: San Francisco — a city by its fabric — in progress (four rounds)
 

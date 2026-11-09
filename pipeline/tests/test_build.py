@@ -75,6 +75,24 @@ def test_apply_water_flattens_lakes_and_lowers_rivers():
     assert (out[4:, :] <= q[4:, :]).all() and (out[4:, :] < q[4:, :]).any()
 
 
+def test_reservoirs_raise_only_the_lake_behind_their_dam():
+    q = np.zeros((7, 9), dtype=np.int64)
+    lake = np.zeros((6, 8), bool)
+    lake[1:3, 0:3] = True  # behind the dam
+    lake[4:6, 5:8] = True  # another lake
+    river = np.zeros((6, 8), bool)
+    plain, plain_level = apply_water(q, lake, river)
+    # a dam's points one cell into the first lake, wanting it at 3
+    held = [(np.array([1.5, 2.5]), np.array([2.2, 2.6]), 3)]
+    out, level = apply_water(q, lake, river, held)
+    assert (level[1:3, 0:3] == 3).all() and (out[1:4, 0:4] == 3).all()
+    assert (level[4:6, 5:8] == plain_level[4:6, 5:8]).all()  # the other lake keeps its level
+    assert (out[5:, 5:] == plain[5:, 5:]).all()
+    # a reservoir never lowers a lake, and points off the grid or on land are ignored
+    low = [(np.array([1.5, -4.0, 6.5]), np.array([1.5, 2.0, 1.5]), -5)]
+    assert (apply_water(q, lake, river, low)[1] == plain_level).all()
+
+
 def test_classify_maps_land_cover_and_marks_cliffs_as_rock():
     lc = np.array([[10, 20, 30], [50, 60, 80]], dtype=np.uint8)
     corner_m = np.full((3, 4), 1000.0)

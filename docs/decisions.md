@@ -239,6 +239,8 @@ The point is more room for visual interest; both halves are wanted.
 - **Problem:** with one metres-per-step everywhere, magnified places would look flatter than the base, and the compressed background spikier.
 - **Rule:** local relief is exaggerated around a smoothed reference, elev′ = ref + R·(elev − ref), with R = (base / local metres per cell)^γ clamped to [0.6, 4]. Flat ground and the regional trend are unchanged.
 - **Strata:** they stay at real elevations through the per-cell `VREF`/`VFAC` layers.
+- **The reference was zero until M3.5's Southwest round:** it is sampled at 480 m, a level the 1 arc-second DEM doesn't carry (its overviews stop at 8×, 240 m). Every read of that level failed and was cached as zeros, so R multiplied absolute elevation: magnified places stood on domes (the canyon rim drawn at 2.7 × 2,100 m), and the flying level, whose cells sample that level almost everywhere, had flat cells at sea level outside the Strip and Hoover Dam, under micro-terrain that still had relief. A level coarser than a source's deepest overview is now averaged from that overview while it is read, under a cache key of its own.
+- **Caps per focus area:** a focus area's `reliefMax` lowers the clamp's upper bound over the area and its falloff ring, fading back over one more falloff. Fading over the ring itself let R peak there (2.4 round Hoover Dam), where the scale is still fine but the cap has risen. Hoover Dam's is 1.6, Lake Mead's own factor, so Black Canyon is exaggerated as the lake is: the dam stands at true proportions at its 100 m cells instead of a slot four times deeper than it is wide.
 
 ### D-042: Importance from Wikidata sitelinks (accepted, M2)
 - **Scoring:** places with coordinates in the region are scored by sitelinks. Counties, deserts, mountain ranges, rivers and events are left out.
@@ -486,3 +488,19 @@ The point is more room for visual interest; both halves are wanted.
 - **Night:** transit windows use `lit` and headlights `lit-cool`, which match glass by day and glow at night; tail lights use `marker`.
 - **Variety:** cars have 24 variants, buses 6, cable cars, streetcars, trains and ferries 4.
 - **Rejected alternative:** voxels rotated per heading. Sampling a voxel grid at 22.5° steps breaks thin parts such as poles and pillars; turning boxes keeps them whole.
+
+### D-065: A dam holds its lake just under its crest, and stands as a wall (accepted)
+- **Problem:** a lake is flattened to one level, the 10th percentile of its corners. Where the relief factor (D-041) differs across a long lake, that level isn't the drawn height of the water at the dam: Lake Mead spans focus areas and their rings, and met Hoover Dam 17 steps below its crest in M3 (2 steps once Black Canyon's relief was capped).
+- **Rule:** a dam's registry entry gives `reservoir`, the metres below its crest its lake stands. The lake with a cell between half a cell and two and a half cells upstream of the dam's upstream face is raised to at least the drawn height of crest − reservoir, rounded down to a step, so the water stays under the crest. Lakes are only raised, and no other lake changes. Hoover Dam's is 10 m.
+- **The wall:** a dam carries its abutment line and half-thickness (`ln`, `lw`), so the generator knows its upstream face (the line's left, where it bows). With the style's `crest` (voxels) the upstream face stands sheer and the downstream face is battered: the thickness runs from the footprint's at the foot to the crest's at the top along a concave curve (`batter`, the profile's exponent). Hoover Dam's footprint is 120 m thick at the foot and 2 voxels at the crest; it reads as a thin curved wall with a fanned face, not a drum.
+- **Neutral by default:** without `reservoir`, or the style's `crest`, lakes and dams are drawn as before.
+- **Rejected alternative:** a lake level from its cells nearest the dam only. Lake Mead would then stand above its own shores far from the dam, wherever the relief factor is lower; raising it to just under the crest moves its whole level by one step.
+
+### D-066: Coarse levels draw built-up land as city blocks (accepted)
+- **Why:** a flying level keeps only towers of 80 m or more and landmarks (D-047). A house is a hundredth of a 1.5 km cell, so Las Vegas read as models on an empty plain.
+- **Rule:** with `objects.lowrise: {group, heightMeters}`, every built-up cell not blocked (roads, water, cliffs) or under another object (a footprint's cells; a cell and its ring for an object without one) gets one instance covering the cell, `city.blocks` by default.
+- **Generator** (`cityBlocks`): one-voxel streets every `pitch` voxels of the world's voxel grid, so streets run on from cell to cell, and each block picked by a hash of its place, so a block cut by a cell edge matches on both sides: houses (one roof colour per block, a few in another), a flat-roofed commercial box, a taller apartment block, a park or an open lot. The desert pack's roofs are mostly stucco and sand, a fifth tile; blocks are 4 voxels with `pitch` 5.
+- **Southwest flying level:** 2,889 cells. Its objects file grows from 4 KB to 37 KB and the package from 0.56 to 0.63 MB.
+- **Rejected alternatives:**
+  - A surface pattern in the bake shader: flat, with no height or shadow, and the shader is shared by every level.
+  - Client scatter by surface: a style's scatter applies to every level of a region, and the walking level's open built-up cells (car parks, plazas) would fill with blocks.

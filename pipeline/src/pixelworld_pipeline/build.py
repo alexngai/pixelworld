@@ -386,21 +386,38 @@ def _cell_corner_view(q: np.ndarray):
 
 
 def apply_water(
-    q: np.ndarray, lake: np.ndarray, river: np.ndarray
+    q: np.ndarray,
+    lake: np.ndarray,
+    river: np.ndarray,
+    reservoirs: list[tuple[np.ndarray, np.ndarray, int]] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Flatten lakes to one level per water body and lower river corners.
+
+    A lake's level is the 10th percentile of its corners. `reservoirs` (from
+    objects.reservoirs) raise the lakes behind dams: a lake with a cell at one
+    of a dam's points (xs, ys, in cells) stands at least at its level, so it
+    meets the dam just under the crest even where the relief around the dam is
+    exaggerated differently from the rest of the lake (D-041).
 
     Returns the updated corner field and the water level per cell (steps).
     """
     q = q.copy()
     level = np.full(lake.shape, NO_WATER, dtype=np.int64)
     labels, n = label_components(lake)
+    raised: dict[int, int] = {}
+    for xs, ys, at_least in reservoirs or []:
+        ix, iy = np.floor(xs).astype(np.int64), np.floor(ys).astype(np.int64)
+        inside = (ix >= 0) & (iy >= 0) & (ix < lake.shape[1]) & (iy < lake.shape[0])
+        for k in np.unique(labels[iy[inside], ix[inside]]):
+            if k:
+                raised[int(k)] = max(raised.get(int(k), at_least), at_least)
     for k in range(1, n + 1):
         cells = labels == k
         touched = np.zeros(q.shape, dtype=bool)
         for view in _cell_corner_view(touched):
             view |= cells
         lake_level = int(np.floor(np.percentile(q[touched], 10)))
+        lake_level = max(lake_level, raised.get(k, lake_level))
         q[touched] = lake_level
         level[cells] = lake_level
     river_only = river & ~lake
@@ -667,7 +684,16 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         river |= buffered_lines(
             river_lines, terrain["riverWidthMeters"] / 2 / region.meters_per_cell, (cy, cx)
         )
-    q, water_level = apply_water(q, lake, river)
+
+    def drawn_steps(x: float, y: float, metres: float) -> float:
+        """The drawn height in steps of a real elevation at a projected point."""
+        if layout.warped:
+            return layout.drawn_height(x, y, metres) / step_m
+        return metres / step_m
+
+    # the lakes behind dams stand just under their crests (a dam's `reservoir`)
+    held = object_stage.reservoirs(region, layout, (cy, cx), drawn_steps)
+    q, water_level = apply_water(q, lake, river, held)
 
     # roads: snap, cut-and-fill on the corner field
     keep = kept_ways(road_rows + path_rows, keep_rules)
@@ -846,11 +872,6 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
         if road_hw is not None:
             blocked |= paved_band(on_road, road_hw / 32.0)
 
-        def drawn_steps(x: float, y: float, metres: float) -> float:
-            if layout.warped:
-                return layout.drawn_height(x, y, metres) / step_m
-            return metres / step_m
-
         instances, object_counts = object_stage.place(
             region,
             blocked,
@@ -871,6 +892,21 @@ def build(region_path: Path, out_dir: Path, compress: bool = True, layout=None) 
                 under, base, shape, water, surface, low, road_layer, road_hw, micro
             )
             print(f"bridges: {int(under.sum())} cells of water under their decks")
+        # a coarse level's built-up land as blocks of low buildings (objects.lowrise)
+        if region.objects.get("lowrise"):
+            blocks = object_stage.lowrise(
+                region.objects["lowrise"],
+                surface == S["urban"],
+                blocked | (water != NO_WATER),
+                object_stage.taken_cells(instances, (cy, cx)),
+                layout.meters_per_cell() if layout.warped else None,
+            )
+            instances += blocks
+            if blocks:
+                object_counts = dict(
+                    sorted((object_counts | {blocks[0]["g"]: len(blocks)}).items())
+                )
+            print(f"lowrise: {len(blocks)} built-up cells drawn as city blocks")
     # yards (M3.5): the green behind and between houses, once the houses stand
     if ground.get("yard") and instances:
         paved = on_road | (water != NO_WATER)

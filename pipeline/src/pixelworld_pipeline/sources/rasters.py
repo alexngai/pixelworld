@@ -255,7 +255,17 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
 
 BLOCK_PX = 512
 _NATIVE = {"usgs-3dep-1arcsec": 30.0, "usgs-3dep-13arcsec": 10.0, "esa-worldcover-2021": 10.0}
-_MAX_LEVEL = 4  # 16× native: the deepest overview the COGs reliably carry
+_MAX_LEVEL = 4  # 16× native: the coarsest level points sample
+# The deepest overview (decimation factor) a source's COGs carry, where it is
+# shallower than _MAX_LEVEL: the 1 arc-second DEM stops at 8× (240 m). A coarser
+# level is read from that overview and averaged down while reprojecting.
+_DEEPEST_OVERVIEW = {"usgs-3dep-1arcsec": 8}
+
+
+def overview_factor(kind: str, res: float) -> tuple[int, int]:
+    """(the decimation factor a level at `res` stands for, the overview it is read from)."""
+    factor = max(1, int(round(res / _NATIVE[kind])))
+    return factor, min(factor, _DEEPEST_OVERVIEW.get(kind, factor))
 
 
 def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -> np.ndarray:
@@ -263,7 +273,12 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
     size = BLOCK_PX + 2
     x0 = bx * BLOCK_PX * res - res
     y1 = (by + 1) * BLOCK_PX * res + res  # blocks count northward
+    factor, read = overview_factor(kind, res)
     key = f"{kind}|{res}|{bx}|{by}|{mode}"
+    if read < factor:
+        # averaged down from a finer overview (older caches hold these blocks empty:
+        # the overview they asked for doesn't exist, so every tile read failed)
+        key += f"|from{read}"
     path = CACHE_ROOT / "levels" / f"{hashlib.sha256(key.encode()).hexdigest()[:20]}.npy"
     path_tag = path.with_suffix(".tag")
     crs_tag = region.crs.to_proj4()
@@ -282,9 +297,8 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
     )
     env = (min(lons) - 0.01, min(lats) - 0.01, max(lons) + 0.01, max(lats) + 0.01)
     urls = usgs_3dep_tiles(env, kind) if is_dem else esa_worldcover_tiles(env)
-    factor = max(1, int(round(res / _NATIVE[kind])))
     resampling = Resampling.average if is_dem else Resampling.mode
-    _warp_tiles(urls, dst, transform, region, factor, resampling, np.nan if is_dem else 0)
+    _warp_tiles(urls, dst, transform, region, read, resampling, np.nan if is_dem else 0)
     if is_dem and np.isnan(dst).any():
         # gaps past the data's edge: grow from valid pixels, then the mean
         if np.isnan(dst).all():

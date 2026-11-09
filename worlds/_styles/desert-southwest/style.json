@@ -210,11 +210,28 @@
     "landmark.tower.lookout": {
       "generator": "lookoutTower",
       "ramps": { "stone": "toroweap", "detail": "vishnu" },
-      "params": { "radius": 2.5, "roomRadius": 3 }
+      "params": { "radius": 2.5, "roomRadius": 3, "radiusPerHeight": 0.1 }
+    },
+    "city.blocks": {
+      "generator": "cityBlocks",
+      "ramps": {
+        "house": "stucco",
+        "house.pale": "desert",
+        "house.pale2": "desert",
+        "house.stucco": "stucco",
+        "house.tile": "roof-tile",
+        "roof": "roof-flat",
+        "roof.concrete": "concrete",
+        "wall": "stucco",
+        "wall.white": "tower-white",
+        "green": "grass"
+      },
+      "params": { "pitch": 5 }
     },
     "landmark.dam": {
       "generator": "dam",
-      "ramps": { "face": "concrete", "crest": "roof-flat", "detail": "limestone" }
+      "ramps": { "face": "concrete", "crest": "roof-flat", "detail": "limestone" },
+      "params": { "crest": 2, "batter": 1.6 }
     },
     "landmark.sign": {
       "generator": "sign",

@@ -121,6 +121,67 @@ export interface GenContext {
 
 export type Generator = (ctx: GenContext) => VoxelModel;
 
+/** A well-mixed hash of two integers and a salt (city blocks pick their kind by place). */
+function blockHash(x: number, y: number, k: number): number {
+  let h = Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1) ^ Math.imul(k + 1, 0x9e3779b1);
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/**
+ * A dam's height per footprint column (−1 off the footprint): H everywhere,
+ * unless it has a crest thickness and its line. Then each column's depth below
+ * the upstream face (the line's left) is measured across the band at its place
+ * along the line, and the downstream face falls away from the crest to the
+ * foot as the thickness profile crest + (T − crest)·(1 − z/H)^batter.
+ */
+export function damProfile(
+  mask: { sx: number; sy: number; on: Uint8Array },
+  frame: GenContext["frame"],
+  crestVox: number,
+  batter: number,
+  H: number,
+): Int16Array {
+  const top = new Int16Array(mask.sx * mask.sy).fill(-1);
+  for (let i = 0; i < top.length; i++) if (mask.on[i]) top[i] = H;
+  if (!frame?.line || crestVox <= 0) return top;
+  const line = frame.line;
+  const v = frame.voxel;
+  const L = Math.hypot(line.b[0] - line.a[0], line.b[1] - line.a[1]);
+  const ux = (line.b[0] - line.a[0]) / Math.max(L, 1e-9);
+  const uy = (line.b[1] - line.a[1]) / Math.max(L, 1e-9);
+  // per column: its bin along the line and how far upstream it lies (voxels)
+  const bin = new Int32Array(top.length);
+  const up = new Float64Array(top.length);
+  const hi = new Map<number, number>();
+  const lo = new Map<number, number>();
+  for (let y = 0; y < mask.sy; y++)
+    for (let x = 0; x < mask.sx; x++) {
+      const i = y * mask.sx + x;
+      if (!mask.on[i]) continue;
+      const wx = frame.x0 + (x + 0.5) * v - line.a[0];
+      const wy = frame.y0 + (y + 0.5) * v - line.a[1];
+      bin[i] = Math.round((wx * ux + wy * uy) / v);
+      up[i] = (wx * uy - wy * ux) / v; // the left of the line: upstream
+      hi.set(bin[i]!, Math.max(hi.get(bin[i]!) ?? -Infinity, up[i]!));
+      lo.set(bin[i]!, Math.min(lo.get(bin[i]!) ?? Infinity, up[i]!));
+    }
+  for (let i = 0; i < top.length; i++) {
+    if (!mask.on[i]) continue;
+    const face = hi.get(bin[i]!)!;
+    const thick = face - lo.get(bin[i]!)! + 1;
+    const depth = face - up[i]!;
+    if (depth < crestVox - 0.5 || thick <= crestVox) continue;
+    const r = Math.min(1, Math.max(0, (depth - crestVox + 0.5) / (thick - crestVox)));
+    top[i] = Math.max(0, Math.round(H * (1 - Math.pow(r, 1 / batter))));
+  }
+  return top;
+}
+
 const GENERATORS: Record<string, Generator> = {
   conifer: ({ rand, ramp, param }) => {
     const h = Math.round(param("minHeight", 7) + rand() * param("heightJitter", 4));
@@ -178,6 +239,66 @@ const GENERATORS: Record<string, Generator> = {
       const len = dx && dy ? reach - 1 : reach;
       for (let k = 1; k <= len; k++) m.set(tx + dx * k, c + dy * k, h - (k === len ? 1 : 0), frond);
     }
+    return m;
+  },
+
+  /**
+   * Low-rise city blocks (a coarse level's built-up land, where one building is
+   * far below a cell): the footprint cut by one-voxel streets every `pitch`
+   * voxels of the world's voxel grid, so streets run on from cell to cell. Each
+   * block is picked by a hash of its place, so a block cut by a cell edge is the
+   * same on both sides: houses (the block's roofs in one colour, a few in
+   * another), a flat-roofed commercial box, a taller apartment block, a park,
+   * or an open lot. The odds of each are params (`lots`, `parks`, `houses`,
+   * `commercial`; apartments take the rest).
+   */
+  cityBlocks: ({ ramps, param, mask, heightVox, frame }) => {
+    if (!mask) throw new Error("cityBlocks generator needs a footprint");
+    const pitch = Math.max(2, Math.round(param("pitch", 4)));
+    const H = Math.max(1, Math.round(heightVox ?? 1));
+    const m = new VoxelModel(mask.sx, mask.sy, H + 3);
+    const mats = (role: string) => ramps(role).map((id) => m.material(id));
+    const houses = mats("house");
+    const flats = mats("roof");
+    const walls = mats("wall");
+    const greens = mats("green");
+    const gx0 = frame ? Math.round(frame.x0 / frame.voxel) : 0;
+    const gy0 = frame ? Math.round(frame.y0 / frame.voxel) : 0;
+    const mod = (a: number, n: number) => ((a % n) + n) % n;
+    const pick = <T>(list: T[], h: number): T => list[h % list.length]!;
+    // cumulative odds of each kind of block: open lot, park, houses, commercial, apartments
+    const odds = [param("lots", 0.12), param("parks", 0.06), param("houses", 0.47), param("commercial", 0.25)];
+    for (let y = 0; y < mask.sy; y++)
+      for (let x = 0; x < mask.sx; x++) {
+        if (!mask.on[y * mask.sx + x]) continue;
+        const gx = gx0 + x;
+        const gy = gy0 + y;
+        if (mod(gx, pitch) === 0 || mod(gy, pitch) === 0) continue; // the street grid
+        const bx = Math.floor(gx / pitch);
+        const by = Math.floor(gy / pitch);
+        const h = blockHash(bx, by, 0);
+        const u = (h & 0xffff) / 0x10000;
+        let kind = 0;
+        let acc = odds[0]!;
+        while (kind < odds.length && u >= acc) acc += odds[++kind] ?? 1;
+        if (kind === 0) continue; // an open lot: the ground shows
+        if (kind === 1) {
+          if (greens.length) m.set(x, y, 0, pick(greens, h >>> 16));
+          continue;
+        }
+        if (kind === 2) {
+          // houses: the block's roofs in one colour, a few in another
+          if (!houses.length) continue;
+          const v = blockHash(gx, gy, 1);
+          const roof = (v & 0xff) < 40 ? pick(houses, v >>> 8) : pick(houses, h >>> 8);
+          for (let z = 0; z < H; z++) m.set(x, y, z, roof);
+          continue;
+        }
+        const tall = kind === 4 ? H + 1 + ((h >>> 20) & 1) : H + ((h >>> 20) & 1);
+        const wall = walls.length ? pick(walls, h >>> 8) : pick(flats, h >>> 8);
+        for (let z = 0; z < tall - 1; z++) m.set(x, y, z, wall);
+        m.set(x, y, tall - 1, kind === 4 ? wall : pick(flats, h >>> 12));
+      }
     return m;
   },
 
@@ -348,20 +469,29 @@ const GENERATORS: Record<string, Generator> = {
     return m;
   },
 
-  /** Arch dam: the footprint extruded from the riverbed to the crest. */
-  dam: ({ ramp, mask, heightVox }) => {
+  /**
+   * Arch dam: the footprint extruded from the riverbed to the crest. With a
+   * `crest` thickness (voxels) and the dam's line (its left is upstream, where
+   * it bows), the upstream face stands sheer and the downstream face is
+   * battered: the dam thins from the whole footprint at its foot to the crest
+   * at its top, along a concave curve (`batter`, the exponent of the thickness
+   * profile), so it reads as a thin curved wall rather than a solid drum.
+   */
+  dam: ({ ramp, param, mask, heightVox, frame }) => {
     if (!mask) throw new Error("dam generator needs a footprint");
     const H = Math.max(2, Math.round(heightVox ?? 8));
     const m = new VoxelModel(mask.sx, mask.sy, H + 1);
     const face = m.material(ramp("face"));
     const crest = m.material(ramp("crest"));
     const band = m.material(ramp("detail"));
-    const on = (x: number, y: number) => x >= 0 && y >= 0 && x < mask.sx && y < mask.sy && mask.on[y * mask.sx + x] === 1;
+    const crestVox = param("crest", 0);
+    const top = damProfile(mask, frame, crestVox, param("batter", 1.6), H);
     for (let y = 0; y < mask.sy; y++)
       for (let x = 0; x < mask.sx; x++) {
-        if (!on(x, y)) continue;
-        for (let z = 0; z < H; z++) m.set(x, y, z, z % 6 === 5 ? band : face);
-        m.set(x, y, H, crest);
+        const h = top[y * mask.sx + x]!;
+        if (h < 0) continue;
+        for (let z = 0; z < h; z++) m.set(x, y, z, z % 6 === 5 ? band : face);
+        m.set(x, y, h, h === H ? crest : face);
       }
     return m;
   },
@@ -399,11 +529,17 @@ const GENERATORS: Record<string, Generator> = {
     return m;
   },
 
-  /** Round stone tower with crenellations and slit windows; optional low round room at its foot. */
+  /**
+   * Round stone tower with crenellations and slit windows; optional low round
+   * room at its foot. With `radiusPerHeight` the tower keeps its proportions
+   * when drawn taller: its radius (and the room's, in step) grows with its
+   * height, never below `radius`.
+   */
   lookoutTower: ({ rand, ramp, param, heightVox }) => {
     const H = Math.round(heightVox ?? param("height", 16));
-    const R = param("radius", 2.5);
-    const KR = param("roomRadius", 0); // 0 = no room
+    const R0 = param("radius", 2.5);
+    const R = Math.max(R0, param("radiusPerHeight", 0) * H);
+    const KR = param("roomRadius", 0) * (R / R0); // 0 = no room
     const KH = Math.max(1, Math.round(H * 0.2));
     const tr = Math.ceil(R);
     const kr = Math.ceil(KR);

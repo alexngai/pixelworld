@@ -354,3 +354,30 @@ def test_canopy_trees_take_the_groups_of_their_cells_land_cover(monkeypatch):
     assert west == {"tree.cypress", "tree.eucalyptus"} and east == {"tree"}
     with pytest.raises(ValueError, match="unknown land cover class"):
         objects.scatter(p, rule | {"byLandcover": {"trees": ["x"]}}, _none, "t", FakeCanopy())
+
+
+def test_lowrise_blocks_cover_free_built_up_cells():
+    built = np.zeros((6, 8), bool)
+    built[1:5, 1:7] = True
+    blocked = np.zeros_like(built)
+    blocked[2, :] = True  # a road across
+    fp = [[5.2, 3.2], [5.8, 3.2], [5.8, 4.4], [5.2, 4.4]]
+    tower = {"g": "building.tower", "x": 5.5, "y": 3.5, "s": 1, "fp": fp}
+    sign = {"g": "landmark.sign", "x": 1.5, "y": 4.5, "s": 2}
+    taken = objects.taken_cells([tower, sign], built.shape)
+    # the footprint's cells, and the cells round an object without one
+    assert taken[3, 5] and taken[4, 5] and not taken[3, 4]
+    assert taken[3:6, 0:3].all() and not taken[1, 1]
+    mpc = np.full(built.shape, 400.0)
+    out = objects.lowrise({"heightMeters": 9}, built, blocked, taken, mpc)
+    cells = {(int(i["x"]), int(i["y"])) for i in out}
+    free = built & ~blocked & ~taken
+    assert cells == {(int(x), int(y)) for y, x in zip(*np.nonzero(free), strict=True)}
+    assert len(out) == int(free.sum())
+    i = next(i for i in out if (int(i["x"]), int(i["y"])) == (3, 1))
+    assert i["g"] == "city.blocks" and i["hm"] == 9 and i["m"] == 400.0
+    assert i["fp"] == [[3, 1], [4, 1], [4, 2], [3, 2]] and (i["x"], i["y"]) == (3.5, 1.5)
+    # seeds depend on the cell alone, so rebuilding gives the same blocks
+    again = objects.lowrise({}, built, blocked, taken)
+    assert [a["s"] for a in again] == [a["s"] for a in out] and "m" not in again[0]
+    assert again[0]["g"] == "city.blocks" and again[0]["hm"] == 8.0
