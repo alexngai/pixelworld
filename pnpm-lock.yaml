@@ -40,24 +40,12 @@ importers:
 
   apps/web:
     dependencies:
-      '@pixelworld/bake':
+      '@pixelworld/engine':
         specifier: workspace:*
-        version: link:../../packages/bake
-      '@pixelworld/generators':
-        specifier: workspace:*
-        version: link:../../packages/generators
-      '@pixelworld/grid':
-        specifier: workspace:*
-        version: link:../../packages/grid
-      '@pixelworld/runtime':
-        specifier: workspace:*
-        version: link:../../packages/runtime
+        version: link:../../packages/engine
       '@pixelworld/sim':
         specifier: workspace:*
         version: link:../../packages/sim
-      '@pixelworld/style':
-        specifier: workspace:*
-        version: link:../../packages/style
       '@pixelworld/world-format':
         specifier: workspace:*
         version: link:../../packages/world-format
