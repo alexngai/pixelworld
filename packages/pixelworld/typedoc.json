@@ -1,0 +1,25 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "pixelworld",
+  "entryPoints": [
+    "src/engine.ts",
+    "src/traffic.ts",
+    "src/format.ts",
+    "src/grid.ts",
+    "src/style.ts",
+    "src/generators.ts"
+  ],
+  "tsconfig": "tsconfig.build.json",
+  "readme": "README.md",
+  "out": "../../docs/api",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "sort": ["kind", "source-order"],
+  "disableGit": true,
+  "displayBasePath": "../..",
+  "gitRevision": "main",
+  "sourceLinkTemplate": "https://github.com/alexngai/pixelworld/blob/{gitRevision}/{path}#L{line}",
+  "treatWarningsAsErrors": false,
+  "validation": { "notExported": false, "invalidLink": true, "notDocumented": false }
+}

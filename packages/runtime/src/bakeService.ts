@@ -42,7 +42,12 @@ interface Transport {
   send(msg: ToWorker, transfer?: Transferable[]): void;
 }
 
-/** Literal `new Worker(new URL(...))` so Vite bundles the worker in builds. */
+/**
+ * Literal `new Worker(new URL(...))` so Vite bundles the worker in builds.
+ * The npm build (packages/pixelworld/build.mjs) rewrites the URL to the
+ * prebuilt `./bake.worker.js` beside the engine and keeps it literal, so
+ * consumers' bundlers (Vite, webpack 5) and plain ESM find it too.
+ */
 export function defaultWorkerFactory(): Worker {
   return new Worker(new URL("./bake.worker.ts", import.meta.url), { type: "module" });
 }

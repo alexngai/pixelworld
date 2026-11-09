@@ -1,0 +1,10 @@
+{
+  "name": "pixelworld-consumer-esm",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "No bundler: serve this directory (with node_modules/) as static files.",
+  "dependencies": {
+    "pixelworld": "^0.1.0"
+  }
+}

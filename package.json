@@ -1,5 +1,5 @@
 {
-  "name": "pixelworld",
+  "name": "pixelworld-monorepo",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",
@@ -18,9 +18,16 @@
     "bench": "pnpm --filter @pixelworld/web exec vite --open /bench.html",
     "bench:headless": "node tools/bench.mjs",
     "example:minimal": "pnpm --filter @pixelworld/example-minimal-viewer dev",
+    "package:build": "pnpm --filter pixelworld build",
+    "package:check": "node tools/pack-check.mjs",
+    "package:size": "pnpm --filter pixelworld size",
+    "package:consumers": "node tools/consumers.mjs",
+    "docs:api": "pnpm --filter pixelworld docs",
+    "changeset": "changeset",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "^24.0.0",

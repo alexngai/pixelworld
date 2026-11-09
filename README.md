@@ -31,11 +31,34 @@ URL parameters, useful for repeatable views: `world` (package URL, default `/sou
 
 The viewer is built on the engine, `@pixelworld/engine`, which other games can build on too ([library.md §7](docs/library.md#7-as-built-the-engine-m4-step-1)). `pnpm example:minimal` runs the smallest client of it (http://localhost:5180): San Francisco, the rover and traffic, in about 45 lines.
 
+## Install from npm
+
+The engine, the world format, the generators and traffic are one npm package, `pixelworld`, ESM with types:
+
+```sh
+npm install pixelworld
+```
+
+```ts
+import { createWorldView, roverController } from "pixelworld/engine";
+
+const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
+const view = await createWorldView({
+  canvas,
+  worldUrl: "/worlds/grand-canyon-m0/",                                   // a world package, e.g. a copy of fixtures/grand-canyon-m0
+  style: (id) => fetch(`/styles/${id}/style.json`).then((r) => r.json()), // its style pack, from worlds/_styles/
+  controller: roverController({ listen: { keys: window, pointer: canvas } }),
+});
+```
+
+It isn't published yet: `cd packages/pixelworld && pnpm pack` makes the tarball, which `npm install ./pixelworld-0.0.0.tgz` takes. Worlds and style packs are data you host; the bake worker works in Vite, webpack 5 and plain ESM without configuration. See [Using pixelworld from npm](docs/npm.md) and the [example consumers](examples/consumers/).
+
 ## Checks
 
 ```sh
 pnpm check          # eslint + tsc + vitest
 pnpm test:e2e       # Playwright golden images + behaviour tests (headless Chromium, SwiftShader)
+pnpm package:check  # the npm package: pack it, check the tarball and its size budgets (also package:size, package:consumers)
 cd pipeline && uv run ruff check . && uv run pytest
 ```
 
@@ -60,6 +83,7 @@ To make the terrain more or less dramatic, pass `--exaggeration E`. E is vertica
 Start with the [docs index](docs/README.md):
 
 - [Architecture](docs/architecture.md)
+- [Using pixelworld from npm](docs/npm.md)
 - [Roadmap](docs/roadmap.md), including the M0 results
 - [Style guide](docs/style-guide.md)
 - [World format](docs/world-format.md)

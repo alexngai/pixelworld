@@ -339,10 +339,12 @@ packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera, fog fields (internal to the engine)
 packages/engine/          the public world view (library.md §7): createWorldView, layers (fog), entities, controllers (the rover), queries
 packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models, the traffic layer (flight†, building†, cell occupancy†)
+packages/pixelworld/      the npm package `pixelworld` (docs/npm.md): entry points over the packages above, built to dist/ with the bake worker
 apps/web/                 the reference viewer, a client of the engine: URL parameters, HUD, layer panel, levels, debug API; bench.html
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
 examples/                 apps built only on the public packages: minimal-viewer (a world, the rover, traffic)
-tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs
+examples/consumers/       projects that use the packed npm package: Vite, webpack 5, plain ESM (tools/consumers.mjs runs them)
+tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs, consumers.mjs; pack-check.mjs
 e2e/                      Playwright golden-image and behaviour tests
 ```
 

@@ -1,6 +1,6 @@
 # pixelworld as a library (proposal, for discussion)
 
-**Status:** a draft for the M4 pass, its first step built: the engine is out of the app (§7, as built). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
+**Status:** a draft for the M4 pass, its first steps built: the engine is out of the app (§7, as built), and the npm package `pixelworld` builds, packs and is checked in CI, unpublished (§3.5, [npm.md](npm.md)). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
 - as a **world and asset generator**: real places in, pixel-art worlds, tiles, sprites and models out;
 - as an **engine** to build games and other interaction modes on.
 
@@ -18,7 +18,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 
 ## 2. What exists today
 
-- **TypeScript packages:** `grid`, `world-format`, `style`, `generators`, `bake`, `runtime` and `sim` are already separate. But they are private, export TypeScript source, and have no build step.
+- **TypeScript packages:** `grid`, `world-format`, `style`, `generators`, `bake`, `runtime`, `engine` and `sim` are already separate. They are private, export TypeScript source, and have no build step; the npm package `pixelworld` bundles them (§3.5, [npm.md](npm.md)).
 - **The web app:** until the engine extraction (§7), `apps/web/src/main.ts` (about 940 lines) held the engine's assembly and the reference app's behaviour together:
   - world loading and level switching
   - the tile cache
@@ -55,7 +55,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworld/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
 | `@pixelworld/editor` (app) | the warp editor | `apps/editor` |
 
-An umbrella package `pixelworld` could re-export the browser packages for people who want one dependency (decision D3).
+D3 settled this as one npm package, `pixelworld`, with an entry point per browser package (`pixelworld/engine`, `pixelworld/traffic`, …), built (§3.5); style packs and city packs are separate packages.
 
 ### 3.2 The engine API, sketched
 
@@ -117,16 +117,20 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 
 ### 3.5 Publishing
 
-- **npm:**
-  - ESM packages built to `dist/` with type declarations;
-  - `exports` maps;
-  - the bake worker shipped as a module worker resolved with `new URL(..., import.meta.url)`, which works in Vite, webpack and plain ESM;
-  - semver per package with changesets, released from CI.
-- **PyPI:** `pixelworld-pipeline`, with extras for heavy sources (`[lidar]`, `[cityjson]`), and city packs as their own distributions (`pixelworld-city-sf`).
+- **npm, as built:** one package, `pixelworld` (D3), in `packages/pixelworld`. How to use it: [npm.md](npm.md).
+  - **Entry points:** `pixelworld/engine`, `/traffic` (`@pixelworld/sim`), `/format` (`@pixelworld/world-format`), `/grid`, `/style` and `/generators`. Each has ESM, declarations and source maps. `pixelworld/bake.worker.js` is exported for copying the worker.
+  - **Workspace and tarball:** the package's `src/` re-exports the private workspace packages, which stay TypeScript sources without a build. In the workspace its `exports` point at `src/`, so the dev flow is unchanged; `publishConfig.exports` points the packed manifest at `dist/` (pnpm applies it, so publishing is with pnpm).
+  - **The build (tsup over esbuild):** one ESM build of all six entry points with code splitting, so entry points share their common code and module state (one generator registry); the private packages bundled in, so the package has no dependencies; their declarations bundled per entry point, with shared declaration chunks. Not minified: consumers' bundlers minify. tsup was chosen over Vite's library mode (which rewrites `new URL(…)` into an expression bundlers can't follow) and over `tsc` (no bundling, and the private packages would have to be published).
+  - **The bake worker:** a second build, one self-contained file, `dist/bake.worker.js`, in the same directory as the engine's chunk. The engine creates it with a literal `new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })`: the build rewrites only the source's `./bake.worker.ts`, and checks the literal survived. Its syntax and names are minified, not its whitespace: esbuild drops comments with whitespace, and a dynamic `import(url)` (plugins) needs `/* webpackIgnore: true */`, or webpack turns it into a context module of `dist/` (tried: a warning, an extra chunk, and a failing import); the build fails on a dynamic import without it. Vite (dev and build), webpack 5 and plain ESM resolve it without configuration. Browsers start workers only from the page's origin, so for a CDN or other setups `createWorldView({ workerUrl })` loads it from elsewhere (a copy, or a `blob:` URL that imports it).
+  - **Side effects:** only the worker's (`"sideEffects"`), so subpaths tree-shake.
+  - **Sizes** (`pnpm package:size`, size-limit; gzipped, as a consumer bundles it): `createWorldView` 72 KB, with traffic 80 KB, all six entry points 87 KB (D3 estimated 89 KB); `parseManifest` and `decodeChunk` 3 KB; `project` from `pixelworld/grid` 0.2 KB. The worker, as a bundler minifies it, is 145 KB, 52 KB gzipped (D3: 145 KB); as shipped, 196 KB, 61 KB gzipped. The tarball is about 600 KB, 2.2 MB unpacked, most of it source maps.
+  - **Checks:** `pnpm package:check` (the tarball's files, manifest, exports, the worker literal, licences and size budgets), `pnpm package:size` (size-limit budgets) and `pnpm package:consumers` (Vite dev and build, webpack 5, plain ESM and a CDN, each from the tarball in headless Chromium, checking the worker baked). CI runs all three on every push.
+  - **Versions:** changesets, for `pixelworld` only (the private packages aren't versioned). Releases are made by hand with `pnpm publish` ([npm.md §9](npm.md#9-releases)); CI holds no tokens.
+- **PyPI:** `pixelworld-pipeline`, with extras for heavy sources (`[lidar]`, `[cityjson]`), and city packs as their own distributions (`pixelworld-city-sf`). Both build with `uv build --all-packages` and are released by hand ([npm.md §9](npm.md#9-releases)); extras and a release job are later work.
 - **The world format:** versioned on its own. The manifest carries the format version; readers accept older minor versions; conformance tests run both codecs over the same files.
 - **Prebuilt worlds:** the San Francisco and Southwest packages as data releases (ODbL), with their attribution manifests.
 - **Docs:**
-  - an API reference (TypeDoc, pdoc);
+  - an API reference (TypeDoc, pdoc). Built for the npm package: `pnpm docs:api` writes TypeDoc's reference of the six entry points to `docs/api/` (git-ignored);
   - guides: "Build your city", "Write a generator", "Make a style pack", "Embed in a game", "Export for Godot";
   - runnable examples: a minimal viewer, a driving demo, a sandbox builder, a static map export.
 
@@ -151,6 +155,8 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
    - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
    - **Not yet:** Overture, canopy, lidar and transit as adapters; 3D city models; stage hooks.
 8. **Builds and releases:** package builds, `exports`, changesets, and CI release jobs for npm and PyPI.
+   - **Done for npm (§3.5):** the `pixelworld` package, its build, `exports`, changesets, and a CI job that builds, packs and checks it on every push.
+   - **Not yet:** publishing from CI (it is manual), the style packs as packages, PyPI extras and a PyPI job.
 9. **Export CLI:** generalized from the hero bake tool.
 10. **Docs and examples:** the guides above, and an examples workspace that uses only the published packages.
 
@@ -220,6 +226,7 @@ interface WorldViewOptions {
   controller?: Controller;
   recordBakes?: boolean;                              // tile timings for the bench
   onError?: (message: string) => void;
+  workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
 }
 
 interface WorldView {
@@ -330,7 +337,7 @@ view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.e
 
 ### 7.8 Not yet
 
-- **Edits** (`view.edits`), the export CLI (§3.4) and packaging (§3.5: builds, `exports` maps, the `pixelworld` umbrella). The workspace packages are still private TypeScript sources.
+- **Edits** (`view.edits`) and the export CLI (§3.4). Packaging is built (§3.5): the workspace packages stay private TypeScript sources, and `pixelworld` bundles them for npm.
 - **Screen passes:** fog's is the one kind. A general pass (a layer's own shader) comes when a second layer needs one.
 - **`pick`** ignores objects.
 - **Traffic sprites** aren't entities yet (§7.4).

@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
+      "docs/api/**",
       "pipeline/**",
       ".claude/**", // agents' git worktrees: other copies of the repo
       "test-results/**",
