@@ -159,14 +159,15 @@ M4's features are built as controllers and plugins on the public API, which prov
 ## 6. Decisions
 
 - **D1, the primary consumer, decided: the engine first.** M4 is an example client of the engine: a game with flying and driving, built only on the public API. The export CLI follows.
-- **D2, licences:**
-  - **World packages:** ODbL 1.0, decided.
-  - **Style packs and art:** CC-BY-4.0, decided.
-  - **Code: open.** The choice is Apache-2.0 (an explicit patent licence from contributors, which ends for anyone who sues over patents in the work), MIT (short, no patent terms), or both as "MIT OR Apache-2.0", as Rust and Bevy do. *Proposal:* MIT OR Apache-2.0.
-- **D3, packaging: open.** Everything browser-side builds to about 260 KB of JavaScript (89 KB gzipped), with both style packs and every generator, plus a 145 KB bake worker. That's small enough for one package.
-  - *Proposal:* one npm package, `pixelworld`, with subpath exports (`pixelworld/engine`, `pixelworld/format`, `pixelworld/generators`, `pixelworld/traffic`, …).
-  - Content ships separately as packages anyone can publish: city packs (a style pack, generators and a facts source) and style packs.
-  - On PyPI, `pixelworld-pipeline`, matching its import name `pixelworld_pipeline`; `pixelworlds` is an unrelated project.
+- **D2, licences, decided:**
+  - **Code:** MIT OR Apache-2.0, as Rust and Bevy do. Users pick either. Contributors grant both, including Apache's patent licence, which ends for anyone who sues over patents in the work.
+  - **Style packs and art:** CC-BY-4.0.
+  - **World packages:** ODbL 1.0.
+- **D3, packaging, decided:**
+  - **npm:** one package, `pixelworld`, with subpath exports (`pixelworld/engine`, `pixelworld/format`, `pixelworld/generators`, `pixelworld/traffic`, …). Everything browser-side builds to about 260 KB of JavaScript (89 KB gzipped), with both style packs and every generator, plus a 145 KB bake worker.
+  - **Content:** city packs and style packs ship as separate packages anyone can publish.
+  - **PyPI:** `pixelworld-pipeline`, matching its import name `pixelworld_pipeline`; `pixelworlds` is an unrelated project.
+  - **Before 1.0:** check the project name against the game *Pixel Worlds* for trademarks.
 - **D4, region-specific code, decided: plugins.** San Francisco's facades, towers, Chinatown and DataSF become the first city pack, the template for others.
 - **D5, the renderer, decided: our compositor; WebGPU later.** Other engines are served by the export path.
   - **A Rust renderer:** not now.

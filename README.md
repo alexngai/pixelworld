@@ -67,3 +67,13 @@ Start with the [docs index](docs/README.md):
 ## Data attribution
 
 Elevation: USGS 3D Elevation Program (public domain). River: © OpenStreetMap contributors (ODbL 1.0). See [fixtures/README.md](fixtures/README.md).
+
+## License
+
+pixelworld is open source:
+
+- **Code** (TypeScript packages, apps, tools and the Python pipeline): licensed under either of the [MIT License](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option.
+- **Style packs** (`worlds/_styles/`): [CC BY 4.0](worlds/_styles/LICENSE.md).
+- **World packages** (`fixtures/`): [ODbL 1.0](fixtures/LICENSE.md), as databases derived from OpenStreetMap and Overture Maps. Each package's manifest lists its sources and their licences; see [data sources and licensing](docs/data-sources.md).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this project by you, as defined in the Apache-2.0 licence, shall be dual-licensed as above, without any additional terms or conditions.
