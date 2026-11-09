@@ -273,7 +273,7 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 - **Lot lines:** each row house raises a one-voxel parapet on one lot line, in its body colour for two voxels and then in the roof's, so a row of flat roofs still reads as separate houses without pastel stripes across the roofs.
 - **Roof line:** each house in a row is a voxel taller or shorter than its neighbours (two on taller houses), and never lower than its storeys (`fl`), so a row steps house by house instead of reading as one block.
 
-**Paint schemes** (generators/facades.ts)
+**Paint schemes** (`facades.ts` in the city pack, `packages/city-sf`)
 - **What a scheme is:** the role variants that share a name, such as `wall.blue`, `trim.blue` and `accent.blue`. Trim and accent come from the body's scheme, never at random.
 - **Per typology and era:**
 
@@ -322,7 +322,7 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 | `landmark.windmill` | `windmill` | the Dutch and Murphy windmills in Golden Gate Park: octagonal smock mills, a cap, four sails facing the sea, drawn 1.35× to read over the park's trees |
 | `landmark.lighthouse` | `lighthouse` | the Alcatraz light: a tapering tower, a gallery, a lantern lit at night |
 | `landmark.cellhouse` | `cellhouse` (a line landmark) | the Alcatraz cellhouse: a long hall of barred windows, a skylight monitor, a taller head block |
-| `landmark.gate` | `gate` (generators/chinatown.ts) | the Dragon Gate at Grant Avenue and Bush Street: a three-opening gate with stone piers, red beams, a blank gold plaque, jade hipped roofs with upturned corners |
+| `landmark.gate` | `gate` (`chinatown.ts` in the city pack) | the Dragon Gate at Grant Avenue and Bush Street: a three-opening gate with stone piers, red beams, a blank gold plaque, jade hipped roofs with upturned corners |
 
 ## 16. Atmosphere: fog (D-063)
 
