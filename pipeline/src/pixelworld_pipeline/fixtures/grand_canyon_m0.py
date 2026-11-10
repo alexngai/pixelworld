@@ -1,8 +1,10 @@
-"""Build the M0 Grand Canyon fixture world package.
+"""Build the M0 Grand Canyon fixture world package (fixtures/grand-canyon-m0).
 
     uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0
 
-Throwaway for M0 (the real staged pipeline arrives in M1). It:
+The first world, kept as it was built in M0 because the renderer's golden
+images are made from it; every later world comes from a region spec
+(`pixelworld build`). It:
   1. reads a window of the USGS 3DEP 1/3 arc-second DEM over HTTP range requests,
   2. averages it onto a 129x129 grid of cell corners in a local transverse
      Mercator projection (uniform 160 m per cell, no warp),
@@ -11,7 +13,8 @@ Throwaway for M0 (the real staged pipeline arrives in M1). It:
   5. classifies surfaces from elevation and steepness, and
   6. writes fixtures/grand-canyon-m0/ in world format v0.
 
-Raw downloads are cached in pipeline/.cache/ (not committed).
+Downloads go through the shared download cache (`$PIXELWORLD_CACHE`, else
+pipeline/.cache), with retries, like every other source.
 """
 
 from __future__ import annotations
@@ -19,7 +22,6 @@ from __future__ import annotations
 import argparse
 import json
 import urllib.parse
-import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -38,12 +40,18 @@ from ..gridify import (
     meters_per_step,
     smooth,
 )
+from ..sources import http
+from ..sources.rasters import GDAL_ENV
 from ..world_format import NO_WATER, write_package
 
 REPO = Path(__file__).resolve().parents[4]
-CACHE = REPO / "pipeline" / ".cache" / "grand-canyon-m0"
 OUT = REPO / "fixtures" / "grand-canyon-m0"
-USER_AGENT = "pixelworld-pipeline/0.0 (+https://github.com/alexngai/pixelworld)"
+
+
+def cache() -> Path:
+    """This fixture's directory in the shared download cache."""
+    return http.cache_dir("grand-canyon-m0")
+
 
 # Centered between Grand Canyon Village (South Rim) and Bright Angel Point (North Rim).
 CENTER_LAT = 36.115
@@ -87,15 +95,11 @@ def corner_transform() -> Affine:
 
 def fetch_corner_heights() -> np.ndarray:
     """Corner elevations in meters, shape (CELLS+1, CELLS+1), row 0 = north."""
-    cache = CACHE / f"corners_{CELLS}_{int(METERS_PER_CELL)}.npy"
-    if cache.exists():
-        return np.load(cache)
+    path = cache() / f"corners_{CELLS}_{int(METERS_PER_CELL)}.npy"
+    if path.exists():
+        return np.load(path)
     dst = np.full((CELLS + 1, CELLS + 1), np.nan, dtype=np.float32)
-    with rasterio.Env(
-        GDAL_HTTP_USERAGENT=USER_AGENT,
-        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
-        CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif",
-    ):
+    with rasterio.Env(**GDAL_ENV):  # the project's User-Agent, retries
         with rasterio.open("/vsicurl/" + DEM_URL) as src:
             reproject(
                 source=rasterio.band(src, 1),
@@ -110,8 +114,7 @@ def fetch_corner_heights() -> np.ndarray:
             )
     if np.isnan(dst).any():
         raise RuntimeError(f"DEM has {int(np.isnan(dst).sum())} missing corners")
-    CACHE.mkdir(parents=True, exist_ok=True)
-    np.save(cache, dst)
+    np.save(path, dst)
     return dst
 
 
@@ -125,23 +128,16 @@ def bounds_lonlat() -> tuple[float, float, float, float]:
 
 def fetch_river() -> list[list[tuple[float, float]]]:
     """Colorado River centerlines (lon, lat) from OpenStreetMap via Overpass."""
-    cache = CACHE / "colorado_river.json"
-    if not cache.exists():
+    path = cache() / "colorado_river.json"
+    if not path.exists():
         w, s, e, n = bounds_lonlat()
         query = (
             "[out:json][timeout:60];"
             f'way["waterway"="river"]["name"="Colorado River"]({s},{w},{n},{e});out geom;'
         )
-        req = urllib.request.Request(
-            OVERPASS_URL,
-            data=urllib.parse.urlencode({"data": query}).encode(),
-            headers={"User-Agent": USER_AGENT},
-        )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            body = resp.read()
-        CACHE.mkdir(parents=True, exist_ok=True)
-        cache.write_bytes(body)
-    data = json.loads(cache.read_text())
+        body = http.get(OVERPASS_URL, data=urllib.parse.urlencode({"data": query}).encode())
+        path.write_bytes(body)
+    data = json.loads(path.read_text())
     return [[(p["lon"], p["lat"]) for p in el["geometry"]] for el in data["elements"]]
 
 
@@ -290,23 +286,54 @@ def build(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=OUT)
-    parser.add_argument("--sigma", type=float, default=SMOOTH_SIGMA)
-    parser.add_argument("--steep", choices=["flat", "slope"], default=STEEP_MODE)
-    parser.add_argument("--bilateral", type=float, nargs=2, default=BILATERAL)
+    parser = argparse.ArgumentParser(
+        prog="python -m pixelworld_pipeline.fixtures.grand_canyon_m0",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=OUT,
+        help="the package directory (default: fixtures/grand-canyon-m0; try values in "
+        "fixtures/_try, which is git-ignored)",
+    )
+    parser.add_argument(
+        "--sigma",
+        type=float,
+        default=SMOOTH_SIGMA,
+        help=f"Gaussian smoothing of corner heights, in cells (default: {SMOOTH_SIGMA:g}, none)",
+    )
+    parser.add_argument(
+        "--steep",
+        choices=["flat", "slope"],
+        default=STEEP_MODE,
+        help="how ground steeper than --max-slope is drawn: flat terraces with cliffs "
+        f"between them, or the steepest slope tile (default: {STEEP_MODE})",
+    )
+    parser.add_argument(
+        "--bilateral",
+        type=float,
+        nargs=2,
+        default=BILATERAL,
+        metavar=("CELLS", "METRES"),
+        help="edge-preserving smoothing: radius in cells, and the height differences it "
+        f"smooths across; 0 0 turns it off (default: {BILATERAL[0]:g} {BILATERAL[1]:g})",
+    )
     parser.add_argument(
         "--exaggeration",
         type=float,
         default=VERTICAL_EXAGGERATION,
-        help="vertical exaggeration relative to true proportions (1.0 = real slopes)",
+        help="vertical exaggeration relative to true proportions "
+        f"(1.0 = real slopes; default: {VERTICAL_EXAGGERATION:g})",
     )
     parser.add_argument(
         "--max-slope",
         type=int,
         choices=[1, 2, 3],
         default=MAX_SLOPE,
-        help="steepest slope tile in steps of rise per cell; steeper terrain becomes cliffs",
+        help="steepest slope tile in steps of rise per cell; steeper terrain becomes cliffs "
+        f"(default: {MAX_SLOPE})",
     )
     args = parser.parse_args()
     manifest = build(
