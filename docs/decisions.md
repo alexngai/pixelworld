@@ -40,6 +40,47 @@ Status values:
 | D-029 | Pixel-resolution visuals decoupled from the gameplay grid: micro-terrain (M1.6) plus an object layer | Accepted |
 | D-030 | Objects come from semantic asset groups; procedural generators first, hand-drawn assets supported per group | Accepted |
 | D-031 | Order of work: pixel experiment → micro-terrain → M2 → detail pass | Accepted |
+| D-032 | Render scale for fine worlds | Proposed (M1.5) |
+| D-033 | Object pixel scale | Proposed (M1.5) |
+| D-034 | Objects in the world package | Proposed (M1.5) |
+| D-035 | Night palette by palette swap | Proposed (M1.5) |
+| D-036 | Fine-terrain rules | Proposed (M1.5) |
+| D-037 | Micro-terrain resolution | Accepted (M1.5) |
+| D-038 | Micro-terrain storage | Accepted (M1.6) |
+| D-039 | Micro-terrain on the GPU | Accepted (M1.6) |
+| D-040 | Elastic map solver | Accepted (M2) |
+| D-041 | Vertical caricature keeps proportions | Accepted (M2) |
+| D-042 | Importance from Wikidata sitelinks | Accepted (M2) |
+| D-043 | Editor v0 architecture | Accepted (M2) |
+| D-044 | Neighbouring road cells share one level | Accepted (M2) |
+| D-045 | Warped land cover is sampled 3×3 per cell | Accepted (M2) |
+| D-046 | Scale levels are separate world packages | Accepted |
+| D-047 | Depiction scale and selection | Accepted |
+| D-048 | Geo grid for moving between levels | Accepted |
+| D-049 | Snap roads and buildings to the 8 grid directions | Accepted |
+| D-050 | Roads and paths at their real width | Accepted |
+| D-051 | A landmark registry with generic depictions by default | Accepted (M3) |
+| D-052 | Building heights and towers from 3DEP lidar | Accepted (M3) |
+| D-053 | Hero landmarks are baked offline and painted over | Accepted (M3) |
+| D-054 | Decorative scatter is the client's, gameplay objects the pipeline's | Accepted (M3) |
+| D-055 | Building typologies from geometry, streets and public records | Accepted |
+| D-056 | Long landmarks: per-column ownership, a fixed base, snapped with their road | Accepted |
+| D-057 | Objects file version 2, footprints relative to their anchor | Accepted |
+| D-058 | Ways that graze the world's edge stay in one piece | Accepted |
+| D-059 | Not used: the number was skipped | — |
+| D-060 | Ambient traffic follows routes exported from the built package | Accepted (M4) |
+| D-061 | Rails drawn in the street as their own layer | Accepted (M3.5) |
+| D-062 | Ground surfaces from land use: park lawns and yards | Accepted (M3.5) |
+| D-063 | Fog as an atmosphere layer over the baked world | Accepted (M3.5) |
+| D-064 | Traffic vehicles as procedural voxel models from the style pack | Accepted |
+| D-065 | Lanes and medians from one-way pairs and way widths | Accepted (M3.5) |
+| D-066 | A dam holds its lake just under its crest, and stands as a wall | Accepted |
+| D-067 | Coarse levels draw built-up land as city blocks | Accepted |
+| D-068 | Pipeline plugins through a registry of entry points | Accepted (M4) |
+| D-069 | An engine API the viewer and games are clients of | Accepted (M4) |
+| D-070 | The example game drives and flies on the public engine API, at a paced speed | Accepted (M4) |
+| D-071 | Generator plugins, and San Francisco's generators as the city pack's browser half | Accepted (M4) |
+| D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
 
 ---
 
@@ -596,3 +637,18 @@ The point is more room for visual interest; both halves are wanted.
   - A registry shared through `globalThis`: plugin bundles with their own copy would then register directly, but any copy of the package, of any version, could change any other's table. Only the announcement list is shared.
   - Keeping San Francisco's generators built in "with clear names" (library.md §4.5): every page would still carry them, and the next city would have no template.
 - **Later:** a published build of the pack (a self-contained `dist/worker.js` and a descriptor on `new URL("./worker.js", import.meta.url)`, with the npm packaging); the bay-area style pack as a data package beside it; plugins for other extension points (hand-drawn assets, layers).
+
+### D-077: Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards (accepted)
+- **Why:** a developer-experience review of the contributor's loop found the workflow scattered or missing (no contributor guide; goldens, `PW_PORT`, changesets and the debug API documented in passing or not at all), a 21-minute serial e2e run with no quick subset, a fixed editor port and silently reused servers (two checkouts could test each other's code), no way to ask which ramp or generator drew a pixel, and no way to look at one model without loading a world.
+- **Docs:** [CONTRIBUTING.md](../CONTRIBUTING.md) (setup, a map of the repo and where to change what you see, the checks as CI runs them, one test, ports, goldens, the tile cache, the debugging tools, decisions, changesets and commits) and [viewer.md](viewer.md) (every key, all 27 URL parameters, the debug API, the model preview). The README's checks match CI and link to both.
+- **e2e servers:** every port comes from `PW_PORT`: the viewer on it, the editor one below, the game two below (`PW_EDITOR_PORT`, `PW_GAME_PORT` override). Each server starts through `tools/e2e-server.mjs`, the app's own Vite config plus a header naming the checkout it serves; `e2e/global-setup.ts` fails the run on a server from another checkout or one it can't identify. Reusing a server already up is opt-in (`PW_REUSE=1`); by default one on the port is an error.
+- **A smoke subset:** ten tests tagged `@smoke` over every app (the M0 and Las Vegas goldens, San Francisco's walking level, the sources screen, the inspector, the model preview, the editor, the game): `pnpm test:e2e:smoke`, 2.3 min here under a load of 10 on 4 cores.
+- **CI shards:** tests are independent, so the suite runs fully parallel (one worker by default, `PW_WORKERS` for more) and CI runs it in four shards, each writing a blob report that a last job merges into one HTML report. Playwright splits by test count in file order, so the shard with the two level-switching tests (5 min together) is the longest.
+- **The pixel inspector:** `__pixelworld.inspect(x, y)` (Alt+click logs it) reads the canvas pixel, finds its palette entry in the palette shown (ramp, shade) and every place the style pack uses that ramp, picks the ground under it (`query.pick`: cell, surface, road), and finds the placed object drawn there: the nearest object the view ray passes through (`query.objectsAt`, by footprint and estimated height) whose asset draws in the pixel's ramp, with its group, generator, the plugin that registered it and its landmark id. About 6 ms per call. Built in `apps/web` on public queries; no engine change.
+- **The model preview:** `pnpm models` opens `apps/web/model.html`: a style pack's asset group (or another generator drawing its roles), seeds, footprints and heights in voxels (vehicles: a size), data hints, in up to four rotations, by day and night, at a zoom, on a ground plate. The same steps as a world's bake: `generateModel`, `meshVoxels` at the object voxel scale, the baker (on the main thread), the night palette over the same indices. Workspace city packs (`packages/*/src/plugin.ts`) are registered, so a generator shows before a style pack names it, with a note when the pack doesn't name the plugin. The parameters are the URL, so the dev server's reload after a save shows the same models re-baked (half a second here).
+- **Rejected alternatives:**
+  - **An object id channel in the bake, for the inspector:** exact, but it changes the baker, the tile format and cache and the compositor for a debugging aid; the ray march over the occupancy queries answers for placed objects, which is what a content author asks about.
+  - **Identifying servers by a file they serve:** Vite answers any path with `index.html` (its SPA fallback) and a main checkout's server serves its worktrees' files, so only a header the server sets says whose it is.
+  - **Hot-swapping the generators in the preview without a reload:** the registry, the plugins and the style packs would each need their own HMR handling; a reload with the state in the URL is as quick and can't show a stale mix.
+  - **Projects per app, so a run starts only the servers its tests need:** Playwright starts every `webServer` for any selection; the three take about 5 s together.
+- **Later:** split the level-switching tests or weight the shards by duration; generate viewer.md's parameter table from `main.ts`; an inspector for traffic and scatter (their sprites and models are known to the layers); a palette viewer.
