@@ -20,6 +20,7 @@ import { listGenerators, resolveAsset, type PluginReport } from "@pixelworlds/ge
 import type { Rotation } from "@pixelworlds/grid";
 import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
 import {
+  DEFAULT_SPEC,
   defaultGroundRamp,
   defaultVehicleSize,
   modelKind,
@@ -176,6 +177,8 @@ function showError(e: unknown): void {
   state = { ...state, error: message };
   statusEl.textContent = message;
   statusEl.className = "error";
+  // a pack the URL names that isn't there: the form for the default one, to pick another
+  if (!form.childElementCount && STYLES[DEFAULT_SPEC.style]) buildControls(DEFAULT_SPEC, styleOf(DEFAULT_SPEC.style));
 }
 
 /** Each rotation's baked image placed so the model's origin lines up across a row. */
@@ -209,8 +212,8 @@ function rowCanvases(images: (BakedImage | null)[], palette: Palette, zoom: numb
 async function draw(spec: PreviewSpec): Promise<void> {
   if (!baker) throw new Error("WebGL2 is required");
   const style = styleOf(spec.style);
-  if (!resolveAsset(style.assets ?? {}, spec.group)) throw new Error(`the style pack ${style.id} has no asset for ${spec.group}`);
   buildControls(spec, style);
+  if (!resolveAsset(style.assets ?? {}, spec.group)) throw new Error(`the style pack ${style.id} has no asset for ${spec.group}`);
   const day = buildPalette(style);
   const palettes: [PaletteName, Palette][] = spec.palettes.flatMap((p): [PaletteName, Palette][] =>
     p === "day" ? [["day", day]] : style.night ? [["night", buildPalette(style, "night")]] : [],

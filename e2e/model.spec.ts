@@ -68,6 +68,15 @@ test.describe("Model preview", () => {
     const missing = await open(page, "style=desert-southwest&group=building.residential&generator=nope&palette=day");
     expect(missing.rows[0]!.error).toContain("nope");
     await expect(page.locator("#grid td.error")).toContainText("nope");
+    // a style pack that isn't there: the error, and the form to pick another
+    const unknown = await open(page, "style=nope");
+    expect(unknown.error).toContain("no style pack nope");
+    await page.locator("select[name=style]").selectOption("bay-area");
+    await page.waitForURL(/style=bay-area/);
+    await page.evaluate(() => window.__models!.ready());
+    const picked = await page.evaluate(() => window.__models!.state());
+    expect(picked.error).toBeNull();
+    expect(picked.rows[0]!.cells.length).toBeGreaterThan(0);
   });
 
   test("the controls redraw and keep the parameters in the URL; vehicles take a size", async ({ page }) => {
