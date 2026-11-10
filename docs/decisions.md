@@ -86,6 +86,7 @@ Status values:
 | D-075 | Style packs get a versioned JSON Schema, path-qualified validation and `extends` | Accepted |
 | D-076 | Every package has a geo grid; specs are checked against a schema; builds are staged | Accepted |
 | D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
+| D-078 | Next regions: New York, then Paris, then Amsterdam | Accepted (M5) |
 
 ---
 
@@ -806,3 +807,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Hot-swapping the generators in the preview without a reload:** the registry, the plugins and the style packs would each need their own HMR handling; a reload with the state in the URL is as quick and can't show a stale mix.
   - **Projects per app, so a run starts only the servers its tests need:** Playwright starts every `webServer` for any selection; the three take about 5 s together.
 - **Later:** split the level-switching tests or weight the shards by duration; generate viewer.md's parameter table from `main.ts`; an inspector for traffic and scatter (their sprites and models are known to the layers); a palette viewer.
+
+### D-078: Next regions: New York, then Paris, then Amsterdam (accepted, M5)
+- **Why:** [second-region.md](second-region.md) scored these three A. All three will be built; the order puts the cheapest adapter and the closest match to the San Francisco pipeline first.
+  - **New York** runs on the same Socrata API as DataSF, uses the US sources already built in (3DEP, USGS lidar, NAIP, Overture), and its records name the fabric outright: PLUTO's class codes, plus the Landmarks Preservation Commission's style and material per building (brownstone, cast iron).
+  - **Paris** brings the first non-US terrain source and the most uniform recognizable fabric. Its roofs still come from rules.
+  - **Amsterdam** brings CityJSON ingestion (3D BAG) and roofs from data.
+- **Verified first:** New York's licence text and datasets were read directly on 2026-11-09 (second-region.md §7).
+- **Rejected alternatives:**
+  - **Amsterdam first**, for M5's CityJSON goal and roofs from data: the most new pipeline code before the first result. It stays in the plan.
+  - **Montréal instead of Paris:** reuses the row-house generators, but its LoD2 covers only some boroughs, and it adds less to the style range than Paris.
+- **Later:** M5's exit criterion ("no code changes beyond new ingest adapters and its style pack") is judged on Paris and Amsterdam; New York may still add rule fields (§7).

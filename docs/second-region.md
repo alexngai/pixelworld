@@ -2,6 +2,8 @@
 
 Research date: 2026-11-09. Scope: the M5 "second region from coverage tier 1" decision (roadmap §M5, data-sources.md §4). No code was changed.
 
+**Decided (D-078):** all three top candidates, in the order New York, Paris, Amsterdam. New York's sources were then checked directly from an open network (§7), which corrects §3 and §4 where they disagree.
+
 **How this was verified.** This session's network only allows the hosts in the pixelworld environment (DataSF, Wikidata, USGS and others). Every official portal tried was blocked: nyc.gov, opendata.cityofnewyork.us, data.cityofchicago.org, opendata.dc.gov, 3dbag.nl, mlit.go.jp, data.gv.at, hri.fi and data.gouv.fr. Facts below were checked in three ways:
 - **Search:** web-search results that quote the official dataset, metadata and licence pages. The URLs given are the official pages those results came from.
 - **Code search:** GitHub code search, to confirm field names and value codes in code that queries the live APIs. NYC Planning's own ZoLa app gave PLUTO's class codes.
@@ -58,7 +60,7 @@ Key: ✔ open and fit for us · ⚠ usable with a caveat · ✖ blocks the use. 
 
 | City | 1 Footprints + heights / 3D | 2 Building attributes | 3 Elevation | 4 Trees, parks | 5 Transit | 6 Access | 7 Licence | 8 Iconic fabric (data-drivable?) | Score |
 |---|---|---|---|---|---|---|---|---|---|
-| **New York City** | Official footprints (~1.08M) with `height_roof`, `construction_year`, BBL, updated weekly. 3D model (2014, CityGML; TUM LoD2 version). Overture/OSM from the 2013–14 full import, with heights | PLUTO per lot: `yearbuilt`, `numfloors`, `bldgclass` (A/B/C/D/K/L/O… codes), `landuse`, units | 3DEP 10 m; USGS lidar EPT `NY_NewYorkCity`, `NY_NewYorkCity_2021` | 2015 Street Tree Census (`uvpi-gqnh`); Overture parks | MTA GTFS ⚠ custom terms; rail via Overture | Socrata SoQL (same as DataSF) | ⚠ Open Data Law: "without any restrictions on their use"; no named licence | Brownstones, walk-up tenements with fire escapes, cast-iron lofts, prewar elevator blocks, Deco towers. ✔ `bldgclass` and year | **A** |
+| **New York City** | Official footprints (~1.08M) with `height_roof`, `construction_year`, BBL, updated weekly. 3D model (2014, CityGML; TUM LoD2 version). Overture/OSM from the 2013–14 full import, with heights | PLUTO per lot: `yearbuilt`, `numfloors`, `bldgclass` (A/B/C/D/K/L/O… codes), `landuse`, units | 3DEP 10 m; USGS lidar EPT `NY_NewYorkCity` | Forestry Tree Points (`hn5i-inap`, current); 2015 Street Tree Census (`uvpi-gqnh`); Overture parks | MTA GTFS ⚠ custom terms; rail via Overture | Socrata SoQL (same as DataSF) | ⚠ Open Data Law: "without any restrictions on their use"; no named licence | Brownstones, walk-up tenements with fire escapes, cast-iron lofts, prewar elevator blocks, Deco towers. ✔ `bldgclass` and year | **A** |
 | Chicago | Footprints with `year_built`, `stories` (year stops ~2015 *(third-party)*) | Cook County Assessor residential characteristics (wall, roof…) | 3DEP + EPT | not checked | not checked | Socrata | ✖ City terms grant no IP rights, can demand termination; Cook County: no licence | Two- and three-flats, greystones, bungalow belt. ✔ data drives it | **C** |
 | Boston | Overture (some heights USGS-lidar-derived); BPDA 3D model; roof-break outlines (PDDL) | Property assessment: `YR_BUILT`, floors, land use ("THREE-FAM DWELLING"), `BLDG_TYPE` ("DK - Decker", "RE - Row End", "RM - Row Middle"), roof structure and cover | 3DEP; EPT `MA_CentralEastern_1_2021` | not verified | not verified | CKAN (Analyze Boston) | ✔ PDDL (default for all Analyze Boston datasets) | Triple-deckers, bowfront brick rows. ✔ `BLDG_TYPE` names it | **B** |
 | Philadelphia | L&I footprints (546k) with `approx_hgt`/`max_hgt` | OPA: `year_built`, `number_stories`, `building_code_description` ("ROW 2 STY MASONRY", "ROW B/GAR 2 STY MASONRY") | 3DEP + EPT | not checked | not checked | ArcGIS FeatureServer, Carto SQL | ✖ City of Philadelphia License: City keeps all rights; no explicit modify or redistribute grant; indemnity | Rowhouses. ✔ the building code spells them out | **C** |
@@ -100,8 +102,8 @@ URLs are the official pages surfaced by search. Socrata IDs and field names were
     - D-series elevator apartments; L1–L9 loft buildings; O1–O9 offices by storey band.
     - Land use 01–11.
 - **NYC 3D Building Model:** every building in the 2014 aerial survey, as CityGML, multipatch and 3dm. "LOD 1.5 buildings" have no pitched roofs or domes. `https://data.cityofnewyork.us/d/tnru-abg2`. A TUM-derived LoD2 CityGML version: `https://www.asg.ed.tum.de/gis/projekte/new-york-city-3d/`. Optional for us, since the footprints already carry heights.
-- **Lidar:** `https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_NewYorkCity/ept.json` and `…/NY_NewYorkCity_2021/ept.json`. These are USGS, public domain, and `lidar.py` reads them as is.
-- **Trees:** 2015 Street Tree Census `uvpi-gqnh` (species, diameter, health). For the current population the portal points to the ForMS datasets *(ID not verified)*.
+- **Lidar:** `https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_NewYorkCity/ept.json`. USGS, public domain, and `lidar.py` reads it as is. (There is no `NY_NewYorkCity_2021` in the bucket; see §7.)
+- **Trees:** Forestry Tree Points `hn5i-inap` (current, updated daily); the 2015 Street Tree Census `uvpi-gqnh` is frozen. See §7.
 - **Transit:** MTA GTFS at `https://www.mta.info/developers`. The data is free, but the terms are MTA's own (`https://www.mta.info/developers/terms-and-conditions`). Use Overture rail instead.
 - **Licence:** NYC Admin Code Title 23, Ch. 5 (Open Data Law) says public data sets "shall be made available without any restrictions on their use". The FAQ (`https://opendata.cityofnewyork.us/faq/`) says there are "no restrictions on the use of Open Data", but the Terms of Use add agency terms. OpenStreetMap imported the NYC footprints in 2013–14, a useful precedent.
 - **Overture:** good. OSM's NYC buildings come from the city import, including roof heights, but those date from 2014.
@@ -276,7 +278,7 @@ URLs are the official pages surfaced by search. Socrata IDs and field names were
   - Walk-up tenements (C4, C7) get fire escapes.
   - Brownstones: A4 or B1, 1840–1900, 3–5 floors, in historic districts.
   - Prewar elevator blocks: D-series before 1940. Lofts: L. Office towers: O4, typed by era like `decoTower` and `sfTower`.
-- Everything US-side is already in the pipeline: 3DEP, the EPT lidar (two NYC surveys), NAIP colours, the Meta canopy and Overture.
+- Everything US-side is already in the pipeline: 3DEP, the EPT lidar, NAIP colours, the Meta canopy and Overture.
 - The 2015 tree census gives real street-tree positions.
 
 **Caveats:**
@@ -332,7 +334,7 @@ The **GTFS reader** is optional for all three, since `transit.py` already gets r
 **By city**
 - **NYC:**
   - The full Terms of Use text wasn't read; the Open Data Law wording came via search.
-  - The current-trees (ForMS) and neighbourhood dataset IDs weren't checked, nor whether PLUTO still carries historic-district fields.
+  - The current-trees (ForMS) and neighbourhood dataset IDs weren't checked, nor whether PLUTO still carries historic-district fields. *(All answered in §7.)*
   - MTA GTFS terms are custom.
 - **Chicago:** the current Data Portal Terms text was only partly visible, and Cook County has no licence at all. The licence status is "unclear", not "denied".
 - **Boston:** street trees, MBTA GTFS and the BPDA 3D model licence weren't checked. Field names come from code, not the official data key.
@@ -363,3 +365,50 @@ The **GTFS reader** is optional for all three, since `transit.py` already gets r
 - **Copenhagen:** the BBR licence is unconfirmed, and access needs a token.
 
 **Not researched:** Seattle, LA and Portland trees and transit; Rotterdam's city-specific data; Hong Kong, Singapore and Melbourne beyond a mention.
+
+---
+
+## 7. New York, checked directly (2026-11-09)
+
+Read from an open network: Socrata dataset metadata and SoQL queries against the live API, DCP's PLUTO page, the portal's dataset pages and the Open Data Law. Counts below are from those queries on that date.
+
+### Licence
+- **The law:** Admin Code §23-502(d), read in the nycadmincode.readthedocs.io mirror of the official code. Public data sets "shall be made available without any registration requirement, license requirement or restrictions on their use". The only condition: the city may require a third party to identify the source and version of each data set and describe its modifications.
+- **The portal:** every dataset below says "The license for this dataset is unspecified". DCP's PLUTO page adds only a no-warranty disclaimer.
+- **For us:** fit for ODbL world packages. Each attribution entry names the dataset, its version (PLUTO `26v2`; the footprints' fetch date) and says it was modified.
+- **Access:** SoQL needs no app token at our volume, as with DataSF. Note that the portal's web pages (`opendata.cityofnewyork.us`) refuse plain HTTP clients behind Cloudflare, while the API (`data.cityofnewyork.us/resource/…`, `/api/views/…`) answers.
+
+### Datasets
+
+| Dataset (agency) | ID | Fields we'd read | Measured |
+|---|---|---|---|
+| **BUILDING**, the footprints (OTI) | `5zhs-2jue` | `the_geom` (spatial: `within_box` works), `bin`, `base_bbl`, `mappluto_bbl`, `height_roof` (feet), `ground_elevation`, `construction_year`, `name`, `geom_source` | 1,082,972 footprints. Height missing on 717 (0.07%), year on 10,058 (0.9%). Year 1900 on 7,520, of them 4,961 in Manhattan (11% of its footprints): a placeholder. 93% photogrammetric. Latest edit 2026-11-06. |
+| **PLUTO** (DCP) | `64uk-42ks` | `bbl`, `bldgclass`, `landuse`, `yearbuilt`, `numfloors`, `unitsres`, `histdist`, `landmark`, `bldgfront`, `bldgdepth`, `latitude`/`longitude` | 858,284 lots, version `26v2` (DCP's latest). No year on 40,317 (4.7%). ⚠ In Manhattan 52% of years are multiples of 5, and 1910, 1900 and 1920 are the three most common: the year is a decade estimate, so rules should lean on the class code. ⚠ `geom` is a text column the API returns empty: lot polygons come only from the MapPLUTO download (shapefile or FGDB zip on DCP's page). Join to footprints by BBL instead. |
+| **Individual Landmark and Historic District Building Database** (LPC) | `gpmc-yuvp` | `bin`, `bbl`, `date_low`/`date_high`, `style_prim`, `mat_prim`, `build_type`, `use_orig`, `hist_dist`, `arch_build` | 38,105 buildings in designated districts and landmarks: Brooklyn 17,047, Manhattan 14,610, Queens 4,814, Bronx 1,095, Staten Island 539. **Material:** brick 13,816, brownstone 7,341, wood frame 2,262, limestone 1,851, cast iron 411. **Style:** Renaissance Revival 5,156, neo-Grec 2,837, Italianate 2,700, Romanesque Revival 2,130, Queen Anne 1,464, Greek Revival 1,407 ("Not determined" 6,703). **Type:** row house 17,650, store and lofts 760, tenement 497. |
+| **Historic Districts** (LPC) | `skyk-mpzq` | district polygons, `area_name`, `desdate` | — |
+| **Individual Landmark Sites** (LPC) | `buis-pvji` | `lpc_name`, `landmarkty`, `bbl`, `nta2020` | candidates for the landmark registry |
+| **2020 NTAs** (DCP) | `9nt8-h7nd` | `ntaname` ("Brooklyn Heights", "Greenpoint"), `boroname` | gives `hood` |
+| **Forestry Tree Points** (Parks) | `hn5i-inap` | `genusspecies`, `dbh`, `tpstructure` | 897,872 live trees (`Full`), updated 2026-11-04. Replaces the 2015 census (`uvpi-gqnh`, frozen in 2017). |
+
+**PLUTO's most common classes in Manhattan:** C7 4,519 (walk-ups over six families, with stores), C1 2,562, C4 2,215 (old-law tenements), RM 1,903, D4 1,896, C5 1,821, C6 1,536, A4 1,475 (city residences), C0 1,396, K4 1,217, D1 1,118, B1 914.
+
+### Elevation and lidar
+- **Terrain:** the built-in `usgs-3dep-13arcsec` covers the city. The city's own 1-foot DEM (`dpc8-z3jc`, `7kuu-zah7`) is a download if ever needed; not at 10–25 m cells.
+- **Lidar:** the bucket has one New York City EPT, `NY_NewYorkCity` (4.76 billion points; the survey year isn't in its metadata). There is no `NY_NewYorkCity_2021`, contrary to §3 and §4 before this check. The footprints already carry heights, so lidar is optional.
+
+### What the city pack would be
+- **`pixelworld-city-nyc`**, with one facts source named after its data, `pluto` (plugins.md §6). It looks up by point in footprint, not point in lot:
+  1. footprints in the box (spatial query);
+  2. PLUTO by BBL, fetched by its lot `latitude`/`longitude` box;
+  3. LPC by BIN.
+- **Facts it fills:**
+  - `year`: LPC's `date_low`, else the footprint's `construction_year` (not 1900), else PLUTO's `yearbuilt`;
+  - `stories` (`numfloors`), `units` (`unitsres`), `use` (from `landuse`), `class` (`bldgclass`, unchanged), `hood` (the NTA);
+  - `material`: LPC's `mat_prim`.
+- **Generators:** `@pixelworlds/city-nyc` for what SF's `rowhouse` and `block` can't draw: stoops, cornices, fire escapes, cast-iron fronts, setback towers.
+
+### Open questions for the New York spec
+1. **Extent.** Manhattan alone is about 4 × 21 km. For example: the drive level as Manhattan and the Brooklyn and Queens waterfront at 25 m; the walk level as Lower Manhattan, or Brownstone Brooklyn (Brooklyn Heights, Cobble Hill, Park Slope), at 10 m; the fly level as the harbour at 100 m.
+2. **Heights.** Buildings come from Overture, whose New York heights come from OSM's 2013–14 import of these same footprints. The city's are edited daily. Using them needs either a buildings source (no such plugin kind yet) or a height key read from facts.
+3. **Rule fields.** LPC's material and style are the strongest signals for the brownstone and cast-iron fabric, and no rule reads them yet: `materials:` (facts' `material`) and maybe `styles:`. Both are pipeline changes beyond an adapter.
+4. **Depiction (data-sources.md §7).** The Statue of Liberty is sculpture, not architecture, so it needs a stylized variant. The Empire State Building's image is used as a trademark by its owners; check before a canonical depiction.
