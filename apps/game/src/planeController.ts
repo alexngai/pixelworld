@@ -24,9 +24,9 @@ export interface PlaneControllerOptions {
   /** A place and heading from another level (a take-off), through the geo grids; wins over `start`. */
   pose?: GeoPose;
   heading?: number;
-  /** Height over the ground at the start (steps; default PLANE.startAgl). */
+  /** Height over the ground at the start (steps; default PLANE.startAgl; at most the ceiling). */
   agl?: number;
-  /** Starting speed (cells/s; default cruise at the level's pace). */
+  /** Starting speed (cells/s; at least cruise at the level's pace). */
   speed?: number;
   /** The camera follows the plane (default true). */
   follow?: boolean;
@@ -97,7 +97,8 @@ export class PlaneController implements Controller {
     const k = pace(m.scale.metersPerCell, FLY_PACE.ref, FLY_PACE.floor) / w.renderScale;
     const vox = PLANE.voxels;
     const size = { length: vox.length * w.renderScale, width: vox.width * w.renderScale, height: vox.height * w.renderScale };
-    this.params = { pace: k, ceiling: w.heightRange[1] + PLANE.ceiling, length: vox.length / 16 };
+    const stall = m.level === "walk" ? PLANE.walkStallSpeed : PLANE.stallSpeed;
+    this.params = { pace: k, ceiling: w.heightRange[1] + PLANE.ceiling, length: vox.length / 16, stall };
     this.world = new FlyWorld(view.query, w.cellsX, w.cellsY);
     let start = { x: (m.start?.x ?? w.cellsX / 2) + 0.5, y: (m.start?.y ?? w.cellsY / 2) + 0.5 };
     let heading = this.opts.heading ?? 0;
@@ -110,23 +111,27 @@ export class PlaneController implements Controller {
       const c = view.query.lonLatToCell(s.lon, s.lat);
       if (c) start = { x: c[0], y: c[1] };
     } else if (s) start = { x: s.x, y: s.y };
-    await view.query.ensure(start.x - 10, start.y - 10, start.x + 10, start.y + 10);
+    // and the landmarks' ground, for their tops: the ceiling is over the tallest too (a walking level's towers stand far over its ground)
+    const marks = view.query.landmarks();
+    await Promise.all([view.query.ensure(start.x - 10, start.y - 10, start.x + 10, start.y + 10), ...marks.map((l) => view.query.ensure(l.x, l.y, l.x, l.y))]);
+    const tops = marks.flatMap((l) => view.query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity));
+    this.params.ceiling = Math.max(w.heightRange[1], ...tops) + PLANE.ceiling;
     const ground = this.world.groundAt(start.x, start.y) ?? 0;
-    const speed = this.opts.speed ?? PLANE.cruiseSpeed * k;
+    const speed = Math.max(this.opts.speed ?? 0, PLANE.cruiseSpeed * k);
     Object.assign(this.state, {
       x: start.x,
       y: start.y,
-      h: ground + (this.opts.agl ?? PLANE.startAgl),
+      h: Math.min(this.params.ceiling, ground + (this.opts.agl ?? PLANE.startAgl)),
       heading,
       speed,
       climb: PLANE.startClimb,
       bank: 0,
-      throttle: throttleFor(Math.max(speed, PLANE.cruiseSpeed * k), k),
+      throttle: throttleFor(speed, k, stall),
     });
     const model = { group: PLANE.group, seed: PLANE.seed, size };
     this.shadowEntity = view.entities.add({ model: { ...model, part: 1 }, x: start.x, y: start.y, h: ground + PLANE.shadowLift, heading: this.state.heading });
     this.plane = view.entities.add({ model, x: start.x, y: start.y, h: this.state.h, heading: this.state.heading, silhouette: true, reveal: {} });
-    this.cam.snap(start.x, start.y, (this.state.h + ground) / 2);
+    this.cam.snap(start.x, start.y, this.focusH(ground));
     if (this.follow) view.camera.setFocus(this.cam.x, this.cam.y, this.cam.h);
     this.remember();
     if (this.opts.listen) this.unlisten = listenTo(this, this.opts.listen);
@@ -147,7 +152,7 @@ export class PlaneController implements Controller {
   place(x: number, y: number, heading = this.state.heading, h?: number): void {
     const ground = this.world?.groundAt(x, y) ?? this.state.h - 2;
     const cruise = PLANE.cruiseSpeed * this.params.pace;
-    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, bank: 0, throttle: throttleFor(cruise, this.params.pace) });
+    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, bank: 0, throttle: throttleFor(cruise, this.params.pace, this.params.stall) });
     this.pilot = null;
     this.history.length = 0;
     this.remember();
@@ -208,7 +213,7 @@ export class PlaneController implements Controller {
       climb: 0,
       bank: 0,
       speed: Math.max(s.speed, PLANE.cruiseSpeed * this.params.pace),
-      throttle: throttleFor(PLANE.cruiseSpeed * this.params.pace, this.params.pace),
+      throttle: throttleFor(PLANE.cruiseSpeed * this.params.pace, this.params.pace, this.params.stall),
     });
     this.history.length = 0;
     this.remember();
@@ -285,10 +290,19 @@ export class PlaneController implements Controller {
     shadow.moveTo(s.x, s.y, (this.shadowGround() ?? shadow.h - PLANE.shadowLift) + PLANE.shadowLift);
     shadow.heading = s.heading;
     if (this.follow) {
-      // between the plane and its shadow, so both stay in view
-      const f = this.cam.update(s.x, s.y, ((ground ?? s.h) + s.h) / 2, s.heading, s.speed, dt);
+      const f = this.cam.update(s.x, s.y, this.focusH(ground), s.heading, s.speed, dt);
       view.camera.setFocus(f.x, f.y, f.h);
     }
+  }
+
+  /** The camera's height: between the plane and its shadow, so both show, but never so far under a high plane that it leaves the view. */
+  private focusH(ground: number | null): number {
+    const s = this.state;
+    const mid = ((ground ?? s.h) + s.h) / 2;
+    const view = this.view;
+    if (!view) return mid;
+    // internal pixels per height step: the grid's STEP_PX (8) at the render scale
+    return Math.max(mid, s.h - (view.camera.internalHeight * PLANE.camAbove) / (8 * view.world.renderScale));
   }
 
   update(dt: number): void {

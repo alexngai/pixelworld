@@ -42,6 +42,8 @@ export interface GameOptions {
   rotation?: number;
   /** HUD root element; null for none. */
   hud?: HTMLElement | null;
+  /** Start in the air (any level). */
+  fly?: boolean;
 }
 
 export type Mode = "car" | "plane";
@@ -146,8 +148,9 @@ export class Game {
     const place: Place | undefined = start ? { lon: start.lon, lat: start.lat } : undefined;
     const toward = start && "toward" in start ? (start as { toward: { lon: number; lat: number } }).toward : undefined;
     await game.load(opts.worldUrl, manifest, (routes) =>
-      manifest.level === "fly"
-        ? new PlaneController({ start: place })
+      manifest.level === "fly" || opts.fly
+        ? // in the air over a finer level: from the top, over its towers
+          new PlaneController({ start: place, agl: manifest.level === "fly" ? undefined : Infinity })
         : new CarController({ start: place, toward, routes, traffic: () => game.trafficOn() }),
     );
     return game;
@@ -166,19 +169,21 @@ export class Game {
   private async load(worldUrl: string, manifest: WorldManifest, make: (routes: RouteNetwork | null) => Controller): Promise<void> {
     const t0 = performance.now();
     const opts = this.opts;
-    const routes = await loadRoutes(worldUrl, manifest).catch(() => null);
-    const controller = make(routes);
     const old = this.view as WorldView | undefined;
+    // the same world (flying over a walking level): the view stays, only its controller changes
+    const same = old !== undefined && worldUrl === this.worldUrl;
+    const routes = same ? this.routes : await loadRoutes(worldUrl, manifest).catch(() => null);
+    const controller = make(routes);
     const t = opts.traffic ?? {};
     const traffic =
-      routes && t.enabled !== false
+      !same && routes && t.enabled !== false
         ? trafficLayer({ routes, seed: t.seed ?? 1, paused: t.paused ?? false, density: t.density ?? 1, enabled: this.traffic?.enabled ?? true })
         : null;
     if (controller instanceof CarController || controller instanceof PlaneController) {
       controller.paused = this.paused;
       if (old) controller.frozen = true; // until the new view shows
     }
-    const view = await createWorldView({
+    const view = same ? old : await createWorldView({
       canvas: opts.canvas,
       worldUrl,
       style: opts.style,
@@ -192,7 +197,8 @@ export class Game {
       plugins: opts.plugins,
       replace: old,
     });
-    if (old?.paused) view.paused = true; // still paused on the other level
+    if (same) await view.controllers.use(controller);
+    else if (old?.paused) view.paused = true; // still paused on the other level
     // the old view keeps the canvas (and its controller runs) until the new one has a whole frame
     await view.ready();
     this.offFrame?.();
@@ -200,7 +206,7 @@ export class Game {
     this.worldUrl = worldUrl;
     this.manifest = manifest;
     this.routes = routes;
-    this.traffic = traffic && view.layers.get(traffic.id) ? traffic : null;
+    if (!same) this.traffic = traffic && view.layers.get(traffic.id) ? traffic : null;
     if (controller instanceof CarController) {
       this.mode = "car";
       this.car = controller;
@@ -216,7 +222,7 @@ export class Game {
     this.places = [...landmarkPlaces(view.query.landmarks(), view.query.cellToLonLat), ...GAZETTEER];
     this.hud?.setWorld(view.world.cellsX, view.world.cellsY, routes, view.query.landmarks());
     this.offFrame = view.onFrame((e) => this.onFrame(e.now, e.dt));
-    if (old) this.changes.push({ from: old.world.level ?? "", to: view.world.level ?? "", ms: performance.now() - t0 });
+    if (old && !same) this.changes.push({ from: old.world.level ?? "", to: view.world.level ?? "", ms: performance.now() - t0 });
     this.transition = null;
     this.refreshHud();
   }
@@ -321,7 +327,9 @@ export class Game {
     const car = this.car;
     if (this.mode !== "car" || !car || this.transition) return false;
     if (!force && !car.canTakeOff) return false;
-    const url = levelUrl(this.worldUrl, this.manifest, "fly", location.href);
+    // a walking level's detail is its charm: fly over it rather than switch to the flying level
+    const here = this.manifest.level === "walk";
+    const url = here ? this.worldUrl : levelUrl(this.worldUrl, this.manifest, "fly", location.href);
     if (!url) {
       this.hud?.say("This world has no flying level.");
       return false;
@@ -333,15 +341,16 @@ export class Game {
     car.frozen = true;
     this.hud?.say("Taking off…", 2);
     try {
-      const manifest = await fetchManifest(url);
-      await this.load(url, manifest, () => new PlaneController({ pose, agl: PLANE.startAgl }));
+      const manifest = here ? this.manifest : await fetchManifest(url);
+      // on the same map the plane keeps the car's speed (another level's speeds differ)
+      await this.load(url, manifest, () => new PlaneController({ pose, agl: PLANE.startAgl, speed: here ? s.speed : undefined }));
     } catch (e) {
       this.transition = null;
       car.frozen = false;
       car.lift = 0;
       throw e;
     }
-    this.hud?.say(`Airborne · ${levelLabel(this.manifest)} level`, 2.5);
+    this.hud?.say(here ? "Airborne" : `Airborne · ${levelLabel(this.manifest)} level`, 2.5);
     return true;
   }
 
@@ -350,7 +359,8 @@ export class Game {
     const plane = this.plane;
     if (this.mode !== "plane" || !plane || this.transition) return false;
     if (!force && !plane.canLand) return false;
-    const url = levelUrl(this.worldUrl, this.manifest, "drive", location.href);
+    const here = this.manifest.level === "walk"; // flying over a walking level: land on it
+    const url = here ? this.worldUrl : levelUrl(this.worldUrl, this.manifest, "drive", location.href);
     if (!url) {
       this.hud?.say("This world has no driving level.");
       return false;
@@ -362,7 +372,7 @@ export class Game {
     plane.frozen = true;
     this.hud?.say("Landing…", 2);
     try {
-      const manifest = await fetchManifest(url);
+      const manifest = here ? this.manifest : await fetchManifest(url);
       // touch down rolling: half the road's speed at the driving level's pace
       const dk = Math.max(DRIVE_PACE.floor, Math.min(1, Math.pow(manifest.scale.metersPerCell / DRIVE_PACE.ref, 0.3)));
       await this.load(url, manifest, (routes) => new CarController({ pose, snap: 8, speed: 3 * dk, routes, traffic: () => this.trafficOn() }));
@@ -372,7 +382,7 @@ export class Game {
       throw e;
     }
     const car = this.car;
-    this.hud?.say(car?.outside ? "That place is outside the driving map: starting at its start." : `Landed · ${levelLabel(this.manifest)} level`, 2.5);
+    this.hud?.say(car?.outside ? "That place is outside the driving map: starting at its start." : here ? "Landed" : `Landed · ${levelLabel(this.manifest)} level`, 2.5);
     return true;
   }
 

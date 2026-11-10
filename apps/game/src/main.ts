@@ -15,7 +15,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  * style packs and the city packs (San Francisco's, New York's).
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
- * `start=lon,lat`, `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
+ * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
  * `cache=0`, `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
  * scripted run in real time, then its frame times).
  */
@@ -110,6 +110,7 @@ async function main() {
     zoom: params.has("zoom") ? num("zoom", 2) : "auto",
     rotation: num("rot", 0) & 3,
     hud: params.get("hud") === "0" ? null : ui,
+    fly: params.get("fly") === "1",
   });
 
   window.addEventListener("keydown", (e) => game.keyDown(e));
