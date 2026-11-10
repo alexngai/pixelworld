@@ -4,6 +4,7 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "pixelworld-city-nyc",
     "pixelworld-city-sf",
     "pixelworld-pipeline",
 ]
@@ -186,6 +187,25 @@ wheels = [
 ]
 
 [[package]]
+name = "pixelworld-city-nyc"
+version = "0.0.0"
+source = { editable = "plugins/pixelworld-city-nyc" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pixelworld-pipeline" },
+    { name = "rasterio" },
+    { name = "shapely" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pixelworld-pipeline", editable = "." },
+    { name = "rasterio", specifier = ">=1.4" },
+    { name = "shapely", specifier = ">=2.2.0" },
+]
+
+[[package]]
 name = "pixelworld-city-sf"
 version = "0.0.0"
 source = { editable = "plugins/pixelworld-city-sf" }
@@ -225,6 +245,7 @@ dev = [
     { name = "ruff" },
 ]
 plugins = [
+    { name = "pixelworld-city-nyc" },
     { name = "pixelworld-city-sf" },
 ]
 
@@ -245,7 +266,10 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.6" },
 ]
-plugins = [{ name = "pixelworld-city-sf", editable = "plugins/pixelworld-city-sf" }]
+plugins = [
+    { name = "pixelworld-city-nyc", editable = "plugins/pixelworld-city-nyc" },
+    { name = "pixelworld-city-sf", editable = "plugins/pixelworld-city-sf" },
+]
 
 [[package]]
 name = "pluggy"

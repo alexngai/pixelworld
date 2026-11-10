@@ -947,6 +947,9 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")), "Class codes: exact, or a prefix ending in `*`."
         ),
         "roofs": Key(ListOf(AnyValue("string")), "Roof shapes."),
+        "materials": Key(
+            ListOf(AnyValue("string")), "Facade materials (from the facts source; any case)."
+        ),
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),

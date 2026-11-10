@@ -111,9 +111,9 @@ def test_register_and_unregister():
 def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
     installed(monkeypatch, plugins.FACTS, FakeEntryPoint("bag", "city_nl.bag:BAG", object()))
     with pytest.raises(plugins.PluginNotFoundError) as e:
-        plugins.load(plugins.FACTS, "pluto", where="objects.typology.facts")
+        plugins.load(plugins.FACTS, "cadastre", where="objects.typology.facts")
     msg = str(e.value)
-    assert "no facts source named 'pluto' (named by objects.typology.facts)" in msg
+    assert "no facts source named 'cadastre' (named by objects.typology.facts)" in msg
     assert "Installed facts sources: bag." in msg
     assert "entry point group 'pixelworld.facts'" in msg and "docs/plugins.md" in msg
     assert e.value.available == ["bag"]

@@ -201,6 +201,29 @@ def test_roof_rules_use_the_facts_roof_else_overtures():
     ]
 
 
+def test_material_rules_match_the_facts_material_in_any_case():
+    insts = _row(1.0, 3)
+    facts = [
+        {"year": 1855, "stories": 4, "use": "residential", "material": "Brownstone"},
+        {"year": 1870, "stories": 5, "use": "commercial", "material": "Cast Iron"},
+        {"year": 1880, "stories": 4, "use": "residential"},
+    ]
+    spec = {
+        "rules": [
+            {"group": "building.brownstone", "materials": ["brownstone"]},
+            {"group": "building.loft.castiron", "materials": ["Cast Iron"]},
+        ]
+    }
+    f = typology.features(insts, STREET, None, 25.0, facts)
+    assert [g["material"] for g in f] == ["Brownstone", "Cast Iron", ""]
+    typology.classify(insts, spec, f)
+    assert [i["g"] for i in insts] == [
+        "building.brownstone",
+        "building.loft.castiron",
+        "building.residential",  # no material: no material rule matches
+    ]
+
+
 def test_parts_share_their_buildings_class_and_roof():
     insts = _row(1.0, 2)
     for inst in insts:

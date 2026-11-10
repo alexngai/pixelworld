@@ -23,8 +23,10 @@ dev = [
   "pytest>=8",
   "ruff>=0.6",
 ]
-# The city packs this repository's worlds need (worlds/sf names `facts: datasf`).
+# The city packs this repository's worlds need (worlds/sf names `facts: datasf`,
+# worlds/nyc `facts: pluto`).
 plugins = [
+  "pixelworld-city-nyc",
   "pixelworld-city-sf",
 ]
 
@@ -37,6 +39,7 @@ default-groups = ["dev", "plugins"]
 members = ["plugins/*"]
 
 [tool.uv.sources]
+pixelworld-city-nyc = { workspace = true }
 pixelworld-city-sf = { workspace = true }
 
 [build-system]

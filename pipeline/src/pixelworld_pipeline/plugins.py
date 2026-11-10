@@ -55,6 +55,7 @@ BUILTIN: dict[str, dict[str, str]] = {
 # Plugins published from this repository: the hint a missing name's error gives.
 KNOWN: dict[tuple[str, str], str] = {
     (FACTS, "datasf"): "pixelworld-city-sf",
+    (FACTS, "pluto"): "pixelworld-city-nyc",
 }
 
 _registered: dict[str, dict[str, Any]] = {g: {} for g in GROUPS}

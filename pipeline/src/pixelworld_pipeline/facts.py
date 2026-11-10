@@ -25,7 +25,7 @@ answer is None (no record there) or a dict with any of these keys:
     hood      str         the neighbourhood, matched by `hoods:` rules
     roof      str         the roof shape in Overture's words (flat, gabled,
                           hipped, mansard, …), matched by `roofs:` rules
-    material  str         the main facade material (no rule reads it yet)
+    material  str         the main facade material, matched by `materials:` rules
 
 Other keys are kept and ignored.
 """
