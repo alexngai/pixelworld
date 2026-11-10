@@ -80,6 +80,7 @@ Status values:
 | D-069 | An engine API the viewer and games are clients of | Accepted (M4) |
 | D-070 | The example game drives and flies on the public engine API, at a paced speed | Accepted (M4) |
 | D-071 | Generator plugins, and San Francisco's generators as the city pack's browser half | Accepted (M4) |
+| D-074 | San Francisco's city pack packaged for npm, and the viewer's city packs in one file | Accepted |
 | D-075 | Style packs get a versioned JSON Schema, path-qualified validation and `extends` | Accepted |
 | D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
 
@@ -638,6 +639,34 @@ The point is more room for visual interest; both halves are wanted.
   - A registry shared through `globalThis`: plugin bundles with their own copy would then register directly, but any copy of the package, of any version, could change any other's table. Only the announcement list is shared.
   - Keeping San Francisco's generators built in "with clear names" (library.md §4.5): every page would still carry them, and the next city would have no template.
 - **Later:** a published build of the pack (a self-contained `dist/worker.js` and a descriptor on `new URL("./worker.js", import.meta.url)`, with the npm packaging); the bay-area style pack as a data package beside it; plugins for other extension points (hand-drawn assets, layers).
+
+### D-074: San Francisco's city pack packaged for npm, and the viewer's city packs in one file (accepted)
+- **Why:** `@pixelworlds/city-sf` was a private package of TypeScript sources that imported the workspace-only `@pixelworlds/generators` and Vite's `?worker&url`. A project outside the repository couldn't install it, and San Francisco without it draws almost nothing (4% of a frame). The DX review's game developer copied 7 source files (1,764 lines) and added an alias and tsconfig paths. D-071 left the published build for later.
+- **The package:** no longer private, MIT OR Apache-2.0, `publishConfig.access: public`. Not published yet: releases stay manual.
+  - **Its peer:** `pixelworld` (`workspace:^`, which `pnpm pack` writes as `^<version>`). Its sources import `pixelworld/generators`, which in the workspace is the same module as `@pixelworlds/generators`, so the packed entry and types name only the peer.
+  - **In the workspace** its `exports` stay on `src/`, so the apps, tests and typecheck run it unbuilt. `publishConfig.exports` points the packed manifest at `dist/`, as for `pixelworld` (D3).
+- **The build** (`packages/city-sf/build.mjs`, tsup; `prepack` runs it):
+  - **`dist/index.js` and `index.d.ts`:** `pixelworld` stays external. The `?worker&url` import becomes `new URL("./worker.js", import.meta.url).href`, which bundlers follow with no configuration: Vite's dev server (its optimizer rewrites the URL to the file in `node_modules`), a Vite build (an asset), webpack 5 (an asset) and Rollup.
+  - **`dist/worker.js`:** self-contained and minified, 28 KB, as Vite's bundle of it was.
+  - **The descriptor** carries the package's version, so a returning visitor's tile cache follows releases.
+- **Checks:**
+  - **The tarball** (`tools/city-pack-check.mjs`, in `pnpm package:check` and CI's npm job): its files; its manifest (`pixelworld` its only peer, no dependencies, `publishConfig` applied); its exports; the `new URL`; imports of the peer only. The worker module is imported alone in Node: it must define and announce the plugin and register exactly the generators `KNOWN_PLUGIN_GENERATORS` gives it. Size budgets too.
+  - **The consumers:** each example (Vite dev and build, webpack 5, plain ESM) also draws San Francisco's flying level from both tarballs, loading the pack because the style names it. A run needs the pack's worker module loaded from where the bundler put it, tiles baked, no error or plugin warning, and at least half the frame drawn: 100% with the pack, 4% without.
+- **Versions:** changesets versions both packages, each on its own. `.changeset/city-sf-npm-package.md` makes the pack's first release 0.1.0, beside `pixelworld`'s. A `pixelworld` release that leaves the pack's peer range bumps the pack (patch), so it is republished with the new range.
+  - **Pins:** the consumer examples pinned `pixelworld` `^0.1.0`, a version that doesn't exist. They, the CDN recipe and the plugin quickstart now name the packages' versions (`^0.0.0` until the first release).
+  - **Kept in step:** a unit test (`tools/version-pins.mjs`) fails when the pins drift; its `--write` is a release step.
+- **Docs:**
+  - **npm.md:** San Francisco's traffic example loads the pack (it drew a blank world); install, plugins and the two-package release (§1, §2, §6, §7, §9).
+  - **plugins.md §9:** in public names (`pixelworld/engine`, `pixelworld/generators`), with a quickstart for a city pack outside the repository: scaffold, generator, worker module, descriptor, build, a style pack that names it, a view, a test (§9.6). It was followed as written in a scratch project against the packed `pixelworld`: Vite dev and build drew its adobe houses, from a 2.5 KB worker module.
+- **The viewer:** its city packs are one file, `apps/web/src/plugins.ts` (`CITY_PACKS`). A style that names a plugin missing from it gets a warning saying where to add it. `?style=` is documented (plugins.md §9.7, README).
+- **Neutral:** the engine's plugin loading is unchanged, and San Francisco draws as before in the workspace.
+- **Rejected alternatives:**
+  - **Keeping the `@pixelworlds/generators` imports and aliasing them in the build:** the declarations would need rewriting too, and the repository's pack would stop being a template an outside author can copy.
+  - **Building the pack into `pixelworld`'s bake worker:** every page would carry San Francisco again (D-071), and the worker has a size budget.
+  - **`fixed` or `linked` versions for the two:** a city pack versions like any plugin; its peer range says which `pixelworld` it works with.
+  - **Discovering packs by globbing `packages/city-*` in the viewer:** a pack from npm would still need a list, and a glob of source paths bypasses package resolution.
+  - **`optimizeDeps.exclude` in Vite apps:** not needed, since Vite 8's optimizer rewrites `new URL(…, import.meta.url)` in pre-bundled packages.
+- **Later:** the first publish, by a maintainer ([npm.md §9](npm.md#9-releases)); the bay-area style pack as a data package beside the pack.
 
 ### D-075: Style packs get a versioned JSON Schema, path-qualified validation and `extends` (accepted)
 - **Why:** the content and game reviews found that a style pack's mistakes pass or fail far from their cause. A misspelt key was ignored, a missing role drew in an undefined colour, errors named no pack, ramp or place, one bad comma blanked every world in the viewer, and the 42-ramp cap was undocumented. library.md claimed a schema that didn't exist.

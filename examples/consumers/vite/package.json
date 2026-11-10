@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "pixelworld": "^0.1.0"
+    "@pixelworlds/city-sf": "^0.0.0",
+    "pixelworld": "^0.0.0"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

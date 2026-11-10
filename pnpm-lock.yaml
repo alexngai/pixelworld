@@ -108,10 +108,13 @@ importers:
         version: link:../style
 
   packages/city-sf:
-    dependencies:
-      '@pixelworlds/generators':
+    devDependencies:
+      pixelworld:
         specifier: workspace:*
-        version: link:../generators
+        version: link:../pixelworld
+      tsup:
+        specifier: 9.0.0
+        version: 9.0.0(postcss@8.5.32)(typescript@6.0.3)(yaml@2.9.1)
 
   packages/engine:
     dependencies:

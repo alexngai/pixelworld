@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // vite/client declares the `?worker&url` import the build rewrites; the
+    // published declarations name only pixelworld/generators
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

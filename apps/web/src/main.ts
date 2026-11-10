@@ -2,15 +2,14 @@ import {
   createWorldView,
   fogLayer,
   roverController,
-  type PluginDescriptor,
   type RoverOptions,
   type TileBake,
 } from "@pixelworlds/engine";
 import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
 import { stylePack } from "./styles";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
-import { cityPlugin } from "@pixelworlds/city-sf";
 import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
+import { viewerPlugins } from "./plugins";
 
 /**
  * The reference viewer (`@pixelworlds/viewer`), a client of the engine: the
@@ -21,11 +20,6 @@ import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
  */
 
 // Every style pack in the repo, by id (styles.ts); a world names its pack in the manifest (`style`).
-
-// The plugins the viewer can load, by name (D-071). A style pack names the ones its
-// generators come from ("plugins"), and the view loads those: San Francisco's city pack
-// for the bay-area pack, nothing for the Southwest.
-const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin };
 
 /** Test/debug hooks (used by the Playwright suite in e2e/). */
 interface PixelworldDebug {
@@ -195,7 +189,8 @@ async function main() {
     },
     layers: [...(traffic ? [traffic] : []), fog],
     controller: rover,
-    plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
+    // the city packs the world's style pack names, from the viewer's list (src/plugins.ts)
+    plugins: viewerPlugins,
     // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
     recordBakes: params.get("bench") === "1",
     onError: (m) => {

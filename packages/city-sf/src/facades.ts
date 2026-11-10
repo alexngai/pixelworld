@@ -1,4 +1,4 @@
-import { VoxelModel, type GenContext, type Generator } from "@pixelworlds/generators";
+import { VoxelModel, type GenContext, type Generator } from "pixelworld/generators";
 
 /**
  * Street-facing building typologies (D-055): row houses and blocks whose front

@@ -382,7 +382,7 @@ await next.ready();   // the old view kept the canvas until here, and is now des
 
 ## 8. As built: generator plugins (M4)
 
-Refactor 5 of §4 and the browser half of D4: generators are found by name in a public registry, and a city's own generators come from a plugin. San Francisco's renders pixel for pixel as before, from the city pack. The details, and how to write and ship one, are in [plugins.md](plugins.md) §9 (D-071).
+Refactor 5 of §4 and the browser half of D4: generators are found by name in a public registry, and a city's own generators come from a plugin. San Francisco's renders pixel for pixel as before, from the city pack. The details, and how to write and ship one, are in [plugins.md](plugins.md) §9 (D-071); the pack is packaged for npm as D-074 describes.
 
 ### 8.1 The registry
 
@@ -395,13 +395,14 @@ Refactor 5 of §4 and the browser half of D4: generators are found by name in a 
 export default definePlugin({ name: "@pixelworlds/city-sf", register: (api) => api.registerGenerators(sfGenerators()) });
 
 // a page
-import { cityPlugin } from "@pixelworlds/city-sf";          // { name, url }: the worker module's URL
+import { cityPlugin } from "@pixelworlds/city-sf";          // { name, url, version }: the worker module's URL
 const view = await createWorldView({ canvas, worldUrl: "/sf/", style: bayArea, plugins: [cityPlugin] });
 ```
 
 - **The bake worker** gets `loadPlugins` (names and module URLs) before `init`, imports each, registers it, and answers `pluginsLoaded`; messages meanwhile wait. `definePlugin` announces the plugin to the realm, so it is found even when a bundler drops the module's exports (Vite does for worker bundles) or bundles its own copy of the generators package.
 - **The main thread** registers each plugin too (entity models, the inline baker), from the descriptor's `plugin` or by importing its URL. Without a view: `register()` from the pack, or `registerPlugin(plugin)`.
 - **Style packs** name the plugins they need: `"plugins": ["@pixelworlds/city-sf"]` in the bay-area pack. `plugins` may be a function given those names, as the viewer passes; a named plugin that isn't loaded is a warning.
+- **Packaged (D-074):** `@pixelworlds/city-sf` builds and packs like `pixelworld`: `dist/index.js` with types and `pixelworld` as a peer, the descriptor on `new URL("./worker.js", import.meta.url)`, and a self-contained `dist/worker.js`. The workspace keeps source exports. CI checks the tarball and draws San Francisco with both tarballs in Vite, webpack 5 and plain ESM. The viewer's city packs are listed in `apps/web/src/plugins.ts` ([plugins.md §9.7](plugins.md#97-the-viewers-city-packs)).
 - **The tile cache key** includes the plugins (name and `version`); without plugins it is unchanged.
 
 ### 8.3 What moved where
