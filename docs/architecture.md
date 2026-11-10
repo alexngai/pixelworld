@@ -266,7 +266,7 @@ Bakes run in two places with the same code:
 
 - **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. If a worker can't create WebGL2, baking falls back to the main thread. When a player edits the grid, only the affected bake tiles are re-baked.
   - **Streaming (M1):** a `ChunkStore` fetches gzipped chunks around the view, deduplicated, with URLs carrying the chunk hash. For each tile it slices the tile plus margin across chunk boundaries and hands the slice to the worker. The mesh builder only adds skirts at real world edges, not slice edges.
-  - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed and pruned least-recently-used. Cache keys include the package hash, style hash and `BAKE_VERSION`, so any change to the world, the style or the baker makes old tiles unreachable.
+  - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed and pruned least-recently-used. Cache keys include the package hash, style hash, the bake code's identity (a hash of the baker, generators and bake pipeline sources, D-072) and the plugins' code, so any change to the world, the style or the code that bakes makes old tiles unreachable.
   - **GPU budget:** tile textures stay on the GPU within a memory budget (192 MB), evicting least-recently-drawn tiles.
 - **Offline**, in headless Chromium via Playwright, for hero assets (`tools/hero-bake.mjs`, D-053), building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
 

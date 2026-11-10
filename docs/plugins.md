@@ -410,11 +410,11 @@ export const register = () => registerPlugin(plugin);
 { "id": "nyc", "plugins": ["@my-org/city-nyc"], "assets": { "building.rowhouse.brownstone": { "generator": "brownstone", "ramps": { … } } } }
 ```
 
-**The descriptor** (`PluginDescriptor`): `name`; `url`, the module a worker imports; optionally `plugin`, the plugin itself, when the page bundles it anyway (the main thread then registers it instead of importing the URL); optionally `version`, which keys the tile cache.
+**The descriptor** (`PluginDescriptor`): `name`; `url`, the module a worker imports; optionally `plugin`, the plugin itself, when the page bundles it anyway (the main thread then registers it instead of importing the URL); optionally `version`, which keys the tile cache beside the plugin's code (D-072).
 
 **Rules:**
 - **Register through the API you are handed:** never into the generators package your module imports. The published bake worker is one file with its own registry, and your bundle's copy of the package is not it.
-- **Deterministic:** a generator draws the same model for the same context, in every realm. Use `ctx.rand` (seeded), never `Math.random` or the clock. Baked tiles are cached by package, style, baker and plugin (name and `version`): bump `version` when your plugin draws differently.
+- **Deterministic:** a generator draws the same model for the same context, in every realm. Use `ctx.rand` (seeded), never `Math.random` or the clock. Baked tiles are cached by package, style, bake code and plugin: its name, `version` and code, the source of the generators it registers and the text of its module and what that imports by URL (D-072), so an edit shows after a reload, in a dev server too. A generator that throws is drawn as a missing-model marker and reported once, with the group, seed and footprint to reproduce it.
 - **Generic depictions:** no names, lettering or logos (D-051), and the style guide's building rules (inside the footprint, no overhangs, glass only on the skin), as the built-ins keep. San Francisco's tests (`packages/city-sf/test`) check them over many footprints and seeds.
 - **Colours come from the style:** a generator asks for ramps by role (`ctx.ramp("wall")`, or `ctx.ramps("wall")` for the `wall.*` variants) and the style pack maps roles to its ramps.
 - **Names:** generators are named for what they draw (`rowhouse`, `brownstone`), the plugin for its npm package (`@pixelworlds/city-sf`; the pipeline half keeps its Python name, `pixelworld-city-sf`).

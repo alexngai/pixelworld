@@ -260,6 +260,8 @@ interface ViewCamera {
 - **Start-up:** load the package, style and bake worker; size the canvas; put the camera on the world's start; attach the controller (the rover puts the camera on itself); apply `camera` (a missing coordinate keeps where the controller put it); initialize the layers in order; then start the loop. No frame is drawn before the view is set up, so no tile is baked in the wrong place.
 - **The loop** is the app's, unchanged: controller update, entity sprite requests, layer updates, tiles wanted nearest first, and a redraw only when something changed. `ready()` resolves once a frame is drawn with every visible tile and sprite and nothing is left to bake.
 - **Redraws:** a change through the public API (camera, entities, layers, palette) redraws and makes `ready()` wait. Setting the focus to where it already is doesn't, so a controller that follows something every frame leaves the loop idle.
+- **Tile cache (D-072):** baked tiles are kept in IndexedDB (`cache`, on by default, in the dev servers too), keyed by the package, the style pack, the bake code's identity and the plugins. The identity (`BAKE_CODE`) is a hash of the code that bakes: the baker and its shaders, the built-in generators and the bake pipeline, set by the npm build and, in the apps, by `tools/bake-code.mjs`'s Vite plugin. A plugin counts by its name, `version` and code (its generators' source and its module's). An edit to any of that bakes afresh after a reload; an edit elsewhere (camera, compositor, app) keeps the cache. A build without the identity keeps no tiles.
+- **Failures (D-072):** a model whose generator is missing, throws or returns no model is drawn as a small checkered marker in the pack's `marker` ramp, and the rest of its tile bakes. `onError` gets one message per generator and cause, naming the group, place, seed and footprint and, for a missing generator, the plugin it comes with; `stats().modelsFailed` counts the models. Loading errors (manifest, chunks, objects, routes, geo grid, heroes) are `WorldFetchError`s that name the URL and what was expected there: "not a world package: /foo/manifest.json returned an HTML page (expected a world manifest); check worldUrl (…)".
 
 ### 7.3 Layers
 
@@ -400,7 +402,7 @@ const view = await createWorldView({ canvas, worldUrl: "/sf/", style: bayArea, p
 - **The bake worker** gets `loadPlugins` (names and module URLs) before `init`, imports each, registers it, and answers `pluginsLoaded`; messages meanwhile wait. `definePlugin` announces the plugin to the realm, so it is found even when a bundler drops the module's exports (Vite does for worker bundles) or bundles its own copy of the generators package.
 - **The main thread** registers each plugin too (entity models, the inline baker), from the descriptor's `plugin` or by importing its URL. Without a view: `register()` from the pack, or `registerPlugin(plugin)`.
 - **Style packs** name the plugins they need: `"plugins": ["@pixelworlds/city-sf"]` in the bay-area pack. `plugins` may be a function given those names, as the viewer passes; a named plugin that isn't loaded is a warning.
-- **The tile cache key** includes the plugins (name and `version`); without plugins it is unchanged.
+- **The tile cache key** includes the plugins: name, `version` and code (D-072); without plugins it has no plugin part.
 
 ### 8.3 What moved where
 
