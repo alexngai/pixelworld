@@ -42,6 +42,29 @@ interface RegionInfo {
   source: { url: string; width: number; height: number; metersPerPixel: number };
   warp: Warp;
   places: { label: string; sitelinks: number; x: number; y: number }[];
+  /** The build output directory, and the viewer's `?world=` for it (null: not under fixtures/). */
+  out?: string;
+  viewer?: string | null;
+}
+
+/**
+ * Sizes that scale with the region, so a 3 km town edits as well as the
+ * Southwest's 400 km: new focus areas, the smallest radius and falloff, and the
+ * background scale's range (a quarter to five times the spec's metres per cell).
+ */
+function scaleFor(info: RegionInfo) {
+  const km = Math.max(...info.sourceMeters) / 1000;
+  const base = info.baseMetersPerCell;
+  const round = (v: number) => Number(v.toPrecision(2));
+  return {
+    radiusKm: round(Math.min(5, km / 16)),
+    falloffKm: round(Math.min(10, km / 8)),
+    focusMetersPerCell: round(Math.min(150, base / 2)),
+    minRadiusKm: round(Math.min(0.5, km / 100)),
+    minFalloffKm: round(Math.min(1, km / 50)),
+    minMetersPerCell: round(Math.min(10, base / 40)),
+    background: [round(base / 4), round(base * 5)] as const,
+  };
 }
 
 interface Lattice {
@@ -78,6 +101,7 @@ const worldCanvas = $<HTMLCanvasElement>("world");
 const statusEl = $<HTMLSpanElement>("status");
 
 let region: RegionInfo;
+let scale: ReturnType<typeof scaleFor>;
 let warp: Warp;
 let tool: Tool = "select";
 let selection: Picked = null;
@@ -344,9 +368,9 @@ function renderSelection(): void {
     const f = warp.focus[selection.index]!;
     title.textContent = "Focus area";
     field("name", f.name, (v) => (f.name = v), "text");
-    field("metres per cell", f.metersPerCell, (v) => (f.metersPerCell = Math.max(10, Number(v))));
-    field("radius (km)", f.radiusKm, (v) => (f.radiusKm = Math.max(0.5, Number(v))));
-    field("falloff (km)", f.falloffKm, (v) => (f.falloffKm = Math.max(1, Number(v))));
+    field("metres per cell", f.metersPerCell, (v) => (f.metersPerCell = Math.max(scale.minMetersPerCell, Number(v))));
+    field("radius (km)", f.radiusKm, (v) => (f.radiusKm = Math.max(scale.minRadiusKm, Number(v))));
+    field("falloff (km)", f.falloffKm, (v) => (f.falloffKm = Math.max(scale.minFalloffKm, Number(v))));
   } else {
     const p = warp.pins[selection.index]!;
     title.textContent = "Pin";
@@ -386,7 +410,14 @@ sourceCanvas.addEventListener("pointerdown", (e) => {
   const [px, py] = local(e, sourceCanvas);
   const [sx, sy] = canvasToSrc(px, py);
   if (tool === "focus") {
-    warp.focus.push({ name: `focus-${warp.focus.length + 1}`, sx, sy, radiusKm: 5, falloffKm: 10, metersPerCell: 150 });
+    warp.focus.push({
+      name: `focus-${warp.focus.length + 1}`,
+      sx,
+      sy,
+      radiusKm: scale.radiusKm,
+      falloffKm: scale.falloffKm,
+      metersPerCell: scale.focusMetersPerCell,
+    });
     selection = { kind: "focus", index: warp.focus.length - 1 };
     setTool("select");
     renderSelection();
@@ -430,7 +461,9 @@ sourceCanvas.addEventListener("pointermove", (e) => {
   else if (drag.kind === "pin-source") Object.assign(warp.pins[drag.index]!, { sx, sy });
   else {
     const f = warp.focus[drag.index]!;
-    f.radiusKm = Math.max(0.5, Math.round(Math.hypot(sx - f.sx, sy - f.sy) / 100) / 10);
+    // 0.1 km steps, or finer on a small region
+    const stepM = Math.min(100, scale.minRadiusKm * 200);
+    f.radiusKm = Math.max(scale.minRadiusKm, (Math.round(Math.hypot(sx - f.sx, sy - f.sy) / stepM) * stepM) / 1000);
   }
   draw();
 });
@@ -498,8 +531,18 @@ $<HTMLButtonElement>("build").addEventListener("click", async () => {
     await api("/api/save", { warp });
     await api("/api/build", {});
     for (;;) {
-      const s = await api<{ state: string; log?: string; seconds?: number; error?: string; report?: { roads: { ok: boolean } } }>("/api/build");
-      log.textContent = `${s.state}${s.seconds ? ` · ${s.seconds} s` : ""}\n${s.log ?? ""}`;
+      const s = await api<{
+        state: string;
+        log?: string;
+        seconds?: number;
+        error?: string;
+        world?: string | null;
+        out?: string;
+        report?: { roads: { ok: boolean } };
+      }>("/api/build");
+      const where =
+        s.state !== "done" ? "" : s.world ? ` · open it: Open viewer` : s.out ? ` · view it: pixelworld view ${s.out}` : "";
+      log.textContent = `${s.state}${s.seconds ? ` · ${s.seconds} s` : ""}${where}\n${s.error ?? ""}${s.log ?? ""}`;
       if (s.state !== "running") break;
       await new Promise((r) => setTimeout(r, 2000));
     }
@@ -528,16 +571,27 @@ async function main(): Promise<void> {
   warp.focus ??= [];
   warp.pins ??= [];
   $<HTMLElement>("title").textContent = `Pixelworld editor · ${region.name}`;
+  scale = scaleFor(region);
   const bg = $<HTMLInputElement>("background");
+  bg.min = String(scale.background[0]);
+  bg.max = String(scale.background[1]);
   bg.value = String(warp.background);
   bg.addEventListener("change", () => {
-    const value = Math.max(50, Number(bg.value));
-    if (value === warp.background) return;
+    const [lo, hi] = scale.background;
+    const value = Math.min(hi, Math.max(lo, Number(bg.value)));
+    if (!Number.isFinite(value) || value === warp.background) return;
     warp.background = value;
     requestSolve(0);
   });
+  // the viewer serves fixtures/; a package elsewhere needs `pixelworld view <out>`
   const viewer = $<HTMLAnchorElement>("viewer");
-  viewer.href = `http://${location.hostname}:5173/?world=/${region.id}/`;
+  const world = region.viewer === undefined ? `/${region.id}/` : region.viewer;
+  if (world) viewer.href = `http://${location.hostname}:5173/?world=${world}`;
+  else {
+    viewer.removeAttribute("href");
+    viewer.textContent = "View: pixelworld view <out>";
+    viewer.title = `The build goes to ${region.out ?? "its --out directory"}, outside fixtures/: serve it with pixelworld view`;
+  }
   sourceImg.onload = draw;
   sourceImg.src = region.source.url;
   renderSelection();

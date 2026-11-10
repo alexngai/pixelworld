@@ -1,6 +1,7 @@
 """Editor pipeline server (M2): spec round trips, solves, previews, saving."""
 
 import json
+import sys
 import threading
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -77,8 +78,44 @@ def test_region_info_carries_source_positions(editor):
         "url": "/api/source.png",
         "width": w,
         "height": h,
-        "metersPerPixel": 400.0,
+        "metersPerPixel": 50.0,  # a 45 km region: about 1,000 pixels across
     }
+    # built outside fixtures/: the viewer can't open it by path
+    assert info["out"] == str(editor.out_dir) and info["viewer"] is None
+
+
+def test_the_editor_scales_with_the_region():
+    # the Southwest keeps its 400 m source map, 4 km preview mesh and 10 km lattice
+    assert server.scales(404_000, 278_000, 400) == {
+        "source_px_m": 400.0,
+        "mesh_km": 4.0,
+        "lattice_km": 10.0,
+    }
+    # a 3 km town (Jerome, 20 m cells): 4 m pixels, a 40 m mesh, a 50 m lattice
+    assert server.scales(2_900, 2_700, 20) == {
+        "source_px_m": 4.0,
+        "mesh_km": 0.04,
+        "lattice_km": 0.05,
+    }
+    assert server.nice(394.6) == 400 and server.nice(10.1, up=False) == 10
+
+
+def test_build_world_builds_through_the_api_with_routes(editor, monkeypatch):
+    from pixelworld_pipeline import api
+
+    calls = []
+
+    def fake_build(spec, out):
+        print("objects: {}", file=sys.stderr)  # progress lands in the build log
+        calls.append((spec, out))
+        return {"packageHash": "h", "roads": {"ok": True}, "routes": {"routes": 3}}
+
+    monkeypatch.setattr(api, "build", fake_build)
+    editor._build()
+    assert calls == [(editor.region_path, editor.out_dir)]
+    state = editor.build_state
+    assert state["state"] == "done" and state["report"]["routes"]["routes"] == 3
+    assert "objects: {}" in state["log"] and state["out"] == str(editor.out_dir)
 
 
 def test_solve_returns_stats_preview_and_a_lattice(editor):
