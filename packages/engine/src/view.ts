@@ -18,13 +18,14 @@ import {
 } from "@pixelworlds/runtime";
 import { buildPalette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
+import { GameClock } from "./clock";
 import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
-import { ObjectIndex } from "./objects";
+import { ObjectIndex, landmarkPlan } from "./objects";
 import { checkGenerators, registerOnMainThread, viewPlugins } from "./plugins";
 import { createQuery } from "./queries";
-import { TileGrid } from "./tiles";
+import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
   ControllerHost,
   EntityList,
@@ -48,11 +49,17 @@ const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the G
 /** Object voxel size in render units (objectVoxelScale at render scale 1, D-010). */
 const VOXEL = { h: 1 / 16, v: 1 / 8 };
 
+/** Seconds of the camera's motion to bake ahead of, by default (`lookAhead`). */
+const LOOK_AHEAD_S = 1.5;
+
 /** Baked tiles on the GPU, evicted least-recently-drawn beyond a memory budget. */
 interface TileEntry {
   img: GpuImage | null;
   bytes: number;
   lastDrawn: number;
+  rotation: Rotation;
+  tx: number;
+  ty: number;
 }
 
 /**
@@ -146,6 +153,15 @@ class View implements WorldView {
   private readonly bakes: TileBake[] | null;
   /** A view this one takes over from once its first frame is complete (`replace`). */
   private replacing: WorldView | null;
+  /** Game time: from the first complete frame, paused and scaled (D-073). */
+  private readonly clock = new GameClock();
+  // baking ahead (D-073): the tiles in and around the view last frame, all those wanted, which are baked
+  private near: TileInView[] = [];
+  private wanted: TileRequest[] = [];
+  private readonly baked: BakedTiles;
+  private readonly motion = new CameraMotion();
+  private readonly lookAhead: number;
+  private readonly prefetches = new Prefetches();
 
   constructor(
     opts: WorldViewOptions,
@@ -161,6 +177,7 @@ class View implements WorldView {
     this.fixedSize = opts.size ?? null;
     this.bakes = opts.recordBakes ? [] : null;
     this.replacing = opts.replace ?? null;
+    this.lookAhead = Math.max(0, opts.lookAhead ?? LOOK_AHEAD_S);
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
@@ -178,6 +195,14 @@ class View implements WorldView {
             },
             (group) => resolveAsset(assets, group) !== null,
             (x, y) => this.query.heightAt(x, y),
+            (inst) =>
+              landmarkPlan(inst, {
+                catalog: assets,
+                rampIds: w.palette.rampIds,
+                renderScale: this.rs,
+                metersPerCell: manifest.scale.metersPerCell,
+                heightStretch: manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1,
+              }),
           )
         : null;
     this.query = createQuery(
@@ -194,6 +219,7 @@ class View implements WorldView {
       ensure: (x, y) => store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1),
       heightAt: (x, y) => this.query.heightAt(x, y),
       lonLatToCell: (lon, lat) => this.query.lonLatToCell(lon, lat),
+      pixelRatio: () => this.ratio,
     });
     this.camera = this.viewCamera;
     const cam = opts.camera;
@@ -217,6 +243,7 @@ class View implements WorldView {
     this.tiles = new TileGrid(manifest.cellsX, manifest.cellsY, w.tileSize, this.rs, w.floor, !!w.objects, (x0, y0, x1, y1) =>
       store.heightRangeFor(x0, y0, x1, y1),
     );
+    this.baked = new BakedTiles(this.tiles);
     this.depthRange = worldDepthRange(
       manifest.cellsX * this.rs,
       manifest.cellsY * this.rs,
@@ -231,15 +258,17 @@ class View implements WorldView {
         const { meshMs, bakeMs, vertices } = res.stats;
         this.bakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
       }
+      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty };
       if (res.image) {
         const img = this.compositor.upload(res.image);
         const bytes = res.image.width * res.image.height * 4;
         this.gpuBytes += bytes;
-        this.gpu.set(res.key, { img, bytes, lastDrawn: this.frameNo });
+        this.gpu.set(res.key, { img, bytes, lastDrawn: this.frameNo, ...at });
         if (!res.fromCache && this.cache) void this.cache.put(this.cacheKey(res), res.image);
       } else {
-        this.gpu.set(res.key, { img: null, bytes: 0, lastDrawn: this.frameNo });
+        this.gpu.set(res.key, { img: null, bytes: 0, lastDrawn: this.frameNo, ...at });
       }
+      this.baked.set(res.rotation, res.tx, res.ty, !!res.image);
       this.dirty = true;
     };
     this.service.onError = opts.onError ?? ((m) => console.error(m));
@@ -305,12 +334,81 @@ class View implements WorldView {
   }
 
   ready(): Promise<void> {
-    return this.renderedComplete && this.service.idle
+    return this.renderedComplete && this.settled()
       ? Promise.resolve()
       : new Promise<void>((resolve) => {
           this.dirty = true;
           this.readyResolvers.push(resolve);
         });
+  }
+
+  /**
+   * Nothing in or around the view is left to bake: its tiles and every
+   * sprite asked for. Tiles baked ahead (prefetch, look-ahead) don't count.
+   */
+  private settled(): boolean {
+    if (this.service.spritesPending > 0) return false;
+    for (const t of this.near) if (!this.gpu.has(tileKey(t.rotation, t.tx, t.ty))) return false;
+    return true;
+  }
+
+  // ---------------------------------------------------------------- game time, baking ahead
+
+  get started(): boolean {
+    return this.clock.started;
+  }
+
+  get time(): number {
+    return this.clock.time;
+  }
+
+  get paused(): boolean {
+    return this.clock.paused;
+  }
+
+  set paused(on: boolean) {
+    this.clock.paused = on;
+  }
+
+  get timeScale(): number {
+    return this.clock.timeScale;
+  }
+
+  set timeScale(s: number) {
+    this.clock.timeScale = s;
+  }
+
+  isDrawn(x: number, y: number): boolean {
+    return this.baked.at(this.cam.rotation, x, y);
+  }
+
+  prefetch(x: number, y: number, radius?: number): Promise<void> {
+    if (this.stopped) return Promise.resolve();
+    // the next frame asks for its tiles
+    return this.prefetches.add(radius === undefined ? { x, y } : { x, y, radius: Math.max(0, radius) });
+  }
+
+  /** A prefetch's tiles in a rotation: within its radius, or those a view centred there would show. */
+  private prefetchTiles(r: Rotation, area: PrefetchArea): TileRequest[] {
+    if (area.radius !== undefined) return this.tiles.around(r, area.x, area.y, area.radius);
+    const rs = this.rs;
+    const h = this.query.heightAt(area.x, area.y) ?? this.camera.h;
+    const c = project(area.x * rs, area.y * rs, h * rs, r);
+    const width = this.cam.internalWidth;
+    const height = this.cam.internalHeight;
+    return this.tiles.visibleFrom(r, { left: Math.floor(c.sx - width / 2), top: Math.floor(c.sy - height / 2), width, height });
+  }
+
+  /** The tiles the view will show `lookAhead` seconds along the camera's motion, if it moves. */
+  private aheadTiles(r: Rotation, info: FrameInfo): TileRequest[] {
+    if (this.lookAhead <= 0) return [];
+    const [dx, dy] = this.motion.ahead(this.lookAhead);
+    if (Math.hypot(dx, dy) < 0.5) return [];
+    const rs = this.rs;
+    const f = info.focus;
+    const a = project(f.x * rs, f.y * rs, f.h * rs, r);
+    const b = project((f.x + dx) * rs, (f.y + dy) * rs, f.h * rs, r);
+    return this.tiles.visibleFrom(r, shiftView(info.view, b.sx - a.sx, b.sy - a.sy));
   }
 
   resize(width: number, height: number): void {
@@ -345,25 +443,36 @@ class View implements WorldView {
       night: this.night,
       renderScale: rs,
       project: (x, y, h) => project(x * rs, y * rs, h * rs, r),
+      isDrawn: (x, y) => this.baked.at(r, x, y),
     };
   }
 
   private readonly frame = (now: number): void => {
     if (this.stopped) return;
     this.frameNo++;
-    const dt = Math.min(0.1, (now - this.lastT) / 1000);
+    // game time: 0 until the first complete frame and while paused (D-073)
+    const clock = this.clock.tick(now - this.lastT);
+    const dt = clock.dt;
     this.lastT = now;
-    this.controllerHost.update(dt);
+    this.controllerHost.update(dt, clock);
     const cam = this.cam;
     const r = cam.rotation;
     this.entityList.request(r);
     const snap = cam.snapped();
     const info = this.frameInfo(snap);
     const layers = this.layerList.enabled();
-    for (const layer of layers) if (layer.update?.(dt, info)) this.dirty = true;
+    for (const layer of layers) if (layer.update?.(dt, info, clock)) this.dirty = true;
 
+    // tiles: the visible ones, then ahead of the camera's motion and where asked, then around the view
     const order = this.tiles.inView(r, info.view);
-    this.service.want(order);
+    this.near = order;
+    this.motion.update(this.camera.x, this.camera.y, clock.realDt);
+    const asked = this.prefetches.size
+      ? this.prefetches.wanted(`${r}:${info.view.width}x${info.view.height}`, (area) => this.prefetchTiles(r, area))
+      : [];
+    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked);
+    this.service.want(this.wanted);
+    if (this.prefetches.size) this.prefetches.settle((t) => this.gpu.has(tileKey(t.rotation, t.tx, t.ty)));
 
     const drawTiles: GpuImage[] = [];
     let complete = true;
@@ -395,7 +504,7 @@ class View implements WorldView {
         }
         fog = pass.frame;
       }
-      const ents = this.entityList.draws(r, info.project);
+      const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
       if (this.replacing && !complete) {
@@ -422,7 +531,9 @@ class View implements WorldView {
         this.renderMs = performance.now() - t0;
         this.dirty = !complete; // keep redrawing while tiles stream in
         this.renderedComplete = complete;
-        if (complete && this.service.idle) this.readyResolvers.splice(0).forEach((f) => f());
+        // the first complete frame starts game time (from the next frame)
+        if (complete) this.clock.start();
+        if (complete && this.settled()) this.readyResolvers.splice(0).forEach((f) => f());
       }
     }
     this.evict();
@@ -433,7 +544,8 @@ class View implements WorldView {
       this.frames = 0;
       this.fpsT = now;
     }
-    for (const f of this.frameListeners) f({ now, dt, drawn });
+    const event: FrameEvent = { ...clock, started: this.clock.started, now, drawn };
+    for (const f of this.frameListeners) f(event);
     this.raf = requestAnimationFrame(this.frame);
   };
 
@@ -447,6 +559,7 @@ class View implements WorldView {
       this.compositor.release(e.img!);
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
+      this.baked.set(e.rotation, e.tx, e.ty, false);
       this.service.forget(key);
     }
   }
@@ -497,6 +610,7 @@ class View implements WorldView {
       tilesBaked: t.tiles,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
+      tilesPending: this.wanted.filter((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty))).length,
       chunksLoaded: this.w.store.loadedCount,
       chunksTotal: this.w.manifest.chunks.length,
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,
@@ -553,10 +667,13 @@ class View implements WorldView {
 
   serialize(): ViewState {
     const c = this.camera;
-    return {
+    const state: ViewState = {
       camera: { x: c.x, y: c.y, h: c.h, rotation: c.rotation, zoom: c.zoom },
       layers: this.layerList.serialize(),
     };
+    const controller = this.controllerHost.current;
+    if (controller?.serialize) state.controller = { id: controller.id, state: controller.serialize() };
+    return state;
   }
 
   restore(state: ViewState): void {
@@ -565,6 +682,9 @@ class View implements WorldView {
     this.camera.zoom = c.zoom;
     this.camera.setFocus(c.x, c.y, c.h);
     this.layerList.restore(state.layers);
+    // the controller's state after the camera's: a controller that follows something puts the camera on it
+    const controller = this.controllerHost.current;
+    if (state.controller && controller?.restore && controller.id === state.controller.id) controller.restore(state.controller.state);
     this.invalidate();
   }
 
@@ -586,5 +706,7 @@ class View implements WorldView {
     this.compositor.dispose();
     this.readyResolvers.splice(0);
     this.frameListeners.clear();
+    this.baked.clear();
+    this.prefetches.clear();
   }
 }

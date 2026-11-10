@@ -236,6 +236,7 @@ interface WorldViewOptions {
   workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]); // generator plugins (§8)
   replace?: WorldView;                                // take over from a view on the same canvas (M4, §7.9)
+  lookAhead?: number;                                 // seconds of camera motion to bake ahead of (1.5; 0 off)
 }
 
 interface WorldView {
@@ -243,12 +244,16 @@ interface WorldView {
   entities: EntityList; layers: LayerRegistry; controllers: ControllerHost; pixelRatio: number;
   palette: "day" | "night"; hasNight: boolean;
   ready(): Promise<void>; invalidate(): void; resize(width, height): void;
+  started: boolean; time: number; paused: boolean; timeScale: number; // game time (D-073)
+  isDrawn(x, y): boolean; prefetch(x, y, radius?): Promise<void>;      // baking ahead (D-073)
   stats(): ViewStats; tileBakes(): TileBake[]; timeFrames(n): number;
   bakeObject(id): Promise<((BakedImage & { rotation }) | null)[]>; // the hero tool's bake
-  onFrame(listener): () => void;
-  serialize(): ViewState; restore(state: ViewState): void;         // camera + every layer's state
+  onFrame(listener: (e: FrameEvent) => void): () => void;          // FrameEvent: the FrameClock, now, drawn
+  serialize(): ViewState; restore(state: ViewState): void;         // camera, every layer's state, the controller's
   destroy(): void;
 }
+
+interface FrameClock { dt; realDt; time; started; paused }  // what controllers, layers and onFrame get
 
 interface ViewCamera {
   x; y; h;                       // focus, cells and steps
@@ -256,11 +261,16 @@ interface ViewCamera {
   setFocus(x, y, h): void;
   lookAt({ x, y, h? } | { lon, lat, h? }): Promise<boolean>;
   pan(dx, dy): void; rotate(±1): void; screenDirToGrid(dx, dy): [number, number];
+  project(x, y, h?): { x, y, onScreen } | null;  // world → canvas CSS px, the inverse of query.pick (D-073)
 }
 ```
 
 - **Start-up:** load the package, style and bake worker; size the canvas; put the camera on the world's start; attach the controller (the rover puts the camera on itself); apply `camera` (a missing coordinate keeps where the controller put it); initialize the layers in order; then start the loop. No frame is drawn before the view is set up, so no tile is baked in the wrong place.
-- **The loop** is the app's, unchanged: controller update, entity sprite requests, layer updates, tiles wanted nearest first, and a redraw only when something changed. `ready()` resolves once a frame is drawn with every visible tile and sprite and nothing is left to bake.
+- **The loop** is the app's, unchanged: controller update, entity sprite requests, layer updates, tiles wanted, and a redraw only when something changed. It runs from the start, before `ready()`. `ready()` resolves once a frame is drawn with every visible tile and sprite and nothing in or around the view is left to bake (tiles baked ahead aren't waited for).
+- **Game time (D-073):** the `dt` controllers, layers and `onFrame` listeners get is game seconds: the wall-clock time since the last frame (at most 0.1 s) × `timeScale`, and 0 until the view's first complete frame (`started`) and while it is `paused`. Their updates still run every frame, so a controller can keep the camera on something, and the `FrameClock` they get as well carries `realDt` (wall-clock), `time` (game seconds since the start), `started` and `paused`. A game that moves things by `dt` can't run ahead of the first frame, nor during a pause, and traffic, fog and entities stop with it; a game that also waits for its whole first view awaits `ready()`.
+- **World → canvas:** `camera.project(x, y, h?)` is where a place is drawn, in CSS pixels from the canvas's top-left (`(render px − the view's origin) × zoom / pixelRatio`), with `onScreen`; without a height, on the ground (null where it isn't loaded). `pick(project(…))` is the place again: HUD labels, off-screen arrows, click targets.
+- **Baking ahead (D-073):** each frame wants the visible tiles nearest first, then the tiles a view `lookAhead` seconds along the camera's motion would show (its velocity, eased over a quarter second; faster than 30 cells/s is a jump, not motion), then `prefetch` requests, then the ring around the view. `prefetch(x, y, radius?)` bakes the tiles within a radius (cells), or those a view centred there would show, and resolves once they are baked in the current rotation (or when the view is destroyed). `isDrawn(x, y)` says whether the ground under a place is baked, `stats().tilesPending` how many wanted tiles aren't.
+- **Nothing over the void:** a sprite isn't drawn where the ground under it isn't baked yet: entities skip themselves, and layers get `frame.isDrawn(x, y)` (traffic skips such vehicles, still baking their sprites). A sprite whose bake failed is left out instead of holding up `ready()`.
 - **Redraws:** a change through the public API (camera, entities, layers, palette) redraws and makes `ready()` wait. Setting the focus to where it already is doesn't, so a controller that follows something every frame leaves the loop idle.
 
 ### 7.3 Layers
@@ -270,17 +280,18 @@ interface Layer {
   id; label; enabled; setEnabled(on): void;
   sublayers?: { id; label }[]; isSublayerEnabled?(id); setSublayerEnabled?(id, on);
   init(ctx: LayerContext): boolean | Promise<boolean>;      // false: nothing in this world, left out
-  update?(dt, frame: FrameInfo): boolean;                    // while enabled; true: redraw
+  update?(dt, frame: FrameInfo, clock: FrameClock): boolean; // every frame while enabled, dt game time; true: redraw
   sprites?(frame): { list: SpriteDraw[]; complete: boolean };
   screenPass?(frame): ScreenPass | null;                     // fog's, today the one kind
-  serialize?(): unknown; restore?(state): void; dispose?(): void;
+  serialize?(): unknown; restore?(state): void; dispose?(): void; // dispose: the layer leaves its view
 }
 interface LayerContext { view; bakeSprite(rotation, boxes): Promise<Sprite | null>; releaseSprite(s); frame(): FrameInfo; invalidate(): void }
-interface FrameInfo { rotation; focus: { x, y, h }; zoom; view: { left, top, width, height }; night; renderScale; project(x, y, h) }
+interface FrameInfo { rotation; focus: { x, y, h }; zoom; view: { left, top, width, height }; night; renderScale; project(x, y, h); isDrawn(x, y) }
 view.layers: list(), get(id), add(layer), remove(id), enable(id, on?, sublayer?)
 ```
 
 - **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. A frame takes the first screen pass any layer offers.
+- **One view at a time (D-073):** a layer may move to another view, as at a level switch. Adding it to a view takes it out of the view it is in (calling its `dispose`) before `init` with the new view's context, so the old view stops drawing it and destroying the old view later leaves it alone. `dispose` drops what belongs to the view (its sprites; bakes still in flight, which resolve null once that view is destroyed); `init` starts that state afresh. Traffic's layer keeps its switches and, until `init`, its simulation (`serialize` after leaving a view works); `init` starts a new simulation on the new world's routes (or the `routes` it was built with), and `restore` puts a saved one back.
 - **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level.
 - **`trafficLayer({ seed, density, enabled, paused, time, sublayers, routes })`** (sim): D-060; left out without routes. Sublayers road, rail and ferry. Its state is the simulation's JSON with its switches.
 
@@ -296,7 +307,7 @@ view.entities.add({
 ```
 
 - **Baking:** lazily, per view rotation and heading, shared by every entity with the same model. Heading 0 bakes the model as given, so the rover's sprite is the same as before.
-- **Hidden entities** are baked too, so showing one is instant, but they don't hold up `ready()`.
+- **Hidden entities** are baked too, so showing one is instant, but they don't hold up `ready()`. Nor does an entity whose ground isn't baked yet: it isn't drawn until its tile is (§7.2).
 - **Group models** are style assets drawn by their generator at the object voxel scale. Vehicle generators need `size`.
 - **Traffic keeps its own sprites:** it bakes each heading once, in rotation 0, for all four rotations (D-060). Entities bake per rotation, which keeps the rover pixel-identical. Folding traffic into entities, with the rotation-0 trick as an option, is left for later.
 
@@ -305,7 +316,9 @@ view.entities.add({
 ```ts
 interface Controller {
   id; attach(view: ControllerView): void | Promise<void>; detach?();
-  update?(dt); keyDown?(e): boolean; keyUp?(e); pointerDown?(e); pointerMove?(e); pointerUp?(); blur?();
+  update?(dt, clock: FrameClock);                           // every frame from the start; dt game time (§7.2)
+  serialize?(): unknown; restore?(state): void;             // kept in view.serialize() under its id (D-073)
+  keyDown?(e): boolean; keyUp?(e); pointerDown?(e); pointerMove?(e); pointerUp?(); blur?();
 }
 interface ControllerView { canvas; world; camera; entities; query; pixelRatio }   // a test can fake it
 view.controllers.use(controller | null)                     // one at a time
@@ -314,7 +327,9 @@ roverController({ start?: { x?, y? } | { lon, lat }, follow?, visible?, listen? 
 ```
 
 - **Input:** the app forwards events (the viewer does, since it keeps T, L, V, G, I, H and Esc), or the controller listens on targets it is given (`listen`, as the example does).
-- **The rover controller:** the rover entity, `follow`, `noclip` and `place(x, y)`. Its keys are as before: arrows drive, WASD and drags pan, Q/E rotate, 1–6 zoom, F follows, N is no-clip.
+- **One view at a time (D-073):** a controller may move to another view with its state, as the player's does at a level switch. Using it in a view detaches it from the view it is in first, so the old view neither updates it nor detaches it again when it is destroyed.
+- **Saved state:** `view.serialize()` keeps the controller's `serialize()` under its id (`ViewState.controller`), and `restore` hands it back to a controller with the same id, after the camera.
+- **The rover controller:** the rover entity, `follow`, `noclip`, `place(x, y)`, and `serialize`/`restore` (its place and switches). Its keys are as before: arrows drive, WASD and drags pan, Q/E rotate, 1–6 zoom, F follows, N is no-clip.
 
 ### 7.6 Queries
 
@@ -332,7 +347,7 @@ view.query.landmarks()                // registry landmarks, one per id: { id, g
 - **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle.
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
 - **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.
-- **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included); an object without one (a tree, a tower drawn from its anchor) occupies its anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.
+- **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included). A registry landmark drawn from its anchor (City Hall, Coit Tower, the Strat) occupies where its model stands, in plan: the voxel columns of the model the bake generates for it (seed, height, quarter turns), worked out the first time a query comes within 16 cells (D-073); City Hall's wings now block, 5.6 × 7.9 cells, where its anchor's cell did. Where the model can't be generated on the page, and for any other object without a footprint (a tree, a prop), it is the anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.
 - **Landmarks (`landmarks`, M4):** one entry per registry id at the middle of its parts' anchors, named by its largest part's group. Names are for people and stay in the registry (D-051); the game names them for its HUD.
 
 ### 7.7 What moved where
@@ -365,7 +380,8 @@ const next = await createWorldView({ canvas, worldUrl: flyingLevel, style, contr
 await next.ready();   // the old view kept the canvas until here, and is now destroyed
 ```
 
-- **While it loads and bakes,** the old view keeps drawing (and its controller keeps running). The new view runs its loop (controller, layers, tile and sprite requests) but draws nothing.
+- **While it loads and bakes,** the old view keeps drawing (and its controller keeps running). The new view runs its loop (controller, layers, tile and sprite requests) but draws nothing, and its game time doesn't start (`dt` is 0) until it takes over.
+- **Reusing layers and controllers:** a layer or controller passed to the new view moves to it when the new view is created (§7.3, §7.5): the old view stops drawing that layer and updating that controller (whose detach usually takes its entities with it), and destroying the old view leaves them alone. Sprite bakes the old view had in flight resolve null when it is destroyed, so nothing waits on them (D-073). For a switch where the old level stays whole until the new one shows, give the new view its own instances and carry their state over (`serialize`/`restore`), as the game does.
 - **On its first complete frame** (every visible tile and sprite baked), it destroys the old view and draws, in the same animation frame. `ready()` resolves after that frame.
 - **The canvas:** both views share its WebGL2 context; each compositor binds what it uses on every frame. A view resizes its canvas only when the size changes (assigning a canvas's size clears it, even to the size it has), so the new view's start-up doesn't blank the old view's frame.
 - **`destroy()`** is idempotent; destroying a view still waiting to take over leaves the old view drawing (its owner keeps it, say after a failed load). It now also lets go of entity sprites and the compositor's own GPU objects (programs, frame targets, palette, fog pass), so swapping levels many times doesn't leak them. Traffic's layer releases its vehicle sprites when it leaves a view (`dispose`).
@@ -378,6 +394,7 @@ await next.ready();   // the old view kept the canvas until here, and is now des
 - **Controllers:** `CarController` and `PlaneController` implement `Controller`: they own their entities (the style's `vehicle.car.player`, and `vehicle.plane` with its shadow, `part` 1), step pure physics (`car.ts`, `plane.ts`) against the world as the queries read it, and drive the camera. A script steps them with a fixed dt through `step(dt, input)` while `paused`.
 - **What it reads:** `heightAt`, `surfaceAt` and `roadAt` for speeds and slopes; `objectsAt` for buildings and towers; traffic's `vehiclesNear` for collisions; the routes (`loadRoutes`, `RouteNetwork`) for the roads' graded surfaces and bridge decks, the autopilot's road plans and the minimap; `lonLatToCell`/`cellToLonLat` to carry a place and a heading between levels; `landmarks()` for place names.
 - **Engine additions it needed:** `query.objectsAt` and `query.landmarks` (§7.6), `createWorldView({ replace })` (§7.9), and traffic's `vehiclesNear`. Everything else was already public.
+- **Game time and labels (D-073):** P pauses the view's game time (`view.paused`): the vehicle, traffic and fog hold still together, and a level change keeps it. The HUD names the landmarks in view over them, placed with `camera.project` where `isDrawn`.
 - **Also in `@pixelworlds/sim`:** `TrafficLayer.vehiclesNear(x, y, radius)` returns the shown vehicles' cars near a place with their size in plan (`modelSize`), for collisions; a switched-off layer or hidden sublayer has none.
 
 ## 8. As built: generator plugins (M4)

@@ -11,7 +11,7 @@ import { loadRoutes, trafficLayer, type RouteNetwork, type TrafficLayer } from "
 import { CarController, type Place } from "./carController";
 import { Hud } from "./hud";
 import { levelLabel, levelUrl, poseToGeo, startFor, type GeoPose } from "./levels";
-import { landmarkPlaces, nearestPlace, GAZETTEER, type NamedPlace } from "./places";
+import { landmarkName, landmarkPlaces, nearestPlace, GAZETTEER, type NamedPlace } from "./places";
 import { PlaneController } from "./planeController";
 import { DRIVE_PACE, FLY_PACE, GAUGE_KMH, PLANE } from "./tuning";
 
@@ -122,6 +122,8 @@ export class Game {
   routes: RouteNetwork | null = null;
   traffic: TrafficLayer | null = null;
   places: NamedPlace[] = [...GAZETTEER];
+  /** The world's landmarks, named, for the labels over them. */
+  private marks: { id: string; name: string; x: number; y: number; top?: number }[] = [];
   /** A level change in progress. */
   transition: "takeoff" | "landing" | null = null;
   /** Scripts step the controllers (`paused` on every controller, now and after level changes). */
@@ -190,6 +192,7 @@ export class Game {
       plugins: opts.plugins,
       replace: old,
     });
+    if (old?.paused) view.paused = true; // still paused on the other level
     // the old view keeps the canvas (and its controller runs) until the new one has a whole frame
     await view.ready();
     this.offFrame?.();
@@ -209,6 +212,7 @@ export class Game {
       controller.onLand = () => void this.land();
     }
     if (controller instanceof CarController || controller instanceof PlaneController) controller.frozen = false;
+    this.marks = view.query.landmarks().map((l) => ({ id: l.id, name: landmarkName(l.id), x: l.x, y: l.y }));
     this.places = [...landmarkPlaces(view.query.landmarks(), view.query.cellToLonLat), ...GAZETTEER];
     this.hud?.setWorld(view.world.cellsX, view.world.cellsY, routes, view.query.landmarks());
     this.offFrame = view.onFrame((e) => this.onFrame(e.now, e.dt));
@@ -221,9 +225,25 @@ export class Game {
     this.frames.tick(now);
     // the old vehicle rises from the road while the flying level loads
     if (this.transition === "takeoff" && this.car) this.car.coast(dt, 2.5);
+    this.labelLandmarks();
     if (now - this.hudT < 100) return;
     this.hudT = now;
     this.refreshHud();
+  }
+
+  /** The landmarks' names over their tops, where they are drawn on the canvas. */
+  private labelLandmarks(): void {
+    if (!this.hud) return;
+    const view = this.view;
+    const shown: { name: string; x: number; y: number }[] = [];
+    for (const m of this.marks) {
+      if (!view.isDrawn(m.x, m.y)) continue;
+      // its drawn top, once the terrain under it is loaded; the ground until then
+      m.top ??= view.query.objectsAt(m.x, m.y).find((o) => o.id === m.id)?.top ?? undefined;
+      const p = m.top !== undefined ? view.camera.project(m.x, m.y, m.top) : view.camera.project(m.x, m.y);
+      if (p?.onScreen) shown.push({ name: m.name, x: p.x, y: p.y });
+    }
+    this.hud.labels(view.canvas, shown);
   }
 
   /** Bring the HUD up to date (it follows the frames ten times a second). */
@@ -381,6 +401,11 @@ export class Game {
     else if (k === "e") view.camera.rotate(1);
     else if (k >= "1" && k <= "6" && k.length === 1) view.camera.zoom = Number(k);
     else if (k === "v" && this.traffic) view.layers.enable(this.traffic.id, !this.traffic.enabled);
+    else if (k === "p") {
+      // the view's game time: the vehicle, traffic and fog hold still together
+      view.paused = !view.paused;
+      this.hud?.say(view.paused ? "Paused · P to go on" : "Go", view.paused ? 3600 : 1);
+    }
     else if (k === "t" && this.mode === "car") {
       if (!this.car?.canTakeOff) this.hud?.say("To take off: over 7 cells/s on a long straight road.", 2);
       else void this.takeOff();

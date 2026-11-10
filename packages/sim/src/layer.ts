@@ -127,9 +127,13 @@ export class TrafficLayer implements Layer {
   private ramp: RampLookup = () => 0;
   private assets: AssetCatalog | undefined;
   private rampIds: Map<string, number> | undefined;
-  private readonly baked = new Map<string, Sprite | null>();
+  /** Vehicle sprites by model and heading: null while baking, false where the bake failed. */
+  private readonly baked = new Map<string, Sprite | null | false>();
   private readonly models = new Map<string, VoxelModel>();
+  private manifest: WorldManifest | null = null;
   private pending = 0;
+  /** Counts the views the layer joined and left: a bake asked for in an earlier one is dropped when it arrives. */
+  private generation = 0;
   /** Milliseconds spent in the last frame: simulation, and turning poses into sprites. */
   simMs = 0;
   drawMs = 0;
@@ -165,8 +169,12 @@ export class TrafficLayer implements Layer {
         return null;
       }));
     if (!net) return false;
+    // a layer may join one view after another (a level switch): start this one's state afresh
+    this.leave();
+    this.models.clear(); // another world's style may draw its vehicles differently
     this.ctx = ctx;
     this.net = net;
+    this.manifest = w.manifest;
     this.renderScale = w.renderScale;
     this.ramp = rampLookup(w.palette.rampIds);
     this.assets = w.style.assets;
@@ -179,9 +187,10 @@ export class TrafficLayer implements Layer {
   }
 
   private newSim(state?: SimState): TrafficSim {
-    const m = this.ctx!.view.world.manifest;
+    const m = this.manifest;
+    if (!m || !this.net) throw new Error("the traffic layer hasn't joined a view");
     return new TrafficSim(
-      this.net!,
+      this.net,
       {
         seed: this.opts.seed ?? 1,
         metersPerCell: m.scale.metersPerCell,
@@ -287,16 +296,19 @@ export class TrafficLayer implements Layer {
   }
 
   private request(key: string, kind: VehicleKind, variant: number, part: number, heading: number): void {
-    if (this.baked.has(key) || !this.ctx) return;
+    const ctx = this.ctx;
+    if (this.baked.has(key) || !ctx) return;
     this.baked.set(key, null);
     this.pending++;
-    void this.ctx.bakeSprite(0, this.boxes(kind, variant, part, heading)).then((img) => {
-      this.pending--;
-      if (!this.baked.has(key)) {
-        if (img) this.ctx?.releaseSprite(img); // the layer left its view meanwhile
+    const generation = this.generation;
+    void ctx.bakeSprite(0, this.boxes(kind, variant, part, heading)).then((img) => {
+      if (generation !== this.generation) {
+        // the layer left that view meanwhile: its sprite goes back to it, and counts for nothing here
+        if (img) ctx.releaseSprite(img);
         return;
       }
-      if (img) this.baked.set(key, img);
+      this.pending--;
+      this.baked.set(key, img ?? false); // a failed bake isn't asked for again, nor waited for
     });
   }
 
@@ -315,6 +327,8 @@ export class TrafficLayer implements Layer {
       const key = this.key(p, heading);
       this.request(key, p.kind, p.variant, TrafficLayer.partKey(p.part), heading);
       const sprite = this.baked.get(key);
+      // its bake failed; or the ground under it is still baking: it would float over the void
+      if (sprite === false || !frame.isDrawn(p.x, p.y)) continue;
       const s = frame.project(p.x, p.y, p.h + LIFT);
       this.drawn.push({ ...p, sx: s.sx, sy: s.sy, depth: s.depth });
       if (!sprite) {
@@ -354,10 +368,23 @@ export class TrafficLayer implements Layer {
     return out;
   }
 
-  /** Let go of the vehicle sprites (the layer leaves its view). */
+  /**
+   * Leave the view: let go of the vehicle sprites and forget bakes still in
+   * flight. The simulation and the switches stay (`serialize` still works),
+   * and the layer may join another view (`init`), as at a level switch.
+   */
   dispose(): void {
+    this.leave();
+    this.ctx = null;
+  }
+
+  /** Drop the state that belongs to the current view. */
+  private leave(): void {
+    this.generation++;
     for (const s of this.baked.values()) if (s) this.ctx?.releaseSprite(s);
     this.baked.clear();
+    this.pending = 0;
+    this.drawn = [];
   }
 
   serialize(): TrafficLayerState {

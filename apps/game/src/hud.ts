@@ -2,8 +2,8 @@ import type { RouteNetwork } from "@pixelworlds/sim";
 
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),
- * a banner for events, a minimap of the world's roads (top right) and the
- * key help (H). Plain DOM over the canvas.
+ * a banner for events, a minimap of the world's roads (top right), the
+ * landmarks' names over them, and the key help (H). Plain DOM over the canvas.
  */
 
 export interface HudInfo {
@@ -43,6 +43,7 @@ const HELP = `<h2>Keys</h2>
 <tr><td>1–6</td><td>zoom</td></tr>
 <tr><td>R</td><td>back onto the nearest road (car) · level out higher up (plane)</td></tr>
 <tr><td>V</td><td>traffic on/off</td></tr>
+<tr><td>P</td><td>pause</td></tr>
 <tr><td>M</td><td>minimap</td></tr>
 <tr><td>H</td><td>this help</td></tr>
 </table>
@@ -64,8 +65,11 @@ export class Hud {
   private base: HTMLCanvasElement | null = null;
   private world = { cellsX: 1, cellsY: 1 };
   private bannerUntil = 0;
+  private readonly root: HTMLElement;
+  private readonly labelEls: HTMLElement[] = [];
 
   constructor(root: HTMLElement) {
+    this.root = root;
     const el = (id: string, tag = "div") => {
       const e = document.createElement(tag);
       e.id = id;
@@ -90,7 +94,26 @@ export class Hud {
   }
 
   hide(): void {
-    for (const e of [this.panel, this.hint, this.banner, this.help, this.map]) e.classList.add("hidden");
+    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, ...this.labelEls]) e.classList.add("hidden");
+  }
+
+  /** Names over places on the canvas (CSS px from its top-left, as the camera projects them). */
+  labels(canvas: HTMLCanvasElement, list: readonly { name: string; x: number; y: number }[]): void {
+    const box = canvas.getBoundingClientRect();
+    while (this.labelEls.length < list.length) {
+      const e = document.createElement("div");
+      e.className = "label";
+      this.root.append(e);
+      this.labelEls.push(e);
+    }
+    this.labelEls.forEach((e, i) => {
+      const l = list[i];
+      e.classList.toggle("hidden", !l);
+      if (!l) return;
+      if (e.textContent !== l.name) e.textContent = l.name;
+      e.style.left = `${box.left + l.x}px`;
+      e.style.top = `${box.top + l.y}px`;
+    });
   }
 
   /** A message across the top for a few seconds. */

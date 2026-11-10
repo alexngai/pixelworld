@@ -40,10 +40,14 @@ function streets(): RouteNetwork {
   return new RouteNetwork(parseRoutes(file));
 }
 
-/** A layer context over no GPU: bakes finish when told to; the camera sits at (15, 15). */
+/**
+ * A layer context over no GPU: bakes finish when told to; the camera sits at
+ * (15, 15); the ground is drawn where `ground` says (everywhere by default).
+ */
 function context(rotation: Rotation = 0) {
   const bakes: { rotation: Rotation; done: (s: Sprite | null) => void }[] = [];
   let invalidations = 0;
+  const ground = { drawn: (_x: number, _y: number) => true };
   const frame = (): FrameInfo => ({
     rotation,
     focus: { x: 15, y: 15, h: 0 },
@@ -52,6 +56,7 @@ function context(rotation: Rotation = 0) {
     night: false,
     renderScale: 1,
     project: (x, y, h) => project(x, y, h, rotation),
+    isDrawn: (x, y) => ground.drawn(x, y),
   });
   const view = {
     world: {
@@ -69,7 +74,7 @@ function context(rotation: Rotation = 0) {
     frame,
     invalidate: () => invalidations++,
   };
-  return { ctx, bakes, frame, invalidations: () => invalidations };
+  return { ctx, bakes, frame, ground, invalidations: () => invalidations };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -198,5 +203,96 @@ describe("the traffic layer", () => {
     layer.dispose();
     expect(released.length).toBe(bakes.length);
     expect(layer.spriteCount).toBe(0);
+  });
+
+  it("joins another view after its first was destroyed with bakes in flight, and completes there", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const a = context();
+    await layer.init(a.ctx);
+    layer.sprites(a.frame());
+    expect(a.bakes.length).toBeGreaterThan(0);
+    // view A is destroyed: the layer leaves it with A's bakes unanswered
+    layer.dispose();
+    const b = context();
+    expect(await layer.init(b.ctx)).toBe(true);
+    expect(layer.sprites(b.frame()).complete).toBe(false); // B bakes its own sprites
+    expect(b.bakes.length).toBeGreaterThan(0);
+    for (const x of b.bakes) x.done({ texture: {}, image: {} } as unknown as Sprite);
+    await flush();
+    let drawn = layer.sprites(b.frame());
+    expect(drawn.complete).toBe(true);
+    expect(drawn.list.length).toBe(layer.drawn.length);
+    // A's bake service settles them with null on dispose, late: nothing changes in B
+    for (const x of a.bakes) x.done(null);
+    await flush();
+    drawn = layer.sprites(b.frame());
+    expect(drawn.complete).toBe(true);
+    expect(drawn.list.length).toBe(layer.drawn.length);
+  });
+
+  it("gives sprites from a view it left back to that view, and counts them for nothing in the new one", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const a = context();
+    const releasedA: Sprite[] = [];
+    a.ctx.releaseSprite = (s) => releasedA.push(s);
+    await layer.init(a.ctx);
+    layer.sprites(a.frame());
+    const b = context();
+    await layer.init(b.ctx); // straight into B (no dispose): A's bakes are still in flight
+    layer.sprites(b.frame());
+    for (const x of a.bakes) x.done({ texture: {}, image: {}, from: "A" } as unknown as Sprite);
+    await flush();
+    expect(releasedA.length).toBe(a.bakes.length);
+    expect(layer.sprites(b.frame()).complete).toBe(false); // still waiting for B's own
+    for (const x of b.bakes) x.done({ texture: {}, image: {}, from: "B" } as unknown as Sprite);
+    await flush();
+    const drawn = layer.sprites(b.frame());
+    expect(drawn.complete).toBe(true);
+    expect(drawn.list.every((d) => (d.sprite as unknown as { from: string }).from === "B")).toBe(true);
+  });
+
+  it("doesn't wait forever for a sprite whose bake failed", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const { ctx, bakes, frame } = context();
+    await layer.init(ctx);
+    layer.sprites(frame());
+    const asked = bakes.length;
+    bakes[0]!.done(null);
+    for (const b of bakes.slice(1)) b.done({ texture: {}, image: {} } as unknown as Sprite);
+    await flush();
+    const drawn = layer.sprites(frame());
+    expect(drawn.complete).toBe(true);
+    expect(bakes.length).toBe(asked); // not asked for again
+    expect(drawn.list.length).toBeLessThan(layer.sim.poses(1).length);
+  });
+
+  it("leaves out vehicles where the ground isn't drawn yet, still baking their sprites", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const { ctx, bakes, frame, ground } = context();
+    await layer.init(ctx);
+    ground.drawn = (x) => x >= 15.5; // the west half is a tile still baking
+    layer.sprites(frame());
+    for (const b of bakes) b.done({ texture: {}, image: {} } as unknown as Sprite);
+    await flush();
+    const drawn = layer.sprites(frame());
+    expect(drawn.complete).toBe(true);
+    expect(layer.drawn.length).toBeGreaterThan(0);
+    expect(layer.drawn.every((v) => v.x >= 15.5)).toBe(true);
+    expect(layer.sim.poses(1).some((v) => v.x < 15.5)).toBe(true);
+    // the tile arrives: they show at once, their sprites were baked meanwhile
+    ground.drawn = () => true;
+    const asked = bakes.length;
+    expect(layer.sprites(frame()).list.length).toBe(layer.sim.poses(1).length);
+    expect(bakes.length).toBe(asked);
+  });
+
+  it("keeps its simulation when it leaves a view, for a save", async () => {
+    const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
+    const { ctx } = context();
+    await layer.init(ctx);
+    const ticks = layer.sim.ticks;
+    layer.dispose();
+    expect(layer.drawn).toEqual([]);
+    expect(layer.serialize().sim.ticks).toBe(ticks);
   });
 });

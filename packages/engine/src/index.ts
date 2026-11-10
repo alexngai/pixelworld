@@ -10,7 +10,7 @@
  * controller turns input into entity and camera movement, using queries.
  */
 export { createWorldView } from "./view";
-export { roverController, RoverController, type RoverOptions } from "./rover";
+export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";
 export { fogLayer, FogLayer, type FogLayerOptions } from "./fog";
 export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";

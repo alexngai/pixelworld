@@ -114,4 +114,27 @@ describe("the layer registry", () => {
     expect(layers.list()).toEqual([]);
     expect(a.disposed).toBe(true);
   });
+
+  it("moves a layer added to another view: it leaves the first, and the first's teardown leaves it alone", async () => {
+    const log: string[] = [];
+    const layer = fakeLayer("traffic");
+    layer.init = async (ctx: LayerContext) => {
+      log.push(`init ${(ctx as unknown as { name: string }).name}`);
+      return true;
+    };
+    layer.dispose = () => void log.push("dispose");
+    const view = (name: string) => new Layers(() => ({ name }) as unknown as LayerContext, () => {});
+    const a = view("A");
+    const b = view("B");
+    await a.add(layer);
+    await b.add(layer); // a level switch reusing the layer, while A still draws
+    expect(log).toEqual(["init A", "dispose", "init B"]);
+    expect(a.list()).toEqual([]);
+    expect(b.list()).toEqual([layer]);
+    a.dispose(); // A destroyed when B takes over
+    expect(log).toEqual(["init A", "dispose", "init B"]);
+    await a.add(layer); // and back
+    expect(log).toEqual(["init A", "dispose", "init B", "dispose", "init A"]);
+    expect(b.list()).toEqual([]);
+  });
 });

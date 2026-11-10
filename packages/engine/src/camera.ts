@@ -1,6 +1,6 @@
-import type { Rotation } from "@pixelworlds/grid";
+import { project, type Rotation } from "@pixelworlds/grid";
 import type { Camera } from "@pixelworlds/runtime";
-import type { ViewCamera } from "./types";
+import type { CanvasPoint, ViewCamera } from "./types";
 
 /** About one internal pixel per this many canvas pixels, when the zoom is "auto". */
 export const AUTO_ZOOM_PX = 640;
@@ -22,6 +22,8 @@ export class ViewCameraImpl implements ViewCamera {
       ensure(x: number, y: number): Promise<void>;
       heightAt(x: number, y: number): number | null;
       lonLatToCell(lon: number, lat: number): [number, number] | null;
+      /** Device pixels per CSS pixel of the canvas (default 1). */
+      pixelRatio?(): number;
     },
   ) {}
 
@@ -123,5 +125,27 @@ export class ViewCameraImpl implements ViewCamera {
 
   screenDirToGrid(dx: number, dy: number): [number, number] {
     return this.cam.screenDirToGrid(dx, dy);
+  }
+
+  project(x: number, y: number, h: number): CanvasPoint;
+  project(x: number, y: number): CanvasPoint | null;
+  project(x: number, y: number, h?: number): CanvasPoint | null {
+    const z = h ?? this.world.heightAt(x, y);
+    if (z === null) return null;
+    const c = this.cam;
+    const rs = this.rs;
+    const p = project(x * rs, y * rs, z * rs, c.rotation);
+    // render px → device px → CSS px, the inverse of query.pick: the view's
+    // top-left is the camera's origin, whole pixels plus the sub-pixel shift
+    const [left, top] = c.origin();
+    const ratio = this.world.pixelRatio?.() ?? 1;
+    const k = c.zoom / ratio;
+    const sx = (p.sx - left) * k;
+    const sy = (p.sy - top) * k;
+    return {
+      x: sx,
+      y: sy,
+      onScreen: sx >= 0 && sy >= 0 && sx < c.canvasWidth / ratio && sy < c.canvasHeight / ratio,
+    };
   }
 }

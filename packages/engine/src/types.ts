@@ -85,6 +85,13 @@ export interface WorldViewOptions {
   /** Bake errors (default: console.error). */
   onError?: (message: string) => void;
   /**
+   * Bake ahead of the camera's motion (seconds, default 1.5; 0 for none):
+   * while the camera moves, the tiles a view this far along its path would
+   * show are baked right after the visible ones (`WorldView.prefetch` asks
+   * for a place explicitly).
+   */
+  lookAhead?: number;
+  /**
    * Where to load the bake worker from, for setups that can't serve it beside
    * the engine: a module worker script, such as a copy of the package's
    * `bake.worker.js` on your own origin (or a `blob:` URL). Default: the
@@ -152,6 +159,22 @@ export interface ViewCamera {
   rotate(delta: 1 | -1): void;
   /** The unit grid direction of a screen direction in this rotation. */
   screenDirToGrid(dx: number, dy: number): [number, number];
+  /**
+   * Where a place (cells, steps) is drawn on the canvas, in CSS pixels from
+   * its top-left: the inverse of `query.pick`, for HUD labels and markers.
+   * Without a height, the ground there; null where it isn't loaded.
+   */
+  project(x: number, y: number, h: number): CanvasPoint;
+  project(x: number, y: number): CanvasPoint | null;
+}
+
+/** A place on the canvas (`ViewCamera.project`). */
+export interface CanvasPoint {
+  /** CSS pixels from the canvas's top-left, as `query.pick` takes them. */
+  x: number;
+  y: number;
+  /** Whether it is on the canvas. */
+  onScreen: boolean;
 }
 
 export interface ViewStats {
@@ -160,6 +183,8 @@ export interface ViewStats {
   tilesBaked: number;
   tilesFromCache: number;
   tilesPerRotation: number;
+  /** Tiles wanted (in and around the view, and baked ahead) that aren't baked yet. */
+  tilesPending: number;
   chunksLoaded: number;
   chunksTotal: number;
   gpuTiles: number;
@@ -186,18 +211,40 @@ export interface TileBake {
   vertices: number;
 }
 
-/** Called after every animation frame. */
-export interface FrameEvent {
-  now: number;
+/**
+ * The view's game clock in a frame: what controllers, layers and `onFrame`
+ * listeners get. Game time starts at the view's first complete frame and
+ * stops while it is paused.
+ */
+export interface FrameClock {
+  /**
+   * Game seconds this frame: the wall-clock time since the last frame (at
+   * most 0.1 s) × `timeScale`; 0 before the view has started and while it is
+   * paused. Controllers and layers move things by this.
+   */
   dt: number;
+  /** Wall-clock seconds since the last frame (at most 0.1 s), paused or not: camera easing, UI. */
+  realDt: number;
+  /** Game seconds since the view started (the sum of `dt`). */
+  time: number;
+  /** Whether the view has drawn its first complete frame. */
+  started: boolean;
+  paused: boolean;
+}
+
+/** Called after every animation frame, with the frame's clock. */
+export interface FrameEvent extends FrameClock {
+  now: number;
   /** Whether the frame was drawn (the loop redraws only when something changed). */
   drawn: boolean;
 }
 
-/** A view's state for determinism: the camera and every layer's own state. */
+/** A view's state for determinism: the camera, every layer's own state and the controller's. */
 export interface ViewState {
   camera: { x: number; y: number; h: number; rotation: Rotation; zoom: number };
   layers: Record<string, unknown>;
+  /** The controller's state (`Controller.serialize`), restored into a controller with the same id. */
+  controller?: { id: string; state: unknown };
 }
 
 export interface WorldView extends ControllerView {
@@ -206,8 +253,35 @@ export interface WorldView extends ControllerView {
   /** "day" or "night" (where the style has a night palette). */
   palette: "day" | "night";
   readonly hasNight: boolean;
-  /** Resolves once a frame is drawn with every visible tile and sprite and nothing is left to bake. */
+  /**
+   * Resolves once a frame is drawn with every visible tile and sprite and
+   * nothing in or around the view is left to bake (tiles baked ahead, by
+   * `prefetch` or the look-ahead, aren't waited for).
+   */
   ready(): Promise<void>;
+  /**
+   * Whether the first complete frame is drawn (every visible tile and
+   * sprite). The loop runs from the start, but game time (`FrameClock.dt`)
+   * only from then: a controller or layer moving things by `dt` holds still
+   * while the view loads, and with `replace`, until the view takes over.
+   */
+  readonly started: boolean;
+  /** Game seconds since the view started. */
+  readonly time: number;
+  /** Hold game time: controllers, layers and `onFrame` get `dt` 0 (the view still draws and bakes). */
+  paused: boolean;
+  /** Game seconds per wall-clock second (default 1; 0 holds time as `paused` does). */
+  timeScale: number;
+  /** Whether the ground at a place (cells) is baked in the current rotation, so frames draw it. */
+  isDrawn(x: number, y: number): boolean;
+  /**
+   * Bake the tiles at a place ahead of need, after the visible ones: where a
+   * fast player is heading, the next stop. Without a radius, the tiles a
+   * view centred there would show; with one, the tiles within that many
+   * cells. Resolves once they are baked in the current rotation (or when
+   * the view is destroyed).
+   */
+  prefetch(x: number, y: number, radius?: number): Promise<void>;
   /** Something changed that the engine can't see: redraw, and make `ready()` wait for it. */
   invalidate(): void;
   /** Set the drawing size (device pixels); with `size` omitted the view follows the canvas instead. */
@@ -219,7 +293,9 @@ export interface WorldView extends ControllerView {
   timeFrames(n: number): number;
   /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
   bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
+  /** Called after every animation frame (from the start, before `ready()`); `dt` is game time. */
   onFrame(listener: (e: FrameEvent) => void): () => void;
+  /** The camera, every layer's state and the controller's (where it has `serialize`). */
   serialize(): ViewState;
   restore(state: ViewState): void;
   /** Stop the frame loop and let go of the GPU and the bake worker. */
@@ -280,8 +356,10 @@ export interface WorldQuery {
   ensure(x0: number, y0: number, x1: number, y1: number): Promise<void>;
   /**
    * Placed objects standing at a point (occupancy): those whose footprint
-   * contains it, and footprint-less ones (trees, towers drawn from an anchor)
-   * in its cell. Empty without objects (`objects: false`) or outside the world.
+   * contains it; landmarks drawn from an anchor (City Hall, a tower) where
+   * their model stands, in plan; and other footprint-less objects (trees,
+   * props) in their anchor's cell. Empty without objects (`objects: false`)
+   * or outside the world.
    */
   objectsAt(x: number, y: number): ObjectHit[];
   /** The world's registry landmarks (objects with an id), one per id. */
@@ -297,9 +375,9 @@ export interface ObjectHit {
   /** The anchor (cells). */
   x: number;
   y: number;
-  /** Bounds in cells [x0, y0, x1, y1]: the footprint's, or the anchor's cell. */
+  /** Bounds in cells [x0, y0, x1, y1]: the footprint's, a landmark model's plan, or the anchor's cell. */
   bounds: [number, number, number, number];
-  /** Whether it has a footprint (else it occupies its anchor's cell). */
+  /** Whether it has a footprint (else it occupies its model's plan, for a landmark, or its anchor's cell). */
   footprint: boolean;
   /** Where it is built (steps), or null where the terrain isn't loaded. */
   base: number | null;
@@ -392,6 +470,12 @@ export interface FrameInfo {
   renderScale: number;
   /** Screen position (render px) and depth of a point (cells, steps) in this rotation. */
   project(x: number, y: number, h: number): { sx: number; sy: number; depth: number };
+  /**
+   * Whether the ground at a place (cells) is baked in this rotation. A layer
+   * leaves out what stands where it isn't, so nothing floats over the void
+   * of a tile still baking (traffic and entities do).
+   */
+  isDrawn(x: number, y: number): boolean;
 }
 
 /** A pass over the drawn frame before the palette. Fog's (D-063) is the one kind today. */
@@ -418,6 +502,12 @@ export interface Sublayer {
 /**
  * A runtime layer (docs/library.md §3.3): something drawn over the baked
  * world without being baked into it, such as traffic or fog.
+ *
+ * A layer is in one view at a time, and may move to another (a level
+ * switch): adding it to a view takes it out of the view it was in, calling
+ * its `dispose`, then calls `init` with the new view's context. `dispose`
+ * drops what belongs to the view (sprites, bakes in flight, which then
+ * resolve null); `init` starts that state afresh.
  */
 export interface Layer {
   readonly id: string;
@@ -429,8 +519,12 @@ export interface Layer {
   setSublayerEnabled?(id: string, on: boolean): void;
   /** Join a view. False when the layer has nothing in this world; it is then left out. */
   init(ctx: LayerContext): boolean | Promise<boolean>;
-  /** Advance by a frame's time (seconds), while enabled; true when the frame needs redrawing. */
-  update?(dt: number, frame: FrameInfo): boolean;
+  /**
+   * Advance by a frame's game time (seconds: 0 before the view has started
+   * and while it is paused), while enabled; true when the frame needs
+   * redrawing. Called every frame, from the start.
+   */
+  update?(dt: number, frame: FrameInfo, clock: FrameClock): boolean;
   /** Depth-tested sprites for a frame being drawn; `complete` is false while some are still baking. */
   sprites?(frame: FrameInfo): { list: SpriteDraw[]; complete: boolean };
   /** A pass over the frame being drawn, or null for none. */
@@ -438,6 +532,7 @@ export interface Layer {
   /** The layer's whole state as plain JSON, and back (determinism). */
   serialize?(): unknown;
   restore?(state: unknown): void;
+  /** The layer leaves its view (removed, the view destroyed, or added to another view). */
   dispose?(): void;
 }
 
@@ -479,13 +574,24 @@ export interface ControllerView {
  * An interaction mode (docs/library.md §3.3): input in, entity and camera
  * movement out. The app forwards key and pointer events to it, or the
  * controller listens on an element it is given (`listenTo`).
+ *
+ * A controller is attached to one view at a time; using it in another view
+ * (a level switch keeping the player's controller) detaches it from the
+ * first, then attaches it to the new one.
  */
 export interface Controller {
   readonly id: string;
   attach(view: ControllerView): void | Promise<void>;
   detach?(): void;
-  /** Each frame, before layers update (seconds). */
-  update?(dt: number): void;
+  /**
+   * Each frame, before layers update, from the start: `dt` is game seconds,
+   * 0 until the view's first complete frame and while it is paused (the
+   * clock has the wall-clock time too).
+   */
+  update?(dt: number, clock: FrameClock): void;
+  /** The controller's state as plain JSON, and back: kept in `view.serialize()` under its id. */
+  serialize?(): unknown;
+  restore?(state: unknown): void;
   /** True when the key was the controller's. */
   keyDown?(e: KeyInput): boolean;
   keyUp?(e: KeyInput): void;
