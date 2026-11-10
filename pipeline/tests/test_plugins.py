@@ -285,4 +285,4 @@ def test_a_registered_facts_source_types_buildings(capsys):
     assert Records.built == [{"vintage": 2026}]
     assert [b["g"] for b in found] == ["building.rowhouse.brownstone", "building.tenement"]
     assert all(b["yr"] == 1890 and b["fl"] == 4 for b in found)
-    assert "typology facts: test records 2026, 2/2 buildings with facts" in capsys.readouterr().out
+    assert "typology facts: test records 2026, 2/2 buildings with facts" in capsys.readouterr().err

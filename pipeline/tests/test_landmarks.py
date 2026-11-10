@@ -5,17 +5,22 @@ import numpy as np
 import pytest
 import yaml
 
-from pixelworld_pipeline import landmarks, objects
-from pixelworld_pipeline.region import Region
+from pixelworld_pipeline import objects
+from pixelworld_pipeline.region import Region, RegionError
 
 SPEC = {
     "id": "lm",
     "name": "Landmarks",
     "bounds": [-115.2, 36.0, -115.19, 36.01],
     "metersPerCell": 20,
-    "style": "s",
+    "style": "desert-southwest",
     "start": {"lon": -115.195, "lat": 36.005},
-    "sources": {},
+    "sources": {
+        "dem": {"kind": "usgs-3dep-1arcsec"},
+        "landcover": {"kind": "esa-worldcover-2021"},
+        "overture": {"release": "2026-10-21.0"},
+        "roads": {"classes": ["primary"]},
+    },
 }
 
 
@@ -80,9 +85,9 @@ def test_registry_entries_are_validated(registry):
     (registry / "_landmarks" / "bad.yaml").write_text(
         yaml.safe_dump({"anchor": {"lon": 0, "lat": 0}})
     )
-    with pytest.raises(landmarks.LandmarkError, match="generic"):
+    with pytest.raises(RegionError, match="generic"):
         _region(registry, {"landmarks": ["bad"]})
-    with pytest.raises(landmarks.LandmarkError, match="no landmark"):
+    with pytest.raises(RegionError, match="no landmark .missing."):
         _region(registry, {"landmarks": ["missing"]})
 
 

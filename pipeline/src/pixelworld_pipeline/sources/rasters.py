@@ -27,7 +27,7 @@ import rasterio
 from rasterio.errors import RasterioIOError
 from rasterio.warp import Resampling, reproject
 
-from .. import plugins
+from .. import plugins, progress
 from ..region import Region
 from .http import CACHE_ROOT, USER_AGENT
 
@@ -273,10 +273,10 @@ def dem_corners(region: Region, k: int = 1, spec: dict | None = None) -> np.ndar
         dst, transform, region.crs, region.lonlat_envelope(), overview, resampling, np.nan
     )
     if missing:
-        print(f"  dem: {len(missing)} tiles missing (outside coverage?)")
+        progress.log(f"dem: {len(missing)} tiles missing (outside coverage?)")
     gaps = int(np.isnan(dst).sum())
     if gaps:
-        print(f"  dem: filling {gaps} empty corners")
+        progress.log(f"dem: filling {gaps} empty corners")
         dst = fill_nan_nearest(dst).astype(np.float32)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, dst)
@@ -353,7 +353,7 @@ def landcover_cells(region: Region) -> np.ndarray:
         0,
     )
     if missing:
-        print(f"  landcover: {len(missing)} tiles missing")
+        progress.log(f"landcover: {len(missing)} tiles missing")
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, dst)
     return dst
@@ -382,7 +382,7 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
         dst, transform, region.crs, region.lonlat_envelope(), 1, Resampling.nearest, 0
     )
     if missing:
-        print(f"  landcover (fine): {len(missing)} tiles missing")
+        progress.log(f"landcover (fine): {len(missing)} tiles missing")
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, dst)
     return dst, px

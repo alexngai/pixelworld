@@ -60,6 +60,7 @@ import numpy as np
 import shapely
 from rasterio.warp import transform as transform_points
 
+from . import progress
 from .region import Region
 from .sources import overture, rasters
 
@@ -955,13 +956,13 @@ def type_buildings(region: Region, found: list[dict], spec: dict, streets, water
         for i, f in zip(has, got, strict=True):
             facts[i] = f
         known = sum(f is not None for f in got)
-        print(
+        progress.log(
             f"typology facts: {facts_sources.describe(source)}, "
             f"{known}/{len(has)} buildings with facts"
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
     counts = typology.classify(found, spec, feats)
-    print(f"typology: {counts}")
+    progress.log(f"typology: {counts}")
     return found
 
 
@@ -1467,7 +1468,7 @@ def place(
     replaces = {r for lm in landmarks for r in lm.get("replaces", [])}
     lidar_stats: dict[str, int] = {}
     building_polys = []
-    if "buildings" in spec:
+    if spec.get("buildings") is not None:
         release = region.sources["overture"]["release"]
         bounds = spec["buildings"].get("bounds", region.lonlat_envelope())
         # one box, or a list of boxes (e.g. the Strip and Grand Canyon Village)
@@ -1509,16 +1510,16 @@ def place(
         )
         dropped = lidar_stats.pop("implausible", 0)
         if dropped:
-            print(f"buildings: dropped {dropped} implausible footprints in parks")
+            progress.log(f"buildings: dropped {dropped} implausible footprints in parks")
         if lidar_stats:
-            print(f"lidar: {lidar_stats}")
+            progress.log(f"lidar: {lidar_stats}")
         if snap is not None:
             found = snap_buildings(found, snap)
         clear_spec = (snap or {}).get("clearRoads")
         if clear_spec and roads is not None:
             nudge = float(clear_spec.get("nudgeMeters", 5.0)) / p.m
             found, cleared = clear_of_roads(found, road_strips(*roads), nudge)
-            print(f"buildings off the roads: {cleared}")
+            progress.log(f"buildings off the roads: {cleared}")
         if spec.get("typology"):
             found = type_buildings(region, found, spec["typology"], streets, water)
         instances += depict_buildings(p, found, depiction.get("buildings", {}))

@@ -66,7 +66,13 @@ def build_index(release: str, theme: str, kind: str, workers: int = 6) -> list[d
         return json.loads(path.read_text())
     files = list_files(f"release/{release}/theme={theme}/type={kind}/")
     if not files:
-        raise RuntimeError(f"no Overture files for {release} {theme}/{kind}")
+        from ..region import RegionError
+
+        raise RegionError(
+            f"sources.overture.release: Overture has no release '{release}' (no "
+            f"{theme}/{kind} files under {BUCKET}release/{release}/); releases are named "
+            "like 2026-10-21.0, see https://docs.overturemaps.org/release-calendar/"
+        )
     with ThreadPoolExecutor(workers) as pool:
         index = list(pool.map(lambda kv: _index_file(*kv), files))
     path.parent.mkdir(parents=True, exist_ok=True)

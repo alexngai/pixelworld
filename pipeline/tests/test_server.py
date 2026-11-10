@@ -17,12 +17,12 @@ id: srv
 name: Server test
 bounds: [-115.4, 36.0, -114.9, 36.3]
 metersPerCell: 400
-style: s
+style: desert-southwest
 start: { lon: -115.17, lat: 36.11 }
 sources:
   dem: { kind: usgs-3dep-1arcsec }
   landcover: { kind: esa-worldcover-2021 }
-  overture: { release: test }
+  overture: { release: 2026-10-21.0 }
   roads: { classes: [primary] }
 warp: warp.yaml
 """
