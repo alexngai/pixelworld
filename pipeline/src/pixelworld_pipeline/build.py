@@ -23,7 +23,7 @@ from . import importance as importance_stage
 from . import lanes as lane_stage
 from . import micro as micro_stage
 from . import objects as object_stage
-from . import plugins
+from . import plugins, progress
 from . import roads as road_stage
 from .gridify import (
     STEP_WORLD,
@@ -73,6 +73,8 @@ ROAD_ORDER = (
     "motorway",
 )
 PATH_ORDER = ("path", "cycleway", "steps", "footway", "sidewalk", "crosswalk", "pedestrian")
+# the river lines a spec without `sources.rivers` draws
+RIVER_SUBTYPES = ["river"]
 # paths that lie on the bed of the road they belong to (micro.follow_beds); footways,
 # pedestrian streets and plazas keep their own ground
 PATHS_ON_ROAD_BEDS = ("sidewalk", "crosswalk")
@@ -652,23 +654,28 @@ def build(
     registry, importance.json)."""
     region = region or Region.load(region_path)
     plugins.check(region)  # a missing plugin fails now, not minutes in
+    progress.stage("layout", "the warp solve" if region.warp else "a uniform grid")
     layout = layout or make_layout(region, region_path)
     cx, cy = layout.cells
     if layout.warped:
         ws = layout.warp.stats
-        print(f"region {region.id}: {cx}×{cy} cells, warped ({ws['method']}, {ws['folds']} folds)")
+        progress.log(
+            f"region {region.id}: {cx}×{cy} cells, warped ({ws['method']}, {ws['folds']} folds)"
+        )
         for f in ws["focus"]:
-            print(f"  focus {f['name']}: {f['achieved']} m/cell (target {f['target']})")
+            progress.log(f"  focus {f['name']}: {f['achieved']} m/cell (target {f['target']})")
     else:
-        print(f"region {region.id}: {cx}×{cy} cells at {region.meters_per_cell:g} m")
+        progress.log(f"region {region.id}: {cx}×{cy} cells at {region.meters_per_cell:g} m")
 
     # fetch (cached)
+    progress.stage("terrain", "elevation and land cover (downloads are cached)")
     dem = layout.corner_elevation(region.sources["dem"])
     dem_real = dem
     vref = vfac = None
     if layout.warped and layout.spec.vertical:
         dem, ref, rel = layout.relief(dem)
     landcover = layout.cell_landcover()
+    progress.stage("ways", "roads, paths and rivers from Overture")
     release = region.sources["overture"]["release"]
     bbox = region.lonlat_envelope()
     road_spec = region.sources["roads"]
@@ -698,16 +705,18 @@ def build(
         extra = [r for r in extra if r["class"] in road_spec["classes"]]
         joined = road_stage.joining_segments(road_rows, extra)
         road_rows = sorted(road_rows + joined, key=lambda r: r["id"])
-        print(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
+        progress.log(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
     path_ids: dict[int, str] = {}
     path_rows: list[dict] = []
-    if "paths" in region.sources:
+    if region.sources.get("paths"):
         path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
         path_rows = overture.paths(release, bbox, region.sources["paths"]["classes"])
     path_id = {c: i for i, c in path_ids.items()}
-    river_rows = overture.rivers(release, bbox, region.sources["rivers"]["subtypes"])
+    rivers = region.sources.get("rivers") or {}
+    river_rows = overture.rivers(release, bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
 
     # heights in steps on the shared corner field
+    progress.stage("grid", "water, roads and cells")
     step_m = meters_per_step(region.meters_per_cell, region.vertical_exaggeration)
     corner_m = dem
     if layout.warped and layout.spec.vertical:
@@ -771,14 +780,14 @@ def build(
             keep=set(keep),
         )
         if keep:
-            print(f"snap: {len(keep)} ways keep their real geometry")
+            progress.log(f"snap: {len(keep)} ways keep their real geometry")
         road_lines = straight.lines[: len(road_lines)]
         path_lines = straight.lines[len(road_lines) :]
         deviation = float(rs.get("deviation", 1.0))
         follow = float((snap.get("buildings") or {}).get("follow", 3.0))
         road_shift = straight.shift(follow)
         moved = np.hypot(*(straight.moved - straight.origin).T)
-        print(
+        progress.log(
             f"snap: {straight.constrained}/{straight.edges} road edges made octilinear, "
             f"nodes moved p99 {np.percentile(moved, 99) if len(moved) else 0:.2f} cells"
         )
@@ -806,7 +815,7 @@ def build(
         road_lines, (cy, cx), deviation=deviation, widths=road_w, lanes=lane_b
     )
     if road_layer.lanes is not None:
-        print(f"lanes: {lane_stage.report(road_layer.lanes)}")
+        progress.log(f"lanes: {lane_stage.report(road_layer.lanes)}")
     path_layer = (
         road_stage.rasterize(path_lines, (cy, cx), deviation=deviation, widths=path_w)
         if path_rows
@@ -833,7 +842,7 @@ def build(
             deviation=deviation,
             on_road=on_road,
         )
-        print(f"rails: {int((rail != 0).sum())} cells from {len(rail_rows)} segments")
+        progress.log(f"rails: {int((rail != 0).sum())} cells from {len(rail_rows)} segments")
 
     # gridify
     base, shape = gridify_heights(q.astype(np.float64), steep="flat", max_offset=region.max_slope)
@@ -871,7 +880,7 @@ def build(
             road_shift,
         )
         surface[lawn] = surface_id["lawn"]
-        print(f"ground: {int(lawn.sum())} lawn cells")
+        progress.log(f"ground: {int(lawn.sum())} lawn cells")
     # a swung street's gardens: the cells its bends sweep take the rule's surface
     for a, b, half, name in gardens:
         band = road_stage.street_band(a, b, half + 0.5, (cy, cx)) & (water == NO_WATER)
@@ -894,13 +903,14 @@ def build(
         cell_corner_heights(base, shape),
         road_stage.junction_index(road_rows, junction_inside),
     )
-    print(f"roads: {asdict(report)}")
+    progress.log(f"roads: {asdict(report)}")
 
     # micro-terrain (optional): K×K micro-cells per cell, constrained by the cell layers
     micro = None
     if region.micro is not None:
+        progress.stage("micro-terrain")
         k = int(region.micro["k"])
-        dem_spec = region.sources["dem"] | region.micro.get("dem", {})
+        dem_spec = region.sources["dem"] | (region.micro.get("dem") or {})
         micro_m = layout.corner_elevation(dem_spec, k)
         if layout.warped and layout.spec.vertical:
             micro_m = layout.relief(micro_m, k)[0]
@@ -930,12 +940,13 @@ def build(
             None if path_hw is None else path_hw / 32.0,
         )
         micro = (mc, k)
-        print(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
+        progress.log(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
 
     # objects (optional): vegetation, buildings, landmarks as semantic groups
     instances = None
     object_counts: dict[str, int] = {}
     if region.objects is not None:
+        progress.stage("objects", "buildings, vegetation, landmarks")
         steep_steps = max(1, round(OBJECT_MAX_SLOPE * region.vertical_exaggeration / STEP_WORLD))
         blocked = on_road | is_water | cliff_mask(base, shape, min_drop=steep_steps)
         if road_hw is not None:
@@ -952,7 +963,7 @@ def build(
             water=is_water,
             roads=None if road_hw is None else (road_layer.mask, road_hw / 32.0),
         )
-        print(f"objects: {object_counts}")
+        progress.log(f"objects: {object_counts}")
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
         under = bridge_decks_over_water(
             instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road
@@ -961,7 +972,7 @@ def build(
             base, shape, water, surface, micro = water_under_decks(
                 under, base, shape, water, surface, low, road_layer, road_hw, micro
             )
-            print(f"bridges: {int(under.sum())} cells of water under their decks")
+            progress.log(f"bridges: {int(under.sum())} cells of water under their decks")
         # a coarse level's built-up land as blocks of low buildings (objects.lowrise)
         if region.objects.get("lowrise"):
             blocks = object_stage.lowrise(
@@ -976,7 +987,7 @@ def build(
                 object_counts = dict(
                     sorted((object_counts | {blocks[0]["g"]: len(blocks)}).items())
                 )
-            print(f"lowrise: {len(blocks)} built-up cells drawn as city blocks")
+            progress.log(f"lowrise: {len(blocks)} built-up cells drawn as city blocks")
     # yards (M3.5): the green behind and between houses, once the houses stand
     if ground.get("yard") and instances:
         paved = on_road | (water != NO_WATER)
@@ -992,13 +1003,13 @@ def build(
             seed=object_stage._seed(region, "yard"),
         )
         surface[yard] = surface_id["yard"]
-        print(f"ground: {int(yard.sum())} yard cells")
+        progress.log(f"ground: {int(yard.sum())} yard cells")
     attribution = [
         rasters.source(region.sources["dem"]["kind"], "terrain").attribution,
         rasters.source(region.sources["landcover"]["kind"], "landcover").attribution,
         ATTRIBUTION["overture"],
     ]
-    if region.objects and "buildings" in region.objects:
+    if region.objects and region.objects.get("buildings") is not None:
         attribution.append(ATTRIBUTION["overture-buildings"])
         if region.objects["buildings"].get("lidar"):
             attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
@@ -1022,12 +1033,14 @@ def build(
             "pins": len(layout.spec.pins),
             "vertical": layout.spec.vertical or None,
         }
-    geo = None
-    if region.levels:
-        # warped maps bend between grid points: a finer grid keeps the
-        # interpolation within ~2 cells even in stretched transition rings
-        step = 4 if layout.warped else 16
-        geo = (*layout.geo_grid(step), step)
+    # Every package carries its geo grid (D-048, D-076): lon/lat ↔ cells for
+    # moving between levels, for traffic routes from Overture's rail and ferry
+    # lines, and for the client's lon/lat queries and fog. Warped maps bend
+    # between grid points: a finer grid keeps the interpolation within ~2 cells
+    # even in stretched transition rings.
+    progress.stage("package", "chunks, objects and the geo grid")
+    step = 4 if layout.warped else 16
+    geo = (*layout.geo_grid(step), step)
     depiction = manifest_depiction((region.objects or {}).get("depiction") or {})
     heroes = package_heroes(region, region_path, out_dir)
     manifest = write_package(

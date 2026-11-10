@@ -8,6 +8,7 @@
 | [library.md](library.md) | pixelworld as a library: packages, the engine API, extension points, the export tool, publishing, licences and the decisions taken |
 | [npm.md](npm.md) | Using pixelworld from npm: install, a world in a page, entry points and sizes, worlds and style packs, the bake worker, plugins, releases |
 | [second-region.md](second-region.md) | Research: which cities have open data for a San Francisco-grade world, and the adapters each would need |
+| [worlds.md](worlds.md) | Make your own world: from a place to a rendered world (Jerome, Arizona, as the example), checking, building and viewing it, and the reference of every region spec key |
 | [plugins.md](plugins.md) | Writing pipeline plugins: facts sources, source adapters, the registry's entry points, the city pack layout, the Python API |
 | [decisions.md](decisions.md) | Decision log: what we decided, why, and whether it's settled |
 | [style-guide.md](style-guide.md) | The art rules every baked pixel follows: palette, light, materials, outlines, dithering |

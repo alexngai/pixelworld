@@ -70,7 +70,7 @@ cd pipeline && uv sync && uv run ruff check . && uv run ruff format --check . &&
 
 To measure tile bakes, frames and memory on your own GPU, run `pnpm bench` (it opens the benchmark page in your browser); see [Benchmarks](docs/architecture.md#benchmarks).
 
-To rebuild the Southwest from its region spec (downloads are cached in `pipeline/.cache/`; about 20 s once cached):
+To rebuild the Southwest from its region spec (downloads are cached in `pipeline/.cache/`; about 3 minutes once cached, 171 s measured on a shared 4-core machine; `pixelworld build` prints each stage's time):
 
 ```sh
 cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml

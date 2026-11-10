@@ -1,5 +1,5 @@
 {
-  "packageHash": "be1a114a1e39b5cbf841e6527cea5fa14157c4bfb33535c4613b61751418ef50",
+  "packageHash": "17b978f65ed319ec37a6b2b7f896fe3d04510002d844fb4f3534891b21819080",
   "cells": [
     280,
     345
@@ -38,5 +38,8 @@
     "desert": 30490,
     "grass": 23787,
     "urban": 184
+  },
+  "routes": {
+    "road": 12
   }
 }

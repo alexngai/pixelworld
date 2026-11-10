@@ -42,3 +42,6 @@ examples/consumers/*/public/styles/
 examples/consumers/esm/worlds/
 examples/consumers/esm/styles/
 examples/consumers/esm/vendor/
+
+# a pipeline build stages its package here beside --out, and moves it in when done (D-076)
+.*.building/

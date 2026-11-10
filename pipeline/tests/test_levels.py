@@ -14,9 +14,14 @@ SPEC = {
     "name": "Levels",
     "bounds": [-115.4, 36.0, -114.9, 36.3],
     "metersPerCell": 400,
-    "style": "s",
+    "style": "desert-southwest",
     "start": {"lon": -115.17, "lat": 36.11},
-    "sources": {},
+    "sources": {
+        "dem": {"kind": "usgs-3dep-1arcsec"},
+        "landcover": {"kind": "esa-worldcover-2021"},
+        "overture": {"release": "2026-10-21.0"},
+        "roads": {"classes": ["primary"]},
+    },
 }
 WARP = {
     "background": 500,
@@ -176,7 +181,7 @@ def test_landmark_scale_draws_it_bigger_but_dams_keep_their_size():
 
 
 def test_editor_saves_only_a_warp_file_the_spec_owns(tmp_path):
-    base = SPEC | {"sources": {"dem": {"kind": "usgs-3dep-1arcsec"}}, "warp": "warp.yaml"}
+    base = SPEC | {"warp": "warp.yaml"}
     (tmp_path / "region.yaml").write_text(yaml.safe_dump(base))
     (tmp_path / "warp.yaml").write_text(yaml.safe_dump(WARP))
     (tmp_path / "fly.yaml").write_text(

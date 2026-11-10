@@ -106,8 +106,23 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "8f96f7e8c4b087593bf4fb8006aabd4970ccd2e4a82d0210ffeb3663ea3d5390",
+    "sha256": "09e827e3a34186322938b44188982149662e5084e9c20217e2df93fa631cabea",
     "count": 8299
   },
-  "packageHash": "d93eb48823795d4f8f8d96f068d3bdeede6acdeb2b2af002f58d49c0983941b7"
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      4,
+      4
+    ],
+    "sha256": "83bfbc3748d3d70843f0c35a5dcbfc0a6914f35d47ee4f9c11a41d81f2680feb"
+  },
+  "packageHash": "26bc68f61619dc2a3fccf7af44c29a8fb2dbfb6ac92d871fd7643250fd3000cb",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "bf5190ac1906d6cd2a0281c37941aa04866479230a45afc397791ed1c4c36363",
+    "version": 1,
+    "count": 1
+  }
 }

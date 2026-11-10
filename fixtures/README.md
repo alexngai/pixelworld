@@ -2,6 +2,8 @@
 
 World packages the dev app serves and the tests use. They are served as static files by the web app (`apps/web/vite.config.ts` sets this directory as Vite's `publicDir`).
 
+**Your own worlds:** build them into `fixtures/_try/<id>` (git-ignored) and open `http://localhost:5173/?world=/_try/<id>/`, or build them anywhere and serve them with `uv run pixelworld view <dir>`. A build without `--out` writes `fixtures/<id>`, which overwrites the committed package of that id. See [docs/worlds.md](../docs/worlds.md).
+
 ## grand-canyon-m0
 
 128×128 cells at a uniform 160 m per cell (no warp), with 2.5× vertical exaggeration (26.1 m per height step) and slope tiles up to 2 steps per cell. Covers the South Rim at Grand Canyon Village, the Colorado River near Phantom Ranch, and the North Rim near Bright Angel Point.
@@ -15,7 +17,7 @@ cd pipeline && uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0
 uv run python -m pixelworld_pipeline.fixtures.grand_canyon_m0 --exaggeration 3.5 --max-slope 3 --out ../fixtures/_try
 ```
 
-`fixtures/_try/` is git-ignored.
+`fixtures/_try/` is git-ignored. Downloads are cached under `grand-canyon-m0/` in the shared download cache (`$PIXELWORLD_CACHE`, else `pipeline/.cache/`).
 
 Sources and licenses:
 - Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
@@ -133,6 +135,9 @@ cd pipeline
 for f in ../worlds/experiment/*.yaml; do uv run pixelworld build "$f"; done
 ```
 
-`exp-strip-k8` reports one split road segment and two disconnected junctions at 20 m cells, so the build exits with status 1; the package is still written.
+**Rebuilds:**
+- **`exp-desert-view-*`** were rebuilt with D-076 and match a rebuild byte for byte. Against their M1.5 build they gained a geo grid and traffic routes, and their objects file moved to version 2 (D-057) with the same instances; they draw identically.
+- **`exp-strip-*`** are kept as built in M1.5 (e2360db), because `exp-strip-k4` is the e2e golden `exp-strip-k4-r0.png`. A rebuild has the same chunks, except a few road cells in one chunk of `exp-strip-k8`. Its objects file is version 2, and 157 of its buildings carry Overture's roof and facade hints (`rs`, `rc`, `fc`, `fm`), which change the golden scene by a few pixels. It also gains a geo grid and traffic routes. Rebuild them when the golden is re-made.
+- **Roads:** the committed `exp-strip-k8` reports one split road segment and two disconnected junctions at 20 m cells. A rebuild reports none (the road stage has changed since; the few road cells above are the difference), so `pixelworld build` exits 0.
 
 Sources and licenses: as for `southwest`, plus the USGS 3DEP 1/3 arc-second DEM (public domain) and Overture Maps buildings (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints; ODbL 1.0).

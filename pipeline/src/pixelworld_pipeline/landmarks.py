@@ -37,11 +37,13 @@ from typing import Any
 
 import yaml
 
+from .region import RegionError
+
 REGISTRY_DIRNAME = "_landmarks"
 
 
-class LandmarkError(ValueError):
-    pass
+class LandmarkError(RegionError):
+    """A landmark reference or registry file that can't be used (a spec error)."""
 
 
 def registry_dir(spec_path: Path) -> Path | None:

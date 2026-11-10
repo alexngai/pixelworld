@@ -37,15 +37,20 @@ def cache_dir(name: str) -> Path:
 
 
 def get(
-    url: str, headers: dict[str, str] | None = None, timeout: float = 120, tries: int = 4
+    url: str,
+    headers: dict[str, str] | None = None,
+    timeout: float = 120,
+    tries: int = 4,
+    data: bytes | None = None,
 ) -> bytes:
-    """GET with a project User-Agent and exponential backoff on transient errors."""
+    """GET (or POST `data`) with a project User-Agent and exponential backoff on
+    transient errors."""
     h = {"User-Agent": USER_AGENT, **(headers or {})}
     delay = 2.0
     for attempt in range(tries):
         try:
             with urllib.request.urlopen(
-                urllib.request.Request(url, headers=h), timeout=timeout
+                urllib.request.Request(url, data=data, headers=h), timeout=timeout
             ) as r:
                 return r.read()
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:

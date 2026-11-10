@@ -82,6 +82,7 @@ Status values:
 | D-071 | Generator plugins, and San Francisco's generators as the city pack's browser half | Accepted (M4) |
 | D-074 | San Francisco's city pack packaged for npm, and the viewer's city packs in one file | Accepted |
 | D-075 | Style packs get a versioned JSON Schema, path-qualified validation and `extends` | Accepted |
+| D-076 | Every package has a geo grid; specs are checked against a schema; builds are staged | Accepted |
 | D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
 
 ---
@@ -690,6 +691,36 @@ The point is more room for visual interest; both halves are wanted.
   - **Generators declaring their roles** (`defineGenerator({ roles })`), with packs checked in advance: roles are dynamic (variants by seed, scoped roles with fallbacks, optional roles), so declarations would be incomplete or need a small language of their own. The error when a generator asks has the exact role and asset.
   - **Warning instead of failing on an unknown generator:** the tiles would bake with failed or placeholder models while the cause scrolls past in the console.
 - **Later:** packs as data packages; a palette page in the viewer; line numbers for schema problems when the pack's text is at hand.
+
+### D-076: Every package has a geo grid; specs are checked against a schema; builds are staged (accepted, M4)
+- **Why:** a developer-experience review built a world of a new town (Jerome, Arizona) from nothing. The build crashed in its last stage, the hash it printed wasn't the package's, 9 of 20 broken specs gave Python tracebacks and 3 built silently, builds were silent for minutes, exit 1 meant both "road problems" and "crashed", and no document said how to make a world.
+- **Every package has a geo grid** (D-048): the lon/lat of cell corners every 16 cells (uniform) or 4 (warped), not only packages with `levels:`.
+  - **The crash:** traffic routes place Overture's rail and ferry lines through the geo grid (D-060). A single-level spec with a railway in its bounds had none and raised a bare `ValueError` after the package was written.
+  - **Chosen over routes without it** (projecting through the region for uniform layouts): one code path instead of two; a warped spec without levels would still have needed the grid; and the client's lon/lat queries (`lonLatToCell`, a rover or camera start at a lon/lat) and style fog need it too, which were silently off for such packages. It costs 190 bytes for Jerome.
+  - **Older packages:** `pixelworld routes` on a package without a geo grid makes its road routes and skips rail and ferries, with a note, instead of raising.
+  - **Unchanged:** packages with levels are byte for byte as before (`sf-fly` rebuilt identical to the committed one, routes included).
+- **Staged builds:** a build writes into `.<out>.building/` beside `--out`, then moves the files into place one by one, manifest last, and removes the old package's files it didn't write (other files stay). A failed build leaves `--out` exactly as it was, and a first build that fails leaves no package. Moving files rather than the directory keeps a running dev server serving a whole package.
+- **The final hash:** the routes stage rewrites the manifest and its hash; `pixelworld_pipeline.build` now returns, and the CLI prints, the hash read back from the manifest written.
+- **The spec schema** (`schema.py`): one table of every key, with its type, range, default and meaning.
+  - **Checks:** unknown keys (with "did you mean": close spellings, other case, or the one name a key starts), required keys (a misspelt one is reported once), types, ranges and whole numbers, unknown values (road and path classes, land-cover classes, surfaces, rail kinds), dates YAML made of unquoted releases, a start outside the bounds, landmark ids against the registry, and the style pack.
+  - **Where:** every problem carries its file, line and key path, through `extends:` chains and `warp:` files (a YAML composer keeps each key's line). YAML syntax errors, missing `extends:`/`warp:` files and an Overture release that doesn't exist are spec errors too. Plugin options beside `facts:` are kept, unless one is a typo of a known key.
+  - **Style packs:** checked against the nearest `_styles/` above the spec, else this checkout's `worlds/_styles` (an installed pipeline outside a checkout doesn't check). A pack of one's own goes in a `_styles/` beside the spec.
+  - **Commands:** `pixelworld check <spec>…` validates without building or downloading; `pixelworld reference` prints the reference, which docs/worlds.md §10 holds and a test keeps equal; the docs' example specs are validated by a test too.
+  - **Defaults:** `sources.rivers` defaults to `[river]` (it was required by accident). Null optional sections no longer crash the stages that read them.
+- **The CLI:**
+  - **Progress** goes to stderr, a line per stage with the time since the start, and the stages' notes under it; the build ends with a summary (cells, chunks, objects, routes, hash, time per stage) and the report path. `--json` prints the report to stdout.
+  - **Exit codes:** 0 done; 1 the package was written but its road report found problems; 2 the spec or command line is invalid; 3 the build failed, with the stage it failed in and, for anything but a download, the traceback.
+  - **`pixelworld view <package>`** serves a package with CORS and prints the viewer URL with `?world=<url>`, warning if the viewer isn't running or lacks the package's style pack.
+  - **Help** without decision ids; every argument explained; `--version`; the exit codes and `PIXELWORLD_CACHE` in the epilog. `pixelworld plugins` sizes its columns to the names.
+- **The editor:** "Build world" runs `pixelworld_pipeline.build`, routes included (it called the stage build, which writes none). The source map is about 1,024 pixels across whatever the region's size (it was fixed at 400 m per pixel, 8 × 7 pixels for Jerome), and the preview mesh, the lattice, new focus areas and the background range follow the region; the Southwest keeps its 400 m, 4 km and 10 km. The viewer link follows `--out`.
+- **The M0 builder** caches through `sources.http` (`PIXELWORLD_CACHE`, retries, the project's User-Agent); its package is byte-identical.
+- **Fixtures:** `exp-desert-view-*` were rebuilt: they gain a geo grid and routes, and objects file version 2 with the same instances, and draw identically. `exp-strip-*` stay as built in M1.5: a rebuild adds Overture's roof and facade hints to 157 buildings (M3), which moves `exp-strip-k4-r0.png` by 288 channel values, so they wait for the golden to be re-made (fixtures/README.md).
+- **Docs:** [worlds.md](worlds.md), "Make your own world", with Jerome (`worlds/jerome/region.yaml`, no committed package) as the worked example and the generated reference; architecture.md §4 shows the real spec format; `pipeline/README.md`.
+- **Rejected alternatives:**
+  - **JSON Schema** (and the `jsonschema` package): no line numbers or "did you mean" without a layer of our own, cross-key checks (start inside bounds, styles, landmarks) outside it anyway, and a reference generator to write either way.
+  - **Marking a failed package** (deleting its manifest, or a `BUILD-FAILED` file) instead of staging: the previous good package would be lost, and a dev server would serve a broken one meanwhile.
+  - **Hiding the progress behind `--verbose`:** a 3-minute build that prints nothing looks hung.
+- **Later:** a CI job that rebuilds the cheap fixtures (M0, `exp-*`) from the cache and compares hashes; `pixelworld new <id> --bbox w,s,e,n` to scaffold a spec; the editor's warp preview of a spec without a warp is solved on the region's envelope, so it can be a cell narrower than the uniform build (147 × 134 against 148 × 134 for Jerome); the editor's port (5180) is the minimal example's too.
 
 ### D-077: Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards (accepted)
 - **Why:** a developer-experience review of the contributor's loop found the workflow scattered or missing (no contributor guide; goldens, `PW_PORT`, changesets and the debug API documented in passing or not at all), a 21-minute serial e2e run with no quick subset, a fixed editor port and silently reused servers (two checkouts could test each other's code), no way to ask which ramp or generator drew a pixel, and no way to look at one model without loading a world.

@@ -890,13 +890,23 @@ def make_routes(
     decks = bridge_decks(pkg.instances)
     out = RouteSet()
     report: dict[str, Any] = {"roads": road_routes(pkg, decks, out), "decks": [d.id for d in decks]}
-    if transit_rows:
+    if transit_rows and not pkg.manifest.get("geo"):
+        # Overture's lines are placed through the geo grid, which every package
+        # built since D-076 has; an older one gets road routes only
+        from . import progress
+
+        progress.log(
+            "routes: this package has no geo grid, so its rail and ferry lines are "
+            "left out; rebuild it (pixelworld build) to get them"
+        )
+        report["transit"] = "skipped: the package has no geo grid"
+    elif transit_rows:
         geo = GeoInverse(out_dir, pkg.manifest)
-        rail_rules = rules.get("rail") or {}
+        rail_rules = rules.get("rail", {})
         if rail_rules is not False:
-            segs = classify_rail(transit_rows, rail_rules)
+            segs = classify_rail(transit_rows, rail_rules or {})
             report["rail"] = rail_routes(pkg, decks, geo, segs, out)
-        if rules.get("ferries", True):
+        if rules.get("ferries", True) is not False:
             report["ferries"] = ferry_routes(pkg, geo, transit_rows, out)
     doc = {"version": ROUTES_VERSION, "nodes": out.nodes, "routes": out.routes}
     report["routes"] = len(out.routes)
@@ -936,12 +946,13 @@ def refresh_routes(
     and ferry lines (Overture, cached) and the package's own roads. `spec` is
     the resolved spec, when it isn't read from `region_path`."""
     from .landmarks import expand
-    from .region import Region, load_spec
+    from .region import Region, load_region
     from .sources import transit
 
     if spec is None:
-        spec = load_spec(Path(region_path))
-    region = Region.from_dict(expand(spec, Path(region_path)))
+        region, spec, _ = load_region(Path(region_path))
+    else:
+        region = Region.from_dict(expand(spec, Path(region_path)))
     rules = spec.get("routes") or {}
     rows = transit.segments(region.sources["overture"]["release"], region.lonlat_envelope())
     doc, report = make_routes(out_dir, rows, rules)

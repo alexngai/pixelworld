@@ -9,8 +9,12 @@ full world build runs in the background on request. Binds to 127.0.0.1.
   POST /api/solve          {warp} → stats, preview URL, forward-map lattice
   GET  /api/preview/<id>   a solved preview (world cells, 1 px per cell)
   POST /api/save           {warp} → writes the spec's warp file (worlds/<id>/warp.yaml)
-  POST /api/build          start a full build into fixtures/<id>
+  POST /api/build          start a full build (pixelworld_pipeline.build: the package
+                           and its traffic routes) into --out, default fixtures/<id>
   GET  /api/build          build status and log tail
+
+The source map and the solver's mesh scale with the region, so a town of a
+few kilometres reads as well as the Southwest's 400 km.
 """
 
 from __future__ import annotations
@@ -39,9 +43,32 @@ from .layout import WarpedLayout, WarpSpec
 from .region import Region
 from .sources import overture, rasters
 
-PREVIEW_MESH_KM = 4.0  # the editor solves on a coarser mesh than the build
-LATTICE_KM = 10.0
-SOURCE_PX_M = 400.0
+PREVIEW_MESH_KM = 4.0  # the editor solves on a mesh at most this coarse (the Southwest's)
+LATTICE_KM = 10.0  # forward-map lattice spacing, at most
+SOURCE_PX = 1024  # the source map's longer side, about (pixels)
+
+
+def nice(m: float, up: bool = True) -> float:
+    """m rounded to 1, 2, 2.5, 4 or 5 × 10^k: up (the smallest at or above m) or
+    down (the largest at or below it)."""
+    k = 10.0 ** math.floor(math.log10(m))
+    steps = [f * k for f in (1, 2, 2.5, 4, 5, 10)]
+    if up:
+        return next(v for v in steps if v >= m * (1 - 1e-9))
+    return max(v for v in steps if v <= m * (1 + 1e-9))
+
+
+def scales(width_m: float, height_m: float, meters_per_cell: float) -> dict[str, float]:
+    """The editor's scales for a region: the source map's metres per pixel
+    (about SOURCE_PX across: 400 m for the Southwest, 4 m for a 3 km town), the
+    preview solve's mesh and the lattice spacing (km)."""
+    longest = max(width_m, height_m)
+    mesh_km = min(PREVIEW_MESH_KM, max(longest / 100, 2 * meters_per_cell) / 1000)
+    return {
+        "source_px_m": nice(longest / SOURCE_PX),
+        "mesh_km": nice(mesh_km, up=False),
+        "lattice_km": min(LATTICE_KM, nice(longest / 40 / 1000, up=False)),
+    }
 
 
 def png(rgb: np.ndarray) -> bytes:
@@ -83,6 +110,9 @@ class Editor:
         x0, y0, x1, y1 = self.region._projected_envelope()
         self.x0, self.y1 = x0, y1
         self.width_m, self.height_m = x1 - x0, y1 - y0
+        sc = scales(self.width_m, self.height_m, self.region.meters_per_cell)
+        self.source_px_m, self.preview_mesh_km = sc["source_px_m"], sc["mesh_km"]
+        self.lattice_km = sc["lattice_km"]
         snap = importance_stage.load_snapshot(self.region_path)
         self.places = snap["places"] if snap else []
         self._source: tuple[np.ndarray, bytes] | None = None
@@ -112,12 +142,13 @@ class Editor:
                 "url": "/api/source.png",
                 "width": w,
                 "height": h,
-                "metersPerPixel": SOURCE_PX_M,
+                "metersPerPixel": self.source_px_m,
             },
-            "warp": self.normalize(
-                self.region.warp
-                or {"background": self.region.meters_per_cell, "focus": [], "pins": []}
-            ),
+            "warp": self.normalize(self.region.warp or self.default_warp()),
+            # where the viewer finds the build: `?world=` for a package under
+            # fixtures/, else none (`pixelworld view <out>` serves it)
+            "out": str(self.out_dir),
+            "viewer": self.viewer_world(),
             "places": [
                 {"label": p["label"], "sitelinks": p["sitelinks"], "x": float(x), "y": float(y)}
                 for p, x, y in zip(self.places, sx, sy, strict=True)
@@ -125,8 +156,28 @@ class Editor:
             "proj": {"crs": self.region.crs.to_proj4(), "x0": self.x0, "y1": self.y1},
         }
 
+    def default_warp(self) -> dict[str, Any]:
+        """A spec without a warp starts from none: the background at its own
+        scale, on a mesh fine enough for a small region."""
+        warp: dict[str, Any] = {"background": self.region.meters_per_cell, "focus": [], "pins": []}
+        if self.preview_mesh_km < 2.0:
+            warp["meshKm"] = self.preview_mesh_km
+        return warp
+
+    def viewer_world(self) -> str | None:
+        """The viewer's `?world=` for the build output, if the dev server serves it
+        (a package under the repository's fixtures/)."""
+        from .api import REPO
+
+        try:
+            rel = self.out_dir.resolve().relative_to((REPO / "fixtures").resolve())
+        except ValueError:
+            return None
+        return f"/{rel.as_posix()}/"
+
     def source_size(self) -> tuple[int, int]:
-        return math.ceil(self.width_m / SOURCE_PX_M), math.ceil(self.height_m / SOURCE_PX_M)
+        r = self.source_px_m
+        return math.ceil(self.width_m / r), math.ceil(self.height_m / r)
 
     def lonlat_of(self, sx: float, sy: float) -> tuple[float, float]:
         lons, lats = transform_points(self.region.crs, "EPSG:4326", [sx + self.x0], [self.y1 - sy])
@@ -141,7 +192,7 @@ class Editor:
 
     def _render_source(self) -> tuple[np.ndarray, bytes]:
         w, h = self.source_size()
-        r = SOURCE_PX_M
+        r = self.source_px_m
         gx, gy = np.meshgrid((np.arange(w) + 0.5) * r, (np.arange(h) + 0.5) * r)
         px, py = gx + self.x0, self.y1 - gy
         dem_kind = self.region.sources["dem"]["kind"]
@@ -212,10 +263,9 @@ class Editor:
 
     # ---- solving --------------------------------------------------------------------------
 
-    def layout_for(
-        self, warp: dict[str, Any], mesh_km: float | None = PREVIEW_MESH_KM
-    ) -> WarpedLayout:
-        spec = WarpSpec.from_dict(warp | ({"meshKm": mesh_km} if mesh_km else {}))
+    def layout_for(self, warp: dict[str, Any], mesh_km: float | None = None) -> WarpedLayout:
+        """The warped layout of an edited warp, solved on the preview mesh."""
+        spec = WarpSpec.from_dict(warp | {"meshKm": mesh_km or self.preview_mesh_km})
         return WarpedLayout(self.region, spec, places=self.places if spec.importance else None)
 
     def solve(self, warp: dict[str, Any]) -> dict[str, Any]:
@@ -228,11 +278,11 @@ class Editor:
         cw, ch = math.ceil(wp.width), math.ceil(wp.height)
         gx, gy = np.meshgrid(np.arange(cw) + 0.5, np.arange(ch) + 0.5)
         sx, sy = wp.to_source(gx, gy)
-        i = np.clip((sx / SOURCE_PX_M).astype(int), 0, rgb.shape[1] - 1)
-        j = np.clip((sy / SOURCE_PX_M).astype(int), 0, rgb.shape[0] - 1)
+        i = np.clip((sx / self.source_px_m).astype(int), 0, rgb.shape[1] - 1)
+        j = np.clip((sy / self.source_px_m).astype(int), 0, rgb.shape[0] - 1)
         preview = rgb[j, i]
-        # forward-map lattice for the editor: source points every LATTICE_KM → cells
-        step = LATTICE_KM * 1000
+        # forward-map lattice for the editor: source points every lattice_km → cells
+        step = self.lattice_km * 1000
         lx = np.arange(0, self.width_m + step, step).clip(max=self.width_m)
         ly = np.arange(0, self.height_m + step, step).clip(max=self.height_m)
         mx, my = np.meshgrid(lx, ly)
@@ -302,11 +352,12 @@ class Editor:
         return self.build_state
 
     def _build(self) -> None:
-        from .build import build
+        # the whole build, as `pixelworld build` runs it: the package and its routes
+        from .api import build
 
         log = io.StringIO()
         try:
-            with contextlib.redirect_stdout(log):
+            with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
                 report = build(self.region_path, self.out_dir)
             state = {"state": "done", "report": report}
         except Exception:  # noqa: BLE001 (report any failure to the editor)
@@ -315,7 +366,8 @@ class Editor:
             self.build_state = state | {
                 "log": log.getvalue()[-4000:],
                 "seconds": round(time.time() - self.build_state.get("started", time.time()), 1),
-                "world": f"/{self.out_dir.name}/",
+                "world": self.viewer_world(),
+                "out": str(self.out_dir),
             }
 
 
@@ -375,8 +427,12 @@ def make_handler(editor: Editor):
 
 def serve(region_path: Path, out_dir: Path, port: int = 8765) -> None:
     editor = Editor(region_path, out_dir)
-    print(f"preparing the source image for {editor.region.id}…")
+    print(f"preparing the source image for {editor.region.id}…", flush=True)
     editor.source_image()
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(editor))
-    print(f"pixelworld pipeline server on http://127.0.0.1:{port} (region {editor.region.id})")
+    print(
+        f"pixelworld pipeline server on http://127.0.0.1:{port} (region {editor.region.id}); "
+        "the editor: pnpm --filter @pixelworlds/editor dev, then http://localhost:5180",
+        flush=True,
+    )
     server.serve_forever()

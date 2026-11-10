@@ -34,7 +34,7 @@ interface Warp {
 }
 
 /** Mock /api: answers like the server, recording solve and save bodies. */
-async function mockApi(page: Page) {
+async function mockApi(page: Page, region: object = REGION) {
   const solves: Warp[] = [];
   const saves: Warp[] = [];
   // an identity-like lattice: source metres / 500 m per cell
@@ -49,7 +49,7 @@ async function mockApi(page: Page) {
   await page.route("**/api/**", async (route: Route) => {
     const url = new URL(route.request().url());
     const json = (body: unknown) => route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
-    if (url.pathname === "/api/region") return json(REGION);
+    if (url.pathname === "/api/region") return json(region);
     if (url.pathname === "/api/source.png" || url.pathname.startsWith("/api/preview/"))
       return route.fulfill({ contentType: "image/png", body: PNG });
     if (url.pathname === "/api/solve") {
@@ -175,5 +175,38 @@ test.describe("Editor v0 (M2)", () => {
     await expect.poll(() => api.saves.length).toBe(1);
     expect(api.saves[0]!.background).toBe(650);
     await expect(page.locator("#status")).toContainText("saved worlds/mock/warp.yaml");
+  });
+
+  test("a town-sized region gets town-sized focus areas and background range", async ({ page }) => {
+    // Jerome: about 2.9 km across at 20 m per cell, built outside fixtures/
+    const town = {
+      ...REGION,
+      id: "jerome",
+      name: "Jerome",
+      baseMetersPerCell: 20,
+      sourceMeters: [2_900, 2_700],
+      source: { url: "/api/source.png", width: 725, height: 675, metersPerPixel: 4 },
+      warp: { background: 20, focus: [], pins: [], meshKm: 0.04 },
+      places: [],
+      out: "/tmp/worlds/jerome",
+      viewer: null,
+    };
+    const api = await mockApi(page, town);
+    await page.goto(EDITOR);
+    await expect.poll(() => solveCount(page)).toBe(1);
+    const bg = page.locator("#background");
+    expect([await bg.getAttribute("min"), await bg.getAttribute("max")]).toEqual(["5", "100"]);
+    await page.fill("#background", "1");
+    await bg.dispatchEvent("change");
+    await expect.poll(() => solveCount(page)).toBe(2);
+    expect(api.solves.at(-1)!.background).toBe(5); // clamped to the floor, not to 50 m
+    await page.click("[data-tool=focus]");
+    const box = (await page.locator("#source").boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect.poll(() => solveCount(page)).toBe(3);
+    const focus = api.solves.at(-1)!.focus[0] as unknown as { radiusKm: number; falloffKm: number; metersPerCell: number };
+    expect(focus).toMatchObject({ radiusKm: 0.18, falloffKm: 0.36, metersPerCell: 10 });
+    // its build lands outside fixtures/: the viewer link says how to serve it
+    await expect(page.locator("#viewer")).toHaveText("View: pixelworld view <out>");
   });
 });
