@@ -220,7 +220,20 @@ export interface TerrainLayers {
    * 5 a carriageway with a median beside it (LANE_DIVIDED).
    */
   lane: Uint8Array;
+  /**
+   * Centre lines (D-082): up to PIECES stretches of road (and path) centre
+   * line inside each cell, PIECES values per cell, each x0 | y0 << 8 |
+   * x1 << 16 | y1 << 24 in 1/255 cell (0: an empty slot, used slots first).
+   * Drawn instead of the connections where a cell has any.
+   */
+  roadSeg: Uint32Array;
+  pathSeg: Uint32Array;
 }
+
+/** Centre-line pieces per cell (TerrainLayers.roadSeg, pathSeg). */
+export const PIECES = 6;
+/** Layers with more than one value per cell, and how many. */
+const PER_CELL: Partial<Record<keyof TerrainLayers, number>> = { roadSeg: PIECES, pathSeg: PIECES };
 
 /** What a rail cell draws (TerrainLayers.rail >> 12): a street's pair of tracks, the same with cable slots, a train's track. */
 export const RAIL_STREET = 1;
@@ -302,6 +315,10 @@ export function copyCells(
       b.pathWidth[di] = a.pathWidth[si]!;
       b.rail[di] = a.rail[si]!;
       b.lane[di] = a.lane[si]!;
+      for (let k = 0; k < PIECES; k++) {
+        b.roadSeg[di * PIECES + k] = a.roadSeg[si * PIECES + k]!;
+        b.pathSeg[di * PIECES + k] = a.pathSeg[si * PIECES + k]!;
+      }
     }
   }
   const ma = src.micro;
@@ -348,6 +365,9 @@ export class TerrainGrid {
   readonly rail: Uint16Array;
   /** Lanes and medians (see TerrainLayers). */
   readonly lane: Uint8Array;
+  /** Centre-line pieces, PIECES per cell (see TerrainLayers). */
+  readonly roadSeg: Uint32Array;
+  readonly pathSeg: Uint32Array;
   /** Micro-terrain, or null for cell-only terrain. */
   readonly micro: MicroLayers | null;
 
@@ -372,8 +392,11 @@ export class TerrainGrid {
     this.pathWidth = layers?.pathWidth ?? new Uint8Array(n);
     this.rail = layers?.rail ?? new Uint16Array(n);
     this.lane = layers?.lane ?? new Uint8Array(n);
+    this.roadSeg = layers?.roadSeg ?? new Uint32Array(n * PIECES);
+    this.pathSeg = layers?.pathSeg ?? new Uint32Array(n * PIECES);
     for (const [name, arr] of Object.entries(this.layers())) {
-      if (arr.length !== n) throw new Error(`layer ${name} has ${arr.length} cells, expected ${n}`);
+      const per = PER_CELL[name as keyof TerrainLayers] ?? 1;
+      if (arr.length !== n * per) throw new Error(`layer ${name} has ${arr.length / per} cells, expected ${n}`);
     }
     this.micro = layers?.micro ?? null;
     if (this.micro) {
@@ -409,6 +432,8 @@ export class TerrainGrid {
       pathWidth: this.pathWidth,
       rail: this.rail,
       lane: this.lane,
+      roadSeg: this.roadSeg,
+      pathSeg: this.pathSeg,
     };
   }
 

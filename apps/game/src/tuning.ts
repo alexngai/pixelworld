@@ -114,6 +114,12 @@ export const TAKEOFF = {
 /** The plane (speeds at the flying level's pace; heights in steps). */
 export const PLANE = {
   stallSpeed: 2.6,
+  /**
+   * Over a walking level (10–20 m cells, flown over itself): a much lower
+   * stall, so the throttle can slow the plane to a sightseeing drift past the
+   * towers (cruise and top speed stay).
+   */
+  walkStallSpeed: 1.2,
   cruiseSpeed: 5,
   maxSpeed: 8,
   /** Speed change toward the throttle's (cells/s²). */
@@ -134,8 +140,10 @@ export const PLANE = {
   climbCost: 3,
   /** Below the stall speed the nose drops (rad/s). */
   stallDrop: 0.8,
-  /** The ceiling, above the world's highest ground (steps). */
+  /** The ceiling, above the world's highest ground or tallest landmark (steps). */
   ceiling: 14,
+  /** The camera keeps the plane at most this share of the view's height above its middle (a high plane's shadow may leave the view). */
+  camAbove: 0.3,
   /** Clearance under which the plane touches the ground: a crash (steps). */
   crashClearance: 0.15,
   /** Landing: at most this high over the ground (steps) and this fast, within `roadReach` cells of a road. */

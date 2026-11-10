@@ -103,6 +103,11 @@ PATH_WIDTH_M = {
 }
 
 
+# How far (cells) a road drawn along its centre line can lie from its cells' centres (D-082):
+# its bed widens by this much, so the band never runs over uncut micro-terrain.
+CENTRELINE_BED_MARGIN = 0.75
+
+
 def package_heroes(region: Region, region_path: Path | None, out_dir: Path) -> list[dict] | None:
     """Copy hero landmarks' offline bakes and paint-overs into the package
     (heroes/<id>/), one manifest entry per landmark and rotation (D-053)."""
@@ -778,6 +783,7 @@ def build(
             max_shift=float(rs.get("maxShift", 2.0)),
             shape=(cy, cx),
             keep=set(keep),
+            directions=int(rs.get("directions", 8)),
         )
         if keep:
             progress.log(f"snap: {len(keep)} ways keep their real geometry")
@@ -811,16 +817,32 @@ def build(
                 region.meters_per_cell,
                 lane_counts,
             )
+    # centre lines (D-082): ways drawn along their own lines, not their cells' connections
+    centrelines = bool((widths or {}).get("centrelines"))
     road_layer = road_stage.rasterize(
-        road_lines, (cy, cx), deviation=deviation, widths=road_w, lanes=lane_b
+        road_lines,
+        (cy, cx),
+        deviation=deviation,
+        widths=road_w,
+        lanes=lane_b,
+        pieces=centrelines,
     )
     if road_layer.lanes is not None:
         progress.log(f"lanes: {lane_stage.report(road_layer.lanes)}")
     path_layer = (
-        road_stage.rasterize(path_lines, (cy, cx), deviation=deviation, widths=path_w)
+        road_stage.rasterize(
+            path_lines, (cy, cx), deviation=deviation, widths=path_w, pieces=centrelines
+        )
         if path_rows
         else None
     )
+    if centrelines:
+        for name, lay in (("road", road_layer), ("path", path_layer)):
+            if lay is not None and lay.pieces is not None:
+                progress.log(
+                    f"centre lines: {int((lay.pieces[..., 0] != 0).sum())} {name} cells, "
+                    f"{lay.pieces_dropped} with more than {road_stage.PIECES} pieces"
+                )
     road_hw = path_hw = None
     if widths is not None:
         mpc = layout.meters_per_cell()
@@ -938,6 +960,8 @@ def build(
             sigma,
             path_bed,
             None if path_hw is None else path_hw / 32.0,
+            # ponytail: a wider bed, not one cut along the pieces; cut along them if hills show it
+            bed_margin=CENTRELINE_BED_MARGIN if centrelines else 0.0,
         )
         micro = (mc, k)
         progress.log(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
@@ -1059,6 +1083,8 @@ def build(
         path_width=path_hw,
         rail=rail,
         lane=road_layer.lanes,
+        road_pieces=road_layer.pieces,
+        path_pieces=None if path_layer is None else path_layer.pieces,
         path_classes=path_ids or None,
         geology=geology,
         vref=vref,

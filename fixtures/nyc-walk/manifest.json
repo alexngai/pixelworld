@@ -11,7 +11,7 @@
       "x": 0,
       "y": 0,
       "path": "chunks/0_0.pxwc.gz",
-      "sha256": "54e679731eee8a64170e957bbe023fdeb4f78647398aab97571ffc7345e24005",
+      "sha256": "ede8930ce66721967180579d53db4c76057d4affd2dce9ab26c9e63504524e1f",
       "heightRange": [
         -1,
         1
@@ -21,7 +21,7 @@
       "x": 1,
       "y": 0,
       "path": "chunks/1_0.pxwc.gz",
-      "sha256": "858d9200823275c610474314f7bcc2d1f5e79cb4d076056bd73b55a3bb216bf0",
+      "sha256": "a1626c949610c27a8b38cf2eb74a764a49183f61476f4b94cc912990a8f5d700",
       "heightRange": [
         -1,
         3
@@ -31,7 +31,7 @@
       "x": 2,
       "y": 0,
       "path": "chunks/2_0.pxwc.gz",
-      "sha256": "ece0663a2dda18aa7d014f7395426e8540d9b98e28f54e4e7e8b588d93e71459",
+      "sha256": "f26d32e3d6b4b8cf7372f7362bb64e028454e19f4821af52104b09c073548e04",
       "heightRange": [
         0,
         4
@@ -41,7 +41,7 @@
       "x": 3,
       "y": 0,
       "path": "chunks/3_0.pxwc.gz",
-      "sha256": "dce2c1f85ce02e3fb0e337e71bb53a9be47ae839b9605e0dd8630e8b65547cce",
+      "sha256": "171f4f7bc824c08bb16572f593175f1c5312a3e643aa2dd4dab8c5e441b0df68",
       "heightRange": [
         3,
         5
@@ -51,7 +51,7 @@
       "x": 4,
       "y": 0,
       "path": "chunks/4_0.pxwc.gz",
-      "sha256": "89889cab162a20a7d9652f804f269d0ccca77bc809f2de2e3900f1571a571471",
+      "sha256": "f350d47a894da07234777f9af58abe63dab0d9b9cdc5cab835a65105c75acfd7",
       "heightRange": [
         2,
         5
@@ -61,7 +61,7 @@
       "x": 5,
       "y": 0,
       "path": "chunks/5_0.pxwc.gz",
-      "sha256": "c89e018921e0ad6c6e969229c39b84b6b7354e9e65bcff50057faf1a6fa16e6d",
+      "sha256": "c6f715939307dbc803dc465b8e14364274b25998f6e87c104a4ab8f8e07a6100",
       "heightRange": [
         0,
         2
@@ -71,7 +71,7 @@
       "x": 6,
       "y": 0,
       "path": "chunks/6_0.pxwc.gz",
-      "sha256": "fdf7496d96235408c78ab9e2002ad7dec50c7d800f29bde3397e77f89e4725a9",
+      "sha256": "57bff3964ab0df0aba272d767d9f6536efe983efac11c6ee979c2d4acf29a052",
       "heightRange": [
         0,
         1
@@ -81,7 +81,7 @@
       "x": 0,
       "y": 1,
       "path": "chunks/0_1.pxwc.gz",
-      "sha256": "588a07ab0a3cfd03fbdd02e86a9dba5d2b1c1611c2ead277d7675cb598d87d55",
+      "sha256": "3b829a2dc878a77157aacf1e157bb4296d99e8a314acc4eee5b5dbaa9e4db669",
       "heightRange": [
         -1,
         2
@@ -91,7 +91,7 @@
       "x": 1,
       "y": 1,
       "path": "chunks/1_1.pxwc.gz",
-      "sha256": "5a61c2a7f745ef46a92ed5ce821a0b09d8b2d576f26c980da10a15ec9270a95e",
+      "sha256": "551c034683b5664d3e6b88b837f9c83fd3d137f9bc4ed96a1b9a4749c8b3ef3b",
       "heightRange": [
         -1,
         3
@@ -101,7 +101,7 @@
       "x": 2,
       "y": 1,
       "path": "chunks/2_1.pxwc.gz",
-      "sha256": "f3ce2ea46c485128c546be54f9986fe9a521e7b0542768840d63e14715ea9573",
+      "sha256": "cbe51698c679fe71efb3ae780f9dc23da1b3d75dbb7e4307867ea34e3160b1bc",
       "heightRange": [
         -1,
         4
@@ -111,7 +111,7 @@
       "x": 3,
       "y": 1,
       "path": "chunks/3_1.pxwc.gz",
-      "sha256": "776092f5dde3c7b163670d6d1ec6e262c096de1f778fbc84741bbb583b8b5b43",
+      "sha256": "3f4aaa271c1a3644e9c78eb6cba0d866249145ef6ec7c2b4307667badd09dcdf",
       "heightRange": [
         3,
         5
@@ -121,7 +121,7 @@
       "x": 4,
       "y": 1,
       "path": "chunks/4_1.pxwc.gz",
-      "sha256": "33ae0ce49199c76708903932fddc9f5df54c4e40a884690ac68b223aaffeda57",
+      "sha256": "cc1c928dd1d0acdceaf95a3a4a377fadd0b9713a622a692b5bdbe50e092d3bb1",
       "heightRange": [
         2,
         5
@@ -131,7 +131,7 @@
       "x": 5,
       "y": 1,
       "path": "chunks/5_1.pxwc.gz",
-      "sha256": "0b67c07562047a2a8ef93d19f965a63d0eb40a5119ec861338b811e41f2cf1c4",
+      "sha256": "efad295e74df45893f77eab89b474a5a7f0bb3e8c606f0255da132ac6bfce655",
       "heightRange": [
         0,
         2
@@ -141,7 +141,7 @@
       "x": 6,
       "y": 1,
       "path": "chunks/6_1.pxwc.gz",
-      "sha256": "fde16e0ac22eedc0c0b70ea1fa84f5be13571d86ce450ff7072452b4ee87112c",
+      "sha256": "fec1eb9adb12a47da0d3e3642a595bb1f77ca1d5274096fb1ba5d491be164c57",
       "heightRange": [
         0,
         1
@@ -151,7 +151,7 @@
       "x": 0,
       "y": 2,
       "path": "chunks/0_2.pxwc.gz",
-      "sha256": "45e3c9ee0cbbe9f24b34d70b6332c611a069b08e707638b05a4409635803aaf6",
+      "sha256": "e6a4898e503ff4136f9c68156f5912163fb86e8fa9efd6e478649b1a0fb581ff",
       "heightRange": [
         -6,
         3
@@ -161,7 +161,7 @@
       "x": 1,
       "y": 2,
       "path": "chunks/1_2.pxwc.gz",
-      "sha256": "2df1744f32d451a4b47d9243bf9c628b473b1053800e5b68e0a5a2b6c0cb10b0",
+      "sha256": "b4e7510baac19ca8d6d85e64c79abeb9d889acd1345dc2c84dd5f4ca20369993",
       "heightRange": [
         -7,
         5
@@ -171,7 +171,7 @@
       "x": 2,
       "y": 2,
       "path": "chunks/2_2.pxwc.gz",
-      "sha256": "8e3a71371419e3b149524f9ef670ec4009eb84a0560585ffe575d3ac0d1c7a6f",
+      "sha256": "fd83ac55f28fca4c6432667e7f6a76e1022cf501b000ef55310dae041b63aabd",
       "heightRange": [
         -1,
         5
@@ -181,7 +181,7 @@
       "x": 3,
       "y": 2,
       "path": "chunks/3_2.pxwc.gz",
-      "sha256": "ec8530b0d53610f0eea091f812457093f6dd3fb9bdf8cca041a0b68c4ff5bb57",
+      "sha256": "c46d6ce544a3cea9a4891db70246c5c769d190ec0a017aaef161a53b4fc9cc3f",
       "heightRange": [
         2,
         5
@@ -191,7 +191,7 @@
       "x": 4,
       "y": 2,
       "path": "chunks/4_2.pxwc.gz",
-      "sha256": "6c8e475cf9916869a6a649bbac8e560299382686cd2c140813e8211bcde9bfa5",
+      "sha256": "9830dea552b9abf75d978fa3a3f5a5e2cd7aec3edac01c7d13f2034067cf2ba2",
       "heightRange": [
         1,
         4
@@ -201,7 +201,7 @@
       "x": 5,
       "y": 2,
       "path": "chunks/5_2.pxwc.gz",
-      "sha256": "2849226bacc7ab7b71a3a3a6d9f3d9e8f392c71dc0a2d3ef96b961b8757042bf",
+      "sha256": "0e5a984b3d1dcef3fd83e1ea08f9d64a565d55974d88bc76e872b59c0da5ae61",
       "heightRange": [
         0,
         4
@@ -211,7 +211,7 @@
       "x": 6,
       "y": 2,
       "path": "chunks/6_2.pxwc.gz",
-      "sha256": "5aa18786ec7b98686de40a007061964a08ffe4e1f85b323373937f5c38412bae",
+      "sha256": "77e1cc07ae13117cc13b3a912f1967eec1fd086ab494b887af2f0f646a0063a1",
       "heightRange": [
         0,
         0
@@ -221,7 +221,7 @@
       "x": 0,
       "y": 3,
       "path": "chunks/0_3.pxwc.gz",
-      "sha256": "b35848d2b0c8a3d5eff2704496f96bfe2d81f2179d26667a0cdcc1ae3adc965f",
+      "sha256": "b3e1b5f11c8e1d77bcef974d869068f4aedeae9faeafb26c8ccdd5fa00d96f74",
       "heightRange": [
         -2,
         4
@@ -231,7 +231,7 @@
       "x": 1,
       "y": 3,
       "path": "chunks/1_3.pxwc.gz",
-      "sha256": "999402035672e882706c4259445a5547c2a7e603d201d64a1d07b2d9370da28b",
+      "sha256": "07a649b25a0255ba457eb431db8d3473f532d237245d876ea30bde13d0f3cfb7",
       "heightRange": [
         -3,
         5
@@ -241,7 +241,7 @@
       "x": 2,
       "y": 3,
       "path": "chunks/2_3.pxwc.gz",
-      "sha256": "e57b923b96ce0b7627de9cf07e5fcb5e0391135b63afc6be162d678fd7a62e11",
+      "sha256": "3a15a0e89c870fef343c38343400ef78fd8be4eb4ce8c97db97614f3f05d99c0",
       "heightRange": [
         -1,
         4
@@ -251,7 +251,7 @@
       "x": 3,
       "y": 3,
       "path": "chunks/3_3.pxwc.gz",
-      "sha256": "6cd3b04c1df3a28506bb29b40ce081664ecbc859071aece600c472aabb9f6ad9",
+      "sha256": "91506d9385a70ceae7429f9d8ef02a7314a1de267164f9afda6adce4886d9cca",
       "heightRange": [
         -1,
         3
@@ -261,7 +261,7 @@
       "x": 4,
       "y": 3,
       "path": "chunks/4_3.pxwc.gz",
-      "sha256": "c4448a63eef02e7342409c01fa69458802ba3148c965ca3fcebc0b9b1cbde550",
+      "sha256": "8088785687fc593db0fddb45dff8d8e955f9929360461177d68e46fb8709bc6e",
       "heightRange": [
         0,
         3
@@ -271,7 +271,7 @@
       "x": 5,
       "y": 3,
       "path": "chunks/5_3.pxwc.gz",
-      "sha256": "2cc69aea824c0e35c4dcd6278c6cd8e200ae1be538ffe0343dd7a4a51f87e4bf",
+      "sha256": "51fdfd05bbec2446778ffdb1c44cd1c75751453eb9ddaf38a69c19f2e55bceb7",
       "heightRange": [
         0,
         2
@@ -281,7 +281,7 @@
       "x": 6,
       "y": 3,
       "path": "chunks/6_3.pxwc.gz",
-      "sha256": "a0a68f20c59dfccf6093fd01e2180a136ee2b0b948c512663339bbde1df21f65",
+      "sha256": "45801c76c1aa4a36d5ffb134b46494f933babff93b81e99ec3522aac5c0a39c8",
       "heightRange": [
         0,
         0
@@ -291,9 +291,9 @@
       "x": 0,
       "y": 4,
       "path": "chunks/0_4.pxwc.gz",
-      "sha256": "71652bbc23e9c88fcad14771a6181d74e58f5607881646b561dcc0dedd721d13",
+      "sha256": "39710a8619128ad3742b9734593c64b0e8bf32f80544b6eca38f5a6374d00cff",
       "heightRange": [
-        -2,
+        -1,
         3
       ]
     },
@@ -301,7 +301,7 @@
       "x": 1,
       "y": 4,
       "path": "chunks/1_4.pxwc.gz",
-      "sha256": "ecadc6c4e69a703e9e935308f914e73577eb2bdcc910e0748796098f695e5bba",
+      "sha256": "c8b8a4a4b3105bbfbae5c4743ae0abc33d83d7e00dc8c64f91acde858df7d3c9",
       "heightRange": [
         -1,
         3
@@ -311,7 +311,7 @@
       "x": 2,
       "y": 4,
       "path": "chunks/2_4.pxwc.gz",
-      "sha256": "49d1062fa284ad8c771bc47bc81185bca400987f9a64033af39c71865df1072e",
+      "sha256": "1c3dd0164b6cba3c269cc68c81a505e29e201b88cc4654839bdd9030f3c6bf48",
       "heightRange": [
         -1,
         1
@@ -321,7 +321,7 @@
       "x": 3,
       "y": 4,
       "path": "chunks/3_4.pxwc.gz",
-      "sha256": "b85bc59c2ed6a232e3dac92db762b173482a41efc335c56f1e8d54523f67966a",
+      "sha256": "bee3b5086010409a44c920ceb121fe566bfef7b4b1be545c9b0ed58c3815184c",
       "heightRange": [
         -1,
         8
@@ -331,7 +331,7 @@
       "x": 4,
       "y": 4,
       "path": "chunks/4_4.pxwc.gz",
-      "sha256": "3c2b369fa48397ee97c2526519472caa5cbabfaeeeb226f1c9ee418c735dadba",
+      "sha256": "01d5973be03065d6d70a39bd018d8120ab1d2147b59d6d76fdf90042532f9899",
       "heightRange": [
         0,
         9
@@ -341,7 +341,7 @@
       "x": 5,
       "y": 4,
       "path": "chunks/5_4.pxwc.gz",
-      "sha256": "2b84757e09f10fb7cafb819a14610e61b304d7dec88fa277089b3ec3b91a4a24",
+      "sha256": "4be6f2455f1fc28254b433edb8d1489489a5cffe9d534ff2ee07322ec678b9a4",
       "heightRange": [
         0,
         5
@@ -351,7 +351,7 @@
       "x": 6,
       "y": 4,
       "path": "chunks/6_4.pxwc.gz",
-      "sha256": "c8e57d45d6bfe057f5bc22bc6ed9bf20a913b2b1af161b9f683cb1f3d21ecb04",
+      "sha256": "3ad51c8219cbdba47ff0b3108cf4dbdc6cf58d34cc90ada5127e07964847dc23",
       "heightRange": [
         0,
         1
@@ -361,7 +361,7 @@
       "x": 0,
       "y": 5,
       "path": "chunks/0_5.pxwc.gz",
-      "sha256": "4fe06e4746607ee953f8b4422ebe1fe446d0f60d2ac4326a4dd58ff6178847bb",
+      "sha256": "362123636f50f42f1e21dd9f67af9c10875f50979d8bd36bc74dbb5cce0886a5",
       "heightRange": [
         -1,
         -1
@@ -381,7 +381,7 @@
       "x": 2,
       "y": 5,
       "path": "chunks/2_5.pxwc.gz",
-      "sha256": "c51e7419c91b2e32a91bd9524ed9133ed9e71f94cffce25f3ca7e79a4368beb1",
+      "sha256": "23bc35ffdd11479fc778d493a1f89ab75acf1f551f728b8702b8833a59c17665",
       "heightRange": [
         -1,
         7
@@ -391,7 +391,7 @@
       "x": 3,
       "y": 5,
       "path": "chunks/3_5.pxwc.gz",
-      "sha256": "f812db085de59ef9b90ceae7c485acd4ca8e1b2dd276a159e551fdfb4ca061fe",
+      "sha256": "eabab5e7098a6ebe0f573aa7bb14bf931e159ab91c6c979f8f1bdef96fb77216",
       "heightRange": [
         -1,
         10
@@ -401,7 +401,7 @@
       "x": 4,
       "y": 5,
       "path": "chunks/4_5.pxwc.gz",
-      "sha256": "792aa1646a0cb97da33d76e2c8f801805b8de618a4bcf82aa08393b0a234151a",
+      "sha256": "30d76da4f24093f546ac54664e7000397cd00c8906376a91d29eccdf99e78445",
       "heightRange": [
         2,
         9
@@ -411,7 +411,7 @@
       "x": 5,
       "y": 5,
       "path": "chunks/5_5.pxwc.gz",
-      "sha256": "c13704cb6f7a00bf8c2265357fd10cb662d56e828feb6a2f633c6eea82f5980a",
+      "sha256": "c7e35b4a025feeb16ec1553f42e18aef71b329da39b21c728181cc726a085564",
       "heightRange": [
         0,
         5
@@ -421,7 +421,7 @@
       "x": 6,
       "y": 5,
       "path": "chunks/6_5.pxwc.gz",
-      "sha256": "db89c49d24334d6d72b1c710761099fca73053aa8bdef837a471805af45544b8",
+      "sha256": "612d25e8baec2b1767a810e62254afd8f5ea9ddb9d486c9719251c1378deef46",
       "heightRange": [
         0,
         6
@@ -431,7 +431,7 @@
       "x": 0,
       "y": 6,
       "path": "chunks/0_6.pxwc.gz",
-      "sha256": "dc87af19a0bc903f95e5e7d96a4d701733bb46e34288c6cdb9029216cf07c4e1",
+      "sha256": "ebc96a5b4ed28264b7e77a5bc5f9568859a0d237823950693d5d08644dec37fe",
       "heightRange": [
         -1,
         5
@@ -441,7 +441,7 @@
       "x": 1,
       "y": 6,
       "path": "chunks/1_6.pxwc.gz",
-      "sha256": "8605fff986bfe3376efc44d6c07b7d8b51cb22b7fed0771cd9f56d50b833b2a6",
+      "sha256": "04757e8779281b33359b14e4020f6d8aac4c767c8611f17dbc743141f86b085f",
       "heightRange": [
         -1,
         1
@@ -451,7 +451,7 @@
       "x": 2,
       "y": 6,
       "path": "chunks/2_6.pxwc.gz",
-      "sha256": "e8fb4ab795aa9b8114cae970b19e563faac7449578a911537960402a870ee20f",
+      "sha256": "8a200514ea716783b763a2fb9e2c459894fcdddfc8bbe4c84af2a1fe0fed2c34",
       "heightRange": [
         -1,
         7
@@ -461,7 +461,7 @@
       "x": 3,
       "y": 6,
       "path": "chunks/3_6.pxwc.gz",
-      "sha256": "5267521f206f1b2268b23c7bac9dfa9310c258c18777ba1da1ea61667306c177",
+      "sha256": "8c32d3a309f04bd8d758b1acc45b9030a09d55760398b03deaf939bf8b6cd87f",
       "heightRange": [
         4,
         9
@@ -471,7 +471,7 @@
       "x": 4,
       "y": 6,
       "path": "chunks/4_6.pxwc.gz",
-      "sha256": "b06221bcac1565fe6907f9142fb668ee13337c1e810b859b14ec205eed258dc2",
+      "sha256": "d49945f1f79bb50a52c29e65a33a213d14f950d1fae12b547aedb103dad6a133",
       "heightRange": [
         3,
         8
@@ -481,7 +481,7 @@
       "x": 5,
       "y": 6,
       "path": "chunks/5_6.pxwc.gz",
-      "sha256": "2f29c5bb5299628f65833b569dfae29bbc7068569da8dbf9cd90554215a92600",
+      "sha256": "804f3fa8e50fd6810bb71de2acfca0dff0e2f6052ef6ef32ee98c692266a3879",
       "heightRange": [
         2,
         12
@@ -491,7 +491,7 @@
       "x": 6,
       "y": 6,
       "path": "chunks/6_6.pxwc.gz",
-      "sha256": "d6dc1c94526ab158b4a22ffef8d9090a46813dd79b0fd21bad7e4aeb0d9fb810",
+      "sha256": "b67ba0ccef33302f044595ff34a038349f7352b649c7170098f9996e3ecfcfb6",
       "heightRange": [
         5,
         12
@@ -612,7 +612,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "338cdb585519d1c0",
+      "region": "f2873c75ec3d8d93",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -626,8 +626,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "c9dd5c05287dc17c566408e2446d491ad941bcb562ac7d04ac9c13c3c8b47477",
-    "count": 35399
+    "sha256": "540d390ef54d9da27bff71e18216e5b53af7587f0159d5cc985b53a53d0e15f1",
+    "count": 35338
   },
   "depiction": {
     "heightStretch": 1.0,
@@ -650,11 +650,11 @@
     ],
     "sha256": "c9b0f067781d5d2923038fa2790c95f1363bc390ea07cac418257f24a1eb065e"
   },
-  "packageHash": "fec7093ba73c7208a287df282b79f982adf85b123298a07adbb55687e37eb1bc",
+  "packageHash": "e1c2aa8ca0ed7e1f76214b4235f86a4734664b2e59850895ef29679ed22e8b55",
   "routes": {
     "path": "routes.json.gz",
-    "sha256": "c52d730d0ec36e56251ad98566b728077031cdfca190867a41ba54fda20f821b",
+    "sha256": "27afa9d29ecc36863178871fd2e5770dc05078e22bc852578323bf0904023974",
     "version": 1,
-    "count": 3915
+    "count": 3769
   }
 }

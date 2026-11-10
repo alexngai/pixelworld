@@ -471,3 +471,59 @@ def test_kept_streets_swing_and_take_their_class_and_gardens_from_the_rule():
         3: "tertiary",
     }
     assert class_ids(["residential", "tertiary"], ROAD_ORDER) == {1: "residential", 2: "tertiary"}
+
+
+def test_sixteen_directions_snap_two_to_one_edges_exactly():
+    # an edge 27 degrees off the x axis: 18 degrees from 45, so 8 directions leave it,
+    # while 16 snap it onto 2:1 (26.57 degrees)
+    lines = [
+        ("a", 1, [(np.array([2.0, 12.0]), np.array([2.0, 2.0 + 10 * np.tan(np.radians(27))]))])
+    ]
+    assert R.straighten(lines, angle=12).constrained == 0
+    st = R.straighten(lines, angle=12, directions=16)
+    assert st.constrained == 1
+    ((xs, ys),) = st.lines[0][2]
+    assert np.degrees(np.arctan2(ys[1] - ys[0], xs[1] - xs[0])) == pytest.approx(26.565, abs=1e-3)
+    with pytest.raises(ValueError, match="8 or 16"):
+        R.straighten(lines, directions=12)
+
+
+def test_centre_line_pieces_follow_the_line_cell_by_cell():
+    got = list(R.cell_pieces(0.5, 0.5, 2.5, 1.5))
+    assert [(cx, cy) for cx, cy, _ in got] == [(0, 0), (1, 0), (1, 1), (2, 1)]
+    # each piece ends where the next begins, in world coordinates
+    ends = [(cx + p[2], cy + p[3]) for cx, cy, p in got]
+    starts = [(cx + p[0], cy + p[1]) for cx, cy, p in got]
+    assert all(np.allclose(e, s) for e, s in zip(ends, starts[1:], strict=False))
+    assert R.pack_piece(0.0, 0.0, 1.0, 0.5) == 0 | 0 << 8 | 255 << 16 | 128 << 24
+    assert R.pack_piece(0.3, 0.3, 0.3, 0.3) == 0  # too short to hold: an empty slot
+
+
+def test_rasterize_with_pieces_keeps_the_widest_four_and_marks_clipped_cells():
+    line = ("a", 2, [(np.array([0.5, 4.5]), np.array([0.5, 2.5]))])
+    layer = R.rasterize([line], (4, 6), deviation=1.0, widths={"a": 8.0}, pieces=True)
+    assert layer.pieces is not None and layer.pieces.shape == (4, 6, R.PIECES)
+    cells = {(x, y) for x, y, _ in R.cell_pieces(0.5, 0.5, 4.5, 2.5)}
+    assert {(x, y) for y, x in zip(*np.nonzero(layer.pieces[..., 0]), strict=True)} == cells
+    # every cell the line crosses has its class and width, connections or not
+    assert all(layer.cls[y, x] == 2 and layer.width[y, x] == 8.0 for x, y in cells)
+    # one way more than fits through one cell: the narrowest is left out
+    n = R.PIECES + 1
+    ways = [
+        (f"w{k}", 1, [(np.array([0.05 + 0.12 * k, 0.05 + 0.12 * k]), np.array([0.0, 1.0]))])
+        for k in range(n)
+    ]
+    crowded = R.rasterize(ways, (2, 2), widths={f"w{k}": 2.0 + k for k in range(n)}, pieces=True)
+    assert crowded.pieces_dropped == 1
+    kept = [int(p) & 0xFF for p in crowded.pieces[0, 0]]  # x0 of each piece
+    assert kept == [round((0.05 + 0.12 * k) * 255) for k in range(n - 1, 0, -1)]
+
+
+def test_a_ways_wiggle_in_a_cell_merges_into_one_piece_but_a_bend_does_not():
+    # a vertex 0.02 cell off the straight line: one piece; 0.2 off: two
+    flat = R.merge_pieces([(0.0, 0.5, 0.5, 0.52), (0.5, 0.52, 1.0, 0.5)])
+    assert flat == [(0.0, 0.5, 1.0, 0.5)]
+    bent = R.merge_pieces([(0.0, 0.5, 0.5, 0.7), (0.5, 0.7, 1.0, 0.5)])
+    assert len(bent) == 2
+    # pieces that don't join stay apart
+    assert len(R.merge_pieces([(0.0, 0.2, 1.0, 0.2), (0.0, 0.8, 1.0, 0.8)])) == 2

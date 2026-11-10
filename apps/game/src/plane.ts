@@ -52,6 +52,8 @@ export interface PlaneParams {
   ceiling: number;
   /** The plane's length (cells): its nose is tested too. */
   length: number;
+  /** The stall speed (cells/s at pace 1; default PLANE.stallSpeed): the throttle's slowest. */
+  stall?: number;
 }
 
 export interface PlaneStep {
@@ -65,19 +67,20 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const toward = (v: number, target: number, rate: number) => v + clamp(target - v, -rate, rate);
 
 /** The speed the throttle asks for (cells/s, paced). */
-export function throttleSpeed(throttle: number, pace: number): number {
-  return (PLANE.stallSpeed + (PLANE.maxSpeed - PLANE.stallSpeed) * clamp(throttle, 0, 1)) * pace;
+export function throttleSpeed(throttle: number, pace: number, stall = PLANE.stallSpeed): number {
+  return (stall + (PLANE.maxSpeed - stall) * clamp(throttle, 0, 1)) * pace;
 }
 
 /** The throttle that holds a speed (inverse of throttleSpeed). */
-export function throttleFor(speed: number, pace: number): number {
-  return clamp((speed / pace - PLANE.stallSpeed) / (PLANE.maxSpeed - PLANE.stallSpeed), 0, 1);
+export function throttleFor(speed: number, pace: number, stall = PLANE.stallSpeed): number {
+  return clamp((speed / pace - stall) / (PLANE.maxSpeed - stall), 0, 1);
 }
 
 export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p: PlaneParams, dt: number): PlaneStep {
   const k = p.pace;
+  const stall = p.stall ?? PLANE.stallSpeed;
   s.throttle = clamp(s.throttle + clamp(input.throttle, -1, 1) * PLANE.throttleRate * dt, 0, 1);
-  const stalled = s.speed < PLANE.stallSpeed * k;
+  const stalled = s.speed < stall * k;
   // the nose: toward the stick, level without it, dropping in a stall
   const target = stalled
     ? -PLANE.maxDive
@@ -86,8 +89,8 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
       : clamp(input.pitch, -1, 0) * PLANE.maxDive;
   s.climb = toward(s.climb, target, (stalled ? PLANE.stallDrop : PLANE.pitchRate) * dt);
   // speed: toward the throttle's, less on a climb, more on a dive
-  s.speed = toward(s.speed, throttleSpeed(s.throttle, k), PLANE.accel * k * dt);
-  s.speed = Math.max(0.5 * PLANE.stallSpeed * k, s.speed - PLANE.climbCost * k * Math.sin(s.climb) * dt);
+  s.speed = toward(s.speed, throttleSpeed(s.throttle, k, stall), PLANE.accel * k * dt);
+  s.speed = Math.max(0.5 * stall * k, s.speed - PLANE.climbCost * k * Math.sin(s.climb) * dt);
   // bank and turn
   s.bank = toward(s.bank, clamp(input.roll, -1, 1) * PLANE.maxBank, PLANE.rollRate * dt);
   s.heading = wrapAngle(s.heading + (s.bank / PLANE.maxBank) * PLANE.turnRate * dt);

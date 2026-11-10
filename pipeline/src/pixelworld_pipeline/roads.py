@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .world_format import PIECES  # centre-line pieces kept per cell (D-082)
+
 DIRS = ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1))
 DIR_INDEX = {d: i for i, d in enumerate(DIRS)}
 CROSSING_SHIFT = 8
@@ -27,7 +29,10 @@ CORNER_INDEX = {(0, 0): 0, (1, 0): 1, (1, 1): 2, (0, 1): 3}
 
 def trace_cells(xs: np.ndarray, ys: np.ndarray, step: float = 0.1) -> list[tuple[int, int]]:
     """Cells visited by a polyline in continuous cell coordinates, as a thin
-    8-connected path (staircase corners replaced by diagonal moves)."""
+    8-connected path (staircase corners replaced by diagonal moves). The
+    cells of its own vertices stay, so ways that meet at a vertex (a junction
+    on a through road) share its cell."""
+    vertex_cells = {(int(np.floor(x)), int(np.floor(y))) for x, y in zip(xs, ys, strict=True)}
     cells: list[tuple[int, int]] = []
     for i in range(len(xs) - 1):
         x0, y0, x1, y1 = xs[i], ys[i], xs[i + 1], ys[i + 1]
@@ -46,7 +51,7 @@ def trace_cells(xs: np.ndarray, ys: np.ndarray, step: float = 0.1) -> list[tuple
     for c in cells:
         if len(thin) >= 2:
             a = thin[-2]
-            if abs(a[0] - c[0]) == 1 and abs(a[1] - c[1]) == 1:
+            if abs(a[0] - c[0]) == 1 and abs(a[1] - c[1]) == 1 and thin[-1] not in vertex_cells:
                 thin.pop()
         thin.append(c)
     return thin
@@ -112,9 +117,18 @@ def _douglas_peucker(pts: np.ndarray, tol: float) -> list[int]:
     return sorted(keep)
 
 
-OCTI_NORMALS = [
-    np.array([np.cos(np.radians(45 * k + 90)), np.sin(np.radians(45 * k + 90))]) for k in range(4)
-]
+# The axes (degrees, mod 180) roads can be snapped along: the 8 grid
+# directions, or with them the 2:1 ones (D-082), which draw as short repeating
+# pixel patterns in this projection.
+SNAP_AXES = {
+    8: (0.0, 45.0, 90.0, 135.0),
+    16: tuple(
+        sorted(
+            float(np.degrees(np.arctan2(y, x)) % 180.0)
+            for x, y in ((1, 0), (2, 1), (1, 1), (1, 2), (0, 1), (-1, 2), (-1, 1), (-2, 1))
+        )
+    ),
+}
 
 
 @dataclass
@@ -164,8 +178,10 @@ def straighten(
     min_length: float = 1.0,
     shape: tuple[int, int] | None = None,
     keep: set[str] | None = None,
+    directions: int = 8,
 ) -> Straightened:
-    """Straighten a road network toward the 8 grid directions (D-049).
+    """Straighten a road network toward the 8 grid directions (D-049), or the
+    16 with the 2:1 ones (`directions`, D-082).
 
     Each road is simplified (Douglas–Peucker, `simplify` cells) between the
     vertices it shares with other roads. Every simplified edge within `angle`
@@ -182,6 +198,10 @@ def straighten(
     only the junctions they share with straightened roads move.
     """
     keep = keep or set()
+    if directions not in SNAP_AXES:
+        raise ValueError(f"directions must be 8 or 16, not {directions}")
+    axes = SNAP_AXES[directions]
+    normals = [np.array([-np.sin(np.radians(ax)), np.cos(np.radians(ax))]) for ax in axes]
     from scipy.sparse import coo_matrix, identity
     from scipy.sparse.linalg import spsolve
 
@@ -246,9 +266,9 @@ def straighten(
         if length < min_length:
             continue
         theta = np.degrees(np.arctan2(v[1], v[0])) % 180.0
-        k = int(round(theta / 45.0)) % 4
-        dev = abs((theta - 45.0 * k + 90.0) % 180.0 - 90.0)
-        if dev <= angle:
+        devs = [abs((theta - ax + 90.0) % 180.0 - 90.0) for ax in axes]
+        k = int(np.argmin(devs))
+        if devs[k] <= angle:
             cand.append((a, b, k))
     active = np.ones(len(cand), dtype=bool)
     p = p0.copy()
@@ -256,7 +276,7 @@ def straighten(
     for _ in range(8):
         rows, cols, vals = [], [], []
         for r, (a, b, k) in enumerate(c for c, on in zip(cand, active, strict=True) if on):
-            nx, ny = OCTI_NORMALS[k]
+            nx, ny = normals[k]
             rows += [r, r, r, r]
             cols += [2 * b, 2 * b + 1, 2 * a, 2 * a + 1]
             vals += [nx, ny, -nx, -ny]
@@ -571,6 +591,63 @@ class RoadLayer:
     lanes: np.ndarray | None = None
     # segment id → cells (inside the grid), for validation
     segment_cells: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
+    # centre-line pieces (D-082): uint32 (cy, cx, PIECES), see cell_pieces
+    pieces: np.ndarray | None = None
+    # cells with more pieces than fit (the narrowest are left out)
+    pieces_dropped: int = 0
+
+
+def cell_pieces(x0: float, y0: float, x1: float, y1: float):
+    """The stretches of the segment (x0, y0)–(x1, y1) (cell coordinates) inside
+    each cell it crosses: (cell x, cell y, (ax, ay, bx, by) in the cell's own
+    0..1 coordinates)."""
+    dx, dy = x1 - x0, y1 - y0
+    ts = {0.0, 1.0}
+    for d, p0, lo, hi in ((dx, x0, min(x0, x1), max(x0, x1)), (dy, y0, min(y0, y1), max(y0, y1))):
+        if d:
+            for g in range(int(np.floor(lo)) + 1, int(np.ceil(hi))):
+                ts.add((g - p0) / d)
+    ts_sorted = sorted(t for t in ts if 0.0 <= t <= 1.0)
+    for t0, t1 in zip(ts_sorted, ts_sorted[1:], strict=False):
+        if t1 - t0 < 1e-9:
+            continue
+        tm = 0.5 * (t0 + t1)
+        cx, cy = int(np.floor(x0 + dx * tm)), int(np.floor(y0 + dy * tm))
+        yield cx, cy, (x0 + dx * t0 - cx, y0 + dy * t0 - cy, x0 + dx * t1 - cx, y0 + dy * t1 - cy)
+
+
+# A way's consecutive pieces in one cell merge where its bend there strays less
+# than this (cells) from the straight piece: what Douglas–Peucker left of a
+# road's wiggle, which would otherwise crowd a junction's cell (D-082).
+PIECE_MERGE = 0.04
+
+
+def merge_pieces(pieces: list[tuple[float, float, float, float]]) -> list[tuple[float, ...]]:
+    """One way's pieces in a cell, in order along it, with consecutive ones
+    joined where the vertex between them lies within PIECE_MERGE of the
+    straight line from the first's start to the second's end."""
+    out: list[tuple[float, ...]] = []
+    for p in pieces:
+        if out:
+            ax, ay, mx, my = out[-1]
+            if np.hypot(mx - p[0], my - p[1]) < 1e-9:
+                bx, by = p[2], p[3]
+                vx, vy = bx - ax, by - ay
+                n = float(np.hypot(vx, vy))
+                if n > 1e-9 and abs(vx * (my - ay) - vy * (mx - ax)) / n < PIECE_MERGE:
+                    out[-1] = (ax, ay, bx, by)
+                    continue
+        out.append(tuple(p))
+    return out
+
+
+def pack_piece(ax: float, ay: float, bx: float, by: float) -> int:
+    """A piece as x0 | y0 << 8 | x1 << 16 | y1 << 24, in 1/255 cell; 0 when it's
+    shorter than that (the empty slot)."""
+    q = [int(round(min(max(v, 0.0), 1.0) * 255)) for v in (ax, ay, bx, by)]
+    if q[0] == q[2] and q[1] == q[3]:
+        return 0
+    return q[0] | q[1] << 8 | q[2] << 16 | q[3] << 24
 
 
 def rasterize(
@@ -580,6 +657,7 @@ def rasterize(
     widths: dict[str, float] | None = None,
     rank_of=None,
     lanes: dict[str, int] | None = None,
+    pieces: bool = False,
 ) -> RoadLayer:
     """lines: (id, class rank ≥ 1, parts as (xs, ys) in cell coords).
 
@@ -590,8 +668,16 @@ def rasterize(
     widest way in each cell, and `lanes` (segment id → LANE byte, with
     `widths`) that way's lanes. The class number written to a cell is the line's
     class; with `rank_of` (class → priority) the higher-priority class wins,
-    else the larger number does."""
+    else the larger number does.
+
+    With `pieces` (D-082), each cell also records the stretches of centre line
+    inside it (cell_pieces, up to PIECES, the widest ways first), which the
+    client draws instead of the connections; the connections then trace the
+    line cell by cell (`deviation` is ignored), so they stay under it for
+    routes and road beds. Cells a line only clips get its class and width too."""
     cy, cx = shape
+    if pieces:
+        deviation = None
     mask = np.zeros(shape, dtype=np.uint16)
     cls = np.zeros(shape, dtype=np.uint8)
     width = np.zeros(shape, dtype=np.float32) if widths is not None else None
@@ -602,9 +688,10 @@ def rasterize(
     def inside(c: tuple[int, int]) -> bool:
         return 0 <= c[0] < cx and 0 <= c[1] < cy
 
-    def mark(c: tuple[int, int], bit: int, klass: int, w: float = 0.0, ln: int = 0) -> None:
+    def mark(c: tuple[int, int], bit: int | None, klass: int, w: float = 0.0, ln: int = 0) -> None:
         if inside(c):
-            mask[c[1], c[0]] |= 1 << bit
+            if bit is not None:
+                mask[c[1], c[0]] |= 1 << bit
             old = int(cls[c[1], c[0]])
             if old == 0 or rank(klass) > rank(old):
                 cls[c[1], c[0]] = klass
@@ -613,6 +700,7 @@ def rasterize(
                 if lane is not None:
                     lane[c[1], c[0]] = ln
 
+    found: dict[tuple[int, int], list[tuple[float, int]]] = {}
     for seg_id, klass, parts in lines:
         w = float(widths.get(seg_id, 0.0)) if widths is not None else 0.0
         ln = int(lanes.get(seg_id, 0)) if lanes is not None else 0
@@ -630,7 +718,26 @@ def rasterize(
                     for o in ((a[0] + dx, a[1]), (a[0], a[1] + dy)):
                         mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], klass, w, ln)
             visited.extend(c for c in path if inside(c))
+            if pieces:
+                mine: dict[tuple[int, int], list] = {}
+                for i in range(len(xs) - 1):
+                    for px, py, piece in cell_pieces(xs[i], ys[i], xs[i + 1], ys[i + 1]):
+                        if inside((px, py)):
+                            mine.setdefault((py, px), []).append(piece)
+                for (py, px), got in mine.items():
+                    for piece in merge_pieces(got):
+                        packed = pack_piece(*piece)
+                        if packed:
+                            found.setdefault((py, px), []).append((w, packed))
+                            mark((px, py), None, klass, w, ln)
         layer.segment_cells[seg_id] = visited
+    if pieces:
+        out = np.zeros((cy, cx, PIECES), dtype=np.uint32)
+        for (py, px), got in found.items():
+            uniq = list(dict.fromkeys(p for _, p in sorted(got, key=lambda g: -g[0])))
+            layer.pieces_dropped += len(uniq) > PIECES
+            out[py, px, : min(PIECES, len(uniq))] = uniq[:PIECES]
+        layer.pieces = out
     return layer
 
 

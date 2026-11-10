@@ -59,6 +59,15 @@ describe("the flight model", () => {
     expect(throttleSpeed(1, 1)).toBe(PLANE.maxSpeed);
     expect(throttleSpeed(1, 0.5)).toBe(PLANE.maxSpeed / 2);
     expect(throttleSpeed(throttleFor(5, 1), 1)).toBeCloseTo(5, 9);
+    // a walking level's lower stall: the throttle's slowest, and the plane flies it without stalling
+    expect(throttleSpeed(0, 1, PLANE.walkStallSpeed)).toBe(PLANE.walkStallSpeed);
+    expect(throttleSpeed(throttleFor(5, 1, PLANE.walkStallSpeed), 1, PLANE.walkStallSpeed)).toBeCloseTo(5, 9);
+    const slow = { ...plane(5, 100, 10), throttle: 0 };
+    let crashed: string | null = null;
+    for (let t = 0; t < 10 && !crashed; t += 1 / 30) crashed = flyPlane(slow, LEVEL_FLIGHT, WORLD, { ...PARAMS, stall: PLANE.walkStallSpeed }, 1 / 30).crashed;
+    expect(crashed).toBeNull();
+    expect(slow.speed).toBeCloseTo(PLANE.walkStallSpeed, 2);
+    expect(slow.h).toBeCloseTo(10, 6);
     const s = plane(5, 100, 10);
     fly(s, { throttle: 1 }, 5);
     expect(s.throttle).toBe(1);

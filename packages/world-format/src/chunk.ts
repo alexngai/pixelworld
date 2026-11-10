@@ -1,4 +1,4 @@
-import { NO_WATER, TerrainGrid, VFAC_ONE, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworlds/grid";
+import { NO_WATER, PIECES, TerrainGrid, VFAC_ONE, isValidShape, shapeFromV0Mask, type MicroLayers } from "@pixelworlds/grid";
 
 /** Chunk binary codec, format v1 (reads v0). Spec: docs/world-format.md. */
 
@@ -82,6 +82,18 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const railS = section("RAIL", 2, false);
   const laneS = section("LANE", 1, false);
   const micro = decodeMicro(view, sections.get("MHGT"), size);
+  // centre-line pieces (D-082): PIECES slots per cell, one section per slot
+  const pieces = (prefix: string): Uint32Array | undefined => {
+    const slots = Array.from({ length: PIECES }, (_, k) => section(`${prefix}${k}`, 4, false));
+    if (!slots.some(Boolean)) return undefined;
+    const out = new Uint32Array(n * PIECES);
+    slots.forEach((sl, k) => {
+      if (sl) for (let i = 0; i < n; i++) out[i * PIECES + k] = view.getUint32(sl.offset + i * 4, true);
+    });
+    return out;
+  };
+  const roadSeg = pieces("RSG");
+  const pathSeg = pieces("PSG");
 
   const base = new Int16Array(n);
   const water = new Int16Array(n).fill(NO_WATER);
@@ -137,6 +149,8 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
       pathWidth,
       rail,
       lane,
+      ...(roadSeg ? { roadSeg } : {}),
+      ...(pathSeg ? { pathSeg } : {}),
       micro,
     }),
   };
@@ -216,6 +230,16 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.pathWidth)) payloads.push(["PWID", terrain.pathWidth.slice()]);
   if (any(terrain.rail)) payloads.push(["RAIL", u16(terrain.rail)]);
   if (any(terrain.lane)) payloads.push(["LANE", terrain.lane.slice()]);
+  for (const [prefix, arr] of [["RSG", terrain.roadSeg], ["PSG", terrain.pathSeg]] as const)
+    for (let k = 0; k < PIECES; k++) {
+      const slot = new Uint32Array(n);
+      for (let i = 0; i < n; i++) slot[i] = arr[i * PIECES + k]!;
+      if (!any(slot)) continue;
+      const out = new Uint8Array(n * 4);
+      const v = new DataView(out.buffer);
+      for (let i = 0; i < n; i++) v.setUint32(i * 4, slot[i]!, true);
+      payloads.push([`${prefix}${k}`, out]);
+    }
   if (terrain.micro) payloads.push(["MHGT", encodeMicro(terrain.micro, size)]);
 
   let offset = HEADER_BYTES + payloads.length * SECTION_ENTRY_BYTES;

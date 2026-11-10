@@ -1,5 +1,5 @@
 {
-  "packageHash": "fec7093ba73c7208a287df282b79f982adf85b123298a07adbb55687e37eb1bc",
+  "packageHash": "e1c2aa8ca0ed7e1f76214b4235f86a4734664b2e59850895ef29679ed22e8b55",
   "cells": [
     424,
     434
@@ -14,16 +14,16 @@
     "riverLines": 3
   },
   "objects": {
-    "building.apartment.prewar": 442,
+    "building.apartment.prewar": 443,
     "building.brownstone": 973,
-    "building.commercial": 1836,
-    "building.commercial.historic": 1867,
+    "building.commercial": 1839,
+    "building.commercial.historic": 1868,
     "building.industrial": 83,
     "building.loft.castiron": 258,
     "building.parking": 19,
-    "building.pier": 15,
-    "building.residential": 3147,
-    "building.tenement": 3499,
+    "building.pier": 10,
+    "building.residential": 3150,
+    "building.tenement": 3492,
     "building.tower": 54,
     "building.tower.deco": 613,
     "building.tower.glass": 275,
@@ -32,14 +32,14 @@
     "landmark.bridge.suspension": 17,
     "landmark.tower.gothic": 1,
     "landmark.tower.obelisk.diagonal": 1,
-    "prop.signal": 155,
-    "prop.streetlight": 2627,
-    "tree": 15329,
-    "tree.street": 3686
+    "prop.signal": 142,
+    "prop.streetlight": 2702,
+    "tree": 15281,
+    "tree.street": 3615
   },
   "roads": {
-    "cells": 23778,
-    "edges": 25192,
+    "cells": 24276,
+    "edges": 25620,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 11,
@@ -49,32 +49,32 @@
   },
   "paths": {
     "segments": 21873,
-    "cells": 65363
+    "cells": 65310
   },
   "rails": {
     "street": 0,
     "cable": 0,
-    "train": 879
+    "train": 866
   },
   "lanes": {
-    "counted": 37683,
-    "oneway": 28958,
-    "divided": 9343
+    "counted": 37672,
+    "oneway": 28967,
+    "divided": 9556
   },
   "surfaces": {
-    "woodland": 14914,
+    "woodland": 14874,
     "scrub": 120,
-    "water": 52743,
-    "desert": 1618,
-    "grass": 372,
+    "water": 52725,
+    "desert": 1632,
+    "grass": 389,
     "farmland": 1,
-    "urban": 90087,
-    "lawn": 14577,
-    "yard": 9584
+    "urban": 90122,
+    "lawn": 14646,
+    "yard": 9507
   },
   "routes": {
     "ferry": 44,
-    "road": 3852,
+    "road": 3706,
     "train": 19
   }
 }
