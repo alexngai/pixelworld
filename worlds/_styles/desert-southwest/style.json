@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
   "id": "desert-southwest",
   "name": "Desert Southwest",
   "shades": 6,

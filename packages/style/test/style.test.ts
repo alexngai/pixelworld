@@ -145,7 +145,7 @@ describe("desert-southwest style pack", () => {
     const s = materialTables(sloped, p, vocab, (m) => m);
     expect([1, 2, 3].map((id) => s.surfaces[id * 4 + 3])).toEqual([0, 1, 0]);
     const bad = { ...style, surfaces: { ...style.surfaces, grass: { ...grass, light: "smooth" } } };
-    expect(() => validateStyle(bad as unknown as StylePack)).toThrow(/light must be/);
+    expect(() => validateStyle(bad as unknown as StylePack)).toThrow(/surfaces\.grass\.light: want one of "tiles", "slope"/);
   });
 
   it("rejects broken packs", () => {

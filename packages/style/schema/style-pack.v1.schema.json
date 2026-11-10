@@ -1,0 +1,1844 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/alexngai/pixelworld/main/packages/style/schema/style-pack.v1.schema.json",
+  "title": "pixelworld style pack, v1",
+  "$comment": "Generated from packages/style/src/schema.ts and schemaDocs.ts by their test (pnpm vitest run packages/style -u); edit those, not this. docs/style-guide.md §18.",
+  "description": "A pixelworld style pack: palette ramps, surfaces, roads, assets, night and atmosphere (docs/style-guide.md).",
+  "type": "object",
+  "if": {
+    "properties": {
+      "extends": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "extends"
+    ]
+  },
+  "then": {
+    "$ref": "#/definitions/variant"
+  },
+  "else": {
+    "$ref": "#/definitions/pack"
+  },
+  "definitions": {
+    "pack": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "description": "This schema, for editors: style-pack.v1.schema.json in packages/style/schema/ in the repository, or in node_modules/pixelworld/dist/ from npm."
+        },
+        "extends": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Another pack's id: this pack is merged over it. Objects merge key by key, anything else replaces, and null deletes the parent's key (docs/style-guide.md §18)."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The pack's id: its directory under worlds/_styles/, and what a world's manifest names (`style`)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The pack's name for people."
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A plugin's npm name."
+          },
+          "uniqueItems": true,
+          "description": "The generator plugins the assets need, by npm name (docs/plugins.md §9): a view loads them before its first bake."
+        },
+        "shades": {
+          "type": "integer",
+          "const": 6,
+          "description": "Shades per ramp: always 6 (0 the outline, 1–5 lighting)."
+        },
+        "background": {
+          "$ref": "#/definitions/colour",
+          "description": "Palette index 0: the background and empty pixels."
+        },
+        "silhouette": {
+          "$ref": "#/definitions/colour",
+          "description": "Palette index 253: a hidden rover's dithered silhouette."
+        },
+        "outline": {
+          "type": "object",
+          "properties": {
+            "depthThreshold": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "A pixel gets its ramp's shade 0 when a neighbour is this much deeper (2.0: cliffs of 2 steps)."
+            }
+          },
+          "required": [
+            "depthThreshold"
+          ],
+          "additionalProperties": false,
+          "description": "Silhouette outlines (docs/style-guide.md §6)."
+        },
+        "ao": {
+          "type": "object",
+          "properties": {
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "description": "How strongly occlusion darkens, in shades."
+            }
+          },
+          "required": [
+            "strength"
+          ],
+          "additionalProperties": false,
+          "description": "Ambient occlusion (docs/style-guide.md §5)."
+        },
+        "terrain": {
+          "type": "object",
+          "properties": {
+            "steepRockSlope": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Micro-cell tops steeper than this rise over run are bare rock (D-036)."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Micro-terrain look (M1.6)."
+        },
+        "ramps": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ramp"
+          },
+          "minProperties": 1,
+          "maxProperties": 42,
+          "errorMessage": "A pack holds at most 42 ramps: the palette is 256 indexed colours, index 0 the background, 6 shades a ramp from index 1, and 253 the silhouette, so 1 + 42 × 6 = 253 (docs/style-guide.md §2).",
+          "description": "Palette ramps by name, in palette order: ramp k is palette indices 1 + 6k to 6 + 6k. At most 42."
+        },
+        "strataSets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/definitions/strataBand"
+            },
+            "description": "Bands from the highest down: a pixel takes the first band it is above."
+          },
+          "minProperties": 1,
+          "maxProperties": 4,
+          "description": "Rock strata by elevation, in sets a world's geology provinces choose between: 1 to 4 sets of 1 to 16 bands."
+        },
+        "defaultStrata": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The strata set for worlds and provinces without a mapping."
+        },
+        "provinces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A strata set's name."
+          },
+          "description": "Geology province name → strata set name."
+        },
+        "surfaces": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/surface"
+          },
+          "description": "Ground surface name (from the world's manifest) → how it is drawn. `none` is the fallback."
+        },
+        "roads": {
+          "type": "object",
+          "properties": {
+            "asphalt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ramp roads are paved in."
+            },
+            "marking": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Centre lines."
+            },
+            "rail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Rails in the street (M3.5); without it, none are drawn."
+            },
+            "lanes": {
+              "type": "object",
+              "properties": {
+                "ramp": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Dashed lane lines and median kerbs."
+                },
+                "minPixels": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "description": "The narrowest lane drawn, in pixels across: narrower lanes draw fewer, wider ones, and none below two."
+                },
+                "dash": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "Dash and gap along a lane line, in lane widths: [dash > 0, gap ≥ 0]. Default [1, 2]."
+                },
+                "median": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Medians between a divided road's carriageways: a strip this many lanes wide (0: none)."
+                }
+              },
+              "required": [
+                "ramp",
+                "minPixels"
+              ],
+              "additionalProperties": false,
+              "description": "Lane lines and medians (M3.5), on worlds with lane counts."
+            },
+            "classes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "halfWidth": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Half-width in render units, for worlds without real widths (D-050)."
+                  },
+                  "centerLine": {
+                    "type": "boolean",
+                    "description": "A one-pixel centre line in the marking ramp."
+                  },
+                  "ramp": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The class's own surface ramp; asphalt if absent."
+                  },
+                  "lanes": {
+                    "type": "boolean",
+                    "description": "Lane lines where the world counts lanes (`roads.lanes`)."
+                  }
+                },
+                "required": [
+                  "halfWidth",
+                  "centerLine"
+                ],
+                "additionalProperties": false,
+                "description": "How a road class is drawn."
+              },
+              "description": "Road class name (from the world's manifest) → how it is drawn."
+            }
+          },
+          "required": [
+            "asphalt",
+            "marking",
+            "classes"
+          ],
+          "additionalProperties": false,
+          "description": "Roads, drawn as decals in the bake (docs/style-guide.md §4)."
+        },
+        "paths": {
+          "type": "object",
+          "properties": {
+            "classes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "ramp": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The ramp the path is drawn in."
+                  },
+                  "stripes": {
+                    "type": "boolean",
+                    "description": "Alternate with asphalt in pixel stripes (crosswalks)."
+                  }
+                },
+                "required": [
+                  "ramp"
+                ],
+                "additionalProperties": false,
+                "description": "How a path class is drawn."
+              },
+              "description": "Path class name → how it is drawn, at its real width (D-050)."
+            }
+          },
+          "required": [
+            "classes"
+          ],
+          "additionalProperties": false,
+          "description": "Paths: footways, sidewalks, crosswalks."
+        },
+        "assets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "generator": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The generator that draws the group, by registered name: a built-in, or one from a plugin in `plugins`."
+              },
+              "ramps": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "A ramp's name."
+                },
+                "description": "Role → ramp: the colours the generator asks for by role. `wall.gold` is a variant of `wall` (picked by seed)."
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  ],
+                  "description": "A number, or a list of them."
+                },
+                "description": "The generator's parameters by name; each generator documents its own."
+              }
+            },
+            "required": [
+              "generator",
+              "ramps"
+            ],
+            "additionalProperties": false,
+            "description": "A semantic group's generator, role ramps and parameters (D-030)."
+          },
+          "description": "Semantic group → asset. The longest dotted prefix wins: \"tree.conifer.ponderosa\" falls back to \"tree.conifer\", then \"tree\"."
+        },
+        "objects": {
+          "type": "object",
+          "properties": {
+            "heightStretch": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Extra vertical stretch for buildings and landmarks (a level's manifest can override it)."
+            },
+            "variants": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Variants generated per group for repeated objects (vegetation, rocks)."
+            },
+            "surfaces": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/surface"
+              },
+              "description": "Replaces surface styles when a world has objects (real buildings make the block pattern redundant)."
+            }
+          },
+          "required": [
+            "heightStretch",
+            "variants"
+          ],
+          "additionalProperties": false,
+          "description": "The look every object shares (docs/style-guide.md §11)."
+        },
+        "scatter": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The semantic group to scatter; the pack needs an asset for it."
+                },
+                "perCell": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Objects per cell."
+                }
+              },
+              "required": [
+                "group",
+                "perCell"
+              ],
+              "additionalProperties": false,
+              "description": "A scatter rule."
+            },
+            "description": "What to scatter on the surface."
+          },
+          "description": "Decorative scatter (M3, D-054): surface name → objects added per cell, on worlds that ask for it."
+        },
+        "night": {
+          "type": "object",
+          "properties": {
+            "background": {
+              "$ref": "#/definitions/colour",
+              "description": "The night background."
+            },
+            "saturation": {
+              "type": "number",
+              "minimum": 0,
+              "description": "0 = greyscale, 1 = day saturation (applied before tinting)."
+            },
+            "multiply": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Per-channel (r, g, b) multiplier for ordinary ramps."
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Per-channel (r, g, b) offset (0–255) added after multiplying."
+            },
+            "emissive": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/ramp"
+              },
+              "description": "Ramps that glow at night → their night colours (6 shades)."
+            }
+          },
+          "required": [
+            "background",
+            "saturation",
+            "multiply",
+            "add",
+            "emissive"
+          ],
+          "additionalProperties": false,
+          "description": "The night palette (D-035): ordinary ramps darken, emissive ones glow; switching needs no re-bake."
+        },
+        "atmosphere": {
+          "type": "object",
+          "properties": {
+            "fog": {
+              "$ref": "#/definitions/fog",
+              "description": "A fog layer (docs/style-guide.md §16)."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Atmosphere layers drawn over the baked world; they never change a bake (D-063)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "shades",
+        "background",
+        "silhouette",
+        "outline",
+        "ao",
+        "ramps",
+        "strataSets",
+        "defaultStrata",
+        "surfaces"
+      ],
+      "additionalProperties": false,
+      "description": "A pixelworld style pack: palette ramps, surfaces, roads, assets, night and atmosphere (docs/style-guide.md)."
+    },
+    "variant": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "This schema, for editors: style-pack.v1.schema.json in packages/style/schema/ in the repository, or in node_modules/pixelworld/dist/ from npm."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extends": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Another pack's id: this pack is merged over it. Objects merge key by key, anything else replaces, and null deletes the parent's key (docs/style-guide.md §18)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "The pack's id: its directory under worlds/_styles/, and what a world's manifest names (`style`)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "The pack's name for people."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plugins": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A plugin's npm name."
+              },
+              "uniqueItems": true,
+              "description": "The generator plugins the assets need, by npm name (docs/plugins.md §9): a view loads them before its first bake."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shades": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "const": 6,
+              "description": "Shades per ramp: always 6 (0 the outline, 1–5 lighting)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "background": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/colour",
+              "description": "Palette index 0: the background and empty pixels."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "silhouette": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/colour",
+              "description": "Palette index 253: a hidden rover's dithered silhouette."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outline": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "depthThreshold": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "A pixel gets its ramp's shade 0 when a neighbour is this much deeper (2.0: cliffs of 2 steps)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Silhouette outlines (docs/style-guide.md §6)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ao": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "strength": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "How strongly occlusion darkens, in shades."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Ambient occlusion (docs/style-guide.md §5)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "terrain": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "steepRockSlope": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Micro-cell tops steeper than this rise over run are bare rock (D-036)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Micro-terrain look (M1.6)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ramps": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/ramp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxProperties": 42,
+              "errorMessage": "A pack holds at most 42 ramps: the palette is 256 indexed colours, index 0 the background, 6 shades a ramp from index 1, and 253 the silhouette, so 1 + 42 × 6 = 253 (docs/style-guide.md §2).",
+              "description": "Palette ramps by name, in palette order: ramp k is palette indices 1 + 6k to 6 + 6k. At most 42."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strataSets": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 16,
+                    "items": {
+                      "$ref": "#/definitions/strataBand"
+                    },
+                    "description": "Bands from the highest down: a pixel takes the first band it is above."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxProperties": 4,
+              "description": "Rock strata by elevation, in sets a world's geology provinces choose between: 1 to 4 sets of 1 to 16 bands."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "defaultStrata": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "The strata set for worlds and provinces without a mapping."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provinces": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "A strata set's name."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Geology province name → strata set name."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "surfaces": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/surfaceVariant"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Ground surface name (from the world's manifest) → how it is drawn. `none` is the fallback."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "roads": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "asphalt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "The ramp roads are paved in."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "marking": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Centre lines."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rail": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Rails in the street (M3.5); without it, none are drawn."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "lanes": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ramp": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Dashed lane lines and median kerbs."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "minPixels": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "description": "The narrowest lane drawn, in pixels across: narrower lanes draw fewer, wider ones, and none below two."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "dash": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "description": "Dash and gap along a lane line, in lane widths: [dash > 0, gap ≥ 0]. Default [1, 2]."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "median": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Medians between a divided road's carriageways: a strip this many lanes wide (0: none)."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "Lane lines and medians (M3.5), on worlds with lane counts."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "classes": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "halfWidth": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "description": "Half-width in render units, for worlds without real widths (D-050)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "centerLine": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "A one-pixel centre line in the marking ramp."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "ramp": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "The class's own surface ramp; asphalt if absent."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "lanes": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "Lane lines where the world counts lanes (`roads.lanes`)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "How a road class is drawn."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "description": "Road class name (from the world's manifest) → how it is drawn."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Roads, drawn as decals in the bake (docs/style-guide.md §4)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "paths": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "classes": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "ramp": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "The ramp the path is drawn in."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stripes": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "Alternate with asphalt in pixel stripes (crosswalks)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "How a path class is drawn."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "description": "Path class name → how it is drawn, at its real width (D-050)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Paths: footways, sidewalks, crosswalks."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assets": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "generator": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "The generator that draws the group, by registered name: a built-in, or one from a plugin in `plugins`."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "ramps": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "description": "A ramp's name."
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "description": "Role → ramp: the colours the generator asks for by role. `wall.gold` is a variant of `wall` (picked by seed)."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "params": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "number"
+                                      }
+                                    }
+                                  ],
+                                  "description": "A number, or a list of them."
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "description": "The generator's parameters by name; each generator documents its own."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "A semantic group's generator, role ramps and parameters (D-030)."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Semantic group → asset. The longest dotted prefix wins: \"tree.conifer.ponderosa\" falls back to \"tree.conifer\", then \"tree\"."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objects": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "heightStretch": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Extra vertical stretch for buildings and landmarks (a level's manifest can override it)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "variants": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Variants generated per group for repeated objects (vegetation, rocks)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "surfaces": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/surfaceVariant"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "description": "Replaces surface styles when a world has objects (real buildings make the block pattern redundant)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "The look every object shares (docs/style-guide.md §11)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scatter": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "group": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The semantic group to scatter; the pack needs an asset for it."
+                        },
+                        "perCell": {
+                          "type": "number",
+                          "minimum": 0,
+                          "description": "Objects per cell."
+                        }
+                      },
+                      "required": [
+                        "group",
+                        "perCell"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A scatter rule."
+                    },
+                    "description": "What to scatter on the surface."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Decorative scatter (M3, D-054): surface name → objects added per cell, on worlds that ask for it."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "night": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "background": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/colour",
+                      "description": "The night background."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "saturation": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "0 = greyscale, 1 = day saturation (applied before tinting)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "multiply": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "description": "Per-channel (r, g, b) multiplier for ordinary ramps."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "add": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "description": "Per-channel (r, g, b) offset (0–255) added after multiplying."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "emissive": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/ramp"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "description": "Ramps that glow at night → their night colours (6 shades)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "The night palette (D-035): ordinary ramps darken, emissive ones glow; switching needs no re-bake."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "atmosphere": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "fog": {
+                  "anyOf": [
+                    {
+                      "description": "A fog layer (docs/style-guide.md §16).",
+                      "$ref": "#/definitions/fogVariant"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Atmosphere layers drawn over the baked world; they never change a bake (D-063)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "A pack that extends another: every key is optional, and null deletes the parent's.",
+      "required": [
+        "id",
+        "extends"
+      ]
+    },
+    "colour": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "patternErrorMessage": "A colour is \"#rrggbb\".",
+      "description": "A colour, #rrggbb."
+    },
+    "ramp": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/colour"
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "errorMessage": "A ramp is 6 colours, from shade 0 (the outline, darkest) to 5 (the lightest).",
+      "description": "6 shades, darkest (0, the outline) to lightest (5); shadows lean cool, highlights warm (docs/style-guide.md §2)."
+    },
+    "surface": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The ramp its tops are drawn in, or \"strata\": the ramp of the strata band at the elevation."
+        },
+        "pattern": {
+          "type": "string",
+          "enum": [
+            "none",
+            "trees",
+            "speckle",
+            "sparkle",
+            "fields",
+            "blocks"
+          ],
+          "description": "A texture over the tops (docs/style-guide.md §4)."
+        },
+        "density": {
+          "type": "number",
+          "minimum": 0,
+          "description": "How much of the surface the pattern covers (keep it low)."
+        },
+        "light": {
+          "type": "string",
+          "enum": [
+            "tiles",
+            "slope"
+          ],
+          "description": "How micro-terrain tops are lit: by micro-tile (\"tiles\", the default: terraces read as steps) or by the slope over about a cell (\"slope\": a smoothed lawn reads as one slope)."
+        }
+      },
+      "required": [
+        "ramp",
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "description": "How a ground surface is drawn."
+    },
+    "strataBand": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The band's name (the rock formation)."
+        },
+        "aboveMeters": {
+          "type": "number",
+          "description": "The band's bottom, in metres."
+        },
+        "ramp": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The band's ramp."
+        }
+      },
+      "required": [
+        "name",
+        "aboveMeters",
+        "ramp"
+      ],
+      "additionalProperties": false,
+      "description": "A strata band."
+    },
+    "fog": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The fog's own colour: a ramp…"
+        },
+        "shade": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "…and one of its shades (0–5)."
+        },
+        "veil": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 1,
+          "description": "Veil levels, thin to thick: how far each moves a colour toward the fog's (increasing, 0–1; 1 is the fog's colour)."
+        },
+        "ceilingMeters": {
+          "type": "number",
+          "description": "The top of the fog, in metres of drawn terrain height."
+        },
+        "fadeMeters": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The fog thins to nothing over this many metres below its ceiling."
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "For people."
+              },
+              "polygon": {
+                "type": "array",
+                "minItems": 3,
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "[lon, lat]."
+                },
+                "description": "The outline as [lon, lat] points (WGS84); the last joins the first."
+              },
+              "density": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Coverage inside, 0–1: the share of pixels the fog takes over low ground."
+              },
+              "edgeMeters": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Width of the soft edge in metres, centred on the outline (0: a hard edge)."
+              }
+            },
+            "required": [
+              "polygon",
+              "density"
+            ],
+            "additionalProperties": false,
+            "description": "An area of fog."
+          },
+          "description": "Where the fog lies; where areas overlap, the densest wins."
+        },
+        "drift": {
+          "type": "object",
+          "properties": {
+            "speed": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Wind speed in real metres per second."
+            },
+            "toward": {
+              "type": "number",
+              "description": "Compass bearing the fog moves toward, in degrees (90 = east)."
+            },
+            "sizeMeters": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Size of a patch, in metres."
+            },
+            "contrast": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "0 = even fog, 1 = patches with clear gaps between them."
+            }
+          },
+          "required": [
+            "speed",
+            "toward",
+            "sizeMeters",
+            "contrast"
+          ],
+          "additionalProperties": false,
+          "description": "Patches drifting with the wind; without it the fog is even and still."
+        },
+        "levels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          },
+          "description": "Coverage per scale level (manifest `level`): unlisted levels 1, 0 turns fog off."
+        },
+        "night": {
+          "type": "object",
+          "properties": {
+            "density": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Coverage multiplier by night (0 = none)."
+            }
+          },
+          "required": [
+            "density"
+          ],
+          "additionalProperties": false,
+          "description": "By night; without it, no fog at night."
+        }
+      },
+      "required": [
+        "ramp",
+        "shade",
+        "veil",
+        "ceilingMeters",
+        "fadeMeters",
+        "areas"
+      ],
+      "additionalProperties": false,
+      "description": "A fog layer (docs/style-guide.md §16)."
+    },
+    "surfaceVariant": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ramp its tops are drawn in, or \"strata\": the ramp of the strata band at the elevation."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "none",
+                "trees",
+                "speckle",
+                "sparkle",
+                "fields",
+                "blocks"
+              ],
+              "description": "A texture over the tops (docs/style-guide.md §4)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "density": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "How much of the surface the pattern covers (keep it low)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "light": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "tiles",
+                "slope"
+              ],
+              "description": "How micro-terrain tops are lit: by micro-tile (\"tiles\", the default: terraces read as steps) or by the slope over about a cell (\"slope\": a smoothed lawn reads as one slope)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "How a ground surface is drawn."
+    },
+    "fogVariant": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "The fog's own colour: a ramp…"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shade": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "…and one of its shades (0–5)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "veil": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minItems": 1,
+              "description": "Veil levels, thin to thick: how far each moves a colour toward the fog's (increasing, 0–1; 1 is the fog's colour)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ceilingMeters": {
+          "anyOf": [
+            {
+              "type": "number",
+              "description": "The top of the fog, in metres of drawn terrain height."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fadeMeters": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "The fog thins to nothing over this many metres below its ceiling."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "areas": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "For people."
+                  },
+                  "polygon": {
+                    "type": "array",
+                    "minItems": 3,
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "description": "[lon, lat]."
+                    },
+                    "description": "The outline as [lon, lat] points (WGS84); the last joins the first."
+                  },
+                  "density": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Coverage inside, 0–1: the share of pixels the fog takes over low ground."
+                  },
+                  "edgeMeters": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Width of the soft edge in metres, centred on the outline (0: a hard edge)."
+                  }
+                },
+                "required": [
+                  "polygon",
+                  "density"
+                ],
+                "additionalProperties": false,
+                "description": "An area of fog."
+              },
+              "description": "Where the fog lies; where areas overlap, the densest wins."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "drift": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "speed": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Wind speed in real metres per second."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "toward": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "description": "Compass bearing the fog moves toward, in degrees (90 = east)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sizeMeters": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Size of a patch, in metres."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "contrast": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "0 = even fog, 1 = patches with clear gaps between them."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "Patches drifting with the wind; without it the fog is even and still."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "levels": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Coverage per scale level (manifest `level`): unlisted levels 1, 0 turns fog off."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "night": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "density": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Coverage multiplier by night (0 = none)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "By night; without it, no fog at night."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "A fog layer (docs/style-guide.md §16)."
+    }
+  }
+}

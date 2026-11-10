@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
   "id": "bay-area",
   "name": "San Francisco Bay Area",
   "plugins": ["@pixelworlds/city-sf"],

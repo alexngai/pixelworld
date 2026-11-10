@@ -7,10 +7,28 @@
  *   0                      background / empty
  *   1 + ramp*SHADES + s    ramp `ramp`, shade s (0 = darkest/outline … 5 = lightest)
  *   INDEX_SILHOUETTE       occluded-player highlight
+ *
+ * Packs are checked against a JSON Schema (schema.ts) and then for what a
+ * schema can't say, with a path in every message (issues.ts); load.ts parses
+ * their JSON and merges `extends` (D-075, docs/style-guide.md §18).
  */
 
+import { checkSchema, STYLE_SCHEMA_VERSION } from "./schema";
+import { StyleError, describe, formatPath, styleIssuesError, suggest, type PathSegment, type StyleIssue } from "./issues";
+
+export * from "./issues";
+export * from "./load";
+export * from "./schema";
+export * from "./schemaDocs";
+
 export const SHADES = 6;
-export const MAX_RAMPS = 42; // ramp 41, shade 5 → index 252, below the specials
+/**
+ * Ramps a pack can hold: indices are 8-bit in the baked tiles, so the palette
+ * has 256 entries: 0 the background, then 6 shades a ramp from 1 (ramp 41,
+ * shade 5 → index 252), and 253 the silhouette. More needs a wider index in
+ * the bake format (D-075).
+ */
+export const MAX_RAMPS = 42;
 export const INDEX_BACKGROUND = 0;
 export const INDEX_SILHOUETTE = 253;
 export const MAX_SURFACES = 16;
@@ -83,8 +101,12 @@ export interface PathClassStyle {
 }
 
 export interface StylePack {
+  /** The schema, for editors (schema.ts); a loader ignores it but for its version. */
+  $schema?: string;
   id: string;
   name: string;
+  /** The generator plugins its assets need, by npm name (D-071). */
+  plugins?: string[];
   shades: number;
   background: string;
   silhouette: string;
@@ -206,115 +228,164 @@ export interface NightStyle {
 
 export type PaletteVariant = "day" | "night";
 
-export class StyleError extends Error {}
-
 export function parseHex(hex: string): [number, number, number] {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) throw new StyleError(`bad color ${hex}`);
+  if (!m) throw new StyleError(`bad colour ${JSON.stringify(hex)}: want "#rrggbb"`);
   const v = parseInt(m[1]!, 16);
   return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }
 
-export function validateStyle(style: StylePack): StylePack {
-  if (style.shades !== SHADES) throw new StyleError(`style must use ${SHADES} shades`);
-  const names = Object.keys(style.ramps);
-  if (names.length > MAX_RAMPS) throw new StyleError(`too many ramps (${names.length})`);
-  for (const [name, colors] of Object.entries(style.ramps)) {
-    if (colors.length !== SHADES) throw new StyleError(`ramp ${name} needs ${SHADES} colors`);
-    colors.forEach(parseHex);
-  }
-  parseHex(style.background);
-  parseHex(style.silhouette);
-  const sets = Object.entries(style.strataSets ?? {});
-  if (sets.length === 0 || sets.length > MAX_STRATA_SETS)
-    throw new StyleError(`strataSets must have 1..${MAX_STRATA_SETS} sets`);
-  for (const [setName, bands] of sets) {
-    if (bands.length === 0 || bands.length > MAX_STRATA)
-      throw new StyleError(`strata set ${setName} must have 1..${MAX_STRATA} bands`);
-    bands.forEach((band, i) => {
-      if (!(band.ramp in style.ramps)) throw new StyleError(`strata ramp ${band.ramp} not defined`);
-      if (i > 0 && band.aboveMeters >= bands[i - 1]!.aboveMeters)
-        throw new StyleError(`strata set ${setName} must be ordered from highest to lowest`);
-    });
-  }
-  if (!(style.defaultStrata in style.strataSets))
-    throw new StyleError(`defaultStrata ${style.defaultStrata} is not a strata set`);
-  for (const [province, set] of Object.entries(style.provinces ?? {}))
-    if (!(set in style.strataSets)) throw new StyleError(`province ${province} uses unknown set ${set}`);
-  for (const [name, s] of Object.entries(style.surfaces)) {
-    if (s.ramp !== "strata" && !(s.ramp in style.ramps))
-      throw new StyleError(`surface ${name} uses undefined ramp ${s.ramp}`);
-    if (!(s.pattern in PATTERNS)) throw new StyleError(`surface ${name}: unknown pattern`);
-    if (s.light !== undefined && s.light !== "tiles" && s.light !== "slope")
-      throw new StyleError(`surface ${name}: light must be "tiles" or "slope"`);
-  }
-  if (style.roads) {
-    const extra = [style.roads.rail, style.roads.lanes?.ramp].filter((r): r is string => !!r);
-    for (const r of [style.roads.asphalt, style.roads.marking, ...extra])
-      if (!(r in style.ramps)) throw new StyleError(`road ramp ${r} not defined`);
-    const lanes = style.roads.lanes;
-    if (lanes) {
-      if (!(lanes.minPixels > 0)) throw new StyleError("roads.lanes.minPixels must be > 0");
-      if (lanes.dash && !(lanes.dash.length === 2 && lanes.dash[0] > 0 && lanes.dash[1] >= 0))
-        throw new StyleError("roads.lanes.dash must be [dash > 0, gap ≥ 0]");
-      if (lanes.median !== undefined && !(lanes.median >= 0))
-        throw new StyleError("roads.lanes.median must be ≥ 0");
-    }
-    for (const [name, c] of Object.entries(style.roads.classes))
-      if (c.ramp && !(c.ramp in style.ramps)) throw new StyleError(`road class ${name} uses undefined ramp ${c.ramp}`);
-  }
-  for (const [surface, rules] of Object.entries(style.scatter ?? {}))
-    for (const r of rules) {
-      if (!(surface in style.surfaces)) throw new StyleError(`scatter for unknown surface ${surface}`);
-      if (!Object.keys(style.assets ?? {}).some((g) => r.group === g || r.group.startsWith(g + ".")))
-        throw new StyleError(`scatter group ${r.group} has no asset`);
-      if (!(r.perCell >= 0)) throw new StyleError(`scatter ${surface}/${r.group}: perCell must be ≥ 0`);
-    }
-  for (const [name, c] of Object.entries(style.paths?.classes ?? {}))
-    if (!(c.ramp in style.ramps)) throw new StyleError(`path class ${name} uses undefined ramp ${c.ramp}`);
-  for (const [group, a] of Object.entries(style.assets ?? {}))
-    for (const [role, ramp] of Object.entries(a.ramps))
-      if (!(ramp in style.ramps)) throw new StyleError(`asset ${group} role ${role} uses undefined ramp ${ramp}`);
-  if (style.night) {
-    parseHex(style.night.background);
-    if (style.night.multiply.length !== 3 || style.night.add.length !== 3)
-      throw new StyleError("night multiply and add need 3 channels");
-    for (const [name, colors] of Object.entries(style.night.emissive)) {
-      if (!(name in style.ramps)) throw new StyleError(`night emissive ramp ${name} not defined`);
-      if (colors.length !== SHADES) throw new StyleError(`night ramp ${name} needs ${SHADES} colors`);
-      colors.forEach(parseHex);
-    }
-  }
-  if (style.atmosphere?.fog) validateFog(style.atmosphere.fog, style);
-  return style;
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** What was given in place of a pack, when it plainly isn't one. */
+function notAPack(v: unknown): string | null {
+  if (typeof v === "string")
+    return /^\s*</.test(v)
+      ? "a style pack is a JSON object, not a string of HTML (is the URL right? dev servers answer a missing file with index.html)"
+      : "a style pack is a JSON object, not a string (parse it first: parseStyleJson)";
+  if (!isObject(v)) return `a style pack is a JSON object, not ${describe(v)}`;
+  if (["ramps", "surfaces", "strataSets", "shades", "extends"].some((k) => k in v)) return null;
+  if (isObject(v.default) && "ramps" in v.default) return "this is a JSON module, not a style pack: pass its default export";
+  const keys = Object.keys(v);
+  return `this isn't a style pack: it has none of ramps, surfaces, strataSets or shades (its keys: ${keys.slice(0, 8).join(", ") || "none"})`;
 }
 
-function validateFog(fog: FogStyle, style: StylePack): void {
-  const unit = (v: unknown) => typeof v === "number" && v >= 0 && v <= 1;
-  if (!(fog.ramp in style.ramps)) throw new StyleError(`fog ramp ${fog.ramp} not defined`);
-  if (!(Number.isInteger(fog.shade) && fog.shade >= 0 && fog.shade < SHADES))
-    throw new StyleError(`fog shade must be 0..${SHADES - 1}`);
-  if (!fog.veil.length || !fog.veil.every((k, i) => unit(k) && k > (fog.veil[i - 1] ?? 0)))
-    throw new StyleError("fog veil levels must increase within 0..1");
-  if (!(fog.fadeMeters > 0)) throw new StyleError("fog fadeMeters must be > 0");
-  if (typeof fog.ceilingMeters !== "number") throw new StyleError("fog needs ceilingMeters");
-  for (const a of fog.areas) {
-    const name = a.name ?? "(unnamed)";
-    if (a.polygon.length < 3) throw new StyleError(`fog area ${name} needs 3 or more points`);
-    for (const p of a.polygon)
-      if (p.length !== 2 || !(Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90))
-        throw new StyleError(`fog area ${name}: points are [lon, lat]`);
-    if (!unit(a.density)) throw new StyleError(`fog area ${name}: density must be 0..1`);
-    if (a.edgeMeters !== undefined && !(a.edgeMeters >= 0)) throw new StyleError(`fog area ${name}: edgeMeters must be ≥ 0`);
+/**
+ * Every problem with a pack, each with its path: its shape against the schema
+ * (schema.ts: types, ranges, unknown keys with a "did you mean"), then what
+ * the schema can't say: the ramps a pack names exist, strata run highest
+ * first, scatter has assets. Empty for a good pack.
+ */
+export function styleIssues(style: unknown): StyleIssue[] {
+  const not = notAPack(style);
+  if (not) return [{ path: "", message: not }];
+  const o = style as Record<string, unknown>;
+  // a newer pack's keys would read as typos: say so instead
+  const version = typeof o.$schema === "string" ? /style-pack\.v(\d+)\./.exec(o.$schema) : null;
+  if (version && Number(version[1]) !== STYLE_SCHEMA_VERSION)
+    return [{ path: "$schema", message: `the pack is written for style pack schema v${version[1]}; this pixelworld reads v${STYLE_SCHEMA_VERSION}` }];
+  if (o.extends !== undefined)
+    return [
+      {
+        path: "extends",
+        message:
+          `${JSON.stringify(o.extends)} isn't merged in: load the pack with resolveStyleExtends(pack, load), ` +
+          "or give createWorldView a style resolver, which does (docs/style-guide.md §18)",
+      },
+    ];
+  const shape = checkSchema(style);
+  return shape.length ? shape : referenceIssues(style as StylePack);
+}
+
+/** What the schema can't check: names that must exist elsewhere in the pack, and orders. */
+function referenceIssues(style: StylePack): StyleIssue[] {
+  const issues: StyleIssue[] = [];
+  const add = (path: PathSegment[], message: string) => issues.push({ path: formatPath(path), message });
+  const has = (o: object | undefined, k: string) => o !== undefined && Object.hasOwn(o, k);
+  const ramps = Object.keys(style.ramps);
+  const ramp = (name: string, path: PathSegment[]) => {
+    if (!has(style.ramps, name)) add(path, `no ramp named ${JSON.stringify(name)}${suggest(name, ramps)}`);
+  };
+  const sets = Object.keys(style.strataSets);
+  for (const [setName, bands] of Object.entries(style.strataSets))
+    bands.forEach((band, i) => {
+      ramp(band.ramp, ["strataSets", setName, i, "ramp"]);
+      if (i > 0 && band.aboveMeters >= bands[i - 1]!.aboveMeters)
+        add(
+          ["strataSets", setName, i, "aboveMeters"],
+          `bands run from the highest down, so want < ${bands[i - 1]!.aboveMeters}, not ${band.aboveMeters}`,
+        );
+    });
+  if (!has(style.strataSets, style.defaultStrata))
+    add(["defaultStrata"], `no strata set named ${JSON.stringify(style.defaultStrata)}${suggest(style.defaultStrata, sets)}`);
+  for (const [province, set] of Object.entries(style.provinces ?? {}))
+    if (!has(style.strataSets, set)) add(["provinces", province], `no strata set named ${JSON.stringify(set)}${suggest(set, sets)}`);
+  const surfaceRamps = (surfaces: Record<string, SurfaceStyle>, at: PathSegment[]) => {
+    for (const [name, s] of Object.entries(surfaces)) if (s.ramp !== "strata") ramp(s.ramp, [...at, name, "ramp"]);
+  };
+  surfaceRamps(style.surfaces, ["surfaces"]);
+  if (style.objects?.surfaces) surfaceRamps(style.objects.surfaces, ["objects", "surfaces"]);
+  if (style.roads) {
+    const r = style.roads;
+    for (const k of ["asphalt", "marking", "rail"] as const) {
+      const name = r[k];
+      if (name !== undefined) ramp(name, ["roads", k]);
+    }
+    if (r.lanes) {
+      ramp(r.lanes.ramp, ["roads", "lanes", "ramp"]);
+      if (r.lanes.dash && !(r.lanes.dash[0] > 0 && r.lanes.dash[1] >= 0))
+        add(["roads", "lanes", "dash"], `want [dash > 0, gap ≥ 0], not ${JSON.stringify(r.lanes.dash)}`);
+    }
+    for (const [name, c] of Object.entries(r.classes)) if (c.ramp !== undefined) ramp(c.ramp, ["roads", "classes", name, "ramp"]);
   }
-  if (fog.drift) {
-    const d = fog.drift;
-    if (!(d.speed >= 0) || !(d.sizeMeters > 0) || typeof d.toward !== "number" || !unit(d.contrast))
-      throw new StyleError("fog drift needs speed ≥ 0, toward, sizeMeters > 0 and contrast 0..1");
+  for (const [name, c] of Object.entries(style.paths?.classes ?? {})) ramp(c.ramp, ["paths", "classes", name, "ramp"]);
+  const groups = Object.keys(style.assets ?? {});
+  const surfaces = Object.keys(style.surfaces);
+  for (const [surface, rules] of Object.entries(style.scatter ?? {})) {
+    if (!has(style.surfaces, surface)) add(["scatter", surface], `no surface named ${JSON.stringify(surface)}${suggest(surface, surfaces)}`);
+    rules.forEach((r, i) => {
+      if (!groups.some((g) => r.group === g || r.group.startsWith(g + ".")))
+        add(["scatter", surface, i, "group"], `no asset for ${JSON.stringify(r.group)}${suggest(r.group, groups)}`);
+    });
   }
-  for (const [level, k] of Object.entries(fog.levels ?? {}))
-    if (!(k >= 0)) throw new StyleError(`fog level ${level}: coverage multiplier must be ≥ 0`);
-  if (fog.night && !(fog.night.density >= 0)) throw new StyleError("fog night density must be ≥ 0");
+  for (const [group, a] of Object.entries(style.assets ?? {}))
+    for (const [role, name] of Object.entries(a.ramps)) ramp(name, ["assets", group, "ramps", role]);
+  for (const name of Object.keys(style.night?.emissive ?? {}))
+    if (!has(style.ramps, name)) add(["night", "emissive", name], `glows, but there's no ramp named ${JSON.stringify(name)}${suggest(name, ramps)}`);
+  const fog = style.atmosphere?.fog;
+  if (fog) {
+    ramp(fog.ramp, ["atmosphere", "fog", "ramp"]);
+    fog.veil.forEach((k, i) => {
+      if (i > 0 && !(k > fog.veil[i - 1]!)) add(["atmosphere", "fog", "veil", i], `veil levels increase, so want > ${fog.veil[i - 1]}, not ${k}`);
+    });
+    fog.areas.forEach((a, i) =>
+      a.polygon.forEach((p, j) => {
+        if (!(Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90))
+          add(["atmosphere", "fog", "areas", i, "polygon", j], `points are [lon, lat], not ${JSON.stringify(p)}`);
+      }),
+    );
+  }
+  return issues;
+}
+
+/**
+ * The asset generators a registry lacks, each at its path with a "did you
+ * mean" (D-075). A view checks this once its plugins are registered;
+ * `providers` names the plugin known to provide a generator, to say what to
+ * load (KNOWN_PLUGIN_GENERATORS in @pixelworlds/generators).
+ */
+export function generatorIssues(
+  style: StylePack,
+  registered: readonly string[],
+  providers: Readonly<Record<string, string>> = {},
+): StyleIssue[] {
+  const issues: StyleIssue[] = [];
+  for (const [group, a] of Object.entries(style.assets ?? {})) {
+    if (registered.includes(a.generator)) continue;
+    const plugin = Object.hasOwn(providers, a.generator) ? providers[a.generator]! : null;
+    issues.push({
+      path: formatPath(["assets", group, "generator"]),
+      message:
+        plugin === null
+          ? `no generator named ${JSON.stringify(a.generator)}${suggest(a.generator, registered)}: ` +
+            `none is registered, and no plugin known here provides it (docs/plugins.md §9)`
+          : style.plugins?.includes(plugin)
+            ? `${JSON.stringify(a.generator)} comes with the plugin ${plugin}, which isn't loaded`
+            : `${JSON.stringify(a.generator)} comes with the plugin ${plugin}: add it to the pack's "plugins", and load it`,
+    });
+  }
+  return issues;
+}
+
+/**
+ * Check a pack (`styleIssues`) and return it typed; a StyleError naming the
+ * pack and listing each problem with its path if it has any:
+ * `style pack "desert-adobe": ramps.desert[0]: bad colour "#3a2f3": want "#rrggbb"`.
+ */
+export function validateStyle(style: unknown): StylePack {
+  const issues = styleIssues(style);
+  if (issues.length) throw styleIssuesError(isObject(style) && typeof style.id === "string" ? style.id : null, issues);
+  return style as StylePack;
 }
 
 export interface Palette {
