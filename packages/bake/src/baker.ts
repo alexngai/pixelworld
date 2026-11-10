@@ -37,6 +37,8 @@ export interface BakeTimings {
 
 export interface BakeOptions {
   shadows: boolean;
+  /** Meshes of the scene that cast shadows but aren't drawn (a tile's buildings, for its bare variant). */
+  hide?: ReadonlySet<MeshData>;
   /** Shadow-map texel size in render units (default 0.03 × render scale). */
   shadowTexel?: number;
 }
@@ -454,7 +456,9 @@ export class Baker {
       gl.uniform1i(u.loc("uSnowSurface"), sr?.snowSurface ?? -1);
     }
     gl.useProgram(this.g.prog);
-    this.drawScene(draws);
+    const hide = options.hide;
+    // draws are the scene's meshes, then its batches
+    this.drawScene(hide?.size ? draws.filter((_, i) => i >= scene.meshes.length || !hide.has(scene.meshes[i]!)) : draws);
     if (fields.length) {
       gl.useProgram(this.fieldG.prog);
       this.drawFields(this.fieldG.u, fields, rotation);

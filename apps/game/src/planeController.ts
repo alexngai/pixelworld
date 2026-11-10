@@ -125,7 +125,7 @@ export class PlaneController implements Controller {
     });
     const model = { group: PLANE.group, seed: PLANE.seed, size };
     this.shadowEntity = view.entities.add({ model: { ...model, part: 1 }, x: start.x, y: start.y, h: ground + PLANE.shadowLift, heading: this.state.heading });
-    this.plane = view.entities.add({ model, x: start.x, y: start.y, h: this.state.h, heading: this.state.heading, silhouette: true });
+    this.plane = view.entities.add({ model, x: start.x, y: start.y, h: this.state.h, heading: this.state.heading, silhouette: true, reveal: {} });
     this.cam.snap(start.x, start.y, (this.state.h + ground) / 2);
     if (this.follow) view.camera.setFocus(this.cam.x, this.cam.y, this.cam.h);
     this.remember();

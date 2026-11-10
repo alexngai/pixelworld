@@ -290,5 +290,5 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
     ...plugins,
   ];
-  return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty)].join("|");
+  return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare)].join("|");
 }

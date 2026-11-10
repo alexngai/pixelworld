@@ -440,7 +440,22 @@ export interface EntitySpec {
   lift?: number;
   /** Draw a dithered silhouette where the world hides it (default false). */
   silhouette?: boolean;
+  /**
+   * See through what stands in front of it (D-079), for a player among tall
+   * buildings: within `margin` render px of its sprite (default 24),
+   * buildings and landmarks in front of it are dithered away (`density` of
+   * their pixels, 0–1, default 0.75) to the ground behind. The tiles around
+   * it are baked a second time without their buildings for this. The first
+   * visible entity with `reveal` counts. Default off.
+   */
+  reveal?: { margin?: number; density?: number };
   visible?: boolean;
+}
+
+/** An entity's `reveal`, with its defaults. */
+export interface EntityReveal {
+  margin: number;
+  density: number;
 }
 
 export interface Entity {
@@ -451,6 +466,8 @@ export interface Entity {
   heading: number;
   visible: boolean;
   silhouette: boolean;
+  /** Seeing through what stands in front of it (`EntitySpec.reveal`, with its defaults), or null. */
+  reveal: EntityReveal | null;
   /** Move (cells, steps); the height defaults to the ground there, or stays where it isn't loaded. */
   moveTo(x: number, y: number, h?: number): void;
   remove(): void;

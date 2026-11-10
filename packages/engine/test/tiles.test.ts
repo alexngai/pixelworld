@@ -41,6 +41,21 @@ describe("the tile grid", () => {
   });
 });
 
+describe("tall objects", () => {
+  it("keep their tile in view as far up as they reach", () => {
+    // a view well above tile (1, 1)'s ground: only something tall there reaches it
+    const view = viewOn(48, 48);
+    const high = { ...view, top: view.top - 400 };
+    const g = new TileGrid(128, 96, 32, 1, 0, true, () => [0, 0]);
+    expect(g.inView(0, high).some((t) => key(t) === "1,1" && t.visible)).toBe(false);
+    g.addObject(40, 40, 41, 41, 60); // 60 steps, 480 px
+    expect(g.inView(0, high).some((t) => key(t) === "1,1" && t.visible)).toBe(true);
+    expect(g.maxTop).toBe(60);
+    g.addObject(0, 0, 70, 1, 0, 80); // an absolute top (a bridge deck) over three tiles
+    expect(g.maxTop).toBe(80);
+  });
+});
+
 describe("baked tiles", () => {
   it("are kept per rotation, and found under a point", () => {
     const g = grid();
@@ -136,5 +151,9 @@ describe("the bake order", () => {
     expect(bakeOrder(near, ahead, asked).map(key)).toEqual(["1,0", "2,0", "4,0", "5,0", "9,0", "3,0"]);
     // without motion or requests: exactly the view's order
     expect(bakeOrder(near, [], []).map(key)).toEqual(near.map(key));
+    // a reveal's bare tiles right after the visible ones, beside the same tiles unbare
+    const bare = [{ rotation: 0 as const, tx: 2, ty: 0, bare: true }];
+    const order = bakeOrder(near, [], [], bare);
+    expect(order.map((t) => key(t) + (t.bare ? "b" : ""))).toEqual(["1,0", "2,0", "2,0b", "3,0", "4,0"]);
   });
 });

@@ -53,6 +53,8 @@ export interface BakeTileMessage {
   rotation: Rotation;
   tx: number;
   ty: number;
+  /** Leave the placed objects out of the image (they still cast shadows): the ground behind them. */
+  bare?: boolean;
   /** The tile's cells plus a context margin, clipped to the world. */
   slice: TerrainSlice;
 }

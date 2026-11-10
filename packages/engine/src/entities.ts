@@ -1,6 +1,6 @@
 import type { Box } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
-import type { Entity, EntityList, EntityModel, EntitySpec, Sprite, SpriteDraw } from "./types";
+import type { Entity, EntityList, EntityModel, EntityReveal, EntitySpec, Sprite, SpriteDraw } from "./types";
 
 /**
  * Entities: depth-tested sprites placed in world cells and heights, baked
@@ -29,6 +29,10 @@ function modelKey(model: EntityModel, id: number): string {
   return ["group", model.group, model.seed, model.variant ?? 0, model.part ?? 0, s ? `${s.length}x${s.width}x${s.height}` : ""].join(":");
 }
 
+function withRevealDefaults(r: EntitySpec["reveal"] | null | undefined): EntityReveal | null {
+  return r ? { margin: Math.max(0, r.margin ?? 24), density: Math.min(1, Math.max(0, r.density ?? 0.75)) } : null;
+}
+
 /** The heading index nearest an angle, of n around the circle. */
 export function headingIndex(heading: number, n: number): number {
   const k = Math.round((heading / (2 * Math.PI)) * n) % n;
@@ -49,6 +53,7 @@ class EntityImpl implements Entity {
   private _heading: number;
   private _visible: boolean;
   private _silhouette: boolean;
+  private _reveal: EntityReveal | null;
   readonly headings: number;
   readonly lift: number;
 
@@ -66,6 +71,7 @@ class EntityImpl implements Entity {
     this._heading = spec.heading ?? 0;
     this._visible = spec.visible ?? true;
     this._silhouette = spec.silhouette ?? false;
+    this._reveal = withRevealDefaults(spec.reveal);
     this.headings = Math.max(1, Math.round(spec.headings ?? DEFAULT_HEADINGS));
     this.lift = spec.lift ?? 0;
   }
@@ -104,6 +110,14 @@ class EntityImpl implements Entity {
   set silhouette(v: boolean) {
     if (v === this._silhouette) return;
     this._silhouette = v;
+    this.owner.changed();
+  }
+
+  get reveal(): EntityReveal | null {
+    return this._reveal;
+  }
+  set reveal(v: EntityReveal | null) {
+    this._reveal = withRevealDefaults(v);
     this.owner.changed();
   }
 
@@ -219,7 +233,7 @@ export class Entities implements EntityList {
         continue;
       }
       const p = project(e.x, e.y, e.h + e.lift);
-      list.push({ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: e.silhouette });
+      list.push({ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: e.silhouette, reveal: e.reveal });
     }
     return { list, complete };
   }
