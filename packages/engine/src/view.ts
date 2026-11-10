@@ -237,7 +237,8 @@ class View implements WorldView {
         const bytes = res.image.width * res.image.height * 4;
         this.gpuBytes += bytes;
         this.gpu.set(res.key, { img, bytes, lastDrawn: this.frameNo });
-        if (!res.fromCache && this.cache) void this.cache.put(this.cacheKey(res), res.image);
+        // a tile with missing-model markers isn't kept: a reload bakes it again and reports why (D-072)
+        if (!res.fromCache && !res.modelsFailed && this.cache) void this.cache.put(this.cacheKey(res), res.image);
       } else {
         this.gpu.set(res.key, { img: null, bytes: 0, lastDrawn: this.frameNo });
       }

@@ -522,5 +522,13 @@ test.describe("Failures (D-072)", () => {
     let red = 0;
     for (let i = 0; i < data.length; i += 4) if (marker.has(hex(data, i))) red++;
     expect(red).toBeGreaterThan(500);
+    // with the tile cache on, a tile with markers isn't kept: a reload bakes it again and says why
+    await page.goto("/?hud=0&w=320&h=180&traffic=0&fog=0&world=/sf/&marker=0&zoom=3&rot=0&at=-122.40583,37.80237&plugins=0");
+    await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const cached = (await page.evaluate(() => window.__pixelworld!.stats())) as { tilesBaked: number; cacheWrites: number; cache: string };
+    expect(cached.cache).toBe("indexeddb");
+    expect(cached.tilesBaked).toBeGreaterThan(0);
+    expect(cached.cacheWrites).toBe(0);
   });
 });

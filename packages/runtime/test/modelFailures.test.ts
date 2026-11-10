@@ -108,9 +108,14 @@ describe("BakeService with failed models", () => {
     svc.onError = (m) => errors.push(m);
     svc.failures.unloaded = [];
     const tiles: string[] = [];
-    svc.onTile = (t) => tiles.push(t.key);
+    const failedPerTile: number[] = [];
+    svc.onTile = (t) => {
+      tiles.push(t.key);
+      failedPerTile.push(t.modelsFailed); // the view keeps no tile with markers in its cache
+    };
     svc.want([0, 1, 2].map((tx) => ({ rotation: 0, tx, ty: 0 })));
     await vi.waitFor(() => expect(tiles).toHaveLength(3));
+    expect(failedPerTile).toEqual([2, 2, 0]);
     expect(svc.failures.count).toBe(3); // two rowhouses and one adobe (in both tiles' margins)
     expect(errors).toHaveLength(2);
     expect(errors[0]).toMatch(/^model failed: building\.residential at cell 10,431, seed 1234, .*'rowhouse' comes with the plugin @pixelworlds\/city-sf/);

@@ -25,6 +25,8 @@ export class BakeHost {
   private baker: Baker;
   private init: InitMessage | null = null;
   private meshCache = new Map<string, BakeScene>();
+  /** Models that failed to generate in a cached scene (D-072). */
+  private readonly sceneFailures = new WeakMap<BakeScene, ModelFailure[]>();
   private static readonly MESH_CACHE = 6;
 
   constructor(
@@ -97,7 +99,6 @@ export class BakeHost {
     const key = `${msg.tx},${msg.ty}`;
     const t0 = performance.now();
     let scene = this.meshCache.get(key);
-    let failures: ModelFailure[] = []; // reported when the tile's models are built, not again per rotation
     if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
       const world = { width: init.worldWidth, height: init.worldHeight };
@@ -117,7 +118,7 @@ export class BakeHost {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
         scene.meshes.push(objects.merged);
         scene.batches.push(...objects.batches);
-        failures = objects.failures;
+        if (objects.failures.length) this.sceneFailures.set(scene, objects.failures);
       }
       const s = init.renderScale ?? 1;
       if (s !== 1) {
@@ -142,7 +143,8 @@ export class BakeHost {
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
       (scene.fields ?? []).reduce((n, f) => n + f.width * f.height * f.k * f.k * 18, 0);
-    this.reply(msg.id, res, meshMs, vertices, failures);
+    // every bake of the tile (each rotation) reports its failed models: such a tile isn't kept in the persistent cache
+    this.reply(msg.id, res, meshMs, vertices, this.sceneFailures.get(scene));
   }
 
   /**

@@ -30,6 +30,8 @@ export interface TileResult extends TileRequest {
   image: BakedImage | null;
   stats: BakeStats | null;
   fromCache: boolean;
+  /** Models of the tile that failed to generate and are drawn as markers (D-072): such a tile isn't worth keeping. */
+  modelsFailed: number;
 }
 
 export interface BakeTotals {
@@ -285,10 +287,10 @@ export class BakeService {
       return;
     }
     if (msg.failures) this.failures.add(msg.failures);
-    this.finish(msg.id, msg.image, msg.stats, false);
+    this.finish(msg.id, msg.image, msg.stats, false, msg.failures?.length ?? 0);
   }
 
-  private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean): void {
+  private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean, modelsFailed = 0): void {
     this.busy = false;
     const sprite = this.spriteJobs.get(id);
     if (sprite) {
@@ -305,7 +307,7 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache });
+      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache, modelsFailed });
     }
     this.pump();
   }
