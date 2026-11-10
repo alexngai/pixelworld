@@ -7,6 +7,7 @@ import {
   type TileBake,
 } from "@pixelworlds/engine";
 import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
+import { stylePack } from "./styles";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
 import { cityPlugin } from "@pixelworlds/city-sf";
 import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
@@ -19,16 +20,7 @@ import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
  * controller come from `@pixelworlds/engine` and `@pixelworlds/sim`.
  */
 
-// Every style pack in the repo, by id; a world names its pack in the manifest (`style`).
-const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<
-  string,
-  object
->;
-function stylePack(id: string): object {
-  const json = STYLE_PACKS[`../../../worlds/_styles/${id}/style.json`];
-  if (!json) throw new Error(`no style pack ${id}`);
-  return json;
-}
+// Every style pack in the repo, by id (styles.ts); a world names its pack in the manifest (`style`).
 
 // The plugins the viewer can load, by name (D-071). A style pack names the ones its
 // generators come from ("plugins"), and the view loads those: San Francisco's city pack
@@ -187,7 +179,8 @@ async function main() {
   const view = await createWorldView({
     canvas,
     worldUrl,
-    style: (id) => stylePack(params.get("style") ?? id),
+    // ?style=<id> draws the world with another pack, merged with its parents first
+    style: params.has("style") ? await stylePack(params.get("style")!) : stylePack,
     size,
     cache: params.get("cache") !== "0",
     objects: params.get("objects") !== "0",
@@ -447,4 +440,5 @@ main().catch((e: unknown) => {
   console.error(e);
   const hud = document.getElementById("hud");
   if (hud) hud.textContent = `error: ${String(e)}`;
+  hud?.classList.add("error"); // wrapped: a style pack's problems run to several long lines
 });

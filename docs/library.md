@@ -34,7 +34,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
   - **San Francisco's facts (DataSF)** are a separate package, the city pack `pixelworld-city-sf` in `pipeline/plugins/`.
   - **Still built in:** stages, and the Overture, canopy, lidar and transit sources.
 - **Generator plugins (TypeScript):** the generator registry is public, and plugins add generators to it, in the bake worker and on the main thread (§8, [plugins.md](plugins.md) §9). San Francisco's facades, towers and Chinatown are the city pack's browser half, the package `@pixelworlds/city-sf` in `packages/city-sf`.
-- **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON without a schema.
+- **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON checked against a JSON Schema (`packages/style/schema/`, D-075).
 - **Licences:** MIT OR Apache-2.0 for the code, CC BY 4.0 for the style packs, ODbL for the world packages (§6, D2).
 
 ## 3. Target shape
@@ -100,7 +100,7 @@ The engine owns streaming, baking, compositing and the frame loop. It owns no in
 | **3D city models** (pipeline) | footprints, heights and roof shapes from CityJSON or CityGML | entry points | none yet (M5's tier-1 regions) |
 | **Stage hooks** (pipeline) | code run at named points of a build | entry points (`pixelworld.stages`), reserved | none yet |
 | **Generators** | **built:** `(ctx) => VoxelModel` for a semantic group | `registerGenerators(record, { source })`, or a plugin (`definePlugin`) loaded with `createWorldView({ plugins })` in the bake worker and on the main thread ([plugins.md](plugins.md) §9); a style pack maps groups to them and names the plugins it needs | built in: buildings, landmarks, trees, vehicles; San Francisco's facades, towers and Chinatown in the city pack `@pixelworlds/city-sf` |
-| **Style packs** | palette ramps, surfaces, materials, assets, night, atmosphere | data packages validated by a JSON Schema | desert-southwest, bay-area |
+| **Style packs** | palette ramps, surfaces, materials, assets, night, atmosphere | JSON files checked against a JSON Schema (D-075), named by world manifests; `extends` for variants. Not yet published as data packages | desert-southwest, bay-area |
 | **Package layers** | an optional file in the world package, written by its own pipeline command | format registry; pipeline command | `routes` (traffic) |
 | **Runtime layers** | `update(dt)`, `sprites(view)`, an optional screen pass, enable/disable, `serialize()` | `view.layers.add(...)` | traffic, fog |
 | **Entities** | a model (generator, seed, size) or boxes, baked per heading, depth-tested | `view.entities` | the rover, vehicles |
@@ -120,7 +120,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 ### 3.5 Publishing
 
 - **npm, as built:** one package, `pixelworld` (D3), in `packages/pixelworld`. How to use it: [npm.md](npm.md).
-  - **Entry points:** `pixelworld/engine`, `/traffic` (`@pixelworlds/sim`), `/format` (`@pixelworlds/world-format`), `/grid`, `/style` and `/generators`. Each has ESM, declarations and source maps. `pixelworld/bake.worker.js` is exported for copying the worker.
+  - **Entry points:** `pixelworld/engine`, `/traffic` (`@pixelworlds/sim`), `/format` (`@pixelworlds/world-format`), `/grid`, `/style` and `/generators`. Each has ESM, declarations and source maps. `pixelworld/bake.worker.js` is exported for copying the worker, and `pixelworld/style-pack.v1.schema.json` for editors (D-075).
   - **Workspace and tarball:** the package's `src/` re-exports the private workspace packages, which stay TypeScript sources without a build. In the workspace its `exports` point at `src/`, so the dev flow is unchanged; `publishConfig.exports` points the packed manifest at `dist/` (pnpm applies it, so publishing is with pnpm).
   - **The build (tsup over esbuild):** one ESM build of all six entry points with code splitting, so entry points share their common code and module state (one generator registry); the private packages bundled in, so the package has no dependencies; their declarations bundled per entry point, with shared declaration chunks. Not minified: consumers' bundlers minify. tsup was chosen over Vite's library mode (which rewrites `new URL(…)` into an expression bundlers can't follow) and over `tsc` (no bundling, and the private packages would have to be published).
   - **The bake worker:** a second build, one self-contained file, `dist/bake.worker.js`, in the same directory as the engine's chunk. The engine creates it with a literal `new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })`: the build rewrites only the source's `./bake.worker.ts`, and checks the literal survived. Its syntax and names are minified, not its whitespace: esbuild drops comments with whitespace, and a dynamic `import(url)` (plugins) needs `/* webpackIgnore: true */`, or webpack turns it into a context module of `dist/` (tried: a warning, an extra chunk, and a failing import); the build fails on a dynamic import without it. Vite (dev and build), webpack 5 and plain ESM resolve it without configuration. Browsers start workers only from the page's origin, so for a CDN or other setups `createWorldView({ workerUrl })` loads it from elsewhere (a copy, or a `blob:` URL that imports it).
@@ -153,6 +153,8 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
 4. **Entities (done for the rover):** today's sprite paths (the rover, vehicles) unify into one entity API that bakes models per heading. Traffic still bakes its own vehicle sprites, in one rotation for all four (§7).
 5. **Generator registry (done, §8):** made public (`registerGenerators`, `listGenerators`, plugins). San Francisco's facades, towers and Chinatown moved to the city pack's plugin package, `@pixelworlds/city-sf`.
 6. **Style schema:** a JSON Schema for style packs, and validation with useful errors. Packs become data packages.
+   - **Done (D-075):** the schema (versioned, exported for editors), validation with paths and "did you mean", generator names checked when a view starts, `extends`.
+   - **Not yet:** packs as data packages.
 7. **Pipeline plugins:** source and facts adapters behind entry points. DataSF moves out as a plugin. A Python API (`pixelworld.build(spec)`) sits beside the CLI.
    - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
    - **Not yet:** Overture, canopy, lidar and transit as adapters; 3D city models; stage hooks.
@@ -384,7 +386,7 @@ Refactor 5 of §4 and the browser half of D4: generators are found by name in a 
 
 ### 8.1 The registry
 
-`@pixelworlds/generators`: `registerGenerators(record, { source, replace })`, `registerGenerator`, `hasGenerator`, `getGenerator`, `listGenerators` and `unregisterGenerators`. It starts with the built-ins (`builtins.ts`: everything every region uses) and holds what plugins add, one registry per realm (the main thread, each bake worker). A style asking for a generator that isn't registered fails that model's bake with a `MissingGeneratorError` naming the generator, the group and, for this repository's plugins, the plugin to load.
+`@pixelworlds/generators`: `registerGenerators(record, { source, replace })`, `registerGenerator`, `hasGenerator`, `getGenerator`, `listGenerators` and `unregisterGenerators`. It starts with the built-ins (`builtins.ts`: everything every region uses) and holds what plugins add, one registry per realm (the main thread, each bake worker). A style asking for a generator that isn't registered fails that model's bake with a `MissingGeneratorError` naming the generator, the group and, for this repository's plugins, the plugin to load. A view checks every asset's generator once its plugins are registered, and doesn't start while one is missing, unless a plugin the style names wasn't loaded (D-075).
 
 ### 8.2 Plugins
 

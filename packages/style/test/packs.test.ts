@@ -1,9 +1,18 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { INDEX_SILHOUETTE, buildPalette, paletteIndex, validateStyle, type StylePack } from "../src/index";
+import {
+  INDEX_SILHOUETTE,
+  STYLE_SCHEMA_FILE,
+  buildPalette,
+  paletteIndex,
+  styleIssues,
+  validateStyle,
+  type StylePack,
+} from "../src/index";
 
 const ROOT = join(__dirname, "../../../worlds/_styles");
+const SCHEMA = resolve(__dirname, "../schema", STYLE_SCHEMA_FILE);
 // every directory is a pack (the licence file beside them isn't)
 const packs = readdirSync(ROOT, { withFileTypes: true })
   .filter((e) => e.isDirectory())
@@ -11,6 +20,14 @@ const packs = readdirSync(ROOT, { withFileTypes: true })
 
 describe("every style pack", () => {
   it("is found", () => expect(packs.map(([id]) => id)).toEqual(expect.arrayContaining(["bay-area", "desert-southwest"])));
+
+  for (const [id, json] of packs)
+    it(`${id}: names the schema, for editors, and has no problems against it`, () => {
+      expect(typeof json.$schema).toBe("string");
+      expect(resolve(ROOT, id, json.$schema as string)).toBe(SCHEMA);
+      expect(existsSync(SCHEMA)).toBe(true);
+      expect(styleIssues(json)).toEqual([]);
+    });
 
   for (const [id, json] of packs)
     it(`${id}: validates, fits the palette and has its id, the marker ramp and a night palette`, () => {

@@ -66,6 +66,7 @@
         "types": "./dist/bake.worker.d.ts",
         "default": "./dist/bake.worker.js"
       },
+      "./style-pack.v1.schema.json": "./dist/style-pack.v1.schema.json",
       "./package.json": "./package.json"
     }
   },

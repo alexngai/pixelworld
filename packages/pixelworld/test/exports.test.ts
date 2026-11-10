@@ -28,7 +28,10 @@ describe("pixelworld's exports", () => {
       expect(Object.keys(pub[k] as object)[0]).toBe("types");
     }
     expect(pub["./bake.worker.js"]).toEqual({ types: "./dist/bake.worker.d.ts", default: "./dist/bake.worker.js" });
-    expect(Object.keys(pub).sort()).toEqual([...subpaths, "./bake.worker.js", "./package.json"].sort());
+    // the style pack schema, for editors (D-075): built.mjs copies it from packages/style
+    expect(pub["./style-pack.v1.schema.json"]).toBe("./dist/style-pack.v1.schema.json");
+    expect(existsSync(new URL("../../style/schema/style-pack.v1.schema.json", import.meta.url))).toBe(true);
+    expect(Object.keys(pub).sort()).toEqual([...subpaths, "./bake.worker.js", "./style-pack.v1.schema.json", "./package.json"].sort());
     expect(pkg.sideEffects).toEqual(["./dist/bake.worker.js"]);
     expect(pkg.files).toContain("dist");
   });

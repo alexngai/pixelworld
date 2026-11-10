@@ -19,6 +19,12 @@ export class VoxelModel {
   }
 
   material(rampId: number): number {
+    // `ctx.ramps(role)[0]` of a role the asset doesn't have would otherwise draw in no colour at all
+    if (!(Number.isInteger(rampId) && rampId >= 0))
+      throw new Error(
+        `VoxelModel.material(${rampId}): not a ramp id. Was it ctx.ramps(role)[0] for a role the style asset doesn't have? ` +
+          "ramps() is empty then; ramp(role) throws, naming the asset and the role.",
+      );
     let i = this.materials.indexOf(rampId, 1);
     if (i < 0) {
       i = this.materials.length;

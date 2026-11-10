@@ -1,5 +1,6 @@
 import type { PluginDescriptor } from "@pixelworlds/engine";
 import { cityPlugin } from "@pixelworlds/city-sf";
+import { StyleError, parseStyleJson, resolveStyleExtends, suggest } from "@pixelworlds/style";
 import type { CarInput } from "./car";
 import { Game } from "./game";
 import { blocksCar } from "./ground";
@@ -18,12 +19,15 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  * scripted run in real time, then its frame times).
  */
 
-// Every style pack in the repo, by id; a world names its pack in the manifest.
-const STYLE_PACKS = import.meta.glob("../../../worlds/_styles/*/style.json", { eager: true, import: "default" }) as Record<string, object>;
-function stylePack(id: string): object {
-  const json = STYLE_PACKS[`../../../worlds/_styles/${id}/style.json`];
-  if (!json) throw new Error(`no style pack ${id}`);
-  return json;
+// Every style pack in the repo, by id; a world names its pack in the manifest. Read as
+// text only when a world needs it and parsed here (D-075), so a broken pack fails only
+// the worlds that use it, with its file, line and column.
+const STYLE_FILES = import.meta.glob<string>("../../../worlds/_styles/*/style.json", { query: "?raw", import: "default" });
+const STYLE_IDS = Object.keys(STYLE_FILES).map((path) => path.split("/").at(-2)!);
+async function stylePack(id: string): Promise<object> {
+  const file = STYLE_FILES[`../../../worlds/_styles/${id}/style.json`];
+  if (!file) throw new StyleError(`no style pack "${id}"${suggest(id, STYLE_IDS)}; there are ${STYLE_IDS.join(", ")} (worlds/_styles/)`, { pack: id });
+  return parseStyleJson(await file(), `worlds/_styles/${id}/style.json`) as object;
 }
 
 // The city packs the game can load, by name (D-071); a world's style pack names the ones it needs.
@@ -90,7 +94,8 @@ async function main() {
     canvas,
     worldUrl: params.get("world") ?? "/southwest/",
     start: Number.isFinite(slon) && Number.isFinite(slat) ? { lon: slon!, lat: slat! } : null,
-    style: (id) => stylePack(params.get("style") ?? id),
+    // ?style= replaces the world's pack, with its own `extends` merged in here
+    style: params.has("style") ? ((await resolveStyleExtends(await stylePack(params.get("style")!), stylePack)) as object) : stylePack,
     plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
     traffic: {
       enabled: params.get("traffic") !== "0",

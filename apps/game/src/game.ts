@@ -3,6 +3,7 @@ import {
   fogLayer,
   type Controller,
   type PluginDescriptor,
+  type StyleSource,
   type WorldManifest,
   type WorldView,
 } from "@pixelworlds/engine";
@@ -28,8 +29,8 @@ export interface GameOptions {
   worldUrl: string;
   /** Start here instead of the world's default start (lon/lat). */
   start?: { lon: number; lat: number } | null;
-  /** Style packs by id. */
-  style: (id: string) => object;
+  /** The style pack, or a resolver for the id the world names (and the ids it `extends`). */
+  style: StyleSource;
   /** Generator plugins (city packs, D-071), or a choice from the names the world's style pack asks for. */
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]);
   traffic?: { enabled?: boolean; seed?: number; paused?: boolean; density?: number };

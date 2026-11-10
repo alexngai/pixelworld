@@ -9,7 +9,17 @@ import {
   type InitMessage,
   type TileRequest,
 } from "@pixelworlds/runtime";
-import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
+import {
+  StyleError,
+  buildPalette,
+  materialTables,
+  resolveStyleExtends,
+  styleIssues,
+  styleIssuesError,
+  validateStyle,
+  type Palette,
+  type StylePack,
+} from "@pixelworlds/style";
 import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworlds/world-format";
 import { pluginsKey } from "./plugins";
 import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
@@ -46,8 +56,38 @@ export interface LoadedWorld {
   scaleOverridden: boolean;
 }
 
-async function resolveStyle(source: StyleSource, id: string): Promise<object> {
-  return typeof source === "function" ? await source(id) : source;
+/**
+ * The world's style pack (D-075): the one given, or the resolver's for the id
+ * the manifest names, with its `extends` merged in (parents from the resolver)
+ * and checked. Errors name the pack; a resolver that answers with another pack
+ * is warned about.
+ */
+export async function resolveStyle(source: StyleSource, id: string): Promise<object> {
+  const load = async (want: string): Promise<unknown> => {
+    if (typeof source !== "function")
+      throw new StyleError(
+        `createWorldView's style is a pack, not a resolver, so it can't load "${want}": ` +
+          "pass a resolver, or the pack with its parents merged in (resolveStyleExtends)",
+      );
+    try {
+      return await source(want);
+    } catch (e) {
+      if (e instanceof StyleError) throw e; // it says where it is
+      throw new StyleError(`style pack "${want}" (from your style resolver): ${e instanceof Error ? e.message : String(e)}`, {
+        pack: want,
+        cause: e,
+      });
+    }
+  };
+  const given = typeof source === "function" ? await load(id) : source;
+  if (given === null || given === undefined)
+    throw new StyleError(`style pack "${id}": your style resolver has no pack for it (it returned ${String(given)})`, { pack: id });
+  const pack = (await resolveStyleExtends(given, load)) as Record<string, unknown>;
+  const issues = styleIssues(pack);
+  if (issues.length) throw styleIssuesError(typeof pack.id === "string" ? pack.id : id, issues);
+  if (typeof source === "function" && pack.id !== id)
+    console.warn(`the world names the style pack "${id}", but the style resolver gave "${String(pack.id)}": drawing it with that one`);
+  return pack;
 }
 
 export async function loadWorld(opts: WorldViewOptions): Promise<LoadedWorld> {

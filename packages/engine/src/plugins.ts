@@ -1,5 +1,6 @@
-import { loadPlugin, registerPlugin, type PluginDescriptor } from "@pixelworlds/generators";
+import { KNOWN_PLUGIN_GENERATORS, listGenerators, loadPlugin, registerPlugin, type PluginDescriptor } from "@pixelworlds/generators";
 import type { PluginRef } from "@pixelworlds/runtime";
+import { generatorIssues, styleIssuesError, type StylePack } from "@pixelworlds/style";
 import type { WorldViewOptions } from "./types";
 
 /**
@@ -42,6 +43,19 @@ export function viewPlugins(option: WorldViewOptions["plugins"], styleJson: obje
 /** Register the plugins on this thread (entity models, the inline baker): the plugin itself, or its module. */
 export async function registerOnMainThread(p: ViewPlugins): Promise<void> {
   await Promise.all(p.descriptors.map((d, i) => (d.plugin ? registerPlugin(d.plugin) : loadPlugin(p.refs[i]!))));
+}
+
+/**
+ * Check the style's asset generators against this realm's registry once its
+ * plugins are registered (D-075): a name nobody registered is a typo, or a
+ * plugin the pack doesn't name. Skipped while a plugin the pack names isn't
+ * loaded (warned about above), since its generators can't be told from typos.
+ */
+export function checkGenerators(style: StylePack, styleJson: object, p: ViewPlugins): void {
+  if (stylePlugins(styleJson).some((n) => !p.descriptors.some((d) => d.name === n))) return;
+  const registered = listGenerators().map((g) => g.name);
+  const issues = generatorIssues(style, registered, KNOWN_PLUGIN_GENERATORS);
+  if (issues.length) throw styleIssuesError(style.id, issues);
 }
 
 /** The plugins' part of the tile cache key: names and versions, or nothing without plugins. */

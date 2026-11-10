@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SUBPATHS, WORKER_LITERAL, checkPackage, sizes } from "./pack-check.mjs";
+import { SCHEMAS, SUBPATHS, WORKER_LITERAL, checkPackage, sizes } from "./pack-check.mjs";
 
 /** A tarball's files as pnpm would pack a good build of packages/pixelworld. */
 function goodPackage() {
@@ -7,6 +7,7 @@ function goodPackage() {
     SUBPATHS.map((s) => [`./${s}`, { types: `./dist/${s}.d.ts`, import: `./dist/${s}.js` }]),
   );
   exports["./bake.worker.js"] = { types: "./dist/bake.worker.d.ts", default: "./dist/bake.worker.js" };
+  for (const f of SCHEMAS) exports[`./${f}`] = `./dist/${f}`;
   const pkg = {
     name: "pixelworld",
     version: "0.1.0",
@@ -28,6 +29,7 @@ function goodPackage() {
     ["dist/bake.worker.js", Buffer.from("self.onmessage = () => {};")],
     ["dist/chunk-ABC.js", Buffer.from(`export const x = 1;`)],
   ]);
+  for (const f of SCHEMAS) files.set(`dist/${f}`, Buffer.from("{}"));
   for (const s of SUBPATHS) {
     const body = s === "engine" ? `export function make() { return ${WORKER_LITERAL}; }` : `export * from "./chunk-ABC.js";`;
     files.set(`dist/${s}.js`, Buffer.from(body));
@@ -78,6 +80,16 @@ describe("pack-check tool", () => {
     const problems = checkPackage(files);
     expect(problems).toContain("the worker literal is in 0 files, not one");
     expect(problems).toContain("dist/engine.js loads bake.worker.ts");
+  });
+
+  it("requires the style pack schema, exported", () => {
+    const { files, pkg } = goodPackage();
+    const bad = withManifest(files, { ...pkg, exports: { ...pkg.exports, "./style-pack.v1.schema.json": undefined } });
+    bad.delete("dist/style-pack.v1.schema.json");
+    expect(checkPackage(bad)).toEqual([
+      'no export "./style-pack.v1.schema.json" of dist/style-pack.v1.schema.json',
+      "missing dist/style-pack.v1.schema.json",
+    ]);
   });
 
   it("measures sizes against the budgets", () => {

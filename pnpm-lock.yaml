@@ -52,6 +52,9 @@ importers:
       '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../../packages/sim
+      '@pixelworlds/style':
+        specifier: workspace:*
+        version: link:../../packages/style
 
   apps/web:
     dependencies:
