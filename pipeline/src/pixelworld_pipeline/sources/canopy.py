@@ -14,7 +14,7 @@ import json
 import numpy as np
 from rasterio.warp import transform as transform_points
 
-from .http import CACHE_ROOT
+from .http import CACHE_ROOT, SSL_CONTEXT
 
 BASE = "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/"
 ATTRIBUTION = {
@@ -32,7 +32,7 @@ def _index() -> list[dict]:
         req = urllib.request.Request(
             BASE + "tiles.geojson", headers={"User-Agent": "pixelworld-pipeline"}
         )
-        with urllib.request.urlopen(req, timeout=300) as r:
+        with urllib.request.urlopen(req, timeout=300, context=SSL_CONTEXT) as r:
             data = r.read()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)

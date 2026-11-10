@@ -167,6 +167,7 @@ def features(
             f["use"] = use_group(fact.get("use", ""))
             f["hood"] = fact.get("hood") or ""
             f["class"] = str(fact.get("class") or "")
+            f["material"] = str(fact.get("material") or "")
         roof = _roof(inst, fact)
         if roof:
             f["roof"] = roof
@@ -190,6 +191,7 @@ def features(
             f["use"] = use_group(fact.get("use", ""))
             f["hood"] = fact.get("hood") or ""
             f["class"] = str(fact.get("class") or "")
+            f["material"] = str(fact.get("material") or "")
         roof = _roof(instances[i], fact)
         if roof:
             f["roof"] = roof
@@ -236,6 +238,10 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     if "classes" in rule and not class_matches(rule["classes"], f.get("class")):
         return False
     if "roofs" in rule and f.get("roof", "") not in [str(r) for r in rule["roofs"]]:
+        return False
+    if "materials" in rule and str(f.get("material") or "").casefold() not in {
+        str(m).casefold() for m in rule["materials"]
+    }:
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),

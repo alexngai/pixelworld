@@ -5,6 +5,7 @@ version = "0.0.0"
 description = "Offline geo pipeline for Pixelworld: real data -> gridded world packages."
 requires-python = ">=3.12"
 dependencies = [
+  "certifi>=2024.2.2",
   "laspy>=2.7.0",
   "lazrs>=0.8.2",
   "numpy>=2.0",
@@ -23,8 +24,10 @@ dev = [
   "pytest>=8",
   "ruff>=0.6",
 ]
-# The city packs this repository's worlds need (worlds/sf names `facts: datasf`).
+# The city packs this repository's worlds need (worlds/sf names `facts: datasf`,
+# worlds/nyc `facts: pluto`).
 plugins = [
+  "pixelworld-city-nyc",
   "pixelworld-city-sf",
 ]
 
@@ -37,6 +40,7 @@ default-groups = ["dev", "plugins"]
 members = ["plugins/*"]
 
 [tool.uv.sources]
+pixelworld-city-nyc = { workspace = true }
 pixelworld-city-sf = { workspace = true }
 
 [build-system]

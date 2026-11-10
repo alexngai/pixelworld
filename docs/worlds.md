@@ -668,6 +668,7 @@ Other keys here are plugin options.
 | `hoods` | list of strings | — | Neighbourhood names (from the facts source). |
 | `classes` | list of strings | — | Class codes: exact, or a prefix ending in `*`. |
 | `roofs` | list of strings | — | Roof shapes. |
+| `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |

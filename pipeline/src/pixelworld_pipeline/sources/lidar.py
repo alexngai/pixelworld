@@ -21,7 +21,7 @@ import numpy as np
 from rasterio.transform import Affine
 from rasterio.warp import transform as transform_points
 
-from .http import CACHE_ROOT
+from .http import CACHE_ROOT, SSL_CONTEXT
 
 BUCKET = "https://usgs-lidar-public.s3.amazonaws.com/"
 GROUND = 2
@@ -34,7 +34,7 @@ def _get(url: str, path: Path) -> bytes:
     if path.exists():
         return path.read_bytes()
     req = urllib.request.Request(url, headers={"User-Agent": "pixelworld-pipeline"})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with urllib.request.urlopen(req, timeout=120, context=SSL_CONTEXT) as r:
         data = r.read()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
