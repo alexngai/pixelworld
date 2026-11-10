@@ -421,7 +421,7 @@ A variant names its parent and only what changes:
 
 ![New York's fabric from the model preview, 3×: brownstones, tenements, cast-iron lofts and prewar blocks, three seeds each in rotations 0 and 3, and one at night](images/nyc-fabric.png)
 
-![New York's landmarks, 2×: the stone and the steel suspension bridges, the tapered tower and the setback tower, by day and night](images/nyc-landmarks.png)
+![New York's landmarks, 2×: the stone and the steel suspension bridges, the tapered tower on the diagonal and the gothic setback tower, by day and night](images/nyc-landmarks.png)
 
 A full pack (`worlds/_styles/new-york/style.json`), laid out like `bay-area` but with its own 41 ramps and no fog. It names two plugins, `["@pixelworlds/city-sf", "@pixelworlds/city-nyc"]`: San Francisco's for `block`, `decoTower`, `sfTower` and `lanterns`, New York's for the four generators below (`packages/city-nyc`).
 
@@ -450,10 +450,10 @@ A full pack (`worlds/_styles/new-york/style.json`), laid out like `bay-area` but
 
 | Group | Generator | Landmark |
 |---|---|---|
-| `landmark.bridge.suspension` | `suspensionBridge` (portal towers, two struts, massive legs) | the Brooklyn Bridge: stone towers and anchorages, a steel truss |
-| `landmark.bridge.suspension.steel` | `suspensionBridge` (braced towers, side-braced, double deck) | the Manhattan Bridge, blue-grey steel |
-| `landmark.tower.obelisk` | `obeliskTower` | One World Trade Center: a tapering glass tower with a lattice crown |
-| `landmark.tower.setback` | `decoTower` (two setbacks, a lantern crown) | the Woolworth Building: buff terracotta with gold trim and a copper cap |
+| `landmark.bridge.suspension` | `suspensionBridge` (portal towers, two struts, massive legs) | the Brooklyn and Manhattan Bridges: stone towers and anchorages, a steel truss |
+| `landmark.bridge.suspension.steel` | `suspensionBridge` (braced towers, side-braced, double deck) | a steel suspension bridge in blue-grey, for the Manhattan Bridge where a spec wants it apart |
+| `landmark.tower.obelisk.diagonal` | `obeliskTower` (turned 45°) | One World Trade Center: a tapering glass tower with a lattice crown; `landmark.tower.obelisk` is the same, square to the grid |
+| `landmark.tower.gothic` | `decoTower` (two setbacks, a lantern crown) | the Woolworth Building: pale terracotta with gold trim, and a lantern under a pointed copper cap with a finial |
 | `landmark.hall.domed` | `domedHall` | City Hall: limestone, with a copper dome |
 
 **Street and traffic:** every `prop.*` and `vehicle.*` group that `bay-area` has, in New York's palette. Street lights and signals are grey, with yellow signal heads. Yellow cabs are commoner than the generator's own share: the `taxi` paint is listed twice among the `paint.*` variants, and the player's car is a cab. Buses are white with a blue band. One ferry livery is orange.

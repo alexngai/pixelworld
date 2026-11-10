@@ -340,7 +340,12 @@
       "ramps": { "structure": "tower-white", "window": "curtain-glass" },
       "params": { "base": 0.15, "top": 0.55, "corner": 0.12, "crown": 0.06 }
     },
-    "landmark.tower.setback": {
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "curtain-glass" },
+      "params": { "base": 0.15, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1 }
+    },
+    "landmark.tower.gothic": {
       "generator": "decoTower",
       "ramps": {
         "wall": "terracotta", "spandrel": "limestone", "trim": "gold", "cap": "verdigris", "roof": "roof-flat", "window": "glass",
