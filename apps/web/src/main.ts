@@ -9,6 +9,7 @@ import {
 import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
 import { cityPlugin } from "@pixelworlds/city-sf";
+import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
 
 /**
  * The reference viewer (`@pixelworlds/viewer`), a client of the engine: the
@@ -75,6 +76,8 @@ interface PixelworldDebug {
   setZoom: (zoom: number) => void;
   /** Every tile baked so far, with its timings: only with bench=1 (apps/web/bench.html), else empty. */
   tileBakes: () => TileBake[];
+  /** What is under a canvas point (CSS px): ramp and shade, ground, placed object, generator, landmark (Alt+click logs it). */
+  inspect: (x: number, y: number) => Inspection;
 }
 declare global {
   interface Window {
@@ -379,6 +382,8 @@ async function main() {
     updateHud();
   });
 
+  const inspect = inspector(view);
+  inspectOnAltClick(canvas, inspect);
   window.__pixelworld = {
     ready: () => view.ready(),
     stats,
@@ -434,6 +439,7 @@ async function main() {
       view.invalidate();
     },
     tileBakes: () => view.tileBakes(),
+    inspect,
   };
 }
 

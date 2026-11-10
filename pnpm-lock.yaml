@@ -55,15 +55,27 @@ importers:
 
   apps/web:
     dependencies:
+      '@pixelworlds/bake':
+        specifier: workspace:*
+        version: link:../../packages/bake
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@pixelworlds/generators':
+        specifier: workspace:*
+        version: link:../../packages/generators
+      '@pixelworlds/grid':
+        specifier: workspace:*
+        version: link:../../packages/grid
       '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../../packages/sim
+      '@pixelworlds/style':
+        specifier: workspace:*
+        version: link:../../packages/style
       '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../../packages/world-format

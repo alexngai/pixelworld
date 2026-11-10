@@ -36,12 +36,12 @@ const hex = (d: number[], i: number) =>
 const M0 = "world=/grand-canyon-m0/";
 
 test.describe("Grand Canyon M0 slice", () => {
-  test("rotation 0, 1× overview matches golden", async ({ page }) => {
+  test("rotation 0, 1× overview matches golden", { tag: "@smoke" }, async ({ page }) => {
     await open(page, M0 + "&zoom=1&rot=0&fx=64&fy=70&rover=71,100");
     await expect(page.locator("#view")).toHaveScreenshot("overview-r0.png");
   });
 
-  test("rotation 2, 2× South Rim strata matches golden", async ({ page }) => {
+  test("rotation 2, 2× South Rim strata matches golden", { tag: "@smoke" }, async ({ page }) => {
     await open(page, M0 + "&zoom=2&rot=2&rover=71,100");
     await expect(page.locator("#view")).toHaveScreenshot("south-rim-r2.png");
   });
@@ -99,7 +99,7 @@ test.describe("US Southwest (M1)", () => {
   const stats = (page: Page) =>
     page.evaluate(() => window.__pixelworld!.stats()) as Promise<unknown> as Promise<Stats>;
 
-  test("Las Vegas at 2× matches golden (roads, urban blocks)", async ({ page }) => {
+  test("Las Vegas at 2× matches golden (roads, urban blocks)", { tag: "@smoke" }, async ({ page }) => {
     await open(page, "zoom=2&rot=0");
     await expect(page.locator("#view")).toHaveScreenshot("southwest-vegas-r0.png");
   });
@@ -167,7 +167,7 @@ test.describe("US Southwest (M1)", () => {
     expect(after.data).toEqual(before.data);
   });
 
-  test("the sources screen lists every attribution from the manifest", async ({ page }) => {
+  test("the sources screen lists every attribution from the manifest", { tag: "@smoke" }, async ({ page }) => {
     await page.setViewportSize({ width: 960, height: 540 });
     await page.goto("/?cache=0&w=960&h=540&zoom=2&traffic=0");
     await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
@@ -323,7 +323,7 @@ test.describe("Hero landmarks (D-053)", () => {
 });
 
 test.describe("San Francisco (D-055, D-056)", () => {
-  test("Victorian rows by Alamo Square: typologies on the walking level", async ({ page }) => {
+  test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world
     await open(page, "world=/sf-walk/&marker=0&zoom=3&rot=0&at=-122.4327,37.7760");
     await expect(page.locator("#view")).toHaveScreenshot("sf-walk-alamo-r0.png");

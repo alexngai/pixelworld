@@ -321,7 +321,7 @@ The same scene builder feeds a live Three.js camera (e.g. a chase cam for flight
 
 ## 11. Repository layout
 
-Entries marked † don't exist yet.
+Entries marked † don't exist yet. [CONTRIBUTING.md](../CONTRIBUTING.md#2-where-things-live) has the same map with where to change what you see.
 
 ```
 docs/                     architecture, roadmap, data sources, decisions, format + style specs
@@ -334,18 +334,20 @@ pipeline/plugins/         pipeline plugins in the uv workspace: city packs (pixe
 packages/grid/            coordinates, projection, rotations, cell model
 packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables
-packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks), client scatter
+packages/generators/      terrain and object meshes (buildings, networks, vegetation, landmarks), client scatter, the generator registry and plugin API
+packages/city-sf/         San Francisco's city pack, browser half (@pixelworlds/city-sf): its generators as a plugin (D-071)
 packages/bake/            WebGL2 baker: shadow, G-buffer and composite passes
 packages/runtime/         chunk streaming, tile cache, bake worker + service, compositor, camera, fog fields (internal to the engine)
 packages/engine/          the public world view (library.md §7): createWorldView, layers (fog), entities, controllers (the rover), queries
 packages/sim/             ambient traffic: routes, vehicle simulation, vehicle models, the traffic layer (flight†, building†, cell occupancy†)
 packages/pixelworld/      the npm package `pixelworld` (docs/npm.md): entry points over the packages above, built to dist/ with the bake worker
-apps/web/                 the reference viewer, a client of the engine: URL parameters, HUD, layer panel, levels, debug API; bench.html
+apps/web/                 the reference viewer, a client of the engine: URL parameters, HUD, layer panel, levels, debug API (docs/viewer.md); model.html, bench.html
 apps/editor/              editor v0: focus areas and pins against `pixelworld serve` (overrides, landmark placement†)
+apps/game/                M4's example game (@pixelworlds/game): a car and a plane on the engine's public API (D-070)
 examples/                 apps built only on the public packages: minimal-viewer (a world, the rover, traffic)
 examples/consumers/       projects that use the packed npm package: Vite, webpack 5, plain ESM (tools/consumers.mjs runs them)
-tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs, consumers.mjs; pack-check.mjs
-e2e/                      Playwright golden-image and behaviour tests
+tools/                    headless tools (Playwright): hero-bake.mjs, bench.mjs, consumers.mjs; pack-check.mjs; e2e-server.mjs
+e2e/                      Playwright golden-image and behaviour tests (@smoke: a quick subset)
 ```
 
 ## 12. Testing and quality

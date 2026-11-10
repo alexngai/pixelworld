@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { EDITOR_PORT } from "../playwright.config";
 
 /**
  * Editor v0 (M2) against a mocked pipeline server: the UI sends the right
@@ -6,7 +7,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
  * pipeline/tests/test_server.py.
  */
 
-const EDITOR = "http://localhost:5198/";
+const EDITOR = `http://localhost:${EDITOR_PORT}/`;
 // 2×2 opaque PNG (grey)
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGNoaGhgYGBgYGAAAA0QAQGZtmqpAAAAAElFTkSuQmCC",
@@ -99,7 +100,7 @@ test.describe("Editor v0 (M2)", () => {
     await page.setViewportSize({ width: 1400, height: 700 });
   });
 
-  test("loads the region, solves it and shows the result", async ({ page }) => {
+  test("loads the region, solves it and shows the result", { tag: "@smoke" }, async ({ page }) => {
     const api = await mockApi(page);
     await page.goto(EDITOR);
     await expect(page.locator("#title")).toHaveText("Pixelworld editor · Mock Region");

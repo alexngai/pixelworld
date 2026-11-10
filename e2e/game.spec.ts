@@ -41,7 +41,7 @@ const SILHOUETTE: [number, number, number] = [0xff, 0xe3, 0x6e];
 const BACKGROUND: [number, number, number] = [0x1e, 0x1c, 0x2b];
 
 test.describe("the game (M4)", () => {
-  test("starts on Las Vegas Boulevard, drives along it on the road surface's height, and stops at a building", async ({ page }) => {
+  test("starts on Las Vegas Boulevard, drives along it on the road surface's height, and stops at a building", { tag: "@smoke" }, async ({ page }) => {
     await open(page, "");
     const s0 = await state(page);
     expect(s0).toMatchObject({ mode: "car", world: "southwest", level: "Driving" });

@@ -8,7 +8,7 @@ An interactive world built from real places and drawn as isometric pixel art in 
 
 ## Run it
 
-Requires Node 22+ and pnpm 10, plus a browser with WebGL2.
+Requires Node 22.12+ and pnpm 10, plus a browser with WebGL2 (the pipeline: Python 3.12+ and uv). To work on pixelworld, see [CONTRIBUTING.md](CONTRIBUTING.md): setup, a map of the repo, the checks CI runs, golden images and the debugging tools.
 
 ```sh
 pnpm install
@@ -23,11 +23,14 @@ pnpm dev            # http://localhost:5173
 | 1–6 | zoom |
 | F | toggle camera follow |
 | N | toggle no-clip |
+| T | day / night |
+| L | next scale level (flying, driving, walking) at the same place |
+| V / G | traffic / fog on or off |
+| I | data sources and licences |
 | H | hide or show the HUD |
+| Alt+click | log what is under the pointer (ramp, surface, object, generator) to the console |
 
-Press **I** for the data sources and licenses.
-
-URL parameters, useful for repeatable views: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache).
+URL parameters make views repeatable: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y` or `at=lon,lat`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache), `traffic=0`, `fog=0`, `palette=night`, `style=<pack>` and more. Every key, URL parameter and debug function is in the [viewer reference](docs/viewer.md). `pnpm models` previews one asset group's models alone, in four rotations, by day and night ([model preview](docs/viewer.md#4-the-model-preview-pnpm-models)).
 
 The viewer is built on the engine, `@pixelworlds/engine`, which other games can build on too ([library.md §7](docs/library.md#7-as-built-the-engine-m4-step-1)). `pnpm example:minimal` runs the smallest client of it (http://localhost:5180): San Francisco, the rover and traffic, in about 45 lines. `pnpm --filter @pixelworlds/game dev` runs M4's example game (http://localhost:5252): drive Las Vegas → Hoover Dam → the Grand Canyon, take off from a straight road and fly the canyon (H for keys; `?world=/sf/` starts on the Embarcadero, `?run=1` drives and flies the run by itself and reports its frame times).
 
@@ -55,11 +58,14 @@ It isn't published yet: `cd packages/pixelworld && pnpm pack` makes the tarball,
 
 ## Checks
 
+The same checks as CI (`.github/workflows/ci.yml`); [CONTRIBUTING.md](CONTRIBUTING.md#3-the-checks-as-ci-runs-them) has them job by job, and how to run one test.
+
 ```sh
-pnpm check          # eslint + tsc + vitest
-pnpm test:e2e       # Playwright golden images + behaviour tests (headless Chromium, SwiftShader)
-pnpm package:check  # the npm package: pack it, check the tarball and its size budgets (also package:size, package:consumers)
-cd pipeline && uv run ruff check . && uv run pytest
+pnpm check                               # eslint + tsc + vitest
+pnpm exec playwright install chromium    # once, for the e2e tests (--with-deps on a fresh Linux machine)
+pnpm test:e2e                            # Playwright golden images + behaviour tests (headless Chromium, SwiftShader); pnpm test:e2e:smoke for a quick subset
+pnpm package:check                       # the npm package: pack it, check the tarball and its size budgets (also package:size, package:consumers, docs:api)
+cd pipeline && uv sync && uv run ruff check . && uv run ruff format --check . && uv run pytest
 ```
 
 To measure tile bakes, frames and memory on your own GPU, run `pnpm bench` (it opens the benchmark page in your browser); see [Benchmarks](docs/architecture.md#benchmarks).
@@ -82,6 +88,8 @@ To make the terrain more or less dramatic, pass `--exaggeration E`. E is vertica
 
 Start with the [docs index](docs/README.md):
 
+- [Contributing](CONTRIBUTING.md)
+- [The viewer: keys, URL parameters, debug API](docs/viewer.md)
 - [Architecture](docs/architecture.md)
 - [Using pixelworld from npm](docs/npm.md)
 - [Roadmap](docs/roadmap.md), including the M0 results
