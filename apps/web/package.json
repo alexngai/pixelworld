@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/generators": "workspace:*",
+    "@pixelworlds/grid": "workspace:*",
     "@pixelworlds/sim": "workspace:*",
+    "@pixelworlds/style": "workspace:*",
     "@pixelworlds/world-format": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*"
   }
