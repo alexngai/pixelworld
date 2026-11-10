@@ -21,7 +21,7 @@ export type SpriteDraw = SpriteInstance;
 
 // ---------------------------------------------------------------- the view
 
-/** Where a style pack comes from: the pack itself (JSON), or a resolver given the id the world names. */
+/** Where a style pack comes from: the pack itself (JSON), or a resolver given the id the world names (and the ids it `extends`). */
 export type StyleSource = object | ((id: string) => object | Promise<object>);
 
 /** Somewhere to keep baked tiles between visits (the default is IndexedDB). */

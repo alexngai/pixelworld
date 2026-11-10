@@ -22,7 +22,7 @@ import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
 import { ObjectIndex } from "./objects";
-import { registerOnMainThread, viewPlugins } from "./plugins";
+import { checkGenerators, registerOnMainThread, viewPlugins } from "./plugins";
 import { createQuery } from "./queries";
 import { TileGrid } from "./tiles";
 import type {
@@ -64,7 +64,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const w = await loadWorld(opts);
   // plugins with generators (D-071): registered here, and in the bake worker before its first bake
   const plugins = viewPlugins(opts.plugins, w.styleJson, w.style.id);
-  const mainThread = registerOnMainThread(plugins);
+  const mainThread = registerOnMainThread(plugins).then(() => checkGenerators(w.style, w.styleJson, plugins));
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
   const cache: TileStore | null =
