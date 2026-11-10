@@ -62,16 +62,16 @@ Working projects, each built and run against the packed packages in CI: [example
 
 | Import | What | Gzipped, as a consumer bundles it |
 |---|---|---|
-| `pixelworld/engine` | `createWorldView`; the camera, layers, entities, controllers and queries; `roverController`, `fogLayer`, `listenTo` | 72 KB for `createWorldView` |
+| `pixelworld/engine` | `createWorldView`; the camera, layers, entities, controllers and queries; `roverController`, `fogLayer`, `listenTo` | 75 KB for `createWorldView` |
 | `pixelworld/traffic` | `trafficLayer()` and the deterministic simulation (D-060) | +8 KB beside the engine |
 | `pixelworld/format` | the world package format: manifest, chunk and objects codecs, the geo grid, PNG decoding | 3 KB for `parseManifest` and `decodeChunk` |
 | `pixelworld/grid` | the projection, rotations, cells, corner heights, road and rail bits | 0.2 KB for `project` |
 | `pixelworld/style` | style packs: validation, palettes, materials, night and atmosphere | |
 | `pixelworld/generators` | voxel models, meshing, terrain fields, object building and the generators | |
-| `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 52 KB (145 KB minified) bundled; 61 KB as shipped (§7) |
+| `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 46 KB (129 KB minified) bundled; 61 KB as shipped (§7) |
 | `pixelworld/style-pack.v1.schema.json` | the style pack JSON Schema, for a pack's `"$schema"` in editors ([style guide](style-guide.md) §18) | |
 
-- **Everything** (all six entry points) is 87 KB gzipped (D3 estimated 89 KB).
+- **Everything** (all six entry points, nothing tree-shaken) is 96 KB gzipped (D3 estimated 89 KB). It grew with style pack validation (D-075), contained model failures (D-072) and the game API (D-073); an app that draws a world bundles 75 KB of it.
 - **Shared code is shared:** the entry points are built together with code splitting, so an app importing `pixelworld/engine` and `pixelworld/traffic` gets one copy of what they have in common (one generator registry, one set of classes).
 - **Tree-shaking:** the package declares no side effects but the worker's, so a bundler keeps only what an app uses: `pixelworld/grid` doesn't bring the engine, and `pixelworld/engine` doesn't bring traffic.
 - **What the engine always brings:** all the generators (the engine draws entities' models) and the baker, for the main-thread fallback (§5).
