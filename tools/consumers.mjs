@@ -1,18 +1,25 @@
 #!/usr/bin/env node
 /**
- * Proves the packed `pixelworld` works outside this workspace (docs/npm.md).
+ * Proves the packed `pixelworld` and the packed city pack `@pixelworlds/city-sf`
+ * work outside this workspace (docs/npm.md, D-074).
  *
  * Each consumer in examples/consumers/ is copied to a scratch directory with
- * the Grand Canyon slice (fixtures/grand-canyon-m0) and its style pack,
- * installs the tarball with npm as any project would, is built and served,
- * and renders in headless Chromium (SwiftShader). A run passes when the page
- * draws with its tiles baked in the bake worker (not the main-thread
- * fallback), the worker's script loaded, and nothing failed.
+ * two worlds and their style packs: the Grand Canyon slice
+ * (fixtures/grand-canyon-m0, desert-southwest) and San Francisco's flying
+ * level (fixtures/sf-fly, bay-area, whose towers come from the city pack). It
+ * installs both tarballs with npm as any project would, is built and served,
+ * and renders each world in headless Chromium (SwiftShader). A run passes when
+ * the page draws with its tiles baked in the bake worker (not the main-thread
+ * fallback), the worker's script loaded, and nothing failed or warned. San
+ * Francisco must also load the city pack's worker module where the bundler put
+ * it, and draw: without its generators, only tiles with none of its buildings
+ * bake, and 4% of the frame is drawn.
  *
- *   node tools/consumers.mjs [--tarball pixelworld-x.y.z.tgz] [--out dir] [vite webpack esm]
+ *   node tools/consumers.mjs [--tarball pixelworld-x.y.z.tgz] [--city-tarball pixelworlds-city-sf-x.y.z.tgz]
+ *                            [--out dir] [vite webpack esm]
  *
- * Without --tarball it packs packages/pixelworld first (`pnpm pack`, which
- * builds it). Needs network for npm installs. Screenshots go to <out>/screenshots.
+ * Without a tarball it packs the package first (`pnpm pack`, which builds it).
+ * Needs network for npm installs. Screenshots go to <out>/screenshots.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { cp, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
@@ -33,8 +40,15 @@ const flag = (name) => {
 };
 const OUT = resolve(flag("--out") ?? join(tmpdir(), "pixelworld-consumers"));
 let tarball = flag("--tarball");
+let cityTarball = flag("--city-tarball");
 const SHOTS = join(OUT, "screenshots");
 const only = args.length ? args : ["vite", "webpack", "esm"];
+
+/** The worlds each consumer draws (fixtures/<id>), with the style pack each manifest names. */
+const WORLDS = { "grand-canyon-m0": "desert-southwest", "sf-fly": "bay-area" };
+/** San Francisco's check: the share of the frame drawn (not the style's background) a working city pack gives at least. */
+const SF = { query: "?world=sf-fly", minDrawn: 0.5 };
+const styleBackground = async (id) => JSON.parse(await readFile(join(ROOT, `worlds/_styles/${id}/style.json`), "utf8")).background;
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -102,14 +116,40 @@ async function viteDev(cwd) {
   throw new Error("vite dev server did not start");
 }
 
-/** Open a page, wait for the view to be ready, check the worker baked, screenshot. */
-async function check(browser, name, url, { expectWorker } = {}) {
+/** The share of a screenshot's pixels that aren't `background` (the style's, a hex colour): about 0 for a world that drew nothing. */
+async function drawnShare(page, png, background) {
+  return page.evaluate(
+    async ([b64, hex]) => {
+      const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+      const g = new OffscreenCanvas(bmp.width, bmp.height).getContext("2d");
+      g.drawImage(bmp, 0, 0);
+      const d = g.getImageData(0, 0, bmp.width, bmp.height).data;
+      const bg = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      let drawn = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] !== bg[0] || d[i + 1] !== bg[1] || d[i + 2] !== bg[2]) drawn++;
+      return drawn / (d.length / 4);
+    },
+    [png.toString("base64"), background],
+  );
+}
+
+/**
+ * Open a page, wait for the view to be ready, check the worker baked, screenshot. With
+ * `expectPlugin`, a request for the city pack's worker module must match it; with
+ * `minDrawn`, tiles must have baked and that share of the frame must not be `background`.
+ */
+async function check(browser, name, url, { expectWorker, expectPlugin, minDrawn, background } = {}) {
   const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
   const problems = [];
   const workers = [];
+  const requests = [];
   page.on("pageerror", (e) => problems.push(`page error: ${e.message}`));
-  page.on("console", (m) => m.type() === "error" && problems.push(`console: ${m.text()}`));
+  page.on("console", (m) => {
+    // the engine warns when a style's plugin isn't loaded; failed bakes are errors
+    if (m.type() === "error" || (m.type() === "warning" && /plugin|generator/i.test(m.text()))) problems.push(`console ${m.type()}: ${m.text()}`);
+  });
   page.on("worker", (w) => workers.push(w.url()));
+  page.on("request", (r) => requests.push(r.url()));
   page.on("response", (r) => r.status() >= 400 && problems.push(`HTTP ${r.status()} ${r.url()}`));
   const t0 = Date.now();
   await page.goto(url);
@@ -117,22 +157,33 @@ async function check(browser, name, url, { expectWorker } = {}) {
     timeout: 180_000,
   });
   const ms = Date.now() - t0;
-  const { bakeMode, error } = await page.evaluate(() => ({ ...document.body.dataset }));
+  const { bakeMode, tilesBaked, error } = await page.evaluate(() => ({ ...document.body.dataset }));
   const status = await page.textContent("#status");
   const shot = join(SHOTS, `${name}.png`);
-  await page.screenshot({ path: shot });
+  const png = await page.screenshot({ path: shot });
+  const drawn = minDrawn ? await drawnShare(page, png, background) : null;
   await page.close();
   if (error) problems.push(`view error: ${error}`);
   if (bakeMode !== "worker") problems.push(`baked in "${bakeMode}", not in the worker`);
   if (!workers.length) problems.push("no worker was created");
   if (expectWorker && !workers.some((w) => expectWorker.test(w))) problems.push(`worker ${workers} is not ${expectWorker}`);
+  if (expectPlugin && !requests.some((u) => expectPlugin.test(u)))
+    problems.push(`no request for the city pack's worker module (${expectPlugin}): ${requests.filter((u) => /\.js(\?|$)/.test(u)).join(" ")}`);
+  if (minDrawn && !(Number(tilesBaked) > 0)) problems.push(`no tiles baked (${tilesBaked})`);
+  if (minDrawn && drawn < minDrawn) problems.push(`only ${(drawn * 100).toFixed(1)}% of the frame is drawn, under ${minDrawn * 100}%: a blank world`);
   const result = { name, ok: problems.length === 0, ms, worker: workers[0] ?? "-", status, shot, problems };
-  console.log(`  ${result.ok ? "ok  " : "FAIL"} ${name}: ${status} (${ms} ms; worker ${result.worker})`);
+  const extra = drawn === null ? "" : `; ${(drawn * 100).toFixed(0)}% drawn`;
+  console.log(`  ${result.ok ? "ok  " : "FAIL"} ${name}: ${status} (${ms} ms; worker ${result.worker}${extra})`);
   for (const p of problems) console.log(`       ${p}`);
   return result;
 }
 
-/** Copy a consumer's sources, add the world and style pack it draws, install the tarball. */
+/** San Francisco on a consumer's page: its city pack's worker module loaded from `expectPlugin`, and a drawn frame. */
+async function checkSF(browser, name, base, expectPlugin, opts = {}) {
+  return check(browser, name, `${base}${SF.query}`, { ...opts, expectPlugin, minDrawn: SF.minDrawn, background: await styleBackground("bay-area") });
+}
+
+/** Copy a consumer's sources, add the worlds and style packs it draws, install the tarballs. */
 async function prepare(name, dataDir) {
   const dir = join(OUT, name);
   await rm(dir, { recursive: true, force: true });
@@ -141,10 +192,12 @@ async function prepare(name, dataDir) {
     filter: (src) => !/[\\/](node_modules|dist|package-lock\.json)$/.test(src),
   });
   const data = join(dir, dataDir);
-  await cp(join(ROOT, "fixtures/grand-canyon-m0"), join(data, "worlds/grand-canyon-m0"), { recursive: true });
-  await mkdir(join(data, "styles/desert-southwest"), { recursive: true });
-  await cp(join(ROOT, "worlds/_styles/desert-southwest/style.json"), join(data, "styles/desert-southwest/style.json"));
-  run("npm", ["install", "--no-audit", "--no-fund", "--loglevel=error", tarball], dir);
+  for (const [world, style] of Object.entries(WORLDS)) {
+    await cp(join(ROOT, "fixtures", world), join(data, "worlds", world), { recursive: true });
+    await mkdir(join(data, "styles", style), { recursive: true });
+    await cp(join(ROOT, `worlds/_styles/${style}/style.json`), join(data, `styles/${style}/style.json`));
+  }
+  run("npm", ["install", "--no-audit", "--no-fund", "--loglevel=error", tarball, cityTarball], dir);
   return dir;
 }
 
@@ -156,15 +209,19 @@ const consumers = {
     const dev = await viteDev(dir);
     try {
       results.push(await check(browser, "vite-dev", dev.url, { expectWorker: /bake\.worker\.js/ }));
+      // the dev server pre-bundles the city pack and serves its worker module from node_modules
+      results.push(await checkSF(browser, "vite-dev-sf", dev.url, /\/@pixelworlds\/city-sf\/dist\/worker\.js/));
     } finally {
       dev.close();
     }
     run("npx", ["vite", "build", "--logLevel", "warn"], dir);
     const assets = await readdir(join(dir, "dist/assets"));
     if (!assets.some((f) => /^bake\.worker-.*\.js$/.test(f))) throw new Error(`vite build emitted no worker: ${assets}`);
+    if (!assets.some((f) => /^worker-.*\.js$/.test(f))) throw new Error(`vite build emitted no city pack worker module: ${assets}`);
     const built = await serve([join(dir, "dist")]);
     try {
       results.push(await check(browser, "vite-build", built.url, { expectWorker: /assets\/bake\.worker-/ }));
+      results.push(await checkSF(browser, "vite-build-sf", built.url, /\/assets\/worker-[\w-]+\.js$/));
     } finally {
       built.close();
     }
@@ -175,8 +232,14 @@ const consumers = {
     const dir = await prepare("webpack", "public");
     run("npx", ["webpack", "--no-stats"], dir);
     const built = await serve([join(dir, "dist"), join(dir, "public")]);
+    // webpack emits the city pack's worker module as an asset of its own, named by its hash
+    const emitted = (await readdir(join(dir, "dist"))).filter((f) => /^[0-9a-f]{8,}\.js$/.test(f));
+    if (emitted.length !== 1) throw new Error(`webpack emitted ${emitted.length} hashed assets, not the city pack's worker module alone: ${emitted}`);
     try {
-      return [await check(browser, "webpack-build", built.url)];
+      return [
+        await check(browser, "webpack-build", built.url),
+        await checkSF(browser, "webpack-build-sf", built.url, new RegExp(`/${emitted[0]}$`)),
+      ];
     } finally {
       built.close();
     }
@@ -199,6 +262,7 @@ const consumers = {
         await check(browser, "esm-cdn", `${site.url}cdn.html?cdn=${encodeURIComponent(cdn.url.replace("localhost", "127.0.0.1"))}`, {
           expectWorker: /^blob:/,
         }),
+        await checkSF(browser, "esm-sf", site.url, /\/node_modules\/@pixelworlds\/city-sf\/dist\/worker\.js$/),
       ];
     } finally {
       site.close();
@@ -208,14 +272,16 @@ const consumers = {
 };
 
 await mkdir(SHOTS, { recursive: true });
-if (!tarball) {
-  console.log("packing packages/pixelworld");
-  run("pnpm", ["--filter", "pixelworld", "pack", "--pack-destination", OUT], ROOT);
-  const tgz = (await readdir(OUT)).filter((f) => /^pixelworld-.*\.tgz$/.test(f)).sort();
-  tarball = join(OUT, tgz.at(-1));
+/** Pack a workspace package into OUT (`pnpm pack` builds it first); the tarball's path. */
+async function pack(name, file) {
+  console.log(`packing ${name}`);
+  run("pnpm", ["--filter", name, "pack", "--pack-destination", OUT], ROOT);
+  const tgz = (await readdir(OUT)).filter((f) => file.test(f)).sort();
+  return join(OUT, tgz.at(-1));
 }
-tarball = resolve(tarball);
-console.log(`consumers of ${tarball} in ${OUT}`);
+tarball = resolve(tarball ?? (await pack("pixelworld", /^pixelworld-.*\.tgz$/)));
+cityTarball = resolve(cityTarball ?? (await pack("@pixelworlds/city-sf", /^pixelworlds-city-sf-.*\.tgz$/)));
+console.log(`consumers of ${tarball} and ${cityTarball} in ${OUT}`);
 
 const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
@@ -231,7 +297,7 @@ try {
   await browser.close();
 }
 
-console.log("\nconsumer          ready     bake worker");
-for (const r of results) console.log(`${(r.ok ? "ok   " : "FAIL ") + r.name.padEnd(14)} ${String(r.ms).padStart(6)} ms  ${r.worker}`);
+console.log("\nconsumer              ready     bake worker");
+for (const r of results) console.log(`${(r.ok ? "ok   " : "FAIL ") + r.name.padEnd(18)} ${String(r.ms).padStart(6)} ms  ${r.worker}`);
 console.log(`screenshots: ${SHOTS}`);
 if (results.some((r) => !r.ok)) process.exit(1);

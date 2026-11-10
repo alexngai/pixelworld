@@ -31,14 +31,18 @@
       }
     </style>
     <!--
-      No bundler: the browser loads the package's ESM files as they are,
-      and the engine finds its worker beside them (./bake.worker.js).
+      No bundler: the browser loads the packages' ESM files as they are. The
+      engine finds its worker beside them (./bake.worker.js), and the city
+      pack its worker module (./worker.js). The city pack imports
+      pixelworld/generators, so the map names it too.
     -->
     <script type="importmap">
       {
         "imports": {
           "pixelworld/engine": "./node_modules/pixelworld/dist/engine.js",
-          "pixelworld/traffic": "./node_modules/pixelworld/dist/traffic.js"
+          "pixelworld/generators": "./node_modules/pixelworld/dist/generators.js",
+          "pixelworld/traffic": "./node_modules/pixelworld/dist/traffic.js",
+          "@pixelworlds/city-sf": "./node_modules/@pixelworlds/city-sf/dist/index.js"
         }
       }
     </script>
@@ -48,17 +52,25 @@
     <div id="status">loading…</div>
     <script type="module">
       import { createWorldView, roverController } from "pixelworld/engine";
+      import { cityPlugin } from "@pixelworlds/city-sf";
+
+      // The city packs this page can load, by name: the view loads those the world's style pack names.
+      const PLUGINS = { [cityPlugin.name]: cityPlugin };
 
       const canvas = document.querySelector("#world");
       const status = document.querySelector("#status");
+      const params = new URLSearchParams(location.search);
+      // ?world=sf-fly draws San Francisco with its city pack (default: the Grand Canyon slice)
+      const world = params.get("world") ?? "grand-canyon-m0";
       // ?workerUrl=… loads the bake worker from elsewhere (a copy on your origin, say)
-      const workerUrl = new URLSearchParams(location.search).get("workerUrl") ?? undefined;
+      const workerUrl = params.get("workerUrl") ?? undefined;
 
       try {
         const view = await createWorldView({
           canvas,
-          worldUrl: "./worlds/grand-canyon-m0/",
+          worldUrl: `./worlds/${world}/`,
           style: (id) => fetch(`./styles/${id}/style.json`).then((r) => r.json()),
+          plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
           camera: { rotation: 1 },
           controller: roverController({ listen: { keys: window, pointer: canvas } }),
           workerUrl,
@@ -66,7 +78,9 @@
         await view.ready();
         const { bakeMode, tilesBaked } = view.stats();
         status.textContent = `${view.world.manifest.name} · ${tilesBaked} tiles baked (${bakeMode}) · plain ESM`;
-        document.body.dataset.bakeMode = bakeMode; // read by the consumer test
+        // read by the consumer test
+        document.body.dataset.tilesBaked = String(tilesBaked);
+        document.body.dataset.bakeMode = bakeMode;
         Object.assign(window, { view });
       } catch (e) {
         status.textContent = `error: ${String(e)}`;
