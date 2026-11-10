@@ -14,7 +14,7 @@ const bay = read("bay-area");
 const adobe = JSON.parse(readFileSync(new URL("../../style/test/fixtures/desert-adobe.json", import.meta.url), "utf8")) as object;
 const packs: Record<string, object> = { "desert-southwest": desert, "bay-area": bay, "desert-adobe": adobe };
 const resolver = (id: string) => packs[id] as object;
-const none: ViewPlugins = { descriptors: [], refs: [] };
+const none: ViewPlugins = { descriptors: [], refs: [], missing: [] };
 
 describe("resolving a view's style pack", () => {
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -41,7 +41,7 @@ describe("resolving a view's style pack", () => {
       throw new SyntaxError(`Unexpected token '<', "<!doctype "... is not valid JSON`);
     };
     await expect(resolveStyle(html, "bay-area")).rejects.toThrow(
-      `style pack "bay-area" (from your style resolver): Unexpected token '<', "<!doctype "... is not valid JSON`,
+      `style pack "bay-area" (from your style resolver): SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON (it got an HTML page, not JSON: is the pack's URL right?)`,
     );
     await expect(resolveStyle(() => undefined as unknown as object, "bay-ara")).rejects.toThrow(
       'style pack "bay-ara": your style resolver has no pack for it (it returned undefined)',
@@ -113,7 +113,7 @@ describe("a pack's generators, when a view starts", () => {
     registerGenerators(Object.fromEntries(names.map((n) => [n, fake])), { source: "styles-test" });
     try {
       // built-ins are already there: the plugin added only what was missing
-      expect(() => checkGenerators(bay, bay, { descriptors: [city], refs: [] })).not.toThrow();
+      expect(() => checkGenerators(bay, bay, { descriptors: [city], refs: [], missing: [] })).not.toThrow();
     } finally {
       unregisterGenerators("styles-test");
     }

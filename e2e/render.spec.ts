@@ -15,6 +15,8 @@ async function open(page: Page, query: string, width = 640, height = 360) {
   await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}${traffic}${fog}`);
   await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => window.__pixelworld!.ready());
+  // every model generated: none drawn as a missing-model marker (D-072)
+  if (!/(^|&)plugins=0/.test(query)) expect(await page.evaluate(() => window.__pixelworld!.stats().modelsFailed)).toBe(0);
 }
 
 /** Canvas pixels as RGBA, row 0 = top. */
@@ -482,5 +484,51 @@ test.describe("Fog (an atmosphere layer)", () => {
     // nor in a world whose style has none
     await open(page, "zoom=2&rot=0&fog=1");
     expect(await fog(page)).toBeNull();
+  });
+});
+
+test.describe("Failures (D-072)", () => {
+  test("a wrong world URL names the URL and what came back", async ({ page }) => {
+    // the dev server answers a path it doesn't have with its index.html
+    await page.goto("/?w=320&h=180&world=/no-such-world/");
+    await expect(page.locator("#hud")).toContainText(
+      'not a world package: /no-such-world/manifest.json returned an HTML page (expected a world manifest); check worldUrl ("/no-such-world/")',
+    );
+  });
+
+  test("models whose plugin isn't loaded are drawn as markers, reported once per generator", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+    // San Francisco's buildings without the city pack: North Beach, below Coit Tower
+    await open(page, "world=/sf/&marker=0&zoom=3&rot=0&at=-122.40583,37.80237&plugins=0", 320, 180);
+    const s = (await page.evaluate(() => window.__pixelworld!.stats())) as { modelsFailed: number; tilesBaked: number; gpuTiles: number };
+    expect(s.modelsFailed).toBeGreaterThan(100);
+    // every tile baked (the markers in it), none left blank
+    expect(s.tilesBaked).toBeGreaterThan(0);
+    expect(s.gpuTiles).toBe(s.tilesBaked);
+    const failed = errors.filter((e) => e.startsWith("model failed: "));
+    const generators = failed.map((e) => /generator '(\w+)'/.exec(e)?.[1]);
+    expect(new Set(generators).size).toBe(failed.length); // once per generator
+    expect(generators).toEqual(expect.arrayContaining(["rowhouse", "sfTower"]));
+    for (const e of failed) {
+      expect(e).toMatch(/^model failed: building\.[\w.]+ at cell [\d.]+,[\d.]+, seed \d+, footprint [\d.]+×[\d.]+ cells/);
+      expect(e).toContain("comes with the plugin @pixelworlds/city-sf, which isn't loaded here");
+    }
+    // the markers are drawn in the pack's marker ramp
+    const marker = new Set(["#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]);
+    const { data } = await pixels(page);
+    let red = 0;
+    for (let i = 0; i < data.length; i += 4) if (marker.has(hex(data, i))) red++;
+    expect(red).toBeGreaterThan(500);
+    // with the tile cache on, a tile with markers isn't kept: a reload bakes it again and says why
+    await page.goto("/?hud=0&w=320&h=180&traffic=0&fog=0&world=/sf/&marker=0&zoom=3&rot=0&at=-122.40583,37.80237&plugins=0");
+    await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
+    await page.evaluate(() => window.__pixelworld!.ready());
+    const cached = (await page.evaluate(() => window.__pixelworld!.stats())) as { tilesBaked: number; cacheWrites: number; cache: string };
+    expect(cached.cache).toBe("indexeddb");
+    expect(cached.tilesBaked).toBeGreaterThan(0);
+    expect(cached.cacheWrites).toBe(0);
   });
 });

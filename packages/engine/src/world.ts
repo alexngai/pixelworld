@@ -1,12 +1,15 @@
-import { BAKE_VERSION } from "@pixelworlds/bake";
+import { BAKE_CODE } from "@pixelworlds/bake";
 import {
   ChunkStore,
+  INCOMPLETE_PACKAGE,
+  TileCache,
   hashString,
   loadManifest,
   loadObjects,
   tileKey,
   type HeroPaint,
   type InitMessage,
+  type TerrainSlice,
   type TileRequest,
 } from "@pixelworlds/runtime";
 import {
@@ -20,9 +23,15 @@ import {
   type Palette,
   type StylePack,
 } from "@pixelworlds/style";
-import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworlds/world-format";
-import { pluginsKey } from "./plugins";
-import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
+import {
+  GeoGrid,
+  decodePng,
+  fetchWorldFile,
+  parseWorldFile,
+  type ObjectsFile,
+  type WorldManifest,
+} from "@pixelworlds/world-format";
+import type { StyleSource, TileStore, WorldInfo, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -73,7 +82,10 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
       return await source(want);
     } catch (e) {
       if (e instanceof StyleError) throw e; // it says where it is
-      throw new StyleError(`style pack "${want}" (from your style resolver): ${e instanceof Error ? e.message : String(e)}`, {
+      // a resolver that fetches the pack: say what an HTML answer means (D-072)
+      const msg = e instanceof Error ? (e.name !== "Error" ? `${e.name}: ${e.message}` : e.message) : String(e);
+      const html = /Unexpected token '?<'?|<!doctype/i.test(msg) ? " (it got an HTML page, not JSON: is the pack's URL right?)" : "";
+      throw new StyleError(`style pack "${want}" (from your style resolver): ${msg}${html}`, {
         pack: want,
         cause: e,
       });
@@ -158,7 +170,13 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
 export async function loadHeroes(w: LoadedWorld): Promise<HeroPaint[]> {
   const heroes: HeroPaint[] = [];
   if (!w.manifest.heroes?.length) return heroes;
-  const png = async (path: string) => decodePng(await (await fetch(new URL(path, w.base))).arrayBuffer());
+  // errors name the URL (D-072)
+  const png = async (path: string) => {
+    const url = new URL(path, w.base);
+    const info = { label: "hero landmark", expected: "a PNG the manifest names", hint: INCOMPLETE_PACKAGE };
+    const bytes = await fetchWorldFile(url, info);
+    return parseWorldFile(url, "hero landmark", () => decodePng(bytes));
+  };
   for (const h of w.manifest.heroes) {
     const [bake, paint] = await Promise.all([png(h.bake), png(h.paint)]);
     heroes.push({ ...h, bake: bake.data, paint: paint.data });
@@ -223,18 +241,54 @@ export function bakeInit(w: LoadedWorld, heroes: HeroPaint[], scatter: boolean):
   };
 }
 
-/** The tile cache key: the package, style, baker and plugins, so a change to any makes old tiles unreachable. */
-export function tileCacheKey(w: LoadedWorld, plugins: PluginDescriptor[] = []): (t: TileRequest) => string {
+/** A tile's cells plus its context margin, clipped to the world, for its bake (loads the chunks it needs). */
+export async function tileSlice(w: LoadedWorld, t: TileRequest): Promise<TerrainSlice> {
+  const { manifest, store } = w;
+  const ts = w.tileSize;
+  const x0 = Math.max(0, t.tx * ts - w.margin);
+  const y0 = Math.max(0, t.ty * ts - w.margin);
+  const x1 = Math.min(manifest.cellsX, (t.tx + 1) * ts + w.margin);
+  const y1 = Math.min(manifest.cellsY, (t.ty + 1) * ts + w.margin);
+  await store.ensureRect(x0, y0, x1, y1);
+  const s = store.slice(x0, y0, x1, y1);
+  return { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+}
+
+/**
+ * The persistent tile cache a view's `cache` option asks for. IndexedDB only
+ * where the bake code's identity is known (BAKE_CODE, D-072): without it a
+ * code change couldn't make old tiles unreachable, so none are kept.
+ */
+export async function openTileCache(option: WorldViewOptions["cache"], code = BAKE_CODE): Promise<TileStore | null> {
+  if (option === false) return null;
+  if (option !== true && option !== undefined) return option; // the app's own store
+  if (code === null) {
+    console.info(
+      "pixelworld: no tiles are kept in IndexedDB: this build of the engine has no bake code identity " +
+        "(build it with packages/pixelworld/build.mjs, or serve it with tools/bake-code.mjs's Vite plugin; D-072)",
+    );
+    return null;
+  }
+  return TileCache.open();
+}
+
+/**
+ * The tile cache key: the package, the style, the bake code's identity
+ * (D-072), the objects flag, a render scale other than the package's, and the
+ * plugins (`pluginsKey`: their names, versions and code). A change to any of
+ * them makes old tiles unreachable.
+ */
+export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
     w.manifest.id,
     w.manifest.packageHash ?? "nohash",
     styleHash,
-    BAKE_VERSION,
+    `bake:${code ?? "unknown"}`,
     w.objects ? "objects" : "terrain",
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
-    ...pluginsKey(plugins),
+    ...plugins,
   ];
   return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty)].join("|");
 }

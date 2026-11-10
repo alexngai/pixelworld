@@ -2,6 +2,7 @@ export * from "./mesh";
 export * from "./objects";
 export * from "./terrain";
 export * from "./assets";
+export * from "./failures";
 export * from "./builtins";
 export * from "./registry";
 export * from "./plugins";

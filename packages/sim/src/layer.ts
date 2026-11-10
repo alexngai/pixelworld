@@ -1,6 +1,6 @@
 import type { FrameInfo, Layer, LayerContext, Sprite, SpriteDraw, Sublayer } from "@pixelworlds/engine";
 import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, type VoxelModel } from "@pixelworlds/generators";
-import { maybeGunzip, type WorldManifest } from "@pixelworlds/world-format";
+import { fetchWorldJson, parseWorldFile, type WorldManifest } from "@pixelworlds/world-format";
 import type { VehicleKind } from "./catalog";
 import { modelSize, vehicleBoxes, vehicleVoxels, type RampLookup } from "./models";
 import { RouteNetwork, parseRoutes } from "./routes";
@@ -46,10 +46,10 @@ const LIFT = 0.2; // steps above the route, so a car's floor isn't lost in the r
 export async function loadRoutes(worldUrl: string, manifest: WorldManifest): Promise<RouteNetwork | null> {
   if (!manifest.routes) return null;
   const base = worldUrl.endsWith("/") ? worldUrl : worldUrl + "/";
-  const res = await fetch(base + manifest.routes.path);
-  if (!res.ok) throw new Error(`${manifest.routes.path}: HTTP ${res.status}`);
-  const bytes = await maybeGunzip(await res.arrayBuffer());
-  return new RouteNetwork(parseRoutes(JSON.parse(new TextDecoder().decode(bytes))));
+  // errors name the URL (D-072)
+  const url = base + manifest.routes.path;
+  const json = await fetchWorldJson(url, { label: "world routes", expected: "the routes file the manifest names" });
+  return parseWorldFile(url, "world routes", () => new RouteNetwork(parseRoutes(json)));
 }
 
 export interface TrafficLayerOptions {

@@ -58,11 +58,7 @@ export interface StyleParams {
   steepRock?: { drop: number; rockSurface: number; waterSurface: number; snowSurface: number };
 }
 
-/**
- * Bump whenever bake output changes for the same inputs (shaders, passes,
- * generators). Persistent tile caches key on it.
- */
-export const BAKE_VERSION = "m1.6";
+// Persistent tile caches key on the bake code's identity, BAKE_CODE (code.ts, D-072): nothing to bump here.
 
 const PAD = 2;
 const MAX_SHADOW = 4096;

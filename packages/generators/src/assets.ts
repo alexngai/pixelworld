@@ -1,3 +1,4 @@
+import { generateContained, type ModelFailure, type ModelSite } from "./failures";
 import { MeshBuilder, type MeshData } from "./mesh";
 import { getGenerator } from "./registry";
 import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
@@ -203,6 +204,8 @@ export interface ObjectMeshes {
   /** Repeated objects (vegetation, rocks) drawn instanced per variant. */
   batches: InstancedBatch[];
   skipped: number;
+  /** Models that failed to generate, drawn as missing-model markers instead (D-072). */
+  failures: ModelFailure[];
 }
 
 /**
@@ -300,13 +303,16 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
   const variants = new Map<string, { mesh: MeshData; offsets: number[]; cells: number[] }>();
   const nVariants = opts.variants ?? 6;
   let skipped = 0;
+  const failures: ModelFailure[] = [];
   for (const inst of instances) {
     const spec = resolveAsset(opts.catalog, inst.g);
     if (!spec) {
       skipped++;
       continue;
     }
-    const gen = getGenerator(spec.generator, inst.g);
+    // a model that fails to generate is drawn as a marker, not left to fail the whole bake (D-072)
+    const gen = (ctx: GenContext, site: Partial<ModelSite> = {}) =>
+      generateContained(spec, ctx, { group: inst.g, seed: inst.s, x: inst.x, y: inst.y, ...site }, opts.rampIds, failures);
     const cell: [number, number] = [Math.floor(inst.x), Math.floor(inst.y)];
     // Footprints sit on their lowest corner so slopes don't leave them floating.
     const base =
@@ -339,9 +345,9 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
         ctx.frame = { x0: fpm.x0, y0: fpm.y0, voxel: opts.voxel.h };
         if (inst.ln && inst.lw !== undefined)
           ctx.frame.line = { a: [inst.ln[0], inst.ln[1]], b: [inst.ln[2], inst.ln[3]], half: inst.lw };
-        model = gen(ctx);
-        origin = [fpm.x0, fpm.y0, base];
         const [bx0, by0, bx1, by1] = footprintBounds(inst.fp);
+        model = gen(ctx, { footprint: { cells: [bx1 - bx0, by1 - by0], voxels: [fpm.mask.sx, fpm.mask.sy] } });
+        origin = [fpm.x0, fpm.y0, base];
         if (Math.max(bx1 - bx0, by1 - by0) > BIG_FOOTPRINT_CELLS) {
           meshVoxels(model, opts.voxel, origin, "column", merged);
           continue;
@@ -358,7 +364,8 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     const key = `${inst.g}#${variant}#${inst.r ?? 0}`;
     let batch = variants.get(key);
     if (!batch) {
-      const model = rotateModel(gen(makeContext(spec, opts, 1000 + variant * 7919 + hash(inst.g))), inst.r ?? 0);
+      const seed = 1000 + variant * 7919 + hash(inst.g);
+      const model = rotateModel(gen(makeContext(spec, opts, seed), { seed, repeated: true }), inst.r ?? 0);
       // instance origin is the model's bottom centre
       const origin: [number, number, number] = [-(model.sx * opts.voxel.h) / 2, -(model.sy * opts.voxel.h) / 2, 0];
       batch = { mesh: meshVoxels(model, opts.voxel, origin, [0, 0]).build(), offsets: [], cells: [] };
@@ -376,6 +383,7 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       cells: new Float32Array(b.cells),
     })),
     skipped,
+    failures,
   };
 }
 

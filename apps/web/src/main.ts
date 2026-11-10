@@ -189,8 +189,9 @@ async function main() {
     },
     layers: [...(traffic ? [traffic] : []), fog],
     controller: rover,
-    // the city packs the world's style pack names, from the viewer's list (src/plugins.ts)
-    plugins: viewerPlugins,
+    // the city packs the world's style pack names, from the viewer's list (src/plugins.ts);
+    // plugins=0 loads none, to see a style's models fail as markers (e2e, D-072)
+    plugins: (names) => (params.get("plugins") === "0" ? [] : viewerPlugins(names)),
     // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
     recordBakes: params.get("bench") === "1",
     onError: (m) => {
@@ -313,6 +314,7 @@ async function main() {
       objects: view.world.objectCount,
       palette: view.palette,
       cacheWrites: s.cacheWrites,
+      modelsFailed: s.modelsFailed,
       // CPU time of the last drawn frame: compositor submission and screen passes (traffic's are below)
       renderMs: s.renderMs,
       traffic: trafficOn
@@ -350,7 +352,7 @@ async function main() {
       `view  rot ${view.camera.rotation} · zoom ${view.camera.zoom}× · ${view.camera.internalWidth}×${view.camera.internalHeight} internal`,
       `rover cell ${Math.floor(r.x)},${Math.floor(r.y)}${where} · ${r.h.toFixed(1)} steps (${meters} m)${rover.noclip ? " · no-clip" : ""}${rover.follow ? " · follow" : ""}`,
       `world ${s.chunksLoaded}/${s.chunksTotal} chunks · ${s.gpuTiles} tiles on GPU (${s.gpuMB.toFixed(0)} MB)`,
-      `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms`,
+      `bake  ${s.tilesBaked} baked + ${s.tilesFromCache} cached · mesh ${s.avgMeshMs.toFixed(0)} ms + bake ${s.avgBakeMs.toFixed(0)} ms avg · max ${s.maxTileMs.toFixed(0)} ms${s.modelsFailed ? ` · ${s.modelsFailed} models failed (markers; see the console)` : ""}`,
       `      ${s.bakeMode} · ${s.renderer}`,
       ...(s.traffic
         ? [

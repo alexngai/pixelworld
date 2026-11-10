@@ -1,28 +1,37 @@
 import { NO_WATER, TerrainGrid, copyCells, emptyMicro } from "@pixelworlds/grid";
 import {
   decodeChunk,
+  fetchWorldFile,
+  fetchWorldJson,
   maybeGunzip,
   parseManifest,
   parseObjects,
+  parseWorldFile,
   type Chunk,
   type ChunkRef,
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
 
-type Fetcher = (url: string) => Promise<ArrayBuffer>;
+/** Fetches a chunk's bytes; `what` names the chunk in errors. */
+type Fetcher = (url: string, what: string) => Promise<ArrayBuffer>;
 
-const defaultFetcher: Fetcher = async (url) => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-  return res.arrayBuffer();
-};
+/** The advice for a file the manifest names that isn't there. */
+export const INCOMPLETE_PACKAGE = "the package is incomplete, or its files are from different builds";
 
-/** Fetch and validate a world manifest. */
+const defaultFetcher: Fetcher = (url, what) =>
+  fetchWorldFile(url, { label: what, expected: "a chunk the manifest lists", hint: INCOMPLETE_PACKAGE });
+
+/**
+ * Fetch and validate a world manifest. Its errors name the URL (D-072): a
+ * wrong `worldUrl` reads "not a world package: …/manifest.json returned an
+ * HTML page (…); check worldUrl", not a JSON parser's "Unexpected token '<'".
+ */
 export async function loadManifest(baseUrl: string): Promise<WorldManifest> {
-  const res = await fetch(withSlash(baseUrl) + "manifest.json");
-  if (!res.ok) throw new Error(`manifest: HTTP ${res.status}`);
-  return parseManifest(await res.json());
+  const url = withSlash(baseUrl) + "manifest.json";
+  const hint = `check worldUrl ("${baseUrl}")`;
+  const json = await fetchWorldJson(url, { label: "not a world package", expected: "a world manifest", hint });
+  return parseWorldFile(url, "world manifest", () => parseManifest(json));
 }
 
 /**
@@ -31,10 +40,10 @@ export async function loadManifest(baseUrl: string): Promise<WorldManifest> {
  */
 export async function loadObjects(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
   if (!manifest.objects) return null;
-  const res = await fetch(withSlash(baseUrl) + manifest.objects.path);
-  if (!res.ok) throw new Error(`${manifest.objects.path}: HTTP ${res.status}`);
-  const bytes = await maybeGunzip(await res.arrayBuffer());
-  return parseObjects(JSON.parse(new TextDecoder().decode(bytes)));
+  const url = withSlash(baseUrl) + manifest.objects.path;
+  const info = { label: "world objects", expected: "the objects file the manifest names", hint: INCOMPLETE_PACKAGE };
+  const json = await fetchWorldJson(url, info);
+  return parseWorldFile(url, "world objects", () => parseObjects(json));
 }
 
 function withSlash(url: string): string {
@@ -88,10 +97,13 @@ export class ChunkStore {
     const ref = this.refs.get(k);
     if (!ref) return Promise.resolve(null);
     const url = this.base + ref.path + (ref.sha256 ? `?v=${ref.sha256.slice(0, 16)}` : "");
-    const p = this.fetcher(url)
-      .then(maybeGunzip)
-      .then((buf) => {
-        const chunk = decodeChunk(buf);
+    const what = `world chunk ${cx},${cy}`;
+    const load = async (): Promise<Chunk> => {
+      const bytes = await this.fetcher(url, what);
+      return parseWorldFile(url, what, async () => decodeChunk(await maybeGunzip(bytes)));
+    };
+    const p = load()
+      .then((chunk) => {
         this.chunks.set(k, chunk);
         return chunk;
       })

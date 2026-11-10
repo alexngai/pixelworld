@@ -197,6 +197,12 @@ export interface ViewStats {
   renderMs: number;
   cache: "indexeddb" | "custom" | "off";
   cacheWrites: number;
+  /**
+   * Models that failed to generate in this view's bakes, drawn as
+   * missing-model markers (D-072): each place once, a repeated object's
+   * variant once. Each generator and cause is reported once through `onError`.
+   */
+  modelsFailed: number;
 }
 
 /** One tile bake's timings (`recordBakes`). */

@@ -2,27 +2,28 @@ import type { TerrainGrid } from "@pixelworlds/grid";
 import {
   assembleTerrain,
   decodeChunk,
+  fetchWorldFile,
   maybeGunzip,
-  parseManifest,
+  parseWorldFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
+import { INCOMPLETE_PACKAGE, loadManifest } from "./chunkStore";
 
 export interface LoadedWorld {
   manifest: WorldManifest;
   terrain: TerrainGrid;
 }
 
-/** Fetch a world package (manifest + all chunks) from a base URL. */
+/** Fetch a world package (manifest + all chunks) from a base URL. Errors name the URL (D-072). */
 export async function loadWorld(baseUrl: string): Promise<LoadedWorld> {
   const base = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
-  const res = await fetch(base + "manifest.json");
-  if (!res.ok) throw new Error(`manifest: HTTP ${res.status}`);
-  const manifest = parseManifest(await res.json());
+  const manifest = await loadManifest(base);
   const chunks = await Promise.all(
     manifest.chunks.map(async (ref) => {
-      const r = await fetch(base + ref.path);
-      if (!r.ok) throw new Error(`${ref.path}: HTTP ${r.status}`);
-      return decodeChunk(await maybeGunzip(await r.arrayBuffer()));
+      const url = base + ref.path;
+      const what = `world chunk ${ref.x},${ref.y}`;
+      const bytes = await fetchWorldFile(url, { label: what, expected: "a chunk the manifest lists", hint: INCOMPLETE_PACKAGE });
+      return parseWorldFile(url, what, async () => decodeChunk(await maybeGunzip(bytes)));
     }),
   );
   return { manifest, terrain: assembleTerrain(manifest, chunks) };

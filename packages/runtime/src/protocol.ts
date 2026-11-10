@@ -1,7 +1,7 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworlds/grid";
 import type { BakedImage, StyleParams } from "@pixelworlds/bake";
 import type { HeroPaint } from "./heroPaint";
-import type { AssetCatalog, Box, ObjectInstance, ScatterRules } from "@pixelworlds/generators";
+import type { AssetCatalog, Box, ModelFailure, ObjectInstance, ScatterRules } from "@pixelworlds/generators";
 
 /** Messages between the main thread and the bake worker. */
 
@@ -104,6 +104,8 @@ export interface BakedMessage {
   id: number;
   image: BakedImage | null;
   stats: BakeStats;
+  /** Models that failed to generate, drawn as missing-model markers (D-072); absent when none did. */
+  failures?: ModelFailure[];
 }
 
 export interface ReadyMessage {

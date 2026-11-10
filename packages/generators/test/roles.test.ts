@@ -71,10 +71,14 @@ describe("roles", () => {
     );
   });
 
-  it("names the asset in a world's bake too", () => {
+  it("names the asset in a world's bake too, as a contained failure (D-072)", () => {
     const opts = { catalog, rampIds, voxel: objectVoxelScale(1), voxelMeters: 1, heightStretch: 1, heightAt: () => 0 };
     const shed = { g: "building.shed.garden", x: 1, y: 1, s: 3, fp: [[0, 0], [1, 0], [1, 1], [0, 1]] as [number, number][], hm: 3 };
-    expect(() => buildObjects([shed], opts)).toThrow(/^assets\["building\.shed"\] has no ramp for the role 'wall'/);
+    // the bake goes on, the model drawn as a marker; its failure carries the role error
+    const out = buildObjects([shed], opts);
+    expect(out.failures).toHaveLength(1);
+    expect(out.failures[0]!.group).toBe("building.shed.garden");
+    expect(out.failures[0]!.error).toMatch(/assets\["building\.shed"\] has no ramp for the role 'wall'/);
   });
 
   it("refuses a material that isn't a ramp id, rather than drawing in no colour", () => {

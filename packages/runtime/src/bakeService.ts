@@ -2,6 +2,7 @@ import type { Rotation } from "@pixelworlds/grid";
 import type { BakedImage } from "@pixelworlds/bake";
 import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworlds/generators";
 import { BakeHost } from "./bakeHost";
+import { ModelFailures } from "./modelFailures";
 import {
   sliceTransferables,
   type BakeStats,
@@ -29,6 +30,8 @@ export interface TileResult extends TileRequest {
   image: BakedImage | null;
   stats: BakeStats | null;
   fromCache: boolean;
+  /** Models of the tile that failed to generate and are drawn as markers (D-072): such a tile isn't worth keeping. */
+  modelsFailed: number;
 }
 
 export interface BakeTotals {
@@ -91,6 +94,8 @@ export class BakeService {
   readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
   onTile: (r: TileResult) => void = () => {};
   onError: (message: string) => void = (m) => console.error(m);
+  /** Models that failed to generate (drawn as markers): counted, and reported through onError once per generator and cause (D-072). */
+  readonly failures = new ModelFailures((m) => this.onError(m));
 
   private constructor(private readonly prepare: (t: TileRequest) => Promise<PreparedTile>) {
     this.transport = { send: () => {} };
@@ -302,10 +307,11 @@ export class BakeService {
       if (msg.id !== undefined) this.finish(msg.id, null, null, false);
       return;
     }
-    this.finish(msg.id, msg.image, msg.stats, false);
+    if (msg.failures) this.failures.add(msg.failures);
+    this.finish(msg.id, msg.image, msg.stats, false, msg.failures?.length ?? 0);
   }
 
-  private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean): void {
+  private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean, modelsFailed = 0): void {
     if (this.disposed) return; // a tile prepared, or an answer in flight, after dispose
     this.busy = false;
     const sprite = this.spriteJobs.get(id);
@@ -323,7 +329,7 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache });
+      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache, modelsFailed });
     }
     this.pump();
   }
