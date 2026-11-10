@@ -64,6 +64,9 @@ importers:
       '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../../packages/sim
+      '@pixelworlds/style':
+        specifier: workspace:*
+        version: link:../../packages/style
       '@pixelworlds/world-format':
         specifier: workspace:*
         version: link:../../packages/world-format

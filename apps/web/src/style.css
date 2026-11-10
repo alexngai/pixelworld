@@ -44,6 +44,16 @@ canvas#view.fixed {
   left: 8px;
 }
 
+/* What stopped the view (a style pack's problems): wrapped and scrollable, never off screen. */
+.hud.error {
+  white-space: pre-wrap;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  pointer-events: auto;
+  color: #ffb4a0;
+}
+
 /* Help and attribution share the bottom edge, half each, so they never overlap. */
 .help {
   bottom: 8px;
