@@ -31,6 +31,15 @@ export interface RoverOptions {
   listen?: { keys?: EventTarget | null; pointer?: EventTarget | null };
 }
 
+/** The rover controller's state (`serialize`): the rover's place and the switches. */
+export interface RoverState {
+  x: number;
+  y: number;
+  h: number;
+  follow: boolean;
+  noclip: boolean;
+}
+
 export class RoverController implements Controller {
   readonly id = "rover";
   /** The camera follows the rover. */
@@ -99,6 +108,20 @@ export class RoverController implements Controller {
   /** Put the rover at a place (cells), on the ground there where it is loaded. */
   place(x: number, y: number): void {
     this.rover.moveTo(x, y);
+  }
+
+  /** Where the rover is and the switches (`view.serialize()` keeps it). */
+  serialize(): RoverState {
+    const r = this.rover;
+    return { x: r.x, y: r.y, h: r.h, follow: this.follow, noclip: this.noclip };
+  }
+
+  restore(state: unknown): void {
+    const s = state as RoverState;
+    this.rover.moveTo(s.x, s.y, s.h);
+    this.follow = s.follow;
+    this.noclip = s.noclip;
+    if (this.follow) this.view?.camera.setFocus(s.x, s.y, s.h);
   }
 
   update(dt: number): void {

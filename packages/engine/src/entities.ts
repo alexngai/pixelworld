@@ -130,7 +130,8 @@ class EntityImpl implements Entity {
 export class Entities implements EntityList {
   private readonly items: EntityImpl[] = [];
   private nextId = 1;
-  private readonly sprites = new Map<string, Sprite | null>();
+  /** Sprites by model, rotation and heading: null while baking, false where the bake failed. */
+  private readonly sprites = new Map<string, Sprite | null | false>();
   /** Each model's boxes at heading 0. */
   private readonly boxes = new Map<string, Box[]>();
 
@@ -190,22 +191,29 @@ export class Entities implements EntityList {
           if (img) this.deps.release(img); // the model went away meanwhile
           return;
         }
-        if (img) this.sprites.set(key, img);
+        this.sprites.set(key, img ?? false); // a failed bake isn't asked for again, nor waited for
         this.deps.redraw();
       });
     }
   }
 
-  /** The visible entities' sprites for a frame; `complete` is false while some are still baking. */
+  /**
+   * The visible entities' sprites for a frame; `complete` is false while
+   * some are still baking. An entity where the ground isn't drawn yet
+   * (`isDrawn`, its tile still baking) is left out, so it doesn't float over
+   * the void.
+   */
   draws(
     rotation: Rotation,
     project: (x: number, y: number, h: number) => { sx: number; sy: number; depth: number },
+    isDrawn: (x: number, y: number) => boolean = () => true,
   ): { list: SpriteDraw[]; complete: boolean } {
     const list: SpriteDraw[] = [];
     let complete = true;
     for (const e of this.items) {
       if (!e.visible) continue;
       const sprite = this.sprites.get(e.spriteKey(rotation).key);
+      if (sprite === false || !isDrawn(e.x, e.y)) continue;
       if (!sprite) {
         complete = false;
         continue;

@@ -1,4 +1,11 @@
-import type { ObjectInstance } from "@pixelworlds/generators";
+import {
+  generateModel,
+  objectVoxelScale,
+  rotateModel,
+  type AssetCatalog,
+  type ObjectInstance,
+  type VoxelModel,
+} from "@pixelworlds/generators";
 import type { LandmarkInfo, ObjectHit } from "./types";
 
 /**
@@ -9,8 +16,11 @@ import type { LandmarkInfo, ObjectHit } from "./types";
  *
  * - **Footprints:** a building or landmark with a footprint occupies the
  *   polygon (a point on its edge counts).
- * - **Points:** an object without one (a tree, a tower drawn from its
- *   anchor) occupies its anchor's cell.
+ * - **Landmarks drawn from an anchor** (City Hall, a tower): where their
+ *   model stands, in plan (the voxel columns it fills, D-073), when the
+ *   index is given a `plan` for them; else their anchor's cell.
+ * - **Points:** another object without a footprint (a tree, a prop)
+ *   occupies its anchor's cell.
  * - **Heights:** the base is where the object is built (its lowest
  *   footprint corner, or its own base); the top is estimated as the bake
  *   draws it: a crest height where the object has one, else its real height
@@ -30,11 +40,99 @@ export interface ObjectIndexWorld {
   heightStretch: number;
 }
 
+/**
+ * How far (cells) a landmark drawn from its anchor may reach: it is filed
+ * this far around its anchor, and its model's plan is worked out when a
+ * query first comes this close.
+ */
+const PLAN_REACH = 16;
+
 interface Entry {
   inst: ObjectInstance;
   bounds: [number, number, number, number];
+  /** Where its model stands, for a landmark drawn from its anchor; undefined until a query comes near. */
+  plan: ModelPlan | null | undefined;
   /** Cached base height (steps), once the terrain under it was loaded. */
   base: number | null;
+}
+
+/** Where a model drawn from an anchor stands, in plan: the columns its voxels fill. */
+export interface ModelPlan {
+  /** Bounds of the filled columns (cells) [x0, y0, x1, y1]. */
+  bounds: [number, number, number, number];
+  /** The model's corner (cells), its columns along x and y and their size (cells). */
+  x0: number;
+  y0: number;
+  sx: number;
+  sy: number;
+  cell: number;
+  /** Whether each column (row-major from the corner) has a voxel. */
+  filled: Uint8Array;
+}
+
+/** The plan of a voxel model drawn centred on an anchor (cells), its voxels `cell` cells across. */
+export function modelPlan(model: VoxelModel, x: number, y: number, cell: number): ModelPlan {
+  const { sx, sy, data } = model;
+  const filled = new Uint8Array(sx * sy);
+  for (let i = 0; i < data.length; i++) if (data[i]) filled[i % (sx * sy)] = 1;
+  const x0 = x - (sx * cell) / 2;
+  const y0 = y - (sy * cell) / 2;
+  let bx0 = Infinity;
+  let by0 = Infinity;
+  let bx1 = -Infinity;
+  let by1 = -Infinity;
+  for (let j = 0; j < sy; j++)
+    for (let i = 0; i < sx; i++) {
+      if (!filled[j * sx + i]) continue;
+      bx0 = Math.min(bx0, i);
+      by0 = Math.min(by0, j);
+      bx1 = Math.max(bx1, i + 1);
+      by1 = Math.max(by1, j + 1);
+    }
+  const bounds: [number, number, number, number] =
+    bx0 === Infinity ? [x, y, x, y] : [x0 + bx0 * cell, y0 + by0 * cell, x0 + bx1 * cell, y0 + by1 * cell];
+  return { bounds, x0, y0, sx, sy, cell, filled };
+}
+
+/** Whether a model's plan covers a point (cells). */
+function inPlan(p: ModelPlan, x: number, y: number): boolean {
+  const i = Math.floor((x - p.x0) / p.cell);
+  const j = Math.floor((y - p.y0) / p.cell);
+  return i >= 0 && j >= 0 && i < p.sx && j < p.sy && p.filled[j * p.sx + i] === 1;
+}
+
+/** What it takes to generate a landmark's model as the bake does (`landmarkPlan`). */
+export interface PlanSource {
+  catalog: AssetCatalog;
+  rampIds: Map<string, number>;
+  renderScale: number;
+  /** Real metres per cell and the level's object height stretch (D-047). */
+  metersPerCell: number;
+  heightStretch: number;
+}
+
+/**
+ * Where a registry landmark drawn from its anchor (no footprint) stands:
+ * its model generated as the bake generates it (seed, height, quarter
+ * turns), in plan. Null for other objects, or where the model can't be
+ * generated here (a generator from a plugin the page didn't load).
+ */
+export function landmarkPlan(inst: ObjectInstance, src: PlanSource): ModelPlan | null {
+  if (inst.fp?.length || !inst.id || (inst.hm === undefined && inst.top === undefined)) return null;
+  const voxel = objectVoxelScale(src.renderScale);
+  let heightVox: number | undefined;
+  if (inst.hm !== undefined) heightVox = (inst.hm / (voxel.h * (inst.m ?? src.metersPerCell))) * src.heightStretch;
+  else if (inst.top !== undefined && inst.z0 !== undefined) heightVox = Math.max(1, (inst.top - inst.z0) / voxel.v);
+  const hints =
+    inst.rs || inst.fm || inst.fr !== undefined || inst.fl !== undefined
+      ? { roof: inst.rs, facade: inst.fm, front: inst.fr, corner: inst.cn === 1, year: inst.yr, floors: inst.fl }
+      : undefined;
+  try {
+    const model = generateModel(src.catalog, src.rampIds, inst.g, { seed: inst.s, heightVox, hints });
+    return modelPlan(inst.r ? rotateModel(model, inst.r) : model, inst.x, inst.y, voxel.h);
+  } catch {
+    return null;
+  }
 }
 
 function boundsOf(inst: ObjectInstance): [number, number, number, number] {
@@ -89,6 +187,8 @@ export class ObjectIndex {
     /** Whether the style draws a group (objects it doesn't draw aren't there). */
     private readonly drawn: (group: string) => boolean,
     private readonly heightAt: (x: number, y: number) => number | null,
+    /** Where a landmark drawn from its anchor stands (`landmarkPlan`), or null for its anchor's cell. */
+    private readonly plan: (inst: ObjectInstance) => ModelPlan | null = () => null,
   ) {
     this.cols = Math.ceil(world.cellsX / BUCKET) + 1;
   }
@@ -101,9 +201,12 @@ export class ObjectIndex {
       let ok = known.get(inst.g);
       if (ok === undefined) known.set(inst.g, (ok = this.drawn(inst.g)));
       if (!ok) continue;
-      const bounds = boundsOf(inst);
+      // a landmark drawn from its anchor: filed around it, its model generated when a query comes near
+      const reaches = !inst.fp?.length && !!inst.id;
+      const r = PLAN_REACH;
+      const bounds: [number, number, number, number] = reaches ? [inst.x - r, inst.y - r, inst.x + r, inst.y + r] : boundsOf(inst);
       const i = entries.length;
-      entries.push({ inst, bounds, base: inst.z0 ?? null });
+      entries.push({ inst, bounds, plan: reaches ? undefined : null, base: inst.z0 ?? null });
       const bx0 = Math.max(0, Math.floor(bounds[0] / BUCKET));
       const by0 = Math.max(0, Math.floor(bounds[1] / BUCKET));
       const bx1 = Math.max(bx0, Math.floor(Math.min(bounds[2], this.world.cellsX) / BUCKET));
@@ -156,7 +259,7 @@ export class ObjectIndex {
     };
   }
 
-  /** Objects standing at a point: footprints that contain it, footprint-less objects in its cell. */
+  /** Objects standing at a point: footprints that contain it, landmarks' plans, other footprint-less objects in its cell. */
   at(x: number, y: number): ObjectHit[] {
     const entries = this.build();
     if (x < 0 || y < 0 || x >= this.world.cellsX || y >= this.world.cellsY) return [];
@@ -165,10 +268,18 @@ export class ObjectIndex {
     const out: ObjectHit[] = [];
     for (const i of list) {
       const e = entries[i]!;
+      if (e.plan === undefined) {
+        const [x0, y0, x1, y1] = e.bounds;
+        if (x < x0 || y < y0 || x > x1 || y > y1) continue;
+        e.plan = this.plan(e.inst);
+        e.bounds = e.plan ? e.plan.bounds : boundsOf(e.inst);
+      }
       const [x0, y0, x1, y1] = e.bounds;
       if (x < x0 || y < y0 || x > x1 || y > y1) continue;
       if (e.inst.fp?.length) {
         if (!inPolygon(x, y, e.inst.fp)) continue;
+      } else if (e.plan) {
+        if (!inPlan(e.plan, x, y)) continue;
       } else if (x >= x1 || y >= y1) continue; // a point object's cell is half-open
       out.push(this.hit(e));
     }

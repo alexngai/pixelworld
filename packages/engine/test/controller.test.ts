@@ -48,6 +48,7 @@ function fakeView(opts: { start?: { x: number; y: number } } = {}) {
     ensure: async () => {},
     heightAt: query.heightAt,
     lonLatToCell: query.lonLatToCell,
+    pixelRatio: () => 2,
   });
   camera.autoZoom = false;
   const bakes: string[] = [];
@@ -198,6 +199,21 @@ describe("the rover controller", () => {
     expect(rover.rover.y).toBe(at);
   });
 
+  it("keeps its place and switches in a saved state, and puts them back", async () => {
+    const { view, camera } = fakeView();
+    const rover = roverController();
+    await rover.attach(view);
+    rover.place(4.5, 26.5);
+    rover.keyDown(key("n"));
+    const saved = JSON.parse(JSON.stringify(rover.serialize()));
+    expect(saved).toEqual({ x: 4.5, y: 26.5, h: 10, follow: true, noclip: true });
+    rover.place(12, 12);
+    rover.keyDown(key("n"));
+    rover.restore(saved);
+    expect([rover.rover.x, rover.rover.y, rover.rover.h, rover.noclip]).toEqual([4.5, 26.5, 10, true]);
+    expect([camera.x, camera.y, camera.h]).toEqual([4.5, 26.5, 10]); // following: the camera is back on it
+  });
+
   it("listens on targets it is given, and stops when detached", async () => {
     const { view, entities } = fakeView();
     const keys = new EventTarget();
@@ -267,5 +283,82 @@ describe("controller wiring", () => {
     stop();
     keys.dispatchEvent(ev("keydown", { key: "b" }));
     expect(got).toEqual(["down a", "up a", "blur", "pd 1", "pm 2", "pu"]);
+  });
+
+  it("hands each update the frame's clock", async () => {
+    const { view } = fakeView();
+    const got: unknown[] = [];
+    const host = new Controllers(view);
+    await host.use({ id: "c", attach: () => {}, update: (dt, clock) => void got.push([dt, clock]) });
+    const clock = { dt: 0, realDt: 0.016, time: 0, started: false, paused: false };
+    host.update(0, clock);
+    expect(got).toEqual([[0, clock]]);
+  });
+
+  it("moves a controller used in another view: detached there first, and left alone when that view goes", async () => {
+    const a = fakeView();
+    const b = fakeView();
+    const log: string[] = [];
+    const c: Controller = {
+      id: "player",
+      attach: (v) => void log.push(`attach ${v === a.view ? "A" : "B"}`),
+      detach: () => void log.push("detach"),
+      update: () => void log.push("update"),
+    };
+    const hostA = new Controllers(a.view);
+    const hostB = new Controllers(b.view);
+    await hostA.use(c);
+    await hostB.use(c); // a level switch keeping the player's controller
+    expect(log).toEqual(["attach A", "detach", "attach B"]);
+    expect(hostA.current).toBeNull();
+    expect(hostB.current).toBe(c);
+    hostA.update(0.1); // the old view's frames don't step it
+    await hostA.use(null); // nor does destroying the old view detach it
+    expect(log).toEqual(["attach A", "detach", "attach B"]);
+    hostB.update(0.1);
+    expect(log.at(-1)).toBe("update");
+  });
+});
+
+describe("the camera's projection to the canvas", () => {
+  it("is the inverse of pick, in CSS pixels", () => {
+    const { camera, view } = fakeView();
+    camera.setFocus(12.3, 9.7, 0);
+    for (const [x, y] of [
+      [12.3, 9.7],
+      [8.25, 14.5],
+      [16, 5.5],
+    ] as const) {
+      const p = camera.project(x, y, 0);
+      expect(p.onScreen).toBe(true);
+      const hit = view.query.pick(p.x, p.y)!;
+      expect(hit.x).toBeCloseTo(x, 4);
+      expect(hit.y).toBeCloseTo(y, 4);
+    }
+    // the focus is the canvas's middle: 1280 × 720 device px at 2 device px per CSS px
+    const mid = camera.project(12.3, 9.7, 0);
+    expect(mid.x).toBeCloseTo(320, 6);
+    expect(mid.y).toBeCloseTo(180, 6);
+  });
+
+  it("follows the rotation and the zoom, and says when a place is off the canvas", () => {
+    const { camera, view } = fakeView();
+    camera.setFocus(16, 16, 0);
+    camera.rotation = 1;
+    camera.zoom = 3;
+    const p = camera.project(18, 15, 0);
+    const hit = view.query.pick(p.x, p.y)!;
+    expect(hit.x).toBeCloseTo(18, 4);
+    expect(hit.y).toBeCloseTo(15, 4);
+    expect(camera.project(30, 30, 0).onScreen).toBe(false);
+    // higher up is higher on the canvas, 8 render px per step
+    expect(camera.project(16, 16, 0).y - camera.project(16, 16, 1).y).toBeCloseTo((8 * 3) / 2, 6);
+  });
+
+  it("stands a place on the ground without a height, and answers null where there is none", () => {
+    const { camera } = fakeView();
+    camera.setFocus(10, 26, 10);
+    expect(camera.project(10, 26)).toEqual(camera.project(10, 26, 10)); // on the cliff top
+    expect(camera.project(40, 40)).toBeNull(); // outside the world
   });
 });

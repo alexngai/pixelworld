@@ -1,6 +1,6 @@
-import type { ObjectInstance } from "@pixelworlds/generators";
+import { VoxelModel, registerGenerators, unregisterGenerators, type GenContext, type ObjectInstance } from "@pixelworlds/generators";
 import { describe, expect, it } from "vitest";
-import { ObjectIndex, inPolygon } from "../src/objects";
+import { ObjectIndex, inPolygon, landmarkPlan } from "../src/objects";
 import { createQuery, type QuerySource } from "../src/queries";
 
 /**
@@ -113,5 +113,67 @@ describe("object occupancy", () => {
     const q = createQuery(src, w, null, v, index());
     expect(q.objectsAt(3, 3).map((o) => o.group)).toEqual(["building.house"]);
     expect(q.landmarks().map((l) => l.id).sort()).toEqual(["big-tower", "dam"]);
+  });
+});
+
+/**
+ * A domed hall drawn from its anchor (no footprint), as City Hall is: a
+ * centre block and two wings around a courtyard, 3 × 2 cells at render
+ * scale 1 (48 × 32 voxels of 1/16 cell). Its height follows `heightVox`.
+ */
+function hall(ctx: GenContext): VoxelModel {
+  const m = new VoxelModel(48, 32, Math.max(1, Math.round(ctx.heightVox ?? 8)));
+  const wall = m.material(ctx.ramp("wall"));
+  m.fill(0, 0, 0, 48, 8, m.sz, wall); // north wing
+  m.fill(0, 24, 0, 48, 32, m.sz, wall); // south wing
+  m.fill(20, 8, 0, 28, 24, m.sz, wall); // the dome's block between them
+  return m;
+}
+
+describe("landmarks drawn from an anchor", () => {
+  const catalog = { "landmark.hall": { generator: "testHall", ramps: { wall: "stone" } } };
+  const src = { catalog, rampIds: new Map([["stone", 4]]), renderScale: 1, metersPerCell: 100, heightStretch: 1 };
+  const HALL: ObjectInstance = { g: "landmark.hall.domed", x: 10, y: 20, s: 9, hm: 50, id: "city-hall" };
+
+  it("stand where their model stands, in plan: wings in, courtyards out", () => {
+    registerGenerators({ testHall: hall }, { source: "test-hall" });
+    try {
+      const plan = landmarkPlan(HALL, src)!;
+      expect(plan.bounds).toEqual([8.5, 19, 11.5, 21]);
+      const ix = new ObjectIndex([...INSTANCES, HALL], world, () => true, (x) => ground(x), (inst) => landmarkPlan(inst, src));
+      const at = (x: number, y: number) => ix.at(x, y).map((o) => o.id);
+      expect(at(10, 20)).toEqual(["city-hall"]); // the anchor
+      expect(at(8.6, 19.1)).toEqual(["city-hall"]); // a wing's far corner, outside the anchor's cell
+      expect(at(11.4, 20.9)).toEqual(["city-hall"]);
+      expect(at(9, 20)).toEqual([]); // the courtyard
+      expect(at(11.6, 20)).toEqual([]); // beyond it
+      expect(ix.at(8.6, 19.1)[0]).toMatchObject({ bounds: [8.5, 19, 11.5, 21], footprint: false });
+      // a quarter turn turns the plan
+      const turned = landmarkPlan({ ...HALL, r: 1 }, src)!;
+      expect(turned.bounds).toEqual([9, 18.5, 11, 21.5]);
+    } finally {
+      unregisterGenerators("test-hall");
+    }
+  });
+
+  it("keep their anchor's cell where the model can't be generated here", () => {
+    expect(landmarkPlan(HALL, src)).toBeNull(); // no generator registered
+    expect(landmarkPlan({ ...HALL, id: undefined }, src)).toBeNull(); // not a landmark
+    expect(landmarkPlan({ ...HALL, fp: [[9, 19], [11, 19], [11, 21], [9, 21]] }, src)).toBeNull(); // a footprint
+    const ix = new ObjectIndex([HALL], world, () => true, (x) => ground(x), (inst) => landmarkPlan(inst, src));
+    expect(ix.at(10.5, 20.5).map((o) => o.id)).toEqual(["city-hall"]);
+    expect(ix.at(8.6, 19.1)).toEqual([]);
+  });
+
+  it("are generated at the bake's height for the level", () => {
+    let seen = 0;
+    registerGenerators({ testHall: (ctx) => ((seen = ctx.heightVox ?? 0), hall(ctx)) }, { source: "test-hall" });
+    try {
+      landmarkPlan(HALL, { ...src, heightStretch: 2 });
+      // 50 m in voxels of 100/16 m, stretched 2×
+      expect(seen).toBeCloseTo((50 / (100 / 16)) * 2, 9);
+    } finally {
+      unregisterGenerators("test-hall");
+    }
   });
 });

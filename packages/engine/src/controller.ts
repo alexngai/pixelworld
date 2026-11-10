@@ -1,6 +1,14 @@
-import type { Controller, ControllerHost, ControllerView } from "./types";
+import type { Controller, ControllerHost, ControllerView, FrameClock } from "./types";
 
-/** The view's current controller: at most one at a time. */
+/** The host each controller is attached to: a controller is in one view at a time. */
+const owners = new WeakMap<Controller, Controllers>();
+
+/**
+ * The view's current controller: at most one at a time. Using a controller
+ * that another view has (a level switch keeping the player's controller)
+ * detaches it there first, so the old view neither updates it nor detaches
+ * it again when it is destroyed.
+ */
 export class Controllers implements ControllerHost {
   private active: Controller | null = null;
 
@@ -12,16 +20,25 @@ export class Controllers implements ControllerHost {
 
   async use(controller: Controller | null): Promise<void> {
     if (controller === this.active) return;
-    this.active?.detach?.();
-    this.active = null;
+    if (this.active) this.release(this.active);
     if (!controller) return;
+    owners.get(controller)?.release(controller);
     await controller.attach(this.view);
     this.active = controller;
+    owners.set(controller, this);
   }
 
-  /** Each frame, before the layers. */
-  update(dt: number): void {
-    this.active?.update?.(dt);
+  /** Detach a controller if it is this view's. */
+  private release(controller: Controller): void {
+    if (this.active !== controller) return;
+    this.active = null;
+    owners.delete(controller);
+    controller.detach?.();
+  }
+
+  /** Each frame, before the layers (game seconds; the clock defaults to a running one). */
+  update(dt: number, clock: FrameClock = { dt, realDt: dt, time: 0, started: true, paused: false }): void {
+    this.active?.update?.(dt, clock);
   }
 }
 

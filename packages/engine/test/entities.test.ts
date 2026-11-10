@@ -165,6 +165,36 @@ describe("the camera", () => {
   });
 });
 
+describe("entities and the baked ground", () => {
+  it("leave out an entity where the ground isn't drawn yet, without holding up the frame", async () => {
+    const t = entities();
+    t.list.add({ model: { boxes: [BOX], key: "a" }, x: 5, y: 6 });
+    const b = t.list.add({ model: { boxes: [BOX], key: "b" }, x: 50, y: 6 });
+    t.list.request(0);
+    t.jobs[0]!.done(t.sprite(1));
+    t.jobs[1]!.done(t.sprite(2));
+    await t.flush();
+    const drawn = (x: number) => x < 20; // the tile under b is still baking
+    let frame = t.list.draws(0, proj, drawn);
+    expect(frame.complete).toBe(true);
+    expect(frame.list.map((d) => d.sprite)).toEqual([t.sprite(1)]);
+    b.moveTo(10, 6);
+    frame = t.list.draws(0, proj, drawn);
+    expect(frame.list.map((d) => d.sprite)).toEqual([t.sprite(1), t.sprite(2)]);
+  });
+
+  it("don't wait for a sprite whose bake failed, nor ask for it again", async () => {
+    const t = entities();
+    t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6 });
+    t.list.request(0);
+    t.jobs[0]!.done(null);
+    await t.flush();
+    t.list.request(0);
+    expect(t.jobs.length).toBe(1);
+    expect(t.list.draws(0, proj)).toEqual({ list: [], complete: true });
+  });
+});
+
 describe("disposing entities", () => {
   it("releases every sprite, and drops ones that arrive afterwards", async () => {
     const t = entities();
