@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "bench": "pnpm --filter @pixelworlds/web exec vite --open /bench.html",
     "bench:headless": "node tools/bench.mjs",
     "example:minimal": "pnpm --filter @pixelworlds/example-minimal-viewer dev",
