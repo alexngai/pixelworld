@@ -89,8 +89,12 @@ export function resolveAsset(catalog: AssetCatalog, group: string): AssetSpec | 
 
 export interface GenContext {
   rand: () => number;
+  /** The ramp id of a role the generator needs; a MissingRoleError naming the asset, generator and role if the asset has none. */
   ramp: (role: string) => number;
-  /** Ramp ids of every role named `role` or `role.<variant>` (e.g. wall, wall.gold). */
+  /**
+   * Ramp ids of every role named `role` or `role.<variant>` (e.g. wall, wall.gold), sorted by role.
+   * Empty when the asset has none: for an optional role (fall back, or call `ramp(role)` to require it).
+   */
   ramps: (role: string) => number[];
   param: (name: string, fallback: number) => number;
   /** Footprint mask in voxels (buildings). */
@@ -139,7 +143,7 @@ export function generateModel(
   const spec = resolveAsset(catalog, group);
   if (!spec) throw new Error(`no asset for group ${group}`);
   const gen = getGenerator(spec.generator, group);
-  const ctx = makeContext(spec, { rampIds } as ObjectBuildOptions, opts.seed);
+  const ctx = makeContext(spec, { rampIds, catalog } as ObjectBuildOptions, opts.seed);
   ctx.mask = opts.mask;
   ctx.heightVox = opts.heightVox;
   ctx.hints = opts.hints;
@@ -201,25 +205,51 @@ export interface ObjectMeshes {
   skipped: number;
 }
 
+/**
+ * A generator asked for a role its style asset doesn't map to a ramp in the
+ * palette. The message names the asset (its key in the pack's `assets`), the
+ * generator and the role, and lists the roles the asset has (D-075).
+ */
+export class MissingRoleError extends Error {
+  override name = "MissingRoleError";
+
+  constructor(
+    readonly role: string,
+    readonly generator: string,
+    /** The asset's key in the style pack's `assets`, if known. */
+    readonly asset: string | null,
+    /** The ramp the role names, when it names one the palette doesn't have. */
+    readonly ramp?: string,
+    roles: string[] = [],
+  ) {
+    const where = asset !== null ? `assets[${JSON.stringify(asset)}]` : "the style asset";
+    super(
+      ramp !== undefined
+        ? `${where}.ramps[${JSON.stringify(role)}] names the ramp '${ramp}', which isn't in the palette (generator '${generator}')`
+        : `${where} has no ramp for the role '${role}', which its generator '${generator}' draws with: ` +
+            `add "${role}": "<ramp>" to its "ramps" (it has ${roles.length ? roles.join(", ") : "none"})`,
+    );
+  }
+}
+
 function makeContext(spec: AssetSpec, opts: ObjectBuildOptions, seed: number): GenContext {
   const rand = rng(seed);
+  // a missing role's error names the asset by its key in the catalog (only looked up then)
+  const rampOf = (role: string): number => {
+    const name = spec.ramps[role];
+    const id = name !== undefined ? opts.rampIds.get(name) : undefined;
+    if (id !== undefined) return id;
+    const asset = Object.entries(opts.catalog ?? {}).find(([, s]) => s === spec)?.[0] ?? null;
+    throw new MissingRoleError(role, spec.generator, asset, name, Object.keys(spec.ramps));
+  };
   return {
     rand,
-    ramp: (role) => {
-      const name = spec.ramps[role];
-      const id = name !== undefined ? opts.rampIds.get(name) : undefined;
-      if (id === undefined) throw new Error(`asset ramp '${role}' (${name}) is not in the palette`);
-      return id;
-    },
+    ramp: rampOf,
     ramps: (role) =>
       Object.keys(spec.ramps)
         .filter((k) => k === role || k.startsWith(role + "."))
         .sort()
-        .map((k) => {
-          const id = opts.rampIds.get(spec.ramps[k]!);
-          if (id === undefined) throw new Error(`asset ramp '${k}' (${spec.ramps[k]}) is not in the palette`);
-          return id;
-        }),
+        .map(rampOf),
     param: (name, fallback) => {
       const v = spec.params?.[name];
       return typeof v === "number" ? v : fallback;
