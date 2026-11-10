@@ -102,7 +102,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **`paint`:** an 8-bit indexed PNG in the style palette, where index 0 keeps the baked pixel.
   - **Use:** clients stamp painted pixels into every tile bake, only where the tile shows the landmark at the bake's depth, or, beyond its silhouette, empty ground or what lies behind it.
   - **Hash:** `sha256` covers both files.
-- **Geo grid (optional, D-048):** `geo.path` is a gzipped file of little-endian int32 microdegrees, shape `(ny, nx, 2)` as (lon, lat), where `size` is `[nx, ny]`.
+- **Geo grid (optional, D-048):** `geo.path` is a gzipped file of little-endian int32 microdegrees, shape `(ny, nx, 2)` as (lon, lat), where `size` is `[nx, ny]`. The pipeline writes one for every package (D-076); packages built before that have one only if they have levels.
   - **Points:** they sit at cell corners `x = min(i·step, cellsX)` and `y = min(j·step, cellsY)`; positions in between are bilinear.
   - **Coding:** each row is delta-coded along x, with the first point absolute.
   - **Use:** clients convert between cells and lon/lat with it, both ways, to carry a place from one level to another.
