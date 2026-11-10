@@ -1,6 +1,6 @@
 # Using pixelworld from npm
 
-pixelworld is one npm package, `pixelworld`, with an entry point per part (decision D3 in [library.md](library.md#6-decisions)). This guide covers installing it, drawing a world in a page, where worlds and style packs come from, the bake worker, plugins, and how a release is made. The engine's API is in [library.md §7](library.md#7-as-built-the-engine-m4-step-1); the full reference is built with `pnpm docs:api` (§8).
+pixelworld is one npm package, `pixelworld`, with an entry point per part (decision D3 in [library.md](library.md#6-decisions)). This guide covers installing it, drawing a world in a page, where worlds and style packs come from, the bake worker, plugins (city packs, packages of their own such as San Francisco's `@pixelworlds/city-sf`), and how a release is made. The engine's API is in [library.md §7](library.md#7-as-built-the-engine-m4-step-1); the full reference is built with `pnpm docs:api` (§8).
 
 ## 1. Install
 
@@ -11,6 +11,13 @@ npm install pixelworld        # or pnpm add, yarn add
 - **ESM only,** with TypeScript declarations and source maps. TypeScript needs `"moduleResolution": "bundler"`, `"node16"` or `"nodenext"`, which read the package's `exports`.
 - **No dependencies:** everything the package needs is bundled in.
 - **Browsers** need WebGL2 and module workers: every current desktop and mobile browser has both.
+- **San Francisco** also needs its city pack, which draws its buildings: `npm install @pixelworlds/city-sf` (§6). Without it, San Francisco bakes almost nothing.
+- **Before the first release,** pack both from a checkout of the repository and install the tarballs:
+
+  ```sh
+  pnpm install && pnpm --filter pixelworld --filter @pixelworlds/city-sf pack --pack-destination /tmp/pw
+  npm install /tmp/pw/*.tgz    # in your project: both tarballs
+  ```
 
 ## 2. A world in a page
 
@@ -33,21 +40,23 @@ await view.ready(); // a complete frame is drawn
 
 Arrows drive the rover, WASD or a drag pans, Q/E rotate, 1–6 zoom. From here a page uses the view: `view.camera.lookAt({ lon, lat })`, `view.entities.add(...)`, `view.query.heightAt(x, y)`, `view.query.pick(screenX, screenY)` and the rest of [library.md §7](library.md#7-as-built-the-engine-m4-step-1).
 
-**Traffic** is a layer, for worlds whose packages have routes (San Francisco and the Southwest):
+**Traffic** is a layer, for worlds whose packages have routes (San Francisco and the Southwest). San Francisco's buildings come from its city pack, a plugin the view loads (§6):
 
 ```ts
 import { trafficLayer } from "pixelworld/traffic";
+import { cityPlugin } from "@pixelworlds/city-sf";
 
 const view = await createWorldView({
   canvas,
   worldUrl: "/worlds/sf/",
   style: bayArea, // worlds/_styles/bay-area/style.json
+  plugins: [cityPlugin], // San Francisco's generators: its rows, towers and Chinatown
   layers: [trafficLayer()],
 });
 view.layers.enable("traffic", false); // and back on with true
 ```
 
-Working projects, each built and run against the packed package in CI: [examples/consumers/](../examples/consumers/) (Vite, webpack 5, plain ESM, and a CDN).
+Working projects, each built and run against the packed packages in CI: [examples/consumers/](../examples/consumers/) (Vite, webpack 5, plain ESM, and a CDN). Each draws the Grand Canyon slice, and San Francisco with its city pack (`?world=sf-fly`).
 
 ## 3. Entry points
 
@@ -107,7 +116,7 @@ await createWorldView({ canvas, worldUrl, style, workerUrl: "/static/bake.worker
 For the package from a CDN, start the worker from a `blob:` URL, which is the page's, and import the CDN's worker in it (CDNs serve it with CORS):
 
 ```ts
-const cdn = "https://cdn.jsdelivr.net/npm/pixelworld@0.1/dist/";
+const cdn = "https://cdn.jsdelivr.net/npm/pixelworld@0.0.0/dist/";
 const { createWorldView } = await import(`${cdn}engine.js`);
 const workerUrl = URL.createObjectURL(new Blob([`import "${cdn}bake.worker.js";`], { type: "text/javascript" }));
 await createWorldView({ canvas, worldUrl, style, workerUrl });
@@ -119,24 +128,39 @@ await createWorldView({ canvas, worldUrl, style, workerUrl });
 
 ## 6. Plugins
 
-- **City packs** add a city's generators (San Francisco's facades, towers and Chinatown, D4) to what the engine draws. They run inside the bake worker, where the engine loads them. How to write one and load it into a view: [plugins.md](plugins.md).
+- **City packs** add a city's generators to what the engine draws (D4). They run inside the bake worker, where the engine loads them. A world's style pack names the ones it needs (`"plugins"`), and a view that lacks one can't bake the tiles holding that pack's buildings.
+- **San Francisco's** is `@pixelworlds/city-sf` (its facades, towers and Chinatown; `pixelworld` is its peer dependency). Pass its descriptor to the view, or let the style choose among the packs a page has:
+
+  ```ts
+  import { cityPlugin } from "@pixelworlds/city-sf";
+
+  await createWorldView({ canvas, worldUrl: "/worlds/sf/", style, plugins: [cityPlugin] });
+  // or: plugins: (names) => names.flatMap((n) => (n === cityPlugin.name ? [cityPlugin] : []))
+  ```
+
+  - **Bundlers:** the descriptor names the pack's worker module with `new URL("./worker.js", import.meta.url)`, which Vite (dev and build) and webpack 5 follow, copying it into your build with no configuration.
+  - **Plain ESM:** add the pack and `pixelworld/generators`, which it imports, to the import map (the [ESM example](../examples/consumers/esm/index.html) does).
 - **Packaging matters for them:** the published worker is one self-contained file with its own copy of the generators. A plugin registers through what the worker's plugin loader hands it, not by importing `pixelworld/generators` (that would be another copy, which the worker doesn't read).
+- **Your own city pack:** the quickstart in [plugins.md §9.6](plugins.md#96-quickstart-a-city-pack-of-your-own) builds one in a project that depends on `pixelworld`, and loads it into a view.
 - **Runtime layers and controllers** are plain objects implementing `Layer` and `Controller` from `pixelworld/engine` ([library.md §7.3, §7.5](library.md#73-layers)); they need no registration.
 - **Pipeline plugins** (sources and facts, in Python) are the pipeline's: [plugins.md](plugins.md).
 
 ## 7. In this repository
 
-- **Names:** the published package is the unscoped `pixelworld`. The workspace's own packages are scoped `@pixelworlds/*`, the npm organization that also holds the city packs (`@pixelworlds/city-sf`, [plugins.md](plugins.md)); the private ones are bundled into `pixelworld` and never published.
+- **Names:** the published packages are the unscoped `pixelworld` and the city packs, scoped `@pixelworlds/city-*` (`@pixelworlds/city-sf`, [plugins.md](plugins.md)). The workspace's other packages are scoped `@pixelworlds/*` too, the npm organization; they are private, bundled into `pixelworld`, and never published.
 - **The package:** `packages/pixelworld`. Its `src/` re-exports the workspace packages (`@pixelworlds/engine`, `@pixelworlds/sim` and the rest), which stay private TypeScript sources. In the workspace its `exports` point at `src/`, so apps, examples, vitest and `pnpm typecheck` use source as before; `publishConfig.exports` points the packed manifest at `dist/`.
 - **The build:** `pnpm package:build` (also run by `pnpm pack`) runs `packages/pixelworld/build.mjs`: tsup over esbuild, one split ESM build of the six entry points with bundled declarations, then the worker as one file, minified but for whitespace (196 KB; bundlers minify it to 145 KB), because esbuild drops comments with whitespace and a dynamic `import(url)` needs its `/* webpackIgnore: true */` to reach webpack. It checks the worker literal, the entry files, that nothing imports a private package, and that every dynamic `import(url)` carries `/* @vite-ignore */ /* webpackIgnore: true */`. See [library.md §3.5](library.md#35-publishing).
+- **The city pack** (D-074): `packages/city-sf` is built the same way by its own `build.mjs` (`pnpm package:build` runs both): `dist/index.js` with its declarations, `pixelworld` left external as a peer, and `dist/worker.js`, the worker module, self-contained and minified (28 KB). In the workspace its `exports` point at `src/` too, so the apps run it unbuilt ([plugins.md §9.5](plugins.md#95-shipping-one)).
 - **The checks**, each also in CI's npm package job:
 
 | Command | Checks |
 |---|---|
-| `pnpm package:check` | packs the package and checks the tarball: its files, manifest, `exports`, the worker literal, the licences, and size budgets (tarball, unpacked, JS, worker) |
+| `pnpm package:check` | packs both packages and checks the tarballs. `pixelworld`: its files, manifest, `exports`, the worker literal, the licences, and size budgets (tarball, unpacked, JS, worker). The city pack (`tools/city-pack-check.mjs`): its files, manifest (`pixelworld` its only peer), `exports`, the descriptor's `new URL("./worker.js", import.meta.url)`, and its worker module, imported alone, which must define the plugin and register its generators |
 | `pnpm package:size` | size-limit: what a consumer bundles from each entry point, gzipped, and the worker ([`.size-limit.json`](../packages/pixelworld/.size-limit.json)) |
-| `pnpm package:consumers` | packs, then builds and runs the [consumer examples](../examples/consumers/) in headless Chromium, and checks the worker baked their tiles |
+| `pnpm package:consumers` | packs both, then builds and runs the [consumer examples](../examples/consumers/) in headless Chromium: the Grand Canyon, and San Francisco with its city pack. It checks the worker baked their tiles, and that San Francisco's buildings did (`--tarball`, `--city-tarball` to reuse packed ones) |
 | `pnpm docs:api` | the API reference |
+
+- **Version pins:** the consumer examples, the CDN recipe (§5) and the city pack quickstart name the packages' versions; a unit test fails when they drift from the packages' `package.json`, and `node tools/version-pins.mjs --write` sets them.
 
 ## 8. API reference
 
@@ -146,23 +170,25 @@ await createWorldView({ canvas, worldUrl, style, workerUrl });
 
 Publishing is manual: CI builds, packs and checks on every push, and holds no tokens.
 
-**With each change** to what the package ships, add a changeset: `pnpm changeset`, pick `pixelworld` and a bump (patch or minor before 1.0), and write a line for the changelog. Commit the file it writes in `.changeset/`.
+**With each change** to what a package ships, add a changeset: `pnpm changeset`, pick `pixelworld`, `@pixelworlds/city-sf` or both and a bump (patch or minor before 1.0), and write a line for the changelog. Commit the file it writes in `.changeset/`. The two version on their own; a `pixelworld` release that leaves the city pack's peer range bumps the pack too ([.changeset/README.md](../.changeset/README.md)).
 
-**To release `pixelworld`** (a maintainer with npm rights, from a clean `main`):
+**To release** (a maintainer with npm rights, from a clean `main`):
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm changeset version          # bumps packages/pixelworld/package.json, writes its CHANGELOG.md
-git add -A .changeset packages/pixelworld
+pnpm changeset version                 # bumps the packages' versions, writes their CHANGELOG.md
+node tools/version-pins.mjs --write    # the examples and docs name the new versions
+git add -A .changeset packages/pixelworld packages/city-sf examples/consumers docs
 git commit -m "Release pixelworld $(node -p 'require("./packages/pixelworld/package.json").version')"
 pnpm check && pnpm package:check && pnpm package:size && pnpm package:consumers
-cd packages/pixelworld
-pnpm publish --access public    # prepack builds dist/; asks for your npm 2FA code
-git tag "pixelworld@$(node -p 'require("./package.json").version')" && git push --follow-tags
+pnpm -r publish --access public        # each public package not yet on npm, pixelworld first; prepack builds dist/
+for p in pixelworld city-sf; do t=$(node -p "const p = require('./packages/$p/package.json'); p.name + '@' + p.version"); git tag -a "$t" -m "$t"; done
+git push --follow-tags
 ```
 
-- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` rejects one.
-- **Check first:** `pnpm pack` writes the tarball `pnpm publish` would upload; `node tools/pack-check.mjs pixelworld-x.y.z.tgz` and `node tools/consumers.mjs --tarball pixelworld-x.y.z.tgz` check it.
+- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports` and turns the city pack's `workspace:^` peer range into `^<pixelworld's version>`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` and `node tools/city-pack-check.mjs` reject one.
+- **`pnpm -r publish`** skips the private packages and any version already on npm, and asks for your npm 2FA code. A tag that already exists (a package that wasn't bumped) fails harmlessly.
+- **Check first:** `pnpm pack` writes the tarball `pnpm publish` would upload. `node tools/pack-check.mjs pixelworld-x.y.z.tgz`, `node tools/city-pack-check.mjs pixelworlds-city-sf-x.y.z.tgz` and `node tools/consumers.mjs --tarball pixelworld-x.y.z.tgz --city-tarball pixelworlds-city-sf-x.y.z.tgz` check them.
 
 **The Python distributions** (`pixelworld-pipeline` and the city pack `pixelworld-city-sf`) are released by hand too. Bump the versions, build, check, then upload the pipeline first, since the city pack depends on it:
 

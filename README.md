@@ -27,7 +27,7 @@ pnpm dev            # http://localhost:5173
 
 Press **I** for the data sources and licenses.
 
-URL parameters, useful for repeatable views: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache).
+URL parameters, useful for repeatable views: `world` (package URL, default `/southwest/`), `rot`, `zoom`, `fx`/`fy` (focus cell), `rover=x,y`, `w`/`h` (fixed canvas size), `hud=0`, `cache=0` (skip the IndexedDB tile cache), `style=<id>` (draw the world with another pack from `worlds/_styles/`, such as a variant you are trying; the city packs it names come from `apps/web/src/plugins.ts`, [plugins.md §9.7](docs/plugins.md#97-the-viewers-city-packs)).
 
 The viewer is built on the engine, `@pixelworlds/engine`, which other games can build on too ([library.md §7](docs/library.md#7-as-built-the-engine-m4-step-1)). `pnpm example:minimal` runs the smallest client of it (http://localhost:5180): San Francisco, the rover and traffic, in about 45 lines. `pnpm --filter @pixelworlds/game dev` runs M4's example game (http://localhost:5252): drive Las Vegas → Hoover Dam → the Grand Canyon, take off from a straight road and fly the canyon (H for keys; `?world=/sf/` starts on the Embarcadero, `?run=1` drives and flies the run by itself and reports its frame times).
 
