@@ -47,12 +47,11 @@ def check(
     checks that the plugins the spec names are installed."""
     from . import plugins
 
-    warnings: list[str] = []
+    issues: list[Issue] = []
     try:
-        region, _, path = load_region(spec, base_dir, warn=warnings.append)
+        region, _, _ = load_region(spec, base_dir, warn=issues.append)
     except SpecError as e:
         return None, e.issues
-    issues = [Issue((), w, "warning") for w in warnings]
     try:
         plugins.check(region)
     except plugins.PluginError as e:
@@ -155,7 +154,7 @@ def build(
     """
     with progress.run():
         progress.stage("spec", str(spec) if not isinstance(spec, dict) else "(a dict)")
-        region, raw, path = load_region(spec, base_dir, warn=progress.log)
+        region, raw, path = load_region(spec, base_dir, warn=lambda i: progress.log(str(i)))
         out = Path(out_dir) if out_dir is not None else default_out_dir(region.id)
         with staged(out) as stage:
             report = build_package(path, stage, compress=compress, region=region)

@@ -152,7 +152,7 @@ def load_region(
     spec: str | os.PathLike | dict[str, Any],
     base_dir: str | os.PathLike | None = None,
     *,
-    warn: Callable[[str], None] | None = None,
+    warn: Callable[[Issue], None] | None = None,
 ) -> tuple[Region, dict[str, Any], Path]:
     """(the Region, the resolved spec, the spec's path) for a spec given as a
     path or as a dict, checked against the schema (schema.py) first: a
@@ -176,7 +176,7 @@ def load_region(
         raise SpecError(issues)
     if warn is not None:
         for issue in issues:
-            warn(str(issue))
+            warn(issue)
     try:
         expanded = expand(raw, path)
     except LandmarkError as e:
