@@ -1,6 +1,7 @@
 import { BAKE_VERSION } from "@pixelworlds/bake";
 import {
   ChunkStore,
+  INCOMPLETE_PACKAGE,
   hashString,
   loadManifest,
   loadObjects,
@@ -10,7 +11,14 @@ import {
   type TileRequest,
 } from "@pixelworlds/runtime";
 import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
-import { GeoGrid, decodePng, type ObjectsFile, type WorldManifest } from "@pixelworlds/world-format";
+import {
+  GeoGrid,
+  decodePng,
+  fetchWorldFile,
+  parseWorldFile,
+  type ObjectsFile,
+  type WorldManifest,
+} from "@pixelworlds/world-format";
 import { pluginsKey } from "./plugins";
 import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
 
@@ -46,8 +54,17 @@ export interface LoadedWorld {
   scaleOverridden: boolean;
 }
 
-async function resolveStyle(source: StyleSource, id: string): Promise<object> {
-  return typeof source === "function" ? await source(id) : source;
+/** The style pack for the manifest's style id: as given, or from the app's resolver (whose errors name the pack). */
+export async function resolveStyle(source: StyleSource, id: string): Promise<object> {
+  if (typeof source !== "function") return source;
+  try {
+    return await source(id);
+  } catch (e) {
+    // a resolver that fetches the pack: say which pack, and what an HTML answer means (D-072)
+    const msg = e instanceof Error ? (e.name !== "Error" ? `${e.name}: ${e.message}` : e.message) : String(e);
+    const html = /Unexpected token '?<'?|<!doctype/i.test(msg) ? " (it got an HTML page, not JSON: is the pack's URL right?)" : "";
+    throw new Error(`style pack ${id}: the style resolver failed: ${msg}${html}`, { cause: e });
+  }
 }
 
 export async function loadWorld(opts: WorldViewOptions): Promise<LoadedWorld> {
@@ -118,7 +135,13 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
 export async function loadHeroes(w: LoadedWorld): Promise<HeroPaint[]> {
   const heroes: HeroPaint[] = [];
   if (!w.manifest.heroes?.length) return heroes;
-  const png = async (path: string) => decodePng(await (await fetch(new URL(path, w.base))).arrayBuffer());
+  // errors name the URL (D-072)
+  const png = async (path: string) => {
+    const url = new URL(path, w.base);
+    const info = { label: "hero landmark", expected: "a PNG the manifest names", hint: INCOMPLETE_PACKAGE };
+    const bytes = await fetchWorldFile(url, info);
+    return parseWorldFile(url, "hero landmark", () => decodePng(bytes));
+  };
   for (const h of w.manifest.heroes) {
     const [bake, paint] = await Promise.all([png(h.bake), png(h.paint)]);
     heroes.push({ ...h, bake: bake.data, paint: paint.data });

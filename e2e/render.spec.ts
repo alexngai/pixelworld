@@ -484,3 +484,13 @@ test.describe("Fog (an atmosphere layer)", () => {
     expect(await fog(page)).toBeNull();
   });
 });
+
+test.describe("Failures (D-072)", () => {
+  test("a wrong world URL names the URL and what came back", async ({ page }) => {
+    // the dev server answers a path it doesn't have with its index.html
+    await page.goto("/?w=320&h=180&world=/no-such-world/");
+    await expect(page.locator("#hud")).toContainText(
+      'not a world package: /no-such-world/manifest.json returned an HTML page (expected a world manifest); check worldUrl ("/no-such-world/")',
+    );
+  });
+});

@@ -1,4 +1,5 @@
 import { maybeGunzip } from "./chunk";
+import { fetchWorldFile, parseWorldFile } from "./fetch";
 import type { WorldManifest } from "./manifest";
 
 const M_PER_DEG_LAT = 110_540;
@@ -62,9 +63,11 @@ export class GeoGrid {
   static async load(manifest: WorldManifest, baseUrl: string | URL): Promise<GeoGrid | null> {
     const g = manifest.geo;
     if (!g) return null;
-    const res = await fetch(new URL(g.path, baseUrl));
-    if (!res.ok) throw new Error(`geo ${g.path}: HTTP ${res.status}`);
-    return GeoGrid.decode(await res.arrayBuffer(), g.size[0], g.size[1], g.step, manifest.cellsX, manifest.cellsY);
+    const url = new URL(g.path, baseUrl);
+    const bytes = await fetchWorldFile(url, { label: "world geo grid", expected: "the geo grid the manifest names" });
+    return parseWorldFile(url, "world geo grid", () =>
+      GeoGrid.decode(bytes, g.size[0], g.size[1], g.step, manifest.cellsX, manifest.cellsY),
+    );
   }
 
   private locate(v: number, ps: Float64Array): [number, number] {
