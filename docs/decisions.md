@@ -850,7 +850,7 @@ The point is more room for visual interest; both halves are wanted.
   - **TLS:** the pipeline's downloads verify against certifi's roots: a standalone Python on macOS reads `/etc/ssl/cert.pem`, which lacks GlobalSign Root R46, the root of both Socrata portals (NYC and DataSF).
 - **Measured** over the walking bounds `[-74.020, 40.690, -73.970, 40.729]` (2026-11-09, PLUTO 26v2): 12,852 footprints, 12,824 on a PLUTO lot (99.8%), 5,317 with an LPC record, 12,707 with a year (98.9%). Materials: brick 2,749, brownstone 550, cast iron 273, masonry 236, wood frame 114. Classes: C7 1,829, RM 888, K4 597, C1 514, C6 497, C4 474, C0 465, A4 337, O5 319, D4 316. Fetching everything took 74 s; a cached build reads it at once.
 - **Rejected alternatives:**
-  - **MapPLUTO's lot polygons** (a 100 MB+ shapefile of the whole city) for DataSF-style point-in-lot lookups: the footprints already carry their lot's BBL, and a lot with several buildings would give them all one lot's facts anyway.
+  - **MapPLUTO's lot polygons** (a download of the whole city) for DataSF-style point-in-lot lookups: the footprints already carry their lot's BBL, and a lot with several buildings would give them all one lot's facts anyway.
   - **PLUTO's year alone:** half of Manhattan's are rounded to 5 or 10 years; LPC's dates are per building where they exist.
   - **The 2015 tree census:** not used here; Forestry Tree Points (`hn5i-inap`) is the current one when street trees come from records.
 - **Later:**
