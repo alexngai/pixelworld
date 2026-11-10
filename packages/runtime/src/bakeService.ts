@@ -77,6 +77,8 @@ export class BakeService {
   private done = new Set<TileKey>();
   private pendingTile: (TileRequest & { id: number; key: TileKey }) | null = null;
   private spriteJobs = new Map<number, (img: BakedImage | null) => void>();
+  /** Disposed: nothing more is baked, and late answers are dropped. */
+  private disposed = false;
   private pluginJobs = new Map<number, { resolve: (p: PluginReport[]) => void; reject: (e: Error) => void }>();
   private spriteQueue: (
     | { id: number; rotation: Rotation; boxes: Box[] }
@@ -181,13 +183,30 @@ export class BakeService {
     };
   }
 
-  /** Stop baking: the worker ends, and nothing more is sent or received. */
+  /**
+   * Stop baking: the worker ends, and nothing more is sent or received.
+   * Everything still asked for settles: sprite and object bakes resolve null
+   * (so a layer counting them isn't left waiting), plugin loads reject, and
+   * later bakes resolve null at once.
+   */
   dispose(): void {
+    this.disposed = true;
     this.worker?.terminate();
     this.worker = null;
     this.wanted = [];
     this.spriteQueue = [];
     this.transport = { send: () => {} };
+    const sprites = [...this.spriteJobs.values()];
+    this.spriteJobs.clear();
+    for (const done of sprites) done(null);
+    const plugins = [...this.pluginJobs.values()];
+    this.pluginJobs.clear();
+    for (const job of plugins) job.reject(new Error("the bake service was disposed"));
+  }
+
+  /** Sprite and object bakes asked for and not finished yet (queued or baking). */
+  get spritesPending(): number {
+    return this.spriteJobs.size;
   }
 
   /** Replace the wanted list (highest priority first). */
@@ -206,6 +225,7 @@ export class BakeService {
   }
 
   bakeSprite(rotation: Rotation, boxes: Box[]): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
     return new Promise((resolve) => {
       const id = this.nextId++;
       this.spriteJobs.set(id, resolve);
@@ -216,6 +236,7 @@ export class BakeService {
 
   /** Bake object instances alone (hero landmarks, offline) on a terrain slice. */
   bakeObjects(rotation: Rotation, instances: ObjectInstance[], slice: TerrainSlice): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
     return new Promise((resolve) => {
       const id = this.nextId++;
       this.spriteJobs.set(id, resolve);
@@ -267,7 +288,7 @@ export class BakeService {
   }
 
   private receive(msg: FromWorker): void {
-    if (msg.type === "ready") return;
+    if (this.disposed || msg.type === "ready") return;
     const job = msg.id !== undefined ? this.pluginJobs.get(msg.id) : undefined;
     if (job) {
       this.pluginJobs.delete(msg.id!);
@@ -285,6 +306,7 @@ export class BakeService {
   }
 
   private finish(id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean): void {
+    if (this.disposed) return; // a tile prepared, or an answer in flight, after dispose
     this.busy = false;
     const sprite = this.spriteJobs.get(id);
     if (sprite) {
