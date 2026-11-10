@@ -88,6 +88,7 @@ Status values:
 | D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
 | D-078 | Next regions: New York, then Paris, then Amsterdam | Accepted (M5) |
 | D-079 | A player sees through the buildings in front of it; tall objects stay in view | Accepted (M5) |
+| D-080 | New York's building facts: footprints joined to PLUTO lots and LPC records; a `materials:` rule | Accepted (M5) |
 
 ---
 
@@ -838,4 +839,22 @@ The point is more room for visual interest; both halves are wanted.
   - Buildings behind the player inside the ellipse are left out too where a nearer tile hid them (they're in no tile's image there); a variant that hides only objects in front of the player would keep them.
   - A bare variant whose scene left the worker's six-scene cache meshes the tile again; bake both together if that shows.
   - Downtown walking-level tiles take about 6 s each to mesh on the CPU (14 tiles on San Francisco's Financial District start); the visibility fix asks for more of them. This is the D5 (Rust/WASM meshing) question.
+
+### D-080: New York's building facts: footprints joined to PLUTO lots and LPC records; a `materials:` rule (accepted, M5)
+- **Why:** New York is the next city (D-078), starting with Lower Manhattan's walking level. Its typology rules (D-055) need facts per building, and its iconic fabric is named in the city's records: PLUTO's building class (C4 old-law tenements, A4 city residences, L lofts, O offices) and the Landmarks Preservation Commission's facade material (brownstone, cast iron).
+- **What:** the city pack `pixelworld-city-nyc` (`pipeline/plugins/`), facts source `pluto`:
+  - **Data** (second-region.md §7): the city's BUILDING footprints, PLUTO, the LPC building database and the 2020 NTAs, read through the Socrata API limited to the region's box (with a 0.002° margin) and cached under the PLUTO release (`nyc/footprints-<box>-26v2.json.gz`). Option `version` pins the release.
+  - **Joins:** PLUTO's API returns no lot polygons (its `geom` is empty), so a footprint finds its lot by BBL (`base_bbl`, else `mappluto_bbl`) and its LPC record by BIN; facts are looked up by point in footprint, not in lot.
+  - **Facts:** `year` from LPC's earliest date, else the footprint's construction year unless it is 1900 (the placeholder on 11% of Manhattan's footprints), else PLUTO's year built; `stories`, `units`; `use` from PLUTO's land use code (01–03 residential, 04 mixed, 05 commercial, 06 industrial, 07–08 civic); `class` as PLUTO's code; `hood` as the NTA; `material` from LPC.
+  - **`materials:` rule field:** matches the facts' material, in any case (`materials: [Brownstone]`). Nothing else reads material yet: a rule picks a group, the group a generator.
+  - **TLS:** the pipeline's downloads verify against certifi's roots: a standalone Python on macOS reads `/etc/ssl/cert.pem`, which lacks GlobalSign Root R46, the root of both Socrata portals (NYC and DataSF).
+- **Measured** over the walking bounds `[-74.020, 40.690, -73.970, 40.729]` (2026-11-09, PLUTO 26v2): 12,852 footprints, 12,824 on a PLUTO lot (99.8%), 5,317 with an LPC record, 12,707 with a year (98.9%). Materials: brick 2,749, brownstone 550, cast iron 273, masonry 236, wood frame 114. Classes: C7 1,829, RM 888, K4 597, C1 514, C6 497, C4 474, C0 465, A4 337, O5 319, D4 316. Fetching everything took 74 s; a cached build reads it at once.
+- **Rejected alternatives:**
+  - **MapPLUTO's lot polygons** (a 100 MB+ shapefile of the whole city) for DataSF-style point-in-lot lookups: the footprints already carry their lot's BBL, and a lot with several buildings would give them all one lot's facts anyway.
+  - **PLUTO's year alone:** half of Manhattan's are rounded to 5 or 10 years; LPC's dates are per building where they exist.
+  - **The 2015 tree census:** not used here; Forestry Tree Points (`hn5i-inap`) is the current one when street trees come from records.
+- **Later:**
+  - Heights from the footprints' `height_roof` (current; Overture's come from OSM's 2013–14 import): needs a height key in facts that `objects.py` reads before grouping towers.
+  - Overture's stacked setback parts (`min_height > 3`) are dropped (`objects.py`), so wedding-cake towers lose their upper tiers.
+  - LPC's `style_prim` (Italianate, Greek Revival, Romanesque Revival…) as a `styles:` rule field, if the generators come to draw styles.
 

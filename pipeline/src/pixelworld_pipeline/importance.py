@@ -29,7 +29,7 @@ from typing import Any
 import numpy as np
 
 from .region import Region
-from .sources.http import USER_AGENT
+from .sources.http import SSL_CONTEXT, USER_AGENT
 
 SPARQL = "https://query.wikidata.org/sparql"
 # instance-of classes that don't mark a magnifiable place
@@ -76,7 +76,7 @@ def fetch(region: Region, min_links: int = 20) -> list[dict[str, Any]]:
         SPARQL + "?format=json&query=" + urllib.parse.quote(q),
         headers={"User-Agent": USER_AGENT, "Accept": "application/sparql-results+json"},
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=120, context=SSL_CONTEXT) as resp:
         rows = json.load(resp)["results"]["bindings"]
     places = []
     for r in rows:
