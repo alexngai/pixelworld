@@ -90,6 +90,7 @@ Status values:
 | D-079 | A player sees through the buildings in front of it; tall objects stay in view | Accepted (M5) |
 | D-080 | New York's building facts: footprints joined to PLUTO lots and LPC records; a `materials:` rule | Accepted (M5) |
 | D-081 | New York's look: a `new-york` style pack and the `@pixelworlds/city-nyc` generator plugin | Accepted (M5) |
+| D-082 | Roads drawn along their own centre lines, and snapped to 16 directions (prototype) | Trial (M5) |
 
 ---
 
@@ -876,3 +877,21 @@ The point is more room for visual interest; both halves are wanted.
   - **Fabric this leaves out:** rear fire escapes, dumbbell light wells, mansard roofs, Federal houses' dormers, and vault-light sidewalks.
   - **Landmark shapes:** the Woolworth Building's crown and One World Trade Center's spire are generic: a lantern under a low copper pyramid, and a lattice crown. A steeper, Gothic crown needs a `decoTower` parameter for the cap's pitch, or a crown generator of its own. Canonical depictions follow data-sources.md §7.
   - **The specs** in `worlds/nyc/` map PLUTO's classes and LPC's materials (the facts plugin's `materials:` rule) to these groups.
+
+### D-082: Roads drawn along their own centre lines, and snapped to 16 directions (prototype; trial, M5)
+- **Why:** roads jittered wherever they weren't snapped exactly to the grid. A cell stored its roads as links from its centre to the centres of its 8 neighbours (D-049, D-050), so a street at any other angle drew as a staircase of links whose edges wobbled by about a third of a cell (3 m, several pixels at walking scale). Snapped streets still jogged a cell where one octilinear run handed over to the next. Lower Manhattan's grid runs 29° off north, 16° from the nearest grid direction, so its avenues zigzagged. The pipeline has the true lines; only the encoding lost them.
+- **What** (two spec switches, both off by default, so existing worlds are unchanged):
+  - **`widths.centrelines: true`:** each cell also stores the stretches of road and path centre line inside it, up to four per kind, each as its two ends in 1/255 cell (optional chunk sections `RSG0`–`RSG3`, `PSG0`–`PSG3`; `TerrainLayers.roadSeg`, `pathSeg`; a field texture of 8 texels per cell). The micro-terrain shader measures a way's distance to those pieces wherever a cell has them, for its band, its lanes and its medians; a cell of one piece, or two joined end to end, is a plain stretch for lanes and medians, more is a junction. The connections are traced cell by cell instead of laid in runs, so they stay under the line for routes and road beds, and cells a line only clips get its class and width.
+  - **`snap.roads.directions: 16`:** snapping (D-049) may also align edges with the 2:1 grid directions (26.6° and its mirrors), which draw as short repeating pixel patterns. Manhattan's grid is 2.4° from one.
+- **Tried** on `nyc-walk-lines` (`worlds/nyc/walk-lines.yaml`: `nyc-walk` with both switches and a 12° snap angle), compared with `nyc-walk` in the viewer with objects off and on: the avenues and cross streets of the Lower East Side and around City Hall run straight at their real angles, with their lane lines and crosswalks, where before they were octilinear runs with jogs; City Hall Park's paths follow their real lines. 37,688 of 84,626 road edges snap with 16 directions (25,477 with 8). The package grows from 1.4 to 1.8 MB.
+- **Known issues** (before this becomes the default):
+  - **Road beds** are still flattened along the traced cells, not the band, so some streets show stepped micro-terrain edges beside them.
+  - **Crowded cells:** 403 road cells and 2,487 path cells (sidewalk corners) have more than four pieces; the narrowest are left out, which can leave small gaps.
+  - **Connectivity:** the road report finds 16 disconnected junctions and 27 components (0 and 11 with runs), and there are 3,620 traffic routes (3,915): the traced connections join less well at junctions than the runs did.
+  - **Routes** still follow cell centres, so traffic zigzags slightly along angled streets; they should follow the pieces.
+  - Only micro-terrain worlds draw pieces (the field shader); rails still draw from their connections.
+- **Rejected alternatives:**
+  - **A distance field per micro-cell:** smooth too, but more data, and class, lanes and junctions still need per-cell records.
+  - **16 directions alone:** two-cell "knight" links would have to be known to every cell they cross, and it does nothing for curves or other angles.
+  - **Snapping everything to 8 directions:** no jitter, but it would turn Manhattan's grid by 16°, far beyond the snap's 2-cell shift.
+

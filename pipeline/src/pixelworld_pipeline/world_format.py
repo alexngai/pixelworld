@@ -70,6 +70,11 @@ LAYERS = (
     # lanes and medians (M3.5): the widest road's lane count in bits 0-3, one-way
     # in bit 4, divided (a carriageway with a median beside it) in bit 5 (lanes.py)
     ("lane", b"LANE", "u1", 0),
+    # centre lines (D-082): up to four pieces of way per cell, each the stretch
+    # of its centre line inside the cell, packed x0 | y0 << 8 | x1 << 16 | y1 << 24
+    # in 1/255 cell; drawn instead of the connection bits where a cell has them
+    *((f"road_seg{k}", f"RSG{k}".encode(), "<u4", 0) for k in range(4)),
+    *((f"path_seg{k}", f"PSG{k}".encode(), "<u4", 0) for k in range(4)),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -137,6 +142,15 @@ class Chunk:
     path_width: np.ndarray = field(default=None)  # uint8 path half-width, 1/32 cell
     rail: np.ndarray = field(default=None)  # uint16 rail connectivity | kind << 12
     lane: np.ndarray = field(default=None)  # uint8 lane count | one-way << 4 | divided << 5
+    # uint32 centre-line pieces (D-082), four slots per kind
+    road_seg0: np.ndarray = field(default=None)
+    road_seg1: np.ndarray = field(default=None)
+    road_seg2: np.ndarray = field(default=None)
+    road_seg3: np.ndarray = field(default=None)
+    path_seg0: np.ndarray = field(default=None)
+    path_seg1: np.ndarray = field(default=None)
+    path_seg2: np.ndarray = field(default=None)
+    path_seg3: np.ndarray = field(default=None)
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -386,6 +400,8 @@ def write_package(
     path_width: np.ndarray | None = None,
     rail: np.ndarray | None = None,
     lane: np.ndarray | None = None,
+    road_pieces: np.ndarray | None = None,
+    path_pieces: np.ndarray | None = None,
     path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
@@ -432,6 +448,9 @@ def write_package(
         "path_width": path_width,
         "rail": rail,
         "lane": lane,
+        # (cy, cx, 4) centre-line pieces (roads.rasterize with pieces), one layer per slot
+        **{f"road_seg{k}": None if road_pieces is None else road_pieces[..., k] for k in range(4)},
+        **{f"path_seg{k}": None if path_pieces is None else path_pieces[..., k] for k in range(4)},
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)

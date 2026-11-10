@@ -1,4 +1,4 @@
-import { LANE_DIVIDED, NO_WATER, TerrainGrid } from "@pixelworlds/grid";
+import { LANE_DIVIDED, NO_WATER, PIECES, TerrainGrid } from "@pixelworlds/grid";
 
 /** The most cells the decal looks out for a median's two carriageways (M3.5). */
 export const MEDIAN_REACH = 3;
@@ -48,6 +48,12 @@ export interface TerrainField {
    * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
    */
   rails: Int16Array;
+  /**
+   * Centre lines (D-082): per cell 2·PIECES RGBA8 texels, its road pieces
+   * then its path pieces (x0, y0, x1, y1 in 1/255 cell; empty slots last and
+   * zero), as a (2·PIECES·width) × height texture; null when the grid has none.
+   */
+  segs: Uint8Array | null;
   /** Height (steps) that world-edge skirts reach down to. */
   floor: number;
   /** World size in cells: skirts are drawn only at real world edges. */
@@ -197,6 +203,16 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
   }
   const rails = new Int16Array(n);
   for (let i = 0; i < n; i++) rails[i] = grid.rail[i]! & 0x7fff;
+  let segs: Uint8Array | null = null;
+  if (grid.roadSeg.some((v) => v !== 0) || grid.pathSeg.some((v) => v !== 0)) {
+    const words = new Uint32Array(n * 2 * PIECES); // little-endian: the bytes are x0, y0, x1, y1
+    for (let i = 0; i < n; i++)
+      for (let k = 0; k < PIECES; k++) {
+        words[i * 2 * PIECES + k] = grid.roadSeg[i * PIECES + k]!;
+        words[i * 2 * PIECES + PIECES + k] = grid.pathSeg[i * PIECES + k]!;
+      }
+    segs = new Uint8Array(words.buffer);
+  }
   for (let i = 0; i < n; i++) {
     cells[i * 4] = grid.surface[i]!;
     cells[i * 4 + 1] = grid.road[i]! & 0x0fff; // connections and corner crossings fit in 12 bits
@@ -214,6 +230,7 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     ways,
     wayReach: widest > 0 ? Math.ceil(widest / 32) : 0,
     rails,
+    segs,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],

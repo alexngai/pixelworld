@@ -757,6 +757,14 @@ SNAP = Map(
                         "1",
                     ),
                     "maxShift": Key(Num(0), "No junction moves further than this (cells).", "2"),
+                    "directions": Key(
+                        OneOf(
+                            (lambda v: v in (8, 16) and not isinstance(v, bool), AnyValue()),
+                            name="8 or 16",
+                        ),
+                        "Snap to the 8 grid directions, or 16 with the 2:1 ones (D-082).",
+                        "8",
+                    ),
                     "keep": Key(ListOf(KEEP_RULE), "Streets left as mapped (a crooked street)."),
                 }
             ),
@@ -803,6 +811,12 @@ WIDTHS = Map(
     {
         "scale": Key(Num(0, lo_open=True), "Ways are drawn this many times their real width.", "1"),
         "minCells": Key(Num(0), "…never narrower than this (cells).", "0.1"),
+        "centrelines": Key(
+            Bool(),
+            "Draw ways along their own centre lines rather than their cells' connections "
+            "(any angle, curves; D-082).",
+            "false",
+        ),
         "roads": Key(
             MapOf(Str(road_classes), Num(0, lo_open=True), "mapping of road class → metres"),
             "Real width per road class (defaults: motorway 16, trunk and primary 14, "

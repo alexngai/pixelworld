@@ -477,6 +477,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `simplify` | number, ≥ 0 | 0.75 | Cells of wiggle removed first. |
 | `deviation` | number, ≥ 0 | 1 | How far (cells) an in-between road may stray to keep long runs. |
 | `maxShift` | number, ≥ 0 | 2 | No junction moves further than this (cells). |
+| `directions` | 8 or 16 | 8 | Snap to the 8 grid directions, or 16 with the 2:1 ones (D-082). |
 | `keep` | [list of mappings](#spec-snap-roads-keep) | — | Streets left as mapped (a crooked street). |
 
 <a id="spec-snap-roads-keep"></a>
@@ -514,6 +515,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 |---|---|---|---|
 | `scale` | number, > 0 | 1 | Ways are drawn this many times their real width. |
 | `minCells` | number, ≥ 0 | 0.1 | …never narrower than this (cells). |
+| `centrelines` | true/false | false | Draw ways along their own centre lines rather than their cells' connections (any angle, curves; D-082). |
 | `roads` | mapping of road class → metres | — | Real width per road class (defaults: motorway 16, trunk and primary 14, secondary 12, tertiary 10, residential 8, unclassified 7, living_street 6, service 5). |
 | `paths` | mapping of path class → metres | — | Real width per path class (defaults: pedestrian 8, crosswalk 4, sidewalk, footway and steps 3, cycleway 2.5, path 2). |
 | `lanes` | [mapping](#spec-widths-lanes) | — | Lanes and medians. |

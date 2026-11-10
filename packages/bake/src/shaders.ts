@@ -129,6 +129,8 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
+uniform highp usampler2D uFieldSegs; // (8·W) × H (D-082): per cell 4 road then 4 path centre-line pieces, x0 y0 x1 y1 in 1/255 cell
+uniform int uHasSegs;
 #endif
 
 out vec4 oG;
@@ -202,6 +204,39 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
+// Centre lines (D-082): a cell's pieces of road (slot 0) or path (slot 4)
+// centre line, used slots first. A cell without them draws its connections.
+uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 8 + slot, c.y), 0); }
+bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
+
+// The nearest point q (cell-local) on a cell's pieces, its distance, and that piece's direction.
+float piecesNearest(ivec2 c, int slot, vec2 local, out vec2 q, out vec2 dir) {
+  float d = 1e9;
+  q = vec2(0.5);
+  dir = vec2(1.0, 0.0);
+  for (int i = 0; i < 4; i++) {
+    uvec4 s = piece(c, slot + i);
+    if (s == uvec4(0u)) break;
+    vec2 a = vec2(s.xy) / 255.0;
+    vec2 ab = vec2(s.zw) / 255.0 - a;
+    float t = clamp(dot(local - a, ab) / max(dot(ab, ab), 1e-9), 0.0, 1.0);
+    vec2 p = a + ab * t;
+    float di = length(local - p);
+    if (di < d) { d = di; q = p; dir = normalize(ab); }
+  }
+  return d;
+}
+
+// A stretch of one way, not a junction: one piece, or two joined end to end
+// (a bend). Lanes and medians are drawn on these only, as on degree-2 cells.
+bool piecesSimple(ivec2 c, int slot) {
+  uvec4 a = piece(c, slot);
+  uvec4 b = piece(c, slot + 1);
+  if (b == uvec4(0u)) return true;
+  if (piece(c, slot + 2) != uvec4(0u)) return false;
+  return a.zw == b.xy || a.xy == b.zw || a.xy == b.xy || a.zw == b.zw;
+}
+
 uniform mat2 uRot;
 uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
 uniform int uRailRamp;           // -1: the style draws no rails
@@ -383,6 +418,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   int roadMask = 0;
   int roadLane = 0;
   float roadHw = 0.0;
+  bool roadSimple = false;
   float pathBest = 2.0;
   int pathCls = 0;
   ivec2 pathCell = ivec2(0);
@@ -409,28 +445,34 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       ivec2 c = own + ivec2(dx, dy);
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
-      if (w.x == 0 && (w.z & 0x0fff) == 0) continue;
+      bool rp = hasPieces(c, 0);
+      bool pp = hasPieces(c, 4);
+      if (w.x == 0 && (w.z & 0x0fff) == 0 && !rp && !pp) continue;
       vec2 local = vGrid - vec2(uSliceOrigin + c);
       // a way's strips stay inside its cell: skip cells further than its half-width
       float gap = length(max(max(-local, local - 1.0), 0.0));
-      if (w.x != 0) {
+      if (w.x != 0 || rp) {
         int cls = w.y & 255;
         int mask = w.x & 255;
         int lane = (w.x >> 8) & 255;
+        bool simple = rp ? piecesSimple(c, 0) : degree8(mask) == 2;
         // never narrower than the style's width for the class: coarse maps keep
         // their road hierarchy, fine ones grow roads to their real width
         float hw = max(float(w.y >> 8) / 32.0, uRoads[cls].x);
         if (gap <= hw) {
           // centre-to-neighbour strips only: crossing flags would extend past the cell
-          float d = roadDistance(local, mask);
+          vec2 pq;
+          vec2 pdir;
+          float d = rp ? piecesNearest(c, 0, local, pq, pdir) : roadDistance(local, mask);
           if (d <= hw && d / hw < roadBest) {
             roadBest = d / hw; roadD = d; roadCls = cls; roadCell = c; roadMask = mask; roadLane = lane; roadHw = hw;
+            roadSimple = simple;
           }
         }
-        if (medians && (lane & 32) != 0 && degree8(mask) == 2) {
+        if (medians && (lane & 32) != 0 && simple) {
           vec2 q;
           vec2 dir;
-          float d = wayNearest(local, mask, q, dir);
+          float d = rp ? piecesNearest(c, 0, local, q, dir) : wayNearest(local, mask, q, dir);
           vec2 v = q - local;
           if (d < mdA) {
             if (mdA < 1e8 && dot(v, mvA) < -0.5 * d * mdA) { mdB = mdA; mvB = mvA; mhB = mhA; mnB = mnA; }
@@ -441,10 +483,12 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
           }
         }
       }
-      if ((w.z & 0x0fff) != 0) {
+      if ((w.z & 0x0fff) != 0 || pp) {
         float hw = float(w.w >> 8) / 32.0;
         if (hw > 0.0 && gap <= hw) {
-          float d = roadDistance(local, w.z & 255);
+          vec2 pq;
+          vec2 pdir;
+          float d = pp ? piecesNearest(c, 4, local, pq, pdir) : roadDistance(local, w.z & 255);
           if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; pathCell = c; pathMask = w.z & 255; }
         }
       }
@@ -453,7 +497,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   // a median: 1 its kerb, 2 a paved strip, 3 the ground between carriageways;
   // never over a cross street or a junction
   int median = 0;
-  bool onCarriageway = roadCls == 0 || ((roadLane & 32) != 0 && degree8(roadMask) == 2);
+  bool onCarriageway = roadCls == 0 || ((roadLane & 32) != 0 && roadSimple);
   if (mdB < 1e8 && onCarriageway) {
     // a strip carved where they meet is uLanes.w lanes across; without lane
     // counts nothing is carved, and only the ground between them is kerbed
@@ -501,7 +545,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
     if (rc.y > 0.5 && roadD * uScale < 0.022) ramp = uMarkingRamp;
     return;
   }
-  if (rc.w < 0.5 || lanes < 2 || degree8(roadMask) != 2) return;
+  if (rc.w < 0.5 || lanes < 2 || !roadSimple) return;
   // as many lanes as are at least uLanes.x pixels across (a cell is about 16 px
   // across a way), an even number on a two-way road; none below two
   bool oneway = (roadLane & 16) != 0;
@@ -519,9 +563,13 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
       int m = w.x & 255;
-      if (m == 0 || ((w.x >> 8) & 255) != roadLane || (w.y & 255) != roadCls || degree8(m) > 2) continue;
+      bool cp = hasPieces(c, 0);
+      if ((m == 0 && !cp) || ((w.x >> 8) & 255) != roadLane || (w.y & 255) != roadCls) continue;
+      if (cp ? !piecesSimple(c, 0) : degree8(m) > 2) continue;
       vec2 dd;
-      float d = bentWayDistance(vGrid - vec2(uSliceOrigin + c), c, m, dd);
+      vec2 dq;
+      float d = cp ? piecesNearest(c, 0, vGrid - vec2(uSliceOrigin + c), dq, dd)
+        : bentWayDistance(vGrid - vec2(uSliceOrigin + c), c, m, dd);
       if (d < bd) { bd = d; dir = dd; }
     }
   }
