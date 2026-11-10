@@ -231,7 +231,7 @@ export interface TerrainLayers {
 }
 
 /** Centre-line pieces per cell (TerrainLayers.roadSeg, pathSeg). */
-export const PIECES = 4;
+export const PIECES = 6;
 /** Layers with more than one value per cell, and how many. */
 const PER_CELL: Partial<Record<keyof TerrainLayers, number>> = { roadSeg: PIECES, pathSeg: PIECES };
 

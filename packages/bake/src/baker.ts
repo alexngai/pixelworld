@@ -1,4 +1,4 @@
-import { EDGE_NEIGHBOR, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
+import { EDGE_NEIGHBOR, PIECES, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
 import type { InstancedBatch, MeshData, TerrainField } from "@pixelworlds/generators";
 import { SHADES, type MaterialTables } from "@pixelworlds/style";
 import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
@@ -233,7 +233,7 @@ export class Baker {
     const ways = createTexture(gl, f.width, f.height, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.ways);
     const rails = createTexture(gl, f.width, f.height, gl.R16I, gl.RED_INTEGER, gl.SHORT, f.rails);
     const segs = f.segs
-      ? createTexture(gl, f.width * 8, f.height, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, f.segs)
+      ? createTexture(gl, f.width * 2 * PIECES, f.height, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, f.segs)
       : createTexture(gl, 1, 1, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(4));
     const ao = rgba8Texture(gl, mw + 1, mh + 1);
     const fb = framebuffer(gl, ao, null);

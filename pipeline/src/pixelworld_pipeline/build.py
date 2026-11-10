@@ -103,6 +103,11 @@ PATH_WIDTH_M = {
 }
 
 
+# How far (cells) a road drawn along its centre line can lie from its cells' centres (D-082):
+# its bed widens by this much, so the band never runs over uncut micro-terrain.
+CENTRELINE_BED_MARGIN = 0.75
+
+
 def package_heroes(region: Region, region_path: Path | None, out_dir: Path) -> list[dict] | None:
     """Copy hero landmarks' offline bakes and paint-overs into the package
     (heroes/<id>/), one manifest entry per landmark and rotation (D-053)."""
@@ -955,6 +960,8 @@ def build(
             sigma,
             path_bed,
             None if path_hw is None else path_hw / 32.0,
+            # ponytail: a wider bed, not one cut along the pieces; cut along them if hills show it
+            bed_margin=CENTRELINE_BED_MARGIN if centrelines else 0.0,
         )
         micro = (mc, k)
         progress.log(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")

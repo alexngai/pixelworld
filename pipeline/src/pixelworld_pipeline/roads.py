@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .world_format import PIECES  # centre-line pieces kept per cell (D-082)
+
 DIRS = ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1))
 DIR_INDEX = {d: i for i, d in enumerate(DIRS)}
 CROSSING_SHIFT = 8
@@ -27,7 +29,10 @@ CORNER_INDEX = {(0, 0): 0, (1, 0): 1, (1, 1): 2, (0, 1): 3}
 
 def trace_cells(xs: np.ndarray, ys: np.ndarray, step: float = 0.1) -> list[tuple[int, int]]:
     """Cells visited by a polyline in continuous cell coordinates, as a thin
-    8-connected path (staircase corners replaced by diagonal moves)."""
+    8-connected path (staircase corners replaced by diagonal moves). The
+    cells of its own vertices stay, so ways that meet at a vertex (a junction
+    on a through road) share its cell."""
+    vertex_cells = {(int(np.floor(x)), int(np.floor(y))) for x, y in zip(xs, ys, strict=True)}
     cells: list[tuple[int, int]] = []
     for i in range(len(xs) - 1):
         x0, y0, x1, y1 = xs[i], ys[i], xs[i + 1], ys[i + 1]
@@ -46,7 +51,7 @@ def trace_cells(xs: np.ndarray, ys: np.ndarray, step: float = 0.1) -> list[tuple
     for c in cells:
         if len(thin) >= 2:
             a = thin[-2]
-            if abs(a[0] - c[0]) == 1 and abs(a[1] - c[1]) == 1:
+            if abs(a[0] - c[0]) == 1 and abs(a[1] - c[1]) == 1 and thin[-1] not in vertex_cells:
                 thin.pop()
         thin.append(c)
     return thin
@@ -592,11 +597,6 @@ class RoadLayer:
     pieces_dropped: int = 0
 
 
-# Pieces of centre line kept per cell (D-082): a junction of four ways that
-# end in it, or two ways side by side.
-PIECES = 4
-
-
 def cell_pieces(x0: float, y0: float, x1: float, y1: float):
     """The stretches of the segment (x0, y0)–(x1, y1) (cell coordinates) inside
     each cell it crosses: (cell x, cell y, (ax, ay, bx, by) in the cell's own
@@ -614,6 +614,31 @@ def cell_pieces(x0: float, y0: float, x1: float, y1: float):
         tm = 0.5 * (t0 + t1)
         cx, cy = int(np.floor(x0 + dx * tm)), int(np.floor(y0 + dy * tm))
         yield cx, cy, (x0 + dx * t0 - cx, y0 + dy * t0 - cy, x0 + dx * t1 - cx, y0 + dy * t1 - cy)
+
+
+# A way's consecutive pieces in one cell merge where its bend there strays less
+# than this (cells) from the straight piece: what Douglas–Peucker left of a
+# road's wiggle, which would otherwise crowd a junction's cell (D-082).
+PIECE_MERGE = 0.04
+
+
+def merge_pieces(pieces: list[tuple[float, float, float, float]]) -> list[tuple[float, ...]]:
+    """One way's pieces in a cell, in order along it, with consecutive ones
+    joined where the vertex between them lies within PIECE_MERGE of the
+    straight line from the first's start to the second's end."""
+    out: list[tuple[float, ...]] = []
+    for p in pieces:
+        if out:
+            ax, ay, mx, my = out[-1]
+            if np.hypot(mx - p[0], my - p[1]) < 1e-9:
+                bx, by = p[2], p[3]
+                vx, vy = bx - ax, by - ay
+                n = float(np.hypot(vx, vy))
+                if n > 1e-9 and abs(vx * (my - ay) - vy * (mx - ax)) / n < PIECE_MERGE:
+                    out[-1] = (ax, ay, bx, by)
+                    continue
+        out.append(tuple(p))
+    return out
 
 
 def pack_piece(ax: float, ay: float, bx: float, by: float) -> int:
@@ -694,10 +719,15 @@ def rasterize(
                         mark(o, CROSSING_SHIFT + CORNER_INDEX[(px - o[0], py - o[1])], klass, w, ln)
             visited.extend(c for c in path if inside(c))
             if pieces:
+                mine: dict[tuple[int, int], list] = {}
                 for i in range(len(xs) - 1):
                     for px, py, piece in cell_pieces(xs[i], ys[i], xs[i + 1], ys[i + 1]):
+                        if inside((px, py)):
+                            mine.setdefault((py, px), []).append(piece)
+                for (py, px), got in mine.items():
+                    for piece in merge_pieces(got):
                         packed = pack_piece(*piece)
-                        if packed and inside((px, py)):
+                        if packed:
                             found.setdefault((py, px), []).append((w, packed))
                             mark((px, py), None, klass, w, ln)
         layer.segment_cells[seg_id] = visited

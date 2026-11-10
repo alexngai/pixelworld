@@ -43,6 +43,7 @@ from .world_format import (
     GEO_FILE,
     MICRO_MAX_OFFSET,
     NO_WATER,
+    PIECES,
     decode_chunk,
     decode_geo,
     decode_objects,
@@ -84,6 +85,34 @@ class Package:
     micro: np.ndarray | None  # (K·H + 1, K·W + 1) micro-corner heights
     k: int
     instances: list[dict]
+    # centre-line pieces of the roads (D-082), (H, W, PIECES) uint32, or None
+    road_pieces: np.ndarray | None = None
+
+    def on_road_line(self, cells: list[tuple[int, int]]) -> np.ndarray:
+        """Points along a chain of road cells: each cell's centre, moved onto the
+        nearest of the cell's centre-line pieces where it has them (D-082), so
+        vehicles keep to the drawn road on angled streets. The chain's ends stay
+        at their cells' centres, where routes meet."""
+        xy = np.array(cells, np.float64) + 0.5
+        if self.road_pieces is None:
+            return xy
+        for i in range(1, len(cells) - 1):
+            x, y = cells[i]
+            best = None
+            for p in self.road_pieces[y, x].tolist():
+                if not p:
+                    break
+                a = np.array([p & 0xFF, (p >> 8) & 0xFF], np.float64) / 255.0
+                b = np.array([(p >> 16) & 0xFF, (p >> 24) & 0xFF], np.float64) / 255.0
+                v = b - a
+                t = float(np.clip(np.dot(0.5 - a, v) / max(float(np.dot(v, v)), 1e-12), 0.0, 1.0))
+                q = a + v * t
+                d = float(np.hypot(*(q - 0.5)))
+                if best is None or d < best[0]:
+                    best = (d, q)
+            if best is not None:
+                xy[i] = (x + best[1][0], y + best[1][1])
+        return xy
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -153,6 +182,8 @@ def load_package(out_dir: Path) -> Package:
     water = np.full(full, NO_WATER, np.int16)
     base = np.zeros(full, np.int16)
     shape = np.zeros(full, np.uint8)
+    pieces = np.zeros((*full, PIECES), np.uint32)
+    any_pieces = False
     k = int((manifest.get("micro") or {}).get("k", 0))
     micro = np.zeros((ny * size * k + 1, nx * size * k + 1), np.int32) if k else None
     for ref in manifest["chunks"]:
@@ -165,6 +196,11 @@ def load_package(out_dir: Path) -> Package:
         water[ys, xs] = c.water
         base[ys, xs] = c.base
         shape[ys, xs] = c.shape
+        for slot in range(PIECES):
+            got = getattr(c, f"road_seg{slot}")
+            if got is not None and got.any():
+                pieces[ys, xs, slot] = got
+                any_pieces = True
         if micro is not None and c.micro_corners is not None:
             s = size * k
             micro[c.y * s : (c.y + 1) * s + 1, c.x * s : (c.x + 1) * s + 1] = c.micro_corners
@@ -182,6 +218,7 @@ def load_package(out_dir: Path) -> Package:
         micro=None if micro is None else micro[: h * k + 1, : w * k + 1],
         k=k,
         instances=instances,
+        road_pieces=pieces[:h, :w] if any_pieces else None,
     )
 
 
@@ -613,7 +650,7 @@ def road_routes(pkg: Package, decks: list[Deck], out: RouteSet) -> dict[str, int
         return float(pkg.surface_height(np.array([c[0] + 0.5]), np.array([c[1] + 0.5]))[0])
 
     for cells in chains:
-        xy = np.array(cells, np.float64) + 0.5
+        xy = pkg.on_road_line(cells)
         a = out.node("road", cells[0], h_at(cells[0]))
         b = out.node("road", cells[-1], h_at(cells[-1]))
         out.add(pkg, decks, "road", xy, a, b, _chain_props(pkg, cells, names))

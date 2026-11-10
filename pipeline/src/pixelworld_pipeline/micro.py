@@ -61,11 +61,14 @@ def reflood(micro_corners: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
 
 
 def road_segments(
-    mask: np.ndarray, centre_h: np.ndarray, half_width: np.ndarray | None = None
+    mask: np.ndarray,
+    centre_h: np.ndarray,
+    half_width: np.ndarray | None = None,
+    margin: float = 0.0,
 ) -> list[tuple[float, ...]]:
     """(ax, ay, ha, bx, by, hb, r) centre-to-centre segments of connected road
     cells (cells, steps); r is the bed radius: the road's half-width where
-    known (D-050), at least ROAD_BED_RADIUS."""
+    known (D-050), at least ROAD_BED_RADIUS, plus `margin`."""
     out = []
     ys, xs = np.nonzero(mask & CONNECT_MASK)
     h, w = mask.shape
@@ -86,9 +89,14 @@ def road_segments(
                     nx + 0.5,
                     ny + 0.5,
                     float(centre_h[ny, nx]),
-                    ROAD_BED_RADIUS
-                    if half_width is None
-                    else max(ROAD_BED_RADIUS, float(half_width[y, x]), float(half_width[ny, nx])),
+                    margin
+                    + (
+                        ROAD_BED_RADIUS
+                        if half_width is None
+                        else max(
+                            ROAD_BED_RADIUS, float(half_width[y, x]), float(half_width[ny, nx])
+                        )
+                    ),
                 )
             )
     return out
@@ -249,6 +257,7 @@ def build_micro(
     smooth: np.ndarray | None = None,
     path_mask: np.ndarray | None = None,
     path_half_width: np.ndarray | None = None,
+    bed_margin: float = 0.0,
 ) -> np.ndarray:
     """Integer micro-corner heights (micro-steps) from micro-corner elevations.
 
@@ -258,6 +267,9 @@ def build_micro(
     none), applied before roads and water are cut in.
     path_mask/path_half_width: paths that lie on the road beds beside them
     (sidewalks and crossings; follow_beds).
+    bed_margin: cells added to every road bed's radius. Roads drawn along
+    their centre lines (D-082) lie up to about 0.7 cell off the centre-to-
+    centre line their bed follows, so their beds widen to stay under them.
     Micro-cells follow from world_format.micro_cells.
     """
     cy, cx = base.shape
@@ -268,7 +280,7 @@ def build_micro(
         q = smooth_cells(q, smooth, k)
     q = flatten_water(q, water, k)
     centre = cell_corner_heights(base, shape).mean(axis=0)
-    beds = road_segments(road_mask, centre, road_half_width)
+    beds = road_segments(road_mask, centre, road_half_width, bed_margin)
     if path_mask is not None and (path_mask & CONNECT_MASK).any():
         # every micro-cell a path's band lies on: its half-width and a micro-cell more
         hw = np.zeros(path_mask.shape) if path_half_width is None else path_half_width

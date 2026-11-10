@@ -129,7 +129,7 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
-uniform highp usampler2D uFieldSegs; // (8·W) × H (D-082): per cell 4 road then 4 path centre-line pieces, x0 y0 x1 y1 in 1/255 cell
+uniform highp usampler2D uFieldSegs; // (12·W) × H (D-082): per cell 6 (PIECES) road then 6 path centre-line pieces, x0 y0 x1 y1 in 1/255 cell
 uniform int uHasSegs;
 #endif
 
@@ -204,9 +204,9 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
-// Centre lines (D-082): a cell's pieces of road (slot 0) or path (slot 4)
+// Centre lines (D-082): a cell's pieces of road (slot 0) or path (slot 6)
 // centre line, used slots first. A cell without them draws its connections.
-uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 8 + slot, c.y), 0); }
+uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 12 + slot, c.y), 0); }
 bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
 
 // The nearest point q (cell-local) on a cell's pieces, its distance, and that piece's direction.
@@ -214,7 +214,7 @@ float piecesNearest(ivec2 c, int slot, vec2 local, out vec2 q, out vec2 dir) {
   float d = 1e9;
   q = vec2(0.5);
   dir = vec2(1.0, 0.0);
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 6; i++) {
     uvec4 s = piece(c, slot + i);
     if (s == uvec4(0u)) break;
     vec2 a = vec2(s.xy) / 255.0;
@@ -446,7 +446,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
       bool rp = hasPieces(c, 0);
-      bool pp = hasPieces(c, 4);
+      bool pp = hasPieces(c, 6);
       if (w.x == 0 && (w.z & 0x0fff) == 0 && !rp && !pp) continue;
       vec2 local = vGrid - vec2(uSliceOrigin + c);
       // a way's strips stay inside its cell: skip cells further than its half-width
@@ -488,7 +488,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
         if (hw > 0.0 && gap <= hw) {
           vec2 pq;
           vec2 pdir;
-          float d = pp ? piecesNearest(c, 4, local, pq, pdir) : roadDistance(local, w.z & 255);
+          float d = pp ? piecesNearest(c, 6, local, pq, pdir) : roadDistance(local, w.z & 255);
           if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; pathCell = c; pathMask = w.z & 255; }
         }
       }

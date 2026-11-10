@@ -82,9 +82,9 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const railS = section("RAIL", 2, false);
   const laneS = section("LANE", 1, false);
   const micro = decodeMicro(view, sections.get("MHGT"), size);
-  // centre-line pieces (D-082): four slots per cell, one section per slot
+  // centre-line pieces (D-082): PIECES slots per cell, one section per slot
   const pieces = (prefix: string): Uint32Array | undefined => {
-    const slots = [0, 1, 2, 3].map((k) => section(`${prefix}${k}`, 4, false));
+    const slots = Array.from({ length: PIECES }, (_, k) => section(`${prefix}${k}`, 4, false));
     if (!slots.some(Boolean)) return undefined;
     const out = new Uint32Array(n * PIECES);
     slots.forEach((sl, k) => {

@@ -507,12 +507,23 @@ def test_rasterize_with_pieces_keeps_the_widest_four_and_marks_clipped_cells():
     assert {(x, y) for y, x in zip(*np.nonzero(layer.pieces[..., 0]), strict=True)} == cells
     # every cell the line crosses has its class and width, connections or not
     assert all(layer.cls[y, x] == 2 and layer.width[y, x] == 8.0 for x, y in cells)
-    # five ways through one cell: the narrowest is left out
+    # one way more than fits through one cell: the narrowest is left out
+    n = R.PIECES + 1
     ways = [
-        (f"w{k}", 1, [(np.array([0.1 + 0.15 * k, 0.1 + 0.15 * k]), np.array([0.0, 1.0]))])
-        for k in range(5)
+        (f"w{k}", 1, [(np.array([0.05 + 0.12 * k, 0.05 + 0.12 * k]), np.array([0.0, 1.0]))])
+        for k in range(n)
     ]
-    crowded = R.rasterize(ways, (2, 2), widths={f"w{k}": 2.0 + k for k in range(5)}, pieces=True)
+    crowded = R.rasterize(ways, (2, 2), widths={f"w{k}": 2.0 + k for k in range(n)}, pieces=True)
     assert crowded.pieces_dropped == 1
     kept = [int(p) & 0xFF for p in crowded.pieces[0, 0]]  # x0 of each piece
-    assert kept == [round((0.1 + 0.15 * k) * 255) for k in (4, 3, 2, 1)]
+    assert kept == [round((0.05 + 0.12 * k) * 255) for k in range(n - 1, 0, -1)]
+
+
+def test_a_ways_wiggle_in_a_cell_merges_into_one_piece_but_a_bend_does_not():
+    # a vertex 0.02 cell off the straight line: one piece; 0.2 off: two
+    flat = R.merge_pieces([(0.0, 0.5, 0.5, 0.52), (0.5, 0.52, 1.0, 0.5)])
+    assert flat == [(0.0, 0.5, 1.0, 0.5)]
+    bent = R.merge_pieces([(0.0, 0.5, 0.5, 0.7), (0.5, 0.7, 1.0, 0.5)])
+    assert len(bent) == 2
+    # pieces that don't join stay apart
+    assert len(R.merge_pieces([(0.0, 0.2, 1.0, 0.2), (0.0, 0.8, 1.0, 0.8)])) == 2
