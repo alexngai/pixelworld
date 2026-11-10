@@ -89,6 +89,7 @@ Status values:
 | D-078 | Next regions: New York, then Paris, then Amsterdam | Accepted (M5) |
 | D-079 | A player sees through the buildings in front of it; tall objects stay in view | Accepted (M5) |
 | D-080 | New York's building facts: footprints joined to PLUTO lots and LPC records; a `materials:` rule | Accepted (M5) |
+| D-081 | New York's look: a `new-york` style pack and the `@pixelworlds/city-nyc` generator plugin | Accepted (M5) |
 
 ---
 
@@ -858,3 +859,20 @@ The point is more room for visual interest; both halves are wanted.
   - Overture's stacked setback parts (`min_height > 3`) are dropped (`objects.py`), so wedding-cake towers lose their upper tiers.
   - LPC's `style_prim` (Italianate, Greek Revival, Romanesque Revival…) as a `styles:` rule field, if the generators come to draw styles.
 
+### D-081: New York's look: a `new-york` style pack and the `@pixelworlds/city-nyc` generator plugin (accepted, M5)
+- **Why:** New York is next (D-078). Its first world is the walking level of Lower Manhattan, and that city reads by a fabric San Francisco's generators can't draw: brownstone stoops and bracketed cornices, fire escapes over shopfronts, cast-iron fronts, and prewar blocks with water tanks on the roof. A style pack alone can recolour `rowhouse` and `block`, but it can't add those parts.
+- **How:**
+  - **The style pack** `worlds/_styles/new-york` is a full pack, copied from `bay-area`'s layout. It has 41 ramps (D-075's limit is 42): brownstone, red and buff brick, limestone, granite, painted cast iron, terracotta, verdigris, curtain glass, black iron, cedar, the harbour, bridge stone and steel, shop signs, and taxi yellow. San Francisco's fog areas are dropped. It names `["@pixelworlds/city-sf", "@pixelworlds/city-nyc"]`, so SF's `block`, `decoTower`, `sfTower` and `lanterns` are reused for commercial blocks, piers, warehouses, towers and Chinatown's lanterns.
+  - **The asset groups are the contract the specs' rules target:** the five every pack has; `building.brownstone`, `.tenement` (and `.tenement.chinatown`), `.loft.castiron`, `.apartment.prewar`, `.commercial.historic`, `.house`, `.industrial` and `.pier`; the towers `building.tower.deco`, `.slab`, `.postmodern` and `.glass`; `tree.street`; bay-area's `prop.*` and `vehicle.*`; and the landmarks `landmark.bridge.suspension` (stone towers), `.suspension.steel`, `landmark.tower.obelisk`, `landmark.tower.setback` and `landmark.hall.domed`. The landmarks use built-in generators, and the setback tower uses SF's `decoTower`.
+  - **The plugin** `packages/city-nyc` is wired as `city-sf` is (`generators.ts`, `plugin.ts`, `worker.ts`, `index.ts`, `build.mjs`, whose worker-URL rewrite now matches the package's own entry and no hardcoded name). It has four generators: `brownstone`, `tenement`, `castIronLoft` and `prewarBlock` (style guide §19). Core lists them in `KNOWN_PLUGIN_GENERATORS`. The viewer (`CITY_PACKS`), the example game and the model preview load the plugin.
+  - **The building rules hold** (inside the footprint, no overhangs, glass only on the skin, no lettering). Cornices and fire escapes are painted flush, and a stoop gets room by setting the facade back. Tests check every group of the pack over footprints from 1 × 4 to 40 × 32, diagonals and heights up to 140 voxels, and also the stoops, fire escapes, tanks and determinism.
+- **Rejected alternatives:**
+  - **A variant of `bay-area` (`extends`):** committed packs can't use `extends` (`packs.test.ts`). It would also keep SF's 42 ramps, eucalyptus to painted ladies, where New York needs to replace half of them.
+  - **New `type`s of SF's `rowhouse` and `block`:** puts two cities in one published package with one version. New York's parts (a stoop's set-back facade, fire escapes, tanks) also don't fit SF's facade plan.
+  - **Importing SF's facade helpers from `@pixelworlds/city-sf`:** a dependency between city packs for about 100 lines. They are copied, so each pack stands alone, as a pack outside this repository would.
+  - **Stoops, cornices and fire escapes that project:** overhangs, and voxels outside the footprint that neighbouring tiles don't expect (D-021).
+- **Later:**
+  - **Publishing `@pixelworlds/city-nyc`.** It is `private` for now. Publishing needs `tools/city-pack-check.mjs` and CI to cover a second pack, a changeset, and a consumer example.
+  - **Fabric this leaves out:** rear fire escapes, dumbbell light wells, mansard roofs, Federal houses' dormers, and vault-light sidewalks.
+  - **Landmark shapes:** the Woolworth Building's Gothic crown and One World Trade Center's spire are generic (a lantern, a lattice crown). Canonical depictions follow data-sources.md §7.
+  - **The specs** in `worlds/nyc/` map PLUTO's classes and LPC's materials (the facts plugin's `materials:` rule) to these groups.

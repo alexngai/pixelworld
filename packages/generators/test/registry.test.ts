@@ -100,7 +100,7 @@ describe("the generator registry", () => {
   });
 
   it("lists what is registered when no known plugin has the generator", () => {
-    const e = new MissingGeneratorError("brownstone", "building.rowhouse.brownstone");
+    const e = new MissingGeneratorError("adobe", "building.residential.adobe");
     expect(e.plugin).toBeNull();
     expect(e.message).toMatch(/No plugin known here provides it/);
     expect(e.message).toMatch(/Registered generators: .*building, .*cityBlocks/);
@@ -130,7 +130,15 @@ describe("style packs and plugins", () => {
     const sf = pack("bay-area");
     expect(sf.plugins).toEqual(["@pixelworlds/city-sf"]);
     const missing = [...named(sf)].filter((g) => !hasGenerator(g)).sort();
-    expect(missing).toEqual(Object.keys(KNOWN_PLUGIN_GENERATORS).sort());
-    for (const g of missing) expect(KNOWN_PLUGIN_GENERATORS[g]).toBe("@pixelworlds/city-sf");
+    const fromSf = Object.keys(KNOWN_PLUGIN_GENERATORS).filter((g) => KNOWN_PLUGIN_GENERATORS[g] === "@pixelworlds/city-sf");
+    expect(missing).toEqual(fromSf.sort());
+  });
+
+  it("the new-york pack names both city packs, and every generator it needs comes with one of them", () => {
+    const ny = pack("new-york");
+    expect(ny.plugins).toEqual(["@pixelworlds/city-sf", "@pixelworlds/city-nyc"]);
+    const missing = [...named(ny)].filter((g) => !hasGenerator(g));
+    for (const g of missing) expect(ny.plugins, g).toContain(KNOWN_PLUGIN_GENERATORS[g]);
+    expect(missing).toEqual(expect.arrayContaining(["brownstone", "tenement", "castIronLoft", "prewarBlock", "block", "sfTower"]));
   });
 });

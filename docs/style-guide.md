@@ -416,3 +416,44 @@ A variant names its parent and only what changes:
 - **In an editor:** the schema accepts a pack with `extends` without the keys its parent has, and with `null`s.
 - **Where it is merged:** `resolveStyleExtends(pack, load)` in `@pixelworlds/style`. `createWorldView` merges with its style resolver; a pack given as an object must be merged already. The viewer's loader merges, so `?style=<variant>` works. The merged pack keys the tile cache, so editing a parent re-bakes its variants.
 - **Example:** `packages/style/test/fixtures/desert-adobe.json` is the content review's adobe variant in 1 KB instead of a 16 KB copy, and its test checks the merge against the parent.
+
+## 19. New York (the `new-york` pack, D-081)
+
+![New York's fabric from the model preview, 3×: brownstones, tenements, cast-iron lofts and prewar blocks, three seeds each in rotations 0 and 3, and one at night](images/nyc-fabric.png)
+
+![New York's landmarks, 2×: the stone and the steel suspension bridges, the tapered tower and the setback tower, by day and night](images/nyc-landmarks.png)
+
+A full pack (`worlds/_styles/new-york/style.json`), laid out like `bay-area` but with its own 41 ramps and no fog. It names two plugins, `["@pixelworlds/city-sf", "@pixelworlds/city-nyc"]`: San Francisco's for `block`, `decoTower`, `sfTower` and `lanterns`, New York's for the four generators below (`packages/city-nyc`).
+
+**Ramps**
+- **Masonry:** `brownstone` (a cool chocolate), `brick` (orange-red), `brick-buff`, `limestone`, `granite` (neutral grey), `terracotta` (buff), `bridge-stone`.
+- **Metal and glass:** `castiron-cream` and `castiron-grey` (painted cast iron), `iron` (black: fire escapes, railings, stands), `verdigris` (copper roofs and cornices), `bridge-steel` (blue-grey), `curtain-glass` (glass towers' panels), `glass`, `lit` and `lit-cool`.
+- **Street:** `asphalt`, `sidewalk`, `marking`, harbour `water`, `cedar` (water tanks), shop signs (`sign-red`, which glows at night, `sign-green`, `paint-navy`, `gold`), `taxi` yellow and `ferry-orange`.
+
+**The fabric** (`buildings.ts` in `packages/city-nyc`)
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.brownstone`, `building.house` | `brownstone` | 3–5 storeys counting the garden level. A high stoop with iron rails climbs to the parlour floor's door, and an areaway fence runs beside it. The facade is flat, with stone hoods over the windows (taller on the parlour floor), a hood and pediment over the door and a dark bracketed cornice. Brownstone, red brick or limestone; `building.house` is the brick and painted version. |
+| `building.tenement`, `building.residential`, `building.tenement.chinatown` | `tenement` | 5–7 storeys of brick over two shops and the tenants' door. Each shop has glass over a bulkhead and a sign band with no lettering, and a corner shop wraps round the corner. Windows sit under stone lintels. Most have a black fire escape over two or three bays, with platforms, rails and stairs that turn at each landing. A pressed-metal bracketed cornice, a stair bulkhead, and a water tank on the taller ones. The Chinatown variant has red and gold signs and red doors. |
+| `building.loft.castiron` | `castIronLoft` | 4–7 storeys with a front of columns and entablatures painted cream, grey or white, on brick party walls. Big windows with arched heads at the walking scale, and a glass ground floor over a dark bulkhead. The cornice is bracketed over every column, with a raised pediment on some. A water tank on many, a fire escape on some. |
+| `building.apartment.prewar`, `building.commercial.historic` | `prewarBlock` | Base, shaft and cap at any height, with no storey cap. A stone base of one to three storeys has the entrance in a stone surround. Above it: a belt course, a brick shaft with lintels and quoins, one or two storeys of stone or terracotta, and a heavy cornice. On the roof, wooden water tanks on steel stands and an elevator penthouse. `building.commercial.historic` is the limestone, granite and terracotta office version. |
+
+- **Projections are drawn flush or made room for** (the building rules, §13). Cornices and fire escapes are painted on the wall. A cornice reads by its brackets and a lip on the roof; a fire escape by its two iron bars per floor and its diagonal stair. A stoop needs room in front of the house, so the facade stands back from the footprint's front by the stoop's run (about 3 m at walking scale). Narrow or shallow lots get no stoop.
+- **Water tanks** stand only where every column of the tank sits on the roof. A tank is a solid dark stand under a cylinder of cedar staves with iron hoops and a conical roof, which reads as legs from street height.
+- **Storeys:** the record's (`fl`) within each type's range, otherwise by seed. For `prewarBlock` the storeys come from the height, 8 voxels a storey at the walking level (param `storey`).
+- **Paint schemes:** as in San Francisco (§15), trim, base, stoop and cornice follow the wall's variant when they list the same variants. Brownstone fronts take dark trim (`bark`), so hoods read as shadowed relief on monochrome stone.
+
+**Reused from San Francisco:** `building.commercial`, `building.industrial` and `building.pier` use `block`. `building.tower` and `building.tower.slab`, `.postmodern` and `.glass` use `sfTower` with New York's stone, buff brick, verdigris and curtain glass. `building.tower.deco` uses `decoTower`.
+
+**Landmarks** (generic depictions, D-051)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.bridge.suspension` | `suspensionBridge` (portal towers, two struts, massive legs) | the Brooklyn Bridge: stone towers and anchorages, a steel truss |
+| `landmark.bridge.suspension.steel` | `suspensionBridge` (braced towers, side-braced, double deck) | the Manhattan Bridge, blue-grey steel |
+| `landmark.tower.obelisk` | `obeliskTower` | One World Trade Center: a tapering glass tower with a lattice crown |
+| `landmark.tower.setback` | `decoTower` (two setbacks, a lantern crown) | the Woolworth Building: buff terracotta with gold trim and a copper cap |
+| `landmark.hall.domed` | `domedHall` | City Hall: limestone, with a copper dome |
+
+**Street and traffic:** every `prop.*` and `vehicle.*` group that `bay-area` has, in New York's palette. Street lights and signals are grey, with yellow signal heads. Yellow cabs are commoner than the generator's own share: the `taxi` paint is listed twice among the `paint.*` variants, and the player's car is a cab. Buses are white with a blue band. One ferry livery is orange.
