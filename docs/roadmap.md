@@ -785,6 +785,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 
 - Zoom-level (semantic LOD) bakes: blocks → city silhouettes → landmark icons.
 - More regions from coverage tier 1, in order (D-078): New York, then Paris, then Amsterdam. CityJSON/CityGML ingestion comes with Amsterdam (3D BAG).
+  - **New York, walking level: built** (`nyc-walk`, Lower Manhattan at 10 m). Its buildings are typed from NYC Open Data (D-080) and drawn by the `new-york` pack and the `city-nyc` generators (D-081). In the game, the player sees through the towers in front of it (D-079). Still to come: the driving and flying levels, the blind test, heights from the city's footprints, and stacked setback tiers.
 - A second style pack.
 - CDN hosting with archive range requests.
 - Performance budgets met on mid-range phones.

@@ -324,6 +324,14 @@ test.describe("Hero landmarks (D-053)", () => {
   });
 });
 
+test.describe("New York (D-078, D-080, D-081)", () => {
+  test("brownstone rows in Brooklyn Heights: the walking level typed from NYC Open Data", async ({ page }) => {
+    // the new-york style pack and its city pack, named by the world
+    await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9952,40.6944");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-heights-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world
