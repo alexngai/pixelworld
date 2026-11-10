@@ -49,7 +49,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&w=640&
 | `palette=night` | day | Start at night, where the style has a night palette |
 | `marker=0` | shown | Don't draw the rover (clean screenshots) |
 | `hud=0` | shown | Hide the HUD, help line, attribution and layer panel |
-| `cache=0` | on | Skip the IndexedDB tile cache: every tile is baked fresh. Use it whenever you change code that bakes tiles (generators, the baker, a city pack): cached tiles can be stale (see [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-the-tile-cache)) |
+| `cache=0` | on | Skip the IndexedDB tile cache: every tile is baked fresh by the code as it is now. Use it when you change code that bakes tiles (generators, the baker, a city pack) ([CONTRIBUTING.md §6](../CONTRIBUTING.md#6-the-tile-cache)) |
 
 **Traffic** (D-060; worlds whose package has routes)
 

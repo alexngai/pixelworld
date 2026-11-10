@@ -110,8 +110,9 @@ const REACH = 400;
 /**
  * The placed objects the view ray passes through above the ground point,
  * nearest the viewer first, with the point where it enters each. An object
- * without an estimated top (trees, props) is taken to be 3 voxels-per-step
- * tall at the world's render scale.
+ * without an estimated top (trees, props, city blocks) is taken to reach 3
+ * steps above its base at render scale 1 (24 voxels), and as many voxels at
+ * other render scales.
  */
 export function objectsOnRay(
   query: Pick<WorldQuery, "objectsAt">,

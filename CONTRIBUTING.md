@@ -97,9 +97,9 @@ The renderer's goldens are in `e2e/__screenshots__/<spec>/<name>.png`, made in h
 
 ## 6. The tile cache
 
-The viewer keeps baked tiles in IndexedDB between visits, keyed by the world package, the style pack, the baker's version and the plugins loaded (D-028). An edit to a style pack shows on reload. An edit to code that bakes tiles (a generator, a city pack, the baker, the bake worker) may not: the page reloads, but tiles can come from the cache.
+The viewer keeps baked tiles in IndexedDB between visits, keyed by what they are baked from: the world package, the style pack, the bake code's version and the plugins loaded (D-028). A tile whose key matches comes from the cache without being baked.
 
-- **To see a change to baking code,** reload with `?cache=0` added: every tile is baked fresh and nothing is read from the cache. The HUD's `bake` line says how many tiles were baked and how many came from the cache.
+- **`?cache=0`** bakes every tile fresh and reads nothing from the cache. Use it when you change code that bakes tiles (a generator, a city pack, the baker) and want to be sure every tile on screen comes from the code as it is now, or when a change doesn't show. The HUD's `bake` line says how many tiles were baked and how many came from the cache.
 - **To clear the cache,** clear the site's data in the browser's developer tools (Application, Storage).
 - The e2e tests open every view with `cache=0`, except the one that tests the cache.
 
