@@ -60,6 +60,7 @@ Working projects, each built and run against the packed package in CI: [examples
 | `pixelworld/style` | style packs: validation, palettes, materials, night and atmosphere | |
 | `pixelworld/generators` | voxel models, meshing, terrain fields, object building and the generators | |
 | `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 52 KB (145 KB minified) bundled; 61 KB as shipped (§7) |
+| `pixelworld/style-pack.v1.schema.json` | the style pack JSON Schema, for a pack's `"$schema"` in editors ([style guide](style-guide.md) §18) | |
 
 - **Everything** (all six entry points) is 87 KB gzipped (D3 estimated 89 KB).
 - **Shared code is shared:** the entry points are built together with code splitting, so an app importing `pixelworld/engine` and `pixelworld/traffic` gets one copy of what they have in common (one generator registry, one set of classes).
@@ -78,6 +79,7 @@ Neither is in the package. Both are data with their own licences.
 **Style packs** are JSON: palette ramps, surfaces, materials, assets, night and atmosphere ([style-guide.md](style-guide.md)).
 - **Choosing one:** a manifest names its pack (`"style": "desert-southwest"`). `style` takes the pack itself (an imported JSON module, say) or a resolver from that name, which can fetch it.
 - **Where they come from:** the repository's [`worlds/_styles/`](../worlds/_styles/) (`bay-area` for San Francisco, `desert-southwest` for the Southwest and the Grand Canyon). They will be published as their own packages (D3); until then copy the JSON. They are CC BY 4.0: credit "pixelworld style packs, by The pixelworld contributors".
+- **Writing or changing one:** point its `"$schema"` at `./node_modules/pixelworld/dist/style-pack.v1.schema.json` (relative to the pack) for completion and checks in your editor. A variant can `"extends": "<pack id>"` and list only what changes; a resolver then loads the parent by id ([style guide](style-guide.md) §18).
 
 ## 5. The bake worker
 

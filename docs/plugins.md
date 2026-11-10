@@ -350,6 +350,7 @@ createWorldView({ canvas, worldUrl, style, plugins: (names) => names.flatMap((n)
 | A name another source has | `generator 'building' is already registered by @pixelworlds/generators, so my-city can't register it too (pass { replace: true } to replace it)` |
 | A plugin's module that fails to load | `plugin @pixelworlds/city-sf (https://…/assets/worker-….js) failed to import: …`; `createWorldView` rejects with it |
 | A module that defines no plugin, or another one | `https://… defines no plugin: the module must call definePlugin({ name, register }) (docs/plugins.md §9)`; `https://… defines the plugin x, not y` |
+| A generator nobody registered, when a view starts (D-075) | `style pack "nyc": assets["building.rowhouse.brownstone"].generator: no generator named "brownstne" (did you mean "brownstone"?): none is registered, and no plugin known here provides it (docs/plugins.md §9)`; `createWorldView` rejects with it. Skipped while a plugin the style names isn't loaded |
 
 ### 9.3 How a plugin reaches the bake worker
 

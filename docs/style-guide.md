@@ -21,6 +21,7 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 - **Ramps have 6 shades.** Shade 0 is reserved for outlines. Lighting uses shades 1–5.
 - **Ramps shift hue as well as brightness.** Shadows lean cool and purple, highlights warm, so shading never turns into flat grey-black.
 - **Layout:** index 0 is the background and empty pixels. Index `1 + ramp·6 + shade` is a ramp colour. Index 253 is the silhouette highlight.
+- **At most 42 ramps:** baked tiles store the index in 8 bits, so 1 + 42 × 6 = 253 indices fit below the silhouette. `bay-area` uses all 42 and `desert-southwest` 41; a variant that needs a colour drops one it doesn't use (§18).
 - **Applying the palette:** it happens at runtime through a lookup texture, so later palette variants (day/night, seasons, compliance styles) won't need a re-bake.
 
 ## 3. Light and shading
@@ -348,3 +349,70 @@ The city is read by its fabric first (D-055): row houses on 25-foot lots, the st
 - **Paint:** cars mostly neutral (white, silver, grey, black) with a few colours, listed in the pack as `paint.*` (repeat a ramp to make it commoner); transit in paired liveries (`body`/`band`, `upper`/`lower`, `loco`/`stripe`, `hull`/`band`).
 - **Lights:** headlights in `lit-cool` and transit windows in `lit` glow at night; tail lights are `marker` red.
 - **No lettering:** signs, destination boards and the taxi's roof sign are blank.
+
+## 18. The pack file: schema, validation, limits and `extends` (D-075)
+
+A pack is `worlds/_styles/<id>/style.json`, named by a world's manifest (`style`). Its shape is a JSON Schema, and every pack is checked against it before anything is drawn.
+
+**The schema**
+- **File:** `packages/style/schema/style-pack.v1.schema.json` (draft-07). It is generated from `packages/style/src/schema.ts` (the shape) and `schemaDocs.ts` (each key's description): edit those, and `pnpm vitest run packages/style -u` rewrites it. The test fails while the file is stale.
+- **npm:** `pixelworld/style-pack.v1.schema.json`, in `node_modules/pixelworld/dist/`.
+- **In an editor:** a pack names it first, for completion, hover text and squiggles (VS Code, JetBrains):
+
+  ```json
+  { "$schema": "../../../packages/style/schema/style-pack.v1.schema.json", "id": "my-pack", … }
+  ```
+
+  From npm, the path is relative to the pack: `"$schema": "./node_modules/pixelworld/dist/style-pack.v1.schema.json"`.
+- **Versions:** the major version is in the file name and `$id`. Optional keys are added to v1. Removing or renaming a key, or changing what one means, makes a v2 beside it. A pack whose `$schema` names a version the library doesn't read is refused rather than read as typos.
+
+**What is checked** (`validateStyle`, or `styleIssues` for the list without throwing; `createWorldView` runs both checks)
+- **The shape:** types, ranges, required keys, and unknown keys, with a "did you mean": `assets["building.residential"]: unknown key "generater" (did you mean "generator"?)`.
+- **Names the pack refers to:** the ramps strata bands, surfaces, roads, paths, asset roles, night ramps and fog name; strata sets; the surfaces and asset groups scatter names. Strata run from the highest down. Example: `assets["building.residential"].ramps.wall: no ramp named "stuco" (did you mean "stucco"?)`.
+- **Messages:** each names the pack and a path into it, and all of a pack's problems are listed at once: `style pack "desert-adobe": ramps.desert[0]: bad colour "#3a2f3": want "#rrggbb"`. A `StyleError` carries `pack` and `issues` (`{ path, message }`).
+- **Not a pack at all:** HTML where JSON was expected, a JSON module instead of its default export, or an object with none of a pack's keys each get a message of their own.
+- **Generators, when a view starts:** once its plugins are registered, every asset's `generator` must be registered: `assets["building.residential"].generator: no generator named "adobee" (did you mean "adobe"?)`. For a generator of this repository's city packs, the message names the plugin to add to `plugins`. The check is skipped while a plugin the pack names isn't loaded, because that is warned about already and its generators can't be told from typos.
+- **Roles, when a model is generated:** `ctx.ramp(role)` for a role the asset doesn't map throws a `MissingRoleError` naming the asset, generator and role: `assets["building.shed"] has no ramp for the role 'wall', which its generator 'adobe' draws with: add "wall": "<ramp>" to its "ramps" (it has roof, door)`.
+  - `ctx.ramps(role)` is empty for a role the asset lacks, which makes the role optional.
+  - A model given `undefined` for a material (`ctx.ramps("wall")[0]` of a missing role) throws instead of drawing in no colour.
+  - Roles aren't declared by generators and checked against packs in advance: they're dynamic (variants by seed, `deco:` scopes falling back to plain roles, optional roles), so the check happens when a generator asks.
+- **JSON syntax:** `parseStyleJson(text, file)` names the file, line and column: `worlds/_styles/bay-area/style.json: invalid JSON at line 3, column 20: Expected double-quoted property name`. The viewer reads each pack only for the worlds that use it, so a broken pack fails only those worlds, with the error in the HUD.
+- **Resolvers:** an error thrown by `createWorldView`'s style resolver names the pack it was asked for (`style pack "bay-area" (from your style resolver): …`). A resolver that answers with another pack than the one asked for is a warning.
+
+**Limits**
+
+| Limit | Value | Why |
+|---|---|---|
+| Ramps | 42 | baked tiles store the palette index in 8 bits: index 0 the background, 6 shades a ramp from index 1, 253 the silhouette, so 1 + 42 × 6 = 253 |
+| Shades | 6 | shade 0 the outline, 1–5 lighting (§2, §3) |
+| Strata sets and bands | 4 sets of 1–16 bands | shader uniforms |
+| Surfaces, road and path classes, geology provinces | 16 ids each, from the world | shader tables indexed by the world's ids, not by the pack's names |
+
+- **Full packs:** every ramp of `bay-area` (42) and `desert-southwest` (41) is used. A San Francisco variant that needs a new colour first points a use at another ramp, then deletes the freed one (`"ramps": { "chert": null }` in a pack that extends). Deleting a ramp moves the ones after it to lower indices, which is harmless: tiles are cached by the merged pack.
+- **Raising the cap isn't cheap (D-075):** the index would need a ninth bit (the alpha channel only says "covered"), and with it the G-buffer's ramp, a 512-entry palette texture, the fog's per-index lookups, the night palette and the hero paint-overs, which are 8-bit indexed PNGs. Goldens could stay identical, since packs within 42 ramps keep their indices. A per-world palette of the ramps a world uses is the other way, but entities added at run time (traffic paints, an app's models) can name any ramp.
+- **Swatches:** `node tools/swatches.mjs <pack id or path>` prints a pack's ramps by day and night with their palette indices and what uses each, and lists the ramps nothing in the pack uses.
+
+**Variants: `extends`**
+
+A variant names its parent and only what changes:
+
+```json
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "extends": "desert-southwest",
+  "id": "desert-adobe",
+  "name": "Desert Southwest (adobe variant)",
+  "plugins": ["@pixelworlds/city-demo"],
+  "ramps": { "adobe": ["#3a2a30", "#62423f", "#8b5d4c", "#b86c5a", "#d4886c", "#e0b089"] },
+  "assets": {
+    "building.residential": { "generator": "adobe", "ramps": { "wall": "adobe", "door": "bark" }, "params": { "style": null } }
+  }
+}
+```
+
+- **The merge rule** is the region specs' `extends:` rule. Objects merge key by key, and the child's value wins. Anything else (a ramp's colours, strata bands, fog areas, `plugins`) replaces whole. `null` deletes the parent's key.
+- **Order:** keys keep the parent's order and new ones follow, so the parent's ramps keep their palette indices and the child's come after them.
+- **Own keys:** a pack that extends another needs its own `id`, and `extends` isn't inherited. Chains work, up to 8 packs; a circle is an error naming it.
+- **In an editor:** the schema accepts a pack with `extends` without the keys its parent has, and with `null`s.
+- **Where it is merged:** `resolveStyleExtends(pack, load)` in `@pixelworlds/style`. `createWorldView` merges with its style resolver; a pack given as an object must be merged already. The viewer's loader merges, so `?style=<variant>` works. The merged pack keys the tile cache, so editing a parent re-bakes its variants.
+- **Example:** `packages/style/test/fixtures/desert-adobe.json` is the content review's adobe variant in 1 KB instead of a 16 KB copy, and its test checks the merge against the parent.
