@@ -1,0 +1,10 @@
+name: Flatiron Building
+wikidata: Q220728
+# Wikidata's coordinate, where Broadway crosses Fifth Avenue at 23rd Street.
+# Drawn on its own wedge of a footprint (Overture's), not on a box.
+anchor: { lon: -73.989722, lat: 40.741111 }
+height: 94           # Wikidata's; 22 storeys
+replaces: [Flatiron Building]
+footprint: true
+depictions:
+  generic: { group: landmark.block.wedge }   # a limestone and terracotta block on a triangular lot, under a cornice; no name

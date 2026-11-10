@@ -358,6 +358,77 @@
       "ramps": { "wall": "limestone", "roof": "roof-flat", "window": "glass", "dome": "verdigris" },
       "params": { "length": 1.6, "depth": 0.8, "hall": 0.35, "dome": 0.15 }
     },
+    "landmark.bridge.suspension.steel.long": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-steel", "truss": "bridge-steel", "deck": "roof-flat", "pier": "bridge-stone", "plate": "asphalt" },
+      "params": {
+        "spans": 1,
+        "side": 0.13,
+        "towerRatio": 2.8,
+        "hangers": 6,
+        "tower": 1,
+        "portals": 3,
+        "leg": 0.3,
+        "legDepth": 0.36,
+        "taper": 0.05,
+        "decks": 2,
+        "truss": 0.1,
+        "pierTop": 0.08,
+        "sideBrace": 1,
+        "sideDepth": 4
+      }
+    },
+    "landmark.bridge.cantilever": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-steel", "truss": "bridge-steel", "deck": "roof-flat", "pier": "bridge-stone", "plate": "asphalt" },
+      "params": {
+        "spans": 2,
+        "side": 0.25,
+        "towerRatio": 2.5,
+        "hangers": 2,
+        "tower": 1,
+        "portals": 2,
+        "leg": 0.3,
+        "legDepth": 0.4,
+        "taper": 0.05,
+        "decks": 2,
+        "truss": 0.14,
+        "pierTop": 0.15,
+        "sag": 0,
+        "anchorTop": 1,
+        "sideBrace": 1,
+        "sideDepth": 4
+      }
+    },
+    "landmark.tower.deco.setback": {
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "limestone", "spandrel": "bridge-steel", "trim": "limestone", "cap": "bridge-steel", "roof": "roof-flat", "window": "glass",
+        "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "piers": 2, "setbacks": 2, "crown": 0, "width": 0.17, "depth": 0.14, "litFraction": 0.5 }
+    },
+    "landmark.tower.deco.steel": {
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "tower-white", "spandrel": "iron", "trim": "castiron-grey", "cap": "castiron-grey", "roof": "roof-flat", "window": "glass",
+        "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "piers": 3, "setbacks": 2, "crown": 0, "width": 0.2, "depth": 0.18, "spire": 0.13, "litFraction": 0.5 }
+    },
+    "landmark.block.wedge": {
+      "generator": "prewarBlock",
+      "ramps": {
+        "wall": "limestone", "base": "limestone", "trim": "terracotta", "cornice": "limestone", "iron": "iron", "accent": "gold",
+        "tank": "cedar", "roof": "roof-flat", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "landmark.hall.terminal": {
+      "generator": "cellhouse",
+      "ramps": { "wall": "limestone", "roof": "verdigris", "window": "glass", "detail": "granite" },
+      "params": { "head": 0.18, "tail": 0, "hall": 0.75 }
+    },
     "prop.lanterns": {
       "generator": "lanterns",
       "ramps": { "lantern": "sign-red", "gold": "gold", "wire": "asphalt" },

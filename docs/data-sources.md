@@ -163,7 +163,7 @@ Nearmap (~5–7 cm aerials and 3D), Planet SkySat (50 cm), Airbus Pléiades Neo 
 
 - **Default:** buildings and landmarks visible from public places are depicted in their canonical form. In the US, 17 U.S.C. §120 allows pictorial representations of constructed architectural works visible from public places.
 - **Protected elements get a stylized or generic variant**, chosen per release target in the landmark registry (`depiction` field). These include:
-  - trademarks (e.g. the Hollywood Sign)
+  - trademarks (e.g. the Hollywood Sign; the Empire State Building's image, which its owners use as a trademark: its generic depiction is a setback tower of its height, with no mast or lighting of its own)
   - copyrighted displays (e.g. the Eiffel Tower's night lighting)
   - public sculpture and artworks (§120 covers architecture, not sculpture)
 - **Brands and signage:** no real brand names or logos on buildings by default (relevant to the Las Vegas Strip). Signs use generic or invented names unless licensed.
