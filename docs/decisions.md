@@ -91,6 +91,7 @@ Status values:
 | D-080 | New York's building facts: footprints joined to PLUTO lots and LPC records; a `materials:` rule | Accepted (M5) |
 | D-081 | New York's look: a `new-york` style pack and the `@pixelworlds/city-nyc` generator plugin | Accepted (M5) |
 | D-082 | Roads drawn along their own centre lines, and snapped to 16 directions | Accepted (M5) |
+| D-084 | Paris's sources and plugins: APUR's footprints with IGN's BD TOPO, IGN's DTMs, and heights from facts | Accepted (M5) |
 
 ---
 
@@ -899,4 +900,24 @@ The point is more room for visual interest; both halves are wanted.
   - **A distance field per micro-cell:** smooth too, but more data, and class, lanes and junctions still need per-cell records.
   - **16 directions alone:** two-cell "knight" links would have to be known to every cell they cross, and it does nothing for curves or other angles.
   - **Snapping everything to 8 directions:** no jitter, but it would turn Manhattan's grid by 16°, far beyond the snap's 2-cell shift.
+
+### D-084: Paris's sources and plugins: APUR's footprints with IGN's BD TOPO, IGN's DTMs, and heights from facts (accepted, M5)
+- **Why:** Paris is next after New York (D-078). Its fabric reads by construction period and height (Haussmann's 1851–1914 street wall at six or seven storeys under zinc mansards), and it brings the first terrain source outside the US. Second-region.md §6 left Paris's elevation licence in conflict and its field names unchecked.
+- **Checked first** (second-region.md §8, 2026-11-10), from APUR's catalogue and ArcGIS service, IGN's catalogue records, WFS and WMS-Raster, and the City of Paris's API:
+  - **Licences:** APUR's layers are ODbL (catalogue, ArcGIS item and geocatalogue record agree). IGN's records for BD TOPO 3.5, RGE ALTI 2.0 and LiDAR HD give the Licence Ouverte 2.0; data.gouv's "not specified" is a harvesting gap, and the Géoplateforme's terms default to the Licence Ouverte anyway. The city's trees are ODbL. All allow derived databases.
+  - **Fields:** APUR's footprints carry `c_perconst` and `h_med` (not `C_PERCONST_APUR` and `H_MEDIANE`, which §4 had from another layer), and also a roof form (`c_forme_toit`, with brisis-terrasson: the mansard) and an urban fabric class (`c_tissu`, with an HBM class). They have no storeys or use; BD TOPO has both.
+- **What:** the city pack `pixelworld-city-paris` (`pipeline/plugins/`):
+  - **Facts source `apur`:** APUR's built footprints of Paris (ArcGIS REST, the region's box, paged) joined to BD TOPO's buildings (the Géoplateforme's WFS) by each footprint's representative point, and to APUR's 80 quartiers by its centroid; cached in `paris/` under a version tag (option `version`, default APUR's last update date). Facts: `year` (APUR's year where it falls inside its period, else the period's representative year: 1750, 1830, 1880, 1930, 1958, …), `stories`, `units` and `use` (BD TOPO; residential with commerce is mixed), `class` (APUR's fabric code: `TR`, `TC`, `TPE`, `HBM`, `ER`, `IGH`, …), `roof` (flat, gabled, mansard), `height` (APUR's median) and `hood` (the quartier).
+  - **Terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`:** the Géoplateforme's WMS-Raster serves both DTMs as float32 GeoTIFFs at any resolution, anonymously. The adapter overrides `read_into`: 2,000-pixel tiles on a fixed Lambert-93 grid at `native_m × overview` (RGE ALTI 1 m, LiDAR HD 0.5 m), cached in `ign/`, labelled EPSG:2154 (the service writes an unnamed datum) and reprojected per cell corner. Copernicus GLO-30 isn't needed.
+  - **Heights from facts (a pipeline change):** Overture gives a height to 3% of the walking box's 20,435 buildings and floors to 61%; the other 37% stood at the default 6–8 m, breaking the street wall. A facts source may now give `height` (`facts.FACT_KEYS`), and a building Overture gives neither height nor floors takes it in `type_buildings`, becoming a tower at `towerMeters` or more. Buildings with Overture heights keep them, so other worlds are unchanged (their facts have no height).
+- **Measured** over the walking box with its margin (`[2.283, 48.848, 2.367, 48.877]`, version 2026-07-30): 36,048 APUR footprints, 34,518 on a BD TOPO building (95.8%), 34,221 with a year (94.9%), 28,520 with storeys (79%). Use: mixed 17,110, residential 7,247, commercial 5,693, none 5,803. Fabric: `TR` 21,763, `TC` 11,486, `ER` 1,155, `TD` 617, `TPE` 334, `IGH` 57, `HBM` 27. Roofs: mansard 32,010, flat 2,853, gabled 1,160. APUR's median height runs at 3.18 m a BD TOPO storey. Fetching took about a minute; a cached build reads it at once. The DTM: four 8 km tiles at 4 m (64 MB).
+- **Rejected alternatives:**
+  - **BD TOPO alone** (it has storeys, use and a height for all of France): no construction period, which is what tells Haussmann from faubourg and HBM; its `date_d_apparition` (on 64% of the box's buildings) is a year rounded to ten or fifty, and missing on more than APUR's period.
+  - **Two facts sources** (APUR and BD TOPO): a spec names one; the join belongs in the pack, as New York's joins PLUTO, LPC and the NTAs.
+  - **Downloading LiDAR HD's 1 km DTM tiles:** 50 cm only, and named per flight block; the WMS-Raster reads any resolution of both DTMs.
+  - **Heights from facts for every building** (replacing Overture's): would change other worlds' heights where their facts gain a height; filling gaps keeps Overture first, as the semantic fusion table orders.
+- **Later:**
+  - The city's tree points (`les-arbres`: 26,950 in the walking box, 9,109 plane trees) for street trees by species; a points input the pipeline doesn't have.
+  - BD TOPO's materials (walls and roofs, as codes, on half the buildings) for a `materials:` rule.
+  - Amsterdam's AHN as the next terrain source, and the landmark registry's jurisdiction field (data-sources.md §7) when a second country's depiction rules differ.
 

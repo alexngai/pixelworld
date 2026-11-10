@@ -26,6 +26,8 @@ answer is None (no record there) or a dict with any of these keys:
     roof      str         the roof shape in Overture's words (flat, gabled,
                           hipped, mansard, …), matched by `roofs:` rules
     material  str         the main facade material, matched by `materials:` rules
+    height    float       the building's height in metres, for buildings Overture
+                          gives no height or floors (D-084)
 
 Other keys are kept and ignored.
 """
@@ -39,7 +41,7 @@ import numpy as np
 from . import plugins
 from .region import RegionError
 
-FACT_KEYS = ("year", "stories", "units", "use", "class", "hood", "roof", "material")
+FACT_KEYS = ("year", "stories", "units", "use", "class", "hood", "roof", "material", "height")
 # keys of the typology section itself: anything else beside a bare `facts: name`
 # is an option for the facts source (the older form, `rollYear:` beside `facts: datasf`)
 TYPOLOGY_KEYS = ("facts", "rules")

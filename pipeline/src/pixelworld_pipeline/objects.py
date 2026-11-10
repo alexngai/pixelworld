@@ -915,6 +915,9 @@ def place_buildings(
             for part in sorted(my_parts, key=lambda r: r["id"]):
                 add(part, cls, _height(part, "other"), row["id"], hints)
         else:
+            if not row.get("height") and not row.get("num_floors"):
+                # a default height: a facts source's may replace it (type_buildings)
+                hints = {**hints, "_hdef": True}
             add(row, cls, height, row["id"], hints, geom)
     return out, polys
 
@@ -937,9 +940,13 @@ def park_polygons(region: Region, spec: dict[str, Any], boxes: list) -> list | N
     return project_rows(region, [rows[k] for k in sorted(rows)])
 
 
-def type_buildings(region: Region, found: list[dict], spec: dict, streets, water) -> list[dict]:
+def type_buildings(
+    region: Region, found: list[dict], spec: dict, streets, water, tower_m: float = 45.0
+) -> list[dict]:
     """Building typologies (D-055): features, facts and the spec's rules. The
-    facts come from the facts source plugin the spec names (`facts:`)."""
+    facts come from the facts source plugin the spec names (`facts:`). A
+    building Overture gives no height or floors takes the facts' `height`
+    (D-084), and becomes a tower at `tower_m` or more."""
     from . import facts as facts_sources
     from . import typology
 
@@ -953,12 +960,18 @@ def type_buildings(region: Region, found: list[dict], spec: dict, streets, water
         if len(got) != len(has):
             raise ValueError(f"facts source answered {len(got)} of {len(has)} points")
         facts = [None] * len(found)
+        filled = 0
         for i, f in zip(has, got, strict=True):
             facts[i] = f
+            if f and f.get("height") and found[i].pop("_hdef", False):
+                found[i]["hm"] = round(float(f["height"]), 1)
+                if found[i]["hm"] >= tower_m and found[i]["g"] in typology.GENERIC[:2]:
+                    found[i]["g"] = "building.tower"
+                filled += 1
         known = sum(f is not None for f in got)
         progress.log(
             f"typology facts: {facts_sources.describe(source)}, "
-            f"{known}/{len(has)} buildings with facts"
+            f"{known}/{len(has)} buildings with facts, {filled} heights from facts"
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
     counts = typology.classify(found, spec, feats)
@@ -1521,7 +1534,14 @@ def place(
             found, cleared = clear_of_roads(found, road_strips(*roads), nudge)
             progress.log(f"buildings off the roads: {cleared}")
         if spec.get("typology"):
-            found = type_buildings(region, found, spec["typology"], streets, water)
+            found = type_buildings(
+                region,
+                found,
+                spec["typology"],
+                streets,
+                water,
+                float(spec["buildings"].get("towerMeters", 45)),
+            )
         instances += depict_buildings(p, found, depiction.get("buildings", {}))
     tree = shapely.STRtree(building_polys) if building_polys else None
 

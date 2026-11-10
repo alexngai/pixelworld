@@ -97,7 +97,8 @@ A facts source gives each building facts from public records, for the building t
 | `class` | str | the source's native building class code (PLUTO's `bldgclass`, Boston's `BLDG_TYPE`, DataSF's property class) | `classes:` rules |
 | `hood` | str | the neighbourhood | `hoods:` rules |
 | `roof` | str | the roof shape in Overture's words (`flat`, `gabled`, `hipped`, `mansard`, …) | `roofs:` rules |
-| `material` | str | the main facade material | (nothing yet) |
+| `material` | str | the main facade material | `materials:` rules |
+| `height` | float | the building's height in metres | buildings Overture gives no height or floors take it, and become towers at `towerMeters` (D-084) |
 
 **Rules that read them:**
 - `classes: [A4, "C*"]` matches a class code exactly, or by a prefix ending in `*`.
@@ -189,9 +190,8 @@ A source adapter is a `RasterSource` (`pixelworld_pipeline.sources.rasters`). Th
 
 USGS 3DEP is the first terrain adapter (`rasters.USGS3DEP`); it implements `tiles`.
 
-**A non-US terrain source** is a plugin like any other. None ships yet. Each candidate needs its licence confirmed first, as [data-sources.md](data-sources.md) requires:
+**A non-US terrain source** is a plugin like any other. The first is France's: `ign-rgealti` and `ign-lidar-hd-mnt` in Paris's city pack (`pipeline/plugins/pixelworld-city-paris/src/pixelworld_city_paris/ign.py`, D-084). They override `read_into`: the Géoplateforme's WMS-Raster resamples to any resolution, so the adapter asks for tiles at `native_m × overview` on a fixed Lambert-93 grid, caches them, and reprojects them itself. Other candidates need their licence confirmed first, as [data-sources.md](data-sources.md) requires:
 - the Dutch **AHN** 0.5 m DTM (CC0; PDOK's ATOM feed or WCS);
-- the French **LiDAR HD** or RGE ALTI DTM (licence metadata to check; see second-region.md);
 - **Copernicus GLO-30** as a global fallback (a surface model, not bare earth).
 
 A sketch for Copernicus GLO-30's public cloud-optimized tiles. Check the tile naming and the licence's attribution text before you use it:

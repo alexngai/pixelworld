@@ -43,7 +43,11 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 | Parks and natural land (M3.5) | Overture `base/land_use` (park, golf, pitch, garden, cemetery, …) and `base/land` (grassland, scrub, heath, beach) | polygons moved with the straightened roads; lawn surfaces where the spec's `ground` section asks (D-062) |
 | Lakes | WorldCover water class, flattened per water body | — |
 | Building facts (San Francisco, D-055) | DataSF assessor roll and parcels | the `datasf` facts source, in the city pack `pixelworld-city-sf` (`pipeline/plugins/pixelworld-city-sf/`): Socrata API, paged, cached in `pipeline/.cache/datasf/` |
+| APUR Emprise bâtie Paris | built footprints with construction period and year, median height, roof form and urban fabric class. Read by the `apur` facts source in the city pack `pixelworld-city-paris` | Paris | ODbL 1.0 |
+| IGN BD TOPO® | buildings with storeys, dwellings, use and height | France | Licence Ouverte 2.0 |
 | Building facts (New York, D-080) | NYC Open Data: BUILDING footprints (OTI, `5zhs-2jue`), PLUTO (DCP, `64uk-42ks`), the LPC Individual Landmark and Historic District Building Database (`gpmc-yuvp`), 2020 NTAs (DCP, `9nt8-h7nd`). Licence: NYC Admin Code §23-502(d), "without any registration requirement, license requirement or restrictions on their use"; the city may ask for each data set's source, version and a description of modifications, which the attribution gives (checked 2026-11-09, second-region.md §7) | the `pluto` facts source, in the city pack `pixelworld-city-nyc`: Socrata API, limited to the region's box, paged, cached in `pipeline/.cache/nyc/` under the PLUTO release |
+| Elevation (France, D-084) | IGN RGE ALTI® 1 m and LiDAR HD 50 cm DTMs, from the Géoplateforme's WMS-Raster. Licence: Licence Ouverte / Open Licence 2.0 (Etalab), per IGN's catalogue records (checked 2026-11-10, second-region.md §8) | the terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`, in the city pack `pixelworld-city-paris`: 2,000-pixel float32 GeoTIFF tiles in Lambert-93 at the resolution the overview asks for (the server resamples), cached in `pipeline/.cache/ign/`, then reprojected and averaged per cell corner |
+| Building facts (Paris, D-084) | APUR's "Emprise bâtie Paris" (period, year, median height, roof form, urban fabric) and "Quartier de Paris": ODbL 1.0. IGN's BD TOPO® buildings (storeys, dwellings, use): Licence Ouverte 2.0, which asks for the source and the date of its last update (checked 2026-11-10, second-region.md §8) | the `apur` facts source, in the city pack `pixelworld-city-paris`: APUR's ArcGIS REST service and the Géoplateforme's WFS, limited to the region's box, paged, cached in `pipeline/.cache/paris/` under a version tag. Its `height` fills buildings Overture gives no height or floors |
 
 - **Plugins:** elevation and land cover are read through source adapters, and building facts through facts sources, all found by name ([plugins.md](plugins.md)). A new region's national DEM or city records come in as a plugin. 3DEP and WorldCover are built in.
 - **Why Overture rather than OSM extracts:** releases are versioned, so builds are reproducible from the spec alone, and GeoParquet supports bounding-box range reads. (Geofabrik and Overpass were also unreachable from the build environment at the time.)
@@ -88,7 +92,8 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | USGS 3DEP lidar | classified point clouds (ground, buildings, vegetation) | most of the US | public domain |
 | AHN | lidar / DSM / DTM | Netherlands | CC0 |
 | Environment Agency lidar | DSM / DTM | England | Open Government Licence |
-| IGN LiDAR HD | classified point clouds | France | Licence Ouverte 2.0 |
+| IGN LiDAR HD | classified point clouds; DTM, DSM and canopy height at 50 cm | France (where flown; Paris is) | Licence Ouverte 2.0 (IGN's catalogue record, checked 2026-11-10) |
+| IGN RGE ALTI® | bare-earth DTM | 1 m, France | Licence Ouverte 2.0 (IGN's catalogue record, checked 2026-11-10) |
 | PNOA-LiDAR | point clouds | Spain | CC BY 4.0 |
 | swissSURFACE3D | point clouds / DSM | Switzerland | swisstopo open data (attribution) |
 
@@ -124,6 +129,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | ESA WorldCover | 11 land-cover classes | 10 m, global | CC BY 4.0 |
 | NLCD (Annual) | land cover, including how built-up an area is | 30 m, US | public domain |
 | Meta/WRI canopy height | tree canopy height | 1 m, global | CC BY 4.0 |
+| City of Paris, "Les arbres" | 220,339 trees with species, height and girth (not read yet) | Paris | ODbL 1.0 |
 
 ### Imagery (color sampling, gap fill, editor reference)
 

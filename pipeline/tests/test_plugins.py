@@ -128,7 +128,13 @@ def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
 def test_a_missing_terrain_source_lists_terrain_sources_only():
     with pytest.raises(plugins.PluginNotFoundError) as e:
         rasters.source("ahn-dtm-05", "terrain", where="sources.dem.kind")
-    assert e.value.available == ["usgs-3dep-13arcsec", "usgs-3dep-1arcsec"]
+    # the built-ins and Paris's city pack's (installed in this repository)
+    assert e.value.available == [
+        "ign-lidar-hd-mnt",
+        "ign-rgealti",
+        "usgs-3dep-13arcsec",
+        "usgs-3dep-1arcsec",
+    ]
     assert "no terrain source named 'ahn-dtm-05' (named by sources.dem.kind)" in str(e.value)
     with pytest.raises(plugins.PluginError, match="is a landcover source, not a terrain source"):
         rasters.source("esa-worldcover-2021", "terrain")
@@ -286,3 +292,28 @@ def test_a_registered_facts_source_types_buildings(capsys):
     assert [b["g"] for b in found] == ["building.rowhouse.brownstone", "building.tenement"]
     assert all(b["yr"] == 1890 and b["fl"] == 4 for b in found)
     assert "typology facts: test records 2026, 2/2 buildings with facts" in capsys.readouterr().err
+
+
+class Heights(facts.FactsSource):
+    def at(self, xs, ys):
+        return [{"height": 60.0 if x > 0 else 24.0} for x in xs]
+
+
+def test_facts_heights_fill_only_buildings_without_one(capsys):
+    """D-084: a facts `height` replaces only a default height (`_hdef`), and a
+    building it lifts to the tower height becomes a tower."""
+    region = Region.from_dict(SPEC)
+    found = []
+    for k, (cx, hdef) in enumerate(((-2.0, True), (-1.0, False), (2.0, True))):
+        fp = [[cx, 1.0], [cx + 0.3, 1.0], [cx + 0.3, 1.8], [cx, 1.8]]
+        b = {"g": "building.residential", "x": cx, "y": 1.4, "fp": fp, "hm": 6.0}
+        b.update({"_grp": f"b{k}", "_c": (cx * 1000.0, 0.0)})
+        if hdef:
+            b["_hdef"] = True
+        found.append(b)
+    with plugins.registered(plugins.FACTS, "heights", Heights):
+        objects.type_buildings(region, found, {"facts": "heights", "rules": []}, None, None, 45.0)
+    assert [b["hm"] for b in found] == [24.0, 6.0, 60.0]
+    assert [b["g"] for b in found] == ["building.residential"] * 2 + ["building.tower"]
+    assert not any("_hdef" in b for b in found)
+    assert "2 heights from facts" in capsys.readouterr().err
