@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixelworld models</title>
+    <style>
+      :root {
+        --bg: #1e1c2b;
+        --fg: #e8dcbc;
+        --muted: #a29384;
+        --panel: #2a2738;
+        --error: #ff8a7a;
+      }
+      body {
+        margin: 0;
+        padding: 12px 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 6px;
+      }
+      p {
+        margin: 4px 0;
+        color: var(--muted);
+        max-width: 1100px;
+      }
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        align-items: end;
+        margin: 8px 0;
+        padding: 8px;
+        background: var(--panel);
+        border-radius: 4px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        color: var(--muted);
+      }
+      input,
+      select {
+        font: inherit;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--muted);
+        border-radius: 3px;
+        padding: 2px 4px;
+      }
+      input.short {
+        width: 9em;
+      }
+      #status {
+        color: var(--fg);
+        white-space: pre-wrap;
+      }
+      #status.error,
+      .error {
+        color: var(--error);
+      }
+      table {
+        border-collapse: collapse;
+        margin-top: 8px;
+      }
+      th {
+        font-weight: normal;
+        color: var(--muted);
+        text-align: left;
+        padding: 2px 8px 2px 0;
+        vertical-align: bottom;
+      }
+      td {
+        padding: 0 8px 8px 0;
+        vertical-align: bottom;
+      }
+      td canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+      td.error {
+        max-width: 24em;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pixelworld models</h1>
+    <p>
+      One asset group's models without a world: generated with the style pack's roles and parameters, meshed at the
+      object voxel scale and baked by the real baker in each rotation, by day and night. Footprints and heights are in
+      voxels (a voxel is a 2×1 px top and 1 px tall at 1×). Saving a generator, a city pack or a style pack reloads the
+      page with the same parameters (they are in the URL).
+    </p>
+    <form id="controls"></form>
+    <div id="status">loading…</div>
+    <div id="grid"></div>
+    <script type="module" src="/src/model.ts"></script>
+  </body>
+</html>

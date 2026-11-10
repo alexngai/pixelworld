@@ -55,6 +55,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@pixelworlds/bake':
+        specifier: workspace:*
+        version: link:../../packages/bake
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
