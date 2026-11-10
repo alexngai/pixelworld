@@ -120,14 +120,15 @@ Sources and licenses:
 
 ## nyc-walk
 
-New York's walking level (D-078), built from [`worlds/nyc/walk.yaml`](../worlds/nyc/walk.yaml) on the `new-york` style pack: Lower Manhattan from the Battery to Canal Street at 10 m per cell, with the Brooklyn and Manhattan Bridges, DUMBO and Brooklyn Heights. Heights are true (`heightStretch` 1.0): One World Trade Center's roof stands 667 voxels up.
+New York's walking level (D-078), built from [`worlds/nyc/walk.yaml`](../worlds/nyc/walk.yaml) on the `new-york` style pack: Lower Manhattan from the Battery to Canal Street at 10 m per cell, with the Brooklyn and Manhattan Bridges, DUMBO and Brooklyn Heights. Heights are true (`heightStretch` 1.0): One World Trade Center's roof stands 667 voxels up. Its roads and paths are drawn along their own centre lines, and snapped to 16 directions where they run near one (D-082).
 
-- **Buildings:** 13,583 from Overture footprints and heights; 12,973 have facts from NYC Open Data (the `pluto` facts source, D-080: footprints, PLUTO lots, LPC records, NTAs).
-- **Types:** tenements (3,499), historic commercial blocks (1,867), brownstones (973), prewar apartment blocks (442), cast-iron lofts (258), warehouses (83), pier sheds (15), and towers by era: deco (613), slabs (375), postmodern (127) and glass (275), with 54 left to a kind by seed.
-- **Also:** 15,329 canopy trees and 3,686 sidewalk trees, 14,577 lawn and 9,584 yard cells, 2,627 street lights and 155 signals, 879 rail cells (the subway over the Manhattan Bridge), 3,915 traffic routes.
+- **Buildings:** 13,579 from Overture footprints and heights; 12,969 have facts from NYC Open Data (the `pluto` facts source, D-080: footprints, PLUTO lots, LPC records, NTAs).
+- **Types:** tenements (3,492), historic commercial blocks (1,868), brownstones (973), prewar apartment blocks (443), cast-iron lofts (258), warehouses (83), pier sheds (10), and towers by era: deco (613), slabs (375), postmodern (127) and glass (275), with 54 left to a kind by seed.
+- **Centre lines:** 31,685 road cells and 56,542 path cells carry pieces; 12 and 266 have more than six, and drop their narrowest.
+- **Also:** 15,281 canopy trees and 3,615 sidewalk trees, 14,646 lawn and 9,507 yard cells, 2,702 street lights and 142 signals, 866 rail cells (the subway over the Manhattan Bridge), 3,769 traffic routes.
 - **Landmarks (generic depictions):** One World Trade Center, the Woolworth Building, the Brooklyn Bridge and the Manhattan Bridge (both in pieces, D-056).
-- **Road report:** clean (no discontinuous or steep edges).
-- **Size:** 1.4 MB. Built in 303 s with an empty download cache, 33 s with it.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 1.8 MB. Built in about 35 s with the download cache (5 minutes without).
 
 ```sh
 cd pipeline

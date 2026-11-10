@@ -23,14 +23,18 @@ smoothing: null
 warp: null
 
 # Lower Manhattan's colonial streets run every way; the grid north of them is
-# 29 degrees off north. Both snap to the eight grid directions (D-049).
+# 29 degrees off north, 2.4 degrees from a 2:1 grid direction. Streets near one
+# of the 16 directions (the 8 and the 2:1 ones) snap to it (D-049, D-082);
+# the rest keep their angle and are drawn along their own centre lines.
 snap:
-  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  roads: { angle: 12, directions: 16, simplify: 0.75, maxShift: 2.0 }
   buildings: { angle: 12, follow: 3, clearRoads: { nudgeMeters: 5 } }
 
 widths:
   scale: 1.0
   minCells: 0.15
+  # ways drawn along their centre lines, not their cells' connections (D-082)
+  centrelines: true
   lanes: { lines: true, meters: 3.5 }
 micro: { k: 2, dem: { overview: 1 }, smooth: { lawn: 15 } }
 
