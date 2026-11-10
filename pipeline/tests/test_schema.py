@@ -284,6 +284,37 @@ def test_a_spec_given_as_a_dict_is_checked_too(tmp_path):
         load_region(raw, tmp_path)
 
 
+def test_the_reference_in_docs_is_the_schemas():
+    doc = (REPO / "docs" / "worlds.md").read_text()
+    assert schema.BEGIN in doc and schema.END in doc
+    assert schema.splice(doc, schema.reference()) == doc, (
+        "docs/worlds.md's spec reference is out of date: "
+        "cd pipeline && uv run pixelworld reference --write ../docs/worlds.md"
+    )
+
+
+def test_the_docs_example_specs_are_valid():
+    """The specs docs/worlds.md and architecture.md §4 show check clean (warp files
+    against the warp section)."""
+    import re
+
+    blocks = []
+    for doc in ("worlds.md", "architecture.md"):
+        text = (REPO / "docs" / doc).read_text()
+        blocks += re.findall(r"```yaml\n(.*?)```", text, flags=re.S)
+    specs = [yaml.safe_load(b) for b in blocks]
+    regions = [s for s in specs if isinstance(s, dict) and "bounds" in s]
+    warps = [s for s in specs if isinstance(s, dict) and "background" in s]
+    assert len(regions) >= 2 and warps
+    place = WORLDS / "example" / "region.yaml"  # as if in worlds/: its style packs and landmarks
+    for raw in regions:
+        assert schema.validate(raw, spec_path=place) == [], raw["id"]
+    for raw in warps:
+        ctx = schema.Ctx(None, None)
+        schema.WARP.check(raw, ("warp",), ctx)
+        assert ctx.issues == []
+
+
 def test_the_reference_lists_every_key_with_its_default():
     ref = schema.reference()
     sections: list[tuple[str, schema.Map]] = []

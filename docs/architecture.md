@@ -128,29 +128,45 @@ A region is built as several world packages, one per way of moving through it. E
 
 ## 4. World definition (source of truth)
 
-A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code. A region can be built at several scale levels (§3.5), each from a level spec that extends the region's. The M1 spec is [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml). It holds bounds, a uniform `metersPerCell`, `verticalExaggeration`, `maxSlope`, smoothing, a start point, pinned data sources and geology provinces. The fields below for focus areas, pins, landmarks and overrides arrive with M2–M3:
+A world is a set of **regions**. Each region is continuous inside and defined by files in `worlds/` that are version-controlled and reviewed like code. A region can be built at several scale levels (§3.5), each from a level spec that extends the region's. Every key a spec can hold, its type, default and meaning, is in the spec reference of [worlds.md](worlds.md) §10, generated from the schema the pipeline checks specs against (`pixelworld check`). The Southwest's driving level, shortened from [`worlds/southwest/region.yaml`](../worlds/southwest/region.yaml):
 
 ```yaml
-# worlds/southwest/region.yaml (target shape, M2+)
-region: southwest
-bounds: [-116.0, 35.0, -111.5, 37.5]      # lon/lat
-projection: auto-tmerc
-base_scale_m_per_cell: 400
-vertical_m_per_step: 25
-focus:                                     # painted into the scale field
-  - name: las-vegas-strip
-    at: [-115.17, 36.11]
-    radius_km: 6
-    scale_m_per_cell: 15
-  - name: grand-canyon-south-rim
-    at: [-112.14, 36.05]
-    radius_km: 25
-    scale_m_per_cell: 40
-    vertical_exaggeration: 1.5
-pins: []                                   # warp constraints, written by the editor
-style_pack: desert-southwest
-landmarks: [hoover-dam, stratosphere-tower, grand-canyon-skywalk]
-overrides: overrides/                      # per-feature edits, keyed by stable ID
+id: southwest                              # the package: fixtures/southwest
+name: US Southwest
+bounds: [-116.0, 35.0, -111.5, 37.5]       # lon/lat: west, south, east, north
+level: drive                               # scale levels (§3.5): fly.yaml and walk.yaml extend this
+levels:
+  - { name: fly, world: southwest-fly, label: Flying }
+  - { name: drive, world: southwest, label: Driving }
+  - { name: walk, world: southwest-walk, label: Walking the Strip }
+metersPerCell: 400                         # the base scale; the warp magnifies focus areas
+verticalExaggeration: 2.5
+maxSlope: 2
+warp: warp.yaml                            # focus areas and pins, written by the editor (§6)
+snap: { roads: { angle: 16 }, buildings: { angle: 12, follow: 3 } }
+widths: { scale: 2.0, minCells: 0.08 }
+micro: { k: 4, dem: { overview: 2 } }
+objects:
+  buildings: { bounds: [[-115.19, 36.08, -115.14, 36.15]], minArea: 200, lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018 } }
+  landmarks: [strat-tower, welcome-sign, hoover-dam, desert-view-watchtower]   # worlds/_landmarks
+style: desert-southwest                    # worlds/_styles/desert-southwest
+start: { lon: -115.1728, lat: 36.1147 }
+sources:
+  dem: { kind: usgs-3dep-1arcsec, overview: 4 }
+  landcover: { kind: esa-worldcover-2021, overview: 16 }
+  overture: { release: 2026-10-21.0 }      # pinned, so builds repeat
+  roads: { classes: [motorway, trunk, primary, secondary] }
+  rivers: { subtypes: [river] }
+geology: { default: basin-and-range }      # plus provinces: outlines with their own strata
+```
+
+```yaml
+# worlds/southwest/warp.yaml
+background: 500                            # metres per cell in the open desert
+vertical: { gamma: 1.0, referenceSigmaKm: 6, min: 0.6, max: 4.0 }
+focus:
+  - { name: las-vegas-strip, lon: -115.1728, lat: 36.1147, radiusKm: 7, falloffKm: 15, metersPerCell: 100 }
+pins: []
 ```
 
 Supporting files:
@@ -160,11 +176,12 @@ Supporting files:
   - geo anchor, Wikidata ID, footprint, scale boost, orientation
   - hero asset references
   - **depiction variants**: canonical, stylized or generic, with the variant chosen per release target for IP/compliance reasons
-- **Overrides:** keyed by our own **stable feature IDs**. These are derived at ingest from source + source ID, with a geo anchor so they can be re-matched when upstream IDs change. Overrides survive re-bakes.
+- **Overrides** (planned, not built yet): keyed by our own **stable feature IDs**. These are derived at ingest from source + source ID, with a geo anchor so they can be re-matched when upstream IDs change. Overrides survive re-bakes.
 
 ## 5. Geo pipeline (offline, Python)
 
-Stages run in order. Each one caches its outputs, keyed by the hash of its inputs, so editing a region only re-runs what changed. In M1 this means downloads cached as `.npy`/JSON under `pipeline/.cache/`, plus a fast in-memory rest of the build (about 20 s for the Southwest). Entry point: `uv run pixelworld build worlds/<id>/region.yaml`.
+Stages run in order. Each one caches its outputs, keyed by the hash of its inputs, so editing a region only re-runs what changed. In M1 this means downloads cached as `.npy`/JSON under `pipeline/.cache/` (or `$PIXELWORLD_CACHE`), plus an in-memory rest of the build. Entry point: `uv run pixelworld build worlds/<id>/region.yaml`, which prints each stage's time.
+- **Build times** from a warm cache, measured on a shared 4-core machine (load average about 13): the Southwest's driving level took 171 s (routes 49 s, terrain 33 s, gridding 30 s, objects 21 s, micro-terrain 19 s, writing the package 19 s), plus about 20 s when its warp solve isn't cached; `sf-fly` took 8 min, nearly all of it sifting the Bay Area's buildings for the few tall enough to draw; Jerome (a 3 km town at 20 m) takes 2–3 s.
 
 **M1 implementation** (`pipeline/src/pixelworld_pipeline/`):
 - **Sources** (`sources/`): rasters are read from cloud-optimized GeoTIFF overviews over HTTP range requests, mean-resampled for elevation and mode-resampled for land cover. Overture GeoParquet is read the same way: a one-time index of every file's row-group bounding boxes (footers only), then only the intersecting row groups and columns.
@@ -192,7 +209,7 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 8. **place:** emit instances for everything gameplay cares about: buildings, trees, props with collision, and landmark stamps (rigid, own scale). Purely decorative scatter (grass tufts, pebbles) is left to the client.
 9. **export:** write the chunked world package plus a manifest.
 
-The editor drives the same stages through a local pipeline server (`uv run pixelworld serve worlds/<id>/region.yaml`, plus `pnpm --filter @pixelworlds/editor dev`). A pin or focus edit re-solves the warp and shows a warped preview within seconds, and "Build world" re-exports the whole package (about 1.5 min for the Southwest).
+The editor drives the same stages through a local pipeline server (`uv run pixelworld serve worlds/<id>/region.yaml`, plus `pnpm --filter @pixelworlds/editor dev`). A pin or focus edit re-solves the warp and shows a warped preview within seconds, and "Build world" runs the whole build, traffic routes included (about 3 min for the Southwest, as above). The source map and the solver's mesh scale with the region, from a 3 km town to the 400 km Southwest.
 
 ## 6. Elastic map (warp)
 

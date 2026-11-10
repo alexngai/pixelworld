@@ -1,0 +1,48 @@
+# Jerome, Arizona: the old copper-mining town on Cleopatra Hill, above the
+# Verde Valley. The worked example of docs/worlds.md ("Make your own world"):
+# a town of about 3 × 3 km at 20 m per cell, one level, no warp.
+# Check: cd pipeline && uv run pixelworld check ../worlds/jerome/region.yaml
+# Build: cd pipeline && uv run pixelworld build ../worlds/jerome/region.yaml --out ../fixtures/_try/jerome
+# View:  pnpm dev, then http://localhost:5173/?world=/_try/jerome/
+id: jerome
+name: Jerome, Arizona
+bounds: [-112.130, 34.738, -112.098, 34.762] # lon/lat: west, south, east, north (~2.9 × 2.7 km)
+
+# 20 m cells: a street is about a cell wide, a house about one cell. The
+# ground rises about 650 m from the valley to Cleopatra Hill; 2.5× relief (the
+# default) terraces it into the switchbacks Jerome is known for, and maxSlope 3
+# keeps the steep streets as slopes rather than cliffs.
+metersPerCell: 20
+verticalExaggeration: 2.5
+maxSlope: 3
+
+style: desert-southwest # worlds/_styles/desert-southwest
+start: { lon: -112.1138, lat: 34.7489 } # Main Street
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 } # the 10 m DEM, at full resolution
+  landcover: { kind: esa-worldcover-2021, overview: 1 } # 10 m land cover
+  overture: { release: 2026-10-21.0 }
+  roads: { classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street] }
+  rivers: { subtypes: [river, stream] }
+
+geology: { default: basin-and-range } # the style pack's strata for the cliffs
+
+# Streets straighten toward the 8 grid directions (clean pixel lines), and
+# buildings turn and move with them; streets drawn at 1.5× their real width.
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+widths: { scale: 1.5, minCells: 0.1 }
+
+# 5 m micro-cells inside each cell, from the same 10 m DEM
+micro: { k: 4, dem: { overview: 1 } }
+
+objects:
+  # Overture's footprints: houses on the hillside, Main Street's commercial blocks
+  buildings: { minArea: 40, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  # pinyon-juniper woodland and shrubs by land cover
+  vegetation:
+    - { group: tree.pinyon-juniper, landcover: [tree], spacing: 22, density: 0.45 }
+    - { group: tree.pinyon-juniper, landcover: [shrub, grass], spacing: 45, density: 0.2 }
+    - { group: shrub, landcover: [shrub, grass, bare], spacing: 35, density: 0.2 }
