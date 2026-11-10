@@ -1,0 +1,9 @@
+name: Woolworth Building
+wikidata: Q217652
+# Wikidata's coordinate, on Broadway across from City Hall Park
+anchor: { lon: -74.00822, lat: 40.7124 }
+height: 241
+clear: 20
+replaces: [Woolworth Building]
+depictions:
+  generic: { group: landmark.tower.gothic }   # a setback tower in pale terracotta with a pointed copper crown; no name

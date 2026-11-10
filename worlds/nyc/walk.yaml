@@ -1,0 +1,122 @@
+# New York, walking level (D-078): Lower Manhattan at 10 m per cell, from the
+# Battery to Canal Street, with the Brooklyn and Manhattan Bridges, DUMBO and
+# Brooklyn Heights across the East River. The Financial District's towers
+# stand over colonial streets; Tribeca's cast-iron lofts, the Seaport, City
+# Hall and Chinatown's tenements around them; brownstone rows on the Heights.
+# The only level so far: the driving (Manhattan and the waterfront at 25 m)
+# and flying levels come later, and will share a region.yaml with this one.
+# Build: cd pipeline && uv run pixelworld build ../worlds/nyc/walk.yaml
+id: nyc-walk
+name: New York (walking)
+level: walk
+levels:
+  - { name: walk, world: nyc-walk, label: Walking Lower Manhattan }
+bounds: [-74.020, 40.690, -73.970, 40.729] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+# Manhattan is flat; 1.5x lets the Brooklyn Heights bluff read over the
+# promenade without lifting the streets
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Lower Manhattan's colonial streets run every way; the grid north of them is
+# 29 degrees off north. Both snap to the eight grid directions (D-049).
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+# parks and plazas as lawn (City Hall Park, the Battery, Brooklyn Bridge
+# Park), and the yards behind Brooklyn Heights' rows
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+  yard:
+    near: [building.brownstone, building.house, building.residential]
+    over: [urban, grass, desert]
+    reachMeters: 15
+    paved: 0.3
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055) from NYC Open Data (D-080): PLUTO's building
+  # class (its years are mostly rounded to 5 or 10), the Landmarks
+  # Preservation Commission's facade material where a building has a record,
+  # and the footprint's shape and street. First match wins.
+  typology:
+    facts: pluto
+    rules:
+      - { group: building.pier, onWater: true }
+      # brownstone and brick rows: one- and two-family houses (A, B) and
+      # brownstone-fronted walk-ups, before 1915, 2 to 6 storeys
+      - { group: building.brownstone, materials: [Brownstone], floors: [2, 6] }
+      - { group: building.brownstone, classes: ["A*", "B*"], year: [1800, 1915], floors: [2, 5] }
+      # cast-iron and loft buildings: Tribeca, SoHo's edge, the Seaport
+      - { group: building.loft.castiron, materials: [Cast Iron] }
+      - { group: building.loft.castiron, classes: ["L*"], year: [1840, 1930] }
+      # walk-ups (C) and buildings with flats over shops (S): tenements
+      - { group: building.tenement, classes: ["C*", "S*"], year: [1840, 1930], floors: [3, 7] }
+      # elevator apartments (D) before the war: base, shaft and cap
+      - { group: building.apartment.prewar, classes: ["D*"], year: [1890, 1946] }
+      - { group: building.commercial.historic, year: [1840, 1946], uses: [commercial, mixed, civic], floors: [1, 20] }
+      - { group: building.industrial, uses: [industrial] }
+      # towers by era: setback towers of the 1916 zoning law and the 1920s
+      # and 30s; slabs of the 1950s to 80s; postmodern; glass
+      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1890, 1946] }
+      - { group: building.tower.slab, from: [building.tower, building.tower.hotel], year: [1946, 1985] }
+      - { group: building.tower.postmodern, from: [building.tower, building.tower.hotel], year: [1985, 2000] }
+      - { group: building.tower.glass, from: [building.tower, building.tower.hotel], year: [2000, 2100] }
+  vegetation:
+    # street and park trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [one-world-trade-center, woolworth-building, brooklyn-bridge, manhattan-bridge]
+  landmarkDepiction: generic
+  # true heights: One World Trade Center's roof is already 667 voxels up
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: new-york
+start: { lon: -74.0107, lat: 40.7094 } # Broadway at Liberty Street
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river]
+  # rails out of their tunnels: the subway over the Manhattan Bridge
+  rails:
+    - { draw: train, rail: [subway, standard_gauge] }
+
+geology: null

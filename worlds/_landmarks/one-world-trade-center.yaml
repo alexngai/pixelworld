@@ -1,0 +1,10 @@
+name: One World Trade Center
+wikidata: Q11245
+# Wikidata's coordinate; a square plan whose corners are chamfered as it rises,
+# to a square turned 45 degrees at the roof
+anchor: { lon: -74.0135, lat: 40.713 }
+height: 417          # the roof; the spire reaches 541 m
+clear: 30
+replaces: [One World Trade Center]
+depictions:
+  generic: { group: landmark.tower.obelisk.diagonal }   # a tapering tower turned 45 degrees by its top; no spire, no logo

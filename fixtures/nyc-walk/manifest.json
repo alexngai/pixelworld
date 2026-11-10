@@ -1,0 +1,660 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "nyc-walk",
+  "name": "New York (walking)",
+  "chunkSize": 64,
+  "cellsX": 424,
+  "cellsY": 434,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "54e679731eee8a64170e957bbe023fdeb4f78647398aab97571ffc7345e24005",
+      "heightRange": [
+        -1,
+        1
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "858d9200823275c610474314f7bcc2d1f5e79cb4d076056bd73b55a3bb216bf0",
+      "heightRange": [
+        -1,
+        3
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "ece0663a2dda18aa7d014f7395426e8540d9b98e28f54e4e7e8b588d93e71459",
+      "heightRange": [
+        0,
+        4
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "dce2c1f85ce02e3fb0e337e71bb53a9be47ae839b9605e0dd8630e8b65547cce",
+      "heightRange": [
+        3,
+        5
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "89889cab162a20a7d9652f804f269d0ccca77bc809f2de2e3900f1571a571471",
+      "heightRange": [
+        2,
+        5
+      ]
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "c89e018921e0ad6c6e969229c39b84b6b7354e9e65bcff50057faf1a6fa16e6d",
+      "heightRange": [
+        0,
+        2
+      ]
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "path": "chunks/6_0.pxwc.gz",
+      "sha256": "fdf7496d96235408c78ab9e2002ad7dec50c7d800f29bde3397e77f89e4725a9",
+      "heightRange": [
+        0,
+        1
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "588a07ab0a3cfd03fbdd02e86a9dba5d2b1c1611c2ead277d7675cb598d87d55",
+      "heightRange": [
+        -1,
+        2
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "5a61c2a7f745ef46a92ed5ce821a0b09d8b2d576f26c980da10a15ec9270a95e",
+      "heightRange": [
+        -1,
+        3
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "f3ce2ea46c485128c546be54f9986fe9a521e7b0542768840d63e14715ea9573",
+      "heightRange": [
+        -1,
+        4
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "776092f5dde3c7b163670d6d1ec6e262c096de1f778fbc84741bbb583b8b5b43",
+      "heightRange": [
+        3,
+        5
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "33ae0ce49199c76708903932fddc9f5df54c4e40a884690ac68b223aaffeda57",
+      "heightRange": [
+        2,
+        5
+      ]
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "0b67c07562047a2a8ef93d19f965a63d0eb40a5119ec861338b811e41f2cf1c4",
+      "heightRange": [
+        0,
+        2
+      ]
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "path": "chunks/6_1.pxwc.gz",
+      "sha256": "fde16e0ac22eedc0c0b70ea1fa84f5be13571d86ce450ff7072452b4ee87112c",
+      "heightRange": [
+        0,
+        1
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "45e3c9ee0cbbe9f24b34d70b6332c611a069b08e707638b05a4409635803aaf6",
+      "heightRange": [
+        -6,
+        3
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "2df1744f32d451a4b47d9243bf9c628b473b1053800e5b68e0a5a2b6c0cb10b0",
+      "heightRange": [
+        -7,
+        5
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "8e3a71371419e3b149524f9ef670ec4009eb84a0560585ffe575d3ac0d1c7a6f",
+      "heightRange": [
+        -1,
+        5
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "ec8530b0d53610f0eea091f812457093f6dd3fb9bdf8cca041a0b68c4ff5bb57",
+      "heightRange": [
+        2,
+        5
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "6c8e475cf9916869a6a649bbac8e560299382686cd2c140813e8211bcde9bfa5",
+      "heightRange": [
+        1,
+        4
+      ]
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "2849226bacc7ab7b71a3a3a6d9f3d9e8f392c71dc0a2d3ef96b961b8757042bf",
+      "heightRange": [
+        0,
+        4
+      ]
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "path": "chunks/6_2.pxwc.gz",
+      "sha256": "5aa18786ec7b98686de40a007061964a08ffe4e1f85b323373937f5c38412bae",
+      "heightRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "b35848d2b0c8a3d5eff2704496f96bfe2d81f2179d26667a0cdcc1ae3adc965f",
+      "heightRange": [
+        -2,
+        4
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "999402035672e882706c4259445a5547c2a7e603d201d64a1d07b2d9370da28b",
+      "heightRange": [
+        -3,
+        5
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "e57b923b96ce0b7627de9cf07e5fcb5e0391135b63afc6be162d678fd7a62e11",
+      "heightRange": [
+        -1,
+        4
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "6cd3b04c1df3a28506bb29b40ce081664ecbc859071aece600c472aabb9f6ad9",
+      "heightRange": [
+        -1,
+        3
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "c4448a63eef02e7342409c01fa69458802ba3148c965ca3fcebc0b9b1cbde550",
+      "heightRange": [
+        0,
+        3
+      ]
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "2cc69aea824c0e35c4dcd6278c6cd8e200ae1be538ffe0343dd7a4a51f87e4bf",
+      "heightRange": [
+        0,
+        2
+      ]
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "path": "chunks/6_3.pxwc.gz",
+      "sha256": "a0a68f20c59dfccf6093fd01e2180a136ee2b0b948c512663339bbde1df21f65",
+      "heightRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "71652bbc23e9c88fcad14771a6181d74e58f5607881646b561dcc0dedd721d13",
+      "heightRange": [
+        -2,
+        3
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "ecadc6c4e69a703e9e935308f914e73577eb2bdcc910e0748796098f695e5bba",
+      "heightRange": [
+        -1,
+        3
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "49d1062fa284ad8c771bc47bc81185bca400987f9a64033af39c71865df1072e",
+      "heightRange": [
+        -1,
+        1
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "b85bc59c2ed6a232e3dac92db762b173482a41efc335c56f1e8d54523f67966a",
+      "heightRange": [
+        -1,
+        8
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "3c2b369fa48397ee97c2526519472caa5cbabfaeeeb226f1c9ee418c735dadba",
+      "heightRange": [
+        0,
+        9
+      ]
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "path": "chunks/5_4.pxwc.gz",
+      "sha256": "2b84757e09f10fb7cafb819a14610e61b304d7dec88fa277089b3ec3b91a4a24",
+      "heightRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "path": "chunks/6_4.pxwc.gz",
+      "sha256": "c8e57d45d6bfe057f5bc22bc6ed9bf20a913b2b1af161b9f683cb1f3d21ecb04",
+      "heightRange": [
+        0,
+        1
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "4fe06e4746607ee953f8b4422ebe1fe446d0f60d2ac4326a4dd58ff6178847bb",
+      "heightRange": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "825ad6cfe2ecf1ef6e5e7f1daf3a93301b66b30d1677f23e866d9dccbc8f4b99",
+      "heightRange": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "c51e7419c91b2e32a91bd9524ed9133ed9e71f94cffce25f3ca7e79a4368beb1",
+      "heightRange": [
+        -1,
+        7
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "f812db085de59ef9b90ceae7c485acd4ca8e1b2dd276a159e551fdfb4ca061fe",
+      "heightRange": [
+        -1,
+        10
+      ]
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "path": "chunks/4_5.pxwc.gz",
+      "sha256": "792aa1646a0cb97da33d76e2c8f801805b8de618a4bcf82aa08393b0a234151a",
+      "heightRange": [
+        2,
+        9
+      ]
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "path": "chunks/5_5.pxwc.gz",
+      "sha256": "c13704cb6f7a00bf8c2265357fd10cb662d56e828feb6a2f633c6eea82f5980a",
+      "heightRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "path": "chunks/6_5.pxwc.gz",
+      "sha256": "db89c49d24334d6d72b1c710761099fca73053aa8bdef837a471805af45544b8",
+      "heightRange": [
+        0,
+        6
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "dc87af19a0bc903f95e5e7d96a4d701733bb46e34288c6cdb9029216cf07c4e1",
+      "heightRange": [
+        -1,
+        5
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "8605fff986bfe3376efc44d6c07b7d8b51cb22b7fed0771cd9f56d50b833b2a6",
+      "heightRange": [
+        -1,
+        1
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "e8fb4ab795aa9b8114cae970b19e563faac7449578a911537960402a870ee20f",
+      "heightRange": [
+        -1,
+        7
+      ]
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "path": "chunks/3_6.pxwc.gz",
+      "sha256": "5267521f206f1b2268b23c7bac9dfa9310c258c18777ba1da1ea61667306c177",
+      "heightRange": [
+        4,
+        9
+      ]
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "path": "chunks/4_6.pxwc.gz",
+      "sha256": "b06221bcac1565fe6907f9142fb668ee13337c1e810b859b14ec205eed258dc2",
+      "heightRange": [
+        3,
+        8
+      ]
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "path": "chunks/5_6.pxwc.gz",
+      "sha256": "2f29c5bb5299628f65833b569dfae29bbc7068569da8dbf9cd90554215a92600",
+      "heightRange": [
+        2,
+        12
+      ]
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "path": "chunks/6_6.pxwc.gz",
+      "sha256": "d6dc1c94526ab158b4a22ffef8d9090a46813dd79b0fd21bad7e4aeb0d9fb810",
+      "heightRange": [
+        5,
+        12
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 2.721655,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.5
+  },
+  "heightRange": [
+    -7,
+    12
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "new-york",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "NYC Open Data: BUILDING footprints (OTI, 5zhs-2jue; version as fetched, see the build log; modified: joined per building footprint into year, storeys, units, use, class, material, neighbourhood)",
+      "license": "NYC Open Data, no restrictions on use (NYC Admin Code \u00a723-502(d))",
+      "url": "https://data.cityofnewyork.us/d/5zhs-2jue"
+    },
+    {
+      "name": "NYC Open Data: PLUTO (DCP, 64uk-42ks; version as fetched, see the build log; modified: joined per building footprint into year, storeys, units, use, class, material, neighbourhood)",
+      "license": "NYC Open Data, no restrictions on use (NYC Admin Code \u00a723-502(d))",
+      "url": "https://data.cityofnewyork.us/d/64uk-42ks"
+    },
+    {
+      "name": "NYC Open Data: Individual Landmark and Historic District Building Database (LPC, gpmc-yuvp; version as fetched, see the build log; modified: joined per building footprint into year, storeys, units, use, class, material, neighbourhood)",
+      "license": "NYC Open Data, no restrictions on use (NYC Admin Code \u00a723-502(d))",
+      "url": "https://data.cityofnewyork.us/d/gpmc-yuvp"
+    },
+    {
+      "name": "NYC Open Data: 2020 Neighborhood Tabulation Areas (DCP, 9nt8-h7nd; version as fetched, see the build log; modified: joined per building footprint into year, storeys, units, use, class, material, neighbourhood)",
+      "license": "NYC Open Data, no restrictions on use (NYC Admin Code \u00a723-502(d))",
+      "url": "https://data.cityofnewyork.us/d/9nt8-h7nd"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 79,
+    "y": 218
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=40.7095 +lon_0=-73.995 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -74.02,
+      40.69,
+      -73.97,
+      40.729
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "338cdb585519d1c0",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 2
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "c9dd5c05287dc17c566408e2446d491ad941bcb562ac7d04ac9c13c3c8b47477",
+    "count": 35399
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "walk",
+      "world": "nyc-walk",
+      "label": "Walking Lower Manhattan"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      28,
+      29
+    ],
+    "sha256": "c9b0f067781d5d2923038fa2790c95f1363bc390ea07cac418257f24a1eb065e"
+  },
+  "packageHash": "fec7093ba73c7208a287df282b79f982adf85b123298a07adbb55687e37eb1bc",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "c52d730d0ec36e56251ad98566b728077031cdfca190867a41ba54fda20f821b",
+    "version": 1,
+    "count": 3915
+  }
+}
