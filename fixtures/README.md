@@ -118,6 +118,29 @@ Sources and licenses:
 - Tree canopy (driving and walking levels): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 - Rail and ferry lines (rails and traffic routes), parks and natural land (lawns): Overture Maps transportation and base themes. ODbL 1.0.
 
+## nyc-walk
+
+New York's walking level (D-078), built from [`worlds/nyc/walk.yaml`](../worlds/nyc/walk.yaml) on the `new-york` style pack: Lower Manhattan from the Battery to Canal Street at 10 m per cell, with the Brooklyn and Manhattan Bridges, DUMBO and Brooklyn Heights. Heights are true (`heightStretch` 1.0): One World Trade Center's roof stands 667 voxels up.
+
+- **Buildings:** 13,583 from Overture footprints and heights; 12,973 have facts from NYC Open Data (the `pluto` facts source, D-080: footprints, PLUTO lots, LPC records, NTAs).
+- **Types:** tenements (3,499), historic commercial blocks (1,867), brownstones (973), prewar apartment blocks (442), cast-iron lofts (258), warehouses (83), pier sheds (15), and towers by era: deco (613), slabs (375), postmodern (127) and glass (275), with 54 left to a kind by seed.
+- **Also:** 15,329 canopy trees and 3,686 sidewalk trees, 14,577 lawn and 9,584 yard cells, 2,627 street lights and 155 signals, 879 rail cells (the subway over the Manhattan Bridge), 3,915 traffic routes.
+- **Landmarks (generic depictions):** One World Trade Center, the Woolworth Building, the Brooklyn Bridge and the Manhattan Bridge (both in pieces, D-056).
+- **Road report:** clean (no discontinuous or steep edges).
+- **Size:** 1.4 MB. Built in 303 s with an empty download cache, 33 s with it.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/nyc/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: USGS 3DEP 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: NYC Open Data (BUILDING footprints, PLUTO, the LPC building database, 2020 NTAs). No restrictions on use (NYC Admin Code §23-502(d)); source, version and modifications named in the manifest.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

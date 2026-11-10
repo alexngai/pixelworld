@@ -136,7 +136,7 @@ export class CarController implements Controller {
       h: this.state.h,
       heading: this.state.heading,
       silhouette: true,
-      reveal: {}, // see through the towers in front of it (D-079)
+      reveal: { margin: 40 }, // see through the towers in front of it, and a street around it (D-079)
     });
     this.state.speed = this.opts.speed ?? 0;
     this.cam.snap(this.state.x, this.state.y, this.state.h);

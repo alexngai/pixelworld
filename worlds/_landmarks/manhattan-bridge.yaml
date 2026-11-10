@@ -1,0 +1,13 @@
+name: Manhattan Bridge
+wikidata: Q125050
+# the suspension spans, anchorage to anchorage (448 m main span, 221 m side
+# spans): 890 m along Overture's roadways (mapped as Canal Street's upper and
+# lower levels and Chrystie Street), centred on Wikidata's point
+line: [[-73.99295, 40.71089], [-73.98871, 40.70356]]
+crest: 41           # deck height above the water at mid-span (m)
+base: 0
+thickness: 37       # two decks of roadway and subway tracks
+bulge: 0
+snap: true
+depictions:
+  generic: { group: landmark.bridge.suspension }   # a suspension bridge; no name
