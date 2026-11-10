@@ -34,7 +34,17 @@ export const BUDGETS = {
   worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
 };
 
-const ALLOWED = [/^package\.json$/, /^README\.md$/, /^LICENSE-(MIT|APACHE)$/, /^CHANGELOG\.md$/, /^dist\/[\w.-]+\.(js|js\.map|d\.ts)$/];
+/** JSON Schemas shipped for editors (D-075), each exported as `./<file>`. */
+export const SCHEMAS = ["style-pack.v1.schema.json"];
+
+const ALLOWED = [
+  /^package\.json$/,
+  /^README\.md$/,
+  /^LICENSE-(MIT|APACHE)$/,
+  /^CHANGELOG\.md$/,
+  /^dist\/[\w.-]+\.(js|js\.map|d\.ts)$/,
+  /^dist\/[\w.-]+\.schema\.json$/,
+];
 
 /** Files in a .tgz: path (without the `package/` prefix) → contents. */
 export function readTarball(buf) {
@@ -91,6 +101,10 @@ export function checkPackage(files, { licences = null } = {}) {
   }
   const worker = pkg.exports?.["./bake.worker.js"];
   if ((worker?.default ?? worker) !== "./dist/bake.worker.js") problems.push('no export "./bake.worker.js" of dist/bake.worker.js');
+  for (const schema of SCHEMAS) {
+    if (pkg.exports?.[`./${schema}`] !== `./dist/${schema}`) problems.push(`no export "./${schema}" of dist/${schema}`);
+    if (!has(`dist/${schema}`)) problems.push(`missing dist/${schema}`);
+  }
 
   // the worker: created with a literal URL from a file beside it, so bundlers pick it up
   const creators = [...files].filter(([f, b]) => /^dist\/[^/]+\.js$/.test(f) && b.toString("utf8").includes(WORKER_LITERAL));

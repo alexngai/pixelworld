@@ -65,6 +65,8 @@ const common = {
 
 await rm(DIST, { recursive: true, force: true });
 await Promise.all(["LICENSE-MIT", "LICENSE-APACHE"].map((f) => copyFile(ROOT + f, here(f))));
+// the style pack schema, for editors: `"$schema": "…/node_modules/pixelworld/dist/style-pack.v1.schema.json"` (D-075)
+const SCHEMA = "style-pack.v1.schema.json";
 
 await build({ ...common, entry, splitting: true, dts: { entry }, esbuildPlugins: [workerUrlPlugin] });
 await build({
@@ -75,6 +77,7 @@ await build({
   minifyIdentifiers: true,
   dts: false,
 });
+await copyFile(here(`../style/schema/${SCHEMA}`), DIST + SCHEMA);
 // `pixelworld/bake.worker.js` is exported for copying (workerUrl), not importing; it still declares itself
 await writeFile(
   DIST + "bake.worker.d.ts",
@@ -97,7 +100,7 @@ for (const f of files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts"))) {
   }
 }
 if (withLiteral.length !== 1) throw new Error(`expected the worker literal in one file, found it in [${withLiteral}]`);
-for (const f of [...ENTRIES.flatMap((n) => [`${n}.js`, `${n}.d.ts`]), "bake.worker.js"]) {
+for (const f of [...ENTRIES.flatMap((n) => [`${n}.js`, `${n}.d.ts`]), "bake.worker.js", SCHEMA]) {
   if (!files.includes(f)) throw new Error(`dist/${f} is missing`);
 }
 console.log(`pixelworld: dist/ has ${ENTRIES.join(", ")} and bake.worker; the worker is created in dist/${withLiteral[0]}`);
