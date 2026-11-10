@@ -12,6 +12,7 @@ Region spec (all sections optional):
         minArea: 30
         towerMeters: 45
         podiumMeters: 15
+        tiers: true      # stacked parts (setback tiers) drawn from the ground (default: dropped)
         # footprints that are likely trees, dropped where they stand in a park
         # (these are the defaults; `implausible: null` keeps every footprint)
         implausible: { maxArea: 200, minHeight: 8, minAspect: 2.5, landUse: [park, ...] }
@@ -828,8 +829,12 @@ def place_buildings(
     out: list[dict] = []
     polys = []
     parts_by_building: dict[str, list[dict]] = {}
+    # parts standing on others (Overture's setback tiers) are dropped, or with
+    # `tiers` drawn from the ground (where they stand over their building's
+    # footprint), so a setback tower keeps its upper tiers
+    tiers = bool(spec.get("tiers"))
     for part in parts:
-        if float(part.get("min_height") or 0) <= 3:
+        if tiers or float(part.get("min_height") or 0) <= 3:
             parts_by_building.setdefault(part["building_id"], []).append(part)
 
     def placed(poly) -> tuple | None:
@@ -891,6 +896,13 @@ def place_buildings(
             cls = "house"
         height = _height(row, _kind(cls))
         my_parts = parts_by_building.get(row["id"], []) if row.get("has_parts") else []
+        if tiers:
+            my_parts = [
+                pt
+                for pt in my_parts
+                if float(pt.get("min_height") or 0) <= 3
+                or geom.contains(p.project(shapely.from_wkt(pt["geometry"])).representative_point())
+            ]
         hints = _hints(row)
         if heights and not my_parts:
             got = None
@@ -1466,6 +1478,7 @@ def place(
         return any(math.hypot(x - lx, y - ly) < r for lx, ly, r in clear_zones)
 
     replaces = {r for lm in landmarks for r in lm.get("replaces", [])}
+    fp_landmarks: dict[int, Any] = {}
     lidar_stats: dict[str, int] = {}
     building_polys = []
     if spec.get("buildings") is not None:
@@ -1482,6 +1495,20 @@ def place(
             parts += overture.building_parts(release, tuple(box))
         parts = list({pt["id"]: pt for pt in parts}.values())
         rows.sort(key=lambda r: r["id"])
+        # landmarks drawn on the footprint of the building they replace (the
+        # largest of its polygons), not on a box sized from their height
+        for k, lm in enumerate(landmarks):
+            if lm.get("footprint"):
+                names = {r.lower() for r in lm.get("replaces", [])} | set(lm.get("replaces", []))
+                polys = [
+                    g
+                    for r in rows
+                    if replaced_by_landmark(r, names)
+                    for geom in [p.project(shapely.from_wkt(r["geometry"]))]
+                    for g in getattr(geom, "geoms", [geom])
+                ]
+                if polys:
+                    fp_landmarks[k] = max(polys, key=lambda g: g.area)
         grids = []
         lidar_spec = spec["buildings"].get("lidar")
         if lidar_spec:
@@ -1575,6 +1602,11 @@ def place(
             inst["m"] = round(local / lm_scale[k], 2)
         if "orient" in lm:
             inst["r"] = int(lm["orient"]) % 4
+        if k in fp_landmarks:
+            poly = fp_landmarks[k]
+            cx, cy = p.to_cells(np.array([poly.centroid.x]), np.array([poly.centroid.y]))
+            inst["x"], inst["y"] = float(cx[0]), float(cy[0])
+            inst["fp"] = _footprint(p, poly, float(spec["buildings"].get("simplifyMeters", 2)))
         if "line" in lm:
             snap_deg = None
             if lm.get("snap") and region.snap:
