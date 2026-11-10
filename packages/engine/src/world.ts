@@ -1,13 +1,15 @@
-import { BAKE_VERSION } from "@pixelworlds/bake";
+import { BAKE_CODE } from "@pixelworlds/bake";
 import {
   ChunkStore,
   INCOMPLETE_PACKAGE,
+  TileCache,
   hashString,
   loadManifest,
   loadObjects,
   tileKey,
   type HeroPaint,
   type InitMessage,
+  type TerrainSlice,
   type TileRequest,
 } from "@pixelworlds/runtime";
 import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
@@ -19,8 +21,7 @@ import {
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
-import { pluginsKey } from "./plugins";
-import type { PluginDescriptor, StyleSource, WorldInfo, WorldViewOptions } from "./types";
+import type { StyleSource, TileStore, WorldInfo, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -206,18 +207,54 @@ export function bakeInit(w: LoadedWorld, heroes: HeroPaint[], scatter: boolean):
   };
 }
 
-/** The tile cache key: the package, style, baker and plugins, so a change to any makes old tiles unreachable. */
-export function tileCacheKey(w: LoadedWorld, plugins: PluginDescriptor[] = []): (t: TileRequest) => string {
+/** A tile's cells plus its context margin, clipped to the world, for its bake (loads the chunks it needs). */
+export async function tileSlice(w: LoadedWorld, t: TileRequest): Promise<TerrainSlice> {
+  const { manifest, store } = w;
+  const ts = w.tileSize;
+  const x0 = Math.max(0, t.tx * ts - w.margin);
+  const y0 = Math.max(0, t.ty * ts - w.margin);
+  const x1 = Math.min(manifest.cellsX, (t.tx + 1) * ts + w.margin);
+  const y1 = Math.min(manifest.cellsY, (t.ty + 1) * ts + w.margin);
+  await store.ensureRect(x0, y0, x1, y1);
+  const s = store.slice(x0, y0, x1, y1);
+  return { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+}
+
+/**
+ * The persistent tile cache a view's `cache` option asks for. IndexedDB only
+ * where the bake code's identity is known (BAKE_CODE, D-072): without it a
+ * code change couldn't make old tiles unreachable, so none are kept.
+ */
+export async function openTileCache(option: WorldViewOptions["cache"], code = BAKE_CODE): Promise<TileStore | null> {
+  if (option === false) return null;
+  if (option !== true && option !== undefined) return option; // the app's own store
+  if (code === null) {
+    console.info(
+      "pixelworld: no tiles are kept in IndexedDB: this build of the engine has no bake code identity " +
+        "(build it with packages/pixelworld/build.mjs, or serve it with tools/bake-code.mjs's Vite plugin; D-072)",
+    );
+    return null;
+  }
+  return TileCache.open();
+}
+
+/**
+ * The tile cache key: the package, the style, the bake code's identity
+ * (D-072), the objects flag, a render scale other than the package's, and the
+ * plugins (`pluginsKey`: their names, versions and code). A change to any of
+ * them makes old tiles unreachable.
+ */
+export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
     w.manifest.id,
     w.manifest.packageHash ?? "nohash",
     styleHash,
-    BAKE_VERSION,
+    `bake:${code ?? "unknown"}`,
     w.objects ? "objects" : "terrain",
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
-    ...pluginsKey(plugins),
+    ...plugins,
   ];
   return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty)].join("|");
 }

@@ -22,7 +22,7 @@ import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
 import { ObjectIndex } from "./objects";
-import { registerOnMainThread, viewPlugins } from "./plugins";
+import { pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
 import { createQuery } from "./queries";
 import { TileGrid } from "./tiles";
 import type {
@@ -42,7 +42,16 @@ import type {
   WorldView,
   WorldViewOptions,
 } from "./types";
-import { bakeInit, loadHeroes, loadWorld, tileCacheKey, worldInfo, type LoadedWorld } from "./world";
+import {
+  bakeInit,
+  loadHeroes,
+  loadWorld,
+  openTileCache,
+  tileCacheKey,
+  tileSlice,
+  worldInfo,
+  type LoadedWorld,
+} from "./world";
 
 const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the GPU
 /** Object voxel size in render units (objectVoxelScale at render scale 1, D-010). */
@@ -67,26 +76,17 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const mainThread = registerOnMainThread(plugins);
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
-  const cache: TileStore | null =
-    opts.cache === false ? null : opts.cache === true || opts.cache === undefined ? await TileCache.open() : opts.cache;
+  const cache = await openTileCache(opts.cache);
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
-  const cacheKey = tileCacheKey(w, plugins.descriptors);
-  const { store, manifest } = w;
+  // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
+  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, cache ? await pluginsKey(plugins.descriptors) : []));
+  cacheKeyReady.catch(() => {}); // awaited below
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     if (cache) {
-      const hit = await cache.get(cacheKey(t));
+      const hit = await cache.get((await cacheKeyReady)(t));
       if (hit) return { cached: hit };
     }
-    const ts = w.tileSize;
-    const x0 = Math.max(0, t.tx * ts - w.margin);
-    const y0 = Math.max(0, t.ty * ts - w.margin);
-    const x1 = Math.min(manifest.cellsX, (t.tx + 1) * ts + w.margin);
-    const y1 = Math.min(manifest.cellsY, (t.ty + 1) * ts + w.margin);
-    await store.ensureRect(x0, y0, x1, y1);
-    const s = store.slice(x0, y0, x1, y1);
-    return {
-      slice: { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro },
-    };
+    return { slice: await tileSlice(w, t) };
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
@@ -98,7 +98,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
     service.dispose();
     throw e;
   });
-  const view = new View(opts, w, compositor, service, cache, cacheKey);
+  const view = new View(opts, w, compositor, service, cache, await cacheKeyReady);
   await view.start(opts);
   return view;
 }

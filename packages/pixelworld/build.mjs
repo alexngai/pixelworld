@@ -23,6 +23,7 @@
 import { copyFile, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { build } from "tsup";
+import { TOKEN, bakeCodeHash } from "../../tools/bake-code.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const ROOT = here("../../");
@@ -51,6 +52,9 @@ const workerUrlPlugin = {
   },
 };
 
+// The bake code's identity, which keys the tile cache (D-072): a hash of the bake's sources, as built.
+const BAKE_CODE = bakeCodeHash();
+
 const common = {
   format: ["esm"],
   platform: "browser",
@@ -61,6 +65,7 @@ const common = {
   // the private workspace packages are bundled in: the published package has no dependencies
   noExternal: [/^@pixelworlds\//],
   tsconfig: here("tsconfig.build.json"),
+  define: { [TOKEN]: JSON.stringify(BAKE_CODE) },
 };
 
 await rm(DIST, { recursive: true, force: true });
@@ -89,6 +94,7 @@ for (const f of files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts"))) {
   const text = await readFile(DIST + f, "utf8");
   if (text.includes(WORKER_LITERAL)) withLiteral.push(f);
   if (/["'`][^"'`]*bake\.worker\.ts["'`]/.test(text)) throw new Error(`dist/${f} still loads bake.worker.ts`);
+  if (f.endsWith(".js") && text.includes(TOKEN)) throw new Error(`dist/${f} reads ${TOKEN}, which the build should have set`);
   if (PRIVATE_IMPORT.test(text)) throw new Error(`dist/${f} imports a private @pixelworlds package`);
   // webpack would make import(url) a context module of dist/ and fail at run time
   for (const [, comments, quote] of f.endsWith(".js") ? text.matchAll(DYNAMIC_IMPORT) : []) {
@@ -100,4 +106,7 @@ if (withLiteral.length !== 1) throw new Error(`expected the worker literal in on
 for (const f of [...ENTRIES.flatMap((n) => [`${n}.js`, `${n}.d.ts`]), "bake.worker.js"]) {
   if (!files.includes(f)) throw new Error(`dist/${f} is missing`);
 }
-console.log(`pixelworld: dist/ has ${ENTRIES.join(", ")} and bake.worker; the worker is created in dist/${withLiteral[0]}`);
+console.log(
+  `pixelworld: dist/ has ${ENTRIES.join(", ")} and bake.worker; the worker is created in dist/${withLiteral[0]}; ` +
+    `bake code ${BAKE_CODE}`,
+);
