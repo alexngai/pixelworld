@@ -1,8 +1,12 @@
 name: CI
 
 on:
+  # main on push; any other branch through its pull request, so a branch with
+  # an open PR is checked once per push, not twice
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   web:

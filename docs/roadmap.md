@@ -803,7 +803,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - Imagery segmentation to fill feature gaps.
 - Roof fitting from lidar.
 
-**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between). M3.5 (San Francisco) is paused after four rounds: its landmarks pass the blind test, and 2 of its 6 ordinary street views do. M4's ambient traffic is done; the rest of M4 is next, starting with the library proposal ([library.md](library.md)) and the earlier milestones' loose ends.
+**Order of work** (decided after M1): M1.5 experiment → M1.6 micro-terrain → M2 elastic map → M3 detail pass → M4 → M5. M1.5 through M3 are done (with M2.5–M2.7 in between). M3.5 (San Francisco) is paused after four rounds: its landmarks pass the blind test, and 2 of its 6 ordinary street views do. M4's ambient traffic is done, and so are the library steps: the engine API (D-069), the example game (D-070), city packs as plugins (D-071, D-074) and the npm package. A developer-experience review then had four newcomers each build something with pixelworld; the fix pass after it covers the tile cache keyed by code and contained model failures (D-072), view lifecycle and game API (D-073), style pack validation (D-075), pipeline spec checks and a world-building guide ([worlds.md](worlds.md), D-076), and contributor tooling ([CONTRIBUTING.md](../CONTRIBUTING.md), D-077). Next: the rest of M4 (grid building mode, water palette cycling, the 60 fps check on a desktop GPU), then M5.
 
 ## 3. Technology tracks
 
