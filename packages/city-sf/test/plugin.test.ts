@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { KNOWN_PLUGIN_GENERATORS, hasGenerator, listGenerators, loadPlugin, type AssetCatalog } from "@pixelworlds/generators";
+import { KNOWN_PLUGIN_GENERATORS, hasGenerator, listGenerators, loadPlugin, type AssetCatalog } from "pixelworld/generators";
 import { describe, expect, it } from "vitest";
 import { PLUGIN_NAME, cityPlugin, plugin, register, sfGenerators } from "../src/index";
 

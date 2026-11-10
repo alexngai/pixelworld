@@ -30,6 +30,7 @@ fixtures/_variants/
 # The npm package (packages/pixelworld): its licence files are copied from the
 # root at build time; tarballs from `pnpm pack`; the API reference (pnpm docs:api)
 packages/pixelworld/LICENSE-*
+packages/city-sf/LICENSE-*
 *.tgz
 docs/api/
 

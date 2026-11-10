@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { generateModel, type AssetCatalog, type VoxelModel } from "@pixelworlds/generators";
+import { generateModel, type AssetCatalog, type VoxelModel } from "pixelworld/generators";
 import { register } from "../src/index";
 import { footprintDepth } from "../src/towers";
 

@@ -1,4 +1,4 @@
-import type { Generator } from "@pixelworlds/generators";
+import type { Generator } from "pixelworld/generators";
 import { CHINATOWN_GENERATORS } from "./chinatown";
 import { FACADE_GENERATORS } from "./facades";
 import { TOWER_GENERATORS } from "./towers";
