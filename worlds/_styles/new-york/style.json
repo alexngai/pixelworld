@@ -1,0 +1,499 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "id": "new-york",
+  "name": "New York",
+  "plugins": ["@pixelworlds/city-sf", "@pixelworlds/city-nyc"],
+  "shades": 6,
+  "background": "#1b1d28",
+  "silhouette": "#ffe36e",
+  "outline": { "depthThreshold": 2.0 },
+  "ao": { "strength": 2.2 },
+  "terrain": { "steepRockSlope": 0.7 },
+  "ramps": {
+    "schist": ["#1c1d24", "#2f3138", "#474a50", "#62656a", "#7f8286", "#9fa1a3"],
+    "grass": ["#1d2420", "#2c3a2c", "#405334", "#56703e", "#6f8b4a", "#8ea65e"],
+    "lawn": ["#15221f", "#203626", "#2e4c2d", "#406534", "#577f3b", "#729947"],
+    "scrub": ["#22242a", "#383b3a", "#51544a", "#6c6e5a", "#88896d", "#a5a483"],
+    "water": ["#0d171f", "#142330", "#1c3240", "#27434f", "#365660", "#4b6c74"],
+    "urban": ["#25252e", "#3b3c46", "#55575f", "#71737a", "#8f9095", "#aeaeb1"],
+    "asphalt": ["#17171e", "#22232b", "#2e2f38", "#3c3d46", "#4c4d56", "#5e5f68"],
+    "marking": ["#3d3b34", "#68644f", "#938c68", "#bab17d", "#d9d095", "#efe9b6"],
+    "sidewalk": ["#29292f", "#434349", "#605f63", "#807e80", "#a09d9c", "#bfbcb8"],
+    "concrete": ["#2b2b32", "#46464d", "#64646a", "#85848a", "#a5a4a7", "#c4c3c3"],
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+    "sand": ["#3a3438", "#5e5550", "#857a6b", "#aca085", "#cdc3a2", "#e8e0c2"],
+    "bark": ["#1c1418", "#2e1f1f", "#432c26", "#5a3b2e", "#714b37", "#8a5e43"],
+    "leaf": ["#0f1d18", "#1a3125", "#264630", "#345e37", "#467541", "#5f8f4f"],
+    "brownstone": ["#1d1315", "#30201f", "#45302b", "#5b4037", "#735345", "#8c6857"],
+    "brick": ["#24130f", "#401d16", "#61291d", "#833826", "#a14b31", "#bb6342"],
+    "brick-buff": ["#2e2824", "#544739", "#7f6a50", "#a68c66", "#c6aa80", "#ddc69e"],
+    "limestone": ["#2f2d33", "#55514f", "#827b70", "#aba190", "#cdc3ae", "#e8e0cc"],
+    "granite": ["#1f1f24", "#35353b", "#4f4f55", "#6b6a6e", "#89878a", "#a9a6a7"],
+    "castiron-cream": ["#332e30", "#625a4f", "#978a73", "#c0b293", "#ddd0b0", "#f2e8cc"],
+    "castiron-grey": ["#202329", "#393e46", "#565c65", "#757b83", "#959aa0", "#b5b9bd"],
+    "terracotta": ["#2f2a30", "#504741", "#7a6a58", "#a38e72", "#c6b08f", "#e2d0ae"],
+    "verdigris": ["#0f2022", "#173a37", "#215649", "#2f735c", "#43906f", "#62ad88"],
+    "curtain-glass": ["#141c26", "#1f2c3a", "#2d4152", "#3e586a", "#557385", "#7090a0"],
+    "iron": ["#0f1014", "#18191f", "#22242b", "#2e3038", "#3b3e47", "#4a4e58"],
+    "cedar": ["#1d1715", "#2f2520", "#45362b", "#5c4836", "#745c45", "#8e7357"],
+    "roof-flat": ["#2e2e36", "#4a4a52", "#68686f", "#87878c", "#a6a6a8", "#c4c4c3"],
+    "roof-slate": ["#16171f", "#22242e", "#2f323d", "#3e424c", "#4f535c", "#62666d"],
+    "glass": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit-cool": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "tower-white": ["#2e2f3c", "#4f5262", "#7a7e8c", "#a4a8b3", "#cbced3", "#ecedee"],
+    "bridge-stone": ["#26221f", "#403833", "#5e534a", "#7e7064", "#9e8f80", "#bdae9d"],
+    "bridge-steel": ["#1a1f2a", "#2a3242", "#3d485c", "#526077", "#6a7a92", "#8696ad"],
+    "taxi": ["#2e2410", "#5a4614", "#8f6e14", "#c49a18", "#e6be2a", "#f8dc5c"],
+    "paint-white": ["#2c2d38", "#565865", "#8a8c97", "#b6b8bf", "#d9dadd", "#f3f3f0"],
+    "paint-navy": ["#141a2e", "#1e2a4e", "#2c4278", "#3e5c9a", "#5c7cba", "#8aa4d6"],
+    "sign-red": ["#2a0f18", "#4d1620", "#7a1e26", "#a52a2b", "#c94336", "#e2664a"],
+    "sign-green": ["#0e1f18", "#153526", "#1d4d34", "#286845", "#378458", "#4fa070"],
+    "gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
+    "ferry-orange": ["#2c140e", "#521f12", "#843014", "#b44516", "#d9601e", "#f08433"]
+  },
+  "strataSets": { "manhattan": [{"name": "Manhattan schist", "aboveMeters": -100000, "ramp": "schist"}] },
+  "defaultStrata": "manhattan",
+  "provinces": {},
+  "surfaces": {
+    "none": { "ramp": "urban", "pattern": "none" },
+    "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
+    "woodland": { "ramp": "leaf", "pattern": "trees", "density": 0.12 },
+    "forest": { "ramp": "leaf", "pattern": "trees", "density": 0.2 },
+    "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
+    "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
+    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.04 },
+    "desert": { "ramp": "sand", "pattern": "speckle", "density": 0.04 },
+    "grass": { "ramp": "grass", "pattern": "speckle", "density": 0.05 },
+    "farmland": { "ramp": "lawn", "pattern": "fields", "density": 0.5 },
+    "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
+    "snow": { "ramp": "tower-white", "pattern": "sparkle", "density": 0.02 },
+    "lawn": { "ramp": "lawn", "pattern": "speckle", "density": 0.02, "light": "slope" },
+    "yard": { "ramp": "lawn", "pattern": "fields", "density": 0.6 }
+  },
+  "roads": {
+    "asphalt": "asphalt",
+    "marking": "marking",
+    "lanes": { "ramp": "sidewalk", "minPixels": 4, "dash": [1, 2], "median": 1 },
+    "rail": "bridge-steel",
+    "classes": {
+      "motorway": { "halfWidth": 0.2, "centerLine": true, "lanes": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true, "lanes": true },
+      "primary": { "halfWidth": 0.1, "centerLine": false, "lanes": true },
+      "secondary": { "halfWidth": 0.07, "centerLine": false, "lanes": true },
+      "tertiary": { "halfWidth": 0.06, "centerLine": false, "lanes": true },
+      "residential": { "halfWidth": 0.05, "centerLine": false },
+      "unclassified": { "halfWidth": 0.05, "centerLine": false },
+      "living_street": { "halfWidth": 0.04, "centerLine": false },
+      "service": { "halfWidth": 0.04, "centerLine": false },
+      "brick": { "halfWidth": 0.04, "centerLine": false, "ramp": "brick" }
+    }
+  },
+  "scatter": {
+    "woodland": [{ "group": "tree", "perCell": 2.0 }],
+    "forest": [{ "group": "tree", "perCell": 2.4 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.9 }],
+    "grass": [{ "group": "shrub", "perCell": 0.12 }],
+    "desert": [{ "group": "shrub", "perCell": 0.08 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.05 }],
+    "urban": [{ "group": "tree.street", "perCell": 0.05 }],
+    "yard": [{ "group": "tree", "perCell": 0.08 }, { "group": "shrub.garden", "perCell": 0.3 }]
+  },
+  "paths": {
+    "classes": {
+      "sidewalk": { "ramp": "sidewalk" },
+      "footway": { "ramp": "sidewalk" },
+      "pedestrian": { "ramp": "sidewalk" },
+      "steps": { "ramp": "sidewalk" },
+      "crosswalk": { "ramp": "sidewalk", "stripes": true },
+      "cycleway": { "ramp": "sidewalk" },
+      "path": { "ramp": "sand" }
+    }
+  },
+  "objects": { "heightStretch": 1.5, "variants": 8, "surfaces": {"urban": {"ramp": "urban", "pattern": "speckle", "density": 0.04}} },
+  "assets": {
+    "tree": {
+      "generator": "roundTree",
+      "ramps": { "body": "leaf", "trunk": "bark" },
+      "params": { "radius": 2.6, "radiusJitter": 0.6, "height": 2.0, "trunk": 2, "lobes": 5, "holes": 0.06 }
+    },
+    "tree.street": {
+      "generator": "roundTree",
+      "ramps": { "body": "leaf", "trunk": "bark" },
+      "params": { "radius": 2.1, "radiusJitter": 0.5, "height": 1.6, "trunk": 1, "lobes": 4, "holes": 0.05 }
+    },
+    "shrub": {
+      "generator": "blob",
+      "ramps": { "body": "scrub" },
+      "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "shrub.garden": {
+      "generator": "blob",
+      "ramps": { "body": "leaf" },
+      "params": { "radius": 0.8, "radiusJitter": 0.5, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "rock.boulder": { "generator": "boulder", "ramps": {"rock": "schist"} },
+    "building.residential": {
+      "generator": "tenement",
+      "ramps": {
+        "wall": "brick", "wall.brick2": "brick", "wall.buff": "brick-buff", "wall.cream": "castiron-cream", "wall.grey": "castiron-grey",
+        "trim": "limestone", "trim.brick2": "brownstone", "trim.buff": "limestone", "trim.cream": "paint-white", "trim.grey": "paint-white",
+        "cornice": "iron", "cornice.grey": "castiron-grey", "cornice.cream": "castiron-cream",
+        "sign": "sign-red", "sign.green": "sign-green", "sign.navy": "paint-navy", "iron": "iron", "accent": "bark", "tank": "cedar",
+        "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.35 }
+    },
+    "building.commercial": {
+      "generator": "block",
+      "ramps": {
+        "wall": "limestone", "wall.brick": "brick", "wall.buff": "brick-buff", "wall.cream": "castiron-cream", "wall.granite": "granite",
+        "trim": "castiron-cream", "trim.brick": "limestone", "trim.buff": "limestone", "trim.cream": "limestone", "trim.granite": "limestone",
+        "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 1, "litFraction": 0.5 }
+    },
+    "building.parking": {
+      "generator": "building",
+      "ramps": { "wall": "concrete", "roof": "concrete", "window": "glass" },
+      "params": { "style": 1, "litFraction": 0 }
+    },
+    "building.tower": {
+      "generator": "sfTower",
+      "ramps": {
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool",
+        "deco:wall": "limestone", "deco:wall.brick": "brick-buff", "deco:wall.granite": "granite", "deco:wall.terracotta": "terracotta",
+        "deco:spandrel": "iron", "deco:spandrel.brick": "brick", "deco:spandrel.granite": "roof-slate", "deco:spandrel.terracotta": "bark",
+        "deco:trim": "gold", "deco:trim.brick": "limestone", "deco:trim.granite": "limestone", "deco:trim.terracotta": "gold",
+        "deco:cap": "verdigris", "deco:cap.slate": "roof-slate", "slab:wall": "tower-white", "slab:wall.concrete": "concrete",
+        "slab:spandrel": "tower-white", "slab:spandrel.concrete": "concrete", "granite:wall": "granite",
+        "postmodern:wall": "limestone", "postmodern:wall.granite": "granite", "postmodern:wall.terracotta": "terracotta",
+        "postmodern:trim": "castiron-cream", "postmodern:trim.granite": "limestone", "postmodern:trim.terracotta": "brick-buff",
+        "postmodern:cap": "verdigris", "postmodern:cap.slate": "roof-slate", "glass:wall": "tower-white", "glass:wall.grey": "concrete",
+        "glass:reflect": "curtain-glass", "glass:reflect.grey": "bridge-steel"
+      },
+      "params": { "kind": -1, "litFraction": 0.45, "deco": 0.3, "slab": 0.15, "granite": 0.05, "postmodern": 0.2, "glass": 0.3 }
+    },
+    "building.brownstone": {
+      "generator": "brownstone",
+      "ramps": {
+        "wall": "brownstone", "wall.brick": "brick", "wall.brick2": "brick", "wall.brown2": "brownstone", "wall.brown3": "brownstone", "wall.limestone": "limestone",
+        "trim": "bark", "trim.brick": "brownstone", "trim.brick2": "limestone", "trim.brown2": "bark", "trim.brown3": "limestone", "trim.limestone": "castiron-grey",
+        "cornice": "iron", "cornice.brown": "bark", "cornice.green": "sign-green", "cornice.grey": "castiron-grey", "stoop": "brownstone",
+        "iron": "iron", "accent": "bark", "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.3 }
+    },
+    "building.tenement": {
+      "generator": "tenement",
+      "ramps": {
+        "wall": "brick", "wall.brick2": "brick", "wall.brick3": "brick", "wall.brown": "brownstone", "wall.buff": "brick-buff", "wall.cream": "castiron-cream",
+        "trim": "limestone", "trim.brick2": "brownstone", "trim.brick3": "castiron-cream", "trim.brown": "limestone", "trim.buff": "brownstone", "trim.cream": "paint-white",
+        "cornice": "iron", "cornice.grey": "castiron-grey", "cornice.cream": "castiron-cream", "cornice.green": "sign-green",
+        "sign": "sign-red", "sign.green": "sign-green", "sign.navy": "paint-navy", "sign.gold": "gold", "sign.white": "paint-white", "iron": "iron",
+        "accent": "bark", "tank": "cedar", "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.35 }
+    },
+    "building.tenement.chinatown": {
+      "generator": "tenement",
+      "ramps": {
+        "wall": "brick", "wall.brick2": "brick", "wall.buff": "brick-buff", "wall.cream": "castiron-cream", "wall.grey": "castiron-grey",
+        "trim": "limestone", "trim.brick2": "castiron-cream", "trim.buff": "limestone", "trim.cream": "paint-white", "trim.grey": "paint-white",
+        "cornice": "iron", "cornice.green": "verdigris", "cornice.red": "sign-red",
+        "sign": "sign-red", "sign.gold": "gold", "sign.red2": "sign-red", "sign.green": "sign-green", "iron": "iron", "accent": "sign-red",
+        "tank": "cedar", "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "building.loft.castiron": {
+      "generator": "castIronLoft",
+      "ramps": {
+        "wall": "castiron-cream", "wall.cream2": "castiron-cream", "wall.grey": "castiron-grey", "wall.grey2": "castiron-grey", "wall.white": "paint-white",
+        "trim": "limestone", "trim.cream2": "paint-white", "trim.grey": "tower-white", "trim.grey2": "concrete", "trim.white": "castiron-cream",
+        "side": "brick", "side.buff": "brick-buff", "iron": "iron", "accent": "iron", "tank": "cedar",
+        "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.4 }
+    },
+    "building.apartment.prewar": {
+      "generator": "prewarBlock",
+      "ramps": {
+        "wall": "brick", "wall.brick2": "brick", "wall.buff": "brick-buff", "wall.buff2": "brick-buff", "wall.limestone": "limestone",
+        "base": "limestone", "base.brick2": "granite", "base.buff": "limestone", "base.buff2": "brownstone", "base.limestone": "granite",
+        "trim": "limestone", "trim.brick2": "terracotta", "trim.buff": "terracotta", "trim.buff2": "limestone", "trim.limestone": "castiron-cream",
+        "cornice": "castiron-grey", "cornice.copper": "verdigris", "cornice.stone": "limestone", "cornice.terracotta": "terracotta", "iron": "iron",
+        "accent": "iron", "tank": "cedar", "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.4 }
+    },
+    "building.commercial.historic": {
+      "generator": "prewarBlock",
+      "ramps": {
+        "wall": "limestone", "wall.buff": "brick-buff", "wall.granite": "granite", "wall.limestone2": "limestone", "wall.terracotta": "terracotta",
+        "base": "granite", "base.buff": "limestone", "base.granite": "granite", "base.limestone2": "granite", "base.terracotta": "limestone",
+        "trim": "castiron-cream", "trim.buff": "terracotta", "trim.granite": "limestone", "trim.limestone2": "terracotta", "trim.terracotta": "castiron-cream",
+        "cornice": "verdigris", "cornice.grey": "castiron-grey", "cornice.stone": "limestone", "iron": "iron", "accent": "gold", "tank": "cedar",
+        "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "building.house": {
+      "generator": "brownstone",
+      "ramps": {
+        "wall": "brick", "wall.brick2": "brick", "wall.brown": "brownstone", "wall.cream": "castiron-cream", "wall.white": "paint-white",
+        "trim": "limestone", "trim.brick2": "brownstone", "trim.brown": "brownstone", "trim.cream": "paint-white", "trim.white": "castiron-grey",
+        "cornice": "paint-white", "cornice.iron": "iron", "stoop": "brownstone", "iron": "iron", "accent": "bark",
+        "roof": "roof-flat", "roof.silver": "concrete", "window": "glass", "lit": "lit"
+      },
+      "params": { "litFraction": 0.3 }
+    },
+    "building.industrial": {
+      "generator": "block",
+      "ramps": { "wall": "brick", "wall.buff": "brick-buff", "wall.concrete": "concrete", "roof": "roof-flat", "window": "glass" },
+      "params": { "type": 4, "litFraction": 0.1 }
+    },
+    "building.pier": {
+      "generator": "block",
+      "ramps": {
+        "wall": "castiron-grey", "wall.green": "sign-green", "wall.cream": "castiron-cream", "trim": "paint-white", "accent": "bridge-steel",
+        "roof": "roof-flat", "window": "glass"
+      },
+      "params": { "type": 3, "litFraction": 0.1 }
+    },
+    "building.tower.deco": {
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "limestone", "wall.brick": "brick-buff", "wall.granite": "granite", "wall.terracotta": "terracotta", "wall.white": "tower-white",
+        "spandrel": "iron", "spandrel.brick": "brick", "spandrel.granite": "roof-slate", "spandrel.terracotta": "bark", "spandrel.white": "concrete",
+        "trim": "gold", "trim.brick": "limestone", "trim.granite": "limestone", "trim.terracotta": "gold", "trim.white": "terracotta",
+        "cap": "verdigris", "cap.slate": "roof-slate", "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "building.tower.slab": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.concrete": "concrete", "wall.granite": "granite", "wall.limestone": "limestone",
+        "spandrel": "tower-white", "spandrel.concrete": "concrete", "spandrel.granite": "iron", "spandrel.limestone": "limestone",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 1, "litFraction": 0.45 }
+    },
+    "building.tower.postmodern": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "limestone", "wall.buff": "brick-buff", "wall.granite": "granite", "wall.terracotta": "terracotta",
+        "trim": "castiron-cream", "trim.buff": "limestone", "trim.granite": "limestone", "trim.terracotta": "brick-buff",
+        "cap": "verdigris", "cap.slate": "roof-slate", "cap.white": "tower-white", "roof": "roof-flat", "window": "glass",
+        "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 3, "litFraction": 0.45 }
+    },
+    "building.tower.glass": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.grey": "concrete", "reflect": "curtain-glass", "reflect.blue": "curtain-glass", "reflect.grey": "bridge-steel",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 4, "litFraction": 0.35 }
+    },
+    "landmark.bridge.suspension": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-stone", "truss": "bridge-steel", "deck": "asphalt", "pier": "bridge-stone" },
+      "params": {
+        "spans": 1,
+        "side": 0.27,
+        "towerRatio": 2.1,
+        "hangers": 6,
+        "tower": 0,
+        "portals": 2,
+        "leg": 0.55,
+        "legDepth": 0.6,
+        "taper": 0.04,
+        "truss": 0.1,
+        "pierTop": 0.15
+      }
+    },
+    "landmark.bridge.suspension.steel": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-steel", "truss": "bridge-steel", "deck": "roof-flat", "pier": "bridge-stone", "plate": "asphalt" },
+      "params": {
+        "spans": 1,
+        "side": 0.25,
+        "towerRatio": 2.5,
+        "hangers": 6,
+        "tower": 1,
+        "portals": 3,
+        "leg": 0.3,
+        "legDepth": 0.36,
+        "taper": 0.05,
+        "decks": 2,
+        "truss": 0.14,
+        "pierTop": 0.12,
+        "sideBrace": 1,
+        "sideDepth": 4
+      }
+    },
+    "landmark.tower.obelisk": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "curtain-glass" },
+      "params": { "base": 0.15, "top": 0.55, "corner": 0.12, "crown": 0.06 }
+    },
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "curtain-glass" },
+      "params": { "base": 0.15, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1 }
+    },
+    "landmark.tower.gothic": {
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "terracotta", "spandrel": "limestone", "trim": "gold", "cap": "verdigris", "roof": "roof-flat", "window": "glass",
+        "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "piers": 2, "setbacks": 2, "crown": 2, "width": 0.26, "depth": 0.22, "litFraction": 0.5 }
+    },
+    "landmark.hall.domed": {
+      "generator": "domedHall",
+      "ramps": { "wall": "limestone", "roof": "roof-flat", "window": "glass", "dome": "verdigris" },
+      "params": { "length": 1.6, "depth": 0.8, "hall": 0.35, "dome": 0.15 }
+    },
+    "prop.lanterns": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "sign-red", "gold": "gold", "wire": "asphalt" },
+      "params": { "span": 24, "height": 12, "every": 4, "sag": 2 }
+    },
+    "prop.lanterns.wide": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "sign-red", "gold": "gold", "wire": "asphalt" },
+      "params": { "span": 32, "height": 13, "every": 5, "sag": 2 }
+    },
+    "prop.streetlight": { "generator": "streetLight", "ramps": {"pole": "castiron-grey", "lamp": "lit"}, "params": {"height": 6} },
+    "prop.signal": { "generator": "trafficSignal", "ramps": {"pole": "castiron-grey", "head": "gold", "light": "marker"}, "params": {"height": 5} },
+    "prop.cablecar": {
+      "generator": "cableCar",
+      "ramps": {
+        "body": "sign-red", "trim": "castiron-cream", "accent": "gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "curtain-glass", "rider.b": "brick-buff", "rider.c": "paint-navy", "rider.d": "sign-green", "rider.e": "brick", "skin": "sand"
+      },
+      "params": { "length": 14, "width": 4, "open": 3 }
+    },
+    "prop.cablecar.diagonal": {
+      "generator": "cableCar",
+      "ramps": {
+        "body": "sign-red", "trim": "castiron-cream", "accent": "gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "curtain-glass", "rider.b": "brick-buff", "rider.c": "paint-navy", "rider.d": "sign-green", "rider.e": "brick", "skin": "sand"
+      },
+      "params": { "length": 14, "width": 4, "open": 3, "turn": 1 }
+    },
+    "prop.streetcar": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "castiron-cream", "upper.b": "castiron-cream", "upper.c": "brick-buff", "upper.d": "castiron-cream",
+        "lower.a": "verdigris", "lower.b": "sign-red", "lower.c": "ferry-orange", "lower.d": "paint-navy", "roof": "bridge-steel", "window": "glass",
+        "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4 }
+    },
+    "prop.streetcar.diagonal": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "castiron-cream", "upper.b": "castiron-cream", "upper.c": "brick-buff", "upper.d": "castiron-cream",
+        "lower.a": "verdigris", "lower.b": "sign-red", "lower.c": "ferry-orange", "lower.d": "paint-navy", "roof": "bridge-steel", "window": "glass",
+        "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4, "turn": 1 }
+    },
+    "prop.lightrail": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "sign-red", "roof": "bridge-steel", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1 }
+    },
+    "prop.lightrail.diagonal": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "sign-red", "roof": "bridge-steel", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1, "turn": 1 }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {
+        "paint.a": "tower-white", "paint.b": "paint-white", "paint.c": "concrete", "paint.d": "castiron-grey", "paint.e": "roof-slate", "paint.f": "asphalt", "paint.g": "paint-navy", "paint.h": "sign-red", "paint.i": "iron", "paint.j": "bridge-steel", "paint.k": "tower-white", "paint.l": "taxi", "paint.m": "taxi",
+        "taxi": "taxi", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete", "sign": "lit"
+      }
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {
+        "body.a": "paint-white", "body.b": "tower-white", "body.c": "paint-white",
+        "band.a": "paint-navy", "band.b": "curtain-glass", "band.c": "gold", "window": "lit", "door": "glass", "tyre": "asphalt",
+        "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "bridge-steel", "sign": "lit"
+      }
+    },
+    "vehicle.cablecar": {
+      "generator": "cableTram",
+      "ramps": {
+        "body.a": "sign-red", "body.b": "brick", "trim": "castiron-cream", "accent": "gold", "roof": "roof-slate", "wood": "bark", "window": "lit",
+        "tyre": "asphalt", "rider.a": "curtain-glass", "rider.b": "brick-buff", "rider.c": "paint-navy", "rider.d": "sign-green", "rider.e": "brick",
+        "skin": "sand"
+      }
+    },
+    "vehicle.streetcar": {
+      "generator": "tram",
+      "ramps": {
+        "upper.a": "castiron-cream", "upper.b": "castiron-cream", "upper.c": "brick-buff", "upper.d": "castiron-cream",
+        "lower.a": "verdigris", "lower.b": "sign-red", "lower.c": "ferry-orange", "lower.d": "paint-navy", "roof": "bridge-steel", "window": "lit",
+        "tyre": "asphalt", "light": "lit-cool", "tail": "marker"
+      }
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {
+        "upper.a": "tower-white", "upper.b": "concrete", "lower.a": "bridge-steel", "lower.b": "sign-red", "roof": "bridge-steel", "window": "lit",
+        "tyre": "asphalt", "light": "lit-cool", "tail": "marker"
+      },
+      "params": { "pantograph": 1, "joints": 1 }
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {
+        "loco.a": "bridge-steel", "loco.b": "ferry-orange", "loco.c": "asphalt", "stripe.a": "sign-red", "stripe.b": "asphalt", "stripe.c": "gold",
+        "wagon.a": "brick", "wagon.b": "terracotta", "wagon.c": "bridge-steel", "wagon.d": "concrete", "wagon.e": "roof-slate",
+        "container.a": "sign-red", "container.b": "curtain-glass", "container.c": "verdigris", "container.d": "gold", "container.e": "tower-white", "container.f": "paint-navy",
+        "coach": "bridge-steel", "band": "sign-red", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete",
+        "trim": "asphalt"
+      }
+    },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {
+        "hull.a": "ferry-orange", "hull.b": "paint-navy", "hull.c": "paint-white",
+        "band.a": "paint-white", "band.b": "paint-white", "band.c": "paint-navy", "cabin": "ferry-orange", "window": "lit", "roof": "concrete",
+        "trim": "bridge-steel"
+      }
+    },
+    "vehicle.car.player": {
+      "generator": "car",
+      "ramps": { "paint.a": "taxi", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete" }
+    },
+    "vehicle.plane": {
+      "generator": "plane",
+      "ramps": {
+        "body.a": "paint-white", "body.b": "brick-buff", "body.c": "paint-white",
+        "stripe.a": "sign-red", "stripe.b": "paint-navy", "stripe.c": "ferry-orange", "glass": "glass", "trim": "bridge-steel", "tyre": "asphalt",
+        "light": "lit-cool", "tail": "marker", "shadow": "asphalt"
+      }
+    }
+  },
+  "night": {
+    "background": "#0a0c16",
+    "saturation": 0.5,
+    "multiply": [0.3, 0.36, 0.52],
+    "add": [5, 8, 18],
+    "emissive": {
+      "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
+      "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
+      "sign-red": ["#3a0d18", "#8a1626", "#d0262f", "#ff4a3d", "#ff8066", "#ffbba0"],
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+    }
+  }
+}

@@ -13,6 +13,7 @@
     "@pixelworlds/engine": "workspace:*",
     "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*",
+    "@pixelworlds/city-nyc": "workspace:*",
     "@pixelworlds/style": "workspace:*"
   }
 }

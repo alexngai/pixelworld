@@ -14,7 +14,7 @@ import { builtinGenerators } from "./builtins";
 export const BUILTIN_SOURCE = "@pixelworlds/generators";
 
 /**
- * Generators that plugins published from this repository provide, and which
+ * Generators that the city packs in this repository provide, and which
  * plugin: a style that names one without its plugin loaded gets an error that
  * says what to load (as the pipeline's registry does for `datasf`).
  */
@@ -25,6 +25,10 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   sfTower: "@pixelworlds/city-sf",
   gate: "@pixelworlds/city-sf",
   lanterns: "@pixelworlds/city-sf",
+  brownstone: "@pixelworlds/city-nyc",
+  tenement: "@pixelworlds/city-nyc",
+  castIronLoft: "@pixelworlds/city-nyc",
+  prewarBlock: "@pixelworlds/city-nyc",
 };
 
 export interface GeneratorInfo {

@@ -33,6 +33,7 @@ fixtures/_variants/
 # root at build time; tarballs from `pnpm pack`; the API reference (pnpm docs:api)
 packages/pixelworld/LICENSE-*
 packages/city-sf/LICENSE-*
+packages/city-nyc/LICENSE-*
 *.tgz
 docs/api/
 
