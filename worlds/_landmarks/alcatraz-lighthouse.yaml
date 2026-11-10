@@ -1,0 +1,10 @@
+name: Alcatraz Island Light
+wikidata: Q4712967
+# Overture's footprint centroid, beside the head of the cellhouse at the island's south end
+anchor: { lon: -122.422295, lat: 37.826254 }
+height: 26
+clear: 6
+replaces:
+  - 3c863309-e658-4c14-807e-5622cf94231a   # Alcatraz Island Lighthouse
+depictions:
+  generic: { group: landmark.lighthouse }

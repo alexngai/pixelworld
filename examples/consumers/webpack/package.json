@@ -1,0 +1,18 @@
+{
+  "name": "pixelworld-consumer-webpack",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@pixelworlds/city-sf": "^0.0.0",
+    "pixelworld": "^0.0.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.112.2",
+    "webpack-cli": "^7.3.1"
+  }
+}

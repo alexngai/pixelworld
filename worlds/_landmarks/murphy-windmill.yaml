@@ -1,0 +1,10 @@
+name: Murphy Windmill
+wikidata: Q50418168
+# Overture's footprint centroid, at the park's southwest corner by the Great Highway
+anchor: { lon: -122.508697, lat: 37.765002 }
+height: 29          # depicted: about 95 ft, the tower and its cap (Overture's 10 m is too low)
+clear: 14
+replaces:
+  - 1be21ce6-88c6-4c31-845a-2d58e5b1b39a   # Murphy Windmill
+depictions:
+  generic: { group: landmark.windmill }    # a smock mill with four lattice sails to the ocean; no name

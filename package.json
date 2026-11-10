@@ -1,0 +1,43 @@
+{
+  "name": "pixelworld-monorepo",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @pixelworlds/web dev",
+    "build": "pnpm --filter @pixelworlds/web build",
+    "preview": "pnpm --filter @pixelworlds/web preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
+    "bench": "pnpm --filter @pixelworlds/web exec vite --open /bench.html",
+    "models": "pnpm --filter @pixelworlds/web exec vite --open /model.html",
+    "bench:headless": "node tools/bench.mjs",
+    "example:minimal": "pnpm --filter @pixelworlds/example-minimal-viewer dev",
+    "package:build": "pnpm --filter pixelworld --filter @pixelworlds/city-sf build",
+    "package:check": "node tools/pack-check.mjs && node tools/city-pack-check.mjs",
+    "package:size": "pnpm --filter pixelworld size",
+    "package:consumers": "node tools/consumers.mjs",
+    "docs:api": "pnpm --filter pixelworld docs",
+    "changeset": "changeset",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  }
+}

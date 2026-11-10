@@ -1,0 +1,8 @@
+name: Coit Tower
+wikidata: Q1107297
+anchor: { lon: -122.40583, lat: 37.80237 }
+height: 64
+clear: 20
+replaces: [Coit Tower]
+depictions:
+  generic: { group: landmark.tower.column }

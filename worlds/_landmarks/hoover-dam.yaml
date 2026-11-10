@@ -1,0 +1,18 @@
+name: Hoover Dam
+wikidata: Q172822
+# the crest from the Nevada to the Arizona abutment (OSM). A line landmark bows to
+# the left of its direction, which here is northeast: upstream, toward Lake Mead.
+line: [[-114.73939, 36.01650], [-114.73680, 36.01480]]
+crest: 376          # metres above sea level
+reservoir: 10       # Lake Mead stands just under the crest (its level is raised to meet it)
+thickness: 120      # at its foot: the downstream face is battered up to a thin crest
+bulge: 0.15
+clear: 60
+parts:              # the four intake towers in the lake, two by each abutment
+  - { group: landmark.dam.intake, along: 0.12, offset: 110, aboveCrest: 8 }
+  - { group: landmark.dam.intake, along: 0.27, offset: 130, aboveCrest: 8 }
+  - { group: landmark.dam.intake, along: 0.73, offset: 130, aboveCrest: 8 }
+  - { group: landmark.dam.intake, along: 0.88, offset: 110, aboveCrest: 8 }
+hero: true          # baked offline and painted over (D-053)
+depictions:
+  generic: { group: landmark.dam }

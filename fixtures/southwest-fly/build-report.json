@@ -1,0 +1,98 @@
+{
+  "packageHash": "c7f06a21aa96bcf0de3a08e4141155e63cfecbf4cb13ceb377d7848dbae23173",
+  "cells": [
+    339,
+    219
+  ],
+  "chunks": 24,
+  "heightRange": [
+    -2,
+    17
+  ],
+  "inputs": {
+    "roadSegments": 2286,
+    "riverLines": 1053
+  },
+  "warp": {
+    "method": "v2",
+    "cells": [
+      339,
+      219
+    ],
+    "folds": 0,
+    "maxAnisotropy": 11.341,
+    "focus": [
+      {
+        "name": "las-vegas-strip",
+        "target": 400.0,
+        "achieved": 398.3,
+        "error": -0.004
+      },
+      {
+        "name": "hoover-dam",
+        "target": 400.0,
+        "achieved": 397.8,
+        "error": -0.005
+      },
+      {
+        "name": "lake-mead",
+        "target": 1000.0,
+        "achieved": 989.8,
+        "error": -0.01
+      },
+      {
+        "name": "grand-canyon-village",
+        "target": 600.0,
+        "achieved": 599.5,
+        "error": -0.001
+      },
+      {
+        "name": "desert-view",
+        "target": 600.0,
+        "achieved": 601.3,
+        "error": 0.002
+      }
+    ],
+    "pins": [],
+    "solveSeconds": 18.885
+  },
+  "objects": {
+    "building.commercial": 9,
+    "building.tower": 37,
+    "building.tower.hotel": 2,
+    "city.blocks": 2889,
+    "landmark.bridge.arch": 1,
+    "landmark.dam": 1,
+    "landmark.dam.intake": 4,
+    "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
+    "landmark.tower.lookout": 1,
+    "landmark.tower.observation": 1,
+    "landmark.wheel": 1
+  },
+  "roads": {
+    "cells": 2019,
+    "edges": 2156,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 1,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "surfaces": {
+    "rock": 1951,
+    "woodland": 11019,
+    "forest": 1953,
+    "scrub": 17877,
+    "water": 2246,
+    "desert": 22082,
+    "grass": 13726,
+    "farmland": 19,
+    "urban": 3368
+  },
+  "routes": {
+    "road": 411,
+    "train": 68
+  }
+}

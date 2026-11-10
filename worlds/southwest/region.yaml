@@ -1,0 +1,104 @@
+# US Southwest, driving level: the whole region on the M2 elastic map.
+# Build: cd pipeline && uv run pixelworld build ../worlds/southwest/region.yaml
+id: southwest
+name: US Southwest
+bounds: [-116.0, 35.0, -111.5, 37.5] # lon/lat: west, south, east, north
+
+# Scale levels (D-046): the region is drawn for flying, driving and walking,
+# each its own world package. Level specs extend this file and override its
+# parameters (fly.yaml, walk.yaml); the client moves between them by lon/lat.
+level: drive
+levels:
+  - { name: fly, world: southwest-fly, label: Flying }
+  - { name: drive, world: southwest, label: Driving }
+  - { name: walk, world: southwest-walk, label: Walking the Strip }
+
+# Layout and vertical scale (docs/architecture.md §3.2, D-022, D-023).
+metersPerCell: 400 # the planned "base" scale; M2 enlarges focus areas
+verticalExaggeration: 2.5
+maxSlope: 2
+chunkSize: 64
+smoothing:
+  bilateralCells: 1.5
+  bilateralMeters: 48
+
+# Elastic map (M2): focus areas and pins live in warp.yaml (edited by apps/editor).
+warp: warp.yaml
+
+# Isometric snapping (D-049): streets straighten toward the 8 grid directions,
+# which draw as clean pixel lines (axes as 2:1 lines, diagonals as straight
+# horizontal or vertical ones), and are laid in long runs. Buildings move with
+# their streets and turn to the nearest grid direction. Levels inherit this.
+#   roads.angle: edges within this many degrees of a grid direction run along it
+#   roads.simplify: cells of wiggle removed before snapping
+#   roads.deviation: how far (cells) an in-between road may stray to keep long runs
+#   roads.maxShift: no junction moves further than this (cells)
+#   buildings.angle: footprints within this many degrees of a grid direction turn to it
+#   buildings.follow: objects within this many cells of a road move with it
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+
+# Real widths (D-050): ways are drawn at `scale` × their real width at the local
+# scale (defaults per class in the pipeline, e.g. 14 m for a primary road's
+# carriageway; override with roads: {class: metres} / paths: {...}), never
+# narrower than `minCells`, nor than the style's width for the class (so coarse
+# maps keep their road hierarchy). Driving: twice real, so city roads read.
+widths: { scale: 2.0, minCells: 0.08 }
+
+# Micro-terrain (M1.6, D-037): 4×4 micro-cells (100 m) per cell, heights in
+# quarter steps, read from the 60 m overview of the 30 m DEM.
+micro:
+  k: 4
+  dem: { overview: 2 }
+
+# Objects (M2: landmarks, buildings on the Strip). Landmarks are stamped
+# rigidly at their mapped anchor; the dam spans its crest line from OSM.
+objects:
+  buildings:
+    # the Strip, Grand Canyon Village and Desert View
+    bounds: [[-115.19, 36.08, -115.14, 36.15], [-112.150, 36.050, -112.128, 36.062], [-111.830, 36.036, -111.820, 36.046]]
+    minArea: 200
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+    # heights and tower massing from USGS 3DEP lidar where Overture has none (D-052)
+    lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018, res: 4, depth: 6 }
+  # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
+  landmarks: [strat-tower, welcome-sign, eiffel-replica, high-roller, hoover-dam, hoover-bypass-bridge, desert-view-watchtower]
+  landmarkDepiction: generic
+  # the client scatters trees, shrubs and rocks by surface (M3)
+  depiction: { scatter: 1.0 }
+
+style: desert-southwest
+start: { lon: -115.1728, lat: 36.1147 } # Las Vegas Strip
+
+sources:
+  dem:
+    kind: usgs-3dep-1arcsec
+    overview: 4 # read the 120 m overview of the 30 m DEM
+  landcover:
+    kind: esa-worldcover-2021
+    overview: 16 # 160 m overview, mode-resampled per cell
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary]
+  rivers:
+    subtypes: [river]
+
+# Geology provinces pick the strata set for cliffs (style pack `provinces`).
+# Rough hand-drawn outline of the Colorado Plateau inside this region; the
+# Grand Wash Cliffs and the Mogollon Rim are its western and southern edges.
+geology:
+  default: basin-and-range
+  provinces:
+    - name: colorado-plateau
+      polygon:
+        - [-113.95, 37.6]
+        - [-113.95, 36.05]
+        - [-113.55, 35.75]
+        - [-112.9, 35.45]
+        - [-112.2, 35.3]
+        - [-111.4, 35.15]
+        - [-111.4, 37.6]

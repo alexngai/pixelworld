@@ -1,0 +1,64 @@
+{
+  "packageHash": "55d03f0b4d588b38d212d3843c1b096366654b68f73819bcc44070feab463c9f",
+  "cells": [
+    182,
+    412
+  ],
+  "chunks": 21,
+  "heightRange": [
+    187,
+    210
+  ],
+  "inputs": {
+    "roadSegments": 16711,
+    "riverLines": 0
+  },
+  "objects": {
+    "building.commercial": 2105,
+    "building.parking": 72,
+    "building.residential": 2683,
+    "building.tower": 194,
+    "building.tower.hotel": 36,
+    "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
+    "landmark.tower.observation": 1,
+    "landmark.wheel": 1,
+    "prop.signal": 124,
+    "prop.streetlight": 2123,
+    "shrub": 6,
+    "tree": 4835,
+    "tree.palm": 234
+  },
+  "roads": {
+    "cells": 23703,
+    "edges": 26071,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 28,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 11365,
+    "cells": 18433
+  },
+  "lanes": {
+    "counted": 25967,
+    "oneway": 9849,
+    "divided": 6954
+  },
+  "surfaces": {
+    "woodland": 3189,
+    "scrub": 112,
+    "water": 454,
+    "desert": 6158,
+    "grass": 1679,
+    "farmland": 7,
+    "urban": 63385
+  },
+  "routes": {
+    "road": 8084,
+    "train": 9
+  }
+}

@@ -1,0 +1,9 @@
+name: San Francisco City Hall
+wikidata: Q1093944
+anchor: { lon: -122.41924, lat: 37.77928 }
+height: 94          # to the top of the dome
+orient: 1           # its long side runs north-south
+clear: 60
+replaces: [San Francisco City Hall]
+depictions:
+  generic: { group: landmark.hall.domed }

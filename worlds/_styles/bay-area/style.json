@@ -1,0 +1,660 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "id": "bay-area",
+  "name": "San Francisco Bay Area",
+  "plugins": ["@pixelworlds/city-sf"],
+  "shades": 6,
+  "background": "#1b1d28",
+  "silhouette": "#ffe36e",
+  "outline": {
+    "depthThreshold": 2.0
+  },
+  "ao": {
+    "strength": 2.2
+  },
+  "terrain": { "steepRockSlope": 0.7 },
+  "ramps": {
+    "franciscan": ["#1e2026", "#33363a", "#4b4f4c", "#666a60", "#838676", "#a3a38f"],
+    "chert": ["#24181f", "#3d2428", "#5a3430", "#784639", "#945c47", "#ad775c"],
+    "grass": ["#2a2a2a", "#454236", "#6a6343", "#8e8650", "#b0a663", "#cdc27c"],
+    "lawn": ["#15221f", "#203626", "#2e4c2d", "#406534", "#577f3b", "#729947"],
+    "cypress": ["#0f1820", "#162624", "#1e352b", "#284532", "#33563a", "#426845"],
+    "eucalyptus": ["#1a1f24", "#28322f", "#3a473d", "#4f5d4c", "#67745e", "#839073"],
+    "scrub": ["#22242a", "#383b3a", "#51544a", "#6c6e5a", "#88896d", "#a5a483"],
+    "water": ["#0e1a26", "#13283a", "#1a3a4b", "#244e5c", "#33636c", "#4a7a80"],
+    "urban": ["#25252e", "#3b3c46", "#55575f", "#71737a", "#8f9095", "#aeaeb1"],
+    "asphalt": ["#17171e", "#22232b", "#2e2f38", "#3c3d46", "#4c4d56", "#5e5f68"],
+    "marking": ["#3d3b34", "#68644f", "#938c68", "#bab17d", "#d9d095", "#efe9b6"],
+    "concrete": ["#2b2b32", "#46464d", "#64646a", "#85848a", "#a5a4a7", "#c4c3c3"],
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+    "sand": ["#3a3438", "#5e5550", "#857a6b", "#aca085", "#cdc3a2", "#e8e0c2"],
+    "bark": ["#1c1418", "#2e1f1f", "#432c26", "#5a3b2e", "#714b37", "#8a5e43"],
+    "paint-white": ["#2c2d38", "#565865", "#8a8c97", "#b6b8bf", "#d9dadd", "#f3f3f0"],
+    "paint-cream": ["#332c33", "#625547", "#9c8a70", "#c4b291", "#e0d3b3", "#f5edd4"],
+    "paint-butter": ["#3a3230", "#6e6046", "#a8965c", "#cdb977", "#e6d596", "#f6ebc0"],
+    "paint-mint": ["#1f2c32", "#3c5852", "#689a82", "#8cbca0", "#b0d8bc", "#d8eedb"],
+    "paint-sky": ["#1f2638", "#3b4e6c", "#6888ae", "#8eaed0", "#b4cee6", "#dae8f4"],
+    "paint-lavender": ["#1f1528", "#352242", "#563664", "#764e88", "#9670aa", "#bc9ccc"],
+    "paint-salmon": ["#34222a", "#6a4440", "#ae765e", "#d29a7c", "#ebbc9c", "#f8dcc4"],
+    "paint-sage": ["#16211c", "#24382c", "#36583e", "#4c7652", "#6a9468", "#94b48a"],
+    "paint-slate": ["#141a2e", "#1e2a4e", "#2c4278", "#3e5c9a", "#5c7cba", "#8aa4d6"],
+    "paint-rose": ["#31212f", "#644052", "#a86e86", "#cc92a6", "#e6b4c4", "#f6d8e2"],
+    "stucco": ["#33303a", "#55505a", "#7e7877", "#a9a197", "#cdc5b6", "#ebe5d6"],
+    "roof-flat": ["#2e2e36", "#4a4a52", "#68686f", "#87878c", "#a6a6a8", "#c4c4c3"],
+    "roof-tile": ["#2b1520", "#4a2027", "#70302e", "#954436", "#b65b40", "#cf7a52"],
+    "roof-slate": ["#16171f", "#22242e", "#2f323d", "#3e424c", "#4f535c", "#62666d"],
+    "glass": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit-cool": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "granite": ["#1a1418", "#2a2026", "#3c2e33", "#4f3e41", "#644f50", "#7a6261"],
+    "terracotta": ["#2f2a30", "#504741", "#7a6a58", "#a38e72", "#c6b08f", "#e2d0ae"],
+    "tower-white": ["#2e2f3c", "#4f5262", "#7a7e8c", "#a4a8b3", "#cbced3", "#ecedee"],
+    "brick": ["#221519", "#3a2023", "#572e2d", "#753f37", "#925344", "#ab6b55"],
+    "chinatown-red": ["#2a0f18", "#4d1620", "#7a1e26", "#a52a2b", "#c94336", "#e2664a"],
+    "jade": ["#0c1e20", "#113630", "#185246", "#20705c", "#2e8e72", "#48aa8a"],
+    "tower-gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
+    "bridge-orange": ["#2a1214", "#4d1d18", "#7c2b1d", "#a83a22", "#cc4f2b", "#e36f3d"],
+    "bridge-grey": ["#22252e", "#383d48", "#535a66", "#717985", "#9199a3", "#b2b8bf"],
+    "leaf": ["#0f1d18", "#1a3125", "#264630", "#345e37", "#467541", "#5f8f4f"]
+  },
+  "strataSets": {
+    "franciscan": [
+      { "name": "Radiolarian chert", "aboveMeters": 150, "ramp": "chert" },
+      { "name": "Franciscan greywacke", "aboveMeters": -100000, "ramp": "franciscan" }
+    ]
+  },
+  "defaultStrata": "franciscan",
+  "provinces": {},
+  "surfaces": {
+    "none": { "ramp": "urban", "pattern": "none" },
+    "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
+    "woodland": { "ramp": "eucalyptus", "pattern": "trees", "density": 0.12 },
+    "forest": { "ramp": "cypress", "pattern": "trees", "density": 0.2 },
+    "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
+    "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
+    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.04 },
+    "desert": { "ramp": "sand", "pattern": "speckle", "density": 0.04 },
+    "grass": { "ramp": "grass", "pattern": "speckle", "density": 0.05 },
+    "farmland": { "ramp": "lawn", "pattern": "fields", "density": 0.5 },
+    "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
+    "snow": { "ramp": "tower-white", "pattern": "sparkle", "density": 0.02 },
+    "lawn": { "ramp": "lawn", "pattern": "speckle", "density": 0.02, "light": "slope" },
+    "yard": { "ramp": "lawn", "pattern": "fields", "density": 0.6 }
+  },
+  "roads": {
+    "asphalt": "asphalt",
+    "marking": "marking",
+    "lanes": { "ramp": "concrete", "minPixels": 4, "dash": [1, 2], "median": 1 },
+    "rail": "bridge-grey",
+    "classes": {
+      "motorway": { "halfWidth": 0.2, "centerLine": true, "lanes": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true, "lanes": true },
+      "primary": { "halfWidth": 0.1, "centerLine": false, "lanes": true },
+      "secondary": { "halfWidth": 0.07, "centerLine": false, "lanes": true },
+      "tertiary": { "halfWidth": 0.06, "centerLine": false, "lanes": true },
+      "residential": { "halfWidth": 0.05, "centerLine": false },
+      "unclassified": { "halfWidth": 0.05, "centerLine": false },
+      "living_street": { "halfWidth": 0.04, "centerLine": false },
+      "service": { "halfWidth": 0.04, "centerLine": false },
+      "brick": { "halfWidth": 0.04, "centerLine": false, "ramp": "brick" }
+    }
+  },
+  "scatter": {
+    "woodland": [{ "group": "tree.eucalyptus", "perCell": 2.0 }],
+    "forest": [{ "group": "tree.cypress", "perCell": 2.4 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.9 }],
+    "grass": [{ "group": "shrub", "perCell": 0.12 }],
+    "desert": [{ "group": "shrub", "perCell": 0.08 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.05 }],
+    "urban": [{ "group": "tree", "perCell": 0.05 }],
+    "yard": [{ "group": "tree", "perCell": 0.08 }, { "group": "shrub.garden", "perCell": 0.3 }]
+  },
+  "paths": {
+    "classes": {
+      "sidewalk": { "ramp": "concrete" },
+      "footway": { "ramp": "concrete" },
+      "pedestrian": { "ramp": "concrete" },
+      "steps": { "ramp": "concrete" },
+      "crosswalk": { "ramp": "concrete", "stripes": true },
+      "cycleway": { "ramp": "concrete" },
+      "path": { "ramp": "sand" }
+    }
+  },
+  "objects": {
+    "heightStretch": 1.5,
+    "variants": 8,
+    "surfaces": {
+      "urban": { "ramp": "urban", "pattern": "speckle", "density": 0.04 }
+    }
+  },
+  "assets": {
+    "tree": {
+      "generator": "roundTree",
+      "ramps": { "body": "leaf", "trunk": "bark" },
+      "params": { "radius": 2.6, "radiusJitter": 0.6, "height": 2.0, "trunk": 2, "lobes": 5, "holes": 0.06 }
+    },
+    "tree.cypress": {
+      "generator": "blob",
+      "ramps": { "body": "cypress", "trunk": "bark" },
+      "params": { "radius": 1.6, "radiusJitter": 0.5, "height": 0.8, "trunk": 1, "holes": 0.1 }
+    },
+    "tree.eucalyptus": {
+      "generator": "blob",
+      "ramps": { "body": "eucalyptus", "trunk": "bark" },
+      "params": { "radius": 0.9, "radiusJitter": 0.4, "height": 2.4, "trunk": 2, "holes": 0.2 }
+    },
+    "tree.street": {
+      "generator": "roundTree",
+      "ramps": { "body": "leaf", "trunk": "bark" },
+      "params": { "radius": 2.1, "radiusJitter": 0.5, "height": 1.6, "trunk": 1, "lobes": 4, "holes": 0.05 }
+    },
+    "tree.palm": {
+      "generator": "palm",
+      "ramps": { "trunk": "bark", "fronds": "leaf" },
+      "params": { "reach": 2, "minHeight": 7, "heightJitter": 2 }
+    },
+    "shrub": {
+      "generator": "blob",
+      "ramps": { "body": "scrub" },
+      "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "shrub.garden": {
+      "generator": "blob",
+      "ramps": { "body": "leaf" },
+      "params": { "radius": 0.8, "radiusJitter": 0.5, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "rock.boulder": { "generator": "boulder", "ramps": { "rock": "franciscan" } },
+    "building.residential": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "wall.cream": "paint-cream", "wall.white": "paint-white", "wall.sky": "paint-sky", "wall.butter": "paint-butter", "roof": "roof-flat", "window": "glass" },
+      "params": { "style": 0 }
+    },
+    "building.commercial": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "wall.white": "tower-white", "wall.brick": "brick", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "params": { "style": 1, "litFraction": 0.5 }
+    },
+    "building.parking": {
+      "generator": "building",
+      "ramps": { "wall": "concrete", "roof": "concrete", "window": "glass" },
+      "params": { "style": 1, "litFraction": 0 }
+    },
+    "building.tower": {
+      "generator": "sfTower",
+      "ramps": {
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool",
+        "deco:wall": "terracotta", "deco:wall.cream": "paint-cream", "deco:wall.white": "tower-white", "deco:wall.zbuff": "terracotta",
+        "deco:spandrel": "bark", "deco:spandrel.cream": "terracotta", "deco:spandrel.white": "concrete", "deco:spandrel.zbuff": "brick",
+        "deco:trim": "tower-gold", "deco:trim.cream": "tower-gold", "deco:trim.white": "terracotta", "deco:trim.zbuff": "paint-cream",
+        "deco:cap": "jade", "deco:cap.slate": "roof-slate",
+        "slab:wall": "tower-white", "slab:wall.concrete": "concrete", "slab:wall.white": "paint-white",
+        "slab:spandrel": "tower-white", "slab:spandrel.concrete": "concrete", "slab:spandrel.white": "tower-white",
+        "granite:wall": "granite",
+        "postmodern:wall": "paint-cream", "postmodern:wall.buff": "terracotta", "postmodern:wall.stone": "stucco", "postmodern:wall.white": "tower-white",
+        "postmodern:trim": "terracotta", "postmodern:trim.buff": "paint-cream", "postmodern:trim.stone": "paint-white", "postmodern:trim.white": "concrete",
+        "postmodern:cap": "roof-slate", "postmodern:cap.green": "jade", "postmodern:cap.white": "tower-white",
+        "glass:wall": "tower-white", "glass:wall.grey": "concrete", "glass:reflect": "paint-sky", "glass:reflect.grey": "bridge-grey"
+      },
+      "params": { "kind": -1, "litFraction": 0.4, "deco": 0.3, "slab": 0.2, "granite": 0.05, "postmodern": 0.2, "glass": 0.25 }
+    },
+    "building.tower.hotel": {
+      "generator": "sfTower",
+      "ramps": {
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool",
+        "deco:wall": "terracotta", "deco:wall.cream": "paint-cream", "deco:spandrel": "bark", "deco:spandrel.cream": "terracotta",
+        "deco:trim": "tower-gold", "deco:trim.cream": "tower-gold", "deco:cap": "jade",
+        "slab:wall": "tower-white", "slab:wall.cream": "paint-cream", "slab:spandrel": "tower-white", "slab:spandrel.cream": "paint-cream",
+        "granite:wall": "granite",
+        "postmodern:wall": "paint-cream", "postmodern:wall.buff": "terracotta", "postmodern:wall.white": "tower-white",
+        "postmodern:trim": "terracotta", "postmodern:trim.buff": "paint-cream", "postmodern:trim.white": "concrete",
+        "postmodern:cap": "roof-slate", "postmodern:cap.green": "jade",
+        "glass:wall": "tower-white", "glass:reflect": "paint-sky"
+      },
+      "params": { "kind": -1, "litFraction": 0.55, "deco": 0.25, "slab": 0.3, "granite": 0.05, "postmodern": 0.28, "glass": 0.12 }
+    },
+    "building.rowhouse.victorian": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-slate", "trim": "paint-cream", "accent": "brick",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-sage",
+        "wall.gold": "tower-gold", "trim.gold": "paint-cream", "accent.gold": "paint-slate",
+        "wall.green": "paint-sage", "trim.green": "paint-cream", "accent.green": "brick",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "paint-lavender",
+        "wall.plum": "paint-lavender", "trim.plum": "paint-cream", "accent.plum": "tower-gold",
+        "wall.red": "brick", "trim.red": "paint-cream", "accent.red": "jade",
+        "wall.rose": "paint-rose", "trim.rose": "paint-white", "accent.rose": "paint-slate",
+        "wall.salmon": "paint-salmon", "trim.salmon": "paint-cream", "accent.salmon": "jade",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "brick",
+        "wall.teal": "jade", "trim.teal": "paint-cream", "accent.teal": "tower-gold",
+        "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
+        "wall.zcream": "paint-cream", "trim.zcream": "paint-white", "accent.zcream": "brick",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white", "gable": "roof-slate",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 0, "litFraction": 0.3 }
+    },
+    "building.rowhouse.victorian.pale": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-white", "trim": "paint-cream", "accent": "paint-slate",
+        "wall.blue": "paint-slate", "trim.blue": "paint-white", "accent.blue": "paint-cream",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-sage",
+        "wall.cream": "paint-cream", "trim.cream": "paint-white", "accent.cream": "brick",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "paint-sage",
+        "wall.green": "paint-sage", "trim.green": "paint-cream", "accent.green": "brick",
+        "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white", "accent.grey2": "brick",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "paint-slate",
+        "wall.white2": "paint-white", "trim.white2": "tower-white", "accent.white2": "brick",
+        "wall.white3": "paint-white", "trim.white3": "paint-cream", "accent.white3": "paint-sage",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white", "gable": "roof-slate",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 0, "litFraction": 0.3 }
+    },
+    "building.rowhouse.edwardian": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-cream", "trim": "paint-white", "accent": "paint-sage",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-slate",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "brick",
+        "wall.cream3": "paint-cream", "trim.cream3": "paint-white", "accent.cream3": "paint-slate",
+        "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white", "accent.grey2": "brick",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "paint-sage",
+        "wall.sand": "sand", "trim.sand": "paint-white", "accent.sand": "paint-sage",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "paint-slate",
+        "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
+        "wall.white2": "paint-white", "trim.white2": "paint-cream", "accent.white2": "brick",
+        "wall.white3": "paint-white", "trim.white3": "tower-white", "accent.white3": "paint-sage",
+        "wall.white4": "paint-white", "trim.white4": "paint-cream", "accent.white4": "paint-slate",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 1, "litFraction": 0.3 }
+    },
+    "building.rowhouse.edwardian.painted": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "paint-cream", "trim": "paint-white", "accent": "paint-sage",
+        "wall.blue": "paint-slate", "trim.blue": "paint-white", "accent.blue": "tower-gold",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "paint-slate",
+        "wall.green": "paint-sage", "trim.green": "paint-cream", "accent.green": "brick",
+        "wall.grey": "stucco", "trim.grey": "paint-white", "accent.grey": "paint-slate",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "paint-sage",
+        "wall.rose": "paint-rose", "trim.rose": "paint-white", "accent.rose": "paint-slate",
+        "wall.salmon": "paint-salmon", "trim.salmon": "paint-cream", "accent.salmon": "jade",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "brick",
+        "wall.white": "paint-white", "trim.white": "paint-cream", "accent.white": "paint-slate",
+        "wall.white2": "paint-white", "trim.white2": "paint-cream", "accent.white2": "brick",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 1, "litFraction": 0.3 }
+    },
+    "building.rowhouse.stucco": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "stucco", "trim": "paint-white",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white",
+        "wall.cream": "paint-cream", "trim.cream": "paint-white",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white",
+        "wall.cream3": "paint-cream", "trim.cream3": "paint-white",
+        "wall.grey": "tower-white", "trim.grey": "paint-white",
+        "wall.grey2": "tower-white", "trim.grey2": "paint-white",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white",
+        "wall.rose": "paint-rose", "trim.rose": "paint-white",
+        "wall.sand": "sand", "trim.sand": "paint-white",
+        "wall.sand2": "sand", "trim.sand2": "paint-white",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white",
+        "wall.stucco2": "stucco", "trim.stucco2": "paint-white",
+        "wall.stucco3": "stucco", "trim.stucco3": "paint-white",
+        "wall.white": "paint-white", "trim.white": "tower-white",
+        "wall.white2": "paint-white", "trim.white2": "stucco",
+        "wall.white3": "paint-white", "trim.white3": "tower-white",
+        "wall.white4": "paint-white", "trim.white4": "paint-white",
+        "accent": "bark", "eave": "roof-tile",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 2, "litFraction": 0.3 }
+    },
+    "building.house": {
+      "generator": "rowhouse",
+      "ramps": {
+        "wall": "stucco", "trim": "paint-white", "accent": "brick",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white", "accent.butter": "bark",
+        "wall.cream": "paint-cream", "trim.cream": "paint-white", "accent.cream": "bark",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white", "accent.cream2": "brick",
+        "wall.grey": "tower-white", "trim.grey": "paint-white", "accent.grey": "granite",
+        "wall.mint": "paint-mint", "trim.mint": "paint-white", "accent.mint": "bark",
+        "wall.sand": "sand", "trim.sand": "paint-white", "accent.sand": "bark",
+        "wall.sky": "paint-sky", "trim.sky": "paint-white", "accent.sky": "bark",
+        "wall.stucco2": "stucco", "trim.stucco2": "paint-white", "accent.stucco2": "bark",
+        "wall.white": "paint-white", "trim.white": "tower-white", "accent.white": "brick",
+        "wall.white2": "paint-white", "trim.white2": "stucco", "accent.white2": "granite",
+        "wall.white3": "paint-white", "trim.white3": "tower-white", "accent.white3": "bark",
+        "eave": "roof-tile", "gable": "roof-slate",
+        "roof": "roof-flat", "roof.gravel": "stucco", "roof.white": "paint-white",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": -1, "litFraction": 0.3 }
+    },
+    "building.apartment.bay": {
+      "generator": "block",
+      "ramps": {
+        "wall": "paint-cream", "trim": "paint-white",
+        "wall.brick": "brick", "trim.brick": "paint-cream",
+        "wall.butter": "paint-butter", "trim.butter": "paint-white",
+        "wall.cream2": "paint-cream", "trim.cream2": "terracotta",
+        "wall.grey": "stucco", "trim.grey": "paint-white",
+        "wall.terracotta": "terracotta", "trim.terracotta": "paint-white",
+        "wall.white": "paint-white", "trim.white": "paint-cream",
+        "wall.white2": "paint-white", "trim.white2": "tower-white",
+        "roof": "roof-flat", "roof.gravel": "stucco",
+        "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 0, "litFraction": 0.4 }
+    },
+    "building.apartment.modern": {
+      "generator": "block",
+      "ramps": { "wall": "stucco", "wall.white": "paint-white", "wall.white2": "paint-white", "wall.concrete": "concrete", "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit" },
+      "params": { "type": 5, "litFraction": 0.4 }
+    },
+    "building.chinatown": {
+      "generator": "block",
+      "ramps": {
+        "wall": "paint-cream", "wall.brick": "brick", "wall.butter": "paint-butter", "wall.green": "paint-sage", "wall.mint": "paint-mint", "wall.white": "paint-white",
+        "trim": "chinatown-red", "accent": "tower-gold", "eave": "jade", "sign": "chinatown-red", "sign.gold": "tower-gold",
+        "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 2, "litFraction": 0.5 }
+    },
+    "building.commercial.historic": {
+      "generator": "block",
+      "ramps": {
+        "wall": "terracotta", "trim": "paint-white",
+        "wall.brick": "brick", "trim.brick": "paint-cream",
+        "wall.buff": "terracotta", "trim.buff": "paint-cream",
+        "wall.cream": "paint-cream", "trim.cream": "terracotta",
+        "wall.cream2": "paint-cream", "trim.cream2": "paint-white",
+        "wall.granite": "granite", "trim.granite": "paint-cream",
+        "wall.white": "paint-white", "trim.white": "terracotta",
+        "roof": "roof-flat", "roof.gravel": "stucco", "window": "glass", "lit": "lit"
+      },
+      "params": { "type": 1, "litFraction": 0.5 }
+    },
+    "building.industrial": {
+      "generator": "block",
+      "ramps": { "wall": "brick", "wall.concrete": "concrete", "wall.cream": "paint-cream", "roof": "roof-flat", "window": "glass" },
+      "params": { "type": 4, "litFraction": 0.1 }
+    },
+    "building.pier": {
+      "generator": "block",
+      "ramps": { "wall": "paint-cream", "wall.grey": "concrete", "wall.sage": "paint-sage", "trim": "paint-white", "accent": "bridge-grey", "roof": "roof-flat", "window": "glass" },
+      "params": { "type": 3, "litFraction": 0.1 }
+    },
+    "building.tower.deco": {
+      "generator": "decoTower",
+      "ramps": {
+        "wall": "terracotta", "wall.cream": "paint-cream", "wall.granite": "granite", "wall.white": "tower-white", "wall.zbuff": "terracotta", "wall.zcream": "paint-cream",
+        "spandrel": "bark", "spandrel.cream": "terracotta", "spandrel.granite": "roof-slate", "spandrel.white": "concrete", "spandrel.zbuff": "brick", "spandrel.zcream": "bark",
+        "trim": "tower-gold", "trim.cream": "tower-gold", "trim.granite": "paint-cream", "trim.white": "terracotta", "trim.zbuff": "paint-cream", "trim.zcream": "terracotta",
+        "cap": "jade", "cap.slate": "roof-slate",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "litFraction": 0.5 }
+    },
+    "building.tower.slab": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.concrete": "concrete", "wall.granite": "granite", "wall.white": "paint-white", "wall.zwhite": "tower-white", "wall.zwhite2": "tower-white",
+        "spandrel": "tower-white", "spandrel.concrete": "concrete", "spandrel.granite": "granite", "spandrel.white": "tower-white", "spandrel.zwhite": "concrete", "spandrel.zwhite2": "tower-white",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 1, "litFraction": 0.45 }
+    },
+    "building.tower.postmodern": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "paint-cream", "wall.buff": "terracotta", "wall.stone": "stucco", "wall.white": "tower-white",
+        "trim": "terracotta", "trim.buff": "paint-cream", "trim.stone": "paint-white", "trim.white": "concrete",
+        "cap": "roof-slate", "cap.green": "jade", "cap.white": "tower-white",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 3, "litFraction": 0.45 }
+    },
+    "building.tower.glass": {
+      "generator": "sfTower",
+      "ramps": {
+        "wall": "tower-white", "wall.grey": "concrete", "reflect": "paint-sky", "reflect.grey": "bridge-grey",
+        "roof": "roof-flat", "window": "glass", "lit": "lit", "lit.cool": "lit-cool"
+      },
+      "params": { "kind": 4, "litFraction": 0.35 }
+    },
+    "landmark.bridge.suspension": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-orange", "truss": "bridge-orange", "deck": "asphalt", "pier": "concrete" },
+      "params": { "spans": 1, "side": 0.175, "towerRatio": 3.3, "hangers": 10, "tower": 0, "portals": 4, "leg": 0.45, "legDepth": 0.4, "truss": 0.08, "pierTop": 0.15 }
+    },
+    "landmark.bridge.suspension.double": {
+      "generator": "suspensionBridge",
+      "ramps": { "structure": "bridge-grey", "truss": "bridge-grey", "deck": "roof-flat", "pier": "concrete", "plate": "asphalt" },
+      "params": { "spans": 2, "side": 0.25, "towerRatio": 2.7, "hangers": 8, "tower": 1, "portals": 4, "leg": 0.3, "legDepth": 0.36, "taper": 0.08, "decks": 2, "truss": 0.12, "pierTop": 0.12, "sideBrace": 1, "sideDepth": 5, "sag": 0.06, "anchorTop": 0.2 }
+    },
+    "landmark.tower.pyramid": {
+      "generator": "pyramidTower",
+      "ramps": { "structure": "tower-white", "window": "glass" },
+      "params": { "base": 0.16, "spire": 0.2, "wing": 0.45 }
+    },
+    "landmark.tower.obelisk": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "glass" },
+      "params": { "base": 0.1, "top": 0.75, "corner": 0.3, "crown": 0.1 }
+    },
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "tower-white", "window": "glass" },
+      "params": { "base": 0.1, "top": 0.75, "corner": 0.3, "crown": 0.1, "turn": 1 }
+    },
+    "landmark.tower.column": {
+      "generator": "column",
+      "ramps": { "stone": "paint-cream", "detail": "stucco", "window": "glass" },
+      "params": { "radius": 0.1 }
+    },
+    "landmark.hall.clock": {
+      "generator": "towerHall",
+      "ramps": { "wall": "paint-cream", "roof": "roof-flat", "window": "glass", "accent": "paint-white", "cap": "stucco" },
+      "params": { "hall": 0.22 }
+    },
+    "landmark.hall.domed": {
+      "generator": "domedHall",
+      "ramps": { "wall": "paint-white", "roof": "roof-flat", "window": "glass", "dome": "roof-slate" },
+      "params": { "length": 1.4, "depth": 1.0, "hall": 0.3, "dome": 0.17 }
+    },
+    "landmark.rotunda": {
+      "generator": "rotunda",
+      "ramps": { "stone": "terracotta", "dome": "roof-tile", "detail": "stucco" },
+      "params": { "radius": 0.35, "dome": 0.23, "arc": 1.6, "arcCentre": 1.16, "arcHeight": 0.4, "open": 115 }
+    },
+    "landmark.tower.mast": {
+      "generator": "tripodMast",
+      "ramps": { "structure": "marker", "band": "paint-white" },
+      "params": { "spread": 0.12 }
+    },
+    "landmark.windmill": {
+      "generator": "windmill",
+      "ramps": { "wall": "stucco", "cap": "roof-slate", "sail": "paint-white", "stock": "bark", "detail": "bark" },
+      "params": { "scale": 1.35, "base": 0.17, "top": 0.09, "sail": 0.5, "gallery": 0, "face": 0 }
+    },
+    "landmark.lighthouse": {
+      "generator": "lighthouse",
+      "ramps": { "wall": "paint-white", "detail": "roof-slate", "lamp": "lit", "window": "concrete" },
+      "params": { "base": 0.11, "top": 0.07 }
+    },
+    "landmark.cellhouse": {
+      "generator": "cellhouse",
+      "ramps": { "wall": "paint-cream", "roof": "roof-flat", "window": "glass", "detail": "concrete" },
+      "params": { "head": 0.14, "tail": 0.3, "tailWidth": 0.45, "hall": 0.8, "wing": 0.55 }
+    },
+    "landmark.gate": {
+      "generator": "gate",
+      "ramps": { "stone": "paint-white", "base": "granite", "tile": "jade", "beam": "chinatown-red", "gold": "tower-gold" },
+      "params": { "width": 1.15, "depth": 0.22, "middle": 0.4 }
+    },
+    "prop.lanterns": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
+      "params": { "span": 24, "height": 12, "every": 4, "sag": 2 }
+    },
+    "prop.lanterns.wide": {
+      "generator": "lanterns",
+      "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
+      "params": { "span": 32, "height": 13, "every": 5, "sag": 2 }
+    },
+    "prop.streetlight": {
+      "generator": "streetLight",
+      "ramps": { "pole": "concrete", "lamp": "lit" },
+      "params": { "height": 6 }
+    },
+    "prop.signal": {
+      "generator": "trafficSignal",
+      "ramps": { "pole": "concrete", "head": "asphalt", "light": "marker" },
+      "params": { "height": 5 }
+    },
+    "prop.cablecar": {
+      "generator": "cableCar",
+      "ramps": { "body": "chinatown-red", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand" },
+      "params": { "length": 14, "width": 4, "open": 3 }
+    },
+    "prop.cablecar.diagonal": {
+      "generator": "cableCar",
+      "ramps": { "body": "chinatown-red", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "glass", "frame": "asphalt",
+        "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand" },
+      "params": { "length": 14, "width": 4, "open": 3, "turn": 1 }
+    },
+    "prop.streetcar": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "paint-cream", "lower.a": "jade",
+        "upper.b": "paint-cream", "lower.b": "chinatown-red",
+        "upper.c": "paint-butter", "lower.c": "bridge-orange",
+        "upper.d": "paint-cream", "lower.d": "paint-slate",
+        "roof": "bridge-grey", "window": "glass", "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4 }
+    },
+    "prop.streetcar.diagonal": {
+      "generator": "streetcar",
+      "ramps": {
+        "upper.a": "paint-cream", "lower.a": "jade",
+        "upper.b": "paint-cream", "lower.b": "chinatown-red",
+        "upper.c": "paint-butter", "lower.c": "bridge-orange",
+        "upper.d": "paint-cream", "lower.d": "paint-slate",
+        "roof": "bridge-grey", "window": "glass", "frame": "asphalt"
+      },
+      "params": { "length": 22, "width": 4, "turn": 1 }
+    },
+    "prop.lightrail": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "chinatown-red", "roof": "bridge-grey", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1 }
+    },
+    "prop.lightrail.diagonal": {
+      "generator": "streetcar",
+      "ramps": { "upper.a": "concrete", "lower.a": "chinatown-red", "roof": "bridge-grey", "window": "glass", "frame": "asphalt" },
+      "params": { "length": 30, "width": 4, "joints": 1, "turn": 1 }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {"paint.a": "tower-white", "paint.b": "paint-white", "paint.c": "bridge-grey", "paint.d": "bridge-grey", "paint.e": "roof-slate", "paint.f": "asphalt", "paint.g": "paint-slate", "paint.h": "chinatown-red", "paint.i": "paint-sky", "paint.j": "concrete", "paint.k": "tower-white", "paint.l": "jade", "taxi": "tower-gold", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete", "sign": "lit"}
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {"body.a": "paint-white", "band.a": "chinatown-red", "body.b": "tower-white", "band.b": "bridge-orange", "body.c": "bridge-grey", "band.c": "marker", "window": "lit", "door": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "bridge-grey", "sign": "lit"}
+    },
+    "vehicle.cablecar": {
+      "generator": "cableTram",
+      "ramps": {"body.a": "chinatown-red", "body.b": "brick", "trim": "paint-cream", "accent": "tower-gold", "roof": "roof-slate", "wood": "bark", "window": "lit", "tyre": "asphalt", "rider.a": "paint-sky", "rider.b": "paint-salmon", "rider.c": "paint-slate", "rider.d": "paint-mint", "rider.e": "brick", "skin": "sand"}
+    },
+    "vehicle.streetcar": {
+      "generator": "tram",
+      "ramps": {"upper.a": "paint-cream", "lower.a": "jade", "upper.b": "paint-cream", "lower.b": "chinatown-red", "upper.c": "paint-butter", "lower.c": "bridge-orange", "upper.d": "paint-cream", "lower.d": "paint-slate", "roof": "bridge-grey", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"}
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "bridge-grey", "upper.b": "concrete", "lower.b": "chinatown-red", "roof": "bridge-grey", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"},
+      "params": {"pantograph": 1, "joints": 1}
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {"loco.a": "bridge-grey", "stripe.a": "chinatown-red", "loco.b": "bridge-orange", "stripe.b": "asphalt", "loco.c": "asphalt", "stripe.c": "tower-gold", "wagon.a": "brick", "wagon.b": "terracotta", "wagon.c": "bridge-grey", "wagon.d": "concrete", "wagon.e": "roof-slate", "container.a": "chinatown-red", "container.b": "paint-sky", "container.c": "jade", "container.d": "tower-gold", "container.e": "tower-white", "container.f": "paint-slate", "coach": "bridge-grey", "band": "chinatown-red", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "asphalt"}
+    },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {"hull.a": "paint-slate", "band.a": "tower-white", "hull.b": "jade", "band.b": "paint-white", "hull.c": "asphalt", "band.c": "chinatown-red", "cabin": "tower-white", "window": "lit", "roof": "concrete", "trim": "bridge-grey"}
+    },
+    "vehicle.car.player": {
+      "generator": "car",
+      "ramps": {"paint.a": "bridge-orange", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete"}
+    },
+    "vehicle.plane": {
+      "generator": "plane",
+      "ramps": {"body.a": "paint-white", "stripe.a": "chinatown-red", "body.b": "paint-butter", "stripe.b": "paint-slate", "body.c": "paint-white", "stripe.c": "bridge-orange", "glass": "glass", "trim": "bridge-grey", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "shadow": "asphalt"}
+    }
+  },
+  "night": {
+    "background": "#0a0c16",
+    "saturation": 0.5,
+    "multiply": [0.3, 0.36, 0.52],
+    "add": [5, 8, 18],
+    "emissive": {
+      "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
+      "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
+      "chinatown-red": ["#3a0d18", "#8a1626", "#d0262f", "#ff4a3d", "#ff8066", "#ffbba0"],
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+    }
+  },
+  "atmosphere": {
+    "fog": {
+      "ramp": "tower-white",
+      "shade": 5,
+      "veil": [0.3, 0.55, 0.8, 1],
+      "ceilingMeters": 220,
+      "fadeMeters": 150,
+      "areas": [
+        {
+          "name": "pacific",
+          "density": 0.85,
+          "edgeMeters": 800,
+          "polygon": [
+            [-122.62, 37.68], [-122.496, 37.68], [-122.4995, 37.715], [-122.502, 37.735], [-122.504, 37.76],
+            [-122.507, 37.7775], [-122.505, 37.788], [-122.53, 37.8], [-122.62, 37.8]
+          ]
+        },
+        {
+          "name": "golden-gate",
+          "density": 0.85,
+          "edgeMeters": 1500,
+          "polygon": [
+            [-122.56, 37.795], [-122.512, 37.786], [-122.49, 37.792], [-122.476, 37.805], [-122.458, 37.808],
+            [-122.44, 37.815], [-122.432, 37.826], [-122.445, 37.836], [-122.47, 37.835], [-122.51, 37.832], [-122.56, 37.837]
+          ]
+        },
+        {
+          "name": "outer-avenues",
+          "density": 0.45,
+          "edgeMeters": 2500,
+          "polygon": [
+            [-122.512, 37.705], [-122.48, 37.705], [-122.462, 37.73], [-122.455, 37.755], [-122.458, 37.775],
+            [-122.468, 37.79], [-122.512, 37.792]
+          ]
+        }
+      ],
+      "drift": { "speed": 4, "toward": 100, "sizeMeters": 450, "contrast": 0.8 },
+      "levels": { "walk": 0 },
+      "night": { "density": 0.8 }
+    }
+  }
+}

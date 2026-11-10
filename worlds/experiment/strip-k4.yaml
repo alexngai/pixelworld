@@ -1,0 +1,9 @@
+# The Strip at K=4: 40 m cells drawn at 1/4 size.
+extends: strip-k8.yaml
+id: exp-strip-k4
+name: Las Vegas Strip (experiment, K=4)
+metersPerCell: 40
+render: { scale: 0.25 }
+sources:
+  dem: { overview: 2 }
+  landcover: { overview: 2 }

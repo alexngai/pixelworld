@@ -1,0 +1,18 @@
+{
+  "$schema": "../../schema/style-pack.v1.schema.json",
+  "extends": "desert-southwest",
+  "id": "desert-adobe",
+  "name": "Desert Southwest (adobe variant)",
+  "plugins": ["@pixelworlds/city-demo"],
+  "ramps": {
+    "asphalt": ["#16151d", "#22212b", "#5a4a44", "#705c52", "#86705f", "#9c8670"],
+    "adobe": ["#3a2a30", "#62423f", "#8b5d4c", "#b86c5a", "#d4886c", "#e0b089"]
+  },
+  "assets": {
+    "building.residential": {
+      "generator": "adobe",
+      "ramps": { "wall": "adobe", "wall.sand": "sand", "trim": "bark", "door": "bark", "lit": "lit" },
+      "params": { "style": null, "litFraction": 0.4 }
+    }
+  }
+}

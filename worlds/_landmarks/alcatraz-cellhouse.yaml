@@ -1,0 +1,17 @@
+name: Alcatraz Federal Penitentiary (the main cellhouse)
+wikidata: Q1142661
+# along the island's crest, from the administration block at its southeast end
+# to the dining hall at its northwest end (Overture's footprints); the
+# generator puts its head block at the band's east end
+line: [[-122.42256, 37.82633], [-122.42359, 37.82717]]
+height: 16          # depicted: the administration block; the cellhouse is a little lower
+thickness: 46
+bulge: 0
+clear: 30
+# the cellhouse, its administration block and its dining hall (by id: the names are common)
+replaces:
+  - d428d6a4-13f7-4ceb-a8ee-f001b9038c6f   # Main Prison
+  - 0946c118-0b7c-4aa7-b132-663989b05f06   # Administration Block
+  - 698194d4-9c13-4b88-9d72-447329b4d850   # Dining Hall
+depictions:
+  generic: { group: landmark.cellhouse }   # a long block of barred windows with a taller head; no name

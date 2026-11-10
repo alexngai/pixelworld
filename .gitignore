@@ -1,0 +1,47 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Pipeline raw-data cache (never committed)
+.cache/
+
+.DS_Store
+
+# Scratch world packages for trying pipeline parameters
+fixtures/_try/
+fixtures/_variants/
+
+# Agent worktrees (local, never committed)
+.claude/worktrees/
+
+# The npm package (packages/pixelworld): its licence files are copied from the
+# root at build time; tarballs from `pnpm pack`; the API reference (pnpm docs:api)
+packages/pixelworld/LICENSE-*
+packages/city-sf/LICENSE-*
+*.tgz
+docs/api/
+
+# Example consumers (examples/consumers): installed and given a world by tools/consumers.mjs
+examples/consumers/*/node_modules/
+examples/consumers/*/package-lock.json
+examples/consumers/*/public/worlds/
+examples/consumers/*/public/styles/
+examples/consumers/esm/worlds/
+examples/consumers/esm/styles/
+examples/consumers/esm/vendor/
+
+# a pipeline build stages its package here beside --out, and moves it in when done (D-076)
+.*.building/

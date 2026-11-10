@@ -1,0 +1,95 @@
+{
+  "packageHash": "da03c089711746b381693f11444b2e50d393b22b38037f2a5d7a02ddb3905a9e",
+  "cells": [
+    584,
+    645
+  ],
+  "chunks": 110,
+  "heightRange": [
+    -1,
+    42
+  ],
+  "inputs": {
+    "roadSegments": 18576,
+    "riverLines": 4
+  },
+  "objects": {
+    "building.apartment.bay": 3244,
+    "building.apartment.modern": 5297,
+    "building.chinatown": 924,
+    "building.commercial": 3502,
+    "building.commercial.historic": 5150,
+    "building.house": 20100,
+    "building.industrial": 2884,
+    "building.parking": 54,
+    "building.pier": 123,
+    "building.residential": 508,
+    "building.rowhouse.edwardian": 17543,
+    "building.rowhouse.edwardian.painted": 9418,
+    "building.rowhouse.stucco": 82002,
+    "building.rowhouse.victorian": 12890,
+    "building.rowhouse.victorian.pale": 4742,
+    "building.tower": 73,
+    "building.tower.deco": 107,
+    "building.tower.glass": 107,
+    "building.tower.hotel": 1,
+    "building.tower.postmodern": 66,
+    "building.tower.slab": 129,
+    "landmark.bridge.suspension": 7,
+    "landmark.bridge.suspension.double": 10,
+    "landmark.cellhouse": 1,
+    "landmark.gate": 1,
+    "landmark.hall.clock": 1,
+    "landmark.hall.domed": 1,
+    "landmark.lighthouse": 1,
+    "landmark.rotunda": 1,
+    "landmark.tower.column": 1,
+    "landmark.tower.mast": 1,
+    "landmark.tower.obelisk.diagonal": 1,
+    "landmark.tower.pyramid": 1,
+    "landmark.windmill": 2,
+    "tree": 14615,
+    "tree.cypress": 31957,
+    "tree.eucalyptus": 15729,
+    "tree.street": 19333
+  },
+  "roads": {
+    "cells": 63332,
+    "edges": 69740,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 6,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "rails": {
+    "street": 2121,
+    "cable": 348,
+    "train": 827
+  },
+  "lanes": {
+    "counted": 0,
+    "oneway": 23962,
+    "divided": 14332
+  },
+  "surfaces": {
+    "woodland": 35342,
+    "scrub": 367,
+    "water": 155657,
+    "desert": 4381,
+    "grass": 9099,
+    "farmland": 14,
+    "urban": 103144,
+    "lawn": 25118,
+    "yard": 43558
+  },
+  "routes": {
+    "cablecar": 16,
+    "ferry": 20,
+    "lightrail": 40,
+    "road": 16274,
+    "streetcar": 10,
+    "train": 68
+  }
+}

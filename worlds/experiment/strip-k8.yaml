@@ -1,0 +1,39 @@
+# M1.5 pixel detail experiment: the Las Vegas Strip, from the Welcome sign to
+# the observation tower at its north end. Same layout as desert-view-k8.yaml.
+# Build: cd pipeline && uv run pixelworld build ../worlds/experiment/strip-k8.yaml
+id: exp-strip-k8
+name: Las Vegas Strip (experiment, K=8)
+bounds: [-115.188, 36.078, -115.148, 36.152]
+metersPerCell: 20
+verticalExaggeration: 2.5
+maxSlope: 3
+chunkSize: 64
+render: { scale: 0.125, tileSize: 512 }
+
+style: desert-southwest
+start: { lon: -115.1720, lat: 36.1125 }
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture: { release: 2026-10-21.0 }
+  roads: { classes: [motorway, trunk, primary, secondary] }
+  rivers: { subtypes: [river] }
+
+geology: { default: basin-and-range }
+
+# keep lakes and big pools (the fountain lake), drop specks
+terrain: { minLakeArea: 4000, maxLakeRelief: 6 }
+
+objects:
+  buildings: { minArea: 40, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  vegetation:
+    - { group: tree, landcover: [tree], spacing: 16, density: 0.8 }
+    - { group: shrub, landcover: [shrub], spacing: 40, density: 0.2 }
+  streetTrees:
+    # the palm-lined boulevard itself, not every arterial
+    - { group: tree.palm, roads: [primary], name: Las Vegas Boulevard, spacing: 70, offset: 24 }
+  landmarks:
+    # generic depictions (no trademarks): an observation tower and a roadside sign
+    - { group: landmark.tower.observation, lon: -115.1555, lat: 36.1474, hm: 350, clear: 45 }
+    - { group: landmark.sign, lon: -115.17282, lat: 36.08208, clear: 10 }

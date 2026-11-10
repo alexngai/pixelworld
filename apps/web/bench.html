@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixelworld bench</title>
+    <style>
+      :root {
+        --bg: #1e1c2b;
+        --fg: #e8dcbc;
+        --muted: #a29384;
+        --panel: #2a2738;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 8px;
+      }
+      p {
+        max-width: 960px;
+        color: var(--muted);
+      }
+      button {
+        font: inherit;
+        color: var(--fg);
+        background: var(--panel);
+        border: 1px solid var(--muted);
+        border-radius: 3px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        color: var(--fg);
+      }
+      #stage {
+        overflow: auto;
+        max-width: 100%;
+        margin: 8px 0;
+      }
+      #stage iframe {
+        display: block;
+        border: 1px solid var(--panel);
+      }
+      pre,
+      textarea {
+        background: var(--panel);
+        color: var(--fg);
+        padding: 8px;
+        border-radius: 4px;
+        overflow: auto;
+        max-width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      textarea {
+        width: 100%;
+        height: 160px;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pixelworld bench</h1>
+    <p>
+      Bakes a fixed set of tiles in each world and level (cases: <span id="cases"></span>) at zooms 3, 2 and 1 on a
+      <span id="canvas"></span> canvas, with the tile cache off, and times each tile; then times frames with and
+      without traffic and fog, and reads memory. Keep this tab in front while it runs: browsers slow down animation
+      frames in background tabs. On a GPU it takes about a minute; in software rendering, much longer.
+    </p>
+    <p><button id="run">Run</button> <span id="status">idle</span></p>
+    <div id="stage"></div>
+    <p>
+      <button id="copy-text">Copy text</button> <button id="copy-json">Copy JSON</button>
+    </p>
+    <pre id="text">(the report appears here)</pre>
+    <textarea id="json" readonly spellcheck="false"></textarea>
+    <script type="module" src="/src/bench.ts"></script>
+  </body>
+</html>

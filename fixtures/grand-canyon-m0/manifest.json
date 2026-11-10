@@ -1,0 +1,114 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "grand-canyon-m0",
+  "name": "Grand Canyon (M0 slice)",
+  "chunkSize": 64,
+  "cellsX": 128,
+  "cellsY": 128,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc",
+      "sha256": "ccfa67917d3fc5da1a08c903484461f16b0c8a1afdae0a22658848bd1fc5ac43",
+      "heightRange": [
+        28,
+        94
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc",
+      "sha256": "32e9f9341b39904f0acbb31487080e952a8559d47b7c1ccc8897c7cb982f156b",
+      "heightRange": [
+        34,
+        96
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc",
+      "sha256": "f0de6edd7c9e514c80c57f2a43710337d339d7f8c1a7406fd1dd187105c1b382",
+      "heightRange": [
+        28,
+        82
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc",
+      "sha256": "096f9a5d25114830963337da840f75037f30a361af37c311ac452b215f0e7c3f",
+      "heightRange": [
+        29,
+        85
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 160.0,
+    "metersPerStep": 26.127891,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    28,
+    96
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors (Colorado River)",
+      "license": "ODbL 1.0",
+      "url": "https://www.openstreetmap.org/copyright"
+    }
+  ],
+  "start": {
+    "x": 68,
+    "y": 75
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.115 +lon_0=-112.12 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -112.23387,
+      36.02266,
+      -112.00613,
+      36.20723
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.fixtures.grand_canyon_m0",
+    "version": "0",
+    "params": {
+      "centerLat": 36.115,
+      "centerLon": -112.12,
+      "cells": 128,
+      "resampling": "average",
+      "smoothSigmaCells": 0.0,
+      "bilateral": {
+        "sigmaCells": 1.5,
+        "sigmaMeters": 48.0
+      },
+      "steepMode": "flat",
+      "maxSlopeSteps": 2
+    }
+  },
+  "packageHash": "57bdd5f958be0d4daeb392678d620ebbcde62d3590dd124056a96b38474199cf"
+}

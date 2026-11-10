@@ -1,0 +1,3 @@
+# The shared download cache, linked into worktrees (a symlink, which ../.gitignore
+# matches only as a directory)
+/.cache

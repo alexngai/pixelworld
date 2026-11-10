@@ -1,0 +1,9 @@
+name: Desert View Watchtower
+wikidata: Q2062022
+anchor: { lon: -111.8261, lat: 36.0441 }
+height: 160         # depicted: about 8× its real 21 m (and as wide, by the style's
+                    # radiusPerHeight) so the tower reads on the rim at 150 m cells
+clear: 30
+hero: true          # baked offline and painted over (D-053)
+depictions:
+  generic: { group: landmark.tower.lookout }

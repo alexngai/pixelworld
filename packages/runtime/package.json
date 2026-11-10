@@ -1,0 +1,17 @@
+{
+  "name": "@pixelworlds/runtime",
+  "license": "MIT OR Apache-2.0",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pixelworlds/grid": "workspace:*",
+    "@pixelworlds/style": "workspace:*",
+    "@pixelworlds/world-format": "workspace:*",
+    "@pixelworlds/generators": "workspace:*",
+    "@pixelworlds/bake": "workspace:*"
+  }
+}

@@ -1,0 +1,2842 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "southwest",
+  "name": "US Southwest",
+  "chunkSize": 64,
+  "cellsX": 1155,
+  "cellsY": 709,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "1d10de3bf90ec726bb5c6ecc3320acd7b31c1d503f2bb7293649cc02a9406c36",
+      "heightRange": [
+        20,
+        38
+      ],
+      "metersPerCell": 418.3
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "ee0554fd72392350115b390f005612ed0dea1474f768f5b56f21dcb3758a16be",
+      "heightRange": [
+        20,
+        43
+      ],
+      "metersPerCell": 416.6
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "b2543403811b9476105796dd4d0f870cf12d667224fb3368296db5b899608895",
+      "heightRange": [
+        18,
+        37
+      ],
+      "metersPerCell": 418.1
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "77d677b100a08933526194ebcb7b14f7a7902873f4faee4c363dbd306f94be68",
+      "heightRange": [
+        15,
+        34
+      ],
+      "metersPerCell": 413.2
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "4c7746fefdbd83fa2326c9f09ee2d714717aa926691ded5befd14ebb81f1f67a",
+      "heightRange": [
+        16,
+        37
+      ],
+      "metersPerCell": 415.0
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "462072153fd364c677acd2d3ee7808d26d5ca983a29b0bb726c5dec27560d1ea",
+      "heightRange": [
+        16,
+        37
+      ],
+      "metersPerCell": 416.3
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "path": "chunks/6_0.pxwc.gz",
+      "sha256": "d87cfc2da5b617a5460ca7ace3189a5f72b9740e0d8b67c2e05f7a989bec4075",
+      "heightRange": [
+        13,
+        35
+      ],
+      "metersPerCell": 419.4
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "path": "chunks/7_0.pxwc.gz",
+      "sha256": "a2d23b19fe86d1743d9dc2558d572a8bc52d19e354edba5cc6a5a414865b9d15",
+      "heightRange": [
+        16,
+        35
+      ],
+      "metersPerCell": 423.8
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "path": "chunks/8_0.pxwc.gz",
+      "sha256": "bda3a3379f51d9d445e20c24cb9769c62538f4ecdc10c8c8b981042c81aff6ff",
+      "heightRange": [
+        15,
+        35
+      ],
+      "metersPerCell": 428.3
+    },
+    {
+      "x": 9,
+      "y": 0,
+      "path": "chunks/9_0.pxwc.gz",
+      "sha256": "fc4412910efb881d815a7bd0afe63e916e9aa81fdc698659b20321c6392daa65",
+      "heightRange": [
+        17,
+        47
+      ],
+      "metersPerCell": 430.1
+    },
+    {
+      "x": 10,
+      "y": 0,
+      "path": "chunks/10_0.pxwc.gz",
+      "sha256": "1155c3698ee28f6ba0332833a3b2f807ff0494e4e02ce6ec6ac1c022353f0942",
+      "heightRange": [
+        14,
+        46
+      ],
+      "metersPerCell": 414.3
+    },
+    {
+      "x": 11,
+      "y": 0,
+      "path": "chunks/11_0.pxwc.gz",
+      "sha256": "518ccb53132e1b454750814e39faa7d3783f8c3d0687dc0d06d17d0dc2ce2d76",
+      "heightRange": [
+        17,
+        45
+      ],
+      "metersPerCell": 425.2
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "path": "chunks/12_0.pxwc.gz",
+      "sha256": "7c54702a5dfe2170832792ee6b6bd2ca97e1d882036a9c599b13385f7c65bc6e",
+      "heightRange": [
+        24,
+        47
+      ],
+      "metersPerCell": 420.9
+    },
+    {
+      "x": 13,
+      "y": 0,
+      "path": "chunks/13_0.pxwc.gz",
+      "sha256": "85277708470d98e9d19431086915f1cd07766dfebe273a207b262768305dac1e",
+      "heightRange": [
+        25,
+        42
+      ],
+      "metersPerCell": 405.7
+    },
+    {
+      "x": 14,
+      "y": 0,
+      "path": "chunks/14_0.pxwc.gz",
+      "sha256": "caf8db879cd7f5965b17a25629ec4029bb8672a58dcee400e53c7f7df04cc5ed",
+      "heightRange": [
+        26,
+        44
+      ],
+      "metersPerCell": 412.5
+    },
+    {
+      "x": 15,
+      "y": 0,
+      "path": "chunks/15_0.pxwc.gz",
+      "sha256": "824ef7c6e6b8f5ab9195a2d6eb6e61900d3a352026a51bc50bc3c70ebca4df64",
+      "heightRange": [
+        21,
+        35
+      ],
+      "metersPerCell": 408.5
+    },
+    {
+      "x": 16,
+      "y": 0,
+      "path": "chunks/16_0.pxwc.gz",
+      "sha256": "fb2cdd5aac22cb0df8873c7d4251d9f14a180e0ee46ba0df871ffc7fb7e56d66",
+      "heightRange": [
+        21,
+        35
+      ],
+      "metersPerCell": 406.2
+    },
+    {
+      "x": 17,
+      "y": 0,
+      "path": "chunks/17_0.pxwc.gz",
+      "sha256": "d1585cee26a385cb1f8a5e3f19cf1d878038afe5fbd392294642e58f39767d85",
+      "heightRange": [
+        20,
+        35
+      ],
+      "metersPerCell": 405.1
+    },
+    {
+      "x": 18,
+      "y": 0,
+      "path": "chunks/18_0.pxwc.gz",
+      "sha256": "0b8d43f46835d7ad942b4f594c7dd0ab6688c0d43ecb7854f0509824ac875666",
+      "heightRange": [
+        20,
+        32
+      ],
+      "metersPerCell": 404.1
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "ff0ee1301e01ece8466081ab5d4e1a95537a3cdc2b3c2fa6783407b0c55044d7",
+      "heightRange": [
+        17,
+        30
+      ],
+      "metersPerCell": 423.4
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "5cd9a3d2843c444681cf711d7e4db8742cffac69b6f72b6b871c6a2569503811",
+      "heightRange": [
+        16,
+        33
+      ],
+      "metersPerCell": 421.5
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "b8e1b51eeb097c43971988530d2d38678f30f2bea25867d5686e6deaddb892e2",
+      "heightRange": [
+        15,
+        32
+      ],
+      "metersPerCell": 419.2
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "e6195e80e80715c468320d04d0a026443bddc8f69eba85f700c835e73698d863",
+      "heightRange": [
+        14,
+        35
+      ],
+      "metersPerCell": 416.4
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "74fe149f7f3bd1d610290232d6e708f4386e74dd4ba350f2ce6d035fd8d57de5",
+      "heightRange": [
+        11,
+        30
+      ],
+      "metersPerCell": 413.0
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "358e7e5dd66c962d5b4d682aab3c0092def94f2d9af580f73581e50362962d3e",
+      "heightRange": [
+        9,
+        29
+      ],
+      "metersPerCell": 413.4
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "path": "chunks/6_1.pxwc.gz",
+      "sha256": "7bba91572027107de9b10e4c06562bc0cfa1e2a8b9598683ec241c45b2f2f4cc",
+      "heightRange": [
+        11,
+        34
+      ],
+      "metersPerCell": 417.6
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "path": "chunks/7_1.pxwc.gz",
+      "sha256": "c4e3f08e50ab04dc2f3926281cbf78944363e3c8cd36f76543ea0920ce2c4d99",
+      "heightRange": [
+        11,
+        25
+      ],
+      "metersPerCell": 423.3
+    },
+    {
+      "x": 8,
+      "y": 1,
+      "path": "chunks/8_1.pxwc.gz",
+      "sha256": "dec580e1e0b1840bb806e291452eda6c1569df9002419f4e2dfb76f501c8b811",
+      "heightRange": [
+        10,
+        35
+      ],
+      "metersPerCell": 426.8
+    },
+    {
+      "x": 9,
+      "y": 1,
+      "path": "chunks/9_1.pxwc.gz",
+      "sha256": "8a1f3474a80e837ec70429dfa5bb93289aed735055b47762d10d40252f1e0aa5",
+      "heightRange": [
+        11,
+        25
+      ],
+      "metersPerCell": 384.2
+    },
+    {
+      "x": 10,
+      "y": 1,
+      "path": "chunks/10_1.pxwc.gz",
+      "sha256": "efc9460a6be44e2b3b8ef67a05a2f4c4e48ceefa9042be0e87860ef27464a16b",
+      "heightRange": [
+        12,
+        27
+      ],
+      "metersPerCell": 393.7
+    },
+    {
+      "x": 11,
+      "y": 1,
+      "path": "chunks/11_1.pxwc.gz",
+      "sha256": "ad8aa90daff271b65bca465c837955cfdc743bb9c961254764a1162e74500b0c",
+      "heightRange": [
+        16,
+        39
+      ],
+      "metersPerCell": 382.5
+    },
+    {
+      "x": 12,
+      "y": 1,
+      "path": "chunks/12_1.pxwc.gz",
+      "sha256": "bb21d012050569831151f1a4b7d76f8e81c330d4591deba7cb151b96a6ca24e3",
+      "heightRange": [
+        18,
+        33
+      ],
+      "metersPerCell": 423.2
+    },
+    {
+      "x": 13,
+      "y": 1,
+      "path": "chunks/13_1.pxwc.gz",
+      "sha256": "f233d1a75cb171b2cbd6fb9f6b7a6a1e5bdf5bcfe7c6f4b773572d3309c37120",
+      "heightRange": [
+        21,
+        33
+      ],
+      "metersPerCell": 409.4
+    },
+    {
+      "x": 14,
+      "y": 1,
+      "path": "chunks/14_1.pxwc.gz",
+      "sha256": "2ed101877d825110460c31b362cee62709242aac5ce94cb3087908c15b38e3b4",
+      "heightRange": [
+        22,
+        35
+      ],
+      "metersPerCell": 412.3
+    },
+    {
+      "x": 15,
+      "y": 1,
+      "path": "chunks/15_1.pxwc.gz",
+      "sha256": "8f7c31c97116250600f6abdbc15630e12d24475930d3149d7b37352122412106",
+      "heightRange": [
+        20,
+        32
+      ],
+      "metersPerCell": 406.4
+    },
+    {
+      "x": 16,
+      "y": 1,
+      "path": "chunks/16_1.pxwc.gz",
+      "sha256": "e4687a1101f47d76beff0f9689288b370a5a9970a0290328f739a70f439cb2d5",
+      "heightRange": [
+        16,
+        29
+      ],
+      "metersPerCell": 398.4
+    },
+    {
+      "x": 17,
+      "y": 1,
+      "path": "chunks/17_1.pxwc.gz",
+      "sha256": "696f464a0dfe641e2267bc5a55a884be59b37d5351b37ebfa2e16352e979e3ca",
+      "heightRange": [
+        14,
+        28
+      ],
+      "metersPerCell": 395.2
+    },
+    {
+      "x": 18,
+      "y": 1,
+      "path": "chunks/18_1.pxwc.gz",
+      "sha256": "7be4c76b3f2e72ac27e316c44244e9491cc99e42b52ed41332aaec19a5e9613b",
+      "heightRange": [
+        16,
+        27
+      ],
+      "metersPerCell": 398.2
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "671d4753e7bf07bcff7c568b9aed84e0b22abc35b7dea92b40c46105ff82dcda",
+      "heightRange": [
+        14,
+        29
+      ],
+      "metersPerCell": 432.5
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "51e359466520fb26232b2d19fa3c5e095f372b4a1f867c02c8b8fa146373269d",
+      "heightRange": [
+        14,
+        31
+      ],
+      "metersPerCell": 426.0
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "6a58e740d3029ee122ebd7a1097e0bc7fe8569226f569a6d37e58bf66518b8d1",
+      "heightRange": [
+        14,
+        40
+      ],
+      "metersPerCell": 418.2
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "33a73f8a0fbbfde0486e2c9287d434c2ecc39fd22638e3f23c5b50715b7f12f4",
+      "heightRange": [
+        15,
+        46
+      ],
+      "metersPerCell": 410.6
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "76cadbb8c07906aa955131928bc295ade6027772cb111185585cbaccdbc0d96e",
+      "heightRange": [
+        9,
+        29
+      ],
+      "metersPerCell": 404.3
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "6bcb332f240ece7ccfe693c1489001590b14e462e45c64bb40f42b41ee56f0fe",
+      "heightRange": [
+        7,
+        20
+      ],
+      "metersPerCell": 402.8
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "path": "chunks/6_2.pxwc.gz",
+      "sha256": "8b57d7f75095a10b432eabd4165cd8923844cc962031254188e28bcb0d62343b",
+      "heightRange": [
+        7,
+        34
+      ],
+      "metersPerCell": 413.4
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "path": "chunks/7_2.pxwc.gz",
+      "sha256": "b61f287e122b70012974b7743a3edb5c5e2e509bab6b3a716ecb30b47c213743",
+      "heightRange": [
+        6,
+        24
+      ],
+      "metersPerCell": 410.4
+    },
+    {
+      "x": 8,
+      "y": 2,
+      "path": "chunks/8_2.pxwc.gz",
+      "sha256": "941f55c86a727e7fbdf1776ccce7a472e478c5fab2c338180378986ffc12dabf",
+      "heightRange": [
+        7,
+        36
+      ],
+      "metersPerCell": 417.9
+    },
+    {
+      "x": 9,
+      "y": 2,
+      "path": "chunks/9_2.pxwc.gz",
+      "sha256": "397a3c6f7ef01b560cc1ca9cf4d939f222c48611acb76da290d5823b9fbb8c95",
+      "heightRange": [
+        11,
+        34
+      ],
+      "metersPerCell": 436.1
+    },
+    {
+      "x": 10,
+      "y": 2,
+      "path": "chunks/10_2.pxwc.gz",
+      "sha256": "534ada691912d97218b16952f16cfbc872fbf3819587fe8a2d7b38ec9f951af1",
+      "heightRange": [
+        13,
+        27
+      ],
+      "metersPerCell": 435.3
+    },
+    {
+      "x": 11,
+      "y": 2,
+      "path": "chunks/11_2.pxwc.gz",
+      "sha256": "f060026fa7d3729ea02df8d89e37ffddb97e2d6003a3263ff53affcec30f5668",
+      "heightRange": [
+        21,
+        31
+      ],
+      "metersPerCell": 424.5
+    },
+    {
+      "x": 12,
+      "y": 2,
+      "path": "chunks/12_2.pxwc.gz",
+      "sha256": "71b1307199b416fe87c184feb948028487501e3d329d096b57b7ef9f3e5730c7",
+      "heightRange": [
+        18,
+        31
+      ],
+      "metersPerCell": 426.2
+    },
+    {
+      "x": 13,
+      "y": 2,
+      "path": "chunks/13_2.pxwc.gz",
+      "sha256": "f7d6f9364256bde085f7ae9777b88227299152431edeaca1984187c8c9e2aa32",
+      "heightRange": [
+        20,
+        38
+      ],
+      "metersPerCell": 422.7
+    },
+    {
+      "x": 14,
+      "y": 2,
+      "path": "chunks/14_2.pxwc.gz",
+      "sha256": "f1b137712ab59a698d0876ef64eaa9e138321d956aeb9fb050a0da56771542a4",
+      "heightRange": [
+        23,
+        41
+      ],
+      "metersPerCell": 414.3
+    },
+    {
+      "x": 15,
+      "y": 2,
+      "path": "chunks/15_2.pxwc.gz",
+      "sha256": "ab9c1a62589bff53322fc0b4cbc5c8e86490afa56455a6c59bdcae08dd0875b8",
+      "heightRange": [
+        22,
+        35
+      ],
+      "metersPerCell": 402.4
+    },
+    {
+      "x": 16,
+      "y": 2,
+      "path": "chunks/16_2.pxwc.gz",
+      "sha256": "1ffbcf18c17c018d0d36e7fb5d227217e3c6bfcd1dd6039789ec80cbe3d43185",
+      "heightRange": [
+        14,
+        35
+      ],
+      "metersPerCell": 394.2
+    },
+    {
+      "x": 17,
+      "y": 2,
+      "path": "chunks/17_2.pxwc.gz",
+      "sha256": "1b074e8deac0dde81d8e195dde0dfe547255075669a0302a5c8423532a83ce87",
+      "heightRange": [
+        14,
+        32
+      ],
+      "metersPerCell": 388.7
+    },
+    {
+      "x": 18,
+      "y": 2,
+      "path": "chunks/18_2.pxwc.gz",
+      "sha256": "4d44aad6ac8554018279ffefa5f07bee9f5c63e6a3b8671e927796aa57a94f98",
+      "heightRange": [
+        19,
+        28
+      ],
+      "metersPerCell": 385.9
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "58881c7bcebcb891063bc8d85302ea3bbdd0d5b26c3031200c7714120c4ffea8",
+      "heightRange": [
+        14,
+        42
+      ],
+      "metersPerCell": 436.0
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "f718531b74e84fc42fb52143f3bd54ec15ad94de3b5649e4e08fd8f12e9db74f",
+      "heightRange": [
+        13,
+        31
+      ],
+      "metersPerCell": 418.5
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "7f61edc92abc3907159885de03368b0143cff97c8da0f842980899ba5eef3231",
+      "heightRange": [
+        9,
+        44
+      ],
+      "metersPerCell": 381.0
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "9c1eec2c88d294c1deb2399f875b676c5a3aa760e5e02565bf8bb29f2e843544",
+      "heightRange": [
+        8,
+        45
+      ],
+      "metersPerCell": 358.9
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "4dcdf70b71c48d933d64708735d413b1d18b45fd731f9fce64d0d56f81380fce",
+      "heightRange": [
+        8,
+        31
+      ],
+      "metersPerCell": 382.0
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "5aee1db484636f1f19b01e7fc5d7ddd6773f86115778ebf42056038603817063",
+      "heightRange": [
+        7,
+        19
+      ],
+      "metersPerCell": 380.9
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "path": "chunks/6_3.pxwc.gz",
+      "sha256": "ff6c095c9d2dc3673167cefe03fa5dd4908970f96cc0caff0daa5c594ccf998b",
+      "heightRange": [
+        5,
+        16
+      ],
+      "metersPerCell": 392.5
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "path": "chunks/7_3.pxwc.gz",
+      "sha256": "86cac03240bcd30bbee68cabeb83321224d2d66c4ad5b53080373ad3e8e98d3f",
+      "heightRange": [
+        5,
+        36
+      ],
+      "metersPerCell": 424.6
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "path": "chunks/8_3.pxwc.gz",
+      "sha256": "cecb199ad28f2091d456e14a7def100ab6b76f543655d5bff736911ee34e3c36",
+      "heightRange": [
+        10,
+        36
+      ],
+      "metersPerCell": 435.7
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "path": "chunks/9_3.pxwc.gz",
+      "sha256": "92f83bacfd3e45e1202833128b60a018d2f325ac0abdb8c244059c78b0cd2004",
+      "heightRange": [
+        14,
+        28
+      ],
+      "metersPerCell": 441.8
+    },
+    {
+      "x": 10,
+      "y": 3,
+      "path": "chunks/10_3.pxwc.gz",
+      "sha256": "f04681aec5199f17c927b0efc672ba130738d65e1e322ff0d6c266c694da27ac",
+      "heightRange": [
+        19,
+        30
+      ],
+      "metersPerCell": 443.2
+    },
+    {
+      "x": 11,
+      "y": 3,
+      "path": "chunks/11_3.pxwc.gz",
+      "sha256": "0025c0ad03874be9f2d7e4bcb0bcca4d35bfa929d7fd5e575d22ac6f84519761",
+      "heightRange": [
+        19,
+        28
+      ],
+      "metersPerCell": 441.3
+    },
+    {
+      "x": 12,
+      "y": 3,
+      "path": "chunks/12_3.pxwc.gz",
+      "sha256": "a4c2c41c44b511a5831559d09f79d30dfa017e4af300f8e3881d0c13c81325a2",
+      "heightRange": [
+        11,
+        34
+      ],
+      "metersPerCell": 433.4
+    },
+    {
+      "x": 13,
+      "y": 3,
+      "path": "chunks/13_3.pxwc.gz",
+      "sha256": "4d01cacf17a7b3f1e2d5b06a5a89450aedc2c263ecf458ca9d27a2dc66746fb8",
+      "heightRange": [
+        16,
+        42
+      ],
+      "metersPerCell": 409.2
+    },
+    {
+      "x": 14,
+      "y": 3,
+      "path": "chunks/14_3.pxwc.gz",
+      "sha256": "2c3d690df0bf93ad3b2d4fb7b55a8247f46ba4826f87a849e40358843d3dc30d",
+      "heightRange": [
+        33,
+        44
+      ],
+      "metersPerCell": 362.4
+    },
+    {
+      "x": 15,
+      "y": 3,
+      "path": "chunks/15_3.pxwc.gz",
+      "sha256": "37f78e9a0df119e8a4b2530c49f42b17892a7ccc9fa7e56cd7d3147e224d08b8",
+      "heightRange": [
+        18,
+        45
+      ],
+      "metersPerCell": 370.9
+    },
+    {
+      "x": 16,
+      "y": 3,
+      "path": "chunks/16_3.pxwc.gz",
+      "sha256": "b2d9906842a72e7b7149823eaac4b56023a2cec97eb8edbcf022274f5d66fe49",
+      "heightRange": [
+        12,
+        35
+      ],
+      "metersPerCell": 377.2
+    },
+    {
+      "x": 17,
+      "y": 3,
+      "path": "chunks/17_3.pxwc.gz",
+      "sha256": "350d4d83d338c0ebc5b97275bb517e91e7e5519d2224af6c0d956e0ab14bf999",
+      "heightRange": [
+        22,
+        34
+      ],
+      "metersPerCell": 377.4
+    },
+    {
+      "x": 18,
+      "y": 3,
+      "path": "chunks/18_3.pxwc.gz",
+      "sha256": "242ef470481eca6a56ed3c11dbcd3e75b3a933af0d08adc3cb6efaee2fa5af2e",
+      "heightRange": [
+        26,
+        29
+      ],
+      "metersPerCell": 380.3
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "a3c4b511214897da84735f0a30d479c27466e2b0bd7d11cc9c7f5c84d59d167d",
+      "heightRange": [
+        12,
+        54
+      ],
+      "metersPerCell": 438.4
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "b1bbeee6ec3926913c2a58a9ba697303e45d3414c94be5d5c2483739b6626114",
+      "heightRange": [
+        9,
+        41
+      ],
+      "metersPerCell": 311.4
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "e2201fd4f3580fd35812ceceac26777034454a5cd80200cb21f5df8c7182eb59",
+      "heightRange": [
+        8,
+        14
+      ],
+      "metersPerCell": 125.5
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "468a5772bca141c92e71ff6723002fc29f07cb7ac9d7b1bfe438157a4efcc22f",
+      "heightRange": [
+        6,
+        11
+      ],
+      "metersPerCell": 116.4
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "5983ade21f9c8d7527943b8a34c85df06972f27b3d7fc21f1543f3632c6047f9",
+      "heightRange": [
+        6,
+        24
+      ],
+      "metersPerCell": 222.8
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "path": "chunks/5_4.pxwc.gz",
+      "sha256": "df06030c3db4cf6d623447843cc534950382b912f2777b6fa5181626285a5536",
+      "heightRange": [
+        7,
+        30
+      ],
+      "metersPerCell": 327.9
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "path": "chunks/6_4.pxwc.gz",
+      "sha256": "b1671b6b8f789e704462744cf18184b9e33580d68562d7bd5a315a307dd721d3",
+      "heightRange": [
+        7,
+        29
+      ],
+      "metersPerCell": 297.3
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "path": "chunks/7_4.pxwc.gz",
+      "sha256": "e2843b8103dad151c003b2b4fa59710d6d2f5a890e2e2d0ff41f996c78f76129",
+      "heightRange": [
+        3,
+        18
+      ],
+      "metersPerCell": 351.7
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "path": "chunks/8_4.pxwc.gz",
+      "sha256": "ad8d4881ebfa950382dc6a78decf847b18b2ac26cc4db7ad488e8b04dd76a7d5",
+      "heightRange": [
+        6,
+        26
+      ],
+      "metersPerCell": 445.5
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "path": "chunks/9_4.pxwc.gz",
+      "sha256": "67968b18bb9210c49d60d6b0a834358365addb689275364714951510946aa604",
+      "heightRange": [
+        10,
+        31
+      ],
+      "metersPerCell": 448.7
+    },
+    {
+      "x": 10,
+      "y": 4,
+      "path": "chunks/10_4.pxwc.gz",
+      "sha256": "4928a0b34b84917cc5020000685720e05daafc481d29c9e4131ea4d305336179",
+      "heightRange": [
+        20,
+        37
+      ],
+      "metersPerCell": 448.7
+    },
+    {
+      "x": 11,
+      "y": 4,
+      "path": "chunks/11_4.pxwc.gz",
+      "sha256": "04beb43c65ba0d536a392e4d1fc3b49ac54e56f3668703a58bc940a5069f9266",
+      "heightRange": [
+        9,
+        31
+      ],
+      "metersPerCell": 441.8
+    },
+    {
+      "x": 12,
+      "y": 4,
+      "path": "chunks/12_4.pxwc.gz",
+      "sha256": "a59e22ee05808c304bc5e59f3b049ba41c23116ee133f66bae343269fe7f4102",
+      "heightRange": [
+        -3,
+        39
+      ],
+      "metersPerCell": 381.3
+    },
+    {
+      "x": 13,
+      "y": 4,
+      "path": "chunks/13_4.pxwc.gz",
+      "sha256": "7778c5e299bf0a22449ca6f65a274b7e0cc298cc7e1fe452c1a1fddaad28770b",
+      "heightRange": [
+        0,
+        51
+      ],
+      "metersPerCell": 201.3
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "path": "chunks/14_4.pxwc.gz",
+      "sha256": "e739cb79b5483dd37879335a968ccb56919f0973d89e58296b65e12bf2a6c45b",
+      "heightRange": [
+        6,
+        53
+      ],
+      "metersPerCell": 161.5
+    },
+    {
+      "x": 15,
+      "y": 4,
+      "path": "chunks/15_4.pxwc.gz",
+      "sha256": "608cbc95244566f7e7c59864e47cbf5b99924088352a0e212ea821f61d574566",
+      "heightRange": [
+        -1,
+        53
+      ],
+      "metersPerCell": 182.7
+    },
+    {
+      "x": 16,
+      "y": 4,
+      "path": "chunks/16_4.pxwc.gz",
+      "sha256": "b7936a71503d80ad0749be0895f236703644df88e743f467243c8fb64f419b56",
+      "heightRange": [
+        7,
+        52
+      ],
+      "metersPerCell": 291.2
+    },
+    {
+      "x": 17,
+      "y": 4,
+      "path": "chunks/17_4.pxwc.gz",
+      "sha256": "727a943d620eae636ef63ddbd0b01be65d857dfd4886e4340b22482b816102c8",
+      "heightRange": [
+        9,
+        32
+      ],
+      "metersPerCell": 372.3
+    },
+    {
+      "x": 18,
+      "y": 4,
+      "path": "chunks/18_4.pxwc.gz",
+      "sha256": "f79d87b469af1f2036bdc7ebf6dc91b9489318295a24b24261b74c1b5edfabbd",
+      "heightRange": [
+        24,
+        30
+      ],
+      "metersPerCell": 386.6
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "40254b6c755269f5263d7f0236204de05e5dc1a98a5ffb7c34c9f9d9ece24d84",
+      "heightRange": [
+        12,
+        49
+      ],
+      "metersPerCell": 433.0
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "a6d67aeda2949637fe6dcd53d28f1a3af634a834f1ebabfd87a26e2e13de0468",
+      "heightRange": [
+        5,
+        37
+      ],
+      "metersPerCell": 168.2
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "e671312eee02a91b532b6d02212e0812807c93c2a54f1999a09eca7d5fc17f56",
+      "heightRange": [
+        8,
+        11
+      ],
+      "metersPerCell": 100.5
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "75823ab367fd45e6270694f69793e801e686e6eefccc30966ab43189031a95dd",
+      "heightRange": [
+        6,
+        10
+      ],
+      "metersPerCell": 100.2
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "path": "chunks/4_5.pxwc.gz",
+      "sha256": "fc15afa3b56c09945adacf069516db0c65df2beaf470cea197ac4ba5e998c8fa",
+      "heightRange": [
+        5,
+        26
+      ],
+      "metersPerCell": 129.0
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "path": "chunks/5_5.pxwc.gz",
+      "sha256": "338cceeaca64a2fdef8708c2871ca3f88c120981c0c44baa361a2392ee45c31b",
+      "heightRange": [
+        3,
+        18
+      ],
+      "metersPerCell": 274.5
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "path": "chunks/6_5.pxwc.gz",
+      "sha256": "5095ffb807c65a2cd5f6bc3c1efe1084a09dc34cfd5428a1295555556a6b6513",
+      "heightRange": [
+        2,
+        22
+      ],
+      "metersPerCell": 241.4
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "path": "chunks/7_5.pxwc.gz",
+      "sha256": "3fdbf7b2391eb6d2086a8d43aa8bb5421fb7a3610184aebecde8a7e0f7c6bf25",
+      "heightRange": [
+        3,
+        22
+      ],
+      "metersPerCell": 262.0
+    },
+    {
+      "x": 8,
+      "y": 5,
+      "path": "chunks/8_5.pxwc.gz",
+      "sha256": "383a611064406b4ff97ae9caab90017924ee96a7766afc6c89638bedb48c72c0",
+      "heightRange": [
+        3,
+        25
+      ],
+      "metersPerCell": 417.9
+    },
+    {
+      "x": 9,
+      "y": 5,
+      "path": "chunks/9_5.pxwc.gz",
+      "sha256": "52ab2918b5e780738704965c92f8b7e58b21575e1ef1871d614a14690ec75ba0",
+      "heightRange": [
+        6,
+        31
+      ],
+      "metersPerCell": 451.6
+    },
+    {
+      "x": 10,
+      "y": 5,
+      "path": "chunks/10_5.pxwc.gz",
+      "sha256": "d060afaf54b12ee65f5159ef009c8ad5a76d63eb775eef0a6e25a641abf99087",
+      "heightRange": [
+        8,
+        35
+      ],
+      "metersPerCell": 449.6
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "path": "chunks/11_5.pxwc.gz",
+      "sha256": "33298cedf941d25b1c21a7a8be6e9c4372f781051bf22ebd938ef89f62b9894c",
+      "heightRange": [
+        9,
+        30
+      ],
+      "metersPerCell": 435.0
+    },
+    {
+      "x": 12,
+      "y": 5,
+      "path": "chunks/12_5.pxwc.gz",
+      "sha256": "af2aa6d9b2ad486b4ce3f354982899d0bf02b34d546338449f0f6cbd80e825e9",
+      "heightRange": [
+        -6,
+        43
+      ],
+      "metersPerCell": 255.6
+    },
+    {
+      "x": 13,
+      "y": 5,
+      "path": "chunks/13_5.pxwc.gz",
+      "sha256": "e03608db37dcd3539ad68d36907bae9a2d300ac5626f695b38e138a109d0464a",
+      "heightRange": [
+        -10,
+        45
+      ],
+      "metersPerCell": 150.9
+    },
+    {
+      "x": 14,
+      "y": 5,
+      "path": "chunks/14_5.pxwc.gz",
+      "sha256": "85780487b81b9747169ed0fb7616e8d2f126e86b4021b9764148f05ae0d5b376",
+      "heightRange": [
+        -10,
+        53
+      ],
+      "metersPerCell": 150.0
+    },
+    {
+      "x": 15,
+      "y": 5,
+      "path": "chunks/15_5.pxwc.gz",
+      "sha256": "00af2854615c5075c490ebe903b0bf9fd97d70877851aeaabf30ec3f68335152",
+      "heightRange": [
+        -9,
+        56
+      ],
+      "metersPerCell": 151.8
+    },
+    {
+      "x": 16,
+      "y": 5,
+      "path": "chunks/16_5.pxwc.gz",
+      "sha256": "383cf4ca55dfb710cc4610dcfeca4d9455c3586e246d2ce3666b8f226a9471c1",
+      "heightRange": [
+        -7,
+        55
+      ],
+      "metersPerCell": 168.5
+    },
+    {
+      "x": 17,
+      "y": 5,
+      "path": "chunks/17_5.pxwc.gz",
+      "sha256": "5d3f5776ea843bc8850d78d23a44656d85d4710496fdfa1787b3ad1a940ccf44",
+      "heightRange": [
+        -2,
+        48
+      ],
+      "metersPerCell": 285.1
+    },
+    {
+      "x": 18,
+      "y": 5,
+      "path": "chunks/18_5.pxwc.gz",
+      "sha256": "ba26b97c89facabb4c67b362a26ca626bbf894642d131c90c15ac26b6519c4e9",
+      "heightRange": [
+        22,
+        25
+      ],
+      "metersPerCell": 440.5
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "e50f9e4c186b8992c3e007407e4e7c4b0cdf10cd0506c2e1ac9e37b6588c7dff",
+      "heightRange": [
+        12,
+        33
+      ],
+      "metersPerCell": 433.8
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "113ee70774c8acab6f5d07666664b54aa0f20309f5ff686dcafd94fe47726b26",
+      "heightRange": [
+        6,
+        29
+      ],
+      "metersPerCell": 180.7
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "3a7fc8871a1d7a6e443bee2067a25652291c139762c6a0d15cfeddcbfe18bc3c",
+      "heightRange": [
+        8,
+        12
+      ],
+      "metersPerCell": 101.0
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "path": "chunks/3_6.pxwc.gz",
+      "sha256": "c2dba731779b2cf68670d0af29519f0d70b26d8a3a6b48b72fe129525c6a61c2",
+      "heightRange": [
+        7,
+        10
+      ],
+      "metersPerCell": 101.5
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "path": "chunks/4_6.pxwc.gz",
+      "sha256": "cf636747c7955ff96271fbe15857effce519bd96be6576f85e813137cafe141a",
+      "heightRange": [
+        5,
+        18
+      ],
+      "metersPerCell": 178.5
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "path": "chunks/5_6.pxwc.gz",
+      "sha256": "e52e11c8252edcb0b928c3d66cb0c5d36b957ec8c88b0c15efe1297675521af8",
+      "heightRange": [
+        3,
+        13
+      ],
+      "metersPerCell": 132.2
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "path": "chunks/6_6.pxwc.gz",
+      "sha256": "f3a5800f34b815979345bd58233d86ac0ba1f1ca45f5fcbd1fc7305df5a9a10c",
+      "heightRange": [
+        2,
+        30
+      ],
+      "metersPerCell": 133.9
+    },
+    {
+      "x": 7,
+      "y": 6,
+      "path": "chunks/7_6.pxwc.gz",
+      "sha256": "5f414e67aa36f9a0659f40eaaa386e7b2c7f0197e5b045e959372e9fde049779",
+      "heightRange": [
+        3,
+        33
+      ],
+      "metersPerCell": 262.9
+    },
+    {
+      "x": 8,
+      "y": 6,
+      "path": "chunks/8_6.pxwc.gz",
+      "sha256": "a001425b7f4d435bac0e5b1b91b5cfb54757ebbdb91381daf92c3dfe56a20f72",
+      "heightRange": [
+        3,
+        27
+      ],
+      "metersPerCell": 420.9
+    },
+    {
+      "x": 9,
+      "y": 6,
+      "path": "chunks/9_6.pxwc.gz",
+      "sha256": "e77356756514dbc7fbedbbccbf624ce0f9dcb81d3655cf7c231b6230c0ac9c94",
+      "heightRange": [
+        6,
+        32
+      ],
+      "metersPerCell": 449.4
+    },
+    {
+      "x": 10,
+      "y": 6,
+      "path": "chunks/10_6.pxwc.gz",
+      "sha256": "09be37f5f8cb63a5010d289f54f2a90e624f1585452532b75e2f635bc51fe5f9",
+      "heightRange": [
+        8,
+        33
+      ],
+      "metersPerCell": 447.7
+    },
+    {
+      "x": 11,
+      "y": 6,
+      "path": "chunks/11_6.pxwc.gz",
+      "sha256": "030aaafd9ca38cab623dc07e43a72dbcb22238d43e6d6750a1d09e9c81cea281",
+      "heightRange": [
+        18,
+        31
+      ],
+      "metersPerCell": 436.9
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "path": "chunks/12_6.pxwc.gz",
+      "sha256": "263a453c48a991d66e41225dea4e2e42fcf4efcf1dcc52fd8cfa5b1508bdaf16",
+      "heightRange": [
+        19,
+        39
+      ],
+      "metersPerCell": 227.2
+    },
+    {
+      "x": 13,
+      "y": 6,
+      "path": "chunks/13_6.pxwc.gz",
+      "sha256": "af83177f4351980ed24547717ae6e6f7c3c7f0103279a1f01b359d09df54288f",
+      "heightRange": [
+        -4,
+        43
+      ],
+      "metersPerCell": 150.1
+    },
+    {
+      "x": 14,
+      "y": 6,
+      "path": "chunks/14_6.pxwc.gz",
+      "sha256": "e8d29fdad821e9c7df04b58b50b541fe8461a1b6d2484d87d0397e48c75aaa4b",
+      "heightRange": [
+        2,
+        49
+      ],
+      "metersPerCell": 150.3
+    },
+    {
+      "x": 15,
+      "y": 6,
+      "path": "chunks/15_6.pxwc.gz",
+      "sha256": "96791c512afb6c99fdd7310ec3c5b1c1242c94571d12da398957a356b14df41f",
+      "heightRange": [
+        -9,
+        48
+      ],
+      "metersPerCell": 152.5
+    },
+    {
+      "x": 16,
+      "y": 6,
+      "path": "chunks/16_6.pxwc.gz",
+      "sha256": "998ca20d77d3c7027aefca6f4536851666f75d1d1a6c96492208af63492e67cd",
+      "heightRange": [
+        -8,
+        50
+      ],
+      "metersPerCell": 155.0
+    },
+    {
+      "x": 17,
+      "y": 6,
+      "path": "chunks/17_6.pxwc.gz",
+      "sha256": "0512c709a8da1ac6c9d5af7def24cf656ec0971e00e370d84b4422ffa183bf07",
+      "heightRange": [
+        9,
+        48
+      ],
+      "metersPerCell": 238.6
+    },
+    {
+      "x": 18,
+      "y": 6,
+      "path": "chunks/18_6.pxwc.gz",
+      "sha256": "16bb51389430de5d5cbe4cc39d194f07e4501822c67a8a8311bd61427f231e35",
+      "heightRange": [
+        21,
+        24
+      ],
+      "metersPerCell": 469.3
+    },
+    {
+      "x": 0,
+      "y": 7,
+      "path": "chunks/0_7.pxwc.gz",
+      "sha256": "74e1773817eaccb89dba0206aa337fa47127778d5643074b5ced394aa6b6f9d4",
+      "heightRange": [
+        11,
+        33
+      ],
+      "metersPerCell": 429.7
+    },
+    {
+      "x": 1,
+      "y": 7,
+      "path": "chunks/1_7.pxwc.gz",
+      "sha256": "e4b02eac1cd50e81d54d11d735a4389237b01ea50f20d328b0a308a78e5caebe",
+      "heightRange": [
+        10,
+        39
+      ],
+      "metersPerCell": 338.2
+    },
+    {
+      "x": 2,
+      "y": 7,
+      "path": "chunks/2_7.pxwc.gz",
+      "sha256": "5e5f8a288a949ab2f898b225c280991954c1bee4f04ca6b7ef164258637f7a16",
+      "heightRange": [
+        8,
+        21
+      ],
+      "metersPerCell": 160.1
+    },
+    {
+      "x": 3,
+      "y": 7,
+      "path": "chunks/3_7.pxwc.gz",
+      "sha256": "a1fe7b1f853ec5620c5fc70aed977c07465cc4dc5eddbcac0cab0b84c43ac3da",
+      "heightRange": [
+        7,
+        22
+      ],
+      "metersPerCell": 143.6
+    },
+    {
+      "x": 4,
+      "y": 7,
+      "path": "chunks/4_7.pxwc.gz",
+      "sha256": "1c995c146461442ac1275cc225042acc6a44079bd8e4c435a82d36842d5fb614",
+      "heightRange": [
+        6,
+        26
+      ],
+      "metersPerCell": 266.1
+    },
+    {
+      "x": 5,
+      "y": 7,
+      "path": "chunks/5_7.pxwc.gz",
+      "sha256": "0688778ad2aadac508ab791c509ac6ac21c515b0e314bfbe2b3e001cb4f40455",
+      "heightRange": [
+        -1,
+        15
+      ],
+      "metersPerCell": 112.5
+    },
+    {
+      "x": 6,
+      "y": 7,
+      "path": "chunks/6_7.pxwc.gz",
+      "sha256": "d7fb479b9c11134a7015e2935f287f565efed77701f923811b60a2207fd2f0ed",
+      "heightRange": [
+        -1,
+        16
+      ],
+      "metersPerCell": 116.6
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "path": "chunks/7_7.pxwc.gz",
+      "sha256": "6b7b4af5fe478acf4855d60c96d8ea8263292cc55982ef729d32c99fbe74d579",
+      "heightRange": [
+        6,
+        33
+      ],
+      "metersPerCell": 339.9
+    },
+    {
+      "x": 8,
+      "y": 7,
+      "path": "chunks/8_7.pxwc.gz",
+      "sha256": "1e65eb77d3debffd2d20d227ffe4c3290414074a325c35ff19332d5e98c57690",
+      "heightRange": [
+        9,
+        31
+      ],
+      "metersPerCell": 434.3
+    },
+    {
+      "x": 9,
+      "y": 7,
+      "path": "chunks/9_7.pxwc.gz",
+      "sha256": "5a8c83c72a5e1f1c571e8f270f970a5c087aa76123c938acb5c574b8ac6b6ec1",
+      "heightRange": [
+        6,
+        29
+      ],
+      "metersPerCell": 444.9
+    },
+    {
+      "x": 10,
+      "y": 7,
+      "path": "chunks/10_7.pxwc.gz",
+      "sha256": "86663957fd90f0865f200eaffc997c7ab621e58b059567b244f6bed33f8c3aa3",
+      "heightRange": [
+        7,
+        34
+      ],
+      "metersPerCell": 445.2
+    },
+    {
+      "x": 11,
+      "y": 7,
+      "path": "chunks/11_7.pxwc.gz",
+      "sha256": "99fd81de7f92902140d6e8e85c02377efc3782802336e4dcb2de28cda16146ac",
+      "heightRange": [
+        26,
+        32
+      ],
+      "metersPerCell": 439.5
+    },
+    {
+      "x": 12,
+      "y": 7,
+      "path": "chunks/12_7.pxwc.gz",
+      "sha256": "2ae12404f8002c8fb3e46153ff89705fcb61acbe511d9e92b1d1ee15283a03ea",
+      "heightRange": [
+        20,
+        30
+      ],
+      "metersPerCell": 318.9
+    },
+    {
+      "x": 13,
+      "y": 7,
+      "path": "chunks/13_7.pxwc.gz",
+      "sha256": "d146d158265f7cf8160a4a5df7e4b98405c8453e68a9d0f07de4a2bc93a3ed16",
+      "heightRange": [
+        26,
+        33
+      ],
+      "metersPerCell": 160.1
+    },
+    {
+      "x": 14,
+      "y": 7,
+      "path": "chunks/14_7.pxwc.gz",
+      "sha256": "b49335c6822051985dddcfbef7c28a2b0dcf6f6ea3c85c4c00acf97fe866ebed",
+      "heightRange": [
+        30,
+        39
+      ],
+      "metersPerCell": 150.4
+    },
+    {
+      "x": 15,
+      "y": 7,
+      "path": "chunks/15_7.pxwc.gz",
+      "sha256": "3c7ba9cf9b6a77d65696e87f0850a07c87508cc0cbc3a9cb67abf4192422f6f9",
+      "heightRange": [
+        10,
+        46
+      ],
+      "metersPerCell": 158.2
+    },
+    {
+      "x": 16,
+      "y": 7,
+      "path": "chunks/16_7.pxwc.gz",
+      "sha256": "6a626b103485890199bf1aa9b48463f08b9a51f9c246e21a928a3bd671bf6b43",
+      "heightRange": [
+        12,
+        42
+      ],
+      "metersPerCell": 222.5
+    },
+    {
+      "x": 17,
+      "y": 7,
+      "path": "chunks/17_7.pxwc.gz",
+      "sha256": "dbd3ee6aa52cba488a45a219bffa3e1498a4912802854f51283f28100230b759",
+      "heightRange": [
+        16,
+        38
+      ],
+      "metersPerCell": 350.2
+    },
+    {
+      "x": 18,
+      "y": 7,
+      "path": "chunks/18_7.pxwc.gz",
+      "sha256": "1b0bcc74aa9c666797cadbb666ea2360c105e7150f9e58c76a202b53050e98e2",
+      "heightRange": [
+        19,
+        23
+      ],
+      "metersPerCell": 428.2
+    },
+    {
+      "x": 0,
+      "y": 8,
+      "path": "chunks/0_8.pxwc.gz",
+      "sha256": "49fceb4425bc4cfbaad704c86d46ac8d65f7211b845c3a837f237b3252fd749a",
+      "heightRange": [
+        8,
+        33
+      ],
+      "metersPerCell": 430.8
+    },
+    {
+      "x": 1,
+      "y": 8,
+      "path": "chunks/1_8.pxwc.gz",
+      "sha256": "c98cf1c1c38883646d7eda1fbfad2d2f46db5a00521a68d4c565c6339123c3ac",
+      "heightRange": [
+        12,
+        28
+      ],
+      "metersPerCell": 411.5
+    },
+    {
+      "x": 2,
+      "y": 8,
+      "path": "chunks/2_8.pxwc.gz",
+      "sha256": "83cdeb2bdccd80c43c177836e49349d200e128b78c33ab00203b53fbde5bddde",
+      "heightRange": [
+        11,
+        26
+      ],
+      "metersPerCell": 387.1
+    },
+    {
+      "x": 3,
+      "y": 8,
+      "path": "chunks/3_8.pxwc.gz",
+      "sha256": "b1788c0b714ad44c35abfa8ba20af05e2da3c83df4b0ea1cc71b7255d16feea4",
+      "heightRange": [
+        8,
+        32
+      ],
+      "metersPerCell": 371.4
+    },
+    {
+      "x": 4,
+      "y": 8,
+      "path": "chunks/4_8.pxwc.gz",
+      "sha256": "a89ee97382a2b3eea1058e29414ebf23497de90d9ccba35a6c0ec3552bff1313",
+      "heightRange": [
+        7,
+        26
+      ],
+      "metersPerCell": 371.2
+    },
+    {
+      "x": 5,
+      "y": 8,
+      "path": "chunks/5_8.pxwc.gz",
+      "sha256": "dd6a191bb8b1f56de47661fffbc98bd2b1e61ffe1afb92ab54e292782f704e4a",
+      "heightRange": [
+        1,
+        23
+      ],
+      "metersPerCell": 331.9
+    },
+    {
+      "x": 6,
+      "y": 8,
+      "path": "chunks/6_8.pxwc.gz",
+      "sha256": "8a509cc592aa19296c6a8bb9ecb26463c894ca124e3e2029734e5aa696f1cf59",
+      "heightRange": [
+        -1,
+        21
+      ],
+      "metersPerCell": 361.3
+    },
+    {
+      "x": 7,
+      "y": 8,
+      "path": "chunks/7_8.pxwc.gz",
+      "sha256": "4e2bb7fa0282e66dc6cbb988053b069aedaa04de4d9035509f753bf24a60b44c",
+      "heightRange": [
+        9,
+        31
+      ],
+      "metersPerCell": 417.7
+    },
+    {
+      "x": 8,
+      "y": 8,
+      "path": "chunks/8_8.pxwc.gz",
+      "sha256": "1a85db76dfcf5965f25757ca4ee20636ed836bc51154e5b672f8c7c52060b2fa",
+      "heightRange": [
+        13,
+        30
+      ],
+      "metersPerCell": 436.4
+    },
+    {
+      "x": 9,
+      "y": 8,
+      "path": "chunks/9_8.pxwc.gz",
+      "sha256": "7d625459b30f3065b3db96e9f44ed6992213020d1e113ed19c0977a57d2e4e53",
+      "heightRange": [
+        12,
+        30
+      ],
+      "metersPerCell": 440.7
+    },
+    {
+      "x": 10,
+      "y": 8,
+      "path": "chunks/10_8.pxwc.gz",
+      "sha256": "cd10ab8466fdce2df79ff7f169326a11dcd0e5ee55f29b3fa7cfc3d25f28c8c0",
+      "heightRange": [
+        11,
+        32
+      ],
+      "metersPerCell": 436.9
+    },
+    {
+      "x": 11,
+      "y": 8,
+      "path": "chunks/11_8.pxwc.gz",
+      "sha256": "d3eaf86154ea4308900c9d4b2c66ff2ebd957165e80779c63ccd13a45a81ebce",
+      "heightRange": [
+        24,
+        32
+      ],
+      "metersPerCell": 439.8
+    },
+    {
+      "x": 12,
+      "y": 8,
+      "path": "chunks/12_8.pxwc.gz",
+      "sha256": "a59ba0fd9b344e990e010a90b17f6b0ba7cbf6ba8318ad57b5e4343e813af763",
+      "heightRange": [
+        25,
+        32
+      ],
+      "metersPerCell": 426.1
+    },
+    {
+      "x": 13,
+      "y": 8,
+      "path": "chunks/13_8.pxwc.gz",
+      "sha256": "216826c4291306e7b8e2bade5fc799b28bdf0b101c20878bed792c24851ffef1",
+      "heightRange": [
+        25,
+        32
+      ],
+      "metersPerCell": 333.0
+    },
+    {
+      "x": 14,
+      "y": 8,
+      "path": "chunks/14_8.pxwc.gz",
+      "sha256": "6896e5261b74e13e703c37016eddad76d1df4bddf6b2f05372fe5d4e956d8279",
+      "heightRange": [
+        27,
+        36
+      ],
+      "metersPerCell": 266.9
+    },
+    {
+      "x": 15,
+      "y": 8,
+      "path": "chunks/15_8.pxwc.gz",
+      "sha256": "1c337c3f8f63c4cd65b80ab7bc355127134c020565b63eb741158c0aff29359c",
+      "heightRange": [
+        28,
+        36
+      ],
+      "metersPerCell": 301.1
+    },
+    {
+      "x": 16,
+      "y": 8,
+      "path": "chunks/16_8.pxwc.gz",
+      "sha256": "d8f40c61a34b6908b8de26447f318d26f0e869e2159138b0502fc4f24b5372ce",
+      "heightRange": [
+        27,
+        35
+      ],
+      "metersPerCell": 365.5
+    },
+    {
+      "x": 17,
+      "y": 8,
+      "path": "chunks/17_8.pxwc.gz",
+      "sha256": "99e7574ef4fe7c895c41cca98559043d11f41fd34d60d6ed8f68b0eea500448a",
+      "heightRange": [
+        22,
+        35
+      ],
+      "metersPerCell": 386.9
+    },
+    {
+      "x": 18,
+      "y": 8,
+      "path": "chunks/18_8.pxwc.gz",
+      "sha256": "c4c3779d4697ce27cdb7516dca9327e80f87648b4826af246d1543135245d51f",
+      "heightRange": [
+        21,
+        27
+      ],
+      "metersPerCell": 393.1
+    },
+    {
+      "x": 0,
+      "y": 9,
+      "path": "chunks/0_9.pxwc.gz",
+      "sha256": "eb90251e56131c58edcfa089ab95eb4e964c65da5ad9f84b41b5873306c57688",
+      "heightRange": [
+        6,
+        23
+      ],
+      "metersPerCell": 421.4
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "path": "chunks/1_9.pxwc.gz",
+      "sha256": "d9a5d524065d1601f0aae00473614565728c94fb23854ea642c34c728e582026",
+      "heightRange": [
+        13,
+        36
+      ],
+      "metersPerCell": 415.2
+    },
+    {
+      "x": 2,
+      "y": 9,
+      "path": "chunks/2_9.pxwc.gz",
+      "sha256": "6caeee171fbde0fd096f5e2179649ee2f82156fa3126d9432696dd240d4c74aa",
+      "heightRange": [
+        12,
+        27
+      ],
+      "metersPerCell": 405.5
+    },
+    {
+      "x": 3,
+      "y": 9,
+      "path": "chunks/3_9.pxwc.gz",
+      "sha256": "636047c95b070b96a8e1fdde3a0e4bb7c86ca85afd8a435f313d437af96029fd",
+      "heightRange": [
+        14,
+        33
+      ],
+      "metersPerCell": 397.0
+    },
+    {
+      "x": 4,
+      "y": 9,
+      "path": "chunks/4_9.pxwc.gz",
+      "sha256": "3e4a535f83e56a9171f523504cf563a51dd03e6878f74f51145f71bbaa7174f1",
+      "heightRange": [
+        11,
+        22
+      ],
+      "metersPerCell": 394.6
+    },
+    {
+      "x": 5,
+      "y": 9,
+      "path": "chunks/5_9.pxwc.gz",
+      "sha256": "0e2ea4dbe54e092dfc0dbfc427830b5b564e890cc066fd75921c354e3c0b954a",
+      "heightRange": [
+        3,
+        24
+      ],
+      "metersPerCell": 409.8
+    },
+    {
+      "x": 6,
+      "y": 9,
+      "path": "chunks/6_9.pxwc.gz",
+      "sha256": "8650dd15cb868e5ca00d838947c6dfc384a5f5266f33f21c463e86f8faff5d53",
+      "heightRange": [
+        3,
+        25
+      ],
+      "metersPerCell": 422.0
+    },
+    {
+      "x": 7,
+      "y": 9,
+      "path": "chunks/7_9.pxwc.gz",
+      "sha256": "4408c3308d6d1a4dc653887b1302089955d93689d1b68e3b90f60896484a605d",
+      "heightRange": [
+        13,
+        32
+      ],
+      "metersPerCell": 421.1
+    },
+    {
+      "x": 8,
+      "y": 9,
+      "path": "chunks/8_9.pxwc.gz",
+      "sha256": "614569ee9c50a4cd98971762fc7e3a58a2d8ea2b0190e776359c590dce031604",
+      "heightRange": [
+        13,
+        28
+      ],
+      "metersPerCell": 433.6
+    },
+    {
+      "x": 9,
+      "y": 9,
+      "path": "chunks/9_9.pxwc.gz",
+      "sha256": "39067c8aba3288232450e8267da33ea770a43aed3eb90ee21186adf2cd87cd84",
+      "heightRange": [
+        15,
+        31
+      ],
+      "metersPerCell": 438.8
+    },
+    {
+      "x": 10,
+      "y": 9,
+      "path": "chunks/10_9.pxwc.gz",
+      "sha256": "2d6be6c927cf7d4fbeb7c2670d27f464c2634db01492308bd8077cb07cadf4b2",
+      "heightRange": [
+        22,
+        30
+      ],
+      "metersPerCell": 437.2
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "path": "chunks/11_9.pxwc.gz",
+      "sha256": "f8b6e4d1b8aef55cfdf9e8cfa16c1aaa26c49d6ecef33b311abe3bf8b299b2e7",
+      "heightRange": [
+        24,
+        31
+      ],
+      "metersPerCell": 431.5
+    },
+    {
+      "x": 12,
+      "y": 9,
+      "path": "chunks/12_9.pxwc.gz",
+      "sha256": "6f106a1ba5e55fc3037c3fa1f5dfdd293785ee17f95b85edfa8d6ff71eca02c3",
+      "heightRange": [
+        24,
+        34
+      ],
+      "metersPerCell": 429.3
+    },
+    {
+      "x": 13,
+      "y": 9,
+      "path": "chunks/13_9.pxwc.gz",
+      "sha256": "607c0639fbcce3a9a117aeb02a41677b213b09724cbfd243dac7415de8c7d1a9",
+      "heightRange": [
+        24,
+        31
+      ],
+      "metersPerCell": 422.7
+    },
+    {
+      "x": 14,
+      "y": 9,
+      "path": "chunks/14_9.pxwc.gz",
+      "sha256": "a8f94076ee07458c2aed29bce45af32a3200e3d364391b4b75287db245baf9f4",
+      "heightRange": [
+        26,
+        34
+      ],
+      "metersPerCell": 412.2
+    },
+    {
+      "x": 15,
+      "y": 9,
+      "path": "chunks/15_9.pxwc.gz",
+      "sha256": "0fdf45d8e990e1899b505888d42db5ebe84079c14cfa6ee136836c32ad6029c5",
+      "heightRange": [
+        28,
+        44
+      ],
+      "metersPerCell": 398.3
+    },
+    {
+      "x": 16,
+      "y": 9,
+      "path": "chunks/16_9.pxwc.gz",
+      "sha256": "3fba749466b42bbdbd1474c65a34ff7baad36ec0d74fd0ada0c14180b74334f9",
+      "heightRange": [
+        29,
+        49
+      ],
+      "metersPerCell": 389.8
+    },
+    {
+      "x": 17,
+      "y": 9,
+      "path": "chunks/17_9.pxwc.gz",
+      "sha256": "4e72e7be4629dfcdb2ce0c0b133a04807f0adc3a4d923da053e826a6feafea66",
+      "heightRange": [
+        26,
+        60
+      ],
+      "metersPerCell": 387.2
+    },
+    {
+      "x": 18,
+      "y": 9,
+      "path": "chunks/18_9.pxwc.gz",
+      "sha256": "036e68b360367f44e14fc052aa5eae5dcc1e507bbf08015f8ffc1d0382ace098",
+      "heightRange": [
+        26,
+        36
+      ],
+      "metersPerCell": 385.2
+    },
+    {
+      "x": 0,
+      "y": 10,
+      "path": "chunks/0_10.pxwc.gz",
+      "sha256": "c7f7cb7248a57aa7e75d112d7db37d01e7c6c8efdefffdddf2de38d9a66e5d08",
+      "heightRange": [
+        4,
+        21
+      ],
+      "metersPerCell": 416.6
+    },
+    {
+      "x": 1,
+      "y": 10,
+      "path": "chunks/1_10.pxwc.gz",
+      "sha256": "6d4fcc2effc449c83ff82cd7b988a31a76e4c7c7891752d1ad264badfe5d80ad",
+      "heightRange": [
+        9,
+        27
+      ],
+      "metersPerCell": 413.5
+    },
+    {
+      "x": 2,
+      "y": 10,
+      "path": "chunks/2_10.pxwc.gz",
+      "sha256": "31968374a8e02755a5b4e5f899ec8dc399ef5a5ecf764e60e0767a27f62f474e",
+      "heightRange": [
+        16,
+        35
+      ],
+      "metersPerCell": 408.9
+    },
+    {
+      "x": 3,
+      "y": 10,
+      "path": "chunks/3_10.pxwc.gz",
+      "sha256": "ee4266970e8bfcf68f8250c8977edbc803d43ff7f131d02a234ae5e4438e78c1",
+      "heightRange": [
+        14,
+        27
+      ],
+      "metersPerCell": 405.9
+    },
+    {
+      "x": 4,
+      "y": 10,
+      "path": "chunks/4_10.pxwc.gz",
+      "sha256": "22d34770eb8b105a7085efd571e1f22933296effe385c356ad359de3eb12578c",
+      "heightRange": [
+        8,
+        23
+      ],
+      "metersPerCell": 406.1
+    },
+    {
+      "x": 5,
+      "y": 10,
+      "path": "chunks/5_10.pxwc.gz",
+      "sha256": "b464be40ed56dccd9dfb3b47ded4efd428f1915029aeca8fc55b5a205bfd59d3",
+      "heightRange": [
+        1,
+        26
+      ],
+      "metersPerCell": 397.0
+    },
+    {
+      "x": 6,
+      "y": 10,
+      "path": "chunks/6_10.pxwc.gz",
+      "sha256": "3f1d3151fdf4cb65aae6681dfb284950658db9a13e7f05458e9e55287df36bab",
+      "heightRange": [
+        1,
+        24
+      ],
+      "metersPerCell": 408.1
+    },
+    {
+      "x": 7,
+      "y": 10,
+      "path": "chunks/7_10.pxwc.gz",
+      "sha256": "e66fcae94937e9323ff4da069e7884839720b6eeab3b82691ade0a40b9039caf",
+      "heightRange": [
+        10,
+        24
+      ],
+      "metersPerCell": 412.6
+    },
+    {
+      "x": 8,
+      "y": 10,
+      "path": "chunks/8_10.pxwc.gz",
+      "sha256": "175f3c98fa273edab54ab08200cbf8d572c6a71cd426f5f3388d82c8644bb180",
+      "heightRange": [
+        13,
+        38
+      ],
+      "metersPerCell": 417.4
+    },
+    {
+      "x": 9,
+      "y": 10,
+      "path": "chunks/9_10.pxwc.gz",
+      "sha256": "fffa47337871832f300569ede77f37a0492099385727c3124bb613489cee5d5c",
+      "heightRange": [
+        14,
+        28
+      ],
+      "metersPerCell": 437.6
+    },
+    {
+      "x": 10,
+      "y": 10,
+      "path": "chunks/10_10.pxwc.gz",
+      "sha256": "7b77e20ee25c7736bbb0d607359149fe4ccdba24471d01eb3b699f54c5bc0436",
+      "heightRange": [
+        18,
+        30
+      ],
+      "metersPerCell": 437.5
+    },
+    {
+      "x": 11,
+      "y": 10,
+      "path": "chunks/11_10.pxwc.gz",
+      "sha256": "2dd04bbb3d939daee92f0c669c0e77e612c58d89baf14c1e25588062e1b591bd",
+      "heightRange": [
+        23,
+        31
+      ],
+      "metersPerCell": 435.6
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "path": "chunks/12_10.pxwc.gz",
+      "sha256": "70acf1983927d6c2b3eb03938041fc79def59254ba0d43247fc6a137f54a9fa1",
+      "heightRange": [
+        21,
+        33
+      ],
+      "metersPerCell": 427.7
+    },
+    {
+      "x": 13,
+      "y": 10,
+      "path": "chunks/13_10.pxwc.gz",
+      "sha256": "f3d4e93dadba7215fa109456b4134d8bb5a5f1d1001049a7db8ed65f478caf1d",
+      "heightRange": [
+        21,
+        30
+      ],
+      "metersPerCell": 414.6
+    },
+    {
+      "x": 14,
+      "y": 10,
+      "path": "chunks/14_10.pxwc.gz",
+      "sha256": "0d583b04d2c9943dce8fa9a28808acd830ece555302faea0498db3c7d79d88fc",
+      "heightRange": [
+        22,
+        43
+      ],
+      "metersPerCell": 402.5
+    },
+    {
+      "x": 15,
+      "y": 10,
+      "path": "chunks/15_10.pxwc.gz",
+      "sha256": "e2db38e8bbb5dc23a7a23864392d8254b5e2625b467ddfe3e48d34d56cb2c50f",
+      "heightRange": [
+        21,
+        37
+      ],
+      "metersPerCell": 394.7
+    },
+    {
+      "x": 16,
+      "y": 10,
+      "path": "chunks/16_10.pxwc.gz",
+      "sha256": "3a90de31c6fd957f1707c8a091bb36b0ec6c597f9d81f35a471ae5460be3d347",
+      "heightRange": [
+        25,
+        40
+      ],
+      "metersPerCell": 380.5
+    },
+    {
+      "x": 17,
+      "y": 10,
+      "path": "chunks/17_10.pxwc.gz",
+      "sha256": "8b1859e4e12e232e0700365f04233b159e79a5777bcf2fdcc65c9189bb78b740",
+      "heightRange": [
+        28,
+        45
+      ],
+      "metersPerCell": 353.5
+    },
+    {
+      "x": 18,
+      "y": 10,
+      "path": "chunks/18_10.pxwc.gz",
+      "sha256": "aa9d00f679d0288e5d72d7cbc2abad33101f80d1e0364f4e2aaa7a075a2fc744",
+      "heightRange": [
+        30,
+        34
+      ],
+      "metersPerCell": 372.9
+    },
+    {
+      "x": 0,
+      "y": 11,
+      "path": "chunks/0_11.pxwc.gz",
+      "sha256": "7a120962d365055d766d24374283b7526211d196168fbef38798195e3b87ec47",
+      "heightRange": [
+        6,
+        14
+      ],
+      "metersPerCell": 415.8
+    },
+    {
+      "x": 1,
+      "y": 11,
+      "path": "chunks/1_11.pxwc.gz",
+      "sha256": "63f08182b0d2e8f34e7480cc45b1cace173cf1d323fc0781d0fc746917c91a07",
+      "heightRange": [
+        8,
+        29
+      ],
+      "metersPerCell": 413.1
+    },
+    {
+      "x": 2,
+      "y": 11,
+      "path": "chunks/2_11.pxwc.gz",
+      "sha256": "63ea84ea2fe4382b8f9f8029676f43494b6e5c87d8b08ea4ee655cdb9bf07be6",
+      "heightRange": [
+        15,
+        24
+      ],
+      "metersPerCell": 409.5
+    },
+    {
+      "x": 3,
+      "y": 11,
+      "path": "chunks/3_11.pxwc.gz",
+      "sha256": "7dc1c04628040e6bec6fb614f84ee06d38887537fe7d3bb41cd584dd9d0d78e3",
+      "heightRange": [
+        13,
+        20
+      ],
+      "metersPerCell": 407.6
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "path": "chunks/4_11.pxwc.gz",
+      "sha256": "9c2eecddc563261c8ec3e100fc6806e51f9bc1e36a95553363db124456f8bf1a",
+      "heightRange": [
+        7,
+        16
+      ],
+      "metersPerCell": 408.4
+    },
+    {
+      "x": 5,
+      "y": 11,
+      "path": "chunks/5_11.pxwc.gz",
+      "sha256": "470bc64bc7f5ce849371da9be7f5d20dad3359ec53e215a09ad905bd634276ce",
+      "heightRange": [
+        2,
+        16
+      ],
+      "metersPerCell": 413.2
+    },
+    {
+      "x": 6,
+      "y": 11,
+      "path": "chunks/6_11.pxwc.gz",
+      "sha256": "73a0d879078a2e5ad0acb13aff61ecdab4e2a613d8ffe369ba38e4f791c1de66",
+      "heightRange": [
+        3,
+        21
+      ],
+      "metersPerCell": 403.8
+    },
+    {
+      "x": 7,
+      "y": 11,
+      "path": "chunks/7_11.pxwc.gz",
+      "sha256": "1d15dae6bc6286425cf1b4e2aad4f125e9ab15c03d40bf2c9e133a4768c46acb",
+      "heightRange": [
+        9,
+        21
+      ],
+      "metersPerCell": 426.0
+    },
+    {
+      "x": 8,
+      "y": 11,
+      "path": "chunks/8_11.pxwc.gz",
+      "sha256": "d068564dcad0c1a6b96f560ef0791ed05727b20b36363dc8b03f34041488ead9",
+      "heightRange": [
+        12,
+        33
+      ],
+      "metersPerCell": 437.7
+    },
+    {
+      "x": 9,
+      "y": 11,
+      "path": "chunks/9_11.pxwc.gz",
+      "sha256": "b456ed8913b3593d085f0bb02db1eb98c03cc2dd05a314c37ef45cc2bfdd11e5",
+      "heightRange": [
+        13,
+        24
+      ],
+      "metersPerCell": 437.6
+    },
+    {
+      "x": 10,
+      "y": 11,
+      "path": "chunks/10_11.pxwc.gz",
+      "sha256": "c04714401ed40a6d3ac3ca9482e55a7da4d8588501d722b4f1956e7bd5ae9afe",
+      "heightRange": [
+        18,
+        28
+      ],
+      "metersPerCell": 437.3
+    },
+    {
+      "x": 11,
+      "y": 11,
+      "path": "chunks/11_11.pxwc.gz",
+      "sha256": "53445de217d130ee75e224acbceddefd4e1a49c67ab3470f8cd0a82ac68229c0",
+      "heightRange": [
+        25,
+        32
+      ],
+      "metersPerCell": 435.2
+    },
+    {
+      "x": 12,
+      "y": 11,
+      "path": "chunks/12_11.pxwc.gz",
+      "sha256": "caf66280ffb0c4071a8bf826ed23a66d301232b7e02aeb9c224ebf2ad58d59fa",
+      "heightRange": [
+        21,
+        31
+      ],
+      "metersPerCell": 429.8
+    },
+    {
+      "x": 13,
+      "y": 11,
+      "path": "chunks/13_11.pxwc.gz",
+      "sha256": "1e824ce2feecb4cce41e9860af7db8c1ba4e7a268a425e5047bd5cbf7f3d94cd",
+      "heightRange": [
+        21,
+        28
+      ],
+      "metersPerCell": 424.4
+    },
+    {
+      "x": 14,
+      "y": 11,
+      "path": "chunks/14_11.pxwc.gz",
+      "sha256": "d32225e680acdefd67ffb0ae26f3ffd916b2062c1fe4597ed177be1ec5556f9a",
+      "heightRange": [
+        21,
+        29
+      ],
+      "metersPerCell": 415.7
+    },
+    {
+      "x": 15,
+      "y": 11,
+      "path": "chunks/15_11.pxwc.gz",
+      "sha256": "4b69f5fb9c8e85ee4d5be32cb546faf6fc97508f366ffa85037e1b033d9c572e",
+      "heightRange": [
+        20,
+        31
+      ],
+      "metersPerCell": 403.1
+    },
+    {
+      "x": 16,
+      "y": 11,
+      "path": "chunks/16_11.pxwc.gz",
+      "sha256": "61df4f6632754adfc6e7a7d2ac9e503e104464ef5d77ca5fc36f0a8ec9198f81",
+      "heightRange": [
+        24,
+        33
+      ],
+      "metersPerCell": 398.4
+    },
+    {
+      "x": 17,
+      "y": 11,
+      "path": "chunks/17_11.pxwc.gz",
+      "sha256": "06114d79ba87f1aee9ccb3172eb5a7db7e02004411fe1f08c867dd08a345e33c",
+      "heightRange": [
+        29,
+        36
+      ],
+      "metersPerCell": 415.0
+    },
+    {
+      "x": 18,
+      "y": 11,
+      "path": "chunks/18_11.pxwc.gz",
+      "sha256": "f8b236ce432391d6e61464097eca70d9948401778a42507c0504baa4710f8a1f",
+      "heightRange": [
+        33,
+        37
+      ],
+      "metersPerCell": 403.0
+    }
+  ],
+  "scale": {
+    "metersPerCell": 400.0,
+    "metersPerStep": 65.319726,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    -10,
+    60
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "basin-and-range",
+    "1": "colorado-plateau"
+  },
+  "start": {
+    "x": 195,
+    "y": 376
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.25 +lon_0=-113.75 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -116.0,
+      35.0,
+      -111.5,
+      37.5
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "4ed77e430ea35f8c",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 2,
+      "bilateral": [
+        1.5,
+        48.0
+      ],
+      "warp": "813442c63bc6fb2c"
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "warp": {
+    "method": "v2",
+    "background": 500.0,
+    "focus": [
+      {
+        "name": "las-vegas-strip",
+        "target": 100.0,
+        "achieved": 100.2,
+        "error": 0.002
+      },
+      {
+        "name": "hoover-dam",
+        "target": 100.0,
+        "achieved": 100.0,
+        "error": 0.0
+      },
+      {
+        "name": "lake-mead",
+        "target": 250.0,
+        "achieved": 250.5,
+        "error": 0.002
+      },
+      {
+        "name": "grand-canyon-village",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.001
+      },
+      {
+        "name": "desert-view",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.0
+      }
+    ],
+    "pins": 0,
+    "vertical": {
+      "gamma": 1.0,
+      "referenceSigmaKm": 6,
+      "min": 0.6,
+      "max": 4.0
+    }
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "fc89c1b1a1531b0964c2147c809b349d040730a3240b4eada895f20afef08c92",
+    "count": 5841
+  },
+  "depiction": {
+    "scatter": 1.0
+  },
+  "heroes": [
+    {
+      "id": "strat-tower",
+      "rotation": 0,
+      "left": -2046,
+      "top": 4203,
+      "width": 17,
+      "height": 151,
+      "depthBase": 555.0,
+      "bake": "heroes/strat-tower/bake-r0.png",
+      "paint": "heroes/strat-tower/paint-r0.png",
+      "sha256": "bdca18177ecafcdf84cfb8e306cfe2524ef2390234899ad9403120bb427275fc"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 1,
+      "left": -8848,
+      "top": -1236,
+      "width": 17,
+      "height": 150,
+      "depthBase": -125.0,
+      "bake": "heroes/strat-tower/bake-r1.png",
+      "paint": "heroes/strat-tower/paint-r1.png",
+      "sha256": "29f382dd5880dd6a6498f5226b16ffec0b99c987fa153db8afc81b2be24394af"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 2,
+      "left": 2029,
+      "top": -4637,
+      "width": 17,
+      "height": 150,
+      "depthBase": -550.0,
+      "bake": "heroes/strat-tower/bake-r2.png",
+      "paint": "heroes/strat-tower/paint-r2.png",
+      "sha256": "6435bb3af42b8e6fda1f3601caf659bdc05c7e8b381ad958e3df40b2a83ecbfd"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 3,
+      "left": 8831,
+      "top": 802,
+      "width": 17,
+      "height": 151,
+      "depthBase": 129.0,
+      "bake": "heroes/strat-tower/bake-r3.png",
+      "paint": "heroes/strat-tower/paint-r3.png",
+      "sha256": "f5a975c8f528d19206a5a23a2fc368201505806c5364bd21a4a4dc9bcbdc4b22"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 0,
+      "left": -1148,
+      "top": 6635,
+      "width": 55,
+      "height": 71,
+      "depthBase": 833.0,
+      "bake": "heroes/hoover-dam/bake-r0.png",
+      "paint": "heroes/hoover-dam/paint-r0.png",
+      "sha256": "b5856429d568c24dbd4f4b1c82ed32f6e505c7aeec82aece5c3b205bde552342"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 1,
+      "left": -13412,
+      "top": -596,
+      "width": 71,
+      "height": 43,
+      "depthBase": -72.0,
+      "bake": "heroes/hoover-dam/bake-r1.png",
+      "paint": "heroes/hoover-dam/paint-r1.png",
+      "sha256": "fd947b61c7d6318ed6fa662abe5b15fd98f9701a41a3d09a2461383f9d294729"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 2,
+      "left": 1093,
+      "top": -6739,
+      "width": 55,
+      "height": 69,
+      "depthBase": -839.0,
+      "bake": "heroes/hoover-dam/bake-r2.png",
+      "paint": "heroes/hoover-dam/paint-r2.png",
+      "sha256": "db78ca477fabc96431c9f3c4a4bfc658d2cfaa0d8e6fcf28f8beba48815af786"
+    },
+    {
+      "id": "hoover-dam",
+      "rotation": 3,
+      "left": 13341,
+      "top": 512,
+      "width": 71,
+      "height": 62,
+      "depthBase": 69.0,
+      "bake": "heroes/hoover-dam/bake-r3.png",
+      "paint": "heroes/hoover-dam/paint-r3.png",
+      "sha256": "eb0823e5c41eac24c6d6e8e6ce94fdb3fb0604e94ffed4c1d11799728f0c57e1"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 0,
+      "left": 10807,
+      "top": 11474,
+      "width": 22,
+      "height": 56,
+      "depthBase": 1504.0,
+      "bake": "heroes/desert-view-watchtower/bake-r0.png",
+      "paint": "heroes/desert-view-watchtower/paint-r0.png",
+      "sha256": "9d6d3727c4a55ae0b5e0ea3a9252e94f790ab358e15d30e8f7a7dc4b930ec3b9"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 1,
+      "left": -23831,
+      "top": 4973,
+      "width": 22,
+      "height": 56,
+      "depthBase": 691.0,
+      "bake": "heroes/desert-view-watchtower/bake-r1.png",
+      "paint": "heroes/desert-view-watchtower/paint-r1.png",
+      "sha256": "7783feaafa14237b69ba4210d81cd64b8149fa677797f44bf66f998e011cd498"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 2,
+      "left": -10829,
+      "top": -12342,
+      "width": 22,
+      "height": 52,
+      "depthBase": -1474.0,
+      "bake": "heroes/desert-view-watchtower/bake-r2.png",
+      "paint": "heroes/desert-view-watchtower/paint-r2.png",
+      "sha256": "cc9b1181283f3106978fa878498688df263c066402c157cfb3a4f0f5bfa5fecb"
+    },
+    {
+      "id": "desert-view-watchtower",
+      "rotation": 3,
+      "left": 23809,
+      "top": -5841,
+      "width": 22,
+      "height": 52,
+      "depthBase": -661.0,
+      "bake": "heroes/desert-view-watchtower/bake-r3.png",
+      "paint": "heroes/desert-view-watchtower/paint-r3.png",
+      "sha256": "029e7af8590ea9afd52594b8feca72ef63fe3f7abf7657ee29867a8038e8007c"
+    }
+  ],
+  "level": "drive",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "southwest-fly",
+      "label": "Flying"
+    },
+    {
+      "name": "drive",
+      "world": "southwest",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "southwest-walk",
+      "label": "Walking the Strip"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 4,
+    "size": [
+      290,
+      179
+    ],
+    "sha256": "b1ff4e45e94b03cd9b55769569b2eb204e2446407c278a38ae6638077c461a59"
+  },
+  "packageHash": "7370e793c07f308c217e281a08d99740a632e06af68125553bcb40c2ffcdaf69",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "cd3fec225d37f6933b369026167bebb686d3086119d3759103df15b98acd1f74",
+    "version": 1,
+    "count": 5619
+  }
+}

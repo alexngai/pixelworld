@@ -1,0 +1,190 @@
+# San Francisco, driving level: the whole city at 25 m per cell (uniform),
+# from Ocean Beach to the Embarcadero and from the Golden Gate to the county
+# line. What should make it recognizable is the ordinary fabric, not only the
+# landmarks: rowhouses on 25-foot lots stepping up the hills, the stucco rows
+# of the Sunset and Richmond, the street grids meeting at Market Street, the
+# piers, Chinatown and the downtown towers.
+# Build: cd pipeline && uv run pixelworld build ../worlds/sf/region.yaml
+id: sf
+name: San Francisco
+bounds: [-122.52, 37.70, -122.355, 37.845] # lon/lat: west, south, east, north
+
+level: drive
+levels:
+  - { name: fly, world: sf-fly, label: Flying over the Bay }
+  - { name: drive, world: sf, label: Driving }
+  - { name: walk, world: sf-walk, label: Walking the hills }
+
+# 25 m cells: a 25-foot lot is a third of a cell, about five object voxels
+# wide, so rows of houses read as rows. Hills at 1.5x: Twin Peaks is about
+# 40 steps above the Bay, and a 30% street climbs about one step per cell.
+# (2x was tried: Telegraph Hill stood a little taller, but Russian Hill and
+# Nob Hill read no steeper under their buildings, and the bridges' decks
+# stood a third further above the ground at their ends.)
+metersPerCell: 25
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# The grid north of Market and the grid south of it meet at about 45 degrees,
+# so both snap to grid directions (D-049).
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+
+# streets at 1.5x their real width, so a 10 m residential street reads; a
+# divided road's carriageways with their median between them (Sunset
+# Boulevard, Van Ness), but no lane lines at this scale (M3.5)
+widths: { scale: 1.5, minCells: 0.1, lanes: { lines: false } }
+
+# 6.25 m micro-cells from the 10 m DEM; lawns smoothed over about 15 m, so
+# a park reads as a grassy slope rather than the elevation model's noise
+micro: { k: 4, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+# The ground WorldCover can't tell apart (M3.5). It sees a park's irrigated
+# lawn and a wild hill as the same grassland, and a block of houses with
+# green backyards as built-up land:
+# - lawn: parks, golf courses, pitches, gardens and cemeteries (Overture's
+#   land use), unless mapped as natural grassland, scrub or beach, or the
+#   park is steeper than 20% (Bernal Heights, Corona Heights and Glen Canyon
+#   stay golden; Twin Peaks has no park polygon). Tree-covered park cells
+#   where the canopy map shows the ground open are lawn too, so a park's
+#   trees stand on its lawn rather than in a wood.
+# - yard: open ground beside houses (backyards, front gardens, the gaps
+#   between rows), some of it left paved
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, golf_course, fairway, green, tee, rough, driving_range, pitch, recreation_ground, stadium, grass, garden, allotments, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+  yard:
+    near: [building.rowhouse, building.house, building.residential, building.apartment]
+    over: [urban, grass, desert]
+    reachMeters: 15
+    paved: 0.3
+
+# WorldCover water is reliable at 10 m; no relief limit (the Bay and the ocean are
+# one water body whose shore corners climb the coastal cliffs)
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 25
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055): what each footprint is, from its shape, its
+  # street and the assessor's roll (year built, storeys, use, neighbourhood,
+  # DataSF). First match wins; anything unmatched keeps its generic group.
+  typology:
+    facts: datasf
+    rules:
+      # pier sheds along the Embarcadero
+      - { group: building.pier, onWater: true }
+      - { group: building.chinatown, hoods: [Chinatown], floors: [2, 8] }
+      # 25-foot lots: Victorian rows before the 1906 earthquake, Edwardian
+      # flats after it, then the stucco rows of the Sunset and the Richmond.
+      # Paint follows the neighbourhood: the painted ladies of the Mission,
+      # the Haight and the Western Addition are saturated, while the
+      # Victorians and Edwardians of the northern hills and the avenues are
+      # mostly white, cream and grey (style pack: *.pale, *.painted).
+      - { group: building.rowhouse.victorian.pale, year: [1840, 1906], uses: [residential, mixed], maxWidth: 12, floors: [1, 4], hoods: [Pacific Heights, Presidio Heights, Marina, Russian Hill, Nob Hill, North Beach, Financial District/South Beach, Inner Richmond, Outer Richmond, Seacliff, Lone Mountain/USF, Inner Sunset, Sunset/Parkside, Lakeshore, West of Twin Peaks] }
+      - { group: building.rowhouse.victorian, year: [1840, 1906], uses: [residential, mixed], maxWidth: 12, floors: [1, 4] }
+      - { group: building.rowhouse.edwardian.painted, year: [1906, 1920], uses: [residential, mixed], maxWidth: 12, floors: [1, 4], hoods: [Mission, Haight Ashbury, Western Addition, Hayes Valley, Castro/Upper Market, Noe Valley, Bernal Heights, Potrero Hill, Glen Park, Japantown, South of Market] }
+      - { group: building.rowhouse.edwardian, year: [1906, 1920], uses: [residential, mixed], maxWidth: 12, floors: [1, 4] }
+      - { group: building.rowhouse.stucco, year: [1920, 1960], uses: [residential], maxWidth: 12, floors: [1, 3] }
+      # apartment blocks: bay-windowed and corniced before 1950, plain after
+      - { group: building.apartment.bay, year: [1890, 1950], uses: [residential, mixed], floors: [3, 14] }
+      - { group: building.apartment.modern, year: [1950, 2100], uses: [residential, mixed], floors: [3, 30] }
+      - { group: building.house, uses: [residential], floors: [1, 3] }
+      - { group: building.commercial.historic, year: [1880, 1950], uses: [commercial, mixed, civic], floors: [1, 16] }
+      - { group: building.industrial, uses: [industrial] }
+      # towers by era (generators/towers.ts): the 1920s and 30s in terracotta
+      # and granite with piers, setbacks and crowns (none taller than the
+      # Russ Building: a taller tower on an old lot is a later one); the white
+      # and granite slabs of the 1960s and 70s; the stone towers with sculpted
+      # tops of the 1985 Downtown Plan; the glass towers south of Market.
+      # A tower in parts takes its building's year; towers with no record take
+      # a kind by seed.
+      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1906, 1950], maxHeight: 140 }
+      - { group: building.tower.slab, from: [building.tower, building.tower.hotel], year: [1950, 1983] }
+      - { group: building.tower.postmodern, from: [building.tower, building.tower.hotel], year: [1983, 2000] }
+      - { group: building.tower.glass, from: [building.tower, building.tower.hotel], year: [2000, 2100] }
+      # houses with no record (mostly over the county line, where Daly City's
+      # 1940s and 50s stucco rows continue the Sunset): narrow ones as stucco
+      # rows, wider ones as houses of their era (mid-century without a year)
+      - { group: building.rowhouse.stucco, from: [building.residential], maxWidth: 12, floors: [1, 3] }
+      - { group: building.house, from: [building.residential], floors: [1, 3] }
+  vegetation:
+    # backyard and park trees where the canopy height map (WRI/Meta, 1 m)
+    # shows 3 m or more. A tree is drawn about 8 m across at 25 m cells, so
+    # one every 12 m at most (about 60,000; every 10 m gave 90,000, mostly in
+    # the parks, for 0.5 MB more). On tree-covered land (Golden Gate Park, the
+    # Presidio, Sutro Forest, Mount Davidson) they are the park's cypress and
+    # eucalyptus, as the client's woodland scatter is.
+    - { group: tree, canopy: 3, spacing: 12, density: 0.9, byLandcover: { tree: [tree.cypress, tree.eucalyptus, tree.cypress] } }
+  streetTrees:
+    # sidewalk trees, also from the canopy map: road cells are kept clear of
+    # everything else, so these stand on the verge just past the drawn
+    # asphalt, in rows along the avenues where the map shows trees
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 12, kerb: 2, offset: 9 }
+  # landmarks from the registry (worlds/_landmarks, D-051), drawn generically
+  # (new ones go at the end: a landmark's seed is its place in the list)
+  landmarks:
+    - golden-gate-bridge
+    - bay-bridge-west
+    - transamerica-pyramid
+    - salesforce-tower
+    - coit-tower
+    - ferry-building
+    - sf-city-hall
+    - palace-of-fine-arts
+    - sutro-tower
+    # the coast and the Bay: Golden Gate Park's windmills by Ocean Beach, Alcatraz
+    - dutch-windmill
+    - murphy-windmill
+    - alcatraz-cellhouse
+    - alcatraz-lighthouse
+    # Chinatown's gate on Grant Avenue at Bush Street
+    - dragon-gate
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.5, scatter: 1.0 }
+
+style: bay-area
+start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
+  rivers:
+    subtypes: [river]
+  # Rails drawn in the street (M3.5): each segment, out of its tunnels, is
+  # drawn as the first rule it matches. Street tracks follow the roads they
+  # run in; trains keep their own way.
+  rails:
+    # cable-car tracks with the cable's slot: the unnamed tram lines over Nob
+    # Hill and Russian Hill (Powell, Mason, Hyde and California Streets)
+    - { draw: cable, rail: [tram], unnamed: true, bounds: [-122.4225, 37.784, -122.3958, 37.8075] }
+    # streetcar and light-rail tracks: the F and E lines on Market Street and
+    # the Embarcadero, the N, L, K, M, J and T lines in the street
+    - { draw: street, rail: [tram, light_rail] }
+    # trains on their own way: Caltrain into 4th and King
+    - { draw: train, rail: [standard_gauge] }
+
+# Ambient traffic routes (D-060): `pixelworld routes`. Overture records the
+# cable cars as tram lines without a route name; the F and E streetcars carry
+# theirs.
+routes:
+  rail: { unnamedTram: cablecar }
+
+geology: null

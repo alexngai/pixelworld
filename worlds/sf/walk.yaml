@@ -1,0 +1,87 @@
+# San Francisco, walking level (D-046): the northeast of the city at 10 m per
+# cell, from the Haight and Alamo Square to the Embarcadero and from Dolores
+# Park to North Beach: Victorian and Edwardian rows, the hills of Nob Hill and
+# Russian Hill, Chinatown, the Financial District and the waterfront. A
+# 25-foot lot is about 12 object voxels wide: room for a bay window, a door,
+# a cornice.
+# Build: cd pipeline && uv run pixelworld build ../worlds/sf/walk.yaml
+extends: region.yaml
+id: sf-walk
+name: San Francisco (walking)
+level: walk
+bounds: [-122.455, 37.755, -122.385, 37.808]
+
+metersPerCell: 10
+# Hills at 2x, so Russian Hill and Nob Hill read as steep from the street: a
+# 20% grade climbs a step per cell (the steepest a road is drawn; steeper
+# blocks are cut into the hill). At 1x they read as gentle slopes.
+verticalExaggeration: 2.0
+maxSlope: 3
+
+# Lombard Street's crooked block keeps its hairpins: snapping would straighten
+# them (D-049). It's drawn 5 m wide (its one lane), so the bends stay apart.
+# True, they swing about 7 m either side of the street's line, less than a
+# cell, so they're drawn twice as wide (but at most 13 m from its line, short
+# of the houses either side), paved in brick, with garden beds between the
+# bends (the lawn's patchwork). At 25 m the driving level can't draw them, so
+# only here.
+snap:
+  roads:
+    keep:
+      - { bounds: [-122.4197, 37.8019, -122.4179, 37.8023], width: 5, widen: 2, within: 13, class: brick, surface: farmland }
+  # buildings the shift leaves over a drawn road move off it, up to 5 m, or
+  # lose the part over it (M3.5)
+  buildings: { clearRoads: { nudgeMeters: 5 } }
+
+start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
+
+sources:
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    # service roads that only connect through a car park's aisles join the
+    # streets through as few aisles as they need (M3.5)
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+
+# Lanes and medians (M3.5): lane counts from each way's width (3.5 m lanes),
+# and a median between the two carriageways of a divided road (Van Ness, the
+# Embarcadero, Dolores). Where downtown Market Street is mapped as one way
+# rather than two, its roadway is still about 20 m, four lanes between the
+# transit islands.
+widths:
+  scale: 1.0
+  minCells: 0.15
+  lanes: { lines: true, meters: 3.5 }
+  ways:
+    - { names: [Market Street], bounds: [-122.4200, 37.7740, -122.3930, 37.7960], oneway: false, meters: 20, lanes: 4 }
+micro: { k: 2, dem: { overview: 1 } }
+
+objects:
+  buildings:
+    minArea: 15
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  vegetation:
+    # street and park trees where the canopy height map (WRI/Meta, 1 m) shows
+    # 3 m or more; on tree-covered land, the park's cypress and eucalyptus
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9, byLandcover: { tree: [tree.cypress, tree.eucalyptus, tree.cypress] } }
+  # sidewalk trees, as on the driving level: where the canopy map shows
+  # trees beside the real road, in rows on the sidewalk just past the drawn
+  # asphalt (road cells keep the canopy scatter off the kerb)
+  streetTrees:
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # red lanterns strung across Grant Avenue (from the Dragon Gate at Bush
+    # Street to Broadway) and across Stockton Street (Sacramento to Broadway)
+    - { group: prop.lanterns, roads: &named [primary, secondary, tertiary, residential, unclassified, living_street], name: Grant Avenue, across: true, spacing: 10, bounds: [-122.4080, 37.7908, -122.4050, 37.7980] }
+    - { group: prop.lanterns.wide, roads: *named, name: Stockton Street, across: true, spacing: 14, bounds: [-122.4095, 37.7936, -122.4070, 37.7980] }
+  # (the windmills and Alcatraz lie outside this level)
+  landmarks: [bay-bridge-west, transamerica-pyramid, salesforce-tower, coit-tower, ferry-building, sf-city-hall, dragon-gate]
+  landmarkDepiction: generic
+  # a little taller than true, so the fronts of deep, three-storey row houses
+  # outweigh their roofs
+  depiction: { heightStretch: 1.4, scatter: 1.0 }

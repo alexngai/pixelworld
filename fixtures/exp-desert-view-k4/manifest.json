@@ -1,0 +1,208 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "exp-desert-view-k4",
+  "name": "Desert View (experiment, K=4)",
+  "chunkSize": 64,
+  "cellsX": 140,
+  "cellsY": 173,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "0a466cf3a87f6ac993691b4381d2d338d9b1bbc6f62f6779cc88448873be1a45",
+      "heightRange": [
+        122,
+        177
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "dce4c5aff5357b28b8e73749a68b7386fab2b3377d987520bd8e98867ecec7c0",
+      "heightRange": [
+        123,
+        204
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "bc280c145e1f7cf9ca8711edf80d3282c7f1ba610e52083fbb1ef1ca06761343",
+      "heightRange": [
+        144,
+        196
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "3ee181835872bdcf39c8254ed8fe9f38c3dfbf836a169fa05dd747c4ab870328",
+      "heightRange": [
+        121,
+        265
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "a81225cde02a850282bfd9ffd82251858bcf1948e44d96029b3c10fc8ccb557a",
+      "heightRange": [
+        159,
+        290
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "dac7ada83ee7e78247521c97c5e1a2877386055f0a95a3c88db42f3edd02bf3c",
+      "heightRange": [
+        163,
+        256
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "a44f0468a6632a1882b619de6f896545362a409c211f308b2c5f2a4d49e372ad",
+      "heightRange": [
+        161,
+        326
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "aa450703cfe56e5dae911b35a0b7d6ce9102c3dd857bfd23f7d1ab64c2916423",
+      "heightRange": [
+        216,
+        350
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "99959cc5293e863bad569b8e725d828eecd9be01200168ec07e16bff5decc51c",
+      "heightRange": [
+        241,
+        348
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 40.0,
+    "metersPerStep": 6.531973,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    121,
+    350
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "secondary",
+    "2": "primary",
+    "3": "trunk",
+    "4": "motorway"
+  },
+  "geology": {
+    "0": "colorado-plateau"
+  },
+  "start": {
+    "x": 126,
+    "y": 153
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.067 +lon_0=-111.849 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -111.88,
+      36.036,
+      -111.818,
+      36.098
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "88c0030b32726a7e",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "render": {
+    "scale": 0.25,
+    "tileSize": 512
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "983d79d7bc16c5f1b6b237d7c8de0cd156c81c05e5f9dd93602fcd57f6d237f2",
+    "count": 7145
+  },
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      10,
+      12
+    ],
+    "sha256": "0f8f7a292d3ffde912b74278bace5a5474b1e0555bc8a070b26b8fec0055345c"
+  },
+  "packageHash": "d2b32f38d3d7116e32c32905585fc5d5dcf47c64dc42eca9fee1b3f7a48e459f",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "8800af150a8de940a3f100a8eafa58306d2fa830c4e8dde418451570c8f3b4c1",
+    "version": 1,
+    "count": 6
+  }
+}

@@ -1,0 +1,146 @@
+:root {
+  --bg: #1e1c2b;
+  --fg: #e8dcbc;
+  --muted: #a29384;
+  --panel: rgba(20, 19, 32, 0.78);
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font: 12px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+canvas#view {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  cursor: grab;
+}
+
+canvas#view.fixed {
+  width: auto;
+  height: auto;
+}
+
+.hud,
+.help,
+.attribution {
+  position: fixed;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.hud {
+  top: 8px;
+  left: 8px;
+}
+
+/* What stopped the view (a style pack's problems): wrapped and scrollable, never off screen. */
+.hud.error {
+  white-space: pre-wrap;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  pointer-events: auto;
+  color: #ffb4a0;
+}
+
+/* Help and attribution share the bottom edge, half each, so they never overlap. */
+.help {
+  bottom: 8px;
+  left: 8px;
+  color: var(--muted);
+  white-space: normal;
+  max-width: calc(50vw - 28px);
+}
+
+.attribution {
+  bottom: 8px;
+  right: 8px;
+  max-width: calc(50vw - 28px);
+  color: var(--muted);
+  white-space: normal;
+  text-align: right;
+}
+
+.attribution button {
+  pointer-events: auto;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 12px 16px;
+  white-space: normal;
+}
+
+.modal h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.modal a {
+  color: var(--fg);
+}
+
+.modal .license,
+.modal .muted {
+  color: var(--muted);
+}
+
+/* Optional layers (traffic): a toggle per layer and sublayer, top right. */
+.layers {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layers label {
+  cursor: pointer;
+}
+
+.layers .sub {
+  padding-left: 16px;
+  color: var(--muted);
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .help {
+    display: none;
+  }
+}

@@ -1,0 +1,9 @@
+name: Mike O'Callaghan–Pat Tillman Memorial Bridge (Hoover Dam Bypass)
+wikidata: Q1293993
+# US 93 across Black Canyon, ~460 m downstream of the dam; a concrete arch under a deck
+line: [[-114.74490, 36.01280], [-114.73900, 36.01160]]
+crest: 468          # deck, metres above sea level (270 m over the river)
+thickness: 26
+bulge: 0
+depictions:
+  generic: { group: landmark.bridge.arch }

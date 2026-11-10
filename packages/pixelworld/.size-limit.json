@@ -1,0 +1,62 @@
+[
+  {
+    "name": "pixelworld/engine: createWorldView, as an app bundles it",
+    "path": "dist/engine.js",
+    "import": "{ createWorldView }",
+    "gzip": true,
+    "limit": "80 KB"
+  },
+  {
+    "name": "pixelworld/engine and pixelworld/traffic: a view with traffic",
+    "path": [
+      "dist/engine.js",
+      "dist/traffic.js"
+    ],
+    "import": {
+      "dist/engine.js": "{ createWorldView, roverController }",
+      "dist/traffic.js": "{ trafficLayer }"
+    },
+    "gzip": true,
+    "limit": "88 KB"
+  },
+  {
+    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API)",
+    "path": [
+      "dist/engine.js",
+      "dist/traffic.js",
+      "dist/format.js",
+      "dist/grid.js",
+      "dist/style.js",
+      "dist/generators.js"
+    ],
+    "gzip": true,
+    "limit": "100 KB"
+  },
+  {
+    "name": "pixelworld/format: reading a manifest and chunks (tree-shaken)",
+    "path": "dist/format.js",
+    "import": "{ parseManifest, decodeChunk }",
+    "gzip": true,
+    "limit": "6 KB"
+  },
+  {
+    "name": "pixelworld/grid: the projection alone (tree-shaken)",
+    "path": "dist/grid.js",
+    "import": "{ project }",
+    "gzip": true,
+    "limit": "1 KB"
+  },
+  {
+    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it, gzipped",
+    "path": "dist/bake.worker.js",
+    "gzip": true,
+    "limit": "60 KB"
+  },
+  {
+    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it (D3: 145 KB)",
+    "path": "dist/bake.worker.js",
+    "gzip": false,
+    "brotli": false,
+    "limit": "160 KB"
+  }
+]

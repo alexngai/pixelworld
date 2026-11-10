@@ -1,0 +1,8 @@
+name: Transamerica Pyramid
+wikidata: Q216865
+anchor: { lon: -122.40279, lat: 37.79519 }
+height: 260
+clear: 30
+replaces: [Transamerica Pyramid]
+depictions:
+  generic: { group: landmark.tower.pyramid }   # a slender pyramid tower; no logo

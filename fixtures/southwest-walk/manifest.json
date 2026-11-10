@@ -1,0 +1,424 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "southwest-walk",
+  "name": "Las Vegas Strip (walking)",
+  "chunkSize": 64,
+  "cellsX": 182,
+  "cellsY": 412,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "f31d9718ff46addc6f35381b9e2a350ef5fef5a0008ecc84b08950be4b3f8491",
+      "heightRange": [
+        193,
+        201
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "7112e5a78418ff5f45d2f8600fb7e3e85ad0573a50e747f66245668ddc2242fa",
+      "heightRange": [
+        190,
+        196
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "f7f1277b6b36e639a64607b8cd6ffe2af9b5bff814bd347989f3331961e0a1c9",
+      "heightRange": [
+        188,
+        192
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "a0a7bffb680671371d54b84193aeb5dde1e0209025bd5a69a78a8970e3d4325d",
+      "heightRange": [
+        194,
+        201
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "8e27f99d8aa336b4d5ae4b58112b43617813269dfec87e1bb901a9e2b478312a",
+      "heightRange": [
+        190,
+        198
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "49587294572f197510442bd3cd858e286abc84f58d534aa8a0c24c75acb287c5",
+      "heightRange": [
+        187,
+        193
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "b454dc4424c32e09b3ff57c45b484dae18bb167fd1a9da26a3e0b37ee21d0820",
+      "heightRange": [
+        194,
+        202
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "5928b603c78e1e8187b817bcae0fa6fe1fc8836e9ac8b97f0a0cf3629c609f49",
+      "heightRange": [
+        191,
+        198
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "05e2687fe01bcfedf203b69a62aa8723e787c7d42cf015f47e09e5d90bb2d879",
+      "heightRange": [
+        189,
+        194
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "a9f3abd6f1363adff2cc175445128c0752ea3fcec68b3fb3fd6d875f91fbce45",
+      "heightRange": [
+        196,
+        205
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "91efb58cf8165e7e3183182696a7dc91c9bf62e76edc3d4743e14e2cd171821a",
+      "heightRange": [
+        192,
+        199
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "37ae16ce78aa7feebc737f86344d24718efffa47f19f952b1e0bab5512645780",
+      "heightRange": [
+        188,
+        194
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "f9072f53d3de46b617fcdd50f2849f440f9d6870fb54b792a0938709398f4f79",
+      "heightRange": [
+        198,
+        205
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "8dae363ed24d4b1d1fbe647da4b246ee0e6e57a91cc6e8b55f894f71fa44f77e",
+      "heightRange": [
+        193,
+        202
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "13b11d1206c9caa6eaf8f858c847692669e30deeca99c2b35a5f24707de554ba",
+      "heightRange": [
+        190,
+        196
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "d01e9506052cc5de7207388001eb94a70fa7a67578421812b87ac4359f3011ec",
+      "heightRange": [
+        199,
+        208
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "5ffc3f2068dbea76cee7eb3d075f1364d2893fa74662d4dc60e26e87be946f1d",
+      "heightRange": [
+        195,
+        204
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "8fd6f918ad0dbe961dc78aa25fda24bd492485aa1445167070915a3591cfe465",
+      "heightRange": [
+        192,
+        199
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "061c7610d7aba9d940a62964636b2ecc7bf11927ff0306c0ea51a866cabb5926",
+      "heightRange": [
+        202,
+        210
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "0e85d933a7298e57df01377559fe32a90c6de2db6f72518c82a43d88fb1b1f2b",
+      "heightRange": [
+        198,
+        207
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "fdc8b32dddd0c6f9daa59d2b14dcc2eeff91a9dd9f71804ffea671a700a9c986",
+      "heightRange": [
+        195,
+        200
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 20.0,
+    "metersPerStep": 3.265986,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.5
+  },
+  "heightRange": [
+    187,
+    210
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "desert-southwest",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "basin-and-range",
+    "1": "colorado-plateau"
+  },
+  "start": {
+    "x": 69,
+    "y": 207
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=36.115 +lon_0=-115.168 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -115.188,
+      36.078,
+      -115.148,
+      36.152
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "5569b59ae9f6bac4",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "6b4cba77ea5c15933925f9c243217ad634e4539be2dfc6039463be1fd10378d2",
+    "count": 12416
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "heroes": [
+    {
+      "id": "strat-tower",
+      "rotation": 0,
+      "left": 1927,
+      "top": -422,
+      "width": 17,
+      "height": 291,
+      "depthBase": 236.0,
+      "bake": "heroes/strat-tower/bake-r0.png",
+      "paint": "heroes/strat-tower/paint-r0.png",
+      "sha256": "43366049b9a52b96f89e812f588acf5e61ed242759a9e6ec96f9fcd9f6c54476"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 1,
+      "left": -2782,
+      "top": -841,
+      "width": 17,
+      "height": 290,
+      "depthBase": 183.0,
+      "bake": "heroes/strat-tower/bake-r1.png",
+      "paint": "heroes/strat-tower/paint-r1.png",
+      "sha256": "53fe060575ced1c51faa0482e1c67b0a1e88b69167722ece33db082d6968173a"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 2,
+      "left": -1944,
+      "top": -3196,
+      "width": 17,
+      "height": 290,
+      "depthBase": -111.0,
+      "bake": "heroes/strat-tower/bake-r2.png",
+      "paint": "heroes/strat-tower/paint-r2.png",
+      "sha256": "e96f652584bcddbe215af502c74dea861791e47418661c880cf5f81bb76fdd34"
+    },
+    {
+      "id": "strat-tower",
+      "rotation": 3,
+      "left": 2765,
+      "top": -2777,
+      "width": 17,
+      "height": 291,
+      "depthBase": -58.0,
+      "bake": "heroes/strat-tower/bake-r3.png",
+      "paint": "heroes/strat-tower/paint-r3.png",
+      "sha256": "7e21a1f5aa57ad1523c2fa51cdb38636dd36dce1aab1511bf415659d78ebe91b"
+    }
+  ],
+  "level": "walk",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "southwest-fly",
+      "label": "Flying"
+    },
+    {
+      "name": "drive",
+      "world": "southwest",
+      "label": "Driving"
+    },
+    {
+      "name": "walk",
+      "world": "southwest-walk",
+      "label": "Walking the Strip"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      13,
+      27
+    ],
+    "sha256": "6ebd18be6a34c66ad3335e7ef5832d63228ccd5911ffce709a3da33a14865af3"
+  },
+  "packageHash": "55d03f0b4d588b38d212d3843c1b096366654b68f73819bcc44070feab463c9f",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "9cec0570fb0ab7e96a1d8c2ead77994791b3d8ca8c7012eb99162f32679e9fd8",
+    "version": 1,
+    "count": 8093
+  }
+}

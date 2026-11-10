@@ -1,0 +1,47 @@
+{
+  "packageHash": "4d02e499bc97c6c0542bca62ad12ad4b65339bedbba49acaac446f2a6426fdab",
+  "cells": [
+    92,
+    206
+  ],
+  "chunks": 8,
+  "heightRange": [
+    94,
+    105
+  ],
+  "inputs": {
+    "roadSegments": 2835,
+    "riverLines": 0
+  },
+  "objects": {
+    "building.commercial": 2330,
+    "building.parking": 76,
+    "building.residential": 3134,
+    "building.tower": 137,
+    "building.tower.hotel": 22,
+    "landmark.sign": 1,
+    "landmark.tower.observation": 1,
+    "shrub": 10,
+    "tree": 3346,
+    "tree.palm": 83
+  },
+  "roads": {
+    "cells": 2410,
+    "edges": 2584,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 1,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "surfaces": {
+    "woodland": 671,
+    "scrub": 16,
+    "water": 159,
+    "desert": 1282,
+    "grass": 434,
+    "farmland": 1,
+    "urban": 16389
+  }
+}

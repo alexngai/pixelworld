@@ -1,0 +1,319 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "id": "desert-southwest",
+  "name": "Desert Southwest",
+  "shades": 6,
+  "background": "#1e1c2b",
+  "silhouette": "#ffe36e",
+  "outline": {
+    "depthThreshold": 2.0
+  },
+  "ao": {
+    "strength": 2.4
+  },
+  "terrain": { "steepRockSlope": 0.6 },
+  "ramps": {
+    "kaibab": ["#2f2a3a", "#4f4652", "#7a6c6c", "#a29384", "#c8b89e", "#e8dcbc"],
+    "toroweap": ["#33283a", "#574046", "#80604f", "#a6825f", "#c6a274", "#e2c08f"],
+    "coconino": ["#3a3446", "#615a63", "#8e8479", "#b8ac94", "#dbd0b0", "#f4ecd2"],
+    "hermit": ["#2a1626", "#4a1f2b", "#6e2c2f", "#92402f", "#b05a3a", "#c9774a"],
+    "supai": ["#2e1b29", "#52282d", "#7a3a32", "#a1513a", "#c16b44", "#d98b54"],
+    "redwall": ["#2b1f2c", "#48303a", "#6a4446", "#8c5b52", "#aa7563", "#c39278"],
+    "muav": ["#24222f", "#3d3a46", "#5a5560", "#79727a", "#978f92", "#b3abaa"],
+    "tonto": ["#1f232b", "#343d3d", "#4d5a4f", "#687763", "#849379", "#a2ae90"],
+    "tapeats": ["#241a24", "#3c2b30", "#573d3c", "#73514a", "#8f685a", "#a9826c"],
+    "vishnu": ["#141320", "#201e2c", "#2e2b39", "#3d3947", "#4e4956", "#625b66"],
+    "pine": ["#142126", "#1d332d", "#284634", "#385b3b", "#4d7243", "#69894c"],
+    "conifer": ["#0e1a22", "#152821", "#1d3828", "#284a2f", "#355d36", "#46713f"],
+    "scrub": ["#26232b", "#3d3a3c", "#57534c", "#736c5c", "#908769", "#ada27a"],
+    "water": ["#0f2230", "#12333f", "#17474f", "#1f5d5e", "#2c746b", "#4a8e7a"],
+    "sand": ["#352a33", "#57463f", "#7d644f", "#a38563", "#c4a57a", "#ddc497"],
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+    "desert": ["#3a2f36", "#5e4c4a", "#87705f", "#ad9377", "#cbb293", "#e4cfae"],
+    "grass": ["#2a2a28", "#45443a", "#64624a", "#83805a", "#a29d6b", "#bfb983"],
+    "farmland": ["#1c2a24", "#2c4130", "#3f5a38", "#567540", "#719046", "#8faa55"],
+    "urban": ["#24232e", "#3b3b48", "#565766", "#737586", "#9294a3", "#b4b5c0"],
+    "snow": ["#3d4559", "#5d6880", "#8290a6", "#a8b5c8", "#cdd7e3", "#eef3f7"],
+    "asphalt": ["#16151d", "#22212b", "#2f2e39", "#3e3d49", "#4f4e5a", "#62616d"],
+    "marking": ["#3f3a2e", "#6b6040", "#978652", "#bfa960", "#dcc677", "#f2e29a"],
+    "basalt": ["#16131b", "#231e26", "#332a31", "#45383d", "#58484a", "#6d5a59"],
+    "ochre": ["#30232b", "#523b3a", "#795646", "#9c7253", "#ba8f63", "#d4ad7a"],
+    "limestone": ["#262833", "#3e4250", "#5b606d", "#7b8089", "#9ba0a6", "#bcc0c2"],
+    "dolomite": ["#33343e", "#545661", "#7b7d86", "#a1a2a8", "#c3c3c6", "#e1e0de"],
+    "bark": ["#1c1418", "#2e1f1f", "#432c26", "#5a3b2e", "#714b37", "#8a5e43"],
+    "palm": ["#10201c", "#1a3324", "#284a2b", "#3a6430", "#527f37", "#6f9a43"],
+    "stucco": ["#3a2f35", "#5f4d4b", "#8a7266", "#b39a85", "#d4bea2", "#ecdcc0"],
+    "roof-tile": ["#2b1520", "#4a2027", "#70302e", "#954436", "#b65b40", "#cf7a52"],
+    "roof-flat": ["#28272f", "#403f48", "#5c5b63", "#7b7a80", "#9a999c", "#b9b8b8"],
+    "glass": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "lit": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "lit-cool": ["#141a2a", "#1f2a3f", "#2c3d56", "#3d526d", "#526a85", "#6c869e"],
+    "tower-white": ["#2e2f3c", "#4f5262", "#7a7e8c", "#a4a8b3", "#cbced3", "#ecedee"],
+    "tower-gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
+    "concrete": ["#2a2a31", "#45444b", "#64626a", "#86838a", "#a7a3a7", "#c6c2c2"],
+    "neon-pink": ["#2a1023", "#4d1836", "#7a2148", "#a62c5b", "#cc4171", "#e8638c"],
+    "neon-cyan": ["#0e2028", "#14363d", "#1b5052", "#226b68", "#2e8780", "#46a39a"],
+    "iron": ["#241d1c", "#382c28", "#4e3e35", "#665244", "#806853", "#9c8066"]
+  },
+  "strataSets": {
+    "grand-canyon": [
+      { "name": "Kaibab limestone", "aboveMeters": 2050, "ramp": "kaibab" },
+      { "name": "Toroweap formation", "aboveMeters": 1950, "ramp": "toroweap" },
+      { "name": "Coconino sandstone", "aboveMeters": 1850, "ramp": "coconino" },
+      { "name": "Hermit shale", "aboveMeters": 1750, "ramp": "hermit" },
+      { "name": "Supai group", "aboveMeters": 1450, "ramp": "supai" },
+      { "name": "Redwall limestone", "aboveMeters": 1250, "ramp": "redwall" },
+      { "name": "Muav limestone", "aboveMeters": 1150, "ramp": "muav" },
+      { "name": "Bright Angel shale", "aboveMeters": 1000, "ramp": "tonto" },
+      { "name": "Tapeats sandstone", "aboveMeters": 950, "ramp": "tapeats" },
+      { "name": "Vishnu schist", "aboveMeters": -100000, "ramp": "vishnu" }
+    ],
+    "desert-ranges": [
+      { "name": "High dolomite", "aboveMeters": 2600, "ramp": "dolomite" },
+      { "name": "Grey limestone", "aboveMeters": 1700, "ramp": "limestone" },
+      { "name": "Red sandstone", "aboveMeters": 1300, "ramp": "supai" },
+      { "name": "Ochre volcanics", "aboveMeters": 800, "ramp": "ochre" },
+      { "name": "Basalt", "aboveMeters": -100000, "ramp": "basalt" }
+    ]
+  },
+  "defaultStrata": "grand-canyon",
+  "provinces": {
+    "colorado-plateau": "grand-canyon",
+    "basin-and-range": "desert-ranges"
+  },
+  "surfaces": {
+    "none": { "ramp": "vishnu", "pattern": "none" },
+    "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
+    "woodland": { "ramp": "pine", "pattern": "trees", "density": 0.09 },
+    "forest": { "ramp": "conifer", "pattern": "trees", "density": 0.2 },
+    "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
+    "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
+    "sand": { "ramp": "sand", "pattern": "speckle", "density": 0.05 },
+    "desert": { "ramp": "desert", "pattern": "speckle", "density": 0.04 },
+    "grass": { "ramp": "grass", "pattern": "speckle", "density": 0.05 },
+    "farmland": { "ramp": "farmland", "pattern": "fields", "density": 0.5 },
+    "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
+    "snow": { "ramp": "snow", "pattern": "sparkle", "density": 0.02 }
+  },
+  "roads": {
+    "asphalt": "asphalt",
+    "marking": "marking",
+    "lanes": { "ramp": "concrete", "minPixels": 4, "dash": [1, 2], "median": 1 },
+    "classes": {
+      "motorway": { "halfWidth": 0.2, "centerLine": true, "lanes": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true, "lanes": true },
+      "primary": { "halfWidth": 0.1, "centerLine": false, "lanes": true },
+      "secondary": { "halfWidth": 0.07, "centerLine": false, "lanes": true },
+      "tertiary": { "halfWidth": 0.06, "centerLine": false, "lanes": true },
+      "residential": { "halfWidth": 0.05, "centerLine": false },
+      "unclassified": { "halfWidth": 0.05, "centerLine": false },
+      "living_street": { "halfWidth": 0.04, "centerLine": false },
+      "service": { "halfWidth": 0.04, "centerLine": false }
+    }
+  },
+  "scatter": {
+    "woodland": [{ "group": "tree.pinyon-juniper", "perCell": 2.4 }],
+    "forest": [{ "group": "tree.conifer", "perCell": 3.0 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.9 }],
+    "grass": [{ "group": "shrub", "perCell": 0.2 }],
+    "desert": [{ "group": "shrub.desert", "perCell": 0.12 }, { "group": "rock.boulder", "perCell": 0.04 }],
+    "sand": [{ "group": "rock.boulder", "perCell": 0.02 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.06 }],
+    "urban": [{ "group": "tree", "perCell": 0.06 }]
+  },
+  "paths": {
+    "classes": {
+      "sidewalk": { "ramp": "concrete" },
+      "footway": { "ramp": "concrete" },
+      "pedestrian": { "ramp": "concrete" },
+      "steps": { "ramp": "concrete" },
+      "crosswalk": { "ramp": "concrete", "stripes": true },
+      "cycleway": { "ramp": "concrete" },
+      "path": { "ramp": "sand" }
+    }
+  },
+  "objects": {
+    "heightStretch": 2.5,
+    "variants": 6,
+    "surfaces": {
+      "urban": { "ramp": "urban", "pattern": "speckle", "density": 0.04 }
+    }
+  },
+  "assets": {
+    "tree": { "generator": "blob", "ramps": { "body": "farmland", "trunk": "bark" } },
+    "tree.conifer": { "generator": "conifer", "ramps": { "crown": "conifer", "trunk": "bark" } },
+    "tree.pinyon-juniper": {
+      "generator": "blob",
+      "ramps": { "body": "pine", "trunk": "bark" },
+      "params": { "radius": 1, "radiusJitter": 0.6, "height": 1.1, "trunk": 1, "holes": 0.15 }
+    },
+    "tree.palm": {
+      "generator": "palm",
+      "ramps": { "trunk": "bark", "fronds": "palm" },
+      "params": { "reach": 2, "minHeight": 7, "heightJitter": 2 }
+    },
+    "shrub": {
+      "generator": "blob",
+      "ramps": { "body": "scrub" },
+      "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "shrub.desert": {
+      "generator": "blob",
+      "ramps": { "body": "desert" },
+      "params": { "radius": 0.5, "radiusJitter": 0.3, "height": 0.4, "trunk": 0, "holes": 0.2 }
+    },
+    "rock.boulder": { "generator": "boulder", "ramps": { "rock": "coconino" } },
+    "building.residential": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "roof": "roof-tile", "window": "glass" },
+      "params": { "style": 0 }
+    },
+    "building.commercial": {
+      "generator": "building",
+      "ramps": { "wall": "stucco", "wall.white": "tower-white", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "params": { "style": 1, "litFraction": 0.5 }
+    },
+    "building.parking": {
+      "generator": "building",
+      "ramps": { "wall": "concrete", "roof": "concrete", "window": "glass" },
+      "params": { "style": 1, "litFraction": 0 }
+    },
+    "building.tower": {
+      "generator": "building",
+      "ramps": {
+        "wall": "tower-white",
+        "wall.gold": "tower-gold",
+        "wall.concrete": "concrete",
+        "roof": "roof-flat",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "style": 2, "litFraction": 0.45 }
+    },
+    "building.tower.hotel": {
+      "generator": "building",
+      "ramps": {
+        "wall": "tower-white",
+        "wall.gold": "tower-gold",
+        "roof": "roof-flat",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool",
+        "trim": "neon-pink",
+        "trim.cyan": "neon-cyan"
+      },
+      "params": { "style": 2, "litFraction": 0.6 }
+    },
+    "landmark.tower.observation": {
+      "generator": "observationTower",
+      "ramps": { "structure": "concrete", "window": "lit-cool", "accent": "neon-pink" }
+    },
+    "landmark.tower.lookout": {
+      "generator": "lookoutTower",
+      "ramps": { "stone": "toroweap", "detail": "vishnu" },
+      "params": { "radius": 2.5, "roomRadius": 3, "radiusPerHeight": 0.1 }
+    },
+    "city.blocks": {
+      "generator": "cityBlocks",
+      "ramps": {
+        "house": "stucco",
+        "house.pale": "desert",
+        "house.pale2": "desert",
+        "house.stucco": "stucco",
+        "house.tile": "roof-tile",
+        "roof": "roof-flat",
+        "roof.concrete": "concrete",
+        "wall": "stucco",
+        "wall.white": "tower-white",
+        "green": "grass"
+      },
+      "params": { "pitch": 5 }
+    },
+    "landmark.dam": {
+      "generator": "dam",
+      "ramps": { "face": "concrete", "crest": "roof-flat", "detail": "limestone" },
+      "params": { "crest": 2, "batter": 1.6 }
+    },
+    "landmark.sign": {
+      "generator": "sign",
+      "ramps": { "panel": "tower-white", "neon": "neon-pink", "post": "concrete" }
+    },
+    "prop.streetlight": {
+      "generator": "streetLight",
+      "ramps": { "pole": "concrete", "lamp": "lit" },
+      "params": { "height": 6 }
+    },
+    "prop.signal": {
+      "generator": "trafficSignal",
+      "ramps": { "pole": "iron", "head": "asphalt", "light": "marker" },
+      "params": { "height": 5 }
+    },
+    "landmark.tower.lattice": {
+      "generator": "latticeTower",
+      "ramps": { "structure": "iron", "deck": "iron", "accent": "lit" }
+    },
+    "landmark.wheel": {
+      "generator": "wheel",
+      "ramps": { "structure": "tower-white", "cabin": "lit-cool", "accent": "neon-cyan" }
+    },
+    "landmark.bridge.arch": {
+      "generator": "archBridge",
+      "ramps": { "structure": "concrete", "deck": "roof-flat", "detail": "limestone" }
+    },
+    "landmark.dam.intake": {
+      "generator": "intakeTower",
+      "ramps": { "structure": "concrete", "detail": "limestone", "crest": "roof-flat" }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {"paint.a": "tower-white", "paint.b": "tower-white", "paint.c": "concrete", "paint.d": "iron", "paint.e": "basalt", "paint.f": "asphalt", "paint.g": "marker", "paint.h": "stucco", "paint.i": "ochre", "paint.j": "roof-tile", "paint.k": "concrete", "paint.l": "limestone", "taxi": "tower-gold", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete", "sign": "lit"}
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {"body.a": "tower-white", "band.a": "marker", "body.b": "concrete", "band.b": "neon-cyan", "body.c": "tower-gold", "band.c": "asphalt", "window": "lit", "door": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "iron", "sign": "lit"}
+    },
+    "vehicle.cablecar": {
+      "generator": "cableTram",
+      "ramps": {"body.a": "marker", "trim": "stucco", "accent": "tower-gold", "roof": "roof-flat", "wood": "bark", "window": "lit", "tyre": "asphalt"}
+    },
+    "vehicle.streetcar": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "marker", "upper.b": "stucco", "lower.b": "ochre", "roof": "concrete", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"}
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {"upper.a": "tower-white", "lower.a": "iron", "roof": "concrete", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker"},
+      "params": {"pantograph": 1, "joints": 1}
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {"loco.a": "ochre", "stripe.a": "marker", "loco.b": "iron", "stripe.b": "tower-gold", "loco.c": "tower-white", "stripe.c": "marker", "wagon.a": "roof-tile", "wagon.b": "ochre", "wagon.c": "iron", "wagon.d": "concrete", "wagon.e": "basalt", "container.a": "marker", "container.b": "neon-cyan", "container.c": "ochre", "container.d": "tower-white", "container.e": "iron", "container.f": "tower-gold", "coach": "concrete", "band": "marker", "window": "lit", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "roof": "concrete", "trim": "iron"}
+    },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {"hull.a": "iron", "band.a": "tower-white", "hull.b": "tower-white", "band.b": "marker", "cabin": "tower-white", "window": "lit", "roof": "concrete", "trim": "iron"}
+    },
+    "vehicle.car.player": {
+      "generator": "car",
+      "ramps": {"paint.a": "neon-cyan", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete"}
+    },
+    "vehicle.plane": {
+      "generator": "plane",
+      "ramps": {"body.a": "tower-white", "stripe.a": "marker", "body.b": "tower-gold", "stripe.b": "asphalt", "body.c": "tower-white", "stripe.c": "neon-cyan", "glass": "glass", "trim": "iron", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "shadow": "asphalt"}
+    }
+  },
+  "night": {
+    "background": "#0b0b16",
+    "saturation": 0.55,
+    "multiply": [0.3, 0.34, 0.52],
+    "add": [4, 6, 16],
+    "emissive": {
+      "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
+      "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
+      "neon-pink": ["#3a0d2a", "#9a1a5e", "#e02a85", "#ff4fa3", "#ff86c0", "#ffc1dd"],
+      "neon-cyan": ["#06303a", "#0e7a8a", "#1fc4d6", "#4fe6f0", "#93f4f8", "#d0fcfd"],
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+    }
+  }
+}

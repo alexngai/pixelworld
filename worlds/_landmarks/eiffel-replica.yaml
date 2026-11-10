@@ -1,0 +1,8 @@
+name: Eiffel Tower replica at Paris Las Vegas
+wikidata: Q691491     # Paris Las Vegas (the replica has no item of its own)
+anchor: { lon: -115.17214, lat: 36.11247 }
+height: 165
+clear: 30
+replaces: [Eiffel Tower]
+depictions:
+  generic: { group: landmark.tower.lattice }       # a four-legged lattice tower

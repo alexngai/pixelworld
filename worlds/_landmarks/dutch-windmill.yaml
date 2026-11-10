@@ -1,0 +1,10 @@
+name: Dutch Windmill (Golden Gate Park)
+wikidata: Q54799943
+# Overture's footprint centroid, at the park's northwest corner by the Great Highway
+anchor: { lon: -122.509406, lat: 37.770441 }
+height: 23          # depicted: about 75 ft, the tower and its cap (Overture's 13 m is too low)
+clear: 12
+replaces:
+  - 1787bb26-be21-4901-b1c5-5582bd91a923   # Dutch Windmill
+depictions:
+  generic: { group: landmark.windmill }    # a smock mill with four lattice sails to the ocean; no name

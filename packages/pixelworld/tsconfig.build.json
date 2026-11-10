@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // the published declarations need no Node or Vite types
+    "types": [],
+    // the private workspace packages, by source, so their declarations are
+    // bundled into dist/*.d.ts rather than imported (they aren't published)
+    "paths": {
+      "@pixelworlds/*": ["../*/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

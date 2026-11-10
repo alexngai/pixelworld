@@ -1,0 +1,100 @@
+{
+  "packageHash": "7370e793c07f308c217e281a08d99740a632e06af68125553bcb40c2ffcdaf69",
+  "cells": [
+    1155,
+    709
+  ],
+  "chunks": 228,
+  "heightRange": [
+    -10,
+    60
+  ],
+  "inputs": {
+    "roadSegments": 26298,
+    "riverLines": 1032
+  },
+  "warp": {
+    "method": "v2",
+    "cells": [
+      1155,
+      709
+    ],
+    "folds": 0,
+    "maxAnisotropy": 15.277,
+    "focus": [
+      {
+        "name": "las-vegas-strip",
+        "target": 100.0,
+        "achieved": 100.2,
+        "error": 0.002
+      },
+      {
+        "name": "hoover-dam",
+        "target": 100.0,
+        "achieved": 100.0,
+        "error": 0.0
+      },
+      {
+        "name": "lake-mead",
+        "target": 250.0,
+        "achieved": 250.5,
+        "error": 0.002
+      },
+      {
+        "name": "grand-canyon-village",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.001
+      },
+      {
+        "name": "desert-view",
+        "target": 150.0,
+        "achieved": 150.1,
+        "error": 0.0
+      }
+    ],
+    "pins": [],
+    "solveSeconds": 22.344
+  },
+  "objects": {
+    "building.commercial": 2694,
+    "building.parking": 79,
+    "building.residential": 2885,
+    "building.tower": 138,
+    "building.tower.hotel": 34,
+    "landmark.bridge.arch": 1,
+    "landmark.dam": 1,
+    "landmark.dam.intake": 4,
+    "landmark.sign": 1,
+    "landmark.tower.lattice": 1,
+    "landmark.tower.lookout": 1,
+    "landmark.tower.observation": 1,
+    "landmark.wheel": 1
+  },
+  "roads": {
+    "cells": 25083,
+    "edges": 27316,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 3,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "surfaces": {
+    "rock": 56472,
+    "woodland": 122183,
+    "forest": 21931,
+    "scrub": 175111,
+    "water": 14330,
+    "desert": 233297,
+    "grass": 147695,
+    "farmland": 416,
+    "urban": 47460
+  },
+  "routes": {
+    "ferry": 1,
+    "road": 5501,
+    "train": 117
+  }
+}

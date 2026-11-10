@@ -1,0 +1,61 @@
+# San Francisco Bay, flying level (D-046): the city with the Golden Gate, the
+# Marin Headlands, Alcatraz, Angel Island, Treasure Island and the Oakland
+# shore at 100 m per cell. Towers of 60 m or more are drawn 2x.
+# Build: cd pipeline && uv run pixelworld build ../worlds/sf/fly.yaml
+extends: region.yaml
+id: sf-fly
+name: San Francisco Bay (flying)
+level: fly
+bounds: [-122.56, 37.69, -122.25, 37.90]
+
+metersPerCell: 100
+verticalExaggeration: 2.0
+maxSlope: 3
+start: { lon: -122.42, lat: 37.79 }
+
+sources:
+  dem: { kind: usgs-3dep-1arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 4 }
+  roads:
+    classes: [motorway, trunk, primary]
+
+widths: { scale: 3.0, minCells: 0.08, lanes: null } # no medians from the air (M3.5)
+micro: { k: 4, dem: { overview: 1 } }
+# the parks' lawns, but not from the canopy map: at 100 m a wood is a wood
+# (and the 1 m map over the whole Bay is too big to read); no yards without houses
+ground:
+  lawn: { wooded: null }
+  yard: null
+
+objects:
+  # only towers and landmarks are drawn from the air: no typology pass, and no
+  # street trees (the driving level's canopy rule would carpet the Bay at 100 m).
+  # The landmarks are the driving level's. Point landmarks are drawn 3x, but
+  # Alcatraz's cellhouse is a line and keeps its size: its lighthouse is drawn
+  # 1.5x and the cellhouse a little taller, so the island isn't a lighthouse's.
+  landmarks:
+    - golden-gate-bridge
+    - bay-bridge-west
+    - transamerica-pyramid
+    - salesforce-tower
+    - coit-tower
+    - ferry-building
+    - sf-city-hall
+    - palace-of-fine-arts
+    - sutro-tower
+    - dutch-windmill
+    - murphy-windmill
+    - { id: alcatraz-cellhouse, hm: 26 }
+    - { id: alcatraz-lighthouse, scale: 1.5 }
+  typology: null
+  vegetation: null
+  streetTrees: null
+  depiction:
+    buildings: { scale: 2, minHeightMeters: 60 }
+    landmarks: { scale: 3 }
+    heightStretch: 2.0
+    scatter: 0.6
+    # traffic (D-060) at most 4x its size: a car drawn 0.55 cells long would be
+    # 55 m here, longer than the bridges' decks are wide; at 4x it's 18 m, as
+    # wide as a lane of the roads drawn at 3x, and a ferry about its real size
+    vehicleScale: 4

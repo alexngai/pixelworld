@@ -1,0 +1,7 @@
+name: Sutro Tower
+wikidata: Q650097
+anchor: { lon: -122.45277, lat: 37.75523 }
+height: 298
+clear: 20
+depictions:
+  generic: { group: landmark.tower.mast }
