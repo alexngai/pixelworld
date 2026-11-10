@@ -12,6 +12,7 @@ import {
   buildTerrainMesh,
   objectVoxelScale,
   scaleMesh,
+  type ModelFailure,
   type ObjectInstance,
 } from "@pixelworlds/generators";
 import type { BakeTileMessage, FromWorker, InitMessage, TerrainSlice, ToWorker, WorldObjects } from "./protocol";
@@ -68,7 +69,7 @@ export class BakeHost {
           const meshMs = performance.now() - t0;
           const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
           this.baker.releaseScene(scene);
-          this.reply(msg.id, res, meshMs, built.merged.vertexCount);
+          this.reply(msg.id, res, meshMs, built.merged.vertexCount, built.failures);
           break;
         }
         case "bakeSprite": {
@@ -82,7 +83,8 @@ export class BakeHost {
         }
       }
     } catch (e) {
-      this.post({ type: "error", id: "id" in msg ? msg.id : undefined, message: String(e) });
+      const where = msg.type === "bakeTile" ? `bake of tile ${msg.tx},${msg.ty} (rotation ${msg.rotation}) failed: ` : `${msg.type} failed: `;
+      this.post({ type: "error", id: "id" in msg ? msg.id : undefined, message: where + String(e) });
     }
   }
 
@@ -95,6 +97,7 @@ export class BakeHost {
     const key = `${msg.tx},${msg.ty}`;
     const t0 = performance.now();
     let scene = this.meshCache.get(key);
+    let failures: ModelFailure[] = []; // reported when the tile's models are built, not again per rotation
     if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
       const world = { width: init.worldWidth, height: init.worldHeight };
@@ -114,6 +117,7 @@ export class BakeHost {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
         scene.meshes.push(objects.merged);
         scene.batches.push(...objects.batches);
+        failures = objects.failures;
       }
       const s = init.renderScale ?? 1;
       if (s !== 1) {
@@ -138,7 +142,7 @@ export class BakeHost {
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
       (scene.fields ?? []).reduce((n, f) => n + f.width * f.height * f.k * f.k * 18, 0);
-    this.reply(msg.id, res, meshMs, vertices);
+    this.reply(msg.id, res, meshMs, vertices, failures);
   }
 
   /**
@@ -190,17 +194,18 @@ export class BakeHost {
     });
   }
 
-  private reply(id: number, res: ReturnType<Baker["bake"]>, meshMs: number, vertices: number): void {
+  private reply(id: number, res: ReturnType<Baker["bake"]>, meshMs: number, vertices: number, failures: ModelFailure[] = []): void {
     const stats = {
       meshMs,
       bakeMs: res?.timings.totalMs ?? 0,
       vertices,
       shadowMapSize: res?.timings.shadowMapSize ?? ([0, 0] as [number, number]),
     };
+    const failed = failures.length ? { failures } : {};
     if (!res) {
-      this.post({ type: "baked", id, image: null, stats });
+      this.post({ type: "baked", id, image: null, stats, ...failed });
       return;
     }
-    this.post({ type: "baked", id, image: res.image, stats }, [res.image.pixels.buffer]);
+    this.post({ type: "baked", id, image: res.image, stats, ...failed }, [res.image.pixels.buffer]);
   }
 }

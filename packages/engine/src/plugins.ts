@@ -18,6 +18,8 @@ export interface ViewPlugins {
   descriptors: PluginDescriptor[];
   /** For the bake worker: names and absolute module URLs. */
   refs: PluginRef[];
+  /** Plugins the style pack names that the view doesn't load. */
+  missing: string[];
 }
 
 /**
@@ -32,11 +34,12 @@ export function viewPlugins(option: WorldViewOptions["plugins"], styleJson: obje
   if (missing.length)
     console.warn(
       `the style pack ${styleId} needs the plugin${missing.length > 1 ? "s" : ""} ${missing.join(", ")}, ` +
-        `which this view didn't load: models drawn by ${missing.length > 1 ? "their" : "its"} generators will fail to bake. ` +
+        `which this view didn't load: models drawn by ${missing.length > 1 ? "their" : "its"} generators will fail to bake ` +
+        `(each is drawn as a missing-model marker). ` +
         `Pass ${missing.length > 1 ? "them" : "it"} to createWorldView({ plugins }) (docs/plugins.md).`,
     );
   const refs = descriptors.map((d) => ({ name: d.name, url: new URL(d.url, location.href).href }));
-  return { descriptors, refs };
+  return { descriptors, refs, missing };
 }
 
 /** Register the plugins on this thread (entity models, the inline baker): the plugin itself, or its module. */

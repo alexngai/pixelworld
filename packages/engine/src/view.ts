@@ -93,6 +93,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
     plugins: plugins.refs,
   });
+  service.failures.unloaded = plugins.missing; // named in failures of generators nobody registered (D-072)
   await mainThread.catch((e: unknown) => {
     service.dispose();
     throw e;
@@ -508,6 +509,7 @@ class View implements WorldView {
       renderMs: this.renderMs,
       cache: !this.cache ? "off" : this.cache instanceof TileCache ? "indexeddb" : "custom",
       cacheWrites: this.cache?.writes ?? 0,
+      modelsFailed: this.service.failures.count,
     };
   }
 

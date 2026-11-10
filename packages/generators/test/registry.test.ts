@@ -106,13 +106,14 @@ describe("the generator registry", () => {
     expect(e.message).toMatch(/Registered generators: .*building, .*cityBlocks/);
   });
 
-  it("fails a bake that needs a missing generator with that error", () => {
+  it("fails a model that needs a missing generator with that error, not the whole bake (D-072)", () => {
     const voxel = objectVoxelScale(1);
     const opts = { catalog, rampIds, voxel, voxelMeters: 1, heightStretch: 1, heightAt: () => 0 };
     const fp: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
-    expect(() => buildObjects([{ g: "thing.dot", x: 0.5, y: 0.5, s: 1, fp }], opts)).toThrow(
-      /no generator named 'testDot' \(asked for by thing\.dot\)/,
-    );
+    const out = buildObjects([{ g: "thing.dot", x: 0.5, y: 0.5, s: 1, fp }], opts);
+    expect(out.failures).toHaveLength(1);
+    expect(out.failures[0]!.error).toMatch(/^MissingGeneratorError: no generator named 'testDot' \(asked for by thing\.dot\)/);
+    expect(out.merged.vertexCount).toBeGreaterThan(0); // its missing-model marker
   });
 });
 

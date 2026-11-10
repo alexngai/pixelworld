@@ -2,6 +2,7 @@ import type { Rotation } from "@pixelworlds/grid";
 import type { BakedImage } from "@pixelworlds/bake";
 import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworlds/generators";
 import { BakeHost } from "./bakeHost";
+import { ModelFailures } from "./modelFailures";
 import {
   sliceTransferables,
   type BakeStats,
@@ -89,6 +90,8 @@ export class BakeService {
   readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
   onTile: (r: TileResult) => void = () => {};
   onError: (message: string) => void = (m) => console.error(m);
+  /** Models that failed to generate (drawn as markers): counted, and reported through onError once per generator and cause (D-072). */
+  readonly failures = new ModelFailures((m) => this.onError(m));
 
   private constructor(private readonly prepare: (t: TileRequest) => Promise<PreparedTile>) {
     this.transport = { send: () => {} };
@@ -281,6 +284,7 @@ export class BakeService {
       if (msg.id !== undefined) this.finish(msg.id, null, null, false);
       return;
     }
+    if (msg.failures) this.failures.add(msg.failures);
     this.finish(msg.id, msg.image, msg.stats, false);
   }
 
