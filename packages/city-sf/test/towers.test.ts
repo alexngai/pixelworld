@@ -106,6 +106,19 @@ describe("San Francisco towers", () => {
     expect(recessed).toBe(12);
   });
 
+  it("raises a needle as tall as its spire parameter asks", () => {
+    const deco = style.assets["building.tower.deco"]!;
+    const tallest = (spire?: number) => {
+      const assets = { ...style.assets, needle: { ...deco, params: { ...deco.params, crown: 0, ...(spire ? { spire } : {}) } } };
+      const m = generateModel(assets, rampIds, "needle", { seed: 3, mask: rectMask(24, 20), heightVox: 100 });
+      let top = 0;
+      for (let y = 0; y < m.sy; y++) for (let x = 0; x < m.sx; x++) top = Math.max(top, topOf(m, x, y));
+      return top;
+    };
+    expect(tallest()).toBeLessThan(108); // a finial of 5%
+    expect(tallest(0.2)).toBeGreaterThanOrEqual(118);
+  });
+
   it("stands a deco tower on a rectangle when it has no footprint (a point landmark)", () => {
     const m = generateModel(style.assets, rampIds, "building.tower.deco", { seed: 4, heightVox: 100 });
     expect(m.sx).toBeGreaterThan(20);
