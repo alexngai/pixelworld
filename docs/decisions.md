@@ -87,6 +87,7 @@ Status values:
 | D-076 | Every package has a geo grid; specs are checked against a schema; builds are staged | Accepted |
 | D-077 | Contributor tooling: a pixel inspector, a model preview, e2e servers per checkout, a smoke subset and CI shards | Accepted |
 | D-078 | Next regions: New York, then Paris, then Amsterdam | Accepted (M5) |
+| D-079 | A player sees through the buildings in front of it; tall objects stay in view | Accepted (M5) |
 
 ---
 
@@ -818,3 +819,23 @@ The point is more room for visual interest; both halves are wanted.
   - **Amsterdam first**, for M5's CityJSON goal and roofs from data: the most new pipeline code before the first result. It stays in the plan.
   - **Montréal instead of Paris:** reuses the row-house generators, but its LoD2 covers only some boroughs, and it adds less to the style range than Paris.
 - **Later:** M5's exit criterion ("no code changes beyond new ingest adapters and its style pack") is judged on Paris and Amsterdam; New York may still add rule fields (§7).
+
+### D-079: A player sees through the buildings in front of it; tall objects stay in view (accepted, M5)
+- **Why:** New York's walking level (D-078) puts a player among towers up to 429 m tall; at walking scale a 326 m tower is already about 730 px, twice the view's height, and a car behind one is hidden for long stretches. The silhouette (D-070) says where the car is, not what's around it. The owner asked for the game view only: buildings in front of the player, and a margin around it, turn see-through; the viewer keeps drawing everything.
+- **What a tile holds decides the design:** a baked tile keeps only the front-most surface (palette index and depth), and neighbouring tiles leave empty what a context object hides (D-021), so the street behind a tower exists nowhere. The output is palette-indexed, so transparency is a dithered screen-door, as silhouettes and fog already are.
+- **How:**
+  - **A bare tile variant:** `TileRequest.bare` bakes a tile with its placed objects' mesh left out of the image but kept in the shadow pass, so the street keeps the towers' shadows and matches its surroundings. Trees and props (instanced batches) stay. Hero paint isn't stamped on it. It has its own tile key and cache key (`…:bare`), and reuses the tile's cached scene in the worker, so it costs a GPU bake, not meshing.
+  - **The compositor:** the first sprite with `reveal` defines an ellipse (its sprite's rectangle plus `margin` px). Normal tiles discard a Bayer-dithered share (`density`, with a soft edge) of their pixels inside it whose surface stands in front of the player: the surface's u + v, recovered from its screen row and depth as the fog pass does (u + v = sy/32 + 0.75·depth), is more than half a cell beyond the player's. Bare tiles are then drawn only inside the ellipse with the usual depth test, so they fill exactly what was let through. Sprites depth-test as before, so the player and traffic behind show.
+  - **The view:** asks for bare variants of the tiles drawn under last frame's ellipse (grown by 32 px) right after the visible tiles, and applies the reveal only once all of them are baked. A view with no revealing entity asks for none: the viewer is unchanged.
+  - **The API:** `EntitySpec.reveal?: { margin?, density? }` (defaults 24 px, 0.75) and `Entity.reveal`. The example game sets it on its car and plane.
+- **Tall objects stay in view:** tile visibility allowed objects only 12 steps (~96 px) above a tile's ground, and the depth range 32 steps above the world's highest ground, so a tower in a tile below the view never drew, and tower tops beyond the range clamped to one depth. Each tile now records its objects' tops (from `hm`, `top` and `z0`; footprints over every tile they cover), and the depth range reaches the tallest. San Francisco's walking level downtown now asks for the tiles whose towers rise into the view.
+- **Checked:** in the game on San Francisco's walking level, downtown (`start=-122.3995,37.7908`), with the car behind a tower: the reveal changes 1,551 pixels around it, showing the car and the shadowed street through the dithered tower; with `reveal` off, only the silhouette shows.
+- **Rejected alternatives:**
+  - **Cutting buildings at a height near the player** (the variant keeps the lower floors): reads better (stumps rather than an empty lot) but needs every model split in two at meshing; it can plug into the same compositor pass later.
+  - **Runtime only, no variant** (tint or outline the buildings in front, using spare alpha bits): cheap, but can't show the street, which doesn't exist in the tiles.
+  - **Re-baking the tiles with the occluding buildings removed as the player moves:** a new bake per move, at seconds per walking-level tile.
+- **Later:**
+  - Buildings behind the player inside the ellipse are left out too where a nearer tile hid them (they're in no tile's image there); a variant that hides only objects in front of the player would keep them.
+  - A bare variant whose scene left the worker's six-scene cache meshes the tile again; bake both together if that shows.
+  - Downtown walking-level tiles take about 6 s each to mesh on the CPU (14 tiles on San Francisco's Financial District start); the visibility fix asks for more of them. This is the D5 (Rust/WASM meshing) question.
+

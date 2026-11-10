@@ -39,9 +39,21 @@ uniform highp sampler2D uImage;
 uniform vec2 uRectOrigin;
 uniform float uDepthBase;
 uniform vec2 uDepthRange;
-uniform int uMode;          // 0 = normal, 1 = occluded silhouette
+uniform int uMode;          // 0 = normal, 1 = occluded silhouette, 2 = bare tile inside the reveal
 uniform float uSilhouette;  // palette index / 255
+uniform vec2 uViewOrigin;   // absolute screen px of the target's top-left
+uniform int uRevealOn;      // tiles in front of a player see-through (normal mode)
+uniform vec4 uReveal;       // the reveal ellipse: centre, radii (target px)
+uniform float uRevealS;     // the player's u + v
+uniform float uRevealDensity;
 out vec4 o;
+
+const float BAYER[16] = float[16](
+   0.0,  8.0,  2.0, 10.0,
+  12.0,  4.0, 14.0,  6.0,
+   3.0, 11.0,  1.0,  9.0,
+  15.0,  7.0, 13.0,  5.0);
+
 void main() {
   ivec2 fp = ivec2(gl_FragCoord.xy);
   ivec2 tp = fp - ivec2(uRectOrigin);
@@ -50,6 +62,21 @@ void main() {
   float local = (floor(t.g * 255.0 + 0.5) * 256.0 + floor(t.b * 255.0 + 0.5)) / 256.0;
   float d = uDepthBase + local;
   float z = clamp(1.0 - (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x), 0.0, 1.0);
+  if (uRevealOn == 1 || uMode == 2) {
+    float r = length((gl_FragCoord.xy - uReveal.xy) / uReveal.zw);
+    if (uMode == 2) {
+      if (r >= 1.0) discard;  // a bare tile fills only the reveal, where the tiles let it through
+    } else if (r < 1.0) {
+      // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
+      float sy = gl_FragCoord.y + uViewOrigin.y;
+      float s = sy / 32.0 + 0.75 * d;
+      if (s > uRevealS + 0.5) {
+        ivec2 ap = fp + ivec2(uViewOrigin);
+        float k = uRevealDensity * smoothstep(1.0, 0.7, r);  // a dithered edge
+        if ((BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0 < k) discard;
+      }
+    }
+  }
   gl_FragDepth = z;
   if (uMode == 1) {
     if (((fp.x + fp.y) & 1) == 1) discard;
@@ -101,6 +128,27 @@ export interface SpriteInstance {
   /** Depth of the object's origin. */
   depth: number;
   silhouette: boolean;
+  /**
+   * Show what this sprite stands behind (D-079): within `margin` px of it,
+   * world pixels in front of it are dithered away (`density` of them, 0–1)
+   * over the bare tiles (`TileRequest.bare`). The first such sprite of a frame counts.
+   */
+  reveal?: Reveal | null;
+}
+
+export interface Reveal {
+  margin: number;
+  density: number;
+}
+
+/** The ellipse a revealing sprite clears (absolute screen px), for choosing bare tiles. */
+export function revealRect(s: SpriteInstance): { left: number; top: number; right: number; bottom: number } | null {
+  if (!s.reveal) return null;
+  const img = s.sprite.image;
+  const m = s.reveal.margin;
+  const left = s.sx + img.left - m;
+  const top = s.sy + img.top - m;
+  return { left, top, right: left + img.width + 2 * m, bottom: top + img.height + 2 * m };
 }
 
 export interface FrameParams {
@@ -216,7 +264,12 @@ export class Compositor {
     this.fogPass.setField(field);
   }
 
-  render(frame: FrameParams, tiles: GpuImage[], sprites: SpriteInstance[], fog: FogFrame | null = null): void {
+  /**
+   * Draw a frame. With `bare` tiles (those under a revealing sprite, all of
+   * them baked), the first sprite with `reveal` sees through what stands in
+   * front of it.
+   */
+  render(frame: FrameParams, tiles: GpuImage[], sprites: SpriteInstance[], fog: FogFrame | null = null, bare: GpuImage[] = []): void {
     const gl = this.gl;
     // +1 so the sub-pixel offset never samples outside the target
     const w = frame.internalWidth + 1;
@@ -253,13 +306,32 @@ export class Compositor {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
 
-    for (const tile of tiles) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 0);
     const spriteAt = (s: SpriteInstance) =>
       [
         s.sx + s.sprite.image.left,
         s.sy + s.sprite.image.top,
         s.depth + s.sprite.image.depthBase,
       ] as const;
+    gl.uniform2f(u.loc("uViewOrigin"), frame.left, frame.top);
+    const rv = bare.length ? sprites.find((s) => s.reveal) : undefined;
+    const box = rv && revealRect(rv);
+    if (box) {
+      // the ellipse in target px (gl_FragCoord: row 0 = the top row of the view)
+      gl.uniform4f(
+        u.loc("uReveal"),
+        (box.left + box.right) / 2 - frame.left,
+        (box.top + box.bottom) / 2 - frame.top,
+        (box.right - box.left) / 2,
+        (box.bottom - box.top) / 2,
+      );
+      gl.uniform1f(u.loc("uRevealS"), rv!.sy / 32 + 0.75 * rv!.depth); // its u + v, as the shader works it out
+      gl.uniform1f(u.loc("uRevealDensity"), Math.min(1, Math.max(0, rv!.reveal!.density)));
+    }
+    gl.uniform1i(u.loc("uRevealOn"), box ? 1 : 0);
+    for (const tile of tiles) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 0);
+    gl.uniform1i(u.loc("uRevealOn"), 0);
+    // the bare tiles fill what the reveal let through: the depth test keeps what's still there
+    if (box) for (const tile of bare) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 2);
     for (const s of sprites) {
       const [l, tp, d] = spriteAt(s);
       draw(s.sprite, l, tp, d, 0);

@@ -47,7 +47,11 @@ test.describe("the game (M4)", () => {
     expect(s0).toMatchObject({ mode: "car", world: "southwest", level: "Driving" });
     expect(s0.road).toBe("primary");
     expect(s0.heading).toBeCloseTo(Math.PI / 2, 3); // south, down the Strip
-    // the car is behind a casino tower here: a dithered silhouette shows it
+    // the car is behind a casino tower here: with its reveal off (D-079), a dithered silhouette shows it
+    await page.evaluate(async () => {
+      window.__game!.game.view.entities.list().find((e) => e.reveal)!.reveal = null;
+      await window.__game!.ready();
+    });
     expect(await countColour(page, SILHOUETTE)).toBeGreaterThan(20);
 
     // full throttle down the boulevard, the road assist keeping to it
@@ -88,6 +92,48 @@ test.describe("the game (M4)", () => {
     expect(left).toBeGreaterThan(0.3); // …and not into the building
     expect(travelled + left).toBeCloseTo(Math.hypot(b!.x - start!.x, b!.y - start!.y), 1); // straight at it
     expect(Math.abs(s2.speed)).toBeLessThan(1);
+  });
+
+  test("sees through the casino tower in front of the car, near it and nowhere else (D-079)", async ({ page }) => {
+    await open(page, "");
+    const res = await page.evaluate(async () => {
+      const g = window.__game!.game;
+      const car = g.view.entities.list().find((e) => e.reveal)!;
+      const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const grab = () => {
+        const c = document.getElementById("view") as HTMLCanvasElement;
+        const t = document.createElement("canvas");
+        t.width = c.width;
+        t.height = c.height;
+        const ctx = t.getContext("2d")!;
+        ctx.drawImage(c, 0, 0);
+        return ctx.getImageData(0, 0, t.width, t.height);
+      };
+      const saved = car.reveal;
+      car.reveal = null;
+      await frames();
+      const off = grab();
+      car.reveal = saved;
+      // the bare tiles under the car bake after the visible ones: the reveal shows once they're in
+      const p = g.view.camera.project(car.x, car.y, car.h);
+      let changed = 0;
+      let far = 0;
+      for (let i = 0; i < 300 && changed === 0; i++) {
+        await new Promise((r) => setTimeout(r, 200));
+        const on = grab();
+        changed = far = 0;
+        for (let y = 0; y < on.height; y++)
+          for (let x = 0; x < on.width; x++) {
+            const k = (y * on.width + x) * 4;
+            if (on.data[k] === off.data[k] && on.data[k + 1] === off.data[k + 1] && on.data[k + 2] === off.data[k + 2]) continue;
+            changed++;
+            if (Math.abs(x - p.x) > 80 || Math.abs(y - p.y) > 80) far++;
+          }
+      }
+      return { changed, far };
+    });
+    expect(res.changed).toBeGreaterThan(100);
+    expect(res.far).toBe(0);
   });
 
   test("takes off from a straight road into the flying level without a flash, flies over its shadow, and lands back on a road", async ({ page }) => {

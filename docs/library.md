@@ -305,8 +305,11 @@ view.entities.add({
   x, y, h?,                 // cells, steps (default the ground)
   heading?, headings?,      // radians; baked headings (16)
   lift?, silhouette?, visible?,
-}): Entity                  // x, y, h, heading, visible, silhouette, moveTo(x, y, h?), remove()
+  reveal?: { margin?, density? },  // see through what stands in front of it (D-079)
+}): Entity                  // x, y, h, heading, visible, silhouette, reveal, moveTo(x, y, h?), remove()
 ```
+
+- **Reveal** (D-079): for a player among tall buildings. Within `margin` render px of the entity's sprite (default 24), the world's pixels in front of it are dithered away (`density`, 0–1, default 0.75) over a second bake of the tiles around it with their buildings and landmarks left out (they still cast their shadows). The first visible entity with `reveal` counts; a view with none bakes nothing extra. The example game turns it on for its car and plane; the viewer doesn't.
 
 - **Baking:** lazily, per view rotation and heading, shared by every entity with the same model. Heading 0 bakes the model as given, so the rover's sprite is the same as before.
 - **Hidden entities** are baked too, so showing one is instant, but they don't hold up `ready()`. Nor does an entity whose ground isn't baked yet: it isn't drawn until its tile is (§7.2).

@@ -56,7 +56,7 @@ describe("entities", () => {
     frame = t.list.draws(0, proj);
     const p = project(5, 6, 0.5, 0);
     expect(frame.complete).toBe(true);
-    expect(frame.list).toEqual([{ sprite: t.sprite(1), sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]);
+    expect(frame.list).toEqual([{ sprite: t.sprite(1), sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true, reveal: null }]);
     // another heading and another rotation are baked on demand
     a.heading = Math.PI / 2;
     t.list.request(0);
@@ -66,6 +66,20 @@ describe("entities", () => {
       [0, (4 * 2 * Math.PI) / 16],
       [1, (4 * 2 * Math.PI) / 16],
     ]);
+  });
+
+  it("reveals with defaults when asked, and passes it to its sprite", async () => {
+    const t = entities();
+    const a = t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6, reveal: {} });
+    expect(a.reveal).toEqual({ margin: 24, density: 0.75 });
+    a.reveal = { margin: 24, density: 2 }; // clamped
+    expect(a.reveal).toEqual({ margin: 24, density: 1 });
+    t.list.request(0);
+    t.jobs[0]!.done(t.sprite(1));
+    await t.flush();
+    expect(t.list.draws(0, proj).list[0]!.reveal).toEqual({ margin: 24, density: 1 });
+    a.reveal = null;
+    expect(t.list.draws(0, proj).list[0]!.reveal).toBeNull();
   });
 
   it("shares a group model's sprites between entities and asks for hidden ones too", async () => {

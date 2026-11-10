@@ -12,6 +12,7 @@ import {
   buildTerrainMesh,
   objectVoxelScale,
   scaleMesh,
+  type MeshData,
   type ModelFailure,
   type ObjectInstance,
 } from "@pixelworlds/generators";
@@ -27,6 +28,8 @@ export class BakeHost {
   private meshCache = new Map<string, BakeScene>();
   /** Models that failed to generate in a cached scene (D-072). */
   private readonly sceneFailures = new WeakMap<BakeScene, ModelFailure[]>();
+  /** A cached scene's placed-objects mesh, left out of its bare variant. */
+  private readonly sceneObjects = new WeakMap<BakeScene, MeshData>();
   private static readonly MESH_CACHE = 6;
 
   constructor(
@@ -118,6 +121,7 @@ export class BakeHost {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
         scene.meshes.push(objects.merged);
         scene.batches.push(...objects.batches);
+        this.sceneObjects.set(scene, objects.merged);
         if (objects.failures.length) this.sceneFailures.set(scene, objects.failures);
       }
       const s = init.renderScale ?? 1;
@@ -136,9 +140,11 @@ export class BakeHost {
       }
     }
     const meshMs = performance.now() - t0;
-    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true });
-    // painted-over hero landmarks go on after every bake, so they survive re-bakes
-    if (res?.image && init.heroes?.length) applyHeroPaint(res.image, msg.rotation, init.heroes);
+    // ponytail: a bare variant whose scene left the cache meshes the tile again; bake both together if that shows
+    const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
+    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set([objects]) } : {}) });
+    // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there)
+    if (res?.image && init.heroes?.length && !msg.bare) applyHeroPaint(res.image, msg.rotation, init.heroes);
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +

@@ -14,13 +14,20 @@ import {
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number): TileKey => `${r}:${tx},${ty}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean): TileKey => `${r}:${tx},${ty}${bare ? ":bare" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
   tx: number;
   ty: number;
+  /**
+   * The tile without its buildings and landmarks (they still cast their
+   * shadows): what lies behind them, for revealing a player they hide.
+   */
+  bare?: boolean;
 }
+
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare);
 
 /** What `prepare` hands back: a cached image, or a terrain slice to bake. */
 export type PreparedTile = { cached: BakedImage | null } | { slice: TerrainSlice };
@@ -255,7 +262,7 @@ export class BakeService {
   }
 
   private nextWanted(): TileRequest | null {
-    for (const t of this.wanted) if (!this.done.has(tileKey(t.rotation, t.tx, t.ty))) return t;
+    for (const t of this.wanted) if (!this.done.has(requestKey(t))) return t;
     return null;
   }
 
@@ -272,7 +279,7 @@ export class BakeService {
     if (!t) return;
     this.busy = true;
     const id = this.nextId++;
-    const key = tileKey(t.rotation, t.tx, t.ty);
+    const key = requestKey(t);
     this.pendingTile = { ...t, id, key };
     this.prepare(t).then(
       (prepared) => {
@@ -280,7 +287,7 @@ export class BakeService {
           this.finish(id, prepared.cached, null, true);
         } else {
           this.transport.send(
-            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, slice: prepared.slice },
+            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...(t.bare ? { bare: true } : {}), slice: prepared.slice },
             sliceTransferables(prepared.slice),
           );
         }
@@ -329,7 +336,8 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, image, stats, fromCache, modelsFailed });
+      const bare = p.bare ? { bare: true } : {};
+      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, ...bare, image, stats, fromCache, modelsFailed });
     }
     this.pump();
   }
