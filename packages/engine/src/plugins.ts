@@ -93,11 +93,13 @@ export async function moduleCode(url: string, fetchFn: FetchText = fetchText): P
       seen.add(k);
       return true;
     });
-    const texts = await Promise.all(batch.map((u) => fetchFn(u.href).catch((e: unknown) => `!${String(e)}`)));
+    const texts = await Promise.all(
+      batch.map((u) => fetchFn(u.href).then(stamps, (e: unknown) => ({ failed: String(e) }))),
+    );
     batch.forEach((u, i) => {
-      const text = stamps(texts[i]!);
-      parts.push(`${stamps(u.href)}\n${text}`);
-      if (!text.startsWith("!")) next.push(...importsOf(text, u));
+      const text = texts[i]!;
+      parts.push(`${stamps(u.href)}\n${typeof text === "string" ? text : `failed: ${text.failed}`}`);
+      if (typeof text === "string") next.push(...importsOf(text, u));
     });
     queue = next;
   }

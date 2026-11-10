@@ -58,7 +58,7 @@ describe("fetching a world package's files", () => {
     serve(new TypeError("Failed to fetch"));
     await expect(fetchWorldFile("https://cdn.example.test/w/manifest.json", INFO)).rejects.toThrow(
       "world objects: https://cdn.example.test/w/manifest.json couldn't be fetched " +
-        "(expected the objects file the manifest names): TypeError: Failed to fetch; the package is incomplete",
+        "(expected the objects file the manifest names): TypeError: Failed to fetch; is the server up, and does a server on another origin send CORS headers?",
     );
   });
 

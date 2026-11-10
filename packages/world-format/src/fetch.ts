@@ -63,7 +63,9 @@ export async function fetchWorldFile(url: string | URL, info: WorldFileInfo): Pr
   try {
     res = await fetch(url);
   } catch (e) {
-    throw new WorldFetchError(worldFileMessage(href, info, "couldn't be fetched", e), href);
+    // no answer at all: the file's advice (an incomplete package…) doesn't apply
+    const hint = "is the server up, and does a server on another origin send CORS headers?";
+    throw new WorldFetchError(worldFileMessage(href, { ...info, hint }, "couldn't be fetched", e), href);
   }
   if (!res.ok) {
     const status = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
