@@ -32,6 +32,14 @@ function rect(sx: number, sy: number, cut = 0): Mask {
   return { sx, sy, on };
 }
 
+/** A block round a courtyard: s across, the court c across in its middle. */
+function courtyard(s: number, c: number): Mask {
+  const on = new Uint8Array(s * s);
+  const a = Math.floor((s - c) / 2);
+  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) on[y * s + x] = x >= a && x < a + c && y >= a && y < a + c ? 0 : 1;
+  return { sx: s, sy: s, on };
+}
+
 /** A footprint on a diagonal (a lot on a radial avenue). */
 function diamond(r: number): Mask {
   const s = 2 * r + 1;
@@ -82,7 +90,7 @@ describe("Paris's buildings", () => {
     let n = 0;
     let seed = 1;
     // a sliver, a narrow faubourg lot, a deep lot, a corner notch, a wide block, a diagonal
-    const masks = [rect(1, 4), rect(3, 3), rect(5, 12), rect(12, 24), rect(16, 30, 5), rect(40, 32), diamond(9)];
+    const masks = [rect(1, 4), rect(3, 3), rect(5, 12), rect(12, 24), rect(16, 30, 5), rect(40, 32), diamond(9), courtyard(30, 10)];
     for (const group of GROUPS)
       for (const mask of masks)
         for (const H of [10, 50, 140])
@@ -131,6 +139,20 @@ describe("Paris's buildings", () => {
     // zinc or slate on the roof
     const roofTop = topAt(m, 12, 15);
     expect(rampName.get(m.materials[m.get(12, 15, roofTop)]!)).toMatch(/zinc|slate/);
+  });
+
+  it("steps roofs in from a courtyard's walls too, and puts windows on them (D-088)", () => {
+    const mask = courtyard(30, 10); // the court is columns 10–19
+    for (const group of ["building.haussmann", "building.palace"]) {
+      const m = gen(group, 3, mask, 50, { floors: 7, front: 6 });
+      expect(topAt(m, 15, 15), group).toBe(-1); // the court is open
+      // beside the court the roof is lower than in the middle of the wing
+      expect(topAt(m, 15, 9), group).toBeLessThan(topAt(m, 15, 5));
+      // glass on the court's walls
+      let glass = 0;
+      for (let z = 0; z < m.sz; z++) for (const [x, y] of [[15, 9], [9, 15], [20, 15], [15, 20]] as const) if (glassRamps.has(rampName.get(m.materials[m.get(x, y, z)]!) ?? "")) glass++;
+      expect(glass, group).toBeGreaterThan(0);
+    }
   });
 
   it("gives a faubourg house a pitched roof whose ridge runs along the street", () => {

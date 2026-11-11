@@ -1,0 +1,13 @@
+name: Dôme des Invalides
+wikidata: Q152109
+# Overture's footprint centroid; the front faces the Place Vauban (south)
+anchor: { lon: 2.31254, lat: 48.85503 }
+height: 107         # to the top of the spire
+orient: 3           # its front to the south
+clear: 35
+replaces: [Église du Dôme]
+depictions:
+  # a Baroque domed church: a square base of two orders with a pedimented
+  # frontispiece, a drum of paired columns, a tall dome gilded between dark
+  # ribs, a gilt lantern and spire; no statues, no name
+  generic: { group: landmark.church.domed }

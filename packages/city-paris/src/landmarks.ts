@@ -638,4 +638,276 @@ export const steelArchBridge: Generator = (ctx) => {
   return m;
 };
 
-export const LANDMARK_GENERATORS: Record<string, Generator> = { cathedral, triumphalArch, latticeArchTower, operaHouse, steelArchBridge };
+/**
+ * A Baroque domed church (the Dôme des Invalides' type), its front at x = 0,
+ * sized from its height H to the top of its spire: a square base of two
+ * orders (0.56 H a side) with a projecting frontispiece and pediment and a
+ * balustrade; a drum ringed with paired columns and tall windows, an attic,
+ * and a tall dome gilded between dark ribs; a gilt lantern and spire.
+ * roles: wall, roof (the base's flat roofs and the dome's ribs), window,
+ * detail (bands, columns, balustrades; wall if absent), gilt (the dome,
+ * lantern and spire; detail if absent).
+ */
+export const domedChurch: Generator = (ctx) => {
+  const H = Math.max(40, Math.round(ctx.heightVox ?? 170));
+  const f = (k: number) => Math.round(H * k);
+  const S = f(0.56);
+  const P = Math.max(2, f(0.05)); // the frontispiece's projection
+  const L = S + P;
+  const m = new VoxelModel(L, S, H + 2);
+  const wall = m.material(ctx.ramp("wall"));
+  const lead = m.material(ctx.ramp("roof"));
+  const shade = m.material(ctx.ramp("window"));
+  const detail = role(ctx, m, "detail", "wall");
+  const gilt = m.material(ctx.ramps("gilt")[0] ?? ctx.ramps("detail")[0] ?? ctx.ramp("wall"));
+  const c = S / 2;
+  const cx = P + S / 2;
+  const hb = f(0.24);
+  // the base: two orders of windows between pilasters, a band between them, a balustrade on top
+  box(m, P, 0, 0, L - 1, S - 1, hb - 1, wall);
+  box(m, P, 0, hb, L - 1, S - 1, hb, lead);
+  for (let x = P; x < L; x++)
+    for (let y = 0; y < S; y++) {
+      const edge = x === P || x === L - 1 || y === 0 || y === S - 1;
+      if (!edge) continue;
+      const run = x === P || x === L - 1 ? y : x;
+      for (let z = 1; z < hb; z++) {
+        const zf = z < f(0.13) ? z : z - f(0.13);
+        const fh = z < f(0.13) ? f(0.13) : hb - f(0.13);
+        if (z === f(0.13) || z === hb - 1) m.set(x, y, z, detail);
+        else if (run % 6 === 0) m.set(x, y, z, detail); // pilasters
+        else if (run % 6 >= 2 && run % 6 <= 4 && zf > fh * 0.25 && zf < fh * 0.8) m.set(x, y, z, shade);
+      }
+      if ((x + y) % 2 === 0) m.set(x, y, hb + 1, detail); // the balustrade
+    }
+  // the frontispiece: paired columns in two orders and a pediment
+  const fw = f(0.14);
+  for (let y = Math.round(c - fw); y < Math.round(c + fw); y++) {
+    const k = Math.abs(y + 0.5 - c);
+    for (let x = 0; x < P; x++) for (let z = 0; z < hb; z++) m.set(x, y, z, wall);
+    for (let z = 1; z < hb; z++) if (k % 5 < 1.5 || z === f(0.13) || z === hb - 1) m.set(0, y, z, detail);
+    else m.set(0, y, z, z % f(0.13) > 2 ? shade : wall);
+    const top = hb + Math.round((fw - k) * 0.45);
+    for (let z = hb; z < top; z++) for (let x = 0; x < P + 2; x++) m.set(x, y, z, z === top - 1 ? detail : wall);
+  }
+  // the drum: paired columns and tall windows round it, then an attic
+  const rd = H * 0.135;
+  const zd = f(0.47);
+  const za = f(0.51);
+  for (let y = Math.floor(c - rd - 1); y <= Math.ceil(c + rd + 1); y++)
+    for (let x = Math.floor(cx - rd - 1); x <= Math.ceil(cx + rd + 1); x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - c);
+      if (d > rd + 0.5) continue;
+      const k = ((Math.atan2(y + 0.5 - c, x + 0.5 - cx) / (2 * Math.PI)) * 20 + 20) % 1;
+      const skin = d > rd - 1;
+      for (let z = hb; z < za; z++) {
+        let mat = wall;
+        if (z < zd) {
+          if (skin && k < 0.3) mat = detail; // the paired columns
+          else if (skin && k > 0.45 && k < 0.85 && z > hb + 2 && z < zd - 3) mat = shade;
+        } else if (d > rd - 0.6) continue; // the attic stands a little in
+        else if (skin && k > 0.5 && k < 0.7 && z > zd + 1 && z < za - 1) mat = shade;
+        m.set(x, y, z, z === zd - 1 ? detail : mat);
+      }
+    }
+  // the dome: taller than a hemisphere, gilded between dark ribs
+  const rdo = rd - 1;
+  const hd = f(0.22);
+  for (let y = Math.floor(c - rdo); y <= Math.ceil(c + rdo); y++)
+    for (let x = Math.floor(cx - rdo); x <= Math.ceil(cx + rdo); x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - c);
+      if (d > rdo) continue;
+      const top = za + Math.round(hd * Math.sqrt(Math.max(0, 1 - (d / rdo) ** 2)));
+      const rib = Math.round((Math.atan2(y + 0.5 - c, x + 0.5 - cx) / Math.PI) * 8 * Math.max(1, rdo / 8)) % Math.max(2, Math.round(rdo / 4)) === 0;
+      for (let z = za; z <= top; z++) m.set(x, y, z, rib ? lead : gilt);
+    }
+  // the lantern, the spire and its cross
+  const rl = Math.max(1.5, H * 0.03);
+  const zl = za + hd;
+  for (let y = Math.floor(c - rl); y <= Math.ceil(c + rl); y++)
+    for (let x = Math.floor(cx - rl); x <= Math.ceil(cx + rl); x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - c);
+      if (d > rl) continue;
+      for (let z = zl; z < f(0.85); z++) m.set(x, y, z, d > rl - 1 && (x + y + z) % 3 === 0 && z < f(0.83) ? shade : gilt);
+    }
+  for (let z = f(0.85); z < H; z++) {
+    const r = Math.max(0.5, H * 0.02 * (1 - (z - f(0.85)) / Math.max(1, H - f(0.85))));
+    for (let y = Math.floor(c - r); y <= Math.ceil(c + r); y++)
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) if (Math.max(Math.abs(x + 0.5 - cx), Math.abs(y + 0.5 - c)) <= r) m.set(x, y, z, gilt);
+  }
+  return m;
+};
+
+/**
+ * A Belle Époque exhibition palace (the Grand Palais's type), its nave along
+ * x and its main front at y = 0, sized from its height H to the top of its
+ * dome: stone walls (0.42 H) with a rusticated base, a colonnade and an
+ * entablature, a portico in the middle of the main front and bronze quadrigas
+ * (plain blocks) at its corners; over the nave and the transept that leaves
+ * it at its crossing, barrel vaults of glass on pale green iron ribs; over the
+ * crossing a glass dome with a lantern and a flagpole; and behind the
+ * transept a stone wing with a dome of its own. Over H: 5.0 long, 3.2 deep.
+ * roles: wall, glass (the vaults), structure (the ironwork), window (shade
+ * between the columns), detail (bands, columns; wall if absent), roof (the
+ * stone wing's roofs and dome; structure if absent), bronze (the quadrigas;
+ * structure if absent).
+ */
+export const glassPalace: Generator = (ctx) => {
+  const H = Math.max(30, Math.round(ctx.heightVox ?? 80));
+  const f = (k: number) => Math.round(H * k);
+  const L = f(5.0);
+  const D = f(3.2);
+  const m = new VoxelModel(L, D, H + f(0.12) + 2);
+  const wall = m.material(ctx.ramp("wall"));
+  const glass = m.material(ctx.ramp("glass"));
+  const iron = m.material(ctx.ramp("structure"));
+  const shade = m.material(ctx.ramp("window"));
+  const detail = role(ctx, m, "detail", "wall");
+  const roof = role(ctx, m, "roof", "structure");
+  const bronze = role(ctx, m, "bronze", "structure");
+  const hw = f(0.42);
+  const wn = f(1.1); // the nave's width
+  const xc = f(2.1); // the crossing
+  const wt = f(0.9); // the transept's width
+  const lt = f(1.3); // the transept's length beyond the nave
+  // a barrel vault of glass on ribs over walls hw tall: across is the distance from its axis, half its half-width
+  const vault = (x: number, y: number, across: number, half: number, along: number, rise: number) => {
+    const top = hw + Math.round(rise * Math.sqrt(Math.max(0, 1 - (across / half) ** 2)));
+    const rib = along % 6 === 0 || Math.abs(across) < 0.6;
+    for (let z = hw; z <= top; z++) if (!m.get(x, y, z) || z === top) m.set(x, y, z, rib ? iron : glass);
+  };
+  for (let x = 0; x < L; x++)
+    for (let y = 0; y < D; y++) {
+      const inNave = y < wn;
+      const inTransept = Math.abs(x + 0.5 - xc) < wt / 2 && y >= wn && y < wn + lt;
+      const inWing = Math.abs(x + 0.5 - xc) < f(0.9) && y >= wn + lt;
+      if (!inNave && !inTransept && !inWing) continue;
+      if (inWing) {
+        for (let z = 0; z < f(0.5); z++) m.set(x, y, z, z === f(0.5) - 1 ? roof : y === D - 1 && x % 5 === 2 && z % f(0.12) > 2 ? shade : wall);
+        continue;
+      }
+      for (let z = 0; z < hw; z++) m.set(x, y, z, wall);
+      if (inNave) vault(x, y, y + 0.5 - wn / 2, wn / 2, x, f(0.4));
+      if (inTransept) vault(x, y, x + 0.5 - xc, wt / 2, y, f(0.35));
+    }
+  // the stone wing's dome
+  const wc = wn + lt + (D - wn - lt) / 2;
+  const rw = Math.min(f(0.32), (D - wn - lt) / 2);
+  for (let y = Math.floor(wc - rw); y <= Math.ceil(wc + rw); y++)
+    for (let x = Math.floor(xc - rw); x <= Math.ceil(xc + rw); x++) {
+      const d = Math.hypot(x + 0.5 - xc, y + 0.5 - wc);
+      if (d > rw || y >= D) continue;
+      const top = f(0.5) + Math.round(f(0.25) * Math.sqrt(Math.max(0, 1 - (d / rw) ** 2)));
+      for (let z = f(0.5); z <= top; z++) m.set(x, y, z, roof);
+    }
+  // the dome over the crossing: glass on ribs, a lantern and a flagpole
+  const rc = Math.min(wn * 0.5, f(0.55));
+  const zb = f(0.66);
+  for (let y = Math.floor(wn / 2 - rc); y <= Math.ceil(wn / 2 + rc); y++)
+    for (let x = Math.floor(xc - rc); x <= Math.ceil(xc + rc); x++) {
+      const d = Math.hypot(x + 0.5 - xc, y + 0.5 - wn / 2);
+      if (d > rc || y < 0) continue;
+      const top = zb + Math.round((H - zb) * Math.sqrt(Math.max(0, 1 - (d / rc) ** 2)));
+      const rib = Math.round((Math.atan2(y + 0.5 - wn / 2, x + 0.5 - xc) / Math.PI) * 12) % 2 === 0 && d > 2;
+      for (let z = hw; z <= top; z++) if (z >= zb - 2 || !m.get(x, y, z)) m.set(x, y, z, z === top && rib ? iron : glass);
+    }
+  box(m, Math.floor(xc) - 1, Math.floor(wn / 2) - 1, H, Math.floor(xc), Math.floor(wn / 2), H + 2, iron);
+  for (let z = H + 3; z < H + f(0.12); z++) m.set(Math.floor(xc), Math.floor(wn / 2), z, iron);
+  // the main front (y = 0): a rusticated base, a colonnade, an entablature; a portico in the middle
+  const zc = f(0.15);
+  const ze = f(0.37);
+  for (let x = 0; x < L; x++) {
+    const portico = Math.abs(x + 0.5 - xc) < f(0.32);
+    for (let z = 1; z < hw; z++) {
+      let mat = z < zc ? (z % 3 === 0 ? detail : -1) : z < ze ? (x % 4 === 0 ? detail : x % 4 === 2 ? shade : -1) : detail;
+      if (portico && z < f(0.32) && Math.abs(x + 0.5 - xc) < f(0.14)) mat = shade; // the great doorway
+      if (mat >= 0) m.set(x, 0, z, mat);
+    }
+    if (portico) {
+      // the portico rises over the walls, with a pediment
+      const k = Math.abs(x + 0.5 - xc);
+      for (let z = hw; z < hw + Math.round((f(0.32) - k) * 0.4); z++) for (let y = 0; y < 3; y++) m.set(x, y, z, z === hw ? detail : wall);
+    }
+  }
+  // the quadrigas at the main front's corners
+  for (const x0 of [1, L - 1 - f(0.06)]) box(m, x0, 1, hw, x0 + f(0.06) - 1, 1 + f(0.05), hw + f(0.08), bronze);
+  return m;
+};
+
+/**
+ * A stone bridge of many arches (the Pont Neuf's type), along its footprint
+ * band (a line landmark), its deck H above its foot: round arches between
+ * piers, each pier with a pointed cutwater and above it a half-round
+ * bastion that stands out from the parapet at the deck, with a lamp; a
+ * cornice of mascarons (plain dots) under the parapet; a deck with stone
+ * pavements. Measured along the whole line when drawn in pieces.
+ * params: arches (7), deck (the deck's share of the band's width; 0.72).
+ * roles: stone, deck, detail (cornice and cutwaters; stone if absent), lamp
+ * (none if absent).
+ */
+export const stoneArchBridge: Generator = (ctx) => {
+  const { mask, param } = ctx;
+  if (!mask) throw new Error("stone arch bridge needs a footprint");
+  const H = Math.max(6, Math.round(ctx.heightVox ?? 14));
+  const m = new VoxelModel(mask.sx, mask.sy, H + 6);
+  const stone = m.material(ctx.ramp("stone"));
+  const deck = m.material(ctx.ramp("deck"));
+  const detail = role(ctx, m, "detail", "stone");
+  const lamp = ctx.ramps("lamp").length ? m.material(ctx.ramps("lamp")[0]!) : 0;
+  const { cells, t, across, length, half } = bandAxis(mask, ctx.frame);
+  const n = Math.max(1, Math.round(param("arches", 7)));
+  const dh = half * param("deck", 0.72); // the deck's half-width
+  const ta = 0.04; // the abutments' share
+  const pw = 0.13; // a pier's share of an arch's module, each side
+  const spring = Math.max(1, Math.round(H * 0.15));
+  const crown = H - 3;
+  const module = (length * (1 - 2 * ta)) / n; // voxels per arch
+  const rb = Math.max(2, Math.min(half - dh, module * pw * 1.6)); // a bastion's radius
+  cells.forEach(([x, y], i) => {
+    const a = Math.abs(across[i]!);
+    const along = t[i]! * length - ta * length; // from the first abutment
+    const u = along / module; // in arches
+    const k = Math.round(u); // the nearest pier (0 and n are the abutments)
+    const toPier = (u - k) * module; // voxels from that pier's centre
+    if (a <= dh) {
+      // the bridge's body: arches between piers, spandrels, the cornice and the deck
+      const lu = u - Math.floor(u);
+      const inSpan = u > 0 && u < n && lu > pw && lu < 1 - pw;
+      const v = (lu - 0.5) / (0.5 - pw);
+      const opening = inSpan ? spring + (crown - spring) * Math.sqrt(Math.max(0, 1 - v * v)) : -1;
+      const face = a > dh - 1;
+      for (let z = 0; z < H; z++) {
+        if (z < opening) continue;
+        m.set(x, y, z, face && z === H - 2 && Math.round(along) % 3 === 0 ? detail : face && z === H - 1 ? detail : stone);
+      }
+      m.set(x, y, H, a > dh - Math.max(2, dh * 0.22) ? stone : deck);
+      if (a > dh - 1 && !(k > 0 && k < n && Math.abs(toPier) < rb)) m.set(x, y, H + 1, stone); // the parapet
+      return;
+    }
+    // beyond the deck: only the piers' cutwaters and bastions
+    if (k <= 0 || k >= n) return;
+    const out = a - dh;
+    const d = Math.hypot(toPier, out);
+    const cutwater = Math.abs(toPier) < rb - out * 0.8;
+    if (d <= rb) {
+      for (let z = 0; z <= H; z++) m.set(x, y, z, z <= spring && cutwater ? detail : stone);
+      if (d > rb - 1) m.set(x, y, H + 1, stone); // the bastion's parapet
+      if (lamp && Math.abs(toPier) < 0.6 && Math.abs(out - rb / 2) < 0.6) {
+        for (let z = H + 1; z < H + 4; z++) m.set(x, y, z, detail);
+        m.set(x, y, H + 4, lamp);
+      }
+    } else if (cutwater) for (let z = 0; z <= spring; z++) m.set(x, y, z, detail);
+  });
+  return m;
+};
+
+export const LANDMARK_GENERATORS: Record<string, Generator> = {
+  cathedral,
+  triumphalArch,
+  latticeArchTower,
+  operaHouse,
+  steelArchBridge,
+  domedChurch,
+  glassPalace,
+  stoneArchBridge,
+};

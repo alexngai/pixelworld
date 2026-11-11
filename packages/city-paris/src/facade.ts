@@ -41,6 +41,10 @@ export interface Facade {
   back: Int16Array;
   /** Position along the front (0 … width-1), -1 outside. */
   along: Int16Array;
+  /** Columns off the footprint that the outside can't reach: its courtyards (1). */
+  hole: Uint8Array;
+  /** Steps from the nearest courtyard (1 beside one; 32767 without courtyards). */
+  court: Int16Array;
   width: number;
   maxDepth: number;
   front: readonly [number, number];
@@ -89,7 +93,64 @@ export function facadeOf(mask: Mask, front: number): Facade {
         hi = Math.max(hi, x * lx + y * ly);
       }
   for (let y = 0; y < sy; y++) for (let x = 0; x < sx; x++) if (on[y * sx + x]) along[y * sx + x] = x * lx + y * ly - lo;
-  return { sx, sy, depth, back, along, width: hi >= lo ? hi - lo + 1 : 0, maxDepth, front: [fx, fy] };
+  const { hole, court } = courtyards(mask);
+  return { sx, sy, depth, back, along, hole, court, width: hi >= lo ? hi - lo + 1 : 0, maxDepth, front: [fx, fy] };
+}
+
+/** A footprint's courtyards (D-088): the empty columns its border doesn't reach, and each column's steps to one. */
+function courtyards(mask: Mask): { hole: Uint8Array; court: Int16Array } {
+  const { sx, sy, on } = mask;
+  const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  const outside = new Uint8Array(sx * sy);
+  const queue: number[] = [];
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++)
+      if ((x === 0 || y === 0 || x === sx - 1 || y === sy - 1) && !on[y * sx + x]) {
+        outside[y * sx + x] = 1;
+        queue.push(y * sx + x);
+      }
+  for (let q = 0; q < queue.length; q++) {
+    const i = queue[q]!;
+    const x = i % sx;
+    const y = (i - x) / sx;
+    for (const [dx, dy] of N4) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const j = ny * sx + nx;
+      if (nx >= 0 && ny >= 0 && nx < sx && ny < sy && !on[j] && !outside[j]) {
+        outside[j] = 1;
+        queue.push(j);
+      }
+    }
+  }
+  const hole = new Uint8Array(sx * sy);
+  const court = new Int16Array(sx * sy).fill(32767);
+  const ring: number[] = [];
+  for (let i = 0; i < sx * sy; i++) if (!on[i] && !outside[i]) hole[i] = 1;
+  for (let i = 0; i < sx * sy; i++) {
+    if (!on[i]) continue;
+    const x = i % sx;
+    const y = (i - x) / sx;
+    if (N4.some(([dx, dy]) => x + dx >= 0 && y + dy >= 0 && x + dx < sx && y + dy < sy && hole[(y + dy) * sx + x + dx])) {
+      court[i] = 1;
+      ring.push(i);
+    }
+  }
+  for (let q = 0; q < ring.length; q++) {
+    const i = ring[q]!;
+    const x = i % sx;
+    const y = (i - x) / sx;
+    for (const [dx, dy] of N4) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const j = ny * sx + nx;
+      if (nx >= 0 && ny >= 0 && nx < sx && ny < sy && on[j] && court[j]! > court[i]! + 1) {
+        court[j] = court[i]! + 1;
+        ring.push(j);
+      }
+    }
+  }
+  return { hole, court };
 }
 
 export const pick = <T>(rand: () => number, xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)]!;
@@ -148,8 +209,9 @@ export function eachSide(f: Facade, fn: (x: number, y: number, nx: number, ny: n
 export function backWindows(m: VoxelModel, f: Facade, floors: readonly number[], zTop: number, pane: () => number, rear: number, side: number): void {
   const fh = floors.length > 1 ? floors[1]! - floors[0]! : zTop;
   eachSide(f, (x, y, nx, ny, d, isRear) => {
-    if (d < 1 && !isRear) return;
-    const every = isRear ? rear : side;
+    const isCourt = nx >= 0 && ny >= 0 && nx < f.sx && ny < f.sy && f.hole[ny * f.sx + nx] === 1;
+    if (d < 1 && !isRear && !isCourt) return;
+    const every = isRear || isCourt ? rear : side;
     if (every <= 0 || (x + y) % every !== 0) return;
     for (const z0 of floors)
       for (let zf = 1; zf < fh; zf++) {
@@ -226,8 +288,8 @@ export function bays(W: number, want: number, ww: number): { n: number; bayOf: I
 /**
  * Fill the footprint to height Hw with `body`, then a roof of `roof` from Hw up
  * to at most Hr more: a column stays while it is at least inset(z) steps from
- * both the front and the rear wall (a mansard's brisis, a pitched roof's
- * slopes; the party walls rise straight). Its top layer is roof. inset grows
+ * the front and the rear wall and any courtyard's (a mansard's brisis, a
+ * pitched roof's slopes; the party walls rise straight). Its top layer is roof. inset grows
  * with z, so each layer stands on the one below.
  */
 export function wallsAndRoof(m: VoxelModel, f: Facade, Hw: number, Hr: number, body: number, roof: number, inset: (dz: number) => number): void {
@@ -236,7 +298,7 @@ export function wallsAndRoof(m: VoxelModel, f: Facade, Hw: number, Hr: number, b
     for (let x = 0; x < f.sx; x++) {
       const i = y * f.sx + x;
       if (f.depth[i]! < 0) continue;
-      const d = Math.min(f.depth[i]!, f.back[i]!);
+      const d = Math.min(f.depth[i]!, f.back[i]!, f.court[i]! - 1); // courtyards' walls too (D-088)
       let z = 0;
       for (; z < Hw; z++) m.set(x, y, z, body);
       for (; z < Hw + Hr && d >= inset(z - Hw); z++) m.set(x, y, z, roof);

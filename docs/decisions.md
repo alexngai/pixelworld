@@ -95,6 +95,7 @@ Status values:
 | D-085 | Paris's look: a `paris` style pack and the `@pixelworlds/city-paris` generator plugin | Accepted (M5) |
 | D-086 | Paris's walking level: the Eiffel Tower to the Marais at 10 m, typed by period, fabric and storeys | Accepted (M5) |
 | D-087 | Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined | Accepted (M5) |
+| D-088 | More Paris landmarks, palaces typed by name, and footprints that keep their courtyards | Accepted (M5) |
 
 ---
 
@@ -982,4 +983,26 @@ The point is more room for visual interest; both halves are wanted.
   - The Eiffel Tower's lattice is one panel size at every height; in life the panels grow finer toward the top.
   - The Palais Garnier's front is drawn at one depth (no projecting pavilions) and its loggia's columns as paint; the opera's statues and the bridge's are gilt blocks.
   - More landmarks in the box: the Invalides' dome, the Grand Palais's glass roof, the Louvre's Cour Carrée, the Pont Neuf (twelve arches; a bridge generator of several spans).
+
+### D-088: More Paris landmarks, palaces typed by name, and footprints that keep their courtyards (accepted, M5)
+- **Why:** the owner asked for the next landmarks in the walking box (D-087's Later): the Dôme des Invalides, the Grand Palais, the Louvre and the Pont Neuf. Looked at first on `paris-walk`: the dome was an odd tower of Overture's parts; the Grand Palais a dark mansard slab of 27,000 m²; the Pont Neuf a plain deck; the Louvre a 10.5 m slab (Overture gives it three storeys and no height) over its wings and courtyards. The Louvre showed the deeper cause: a footprint kept only its outer ring (`_footprint`), so every courtyard was drawn solid. In the box 4,002 of Overture's 24,998 buildings have holes, 531,000 m² of courtyards in all, the Louvre's Cour Carrée and the Invalides' fifteen courts among them.
+- **What:**
+  - **Courtyards** (opt-in, `objects.buildings.courtyards: true`): a building's holes of at least `minArea` go out as `fh`, rings in the same cells and anchor-relative hundredths as `fp`, turned, nudged and scaled with it (snapping, roads, depiction); trimming against roads leaves them as they are, since a hole is subtracted, not toggled. `footprintMask(fp, voxel, holes)` leaves their columns out (`pixelworld`, a changeset). Paris's generators step their roofs in from a courtyard's walls as from the front and rear (`facadeOf`'s `court` distance) and put windows on them. Off by default, so other worlds are unchanged; `paris-walk` turns it on: 2,791 of its buildings carry courtyards, and the package stays 2.9 MB.
+  - **`names:`**, a typology rule field: Overture's primary name of a building, exactly; its parts and podium share it. `paris-walk` types "Palais du Louvre" and "Hôtel des Invalides" as `building.palace` (33 pieces with their parts), and "Pyramide du Louvre", a protected design, as a plain modern block.
+  - **`palace`** (`building.palace`): walls of three storeys on every face (rustication and arched windows, a principal storey between pilasters, an attic) under a high slate roof that rises from every wall by a distance field over the footprint, so it follows each wing round its courtyards and stands higher where wings meet. Its height comes from the wing's half-width (walls 1.6, roof 1.0 voxels per voxel), since Overture's three storeys would make the Louvre 10.5 m tall.
+  - **`domedChurch`** (`landmark.church.domed`, the Dôme des Invalides, 107 m): a base of two orders with a pedimented frontispiece, a drum of paired columns, a dome taller than a hemisphere gilded between dark ribs, a gilt lantern and spire; turned to face south. It replaces Overture's "Église du Dôme".
+  - **`glassPalace`** (`landmark.hall.glass`, the Grand Palais, 50 m): stone walls with a colonnade and a portico, pale glass barrel vaults on green iron ribs over the nave and transept, a ribbed glass dome over the crossing, the stone wing behind; turned so the nave runs north-south and the main front faces the Avenue Winston-Churchill. It replaces Overture's "Grand Palais".
+  - **`stoneArchBridge`** (`landmark.bridge.stone`, seven arches, and `.short`, five): round arches between piers with cutwaters, a half-round bastion with a lamp over each pier, a cornice of plain mascarons. The Pont Neuf is two line landmarks, one per arm, along Overture's carriageways either side of the island's tip. Landmark files can't pass params, so the arm with five arches is a second group.
+- **Checked** in the model preview and in the world: the Louvre's wings round the Cour Carrée and the Cour Napoléon under slate; the gilt dome over the Hôtel des Invalides' courts; the Grand Palais's vaults and dome from the east; the Pont Neuf's arches and bastions from the Quai du Louvre. Tests: a courtyard footprint in the building-rules sweep (every group, three heights, three hints); roofs that step in from a court and windows on its walls (`haussmann`, `palace`); `fh` through the mask, the format's decoding, the pipeline's encoding, scaling and snapping; `names:` against a building and its parts. The Paris golden (Gros-Caillou) was regenerated: one block in it now shows its courtyard.
+- **Measured:** the view over the Louvre bakes in 47 s on SwiftShader (158 s for a first palace over the filled footprint); the palace models are large (the Louvre's is about 1,100 × 750 voxels in plan). The other views of this decision bake in 7–15 s.
+- **Rejected alternatives:**
+  - **A keyhole ring** (holes joined to the outline by zero-width slits, which the even-odd rasterizer reads as holes, with no format change): many pipeline steps rebuild shapely polygons from `fp`, which such a ring makes invalid.
+  - **Cutting footprints with holes into hole-free pieces:** no format change either, but every cut is a false wall and a notch in the roof.
+  - **The Louvre as line landmarks** along each wing: about fourteen hand-traced wings, where the footprint already has them.
+  - **Courtyards on by default:** every world's buildings with holes would change, and their goldens with them.
+- **Later:**
+  - The Louvre bakes slowly at the walking level; a palace drawn in pieces per wing, or meshed by runs, would cut it.
+  - The engine's picking (`inPolygon`) still counts a courtyard as part of its building.
+  - The Louvre's pavilions (Flore, Marsan, the Horloge) have no roofs of their own; Overture's parts carry no heights to find them by.
+  - Other worlds could turn courtyards on when their goldens are next regenerated.
 

@@ -59,6 +59,8 @@ objects:
     towerMeters: 45
     podiumMeters: 18
     houseMaxArea: 350
+    # courtyards stay open (D-088): 4,002 of the box's footprints have them
+    courtyards: true
   # Building typologies (D-055) from APUR and IGN (D-084): APUR's
   # construction period (each period stands for one year, or the footprint's
   # own year inside it), its urban fabric class, and BD TOPO's storeys, which
@@ -66,6 +68,11 @@ objects:
   typology:
     facts: { plugin: apur, version: "2026-07-30" }
     rules:
+      # palaces by Overture's name (D-088): the Louvre's wings round its
+      # courtyards, and the Hôtel des Invalides round the dome's church
+      - { group: building.palace, names: ["Palais du Louvre", "Hôtel des Invalides"], from: [building.residential, building.commercial, building.tower] }
+      # the Louvre's pyramid is a protected work: a plain modern block
+      - { group: building.modern, names: ["Pyramide du Louvre"] }
       # APUR's "remarkable buildings": churches, ministries, palaces, museums
       - { group: building.civic, classes: [ER] }
       # the 1920s-30s: HBM's brick blocks (APUR's own HBM class first)
@@ -90,7 +97,7 @@ objects:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
   # new ones go at the end: a landmark's seed is its place in the list
-  landmarks: [eiffel-tower, notre-dame, arc-de-triomphe, palais-garnier, pont-alexandre-iii]
+  landmarks: [eiffel-tower, notre-dame, arc-de-triomphe, palais-garnier, pont-alexandre-iii, invalides-dome, grand-palais, pont-neuf-north, pont-neuf-south]
   landmarkDepiction: generic
   depiction: { heightStretch: 1.0, scatter: 1.0 }
 
