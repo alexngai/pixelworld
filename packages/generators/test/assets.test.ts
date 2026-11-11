@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DIRECT_RAMP_BASE,
+  FACE_TEXELS,
+  MeshBuilder,
+  TEXEL_ROW,
   VoxelModel,
   buildObjects,
   footprintMask,
@@ -8,9 +12,31 @@ import {
   resolveAsset,
   rotateModel,
   type AssetCatalog,
+  type MeshData,
 } from "../src/index";
 
 const unit = { h: 1, v: 1 };
+
+/** Every voxel face a mesh draws (unit voxels), and its ramp and owning cell: "axis,dir,plane,a,b" → "ramp@cx,cy". */
+function voxelFaces(m: MeshData): Map<string, string> {
+  const out = new Map<string, string>();
+  for (let q = 0; q < m.vertexCount; q += 6) {
+    const p = (k: number) => [0, 1, 2].map((i) => m.position[(q + k) * 3 + i]!);
+    const n = [0, 1, 2].map((i) => m.normal[q * 3 + i]!);
+    const d = n.findIndex((x) => x !== 0);
+    const [u, v] = [(d + 1) % 3, (d + 2) % 3];
+    const [a, c] = [p(0), p(2)];
+    const mat = m.material[q * 3]!;
+    const ref = m.faceRef?.slice(q * 4, q * 4 + 4);
+    if (mat === FACE_TEXELS) expect([m.faceUv![(q + 2) * 2], m.faceUv![(q + 2) * 2 + 1]]).toEqual([c[u]! - a[u]!, c[v]! - a[v]!]);
+    for (let j = 0; j < c[v]! - a[v]!; j++)
+      for (let i = 0; i < c[u]! - a[u]!; i++) {
+        const ramp = mat === FACE_TEXELS ? m.texels![ref![0]! * TEXEL_ROW + ref![1]! + j * ref![2]! + i]! : mat - DIRECT_RAMP_BASE;
+        out.set(`${d},${n[d]},${a[d]},${a[u]! + i},${a[v]! + j}`, `${ramp}@${m.cell[q * 2]},${m.cell[q * 2 + 1]}`);
+      }
+  }
+  return out;
+}
 
 describe("voxel meshing", () => {
   it("emits six faces for one voxel", () => {
@@ -29,6 +55,22 @@ describe("voxel meshing", () => {
     two.set(0, 0, 0, 1);
     two.set(1, 0, 0, 2); // different material: top and sides split
     expect(meshVoxels(two, unit, [0, 0, 0], [0, 0]).build().vertexCount).toBe(60);
+  });
+
+  it("draws faces of several colours from texels, each voxel face as without them", () => {
+    // a block with windows of two colours, a recess and a hole through it
+    const m = new VoxelModel(9, 7, 11, [0, 3, 5, 8]);
+    m.fill(0, 0, 0, 9, 7, 11, 1);
+    for (let z = 1; z < 10; z += 2) for (let x = 1; x < 8; x += 2) m.set(x, 0, z, (x + z) % 4 ? 2 : 3);
+    m.set(4, 6, 5, 0);
+    m.fill(3, 2, 0, 5, 4, 11, 0);
+    for (const cell of [[2, 3], "column"] as const) {
+      const plain = meshVoxels(m, unit, [0, 0, 0], cell).build();
+      const texels = meshVoxels(m, unit, [0, 0, 0], cell, new MeshBuilder({ texels: true })).build();
+      expect(voxelFaces(texels)).toEqual(voxelFaces(plain));
+      expect(texels.vertexCount).toBeLessThan(plain.vertexCount);
+      expect(texels.texels!.length).toBeGreaterThan(0);
+    }
   });
 
   it("rotates models by quarter turns", () => {

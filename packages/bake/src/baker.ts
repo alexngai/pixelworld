@@ -1,5 +1,5 @@
 import { EDGE_NEIGHBOR, PIECES, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
-import type { InstancedBatch, MeshData, TerrainField } from "@pixelworlds/generators";
+import { TEXEL_ROW, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworlds/generators";
 import { SHADES, type MaterialTables } from "@pixelworlds/style";
 import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
 import { Uniforms, compileProgram, createTexture, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
@@ -64,6 +64,8 @@ export interface StyleParams {
 
 const PAD = 2;
 const MAX_SHADOW = 4096;
+/** The texture unit of a mesh's texels (units 0–8 are the shadow map and the field textures). */
+const TEXEL_UNIT = 9;
 
 interface UploadedMesh {
   vao: WebGLVertexArrayObject;
@@ -71,6 +73,8 @@ interface UploadedMesh {
   count: number;
   /** Instance count for instanced batches; 0 for plain meshes. */
   instances: number;
+  /** The mesh's texels (MeshData.texels), or null. */
+  texels: WebGLTexture | null;
 }
 
 interface UploadedField {
@@ -125,6 +129,8 @@ export class Baker {
   private fields = new WeakMap<TerrainField, UploadedField>();
   private style: StyleParams | null = null;
   private emptyVao: WebGLVertexArrayObject;
+  /** Bound for meshes without texels: the texel sampler wants an integer texture. */
+  private noTexels: WebGLTexture;
 
   constructor(private readonly gl: GL) {
     const program = (vs: string, fs: string): Program => {
@@ -138,6 +144,7 @@ export class Baker {
     this.fieldG = program(FIELD_GBUFFER_VS, FIELD_GBUFFER_FS);
     this.fieldAo = program(FULLSCREEN_VS, FIELD_AO_FS);
     this.emptyVao = gl.createVertexArray()!;
+    this.noTexels = createTexture(gl, 1, 1, gl.R8UI, gl.RED_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(1));
   }
 
   setStyle(style: StyleParams): void {
@@ -185,13 +192,31 @@ export class Baker {
       attrib(6, batch.offsets, 3, 1);
       attrib(7, batch.cells, 2, 1);
     }
+    if (mesh.faceUv && mesh.faceRef) {
+      attrib(8, mesh.faceUv, 2);
+      attrib(9, mesh.faceRef, 4);
+    }
     gl.bindVertexArray(null);
-    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0 };
+    const texels = mesh.texels?.length ? this.texelTexture(mesh.texels) : null;
+    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0, texels };
+  }
+
+  /** Texels as an R8UI texture TEXEL_ROW wide, row after row. */
+  private texelTexture(texels: Uint8Array): WebGLTexture {
+    const gl = this.gl;
+    const w = Math.min(TEXEL_ROW, texels.length);
+    const h = Math.ceil(texels.length / w);
+    const max = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    if (h > max) throw new Error(`a mesh's ${texels.length} texels need a ${w}×${h} texture; this GPU allows ${max} rows`);
+    const data = texels.length === w * h ? texels : new Uint8Array(w * h);
+    if (data !== texels) data.set(texels);
+    return createTexture(gl, w, h, gl.R8UI, gl.RED_INTEGER, gl.UNSIGNED_BYTE, data);
   }
 
   private free(up: UploadedMesh): void {
     this.gl.deleteVertexArray(up.vao);
     up.buffers.forEach((b) => this.gl.deleteBuffer(b));
+    if (up.texels) this.gl.deleteTexture(up.texels);
   }
 
   release(mesh: MeshData): void {
@@ -331,10 +356,16 @@ export class Baker {
     gl.bindVertexArray(null);
   }
 
-  private drawScene(draws: UploadedMesh[]): void {
+  /** Draw meshes and batches; `texels`: bind each one's texels (the G-buffer pass). */
+  private drawScene(draws: UploadedMesh[], texels = false): void {
     const gl = this.gl;
     for (const d of draws) {
       if (!d.count) continue;
+      if (texels) {
+        gl.activeTexture(gl.TEXTURE0 + TEXEL_UNIT);
+        gl.bindTexture(gl.TEXTURE_2D, d.texels ?? this.noTexels);
+        gl.activeTexture(gl.TEXTURE0);
+      }
       gl.bindVertexArray(d.vao);
       if (d.instances) gl.drawArraysInstanced(gl.TRIANGLES, 0, d.count, d.instances);
       else gl.drawArrays(gl.TRIANGLES, 0, d.count);
@@ -459,6 +490,7 @@ export class Baker {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);
+      gl.uniform1i(u.loc("uFaceTexels"), TEXEL_UNIT);
       const sr = style.steepRock;
       gl.uniform1i(u.loc("uSteepDrop"), sr?.drop ?? 0);
       gl.uniform1i(u.loc("uRockSurface"), sr?.rockSurface ?? -1);
@@ -468,7 +500,7 @@ export class Baker {
     gl.useProgram(this.g.prog);
     const hide = options.hide;
     // draws are the scene's meshes, then its batches
-    this.drawScene(hide?.size ? draws.filter((_, i) => i >= scene.meshes.length || !hide.has(scene.meshes[i]!)) : draws);
+    this.drawScene(hide?.size ? draws.filter((_, i) => i >= scene.meshes.length || !hide.has(scene.meshes[i]!)) : draws, true);
     if (fields.length) {
       gl.useProgram(this.fieldG.prog);
       this.drawFields(this.fieldG.u, fields, rotation);
@@ -503,7 +535,7 @@ export class Baker {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindVertexArray(null);
-    for (const unit of [8, 7, 6, 5, 4, 3, 2, 1, 0]) {
+    for (const unit of [TEXEL_UNIT, 8, 7, 6, 5, 4, 3, 2, 1, 0]) {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, null);
     }
