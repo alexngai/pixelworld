@@ -26,7 +26,8 @@ commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
 facts' class codes: exact, or a prefix ending in `*`) · names (Overture's
 primary name of the building, exactly; its parts share it) · kinds (Overture's
 class of the building, OSM's `building=*`: temple, shrine, house …, exactly; its
-parts share it) · roofs (roof shapes:
+parts share it) · grounds (Overture's land-use classes the building's centroid
+stands in: religious, cemetery …) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
 minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
 max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
@@ -258,6 +259,8 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     if "names" in rule and f.get("name", "") not in [str(n) for n in rule["names"]]:
         return False
     if "kinds" in rule and f.get("kind", "") not in [str(k) for k in rule["kinds"]]:
+        return False
+    if "grounds" in rule and f.get("ground", "") not in [str(g) for g in rule["grounds"]]:
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),

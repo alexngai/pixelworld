@@ -979,6 +979,11 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")),
             "Overture names (a building's primary name; its parts share it), exactly.",
         ),
+        "grounds": Key(
+            ListOf(AnyValue("string")),
+            "Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) "
+            "the building's centroid stands in.",
+        ),
         "kinds": Key(
             ListOf(AnyValue("string")),
             "Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts "
@@ -1015,6 +1020,12 @@ TYPOLOGY = Map(
             "`{ plugin: datasf, …options }`.",
         ),
         "rules": Key(ListOf(TYPOLOGY_RULE), "Matched in order; the first match picks the group."),
+        "roofHints": Key(
+            Bool(),
+            "The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof "
+            "hint where Overture gives none.",
+            "false",
+        ),
     },
     options="facts source options (the older form)",
 )

@@ -320,6 +320,35 @@ def test_facts_heights_fill_only_buildings_without_one(capsys):
     assert "2 heights from facts" in capsys.readouterr().err
 
 
+class Roofs:
+    """A facts source whose buildings all have gabled roofs."""
+
+    def __init__(self, region, options=None):
+        pass
+
+    def at(self, xs, ys):
+        return [{"roof": "gabled"} for _ in xs]
+
+
+def test_roof_hints_take_the_facts_roof_where_overture_has_none():
+    """D-094: with `roofHints`, a building without Overture's roof shape takes the
+    facts' as its generator's hint (`rs`); one with Overture's keeps it; off by default."""
+    region = Region.from_dict(SPEC)
+    for hints, want in ((True, ["gabled", "flat"]), (False, [None, "flat"])):
+        found = []
+        for k, rs in enumerate((None, "flat")):
+            fp = [[k, 1.0], [k + 0.3, 1.0], [k + 0.3, 1.8], [k, 1.8]]
+            b = {"g": "building.residential", "x": k, "y": 1.4, "fp": fp, "hm": 6.0}
+            b.update({"_grp": f"b{k}", "_c": (k * 1000.0, 0.0)})
+            if rs:
+                b["rs"] = rs
+            found.append(b)
+        spec = {"facts": "roofs", "rules": [], "roofHints": hints}
+        with plugins.registered(plugins.FACTS, "roofs", Roofs):
+            objects.type_buildings(region, found, spec, None, None, 45.0)
+        assert [b.get("rs") for b in found] == want
+
+
 def test_names_rules_match_a_building_and_its_parts_by_overture_name():
     """D-088: `names:` matches Overture's primary name, which a building's parts share."""
     from pixelworld_pipeline import typology
@@ -349,6 +378,40 @@ def test_kinds_rules_match_a_building_and_its_parts_by_overture_class():
     hall = {"g": "building.commercial", "x": 1.0, "y": 0.5, "fp": fp, "hm": 12.0}
     hall.update({"_grp": "a", "_name": "本堂", "_cls": "temple"})
     assert typology.features([hall], None, None, 10.0, None)[0]["kind"] == "temple"
+
+
+def test_grounds_rules_match_buildings_standing_in_a_land_use_area(monkeypatch):
+    """D-094: `grounds:` matches the Overture land-use class under a building's
+    centroid (a temple's grounds); the areas are fetched only when a rule names one."""
+    import numpy as np
+    import shapely
+
+    from pixelworld_pipeline.sources import overture
+
+    asked = []
+    area = "POLYGON ((-115.11 36.09, -115.09 36.09, -115.09 36.11, -115.11 36.11, -115.11 36.09))"
+
+    def land_use(release, bbox, classes):
+        asked.append(list(classes))
+        return [{"id": "g", "class": "religious", "geometry": area}]
+
+    monkeypatch.setattr(overture, "land_use", land_use)
+    spec = {**SPEC, "sources": {**SPEC["sources"], "overture": {"release": "r"}}}
+    region = Region.from_dict(spec)
+    place = objects.Placement(region, np.zeros((1, 1), dtype=bool))
+    found = []
+    for k, lon in enumerate((-115.1, -115.05)):
+        c = place.project(shapely.Point(lon, 36.1))
+        fp = [[k, 1.0], [k + 0.3, 1.0], [k + 0.3, 1.8], [k, 1.8]]
+        b = {"g": "building.commercial", "x": k, "y": 1.4, "fp": fp, "hm": 9.0}
+        b.update({"_grp": f"b{k}", "_c": (c.x, c.y)})
+        found.append(b)
+    rules = [{"group": "building.temple", "grounds": ["religious"]}]
+    objects.type_buildings(region, found, {"rules": rules}, None, None, 45.0)
+    assert [b["g"] for b in found] == ["building.temple", "building.commercial"]
+    assert asked == [["religious"]]
+    objects.type_buildings(region, found, {"rules": []}, None, None, 45.0)
+    assert asked == [["religious"]]  # no rule names grounds: nothing fetched
 
 
 def test_courtyards_are_kept_as_holes_and_move_with_the_footprint():

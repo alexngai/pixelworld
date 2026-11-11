@@ -650,6 +650,7 @@ Other keys here are facts source options (the older form).
 |---|---|---|---|
 | `facts` | [a plugin name, or { plugin, …options }](#spec-objects-typology-facts) | — | A facts source plugin (year built, use, storeys) by name: `datasf`, or `{ plugin: datasf, …options }`. |
 | `rules` | [list of mappings](#spec-objects-typology-rules) | — | Matched in order; the first match picks the group. |
+| `roofHints` | true/false | false | The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof hint where Overture gives none. |
 
 <a id="spec-objects-typology-facts"></a>
 #### `objects.typology.facts`
@@ -674,6 +675,7 @@ Other keys here are plugin options.
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `grounds` | list of strings | — | Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) the building's centroid stands in. |
 | `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |

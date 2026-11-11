@@ -988,7 +988,9 @@ def type_buildings(
     """Building typologies (D-055): features, facts and the spec's rules. The
     facts come from the facts source plugin the spec names (`facts:`). A
     building Overture gives no height or floors takes the facts' `height`
-    (D-084), and becomes a tower at `tower_m` or more."""
+    (D-084), and becomes a tower at `tower_m` or more. With `roofHints`, one
+    Overture gives no roof shape takes the facts' `roof` as its generator's
+    hint (D-094)."""
     from . import facts as facts_sources
     from . import typology
 
@@ -1002,7 +1004,8 @@ def type_buildings(
         if len(got) != len(has):
             raise ValueError(f"facts source answered {len(got)} of {len(has)} points")
         facts = [None] * len(found)
-        filled = 0
+        filled = roofed = 0
+        roof_hints = bool(spec.get("roofHints"))
         for i, f in zip(has, got, strict=True):
             facts[i] = f
             if f and f.get("height") and found[i].pop("_hdef", False):
@@ -1010,15 +1013,45 @@ def type_buildings(
                 if found[i]["hm"] >= tower_m and found[i]["g"] in typology.GENERIC[:2]:
                     found[i]["g"] = "building.tower"
                 filled += 1
+            # the facts' roof shape as the generator's hint where Overture gives none (D-094)
+            if roof_hints and f and f.get("roof") in ROOF_SHAPES and "rs" not in found[i]:
+                found[i]["rs"] = f["roof"]
+                roofed += 1
         known = sum(f is not None for f in got)
         progress.log(
             f"typology facts: {facts_sources.describe(source)}, "
             f"{known}/{len(has)} buildings with facts, {filled} heights from facts"
+            + (f", {roofed} roof shapes from facts" if roof_hints else "")
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
+    grounds = sorted({str(c) for rule in spec.get("rules", []) for c in rule.get("grounds", [])})
+    if grounds:
+        _ground_features(region, found, feats, grounds)
     counts = typology.classify(found, spec, feats)
     progress.log(f"typology: {counts}")
     return found
+
+
+def _ground_features(region: Region, found: list[dict], feats: list[dict], classes: list[str]):
+    """The land-use class (Overture's, of `classes`) under each building's
+    centroid, as the feature `ground` (`grounds:` rules, D-094): a temple's or
+    a shrine's grounds (OSM's landuse=religious), a cemetery."""
+    from .ground import project_rows
+
+    release = region.sources["overture"]["release"]
+    rows = overture.land_use(release, tuple(region.lonlat_envelope()), classes)
+    polys = project_rows(region, rows)
+    if not polys:
+        return
+    kinds = [str(r.get("class") or "") for r in rows]
+    tree = shapely.STRtree(polys)
+    has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
+    pts = shapely.points([found[i]["_c"] for i in has])
+    hit, poly = tree.query(pts, predicate="within")
+    for k, j in zip(hit.tolist(), poly.tolist(), strict=True):
+        feats[has[k]]["ground"] = kinds[j]
+    n = len(set(hit.tolist()))
+    progress.log(f"typology grounds: {n} buildings in {len(polys)} areas of {classes}")
 
 
 def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
