@@ -106,6 +106,11 @@ export interface WorldViewOptions {
    */
   workerUrl?: string | URL;
   /**
+   * Bake the ground of visible tiles first (default true): quick, so the view
+   * shows the ground at once and buildings appear as their tiles finish.
+   */
+  groundFirst?: boolean;
+  /**
    * Bake workers: each bakes a tile at a time, so the view fills that many
    * times faster where tiles take long. Default: the CPU's cores less one, at
    * most 4 (each holds its own copy of the world's objects).
@@ -195,6 +200,8 @@ export interface ViewStats {
   /** Bakers running (workers, or the one in-thread fallback). */
   bakeWorkers: number;
   tilesBaked: number;
+  /** Ground-only bakes, shown while their whole tiles bake (not in `tilesBaked`). */
+  groundTiles: number;
   tilesFromCache: number;
   tilesPerRotation: number;
   /** Tiles wanted (in and around the view, and baked ahead) that aren't baked yet. */

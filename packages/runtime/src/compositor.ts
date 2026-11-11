@@ -10,6 +10,9 @@ import {
 import type { FogField } from "./fog";
 import { FogPass, type FogFrame } from "./fogPass";
 
+/** How far back (depth units) `behind` tiles are drawn: beyond a depth's 1/256 quantisation, short of anything standing in front. */
+const BEHIND_DEPTH = 0.5;
+
 /**
  * Runtime compositor (architecture §8.2): draws baked tiles and sprites into
  * an index + depth framebuffer at the canvas's own resolution, each art pixel
@@ -269,9 +272,17 @@ export class Compositor {
   /**
    * Draw a frame. With `bare` tiles (those under a revealing sprite, all of
    * them baked), the first sprite with `reveal` sees through what stands in
-   * front of it.
+   * front of it. `behind` (tiles' ground alone, while they bake) fills only
+   * what nothing else covers: drawn a little further back than it stands.
    */
-  render(frame: FrameParams, tiles: GpuImage[], sprites: SpriteInstance[], fog: FogFrame | null = null, bare: GpuImage[] = []): void {
+  render(
+    frame: FrameParams,
+    tiles: GpuImage[],
+    sprites: SpriteInstance[],
+    fog: FogFrame | null = null,
+    bare: GpuImage[] = [],
+    behind: GpuImage[] = [],
+  ): void {
     const gl = this.gl;
     // the canvas's own pixels; the view's top-left in absolute art px, and target px per art px
     const w = this.canvas.width;
@@ -332,6 +343,8 @@ export class Compositor {
     gl.uniform1i(u.loc("uRevealOn"), 0);
     // the bare tiles fill what the reveal let through: the depth test keeps what's still there
     if (box) for (const tile of bare) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 2);
+    // a tile's own baked ground is at the same depth as its ground alone: pushed back, the baked one wins
+    for (const tile of behind) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase - BEHIND_DEPTH, 0);
     for (const s of sprites) {
       const [l, tp, d] = spriteAt(s);
       draw(s.sprite, l, tp, d, 0);

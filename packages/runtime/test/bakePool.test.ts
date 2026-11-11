@@ -28,16 +28,16 @@ class FakeWorker {
   /** Finish its last tile bake. */
   answer(): void {
     const last = [...this.sent].reverse().find((m) => m.type === "bakeTile") as { id: number };
-    this.onmessage?.({ data: { type: "baked", id: last.id, image: { width: 1, height: 1, pixels: new Uint8Array(4) }, stats: null } as unknown as FromWorker });
+    this.onmessage?.({ data: { type: "baked", id: last.id, image: { width: 1, height: 1, pixels: new Uint8Array(4) }, stats: { meshMs: 1, bakeMs: 1, vertices: 0 } } as unknown as FromWorker });
   }
 }
 
 const init = { type: "init", tileSize: 32, margin: 8, floor: 0, worldWidth: 256, worldHeight: 256 } as unknown as InitMessage;
 const slice = { x0: 0, y0: 0, width: 1, height: 1, layers: {} };
 
-async function pool(workers: number) {
+async function pool(workers: number, prepare: (t: { tx: number; ground?: boolean }) => unknown = () => ({ slice })) {
   const made: FakeWorker[] = [];
-  const svc = await BakeService.create(init, async () => ({ slice }) as never, () => {
+  const svc = await BakeService.create(init, async (t) => prepare(t) as never, () => {
     const w = new FakeWorker();
     made.push(w);
     return w as unknown as Worker;
@@ -73,6 +73,26 @@ describe("a pool of bake workers", () => {
     await tick();
     expect(made[0]!.tiles).toEqual(["0,0", "2,0"]);
     expect(made[1]!.tiles).toEqual(["1,0", "1,0:bare"]);
+    svc.dispose();
+  });
+
+  it("bakes a tile's ground alone, keeping no meshes for it, or answers with the whole tile where it is kept", async () => {
+    const kept = { width: 1, height: 1, pixels: new Uint8Array(4) };
+    // tile 1,0 is kept (a cache): its ground request comes back as the whole tile
+    const { svc, made } = await pool(2, (t) => (t.tx === 1 ? { cached: kept, ...(t.ground ? { whole: true } : {}) } : { slice }));
+    const results: string[] = [];
+    svc.onTile = (r) => results.push(r.key);
+    const t = (tx: number, ground = false) => ({ rotation: 0 as const, tx, ty: 0, ...(ground ? { ground } : {}) });
+    svc.want([t(0, true), t(1, true), t(0), t(1)]);
+    await tick();
+    expect(results).toEqual(["0:1,0"]); // the whole tile, and its own request is done with it
+    expect(svc.isDone("0:1,0:ground") && svc.isDone("0:1,0")).toBe(true);
+    // the ground bake went to a worker, the whole tile to the other: no meshes kept for a ground
+    expect(made.map((w) => w.sent.flatMap((m) => (m.type === "bakeTile" ? [`${m.tx},${m.ty}${m.ground ? ":ground" : ""}`] : [])))).toEqual([["0,0:ground"], ["0,0"]]);
+    made[0]!.answer();
+    await tick();
+    expect(results).toEqual(["0:1,0", "0:0,0:ground"]);
+    expect(svc.totals.ground).toBe(1);
     svc.dispose();
   });
 

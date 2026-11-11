@@ -285,7 +285,8 @@ export class Prefetches {
 }
 
 /**
- * The order to bake tiles in: the visible ones, then the bare ones a reveal
+ * The order to bake tiles in: the ground of visible tiles not drawn yet (quick,
+ * so the view is never blank), the visible ones, then the bare ones a reveal
  * needs, then those ahead of the camera's motion, then those asked for, then
  * the rest around the view; each once.
  */
@@ -294,15 +295,17 @@ export function bakeOrder(
   ahead: readonly TileRequest[],
   asked: readonly TileRequest[],
   bare: readonly TileRequest[] = [],
+  ground: readonly TileRequest[] = [],
 ): TileRequest[] {
   const seen = new Set<string>();
   const out: TileRequest[] = [];
   const push = (t: TileRequest) => {
-    const k = tileKey(t.rotation, t.tx, t.ty, t.bare);
+    const k = tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
     if (seen.has(k)) return;
     seen.add(k);
     out.push(t);
   };
+  for (const t of ground) push(t);
   for (const t of near) if (t.visible) push(t);
   for (const t of bare) push(t);
   for (const t of ahead) push(t);

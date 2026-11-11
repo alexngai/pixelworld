@@ -14,7 +14,8 @@ import {
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean): TileKey => `${r}:${tx},${ty}${bare ? ":bare" : ""}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean): TileKey =>
+  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
@@ -25,12 +26,21 @@ export interface TileRequest {
    * shadows): what lies behind them, for revealing a player they hide.
    */
   bare?: boolean;
+  /**
+   * The ground alone, without buildings or trees: quick to bake, so it shows
+   * while the whole tile bakes. Where the whole tile is kept, `prepare`
+   * answers with it instead (`whole`).
+   */
+  ground?: boolean;
 }
 
-const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare);
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
 
-/** What `prepare` hands back: a cached image, or a terrain slice to bake. */
-export type PreparedTile = { cached: BakedImage | null } | { slice: TerrainSlice };
+/**
+ * What `prepare` hands back: a cached image, or a terrain slice to bake.
+ * `whole`: a ground request answered with the whole tile, kept.
+ */
+export type PreparedTile = { cached: BakedImage | null; whole?: boolean } | { slice: TerrainSlice };
 
 export interface TileResult extends TileRequest {
   key: TileKey;
@@ -43,6 +53,8 @@ export interface TileResult extends TileRequest {
 
 export interface BakeTotals {
   tiles: number;
+  /** Ground-only bakes (`TileRequest.ground`), not counted in `tiles`. */
+  ground: number;
   fromCache: number;
   meshMs: number;
   bakeMs: number;
@@ -118,7 +130,7 @@ export class BakeService {
   mode: "worker" | "inline" = "worker";
   /** The plugins the baker registered, and the generators each added. */
   plugins: PluginReport[] = [];
-  readonly totals: BakeTotals = { tiles: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
+  readonly totals: BakeTotals = { tiles: 0, ground: 0, fromCache: 0, meshMs: 0, bakeMs: 0, maxTileMs: 0 };
   onTile: (r: TileResult) => void = () => {};
   onError: (message: string) => void = (m) => console.error(m);
   /** Models that failed to generate (drawn as markers): counted, and reported through onError once per generator and cause (D-072). */
@@ -333,11 +345,12 @@ export class BakeService {
     this.prepare(t).then(
       (prepared) => {
         if ("cached" in prepared) {
-          this.finish(b, id, prepared.cached, null, true);
+          this.finish(b, id, prepared.cached, null, true, 0, prepared.whole);
         } else {
-          this.keepMeshes(b, t);
+          if (!t.ground) this.keepMeshes(b, t); // a ground bake keeps no meshes
+          const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
           b.transport.send(
-            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...(t.bare ? { bare: true } : {}), slice: prepared.slice },
+            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, slice: prepared.slice },
             sliceTransferables(prepared.slice),
           );
         }
@@ -380,7 +393,7 @@ export class BakeService {
     this.finish(b, msg.id, msg.image, msg.stats, false, msg.failures?.length ?? 0);
   }
 
-  private finish(b: Baker, id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean, modelsFailed = 0): void {
+  private finish(b: Baker, id: number, image: BakedImage | null, stats: BakeStats | null, fromCache: boolean, modelsFailed = 0, whole = false): void {
     if (this.disposed) return; // a tile prepared, or an answer in flight, after dispose
     const job = b.job?.id === id ? b.job : null;
     if (job) b.job = null;
@@ -392,15 +405,20 @@ export class BakeService {
       const p = job.tile;
       this.inFlight.delete(p.key);
       this.done.add(p.key);
+      // a ground request answered with the whole tile: the tile is done
+      const t: TileRequest = whole ? { rotation: p.rotation, tx: p.tx, ty: p.ty } : p;
+      const key = requestKey(t);
+      this.done.add(key);
       if (fromCache) this.totals.fromCache++;
+      else if (stats && t.ground) this.totals.ground++;
       else if (stats) {
         this.totals.tiles++;
         this.totals.meshMs += stats.meshMs;
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      const bare = p.bare ? { bare: true } : {};
-      this.onTile({ key: p.key, rotation: p.rotation, tx: p.tx, ty: p.ty, ...bare, image, stats, fromCache, modelsFailed });
+      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
+      this.onTile({ key, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, image, stats, fromCache, modelsFailed });
     }
     this.pump();
   }
