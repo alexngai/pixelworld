@@ -134,7 +134,7 @@ export class BakeHost {
         }
       }
       this.meshCache.set(key, scene);
-      if (this.meshCache.size > BakeHost.MESH_CACHE) {
+      if (this.meshCache.size > (init.meshScenes ?? BakeHost.MESH_CACHE)) {
         const oldest = this.meshCache.keys().next().value!;
         this.baker.releaseScene(this.meshCache.get(oldest)!);
         this.meshCache.delete(oldest);

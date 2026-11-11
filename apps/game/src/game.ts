@@ -44,6 +44,8 @@ export interface GameOptions {
   cache?: boolean;
   /** Read the world's start tiles, its first view baked ahead (default true; tools/prebake.mjs bakes without). */
   startTiles?: boolean;
+  /** Bake workers (default the engine's: the cores less one, at most 4). */
+  bakeWorkers?: number;
   /** A fixed canvas size (device px); default: follow the page. */
   size?: { width: number; height: number };
   zoom?: number | "auto";
@@ -212,6 +214,7 @@ export class Game {
       size: opts.size,
       cache: opts.cache ?? true,
       ...(opts.startTiles === false ? { startTiles: false as const } : {}),
+      ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
         : { rotation: opts.rotation ?? 0, zoom: opts.zoom ?? "auto" },

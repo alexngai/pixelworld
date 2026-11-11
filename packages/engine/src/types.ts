@@ -106,6 +106,12 @@ export interface WorldViewOptions {
    */
   workerUrl?: string | URL;
   /**
+   * Bake workers: each bakes a tile at a time, so the view fills that many
+   * times faster where tiles take long. Default: the CPU's cores less one, at
+   * most 4 (each holds its own copy of the world's objects).
+   */
+  bakeWorkers?: number;
+  /**
    * Plugins with generators the world's style uses (D-071), such as the city
    * pack @pixelworlds/city-sf's `cityPlugin`: loaded in the bake worker and on
    * the main thread before the first bake. Or a function given the plugins the
@@ -186,6 +192,8 @@ export interface CanvasPoint {
 export interface ViewStats {
   renderer: string;
   bakeMode: "worker" | "inline";
+  /** Bakers running (workers, or the one in-thread fallback). */
+  bakeWorkers: number;
   tilesBaked: number;
   tilesFromCache: number;
   tilesPerRotation: number;
