@@ -1,5 +1,5 @@
 {
-  "packageHash": "200b6ae8de54dc3d6bad2f2d9aab0b3a3b613f67dece981227f3ed9a03444039",
+  "packageHash": "e45a38ac29324d838cf92462ac5904509235a34ba96619be97c98843e0daf435",
   "cells": [
     294,
     378
@@ -14,16 +14,16 @@
     "riverLines": 901
   },
   "objects": {
-    "building.commercial": 2781,
+    "building.commercial": 2778,
     "building.house": 1538,
     "building.house.gabled": 72608,
     "building.kura": 411,
     "building.machiya": 28162,
     "building.midrise": 38479,
     "building.palace": 33,
-    "building.palace.gosho": 32,
+    "building.palace.gosho": 40,
     "building.parking": 65,
-    "building.residential": 36551,
+    "building.residential": 36546,
     "building.shrine": 145,
     "building.temple": 1138,
     "building.tower": 71,
@@ -36,7 +36,7 @@
     "landmark.temple.stage": 1,
     "landmark.torii.great": 1,
     "landmark.tower.candle": 1,
-    "tree": 42179,
+    "tree": 42128,
     "tree.street": 3224
   },
   "roads": {
@@ -60,13 +60,13 @@
     "divided": 4933
   },
   "surfaces": {
-    "woodland": 24516,
-    "water": 1761,
-    "desert": 146,
-    "grass": 289,
+    "woodland": 24478,
+    "water": 1936,
+    "desert": 131,
+    "grass": 279,
     "farmland": 268,
-    "urban": 79799,
-    "lawn": 4353
+    "urban": 79772,
+    "lawn": 4268
   },
   "routes": {
     "ferry": 1,

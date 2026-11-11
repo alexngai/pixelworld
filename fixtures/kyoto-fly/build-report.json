@@ -1,5 +1,5 @@
 {
-  "packageHash": "56c1539aeeb16ef92abb1ad569e4294138afd2c68c17897251715571a7f70604",
+  "packageHash": "3f3b7732af24701ebd8be0f44ab4e75588b641631f3c84d0f88bc3921dab36af",
   "cells": [
     184,
     222
@@ -37,13 +37,13 @@
     "train": 1772
   },
   "surfaces": {
-    "woodland": 20175,
-    "water": 3453,
+    "woodland": 20142,
+    "water": 3504,
     "desert": 57,
-    "grass": 166,
+    "grass": 167,
     "farmland": 1092,
-    "urban": 15143,
-    "lawn": 762
+    "urban": 15131,
+    "lawn": 755
   },
   "routes": {
     "ferry": 2,

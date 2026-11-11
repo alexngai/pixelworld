@@ -103,6 +103,7 @@ Status values:
 | D-094 | Kyoto refined: PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns | Accepted (M5) |
 | D-095 | Kyoto's driving and flying levels, and its blind test | Accepted (M5) |
 | D-096 | Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces | Accepted (M5) |
+| D-097 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
 
 ---
 
@@ -1164,3 +1165,19 @@ The point is more room for visual interest; both halves are wanted.
   - **Wires as props of their own between poles:** props stand alone and don't know their neighbours; a pole drawing half of each span meets the next one's.
   - **The Imperial Palace's unnamed buildings by the park they stand in:** the Gyoen is one `park` among many; only names single out the palace.
 - **Later:** the Imperial Palace's covered corridors (unnamed) still draw as low modern blocks, and its courts and the park as lawn where they are gravel; Nijō's stone walls and corner towers; Kinkaku-ji's pond (ESA reads it as bare ground); wires follow quarter turns, so on a diagonal street they run off the road's line.
+
+### D-097: Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets (accepted, M5)
+- **Why:** the owner asked to address what of D-096's Later list the data can detect. Lakes came only from ESA WorldCover's water class and rivers only from Overture's lines, so Kinkaku-ji's pond read as bare ground and Nijō Castle's moats were patchy; the Imperial Palace's gravel courts were lawn because the Gyoen park is; wires ran off diagonal streets because props turn only by quarters.
+- **What the data has:** Overture's water areas in the driving box: 269 ponds (Kinkaku-ji's 鏡湖池, 6,230 m²), two moats (Nijō's 外濠, 29,477 m², and 内濠, 16,880 m²), reservoirs; also pools and wastewater tanks, left out. Land use maps the palace's courts as `pedestrian` areas inside the park. Every road's direction.
+- **What:**
+  - **`sources.lakes`** (pipeline, opt-in): Overture's water areas of the given classes are still water beside land cover's; each body is levelled as a lake (one level per body, `minLakeArea` applies). Kyoto's three levels take `[pond, moat, lake, reservoir]`: 199 cells on the walking level, 291 on the driving, 95 on the flying.
+  - **`ground.lawn.paved`** (pipeline): land-use classes inside a park that a lawn leaves as they are; Kyoto's levels name `pedestrian`, so the Imperial Palace's courts and the parks' plazas stay paved grey.
+  - **`diagonal`** on street props with `along` (pipeline): the group placed where a road runs within 22.5° of a diagonal, turned for its diagonal; `utilityPole`'s `diagonal` draws the crossarm and wires along x = y. On the walking level 109 of 1,265 poles stand on diagonal streets.
+  - **The Imperial Palace's corridors:** a rule for narrow (3–7 m), long (25 m or more) and low buildings in a park types 8 pieces as palace corridors.
+- **Measured** (builds of 2026-11-11): road reports clean; the walking level 2.1 MB, the driving 7.5 MB, the flying 392 KB. Tests: the water areas' cells, a park's paved courts, the diagonal group and its turns, the diagonal pole.
+- **Looked at:** Kinkaku-ji's pavilion on its pond's shore; both of Nijō Castle's moats round the Honmaru and the Ninomaru; the Imperial Palace's courts in grey between its halls.
+- **Rejected alternatives:**
+  - **Every Overture water class:** swimming pools (96) and wastewater tanks (63) would be lakes on roofs and in plants.
+  - **River polygons as lakes:** a river is one body, and levelling one along its length would cut terraces into its valley; rivers stay lines.
+  - **Props turned by eighths:** the engine turns instances by quarters; a second group drawn on the diagonal needs no engine change.
+- **Later:** the Imperial Palace's main corridors are mapped as one ring round each court, so no rule on width finds them (a building's holes, D-088's courtyards, could); wires on the 16 directions' 2:1 streets still run a little off; Nijō's stone walls show only where the terrain drops to the moats.

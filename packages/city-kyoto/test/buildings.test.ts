@@ -355,6 +355,16 @@ describe("Kyoto's landmarks", () => {
     expect(at(0)).toBe(at(m.sy - 1));
   });
 
+  it("draw a diagonal street's pole with its wires along x = y (D-097)", () => {
+    const m = generateModel(style.assets, rampIds, "prop.pole.diagonal", { seed: 2 });
+    expect(m.sx).toBe(m.sy);
+    const c = Math.floor(m.sx / 2);
+    let wires = 0;
+    for (let t = 3; t < c; t++) for (let z = 0; z < m.sz; z++) if (m.get(c + t, c + t, z) || m.get(c - t, c - t, z)) wires++;
+    expect(wires).toBeGreaterThan(c / 2); // the telecom cable at every step out to its reach
+    for (let z = 0; z < m.sz; z++) expect(m.get(c + c - 1, c - (c - 1), z)).toBe(0); // nothing along the other diagonal
+  });
+
   it("draw Kiyomizu-dera's hall on a stage of pillars over the slope", () => {
     const H = 74;
     const m = generateModel(style.assets, rampIds, "landmark.temple.stage", { seed: 1, heightVox: H });

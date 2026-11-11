@@ -50,6 +50,8 @@ ground:
     slopeMeters: 50
     wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
     spread: { over: [grass], meters: 25 }
+    # a park's courts and plazas stay paved (D-097)
+    paved: [pedestrian]
 
 terrain: { minLakeArea: 4000 }
 
@@ -104,9 +106,10 @@ objects:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
     # concrete utility poles along one side of the lanes and side streets, at their
-    # edge (D-094), turned with the road so their wires reach the next (D-096)
-    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, along: true }
-    - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, along: true }
+    # edge (D-094), turned with the road so their wires reach the next (D-096),
+    # along the diagonal on a diagonal street (D-097)
+    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, along: true, diagonal: prop.pole.diagonal }
+    - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, along: true, diagonal: prop.pole.diagonal }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks: [kiyomizu-dera-hondo, yasaka-pagoda, yasaka-shrine-west-gate, chion-in-sanmon, kyoto-tower, kiyomizu-dera-pagoda, jishu-jinja-torii, gion-torii-east, gion-torii-west]
   landmarkDepiction: generic
@@ -126,6 +129,8 @@ sources:
     excludeSubclasses: [parking_aisle, driveway]
     joinIslands: [parking_aisle]
   paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  # ponds and moats from Overture as still water, which land cover misses (D-097)
+  lakes: { classes: [pond, moat, lake, reservoir] }
   rivers:
     subtypes: [river, canal]
   # the JR lines into Kyoto Station, where they run above ground

@@ -1,5 +1,5 @@
 {
-  "packageHash": "35587809bd1c150e1de422e9ff9305fba27d59d3f3fe4bf38be24aa50d491222",
+  "packageHash": "310220a8f7d36ee87f0ce5fd9bcb44778b24a6bc505e96b6358c55446d9d9001",
   "cells": [
     338,
     300
@@ -33,10 +33,11 @@
     "landmark.temple.stage": 1,
     "landmark.torii": 3,
     "landmark.tower.candle": 1,
-    "prop.pole": 1265,
+    "prop.pole": 1156,
+    "prop.pole.diagonal": 109,
     "prop.signal": 54,
     "prop.streetlight": 1142,
-    "tree": 20870,
+    "tree": 20861,
     "tree.street": 559
   },
   "roads": {
@@ -64,13 +65,13 @@
     "divided": 3138
   },
   "surfaces": {
-    "woodland": 18916,
-    "water": 1211,
+    "woodland": 18910,
+    "water": 1275,
     "desert": 237,
     "grass": 177,
     "farmland": 17,
-    "urban": 77362,
-    "lawn": 3480
+    "urban": 77368,
+    "lawn": 3416
   },
   "routes": {
     "road": 3198,

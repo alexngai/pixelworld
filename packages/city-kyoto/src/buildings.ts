@@ -521,7 +521,8 @@ export const kura: Generator = (ctx) => {
  * the street props' `along`, turned to run with the road; D-096). A prop:
  * the wires hang in the air.
  * params: height (16 voxels), transformers (share with a transformer; 0.3),
- * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2).
+ * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2),
+ * diagonal (1: for a diagonal street, the wires along x = y; D-097).
  * roles: pole, arm (pole if absent), transformer (arm if absent), wire (arm if absent).
  */
 export const utilityPole: Generator = (ctx) => {
@@ -529,6 +530,7 @@ export const utilityPole: Generator = (ctx) => {
   const H = Math.max(6, Math.round(param("height", 16) * (0.9 + rand() * 0.2)));
   const span = Math.max(0, Math.round(param("span", 0)));
   const sag = Math.max(0, Math.round(param("sag", 2)));
+  if (param("diagonal", 0) >= 1) return diagonalPole(ctx, H, span, sag);
   const c = span; // the pole's row
   const m = new VoxelModel(5, 2 * span + 1, H + 1);
   const pole = m.material(ctx.ramp("pole"));
@@ -550,5 +552,31 @@ export const utilityPole: Generator = (ctx) => {
   }
   return m;
 };
+
+/** The pole on a diagonal street (D-097): its crossarm along x = −y, its wires along x = y. */
+function diagonalPole(ctx: GenContext, H: number, span: number, sag: number): VoxelModel {
+  const reach = Math.round(span / Math.SQRT2); // a diagonal voxel step is √2 voxels long
+  const c = reach + 2;
+  const size = 2 * c + 1;
+  const m = new VoxelModel(size, size, H + 1);
+  const pole = m.material(ctx.ramp("pole"));
+  const arm = optional(ctx, m, "arm", pole);
+  const drum = optional(ctx, m, "transformer", arm);
+  const wire = optional(ctx, m, "wire", arm);
+  for (let z = 0; z < H; z++) m.set(c, c, z, pole);
+  for (let k = -2; k <= 2; k++) m.set(c + k, c - k, H - 2, arm);
+  m.set(c - 2, c + 2, H - 1, arm);
+  m.set(c + 2, c - 2, H - 1, arm);
+  if (ctx.rand() < ctx.param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(c + 1, c, z, drum);
+  for (let t = 1; t <= reach; t++) {
+    const drop = Math.round(sag * (1 - (1 - t / reach) ** 2));
+    for (const s of [-1, 1]) {
+      m.set(c - 2 + s * t, c + 2 + s * t, H - 1 - drop, wire);
+      m.set(c + 2 + s * t, c - 2 + s * t, H - 1 - drop, wire);
+      m.set(c + s * t, c + s * t, Math.max(1, H - 5 - drop), wire);
+    }
+  }
+  return m;
+}
 
 export const BUILDING_GENERATORS: Record<string, Generator> = { machiya, midrise, kura, utilityPole };
