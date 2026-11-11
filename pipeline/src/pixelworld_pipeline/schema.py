@@ -1078,6 +1078,9 @@ ROW_RULE_KEYS = {
     "bounds": Key(BBOX, "Only within this box."),
     "landcover": Key(ListOf(Str(landcover_classes)), "Only on these land-cover classes."),
     "across": Key(Bool(), "Over the road, turned across it (strung lanterns)."),
+    "along": Key(
+        Bool(), "On one side only, turned to run with the road (utility poles and their wires)."
+    ),
     "canopy": Key(
         Num(0, unit="m"),
         "On the verge past the drawn asphalt, where the canopy map has trees this tall.",

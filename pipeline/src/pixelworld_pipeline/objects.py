@@ -518,13 +518,16 @@ def street_trees(
     With `across`, one prop stands on the road's line at each step instead,
     over the road (road cells are otherwise kept clear) and turned a quarter
     where its road runs east-west, so a model drawn along x spans the street:
-    lanterns strung across it. `bounds` ([w, s, e, n], lon/lat) keeps a rule
-    to one stretch of its roads.
+    lanterns strung across it. With `along`, one row on the road's left
+    side, turned the same way so a model drawn along y runs with its road:
+    utility poles whose wires reach to the next (D-096). `bounds` ([w, s, e,
+    n], lon/lat) keeps a rule to one stretch of its roads.
     """
     classes = set(rule["roads"])
     spacing = float(rule["spacing"])
     offset = float(rule.get("offset", 12))
     across = bool(rule.get("across"))
+    along = bool(rule.get("along"))
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
     rng = np.random.default_rng(_seed(p.region, f"street|{tag}|{rule['group']}"))
     xs: list[float] = []
@@ -563,9 +566,11 @@ def street_trees(
                     ys.append(c.y)
                     turns.append(0 if abs(ty) >= abs(tx) else 1)
                     continue
-                for side in (-1, 1):
+                for side in (1,) if along else (-1, 1):
                     xs.append(c.x - side * ty / norm * offset)
                     ys.append(c.y + side * tx / norm * offset)
+                    if along:
+                        turns.append(0 if abs(ty) >= abs(tx) else 1)
     if not xs:
         return []
     ax, ay = np.asarray(xs), np.asarray(ys)
@@ -579,7 +584,7 @@ def street_trees(
         bx, by = transform_points("EPSG:4326", p.region.crs, [w, e], [s, n])
         ok &= (ax >= min(bx)) & (ax <= max(bx)) & (ay >= min(by)) & (ay <= max(by))
     seeds = rng.integers(0, 2**31, size=ax.size)
-    rots = np.asarray(turns) if across else rng.integers(0, 4, size=ax.size)
+    rots = np.asarray(turns) if across or along else rng.integers(0, 4, size=ax.size)
     return [
         {
             "g": rule["group"],

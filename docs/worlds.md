@@ -713,6 +713,7 @@ Other keys here are plugin options.
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
@@ -731,6 +732,7 @@ Other keys here are plugin options.
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |

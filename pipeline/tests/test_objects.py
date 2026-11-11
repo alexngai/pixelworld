@@ -492,3 +492,34 @@ def test_lowrise_blocks_cover_free_built_up_cells():
     again = objects.lowrise({}, built, blocked, taken)
     assert [a["s"] for a in again] == [a["s"] for a in out] and "m" not in again[0]
     assert again[0]["g"] == "city.blocks" and again[0]["hm"] == 8.0
+
+
+def test_props_along_a_street_stand_on_one_side_turned_with_it():
+    """D-096: `along` puts one row of props on one side of a road, turned so a
+    model drawn along y runs with the road (utility poles and their wires)."""
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.195 36.001, -115.195 36.009)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)",
+        },
+    ]
+    rule = {"group": "prop.pole", "roads": ["residential"], "spacing": 100, "offset": 5}
+    both = objects.street_trees(p, rule, rows, _none, "t")
+    one = objects.street_trees(p, rule | {"along": True}, rows, _none, "t")
+    assert len(one) * 2 == len(both)
+    (ax,), (ay,) = p.to_cells(
+        *objects.transform_points("EPSG:4326", region.crs, [-115.195], [36.005])
+    )
+    ns = [i for i in one if abs(i["x"] - ax) < 0.5 and abs(i["y"] - ay) >= 0.5]
+    ew = [i for i in one if abs(i["y"] - ay) < 0.5 and abs(i["x"] - ax) >= 0.5]
+    assert ns and ew
+    assert {i["r"] for i in ns} == {0} and {i["r"] for i in ew} == {1}
