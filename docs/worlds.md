@@ -674,6 +674,7 @@ Other keys here are plugin options.
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |

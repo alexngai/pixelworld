@@ -895,6 +895,7 @@ def place_buildings(
                 "_grp": group,  # building id (parts join their building); see depict_buildings
                 "_c": (float(c.x), float(c.y)),  # projected centroid (facts lookup, D-055)
                 "_name": name,  # the building's Overture name (`names:` rules); parts share it
+                "_cls": cls or "",  # its Overture class (`kinds:` rules); parts share it
                 **hints,
             }
             if p.layout is not None:
@@ -1658,6 +1659,9 @@ def place(
             inst["m"] = round(local / lm_scale[k], 2)
         if "orient" in lm:
             inst["r"] = int(lm["orient"]) % 4
+        if "line" not in lm and heights is not None and "baseMeters" in lm:
+            # an anchored landmark's foot below its anchor's ground (a hall's stage down a slope)
+            inst["z0"] = round(float(heights(lx, ly, float(lm["baseMeters"]))), 2)
         if k in fp_landmarks:
             poly = fp_landmarks[k]
             cx, cy = p.to_cells(np.array([poly.centroid.x]), np.array([poly.centroid.y]))

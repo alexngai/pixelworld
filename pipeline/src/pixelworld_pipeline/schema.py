@@ -979,6 +979,11 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")),
             "Overture names (a building's primary name; its parts share it), exactly.",
         ),
+        "kinds": Key(
+            ListOf(AnyValue("string")),
+            "Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts "
+            "share it), exactly.",
+        ),
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),

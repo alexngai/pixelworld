@@ -24,7 +24,9 @@ group:
 Rule fields (all optional): year [from, to) · uses (residential, mixed,
 commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
 facts' class codes: exact, or a prefix ending in `*`) · names (Overture's
-primary name of the building, exactly; its parts share it) · roofs (roof shapes:
+primary name of the building, exactly; its parts share it) · kinds (Overture's
+class of the building, OSM's `building=*`: temple, shrine, house …, exactly; its
+parts share it) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
 minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
 max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
@@ -116,6 +118,7 @@ def features(
         f: dict[str, Any] = {
             "height": float(inst.get("hm") or 0.0),
             "name": inst.get("_name") or "",
+            "kind": inst.get("_cls") or "",
         }
         if rc is None:
             out[i] = f
@@ -192,6 +195,7 @@ def features(
             "height": float(instances[i].get("hm") or 0.0),
             "parts": True,
             "name": instances[i].get("_name") or "",
+            "kind": instances[i].get("_cls") or "",
         }
         fact = shared.get(instances[i].get("_grp"))
         if fact:
@@ -252,6 +256,8 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     }:
         return False
     if "names" in rule and f.get("name", "") not in [str(n) for n in rule["names"]]:
+        return False
+    if "kinds" in rule and f.get("kind", "") not in [str(k) for k in rule["kinds"]]:
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),

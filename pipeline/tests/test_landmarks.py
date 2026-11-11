@@ -277,6 +277,23 @@ def test_bridges_turn_to_the_grid_with_their_road_and_keep_their_foot(registry):
             assert bridge["z0"] == 0.0 and bridge["top"] == 6.0
 
 
+def test_an_anchored_landmark_stands_on_its_base_when_it_has_one(registry):
+    """D-091: `base` puts an anchored landmark's foot at that height (Kiyomizu-dera's
+    stage, down the slope from its hall); without it, it stands on the ground."""
+    for base, want in ((102, 10.2), (None, None)):
+        raw = {"anchor": {"lon": -115.195, "lat": 36.005}, "height": 30}
+        raw["depictions"] = {"generic": {"group": "landmark.temple.stage"}}
+        if base is not None:
+            raw["base"] = base
+        (registry / "_landmarks" / "hall.yaml").write_text(yaml.safe_dump(raw))
+        path = registry / "r" / "region.yaml"
+        path.write_text(yaml.safe_dump(SPEC | {"objects": {"landmarks": ["hall"]}}))
+        r = Region.load(path)
+        blocked = np.zeros(r.cells[::-1], dtype=bool)
+        out, _ = objects.place(r, blocked, [], heights=lambda x, y, m: m / 10.0)
+        assert out[0].get("z0") == want
+
+
 def test_snapped_bridges_lie_on_the_road_they_carry(registry):
     (registry / "_landmarks" / "span.yaml").write_text(
         yaml.safe_dump(

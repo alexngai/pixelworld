@@ -337,6 +337,20 @@ def test_names_rules_match_a_building_and_its_parts_by_overture_name():
         assert typology.matches(rule, inst["g"], f) is want
 
 
+def test_kinds_rules_match_a_building_and_its_parts_by_overture_class():
+    """D-091: `kinds:` matches Overture's building class (OSM's `building=*`)."""
+    from pixelworld_pipeline import typology
+
+    rule = {"group": "building.temple", "kinds": ["temple"]}
+    for kind, want in (("temple", True), ("shrine", False), ("", False)):
+        f = {"kind": kind, "height": 12.0}
+        assert typology.matches(rule, "building.commercial", f) is want
+    fp = [[0.0, 0.0], [2.0, 0.0], [2.0, 1.0], [0.0, 1.0]]
+    hall = {"g": "building.commercial", "x": 1.0, "y": 0.5, "fp": fp, "hm": 12.0}
+    hall.update({"_grp": "a", "_name": "本堂", "_cls": "temple"})
+    assert typology.features([hall], None, None, 10.0, None)[0]["kind"] == "temple"
+
+
 def test_courtyards_are_kept_as_holes_and_move_with_the_footprint():
     """D-088: with `courtyards`, a footprint's holes go out as `fh` rings,
     turned with it when snapped, scaled with it when depicted, and stored
