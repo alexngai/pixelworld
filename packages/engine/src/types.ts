@@ -59,6 +59,12 @@ export interface WorldViewOptions {
   renderScale?: number;
   /** Keep baked tiles: true for IndexedDB (default), false for none, or your own store. */
   cache?: boolean | TileStore;
+  /**
+   * The world's start tiles (tools/prebake.mjs), read before baking so a
+   * first visit shows its first view at once: default `start-tiles.bin` in
+   * the world package, where there is one; false for none.
+   */
+  startTiles?: string | URL | false;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
   /** Decorative scatter where the level asks for it (default true). */

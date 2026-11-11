@@ -17,7 +17,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
  * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
- * `cache=0`, `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
+ * `cache=0`, `startTiles=0` (bake the first view too), `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
  * scripted run in real time, then its frame times).
  */
 
@@ -113,6 +113,7 @@ async function main() {
     },
     fog: params.get("fog") !== "0",
     cache: params.get("cache") !== "0",
+    startTiles: params.get("startTiles") !== "0",
     size,
     zoom: params.has("zoom") ? num("zoom", 2) : "auto",
     rotation: num("rot", 0) & 3,

@@ -5,6 +5,7 @@ import {
   BakeService,
   Camera,
   Compositor,
+  StartTiles,
   TileCache,
   revealRect,
   tileKey,
@@ -79,6 +80,8 @@ const REVEAL_AHEAD_PX = 32;
 
 type ScreenBox = { left: number; top: number; right: number; bottom: number };
 
+const withSlash = (u: URL): URL => (u.pathname.endsWith("/") ? u : new URL(u.pathname + "/" + u.search, u));
+
 const overlaps = (img: BakedImage, b: ScreenBox): boolean =>
   img.left < b.right && img.left + img.width > b.left && img.top < b.bottom && img.top + img.height > b.top;
 
@@ -95,13 +98,17 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
   const cache = await openTileCache(opts.cache);
+  // the first view's tiles baked ahead, read before the cache (tools/prebake.mjs)
+  const start = opts.startTiles === false ? Promise.resolve(null) : StartTiles.load(opts.startTiles ?? new URL("start-tiles.bin", withSlash(w.base)));
+  const keyed = cache !== null || opts.startTiles !== false;
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
-  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, cache ? await pluginsKey(plugins.descriptors) : []));
+  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
-    if (cache) {
-      const hit = await cache.get((await cacheKeyReady)(t));
+    if (keyed) {
+      const key = (await cacheKeyReady)(t);
+      const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
       if (hit) return { cached: hit };
     }
     return { slice: await tileSlice(w, t) };
