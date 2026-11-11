@@ -50,7 +50,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "generator": { "name": "…", "version": "…", "params": { } },
   "render": { "scale": 0.125, "tileSize": 512 },  // optional (M1.5): render units per cell; bake tile edge in cells
   "objects": { "path": "objects.json.gz", "sha256": "…", "count": 9401 },  // optional (M1.5)
-  "micro": { "k": 4 },              // optional (M1.6): every chunk has an MHGT section
+  "micro": { "k": 4, "shores": true }, // optional (M1.6): every chunk has an MHGT section
   "warp": { "method": "v2", "background": 500, "focus": [ … ], "pins": 0, "vertical": { … } },  // optional (M2), informational
   "depiction": { "heightStretch": 1.0, "scatter": 1.0 },  // optional (D-047, D-054): how objects are drawn at this level
   "level": "drive",                 // optional (D-046): this package's scale level
@@ -73,7 +73,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **Summary:** `warp` summarises the layout (focus targets and what they achieved).
   - **Nominal scale:** `scale.metersPerCell` stays the base scale that heights and steepness rules are expressed in.
   - **Objects:** instances carry `m`, their local metres per cell, and a dam carries `top`, its crest height in steps.
-- **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too.
+- **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too. `micro.shores` (D-094): the micro-terrain sinks under the water, which the client draws as a plane at each water cell's level over it and its neighbours; without it, water cells' micro-corners lie flat at their level.
 - **Render scale (optional, D-032):** `render.scale` in (0, 1] draws each cell at that fraction of a 32×16 px tile, and heights shrink by the same factor. Fine experiment worlds use it to stand in for micro-terrain. `render.tileSize` overrides the bake tile edge (default 32 cells).
 - **Objects (optional, D-034):** `objects.path` points to a gzipped JSON file, `{ "version": 2, "instances": [...] }`. Each instance has:
   - `g`: semantic group

@@ -12,6 +12,8 @@ export interface InitMessage {
   margin: number;
   /** Height (steps) of world-edge skirts. */
   floor: number;
+  /** The package's micro-terrain sinks under its water, drawn as planes (manifest micro.shores, D-094). */
+  shores?: boolean;
   worldWidth: number;
   worldHeight: number;
   /** Render units per world cell (manifest render.scale); 1 if absent. */

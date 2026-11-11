@@ -59,6 +59,12 @@ export interface TerrainField {
   /** World size in cells: skirts are drawn only at real world edges. */
   world: { width: number; height: number };
   /**
+   * Water is drawn as planes at its levels over shaped shores (D-094):
+   * packages whose manifest says micro.shores. Without it, water cells are
+   * flat at their level and drawn as their tops.
+   */
+  shores: boolean;
+  /**
    * Per edge (0 N, 1 E, 2 S, 3 W): the micro-cells (row-major index) that
    * have a wall on that edge, i.e. stand above their neighbour there or sit at
    * the world edge. The baker draws walls only for these.
@@ -89,6 +95,8 @@ export interface TerrainFieldOptions {
   offset?: [number, number];
   world?: { width: number; height: number };
   floor?: number;
+  /** TerrainField.shores (default false). */
+  shores?: boolean;
 }
 
 const DIRS8 = [
@@ -233,13 +241,15 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     segs,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
+    shores: options.shores ?? false,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],
   };
 }
 
 /**
  * Visit the points that bound a field: every micro-cell's four drawn corners,
- * plus skirt bottoms at world edges. fn receives (x, y, h steps, cellX, cellY).
+ * skirt bottoms at world edges, and the corners of water cells at their level
+ * (the water plane, D-094). fn receives (x, y, h steps, cellX, cellY).
  */
 export function forEachFieldPoint(
   f: TerrainField,
@@ -263,4 +273,12 @@ export function forEachFieldPoint(
         for (let c = 0; c < 4; c++) fn(ox + (mx + OFF[c * 2]!) / k, oy + (my + OFF[c * 2 + 1]!) / k, f.floor, cx, cy);
     }
   }
+  // the planes over a water cell's neighbours stand at a water cell's level too
+  if (!f.shores) return;
+  for (let y = 0; y < f.height; y++)
+    for (let x = 0; x < f.width; x++) {
+      const level = f.cells[(y * f.width + x) * 4 + 3]!;
+      if (level === NO_WATER) continue;
+      for (let c = 0; c < 4; c++) fn(ox + x + OFF[c * 2]!, oy + y + OFF[c * 2 + 1]!, level, ox + x, oy + y);
+    }
 }

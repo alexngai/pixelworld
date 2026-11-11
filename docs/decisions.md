@@ -98,6 +98,8 @@ Status values:
 | D-087 | Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined | Accepted (M5) |
 | D-088 | More Paris landmarks, palaces typed by name, and footprints that keep their courtyards | Accepted (M5) |
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
+| D-094 | Water as a plane over a shaped shore: shorelines from the map's water polygons at micro-cell resolution | Accepted (M5) |
+| D-095 | Natural ground lit by its slope, with dithered light, hollows, ridges and patches | Accepted (M5) |
 
 ---
 
@@ -1066,3 +1068,34 @@ The point is more room for visual interest; both halves are wanted.
   - Neighbourhoods from each building's ward code (`uro:city`) and the code list `Common_localPublicAuthorities.xml`, for `hoods:` rules.
   - What `yearOfConstruction` means for rebuilt temples (Nishi Hongan-ji's 17th- and 18th-century halls read 1989), and why 14% of Kyoto's wooden buildings have flat LoD2 roofs.
   - Fetching GSI's tiles in parallel (one at a time now, about 0.5 s each).
+
+### D-094: Water as a plane over a shaped shore: shorelines from the map's water polygons at micro-cell resolution (accepted, M5)
+- **Why:** water was a cell layer. Micro-terrain flattened whole water cells to their level and the shader kept their exact cells, so every shore was a staircase of cells: 10 m on the walking levels, 400–500 m in the desert (M1.6's known issue). Lakes and the sea came from WorldCover per cell; Overture's water polygons weren't read.
+- **What:**
+  - **Shoreline field** (`micro.shore_field`): the signed distance (micro-cells, negative in water) from every micro-corner to the shoreline. It's drawn from Overture's `base/water` polygons (classes ocean, river, lake, pond, reservoir, water, dock, canal and lagoon; not pools, wastewater or the named bays and shoals over the sea) and river lines (half `riverWidthMeters`, at least 0.75 micro-cell), rasterized on a grid up to 4 times finer than the micro-corners (a 12 M pixel budget), with scipy's distance transform. Water cells with neither within 2 cells (a lake the map lacks) are rounded by a 0.5-cell Gaussian instead of keeping their staircase.
+  - **Planes** (`micro.plane_levels`): the level the client draws over each cell: a water cell's own, else the highest of its 8 neighbours', none on a dry road cell. The baker computes the same from the cell water layer, so nothing new is stored. Beside the water, ground more than the deepest bed (3 micro-steps) under a neighbour's plane isn't its shore (the canyon below a dam, a cliff's foot): the pipeline leaves it as it is and the baker draws no plane over it.
+  - **Shore** (`micro.shape_shore`): wet micro-corners sink under every plane over them, a micro-step deeper per micro-cell out from the shore, at most 3; dry ones stand at least a micro-step above. Corners touching a road cell stay dry. Ground other than urban, rock or none slopes into the water: a micro-step above it for a micro-cell, then 1.4 micro-steps per micro-cell up to 6 above the nearest plane, reaching past the planes, so no micro-cell on a natural shore spans more than a slope tile's 3 micro-steps (even across its diagonal) and the bank draws as slopes; higher ground stands behind it as a cliff. Quays and rock meet the water in walls.
+  - **Unchanged:** the cell layers (water, base, shape, surface), so gameplay still reads water by cell; the road report. Bridge decks' water (D-056) re-sinks only the cells under the decks.
+  - **Packages say so:** the manifest's `micro.shores: true` marks a package built this way; the baker draws planes only for those (`TerrainField.shores`). Packages built before keep water cells flat at their level, drawn as before, until they're rebuilt.
+  - **Baker:** a third field draw in the G-buffer pass, one flat quad per micro-cell at its plane's level where its ground dips below it (face kind `FACE_WATER`, 5: 4 is objects'); the depth test draws the shoreline where ground and plane cross, at pixel resolution. The plane carries the water's depth over the ground: a shade lighter within a micro-step, dithered to two. No way or rail decals on it, no AO; not in the shadow map. Field bounds include the water levels.
+- **Measured** (New York, walking): 173 water polygons and 26 river lines; micro-terrain 9.6 s; chunks 3.10 → 3.12 MB; the road report unchanged. FDR Drive's bulkhead is a straight line along the esplanade instead of 10 m steps, and the Reservoir follows its curve.
+- **Rejected alternatives:**
+  - **Water per micro-cell:** still a staircase, at 5 m, and a new chunk layer.
+  - **A stored shore field or per-micro-cell levels:** the plane levels follow from the cell water layer by one rule both sides share, and the micro-heights carry the shore.
+  - **Water wherever the ground is under the level, without a plane:** the bed would be drawn at its own height, sunk below its shores.
+  - **WorldCover at the micro-corners:** its 10 m pixels are a staircase of their own and have no piers.
+- **Later:** rivers that step down meet with no face between their planes; vehicles over water read the bed; foam and palette cycling at the waterline; streams narrower than a micro-cell as way decals; warped layouts map the polygons through the layout but aren't checked against the Southwest yet.
+
+### D-095: Natural ground lit by its slope, with dithered light, hollows, ridges and patches (accepted, M5)
+- **Why:** micro-tiles are planar triangles and each took one shade, so hillsides read as crumpled facets (the Black Canyon, the desert ranges), while large woods and fields were one flat colour.
+- **What** (`GBUFFER_FS`, micro-terrain only): the tops of surfaces whose pattern is trees or speckle, off pavement:
+  - **Light:** lit by the ground's slope over about a cell (`groundShape`, the plane through a 3×3 ring a cell apart, as lawns were), with the light between shades dithered on a 4×4 ordered pattern anchored to screen pixels rather than rounded. The ring is sampled once per micro-corner in a prepass beside the AO's (`FIELD_SHAPE_FS`, RGBA8: slopes as angles, hollowness in steps) and read per vertex: sampled per pixel, it nearly tripled a forest tile's bake in software rendering.
+  - **Hollows and ridges:** the same ring's mean height minus the height here; 0.2 steps or more below it dithers a shade darker, fully at 0.7; as far above, a shade lighter.
+  - **Patches:** two octaves of world-anchored value noise, about 2.5 render cells across; the lowest values a shade darker, the highest a shade lighter, with dithered rims. Not on strata.
+  - **Walls** keep their own light and strata, so canyon ledges stay.
+- **Measured** (`tools/bench.mjs`, software rendering, median tile bake): Grand Canyon Village 802 ms against 784 ms without it (2,171 ms when each pixel sampled the ring); Alamo Square unchanged within the run-to-run noise. Five e2e goldens change, in their ground only (Hoover Dam, Las Vegas, the flying Strip, Coit Tower, Brooklyn Heights).
+- **Rejected alternatives:**
+  - **`light: "slope"` on natural surfaces in the style packs:** it also turns their risers into the surface's own colour, where cliffs should show rock.
+  - **Second ramps per surface (dry grass, pale sand):** new style tables for what a shade shift already reads as.
+  - **Style knobs for the constants:** every pack takes the same values for now; add them when one needs others.
+

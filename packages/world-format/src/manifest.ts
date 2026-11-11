@@ -67,8 +67,12 @@ export interface WorldManifest {
    * bake tile edge in cells.
    */
   render?: { scale: number; tileSize?: number };
-  /** Micro-terrain (M1.6): every chunk carries K×K micro-cells per cell (MHGT). */
-  micro?: { k: number };
+  /**
+   * Micro-terrain (M1.6): every chunk carries K×K micro-cells per cell (MHGT).
+   * shores: the micro-terrain sinks under the water (D-094), which is drawn as
+   * a plane at its level; packages without it keep water cells flat at it.
+   */
+  micro?: { k: number; shores?: boolean };
   /** Elastic map (M2): how the world was laid out (informational). */
   warp?: {
     method: string;

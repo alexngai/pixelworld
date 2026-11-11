@@ -209,7 +209,7 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 - **Walls only where they exist:** this keeps wall cost proportional to actual cliffs.
 
 **Known issues:**
-- **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix.
+- **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix. *Fixed (D-094):* water is a plane over micro-terrain shaped from the map's water polygons and river lines.
 - **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized.
 - **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds.
 - **Road beds** are 0.3 cells to either side of the centre line, so in mountains they read as wide benches.

@@ -212,6 +212,7 @@ export function bakeInit(w: LoadedWorld, heroes: HeroPaint[], scatter: boolean):
     tileSize: w.tileSize,
     margin: w.margin,
     floor: w.floor,
+    shores: manifest.micro?.shores === true,
     worldWidth: manifest.cellsX,
     worldHeight: manifest.cellsY,
     renderScale: RS,

@@ -108,7 +108,7 @@ export class BakeHost {
       const world = { width: init.worldWidth, height: init.worldHeight };
       if (grid.micro) {
         // micro-terrain: the GPU builds the geometry from height textures
-        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor });
+        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor, shores: init.shores });
         scene = { meshes: [], batches: [], fields: [field] };
       } else {
         const terrain = buildTerrainMesh(

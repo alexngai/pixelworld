@@ -1,4 +1,4 @@
-import { EDGE_NEIGHBOR, PIECES, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
+import { EDGE_NEIGHBOR, NO_WATER, PIECES, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
 import { TEXEL_ROW, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworlds/generators";
 import { SHADES, type MaterialTables } from "@pixelworlds/style";
 import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
@@ -6,6 +6,7 @@ import { Uniforms, compileProgram, createTexture, depthTexture, framebuffer, rgb
 import {
   COMPOSITE_FS,
   FIELD_AO_FS,
+  FIELD_SHAPE_FS,
   FIELD_GBUFFER_FS,
   FIELD_GBUFFER_VS,
   FIELD_SHADOW_VS,
@@ -66,6 +67,8 @@ const PAD = 2;
 const MAX_SHADOW = 4096;
 /** The texture unit of a mesh's texels (units 0–8 are the shadow map and the field textures). */
 const TEXEL_UNIT = 9;
+/** The texture unit of a field's ground shape (FIELD_SHAPE_FS). */
+const SHAPE_UNIT = 10;
 
 interface UploadedMesh {
   vao: WebGLVertexArrayObject;
@@ -77,6 +80,9 @@ interface UploadedMesh {
   texels: WebGLTexture | null;
 }
 
+/** uWallEdge for the water planes (shaders.ts WATER_PLANE). */
+const WATER_PLANE = -2;
+
 interface UploadedField {
   corners: WebGLTexture;
   cells: WebGLTexture;
@@ -86,9 +92,13 @@ interface UploadedField {
   /** Centre-line pieces (D-082), or a 1×1 empty texture. */
   segs: WebGLTexture;
   ao: WebGLTexture;
+  /** Natural ground's slope and hollowness at every micro-corner (FIELD_SHAPE_FS). */
+  shape: WebGLTexture;
   instances: number;
   /** Per edge: an R32I texture (4096 per row) listing the micro-cells with a wall there. */
   walls: { list: WebGLTexture; count: number }[];
+  /** Whether any cell has water: only then is the water plane drawn. */
+  water: boolean;
 }
 
 /**
@@ -124,6 +134,7 @@ export class Baker {
   private fieldShadow: Program;
   private fieldG: Program;
   private fieldAo: Program;
+  private fieldShape: Program;
   private meshes = new WeakMap<MeshData, UploadedMesh>();
   private batches = new WeakMap<InstancedBatch, UploadedMesh>();
   private fields = new WeakMap<TerrainField, UploadedField>();
@@ -143,6 +154,7 @@ export class Baker {
     this.fieldShadow = program(FIELD_SHADOW_VS, SHADOW_FS);
     this.fieldG = program(FIELD_GBUFFER_VS, FIELD_GBUFFER_FS);
     this.fieldAo = program(FULLSCREEN_VS, FIELD_AO_FS);
+    this.fieldShape = program(FULLSCREEN_VS, FIELD_SHAPE_FS);
     this.emptyVao = gl.createVertexArray()!;
     this.noTexels = createTexture(gl, 1, 1, gl.R8UI, gl.RED_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(1));
   }
@@ -239,7 +251,7 @@ export class Baker {
     for (const f of sc.fields ?? []) {
       const up = this.fields.get(f);
       if (!up) continue;
-      for (const t of [up.corners, up.cells, up.vmap, up.ways, up.rails, up.segs, up.ao]) this.gl.deleteTexture(t);
+      for (const t of [up.corners, up.cells, up.vmap, up.ways, up.rails, up.segs, up.ao, up.shape]) this.gl.deleteTexture(t);
       for (const w of up.walls) this.gl.deleteTexture(w.list);
       this.fields.delete(f);
     }
@@ -260,18 +272,21 @@ export class Baker {
     const segs = f.segs
       ? createTexture(gl, f.width * 2 * PIECES, f.height, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, f.segs)
       : createTexture(gl, 1, 1, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(4));
-    const ao = rgba8Texture(gl, mw + 1, mh + 1);
-    const fb = framebuffer(gl, ao, null);
-    gl.viewport(0, 0, mw + 1, mh + 1);
+    // per micro-corner prepasses: AO, and natural ground's shape (D-095)
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    const { prog, u } = this.fieldAo;
-    gl.useProgram(prog);
-    this.setFieldUniforms(u, f, corners, cells, vmap, ways, rails, segs, 0);
     gl.bindVertexArray(this.emptyVao);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.deleteFramebuffer(fb);
+    const [ao, shape] = [this.fieldAo, this.fieldShape].map(({ prog, u }) => {
+      const tex = rgba8Texture(gl, mw + 1, mh + 1);
+      const fb = framebuffer(gl, tex, null);
+      gl.viewport(0, 0, mw + 1, mh + 1);
+      gl.useProgram(prog);
+      this.setFieldUniforms(u, f, corners, cells, vmap, ways, rails, segs, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.deleteFramebuffer(fb);
+      return tex;
+    }) as [WebGLTexture, WebGLTexture];
     const walls = f.walls.map((list) => {
       const w = Math.max(1, Math.min(4096, list.length));
       const h = Math.max(1, Math.ceil(list.length / 4096));
@@ -279,7 +294,9 @@ export class Baker {
       data.set(list);
       return { list: createTexture(gl, w, h, gl.R32I, gl.RED_INTEGER, gl.INT, data), count: list.length };
     });
-    const up = { corners, cells, vmap, ways, rails, segs, ao, instances: mw * mh, walls };
+    let water = false;
+    for (let i = 3; i < f.cells.length && !water; i += 4) water = f.cells[i] !== NO_WATER;
+    const up = { corners, cells, vmap, ways, rails, segs, ao, shape, instances: mw * mh, walls, water };
     this.fields.set(f, up);
     return up;
   }
@@ -331,11 +348,15 @@ export class Baker {
     gl.activeTexture(gl.TEXTURE0);
   }
 
-  private drawFields(u: Uniforms, fields: TerrainField[], rotation: Rotation): void {
+  /** water: also draw the water planes (D-094; the G-buffer pass, not the shadow map's). */
+  private drawFields(u: Uniforms, fields: TerrainField[], rotation: Rotation, water = false): void {
     const gl = this.gl;
     for (const f of fields) {
       const up = this.uploadField(f);
       this.setFieldUniforms(u, f, up.corners, up.cells, up.vmap, up.ways, up.rails, up.segs, rotation, up.ao);
+      gl.activeTexture(gl.TEXTURE0 + SHAPE_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, up.shape);
+      gl.uniform1i(u.loc("uFieldShape"), SHAPE_UNIT);
       gl.bindVertexArray(this.emptyVao);
       gl.uniform1i(u.loc("uWallList"), 4);
       // tops: every micro-cell
@@ -350,6 +371,11 @@ export class Baker {
         gl.uniform1i(u.loc("uWallEdge"), e);
         gl.bindTexture(gl.TEXTURE_2D, w.list);
         gl.drawArrays(gl.TRIANGLES, 0, 6 * w.count);
+      }
+      if (water && f.shores && up.water) {
+        gl.uniform1i(u.loc("uWallEdge"), WATER_PLANE);
+        gl.bindTexture(gl.TEXTURE_2D, up.walls[0]!.list);
+        gl.drawArrays(gl.TRIANGLES, 0, 6 * up.instances);
       }
       gl.activeTexture(gl.TEXTURE0);
     }
@@ -503,7 +529,7 @@ export class Baker {
     this.drawScene(hide?.size ? draws.filter((_, i) => i >= scene.meshes.length || !hide.has(scene.meshes[i]!)) : draws, true);
     if (fields.length) {
       gl.useProgram(this.fieldG.prog);
-      this.drawFields(this.fieldG.u, fields, rotation);
+      this.drawFields(this.fieldG.u, fields, rotation, true);
     }
 
     // 3. Composite: cleanup, AO dither, outlines → palette index + local depth
@@ -535,7 +561,7 @@ export class Baker {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindVertexArray(null);
-    for (const unit of [TEXEL_UNIT, 8, 7, 6, 5, 4, 3, 2, 1, 0]) {
+    for (const unit of [SHAPE_UNIT, TEXEL_UNIT, 8, 7, 6, 5, 4, 3, 2, 1, 0]) {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, null);
     }

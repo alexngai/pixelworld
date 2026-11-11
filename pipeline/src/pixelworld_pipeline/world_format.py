@@ -563,7 +563,8 @@ def write_package(
     if render is not None:
         manifest["render"] = render
     if micro is not None:
-        manifest["micro"] = {"k": int(micro[1])}
+        # shores: water is a plane over shaped shores (D-094); older packages lack it
+        manifest["micro"] = {"k": int(micro[1]), "shores": True}
     if warp_info is not None:
         manifest["warp"] = warp_info
     objects_path = out_dir / OBJECTS_FILE

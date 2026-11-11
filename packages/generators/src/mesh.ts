@@ -15,6 +15,8 @@ export const FACE_SLOPE = 1;
 export const FACE_CLIFF = 2;
 export const FACE_SKIRT = 3;
 export const FACE_OBJECT = 4;
+/** A micro-terrain field's water plane (D-094), drawn by the baker's field shader. */
+export const FACE_WATER = 5;
 
 export const DIRECT_RAMP_BASE = 100;
 /** Material of a face drawn from texels (`MeshData.texels`): voxel faces of several colours merged into one rectangle. */
