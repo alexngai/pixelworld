@@ -183,10 +183,10 @@ Tokyo's walking level (D-093), built from [`worlds/tokyo/walk.yaml`](../worlds/t
 - **Buildings:** 18,875 from Overture footprints; 17,638 have facts from PLATEAU 2025 (the `plateau` facts source, D-089: use, storeys, measured height; 28 meshes of five wards), and 14,080 that Overture gives no height take PLATEAU's.
 - **Types** (no year in Tokyo's models: by use, storeys, footprint size and neighbourhood boxes, D-093): houses (6,965), zakkyo (4,081 under signs, 2,049 quieter), mansions (2,238), shop houses (967), civic blocks (697), offices (532), warehouses (109), towers (136 in west Shinjuku, 260 elsewhere), the Meiji Shrine's halls (37); 433 commercial and 369 residential keep the defaults.
 - **Centre lines:** 30,990 road cells and 23,374 path cells carry pieces; 14 and 180 have more than six, and drop their narrowest.
-- **Also:** 17,758 canopy trees and 341 street trees, 7,240 lawn cells, 4,207 utility poles with their lines, 2,072 street lights and 121 signals, 1,560 rail corridor cells (255 mapped tracks of the Yamanote, Chūō, Saikyō, Odakyū and Keiō lines where they surface, drawn as 173 corridors, D-094), 5,372 traffic routes (51 for trains).
+- **Also:** 17,758 canopy trees and 341 street trees, 7,240 lawn cells, 3,781 utility poles with 2,893 wire spans strung between them (D-095), 2,072 street lights and 121 signals, 1,560 rail corridor cells (255 mapped tracks of the Yamanote, Chūō, Saikyō, Odakyū and Keiō lines where they surface, drawn as 173 corridors, D-094), 5,372 traffic routes (51 for trains).
 - **Landmarks (generic depictions, D-092):** the Tokyo Metropolitan Government Building's twin towers, the NTT Docomo Yoyogi Building, Shibuya 109's cylinder and the Meiji Shrine's great torii.
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
-- **Size:** 1.8 MB. Built in about 55 s with the download cache (270 s on a first build, fetching Overture and 16 more PLATEAU meshes).
+- **Size:** 1.9 MB. Built in about 55 s with the download cache (270 s on a first build, fetching Overture and 16 more PLATEAU meshes).
 
 ```sh
 cd pipeline

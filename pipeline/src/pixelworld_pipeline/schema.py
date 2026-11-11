@@ -1083,7 +1083,15 @@ ROW_RULE_KEYS = {
 STREET_TREE_RULE = Map(dict(ROW_RULE_KEYS), rule=_row_rule)
 STREET_PROP_RULE = Map(
     ROW_RULE_KEYS
-    | {"at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners.")},
+    | {
+        "at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners."),
+        "wires": Key(
+            Str(),
+            "Strung props (D-095): one row on each street's left at `offset` (default 3 m), "
+            "joined through junctions where the street runs on straight, and a span of "
+            "this group from each prop to the next.",
+        ),
+    },
     rule=_row_rule,
 )
 LANDMARK_PART = Map(

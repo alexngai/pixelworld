@@ -101,6 +101,7 @@ Status values:
 | D-092 | Tokyo's look: a `tokyo` style pack and the `@pixelworlds/city-tokyo` generator plugin | Accepted (M5) |
 | D-093 | Tokyo's walking level: Shibuya to Shinjuku at 10 m, typed by use, storeys, size and neighbourhood boxes | Accepted (M5) |
 | D-094 | Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count | Accepted (M5) |
+| D-095 | Wires strung from pole to pole: utility poles along whole streets, and each span a line object at any angle | Accepted (M5) |
 
 ---
 
@@ -1134,3 +1135,20 @@ The point is more room for visual interest; both halves are wanted.
   - **Traffic's trains** still run on Overture's individual tracks, which lie inside the drawn corridor but not always on a drawn track.
   - **Other worlds** (`nyc-walk`, `paris-walk`) could turn `bundle` on when their goldens are next regenerated; worlds without micro-terrain don't draw corridors.
   - **Overhead wires** (D-092's Later) next: spans as line objects from pole to pole.
+
+### D-095: Wires strung from pole to pole: utility poles along whole streets, and each span a line object at any angle (accepted, M5)
+- **Why:** D-092 drew a utility pole and its wires as one prop placed across the street. A prop turns by quarter turns only, so the wire in it lined up with the next pole's only on streets running north–south or east–west: everywhere else, short staggered black strokes, heavier still where four lines a voxel thick were outlined side by side. Looked at on `tokyo-walk` at zoom 1, they read as scribbles over the rooftops.
+- **What:**
+  - **Streets, not segments** (`objects._strokes`): a street prop rule's roads are joined end to end where only two meet, and through a junction where a road runs on into another, turning less than 30°, the straightest pairs first. A Tokyo block is shorter than two poles' spacing, so poles placed per Overture segment would rarely have a neighbour to string a wire to.
+  - **`wires: <group>`** on a `streetProps` rule (`objects.wired_props`): a prop every `spacing` metres along each street, on its left at `offset` (3 m), turned as an `across` prop is so its crossarm spans the street; and between each two in a row, a span of the named group: a line object as the kit's bridges are (D-056), its footprint a band a voxel either side of the line from one pole to the next, `ln` its ends, drawn whatever the angle. A pole kept off a building's footprint takes its spans with it.
+  - **The ground at a line object's ends:** the bake now hands a line object's generator the ground's height at its two ends above its base (`frame.line.rise`, voxels), so a span climbs from a pole on low ground to one on higher ground. The kit's bridges ignore it.
+  - **`wireSpan`** (`@pixelworlds/city-tokyo`, `prop.wire`): one column per voxel along the line's major axis, from `height` voxels over the ground at one pole to the same at the other, sagging `sag` voxels between them; each column fills between its neighbours' heights so the wire never breaks. `utilityPoles` with `wires: 0` is the pole alone in a small model, its crossarm across the street.
+  - **`tokyo-walk`:** poles every 30 m, 3 m off residential, unclassified and living streets, with `prop.wire` spans. Its Yoyogi golden is regenerated (6% of its pixels: the poles and their wires).
+- **Measured:** 3,781 poles and 2,893 spans (4,207 props before, each with its own wire); 45,845 objects; the package grows from 1.8 to 1.9 MB; the build takes the same 55 s, and the Yoyogi view bakes in 8–9 s on SwiftShader as before. Looked at in Yoyogi, Sendagaya and over the Docomo tower at zooms 1 to 3: the wires run along every street at its own angle, thin, from pole to pole, sagging, and read as Tokyo's wires rather than scribbles. Tests: streets joined through straight junctions and round a bend, not through a crossing; poles on one side 3 m off with a span between each two; a span a voxel thick at any angle, joined in every column, sagging, and climbing to a pole on higher ground. Every other golden is unchanged.
+- **Rejected alternatives:**
+  - **Wires drawn in the bake as one-pixel lines** (not tried): thinner still, but the terrain pass would have to draw things standing over it and sort them against the objects; a voxel line goes through the same passes as everything else.
+  - **One prop per pole and span, turned by eighths:** props turn by quarter turns; a span at any other angle needs its own model, which the line object gives.
+  - **Poles on both sides:** in life they stand on one side of a small street, and two rows of wires would double the clutter.
+- **Later:**
+  - **Wires across junctions** between streets that meet at an angle, and the service drops from poles to houses.
+  - **A line object's outline:** a voxel-thick wire is still outlined like a building; a thinner look would need an object kind the outline pass leaves alone.

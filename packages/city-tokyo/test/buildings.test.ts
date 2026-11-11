@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { generateModel, type AssetCatalog, type GenContext, type VoxelModel } from "pixelworld/generators";
+import { footprintMask, generateModel, type AssetCatalog, type GenContext, type VoxelModel } from "pixelworld/generators";
 import { register as registerSf } from "@pixelworlds/city-sf";
 import { BUILDING_GENERATORS, slabFront } from "../src/buildings";
 import { register } from "../src/index";
@@ -173,5 +173,58 @@ describe("Tokyo's buildings", () => {
     const m = gen("building.shrine", 2, rect(20, 14), 20, { floors: 1 });
     expect(count(m, "copper")).toBeGreaterThan(100);
     expect(count(m, "glass", "lit")).toBe(0);
+  });
+});
+
+describe("Tokyo's wires (D-095)", () => {
+  /** A wire span's line object as the pipeline gives it: a band of half-width lw around a → b (cells), and its frame. */
+  function span(a: [number, number], b: [number, number], rise: [number, number] = [0, 0]) {
+    const voxel = 1 / 16;
+    const lw = 0.06;
+    const [ux, uy] = [b[0] - a[0], b[1] - a[1]];
+    const len = Math.hypot(ux, uy);
+    const [nx, ny] = [(uy / len) * lw, (-ux / len) * lw];
+    const fp: [number, number][] = [
+      [a[0] + nx, a[1] + ny],
+      [b[0] + nx, b[1] + ny],
+      [b[0] - nx, b[1] - ny],
+      [a[0] - nx, a[1] - ny],
+    ];
+    const { mask, x0, y0 } = footprintMask(fp, voxel);
+    return generateModel(style.assets, rampIds, "prop.wire", { seed: 1, mask, frame: { x0, y0, voxel, line: { a, b, half: lw, rise } } });
+  }
+
+  it("runs a voxel thick from pole to pole at any angle, sagging between them, joined in every column", () => {
+    for (const [a, b] of [
+      [[0.5, 0.5], [3.5, 0.5]],
+      [[0.5, 0.5], [2.6, 2.6]],
+      [[0.5, 0.5], [3.1, 1.8]],
+    ] as [number, number][][]) {
+      const m = span(a!, b!);
+      const tops: number[] = [];
+      let columns = 0;
+      for (let y = 0; y < m.sy; y++)
+        for (let x = 0; x < m.sx; x++) {
+          let n = 0;
+          for (let z = 0; z < m.sz; z++) if (m.get(x, y, z)) n++;
+          if (n) {
+            columns++;
+            tops.push(topAt(m, x, y));
+          }
+        }
+      // one column per voxel along the longer axis, not a band
+      const along = Math.max(Math.abs(b![0] - a![0]), Math.abs(b![1] - a![1])) * 16;
+      expect(columns, `${a} → ${b}`).toBeGreaterThanOrEqual(along - 2);
+      expect(columns, `${a} → ${b}`).toBeLessThanOrEqual(along + 3);
+      // at the poles' height (25) at its ends, a little lower in the middle
+      expect(Math.max(...tops)).toBe(25);
+      expect(Math.min(...tops)).toBeLessThanOrEqual(23);
+    }
+  });
+
+  it("climbs from a pole on low ground to one on higher ground", () => {
+    const m = span([0.5, 0.5], [3.5, 0.5], [0, 8]);
+    const ends = [0, m.sx - 1].map((x) => Math.max(...[...Array(m.sy).keys()].map((y) => topAt(m, x, y))));
+    expect(ends[1]! - ends[0]!).toBeGreaterThanOrEqual(7);
   });
 });

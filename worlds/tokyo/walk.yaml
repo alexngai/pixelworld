@@ -115,8 +115,9 @@ objects:
   streetProps:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
-    # utility poles and their wires down the residential streets
-    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, across: true }
+    # utility poles down the residential streets, 3 m off their centre lines,
+    # and their wires strung from pole to pole along each street (D-095)
+    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, wires: prop.wire }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks: [tokyo-metropolitan-government-building, ntt-docomo-yoyogi-building, shibuya-109, meiji-jingu-otorii]
   landmarkDepiction: generic

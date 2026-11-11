@@ -467,8 +467,9 @@
     "prop.pole": {
       "generator": "utilityPoles",
       "ramps": { "pole": "pole", "wire": "wire", "box": "concrete" },
-      "params": { "span": 12, "length": 48, "height": 26, "sag": 2, "transformer": 0.3, "cable": 0 }
+      "params": { "span": 5, "length": 3, "height": 26, "transformer": 0.3, "wires": 0 }
     },
+    "prop.wire": { "generator": "wireSpan", "ramps": { "wire": "wire" }, "params": { "height": 25, "sag": 2 } },
     "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "pole", "head": "steel", "light": "marker" }, "params": { "height": 5 } },
     "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "pole", "lamp": "lit-cool" }, "params": { "height": 6 } },
     "rock.boulder": { "generator": "boulder", "ramps": { "rock": "loam" } },

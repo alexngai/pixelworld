@@ -48,6 +48,7 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   cylinderTower: "@pixelworlds/city-tokyo",
   myojinTorii: "@pixelworlds/city-tokyo",
   utilityPoles: "@pixelworlds/city-tokyo",
+  wireSpan: "@pixelworlds/city-tokyo",
 };
 
 export interface GeneratorInfo {

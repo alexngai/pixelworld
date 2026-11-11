@@ -11,8 +11,8 @@ export const PLUGIN_NAME = "@pixelworlds/city-tokyo";
  * `zakkyo` (the narrow mixed-use mid-rise under stacked signs), `mansion`
  * (the apartment slab with continuous balconies) and `kodate` (the small
  * detached house); the landmark shapes `twinTowerHall`, `cylinderTower` and
- * `myojinTorii`; and `utilityPoles`, the poles and wires over residential
- * streets. A function, so a page that only names the plugin (`cityPlugin`)
+ * `myojinTorii`; and `utilityPoles` and `wireSpan`, the poles and the wires
+ * strung between them over residential streets. A function, so a page that only names the plugin (`cityPlugin`)
  * doesn't bundle them.
  */
 export function tokyoGenerators(): Record<string, Generator> {

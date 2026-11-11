@@ -441,6 +441,73 @@ def test_props_strung_across_a_street_hang_over_it_turned_across_it():
     assert objects.street_trees(p, rule, rows, lambda x, y: np.ones(len(x), dtype=bool), "t") == []
 
 
+def test_streets_run_on_through_junctions_where_they_go_straight():
+    # a street in three blocks, crossed by two others, bending 60° after the third where
+    # nothing else meets it
+    lines = [
+        shapely.LineString([(0, 0), (100, 0)]),
+        shapely.LineString([(100, 0), (200, 0)]),
+        shapely.LineString([(200, 0), (300, 0)]),
+        shapely.LineString([(100, -50), (100, 0)]),
+        shapely.LineString([(100, 0), (100, 50)]),
+        shapely.LineString([(200, 0), (200, 50)]),
+        shapely.LineString([(300, 0), (350, 87)]),
+    ]
+    strokes = sorted(objects._strokes(lines), key=lambda c: -shapely.LineString(c).length)
+    lengths = [round(shapely.LineString(c).length) for c in strokes]
+    # the long street through both crossings and round its bend; the cross street
+    # through the first crossing; the last stub alone
+    assert lengths == [400, 100, 50]
+    assert {tuple(strokes[0][0]), tuple(strokes[0][-1])} == {(0.0, 0.0), (350.0, 87.0)}
+
+
+def test_poles_stand_on_one_side_with_a_wire_from_each_to_the_next():
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    p = objects.Placement(region, np.ones((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.195 36.001, -115.195 36.005)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.195 36.005, -115.195 36.009)",
+        },
+    ]
+    rule = {
+        "group": "prop.pole",
+        "roads": ["residential"],
+        "spacing": 30,
+        "offset": 3,
+        "wires": "prop.wire",
+    }
+    out = objects.wired_props(p, rule, rows, _none, "t")
+    assert out == objects.wired_props(p, rule, rows, _none, "t")
+    poles = [i for i in out if i["g"] == "prop.pole"]
+    wires = [i for i in out if i["g"] == "prop.wire"]
+    # one street of about 890 m (its two segments joined): a pole every 30 m, a wire
+    # between each two
+    assert len(poles) >= 28 and len(wires) == len(poles) - 1
+    (sx,), _ = p.to_cells(*objects.transform_points("EPSG:4326", region.crs, [-115.195], [36.005]))
+    m = region.meters_per_cell
+    assert all(abs(abs(i["x"] - sx) * m - 3) < 0.2 for i in poles)  # 3 m off the line
+    assert len({round(i["x"], 2) for i in poles}) == 1  # all on one side
+    assert {i["r"] for i in poles} == {0}  # turned across a north-south street
+    # each wire runs from one pole to the next
+    ends = {(round(i["x"], 3), round(i["y"], 3)) for i in poles}
+    for w in wires:
+        a, b = (
+            (round(w["ln"][0], 3), round(w["ln"][1], 3)),
+            (round(w["ln"][2], 3), round(w["ln"][3], 3)),
+        )
+        assert a in ends and b in ends and len(w["fp"]) == 4
+    # buildings keep poles off, and the wires to them go too
+    assert objects.wired_props(p, rule, rows, lambda x, y: np.ones(len(x), dtype=bool), "t") == []
+
+
 def test_canopy_trees_take_the_groups_of_their_cells_land_cover(monkeypatch):
     region = Region.from_dict(SPEC)
     cx, cy = region.cells

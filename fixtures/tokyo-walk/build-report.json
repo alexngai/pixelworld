@@ -1,5 +1,5 @@
 {
-  "packageHash": "ff9f0ba6a2603527f16d63505c429ae275fe45f0e9dda641c159a37f8bb80124",
+  "packageHash": "92d578758d7e332d31eb9793b56dde436bf8c232aa2448036c983299ae373157",
   "cells": [
     228,
     478
@@ -33,9 +33,10 @@
     "landmark.hall.twin": 1,
     "landmark.tower.cylinder": 1,
     "landmark.tower.spire": 1,
-    "prop.pole": 4207,
+    "prop.pole": 3781,
     "prop.signal": 121,
     "prop.streetlight": 2072,
+    "prop.wire": 2893,
     "tree": 17758,
     "tree.street": 341
   },

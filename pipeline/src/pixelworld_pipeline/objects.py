@@ -592,6 +592,135 @@ def street_trees(
     ]
 
 
+def _strokes(lines: list, max_turn: float = 30.0) -> list[np.ndarray]:
+    """Streets as continuous lines (coordinate arrays): lines joined end to end
+    where only two meet, and through a junction where one runs on into
+    another, turning less than `max_turn` degrees; at each junction the
+    straightest pairs join first."""
+    parts = [g for ln in lines for g in (getattr(ln, "geoms", None) or [ln]) if g.length > 0]
+    if not parts:
+        return []
+    merged = shapely.line_merge(shapely.MultiLineString(parts))
+    segs = [np.asarray(g.coords) for g in getattr(merged, "geoms", [merged]) if g.length > 0]
+    nodes: dict[tuple[float, float], list[tuple[int, int, np.ndarray]]] = {}
+    for i, c in enumerate(segs):
+        ln = shapely.LineString(c)
+        for side in (0, 1):
+            end = c[0] if side == 0 else c[-1]
+            inner = ln.interpolate(
+                min(5.0, ln.length / 2) if side == 0 else max(0, ln.length - 5.0)
+            )
+            d = np.array([inner.x, inner.y]) - end
+            d = d / max(float(np.hypot(*d)), 1e-9)
+            nodes.setdefault((round(end[0], 1), round(end[1], 1)), []).append((i, side, d))
+    partner: dict[tuple[int, int], tuple[int, int]] = {}
+    cos_max = math.cos(math.radians(max_turn))
+    for ends in nodes.values():
+        pairs = sorted(
+            (float(np.dot(a[2], -b[2])), ka, kb)
+            for ka, a in enumerate(ends)
+            for kb, b in enumerate(ends)
+            if ka < kb and a[0] != b[0]
+        )
+        for straight, ka, kb in reversed(pairs):
+            ea, eb = ends[ka][:2], ends[kb][:2]
+            if straight >= cos_max and ea not in partner and eb not in partner:
+                partner[ea], partner[eb] = eb, ea
+    out: list[np.ndarray] = []
+    seen: set[int] = set()
+    for i in range(len(segs)):
+        if i in seen:
+            continue
+        # back to the chain's free end (or round a ring to where it started)
+        line, enter = i, 0
+        while (line, enter) in partner:
+            j, sj = partner[(line, enter)]
+            if j == i:
+                break
+            line, enter = j, 1 - sj
+        coords: list[np.ndarray] = []
+        while line not in seen:
+            seen.add(line)
+            c = segs[line] if enter == 0 else segs[line][::-1]
+            coords.append(c if not coords else c[1:])
+            nxt = partner.get((line, 1 - enter))
+            if nxt is None:
+                break
+            line, enter = nxt
+        out.append(np.vstack(coords))
+    return out
+
+
+def wired_props(
+    p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
+) -> list[dict]:
+    """Props strung together (D-095), utility poles and their wires: along each
+    street of the rule's road classes (_strokes), a prop every `spacing`
+    metres on its left, `offset` metres from its centre line, turned as an
+    `across` prop is (its x across the street); and between each two in a row,
+    a span of the `wires` group, a line object from one to the next (`ln`, the
+    props' positions in cells), drawn by its generator at any angle."""
+    classes = set(rule["roads"])
+    spacing = float(rule["spacing"])
+    offset = float(rule.get("offset", 3.0))
+    lines = [
+        p.project(shapely.from_wkt(row["geometry"]))
+        for row in sorted(road_rows, key=lambda r: r["id"])
+        if row["class"] in classes
+    ]
+    rng = np.random.default_rng(_seed(p.region, f"wired|{tag}|{rule['group']}"))
+    half = 0.06  # a span's footprint either side of its line, cells (about a voxel)
+    out: list[dict] = []
+    for stroke in _strokes(lines):
+        ln = shapely.LineString(stroke)
+        ds = np.arange(spacing / 2, ln.length, spacing)
+        if not len(ds):
+            continue
+        c = shapely.line_interpolate_point(ln, ds)
+        a = shapely.line_interpolate_point(ln, np.maximum(ds - 1, 0))
+        b = shapely.line_interpolate_point(ln, np.minimum(ds + 1, ln.length))
+        tx, ty = shapely.get_x(b) - shapely.get_x(a), shapely.get_y(b) - shapely.get_y(a)
+        norm = np.maximum(np.hypot(tx, ty), 1e-9)
+        ax = shapely.get_x(c) - ty / norm * offset
+        ay = shapely.get_y(c) + tx / norm * offset
+        cx, cy = p.to_cells(ax, ay)
+        ok = p.inside(cx, cy) & ~occupied(ax, ay)
+        if "bounds" in rule:
+            w, s, e, n = (float(v) for v in rule["bounds"])
+            bx, by = transform_points("EPSG:4326", p.region.crs, [w, e], [s, n])
+            ok &= (ax >= min(bx)) & (ax <= max(bx)) & (ay >= min(by)) & (ay <= max(by))
+        seeds = rng.integers(0, 2**31, size=len(ds) * 2)
+        for k in np.nonzero(ok)[0]:
+            out.append(
+                {
+                    "g": rule["group"],
+                    "x": float(cx[k]),
+                    "y": float(cy[k]),
+                    "s": int(seeds[2 * k]),
+                    "r": 0 if abs(ty[k]) >= abs(tx[k]) else 1,
+                }
+            )
+            if k == 0 or not ok[k - 1]:
+                continue
+            pa, pb = np.array([cx[k - 1], cy[k - 1]]), np.array([cx[k], cy[k]])
+            u = (pb - pa) / max(float(np.hypot(*(pb - pa))), 1e-9)
+            nrm = np.array([u[1], -u[0]]) * half
+            ring = [pa + nrm, pb + nrm, pb - nrm, pa - nrm]
+            mid = 0.5 * (pa + pb)
+            out.append(
+                {
+                    "g": rule["wires"],
+                    "x": round(float(mid[0]), 3),
+                    "y": round(float(mid[1]), 3),
+                    "s": int(seeds[2 * k + 1]),
+                    "fp": [[round(float(x), 3), round(float(y), 3)] for x, y in ring],
+                    "ln": [round(float(v), 3) for v in (*pa, *pb)],
+                    "lw": half,
+                }
+            )
+    return out
+
+
 def junction_props(
     p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
 ) -> list[dict]:
@@ -1654,6 +1783,8 @@ def place(
     for i, rule in enumerate(spec.get("streetProps") or []):
         if rule.get("at") == "junctions":
             instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
+        elif rule.get("wires"):
+            instances += wired_props(p, rule, road_rows, occupied, f"w{i}")
         else:
             instances += street_trees(p, rule, road_rows, occupied, f"p{i}")
     for k, lm in enumerate(landmarks):

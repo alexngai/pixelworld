@@ -113,7 +113,13 @@ export interface GenContext {
    * Where the model sits (footprint objects): its (0, 0) corner in world cells
    * and the voxel size in cells; for a piece of a long landmark, the whole line.
    */
-  frame?: { x0: number; y0: number; voxel: number; line?: { a: [number, number]; b: [number, number]; half: number } };
+  frame?: {
+    x0: number;
+    y0: number;
+    voxel: number;
+    /** A line object's ends and half-width (cells), and the ground's height at its ends above its base (voxels; D-095). */
+    line?: { a: [number, number]; b: [number, number]; half: number; rise?: [number, number] };
+  };
   /** Target size in voxels (traffic vehicles, D-064): along, across, up. */
   size?: { length: number; width: number; height: number };
   /** Which car of a consist (traffic vehicles): 0 the head, then its wagons. */
@@ -349,8 +355,15 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
         const fpm = footprintMask(inst.fp, opts.voxel.h, inst.fh);
         ctx.mask = fpm.mask;
         ctx.frame = { x0: fpm.x0, y0: fpm.y0, voxel: opts.voxel.h };
-        if (inst.ln && inst.lw !== undefined)
-          ctx.frame.line = { a: [inst.ln[0], inst.ln[1]], b: [inst.ln[2], inst.ln[3]], half: inst.lw };
+        if (inst.ln && inst.lw !== undefined) {
+          const rise = (x: number, y: number) => (opts.heightAt(x, y) - base) / opts.voxel.v;
+          ctx.frame.line = {
+            a: [inst.ln[0], inst.ln[1]],
+            b: [inst.ln[2], inst.ln[3]],
+            half: inst.lw,
+            rise: [rise(inst.ln[0], inst.ln[1]), rise(inst.ln[2], inst.ln[3])],
+          };
+        }
         const [bx0, by0, bx1, by1] = footprintBounds(inst.fp);
         model = gen(ctx, { footprint: { cells: [bx1 - bx0, by1 - by0], voxels: [fpm.mask.sx, fpm.mask.sy] } });
         origin = [fpm.x0, fpm.y0, base];
