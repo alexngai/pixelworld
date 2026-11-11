@@ -1,0 +1,12 @@
+name: Pont Alexandre III
+wikidata: Q390418
+# one steel arch across the Seine, quay to quay, along Overture's carriageway
+line: [[2.31345, 48.86283], [2.31367, 48.86467]]
+crest: 35           # the deck, metres above sea level (the quays are about 34)
+base: 27            # the Seine's level in Paris
+thickness: 40       # the deck's width
+bulge: 0
+snap: true          # turns with its road to the grid (D-049)
+depictions:
+  # a single arch under the deck; its gilded statues are left out
+  generic: { group: landmark.bridge.arch }

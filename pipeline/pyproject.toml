@@ -25,9 +25,10 @@ dev = [
   "ruff>=0.6",
 ]
 # The city packs this repository's worlds need (worlds/sf names `facts: datasf`,
-# worlds/nyc `facts: pluto`).
+# worlds/nyc `facts: pluto`, worlds/paris `facts: apur` and an IGN terrain source).
 plugins = [
   "pixelworld-city-nyc",
+  "pixelworld-city-paris",
   "pixelworld-city-sf",
 ]
 
@@ -41,6 +42,7 @@ members = ["plugins/*"]
 
 [tool.uv.sources]
 pixelworld-city-nyc = { workspace = true }
+pixelworld-city-paris = { workspace = true }
 pixelworld-city-sf = { workspace = true }
 
 [build-system]

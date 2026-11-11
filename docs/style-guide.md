@@ -457,3 +457,38 @@ A full pack (`worlds/_styles/new-york/style.json`), laid out like `bay-area` but
 | `landmark.hall.domed` | `domedHall` | City Hall: limestone, with a copper dome |
 
 **Street and traffic:** every `prop.*` and `vehicle.*` group that `bay-area` has, in New York's palette. Street lights and signals are grey, with yellow signal heads. Yellow cabs are commoner than the generator's own share: the `taxi` paint is listed twice among the `paint.*` variants, and the player's car is a cab. Buses are white with a blue band. One ferry livery is orange.
+
+## 20. Paris (the `paris` pack, D-085)
+
+A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with its own 41 ramps and no fog. It names `["@pixelworlds/city-sf", "@pixelworlds/city-paris"]`: San Francisco's for `block` and `sfTower` (post-war blocks, warehouses, towers), Paris's for the five generators below (`packages/city-paris`).
+
+**Ramps**
+- **Stone and render:** `limestone` (the cream Lutetian stone of the Haussmann front), `limestone-warm` (an older, warmer stone, and the trim on cream fronts), `stone-grey` (weathered stone, the cathedral's buttresses), `plaster`, `plaster-ochre` and `plaster-grey` (the faubourg's renders), `brick` (HBM's red-orange) and `brick-pale` (its buff bands), `calcaire` (the bedrock, for cuttings).
+- **Roofs:** `zinc` (the blue-grey mansards), `slate`, `terracotta` (tiles and chimney pots), `verdigris` (copper domes).
+- **Iron and paint:** `iron` (black balconies and railings), `wallace-green` (kiosks, street lights, fountains, shopfronts, shutters), `oxblood` and `shop-navy` (shopfronts and doors), `awning-red` (café awnings), `gold` (gilt), `eiffel-brown` (the tower's bronze paint), `steel-grey` (bridges).
+- **Street:** pale grey `asphalt`, `sand` as the parks' pale gravel, a grey-green Seine (`water`), plane trees (`leaf`, and `bark` pale and mottled). Only `lit`, `lit-cool` and `marker` glow at night: nothing else is lit, the Eiffel Tower included (its lighting is a protected work, data-sources.md §7).
+
+**The fabric** (`buildings.ts` in `packages/city-paris`). Storeys are counted as in France and as BD TOPO counts them: the ground floor (rez-de-chaussée) is storey 0, and the hint's count includes it and the storeys in the roof.
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.haussmann`, `building.residential`, `building.commercial`, `building.civic` | `haussmann` | 6–7 storeys in all. At the street, shopfronts in green, oxblood, navy or black frames (some with a red café awning), the porte-cochère in the middle bay of wider fronts, under a stone band; dressed-stone coursing on the bare wall of the lower storeys. Tall French windows in regular bays, under lintels. A continuous black-iron balcony on storeys 2 and 5, painted flush: a stone slab, balusters and a handrail. A stone cornice, then a zinc (or slate) mansard: a steep brisis stepping in a voxel for every three up, from a voxel behind the cornice, then the near-flat terrasson; dormers framed in stone over every bay but the ends; chimney stacks with terracotta pots on the party walls. `building.residential` has fewer shops, `building.commercial` shops on every front and a balcony on every storey, `building.civic` (APUR's remarkable buildings: ministries, palaces, museums) no shops and no iron, under slate. |
+| `building.faubourg` | `faubourg` | Before 1850: narrow, 3–5 storeys, rendered in off-white, ochre or grey, with plain window surrounds and, on half of them, shutters folded back beside the windows. A steep pitched roof of tile, slate or zinc with its ridge along the street, a dormer or two, tall chimneys. At the street, a small shop or windows, and a carriage door. |
+| `building.hbm` | `hbm` | The 1920s–30s (habitations à bon marché): 6–7 storeys of red-orange or buff brick on a pale stone base, pale bands at every floor line, windows in bays with a bay of flush bow-windows framed in trim every few, loggias on the top storey, a low tiled roof with brick stacks. |
+
+- **Nothing projects** (the building rules, §13): balconies and cornices are painted on the wall; a mansard or a pitched roof steps in layer by layer inside the footprint, so every voxel stands on another; a dormer is filled back into the roof, and its glass is painted only where it shows.
+- **Paint schemes:** trim and doors follow the wall's variant when they list the same variants (§15): a cream front takes warm trim and a warm front cream trim.
+
+**Reused from San Francisco:** `building.modern` (post-war slabs and blocks: concrete, pale stone, curtain glass) and `building.industrial` use `block`; `building.tower` uses `sfTower`.
+
+**Landmarks** (generic depictions, D-051)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.tower.lattice` | `latticeTower` (built in) | the Eiffel Tower: a four-legged lattice tower in bronze-brown, unlit |
+| `landmark.cathedral.gothic` | `cathedral` (Paris's) | Notre-Dame: two square west towers with flat tops and a rose window between them, three portals and a band of niches, a nave with clerestory windows and flying buttresses at each bay, a transept with a rose at each end, a rounded apse and a slender spire over the crossing; no statues |
+| `landmark.arch.triumphal` | `triumphalArch` (Paris's) | the Arc de Triomphe: a stone block with one great round arch through its wide faces and smaller ones through its narrow faces, an entablature, an attic with plain shields, and darker panels where its reliefs are |
+| `landmark.hall.domed` | `domedHall` (built in) | the Palais Garnier: warm stone under a copper dome |
+| `landmark.bridge.arch` | `archBridge` (built in) | the Pont Alexandre III: one steel arch under the deck, gilt rails; no statues |
+
+**Street and traffic:** `prop.streetlight` and `prop.signal` in Wallace green, plane trees for `tree` and `tree.street` (broad pale-green crowns on pale trunks), and `bay-area`'s vehicles in Paris's palette, with white river boats.

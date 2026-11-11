@@ -34,6 +34,7 @@ fixtures/_variants/
 packages/pixelworld/LICENSE-*
 packages/city-sf/LICENSE-*
 packages/city-nyc/LICENSE-*
+packages/city-paris/LICENSE-*
 *.tgz
 docs/api/
 

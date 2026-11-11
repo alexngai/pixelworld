@@ -1,0 +1,765 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "paris-walk",
+  "name": "Paris (walking)",
+  "chunkSize": 64,
+  "cellsX": 610,
+  "cellsY": 324,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "969b1fd2a599f2d769bab7d54e3c423a4e1a66d7819d95390815aa081a0cf199",
+      "heightRange": [
+        14,
+        25
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "54d1b96da871e1b92598728f6756aa8eb4ff856b02b8de11e24e9335fabee04d",
+      "heightRange": [
+        15,
+        22
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "9eadbb2e8ce15a83312aa012ff8cf5a42ce25e6f1f23961083c6eb9687cf2c7f",
+      "heightRange": [
+        11,
+        19
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "9a8375ecc068530c719777c2e11cb20f5396961c5de65c7d830077a1aca0422a",
+      "heightRange": [
+        10,
+        17
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "d36e1219aafbf141c95583586aa183a14533a651d5404c2608a0d56822c5df71",
+      "heightRange": [
+        11,
+        16
+      ]
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "813b713819fca7e5a0da420875ec496b354ce8e37c6a807ecd9aff1026cb750f",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "path": "chunks/6_0.pxwc.gz",
+      "sha256": "a7259c3cc4111a8842f8b6419ce4ecc1a39e7b6976d259e71809ce429341a511",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "path": "chunks/7_0.pxwc.gz",
+      "sha256": "ef8e60050989092d5eadd3c7244c7891cf20ddb7eb47e932796501876cf65628",
+      "heightRange": [
+        12,
+        18
+      ]
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "path": "chunks/8_0.pxwc.gz",
+      "sha256": "40b5b9d1951e97d8b0641a80e02a1ea3b3575b13bc2662bde8708575518ef5d8",
+      "heightRange": [
+        12,
+        18
+      ]
+    },
+    {
+      "x": 9,
+      "y": 0,
+      "path": "chunks/9_0.pxwc.gz",
+      "sha256": "fba9ca9183da22603b59f3736103a4049cdbdd7f9b0db21f577adce531491e49",
+      "heightRange": [
+        12,
+        18
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "6850410eec865881c34ddbbbe36d211d49a54d9921be8965314aec6437f474d9",
+      "heightRange": [
+        17,
+        25
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "56722ed60fac57e66927eb28b4c48ed2e1c6cd8e43328aa1981e59d7b619d384",
+      "heightRange": [
+        12,
+        23
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "a9ef8f234593399e3a7fc1b254797f087af8791a392d0dcd93cc8396c0bfc515",
+      "heightRange": [
+        11,
+        16
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "73aff550fd1bb90690d612c14d84b489d80133cc89a73c0d40d493da922439ef",
+      "heightRange": [
+        10,
+        13
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "9cf2688af14a2596d39d4c137f832ee34886a2582db6f63db0691ec4525d9806",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "e939b773abf5e4fedab6b75fa89a60da68eb7ecbafb7cc91a5529b3e45c1f372",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "path": "chunks/6_1.pxwc.gz",
+      "sha256": "d750e05baf966e85ed807f6fa9ca882ebc65a826dec3217eec5ff1f9267d187e",
+      "heightRange": [
+        12,
+        15
+      ]
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "path": "chunks/7_1.pxwc.gz",
+      "sha256": "549b396c50fac5762d75c2dde9fe897eac5e71c0b87711966cc494ffa3372f32",
+      "heightRange": [
+        12,
+        17
+      ]
+    },
+    {
+      "x": 8,
+      "y": 1,
+      "path": "chunks/8_1.pxwc.gz",
+      "sha256": "4d235868cc76bd0ea5f893cff99e2641c2a3d11705994fa364b15ceb6540dde8",
+      "heightRange": [
+        12,
+        16
+      ]
+    },
+    {
+      "x": 9,
+      "y": 1,
+      "path": "chunks/9_1.pxwc.gz",
+      "sha256": "cb3727ae99123379fdd235b65702b9d34c375d2e25798ee9b017fb7340a37aab",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "a7a02952543e1c84baa53d696cae56f99c3fb3b5133031ca68a48d281bf941ac",
+      "heightRange": [
+        9,
+        25
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "29186b2cecdadbe19e2483865d7aa9a8e884a25e7227478501ec6ccf061eaf63",
+      "heightRange": [
+        9,
+        18
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "1b56af817a04878aac8694f0013136cfb871096e62a0fab8fa8c913d31f3ebd5",
+      "heightRange": [
+        9,
+        13
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "06e2e27e3d30ada23e3f9e004946f030a8e764abf1dbd1ea8c1178298cdfa514",
+      "heightRange": [
+        9,
+        13
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "4a23fe991eb2bb9141146884708db86a1f776685e95e5aae4f9d83353804f147",
+      "heightRange": [
+        9,
+        13
+      ]
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "7d4e70f1ecfb77edc2ccdf621932cecb5de70f5e8df008a4877dd2440020807b",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "path": "chunks/6_2.pxwc.gz",
+      "sha256": "9b963295a849b304f979c98375ea9ff05dbb832e5f033af08e48ea8008cd4c01",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "path": "chunks/7_2.pxwc.gz",
+      "sha256": "f592b821e223d82971a7d349186dd1418c2448c7ace54af5f84a878eb51d5130",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 8,
+      "y": 2,
+      "path": "chunks/8_2.pxwc.gz",
+      "sha256": "6c412716de96cf448e3f1ab7a45a2ed459bf58c424c4b2fb33d410998d18806b",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 9,
+      "y": 2,
+      "path": "chunks/9_2.pxwc.gz",
+      "sha256": "3333874c8293d411d8f60e345c52ad4eb6884cab85929bc09e2526b5a5a87af8",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "08ebf2417fd15a3317df68b7cc1a38d922f7c9c8f8e9a2fa105ee6b06aa9a7cf",
+      "heightRange": [
+        9,
+        22
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "b620e92347de92ae3498487c09f7253158d18e9146818e642961387519630117",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "8811e9153cad62e95093e5c0b799c0f4659b8eca0971fe6a7352a19bfb69cb05",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "cb2474536e5b5468b12c9a1a23fdb460d7d23422c343c85f4903c5bf67a012a3",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "56923c3c367589c93b54b7ff50d6717a37f1dd0d77eaf3569248d1e18b750bd2",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "511a7d6597e6b57cd7f44b622b4e375ea59f29b9b6be684e137a908e52feb47f",
+      "heightRange": [
+        10,
+        15
+      ]
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "path": "chunks/6_3.pxwc.gz",
+      "sha256": "2ff466d2976440bd5f7b5ebf66e7fe0212edd2aa03c2808816dee9727033bd3f",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "path": "chunks/7_3.pxwc.gz",
+      "sha256": "0ce8f3d7965991e0cddc0ffe0faee7a8dc91be822319a30b1152afa2a04ff4ad",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "path": "chunks/8_3.pxwc.gz",
+      "sha256": "e2dbce967d54c2c67b57ec9d4bbb9a50624851841edcfdcabbb18716be4e8e2c",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "path": "chunks/9_3.pxwc.gz",
+      "sha256": "56bb1ee4845f3810555b4eacedfb9b4f5d4257beaa60bed5efbf44e569f8584f",
+      "heightRange": [
+        12,
+        15
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "27fe2280804eb723e876702336f8b959f9d0397e5fbb40d780c94429f2e2746a",
+      "heightRange": [
+        9,
+        14
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "0d311e3be43cd0a2dea22f179bbf9bad0d47e488cf046f94870a978aac5fe342",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "59c9b5511180ab4cd0b8c8f4d9bf1d087929b832f790e08fceb8f070bae9f6b7",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "a070c3d4d24b8c508483b6fb9e57a6c753a4aa1b7efd7f7903d564a685cfc687",
+      "heightRange": [
+        11,
+        15
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "566f35a91f38ae53f5b4fb0a3a5df91ee0828925444d56be5fe44ffe840ed5fd",
+      "heightRange": [
+        12,
+        15
+      ]
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "path": "chunks/5_4.pxwc.gz",
+      "sha256": "8d5c3d83340f17e0f8b4268d18c26665a029849ce0fdab81eb2bee406eb90c53",
+      "heightRange": [
+        12,
+        16
+      ]
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "path": "chunks/6_4.pxwc.gz",
+      "sha256": "88470d073f670f78ea580ad59c5688f089c3acaebc6af459edc1145fcec89f1b",
+      "heightRange": [
+        10,
+        19
+      ]
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "path": "chunks/7_4.pxwc.gz",
+      "sha256": "7470f69431a8647b2e86a479e093d5f07b74697e7f31d3adcb5e559171bdba1a",
+      "heightRange": [
+        10,
+        18
+      ]
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "path": "chunks/8_4.pxwc.gz",
+      "sha256": "087db5ca01538c356395678778b02fca836c2f6c8ae6740bd6bca11e4a7270f6",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "path": "chunks/9_4.pxwc.gz",
+      "sha256": "f711c985dd81198f74167c06727e088f7a865e3c529d39ad7645fe44ed5fa1a8",
+      "heightRange": [
+        11,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "e1c6645de1b9b37b7295d305e269b20b9e6d1f46e9eea0e2d26b028bb09689ff",
+      "heightRange": [
+        11,
+        13
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "8d7a746d03bed35862de822ed9dbca7e24a72161643c0a0d56969966b514fe5e",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "7cb9dedf052fef59b5cb0e2c6f3cf5e0e1c267182c1f36aef7b6fd39ea52741d",
+      "heightRange": [
+        13,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "9fab7ad298bb6902480531542c84dd1490ada39dd200752867d4cee70d30428d",
+      "heightRange": [
+        12,
+        14
+      ]
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "path": "chunks/4_5.pxwc.gz",
+      "sha256": "e95b4b12ae15ca0dbd0d6f073705bb10643404267d3dd8301a82293d4cc7ed58",
+      "heightRange": [
+        13,
+        15
+      ]
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "path": "chunks/5_5.pxwc.gz",
+      "sha256": "b9aeae7aa1d772be4e5c0ceccbdfe49bbc842c34a3136f3555a6dc4de259d98c",
+      "heightRange": [
+        14,
+        17
+      ]
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "path": "chunks/6_5.pxwc.gz",
+      "sha256": "c1aab334f1970560c7c3f7edd64955f6b96f4d77e862ac9e7ebab77a92511226",
+      "heightRange": [
+        15,
+        19
+      ]
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "path": "chunks/7_5.pxwc.gz",
+      "sha256": "71e58f1814e159aa400029a2ee6f74bf5856f99626396a354ed973f39ab63425",
+      "heightRange": [
+        12,
+        19
+      ]
+    },
+    {
+      "x": 8,
+      "y": 5,
+      "path": "chunks/8_5.pxwc.gz",
+      "sha256": "56a5d557a1e62f03651b33fefcd97978378a339f7c2270e5c4fe9c132fd2b134",
+      "heightRange": [
+        10,
+        13
+      ]
+    },
+    {
+      "x": 9,
+      "y": 5,
+      "path": "chunks/9_5.pxwc.gz",
+      "sha256": "7090a6bc60f7059705167a630771405018bfac0ef8c3087da1d9316bb959f709",
+      "heightRange": [
+        11,
+        14
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 2.721655,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.5
+  },
+  "heightRange": [
+    9,
+    25
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "paris",
+  "attribution": [
+    {
+      "name": "IGN, RGE ALTI\u00ae 1 m (G\u00e9oplateforme WMS-Raster, as fetched)",
+      "license": "Licence Ouverte / Open Licence 2.0 (Etalab)",
+      "url": "https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_RGE-ALTI"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "Apur, Emprise b\u00e2tie Paris (sources: Apur, DGFiP, Ville de Paris; version as fetched, see the build log; modified: joined per footprint into year, storeys, use, fabric class, roof form, height, quartier)",
+      "license": "ODbL 1.0",
+      "url": "https://opendata.apur.org/datasets/Apur::emprise-batie-paris"
+    },
+    {
+      "name": "Apur, Quartier de Paris",
+      "license": "ODbL 1.0",
+      "url": "https://opendata.apur.org/datasets/Apur::quartier-de-paris"
+    },
+    {
+      "name": "IGN, BD TOPO\u00ae (b\u00e2timents; as served by the G\u00e9oplateforme on the fetch date in the build log; modified: storeys, dwellings and use joined to APUR's footprints)",
+      "license": "Licence Ouverte / Open Licence 2.0 (Etalab)",
+      "url": "https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_BD-TOPO"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 360,
+    "y": 100
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=48.8625 +lon_0=2.3265 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      2.285,
+      48.848,
+      2.368,
+      48.877
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "ddfcb1314ceac4f0",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 2
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "95acae009374df56980b72900880a9e82d936f0013f17b2a1f2f74d8e583b2a2",
+    "count": 52114
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "walk",
+      "world": "paris-walk",
+      "label": "Walking central Paris"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      40,
+      22
+    ],
+    "sha256": "27d50aba77c75ee90fcae46e4f5f07b7bfe41fd120fad4ddfd49112709b0dc32"
+  },
+  "packageHash": "14f30de99c7a4ad2c6b07f00f1151a7f86e1ce999ec58c9ba7aee3a92928a4c3",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "a7eda517d53b4fc46f1ccbcf75f66ab4f4a817463d4b8b6614115950c549fbd1",
+    "version": 1,
+    "count": 5850
+  }
+}

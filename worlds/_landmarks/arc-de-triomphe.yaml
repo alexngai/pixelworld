@@ -1,0 +1,13 @@
+name: Arc de Triomphe
+wikidata: Q64436
+# the middle of the Place de l'Étoile
+anchor: { lon: 2.29504, lat: 48.87378 }
+height: 50
+# its great arch runs along the axis of the Champs-Élysées (east-west)
+orient: 1
+clear: 30
+replaces: [Arc de Triomphe]
+depictions:
+  # a triumphal arch: a stone block with one great arch and smaller side
+  # arches; the reliefs are plain panels, no figures
+  generic: { group: landmark.arch.triumphal }
