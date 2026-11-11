@@ -3,21 +3,23 @@
 # Tower, at 10 m per cell. The wooden town of narrow, deep machiya under
 # grey tile is most of it; temple halls, pagodas and shrines stand among it
 # and up the Higashiyama hills, with modern mid-rises along the wide streets.
-# The only level so far: the driving and flying levels come later, and will
-# share a region.yaml with this one.
+# The driving level (region.yaml) and the flying level (fly.yaml) are its
+# neighbours (D-095).
 # Build: cd pipeline && uv run pixelworld build ../worlds/kyoto/walk.yaml
 id: kyoto-walk
 name: Kyoto (walking)
 level: walk
 levels:
+  - { name: fly, world: kyoto-fly, label: Flying over the Kyoto basin }
+  - { name: drive, world: kyoto, label: Driving central Kyoto }
   - { name: walk, world: kyoto-walk, label: Walking Gion and Higashiyama }
 bounds: [135.752, 34.985, 135.789, 35.012] # lon/lat: west, south, east, north (east of Kiyomizu-dera, past Shibutani-kaidō, which a nearer edge cuts twice)
 
 metersPerCell: 10
 # the Kamo river at 35 m, Kiyomizu-dera's stage at about 100 m and the
-# Higashiyama hills past 150 m: real heights, since the hills already rise
-# steeply over the town
-verticalExaggeration: 1.0
+# Higashiyama hills past 150 m: 1.5x, as for New York and Paris, so the
+# lanes up to Kiyomizu-dera and the Yasaka Pagoda read as climbing (D-094)
+verticalExaggeration: 1.5
 maxSlope: 3
 chunkSize: 64
 smoothing: null
@@ -65,7 +67,12 @@ objects:
   # First match wins.
   typology:
     facts: { plugin: plateau, year: 2025 }
+    # PLATEAU's LoD2 roof shape draws the roof where Overture gives none (D-094)
+    roofHints: true
     rules:
+      # Buddhist halls by their names, whatever OSM's class: it tags many of them
+      # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-094)
+      - { group: building.temple, names: [本堂, 金堂, 講堂, 食堂, 御影堂, 阿弥陀堂, 開山堂, 法堂, 仏殿, 観音堂, 釈迦堂, 不動堂, 大師堂, 地蔵堂, 薬師堂, 太子堂, 経蔵, 鐘楼, 山門, 三門, 方丈, 庫裏, 宝蔵] }
       - { group: building.shrine, kinds: [shrine] }
       # the pavilions of temples and shrines (OSM's building=roof: water basins, bell towers)
       - { group: building.temple, kinds: [roof], classes: ["422"] }
@@ -75,8 +82,14 @@ objects:
       # (concrete rebuilds too), and large wooden footprints under one
       - { group: building.temple, classes: ["422"], roofs: [hipped] }
       - { group: building.temple, materials: [wood], roofs: [hipped], minWidth: 12 }
-      # machiya: wooden, before 1950, one or two storeys, narrow, a house or a shop-house
-      - { group: building.machiya, materials: [wood], year: [1000, 1950], floors: [1, 2], maxWidth: 10, uses: [residential, mixed] }
+      # the halls, priests' quarters and gates inside a temple's or shrine's
+      # grounds (OSM's landuse=religious), under pitched roofs (D-094)
+      - { group: building.temple, grounds: [religious], roofs: [gabled, hipped], maxHeight: 25 }
+      # kura: wooden storehouses (PLATEAU's warehouses, 431) of one or two storeys (D-094)
+      - { group: building.kura, classes: ["431"], materials: [wood], floors: [1, 2] }
+      # machiya: wooden, before 1950, one or two storeys, narrow, a house, flats
+      # or a shop-house (PLATEAU's 411–415), or of unknown use (461)
+      - { group: building.machiya, materials: [wood], year: [1000, 1950], floors: [1, 2], maxWidth: 10, classes: ["41*", "461"] }
       # the later wooden town: houses and shop-houses under tile
       - { group: building.house, materials: [wood], roofs: [hipped] , floors: [1, 3] }
       - { group: building.house.gabled, materials: [wood], floors: [1, 3] }
@@ -90,8 +103,11 @@ objects:
   streetProps:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # concrete utility poles along the lanes and side streets, at their edge (D-094)
+    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3 }
+    - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5 }
   # new ones go at the end: a landmark's seed is its place in the list
-  landmarks: [kiyomizu-dera-hondo, yasaka-pagoda, yasaka-shrine-west-gate, chion-in-sanmon, kyoto-tower, kiyomizu-dera-pagoda]
+  landmarks: [kiyomizu-dera-hondo, yasaka-pagoda, yasaka-shrine-west-gate, chion-in-sanmon, kyoto-tower, kiyomizu-dera-pagoda, jishu-jinja-torii, gion-torii-east, gion-torii-west]
   landmarkDepiction: generic
   depiction: { heightStretch: 1.0, scatter: 1.0 }
 

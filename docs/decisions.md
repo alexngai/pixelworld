@@ -100,6 +100,7 @@ Status values:
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 | D-090 | Kyoto's look: a `kyoto` style pack and the `@pixelworlds/city-kyoto` generator plugin | Accepted (M5) |
 | D-091 | Kyoto's walking level: Nakagyō to Kiyomizu-dera and Kyoto Tower at 10 m, typed by structure, year, class and roof | Accepted (M5) |
+| D-094 | Kyoto refined: PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns | Accepted (M5) |
 
 ---
 
@@ -1112,3 +1113,21 @@ The point is more room for visual interest; both halves are wanted.
   - **The Kamo's banks:** the riverbed reads as gravel and water from the land cover; the paths along it and the stepping stones are Overture's.
   - **Street detail:** utility poles and wires (Tokyo's pack draws them), Gion's lanterns, the shrines' torii and stone lanterns.
   - **Typing by usage code more finely:** 461 (unknown) was 5,418 buildings in D-089's box, and the 422 class mixes schools, hospitals and temples; a temple's grounds from Overture's land use could type the halls inside them.
+
+### D-094: Kyoto refined: PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns (accepted, M5)
+- **Why:** the owner took up D-090's and D-091's Later lists. PLATEAU's LoD2 roof shapes typed Kyoto's buildings but the generators drew each group's default roof; Overture's classes missed halls OSM leaves unclassed and called many Buddhist halls shrines; and the town had no kura, torii, utility poles or lanterns. A blind test (D-095) showed what still read wrong.
+- **What:**
+  - **`roofHints`** (an opt-in typology option, pipeline): a building Overture gives no roof shape takes the facts' `roof` as its generator's hint (`rs`). Off by default, so Paris's APUR roofs and other worlds are unchanged. In Kyoto's generators: `machiya` draws gabled, hipped and shed roofs from it, and flat ones only where the asset sets `flat` (the untyped `building.residential`), since most wooden houses' flat LoD2 roofs are pitched roofs the model left out (D-089: 14% of wooden buildings); `midrise` puts a pitched tile roof on a block the data says is gabled or hipped; `templeHall` draws a plain gable for `gabled` and a pyramid for `pyramidal`.
+  - **`grounds:`**, a typology rule field (pipeline): the class of Overture's land use under a building's centroid (OSM's `landuse=religious`). The land use is fetched only when a rule names it. Kyoto types pitched-roofed buildings up to 25 m inside religious grounds as temple halls, and PLATEAU's 431 (warehouses) in wood at 1–2 storeys as kura.
+  - **Buddhist halls by name:** a `names:` rule listing the halls' names (本堂, 金堂, 講堂, 御影堂, 阿弥陀堂, 経蔵, 鐘楼, 山門 …) ahead of the shrine rule: OSM tags about 50 of the driving box's 409 `building=shrine` as Buddhist halls by these names, Kiyomizu-dera's and Tō-ji's main halls among them.
+  - **Machiya by usage code:** PLATEAU's 411–415 and 461 (unknown) in place of `uses: [residential, mixed]`, which left out 461.
+  - **New generators** (`packages/city-kyoto`): `kura` (white plaster over a namako skirt, a door and a shuttered window, a steep tile roof), `torii` (a vermilion myōjin torii with a stone lantern before each pillar, or without them for a great torii) and `utilityPole` (a concrete pole, a crossarm, a transformer on some; the wires aren't drawn). `machiya` gains `lanterns` (a red paper lantern by the door, glowing at night in a new `chochin` ramp: the pack has 40) and `udatsu` (party walls carried up through the pent roof).
+  - **In the world:** utility poles as street props along the lanes and side streets (every 30 m); torii as landmarks where OSM maps them (Jishu Shrine's, and two in Gion), since Overture carries no torii class and only three utility poles in the box; relief 1.5× on the walking level, as New York's and Paris's, so the lanes up to Kiyomizu-dera climb.
+- **Measured** (`kyoto-walk`, build of 2026-11-11): 29,976 roof shapes from PLATEAU; 180 buildings in 22 religious grounds; temple halls 448 → 513, shrines 66 → 57, machiya 6,260 → 6,451, kura 91; 2,301 poles, 3 torii; the road report clean at 1.5×; 2.1 MB. Tests: the building-rules sweep gains every roof shape and the kura (2,304 models), and the new types and roofs have tests of their own.
+- **Rejected alternatives:**
+  - **The facts' roofs as hints for every world:** Paris's APUR gives roof shapes too, and its next build would change; opt-in keeps it.
+  - **Flat roofs on wooden houses from the data:** most are pitched roofs the LoD2 model left out (D-089), and drawn flat they would be bare boxes in a town of tile; the wooden house groups keep a pitch.
+  - **Placing a torii before every shrine hall:** no building says which way its approach runs; OSM's torii are few but placed.
+  - **Poles from the data:** OSM maps three in the box.
+- **Later:** wires between poles (props are placed one by one); Gion's lanterns by neighbourhood (a `bounds` rule, which Tokyo's pack adds); stone lanterns along the approaches; shrines' torii from a land-use or path source.
+

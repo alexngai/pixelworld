@@ -6,8 +6,8 @@ import { TEMPLE_GENERATORS } from "./temples";
 export const PLUGIN_NAME = "@pixelworlds/city-kyoto";
 
 /**
- * Kyoto's generators: the street fabric (`machiya`, `midrise`) and its
- * temples and shrines (`templeHall`, `towerGate`, `pagoda`) and Kyoto Tower's type (`candleTower`). A function, so a
+ * Kyoto's generators: the street fabric (`machiya`, `midrise`, `kura`, `utilityPole`) and its
+ * temples and shrines (`templeHall`, `towerGate`, `pagoda`) its torii (`torii`) and Kyoto Tower's type (`candleTower`). A function, so a
  * page that only names the plugin (`cityPlugin`) doesn't bundle them.
  */
 export function kyotoGenerators(): Record<string, Generator> {

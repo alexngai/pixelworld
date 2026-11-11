@@ -191,6 +191,8 @@ function subMask(mask: Mask, keep: (x: number, y: number) => boolean): Mask {
  * `stage` of its height, and on the +y side a stage of boards on a lattice
  * of pillars and tie beams (kake-zukuri) runs out over the slope, between
  * two small roofed wings. A landmark, so the stage overhangs.
+ * The roof's shape follows the data's where the hints give one: a plain
+ * gable for `gabled`, a pyramid for `pyramidal`, else hip-and-gable.
  * params: hip (0.4), roof (the roof's share of the height; 0.55), eave (the
  * eaves' depth; 1), width and depth (the plan over the height, without a
  * footprint; 1.6, 1.3), stage (the stage's height over the whole; 0),
@@ -206,7 +208,10 @@ export const templeHall: Generator = (ctx) => {
   const mask = ctx.mask ?? rectMask(Math.max(5, Math.round(H * param("width", 1.6))), Math.max(5, Math.round(H * param("depth", 1.3))));
   const m = new VoxelModel(mask.sx, mask.sy, H + 3);
   const mats = hallMats(ctx, m);
-  const spec = { hip: param("hip", 0.4), roof: param("roof", 0.55), eave: param("eave", 1), open: param("open", 0) >= 1 };
+  // the data's roof shape where it gives one (D-094): a plain gable (kirizuma), or a pyramid (hōgyō)
+  const shape = ctx.hints?.roof;
+  const hip = shape === "gabled" ? 0 : shape === "pyramidal" ? 1 : param("hip", 0.4);
+  const spec = { hip, roof: param("roof", 0.55), eave: param("eave", 1), open: param("open", 0) >= 1 };
   const stage = param("stage", 0);
   if (stage <= 0) {
     hall(m, mask, { ...spec, z0: 0, H, base: clamp(Math.round(H * 0.07), 1, 6) }, mats);
@@ -479,4 +484,67 @@ export const candleTower: Generator = (ctx) => {
   return m;
 };
 
-export const TEMPLE_GENERATORS: Record<string, Generator> = { templeHall, towerGate, pagoda, candleTower };
+/**
+ * A torii (the myōjin type) with a pair of stone lanterns before it: two
+ * round pillars on black feet, a tie beam (nuki) through them, a strut in
+ * the middle holding a blank plaque, and the double top lintel (kasagi over
+ * shimaki), black on top, its ends sweeping up past the pillars. The
+ * lanterns' fireboxes glow at night. The passage runs along y, the lanterns
+ * on its +y side. A landmark: the lintels overhang.
+ * params: width (the span between the pillars over the height; 0.9),
+ * lanterns (1, or 0 for none).
+ * roles: pillar, cap (the lintel's top, the feet and the plaque; pillar if
+ * absent), stone (the lanterns; cap if absent), lamp (their light; stone if absent).
+ */
+export const torii: Generator = (ctx) => {
+  const { param } = ctx;
+  const H = clamp(Math.round(ctx.heightVox ?? param("height", 16)), 6, 200);
+  const pw = H >= 14 ? 2 : 1;
+  const span = Math.max(3, Math.round(H * param("width", 0.9)));
+  const over = Math.max(2, Math.round(H * 0.18));
+  const lanterns = param("lanterns", 1) >= 1;
+  const sx = span + pw + 2 * over;
+  const yc = 1;
+  const sy = yc + pw + (lanterns ? 4 : 1);
+  const m = new VoxelModel(sx, sy, H + 2);
+  const pillar = m.material(ctx.ramp("pillar"));
+  const cap = ctx.ramps("cap").length ? m.material(ctx.ramp("cap")) : pillar;
+  const stone = ctx.ramps("stone").length ? m.material(ctx.ramp("stone")) : cap;
+  const lamp = ctx.ramps("lamp").length ? m.material(ctx.ramp("lamp")) : stone;
+  const x0 = over;
+  const x1 = over + span; // the right pillar's first column
+  const zn = Math.round(H * 0.7);
+  // the pillars, black at the foot
+  for (const px of [x0, x1])
+    for (let y = yc; y < yc + pw; y++) for (let x = px; x < px + pw; x++) for (let z = 0; z < H - 2; z++) m.set(x, y, z, z < 2 ? cap : pillar);
+  // the tie beam, a little past the pillars
+  for (let x = x0 - 1; x <= x1 + pw; x++) for (let y = yc; y < yc + pw; y++) for (let z = zn; z < zn + (H >= 14 ? 2 : 1); z++) m.set(x, y, z, pillar);
+  // the strut and its blank plaque
+  const cx = Math.floor((x0 + x1 + pw - 1) / 2);
+  for (let z = zn + 1; z < H - 3; z++) m.set(cx, yc, z, z === zn + 2 || z === zn + 3 ? cap : pillar);
+  // the shimaki, then the kasagi over the whole width, black on top, its ends swept up
+  for (let x = x0 - 1; x <= x1 + pw; x++) for (let y = yc; y < yc + pw; y++) m.set(x, y, H - 3, pillar);
+  for (let x = 0; x < sx; x++)
+    for (let y = yc; y < yc + pw; y++) {
+      m.set(x, y, H - 2, pillar);
+      m.set(x, y, H - 1, cap);
+      if (x < 2 || x >= sx - 2) m.set(x, y, H, cap);
+    }
+  // a stone lantern before each pillar, outside the passage
+  if (lanterns) {
+    const lh = Math.max(4, Math.round(H * 0.3));
+    const ly = yc + pw + 2;
+    for (const lx of [Math.max(0, x0 - 2), Math.min(sx - 2, x1 + pw)]) {
+      for (let y = ly; y < ly + 2 && y < sy; y++)
+        for (let x = lx; x < lx + 2; x++) {
+          m.set(x, y, 0, stone);
+          m.set(x, y, lh - 2, lamp);
+          m.set(x, y, lh - 1, stone);
+        }
+      for (let z = 1; z < lh - 2; z++) m.set(lx, ly, z, stone);
+    }
+  }
+  return m;
+};
+
+export const TEMPLE_GENERATORS: Record<string, Generator> = { templeHall, towerGate, pagoda, candleTower, torii };

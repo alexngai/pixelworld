@@ -8,6 +8,9 @@ import { bays, clamp, eachSide, edgeDistance, facadeOf, frontDir, frontPainter, 
  * first. Shop curtains and signs carry no lettering.
  */
 
+/** Roof shapes drawn pitched. */
+const PITCHED = new Set(["gabled", "hipped", "half_hipped", "pyramidal"]);
+
 /** A role's material if the asset has it, else `fallback`. */
 function optional(ctx: GenContext, m: VoxelModel, role: string, fallback: number): number {
   const xs = ctx.ramps(role);
@@ -68,16 +71,24 @@ function roofDistance(f: Facade, from: number, wing: number, hipped: boolean, ed
  * a deep lot has the front house and wings behind it under roofs of their
  * own. Party walls show dark boards below and plaster above. Later houses
  * have glass windows in place of the lattice and slits, and some a hipped
- * roof. Nothing projects: the pent roof stands on the ground storey's front.
+ * roof. The roof follows the data's shape where the hints give one (gabled,
+ * hipped, a shed rising to the rear, and flat only with `flat`), else `hip`.
+ * Nothing projects: the pent roof stands on the ground storey's front.
  * params: koshi (share of fronts with a lattice; 1), mushiko (share of upper
  * storeys with mushiko-mado; 0.85), fences (share with an inuyarai; 0.4),
- * noren (share with a noren; 0.35), hip (share with hipped roofs; 0), pitch
+ * noren (share with a noren; 0.35), lanterns (share with a red paper lantern
+ * beside the door; 0), udatsu (share whose party walls rise through the pent
+ * roof as firewalls; 0), hip (share with hipped roofs where the
+ * data gives no shape; 0), flat (1: draw a flat roof where the data says
+ * flat; 0, the default, keeps the group's: wooden houses' flat LoD2 roofs
+ * are mostly unmodelled pitched ones), pitch
  * (voxels in for each up; 2), wing (the front house's depth in voxels; 16),
  * litFraction.
  * roles: wall (wall.* variants: the ground storey and its sides), upper
  * (upper.*: the upper storey's plaster, following the wall's variants),
  * timber (pillars and beams), lattice (lattice.* variants), gap (the dark
- * between slats and in doors), base, fence, noren (noren.* variants), roof
+ * between slats and in doors), base, fence, noren (noren.* variants),
+ * lantern (the chōchin; it glows at night where the pack makes it emissive), roof
  * (roof.* variants), ridge (roof if absent), window, lit.
  */
 export const machiya: Generator = (ctx) => {
@@ -102,7 +113,14 @@ export const machiya: Generator = (ctx) => {
   const mushiko = rand() < param("mushiko", 0.85);
   const fence = rand() < param("fences", 0.4) ? optional(ctx, m, "fence", 0) : 0;
   const noren = rand() < param("noren", 0.35) ? optional(ctx, m, "noren", 0) : 0;
-  const hipped = rand() < param("hip", 0);
+  const lantern = rand() < param("lanterns", 0) ? optional(ctx, m, "lantern", 0) : 0;
+  const udatsu = rand() < param("udatsu", 0);
+  // the roof's shape: the data's (PLATEAU's LoD2 roofs, D-094) where it gives one, else the group's
+  const shape = hints?.roof;
+  const flat = shape === "flat" && param("flat", 0) >= 1;
+  const shed = shape === "skillion";
+  const hipped =
+    shape === "hipped" || shape === "half_hipped" || shape === "pyramidal" ? true : shape === "gabled" || flat || shed ? false : rand() < param("hip", 0);
   const run = Math.max(0.5, param("pitch", 2));
 
   // the upper storey stands back behind the pent roof: a voxel, two on a larger house
@@ -110,6 +128,8 @@ export const machiya: Generator = (ctx) => {
   const sb = want >= 2 && f.maxDepth >= 5 && H >= 10 ? (H >= 16 && f.maxDepth >= 12 && W >= 4 ? 2 : 1) : 0;
   const edge = edgeDistance(mask);
   const dist = roofDistance(f, sb, clamp(Math.round(param("wing", 16)), 6, 60), hipped, edge);
+  // a flat roof: one layer; a shed roof: rising from the front to the rear
+  for (let i = 0; i < dist.length; i++) if (dist[i]! >= 0 && (flat || shed)) dist[i] = flat ? 0 : f.depth[i]! - sb;
   // the roof: as high as the front house's half-depth gives, at most 40% of the height
   let rMax = 0;
   for (let i = 0; i < dist.length; i++) if (f.depth[i]! < sb + 24) rMax = Math.max(rMax, dist[i]!);
@@ -129,8 +149,14 @@ export const machiya: Generator = (ctx) => {
       let z = 0;
       for (; z < Math.min(g, Hw); z++) m.set(x, y, z, body);
       if (d < sb) {
-        // the pent roof: a tile at the front, rising a voxel for each step back
-        for (let t = 0; t <= d; t++, z++) m.set(x, y, z, roof);
+        if (udatsu && W >= 5 && (f.along[i] === 0 || f.along[i] === W - 1)) {
+          // an udatsu: the party wall carried up through the pent roof in plaster, capped in tile
+          for (; z <= g + sb; z++) m.set(x, y, z, upper);
+          m.set(x, y, z++, roof);
+        } else {
+          // the pent roof: a tile at the front, rising a voxel for each step back
+          for (let t = 0; t <= d; t++, z++) m.set(x, y, z, roof);
+        }
       } else {
         for (; z < Hw; z++) m.set(x, y, z, upper);
         const r = rf(dist[i]!);
@@ -175,6 +201,11 @@ export const machiya: Generator = (ctx) => {
         else if (z >= 2 && z < g - 2 && a > 1 && a < W - 2) ground(a, z, pane());
       }
     }
+  // a red paper lantern (chōchin) beside the door, lit at night
+  if (lantern && dw > 0 && g >= 6) {
+    const a = left ? dw + 1 : W - 2 - dw;
+    if (a > 0 && a < W - 1) for (const z of [g - 3, g - 2]) ground(a, z, lantern);
+  }
   // the upper storey's front, from above the pent roof to the beam under the eaves
   if (sb > 0 && n >= 2 && W >= 3) {
     const face = frontPainter(m, f, sb);
@@ -216,7 +247,8 @@ export const machiya: Generator = (ctx) => {
  * bays between spandrels, a shopfront under a sign band at the street and a
  * vertical sign board on a front corner, both without lettering. On some a
  * rim of grey tile round the roof, as Kyoto's landscape rules ask of new
- * buildings. Nothing projects: balconies and signs are painted flush.
+ * buildings, or a pitched tile roof where the data gives one (gabled or
+ * hipped). Nothing projects: balconies and signs are painted flush.
  * params: flats (share that are flats; 0.5), shops (share with shopfronts;
  * 0.6), eaves (share with a tile rim; 0.35), litFraction.
  * roles: wall (wall.* variants), trim (trim.*, following the wall's), shop
@@ -231,7 +263,7 @@ export const midrise: Generator = (ctx) => {
   const H = clamp(Math.round((ctx.heightVox ?? param("height", 40)) * (1 + (rand() - 0.5) * 0.04)), 5, 400);
   const walls = ctx.ramps("wall");
   const k = Math.floor(rand() * walls.length);
-  const pent = W >= 8 && f.maxDepth >= 8 && H >= 18;
+  const pent = W >= 8 && f.maxDepth >= 8 && H >= 18 && !PITCHED.has(hints?.roof ?? "");
   const m = new VoxelModel(f.sx, f.sy, H + (pent ? Math.round(H * 0.2) + 6 : 2));
   const body = m.material(walls[k]!);
   const trim = schemeRole(ctx, m, k, walls.length, "trim", body);
@@ -243,18 +275,31 @@ export const midrise: Generator = (ctx) => {
   const shopGlass = optional(ctx, m, "shop", glass);
   const flats = rand() < param("flats", 0.5);
   const shops = rand() < param("shops", 0.6);
-  const rim = rand() < param("eaves", 0.35) && H >= 10;
-  const n = clamp(Math.round(hints?.floors ?? H / 7), 1, 60);
-  const fh = Math.max(3, Math.floor(H / n));
-  const g = Math.max(fh, H - fh * (n - 1));
   const edge = edgeDistance(mask);
+  // a pitched tile roof where the data gives one (D-094), rising a voxel for every two in
+  const pitched = PITCHED.has(hints?.roof ?? "") && H >= 6;
+  const inFrom = (i: number) => (hints?.roof === "gabled" ? Math.min(f.depth[i]!, f.back[i]!) : edge[i]! - 1);
+  let dMax = 0;
+  for (let i = 0; i < edge.length; i++) if (edge[i]) dMax = Math.max(dMax, inFrom(i));
+  const Hr = pitched ? clamp(Math.floor(dMax / 2), 1, Math.max(1, Math.round(H * 0.3))) : 0;
+  const Hb = H - Hr; // the walls' top
+  const rim = !pitched && rand() < param("eaves", 0.35) && H >= 10;
+  const n = clamp(Math.round(hints?.floors ?? Hb / 7), 1, 60);
+  const fh = Math.max(3, Math.floor(Hb / n));
+  const g = Math.max(fh, Hb - fh * (n - 1));
   // the body: walls to the parapet's top, the roof a voxel lower inside; a tile rim steps up from the wall
-  const Hp = H - 1;
+  const Hp = Hb - 1;
   for (let y = 0; y < f.sy; y++)
     for (let x = 0; x < f.sx; x++) {
       const i = y * f.sx + x;
       const e = edge[i]!;
       if (!e) continue;
+      if (pitched) {
+        let z = 0;
+        for (; z < Hb - 1; z++) m.set(x, y, z, body);
+        for (let t = Math.min(Hr, Math.floor(inFrom(i) / 2)); t >= 0; t--, z++) m.set(x, y, z, eave);
+        continue;
+      }
       const t = rim ? (e === 1 ? Hp - 1 : e === 2 ? Hp : Hp - 1) : e === 1 ? Hp : Hp - 1;
       for (let z = 0; z <= t; z++) m.set(x, y, z, body);
       if (rim && e <= 2) {
@@ -329,4 +374,85 @@ export const midrise: Generator = (ctx) => {
   return m;
 };
 
-export const BUILDING_GENERATORS: Record<string, Generator> = { machiya, midrise };
+/**
+ * A kura (dozō), the storehouse of the old town: thick white plaster walls
+ * over a skirt of namako (dark tiles in a diagonal grid of white joints), a
+ * door at the street and one small window high on the front behind a heavy
+ * shutter, under a steep gabled tile roof whose ridge runs along the longer
+ * side, its gable ends plastered. Nothing projects.
+ * params: pitch (voxels in for each up; 1.4).
+ * roles: wall (plaster), namako (the skirt's tiles; wall if absent), door
+ * (and the shutter; namako if absent), base, roof, ridge (roof if absent).
+ */
+export const kura: Generator = (ctx) => {
+  const { mask, hints, param } = ctx;
+  if (!mask) throw new Error("kura needs a footprint");
+  const f = facadeOf(mask, frontDir(mask, hints?.front));
+  const W = f.width;
+  const H = clamp(Math.round(ctx.heightVox ?? param("height", 14)), 5, 120);
+  const m = new VoxelModel(f.sx, f.sy, H + 2);
+  const wall = m.material(ctx.ramp("wall"));
+  const namako = optional(ctx, m, "namako", wall);
+  const door = optional(ctx, m, "door", namako);
+  const base = optional(ctx, m, "base", namako);
+  const roof = optional(ctx, m, "roof", wall);
+  const ridge = optional(ctx, m, "ridge", roof);
+  const run = Math.max(0.5, param("pitch", 1.4));
+  // the ridge along the longer side: from the front and rear on a wide store, from the sides on a deep one
+  const wide = W >= f.maxDepth + 1;
+  const dist = (i: number) => (wide ? Math.min(f.depth[i]!, f.back[i]!) : Math.min(f.along[i]!, W - 1 - f.along[i]!));
+  let rMax = 0;
+  for (let i = 0; i < f.depth.length; i++) if (f.depth[i]! >= 0) rMax = Math.max(rMax, dist(i));
+  const cap = Math.max(1, Math.round(H * 0.45));
+  const rf = (d: number) => Math.min(cap, Math.floor(d / run));
+  const Hw = Math.max(4, H - 1 - rf(rMax));
+  const nk = Math.max(2, Math.round(Hw * 0.3)); // the skirt's top
+  const edge = edgeDistance(mask);
+  for (let y = 0; y < f.sy; y++)
+    for (let x = 0; x < f.sx; x++) {
+      const i = y * f.sx + x;
+      if (f.depth[i]! < 0) continue;
+      const out = edge[i] === 1; // on the outer wall
+      let z = 0;
+      for (; z < Hw; z++) {
+        const pos = x + y;
+        const joint = (pos + z) % 3 === 0 || (pos - z + 3 * H) % 3 === 0;
+        m.set(x, y, z, z === 0 ? base : z < nk && out && !joint ? namako : wall);
+      }
+      const r = rf(dist(i));
+      for (let t = 0; t <= r; t++, z++) m.set(x, y, z, t === r && dist(i) === rMax ? ridge : t < r && out ? wall : roof);
+    }
+  // the door at the street and the shuttered window high above it
+  const paint = frontPainter(m, f, 0);
+  const mid = Math.floor((W - 1) / 2);
+  if (W >= 4)
+    for (let a = mid; a <= mid + 1 && a < W - 1; a++) {
+      for (let z = 1; z < Math.min(Hw - 3, Math.max(3, nk + 2)); z++) paint(a, z, door);
+      if (Hw >= 9) for (let z = Hw - 4; z < Hw - 2; z++) paint(a, z, door);
+    }
+  return m;
+};
+
+/**
+ * A concrete utility pole (denchū): a slim pole, a steel crossarm near its
+ * top with an insulator at each end, and on some a transformer drum. The
+ * wires between poles aren't drawn.
+ * params: height (16 voxels), transformers (share with a transformer; 0.3).
+ * roles: pole, arm (pole if absent), transformer (arm if absent).
+ */
+export const utilityPole: Generator = (ctx) => {
+  const { rand, param } = ctx;
+  const H = Math.max(6, Math.round(param("height", 16) * (0.9 + rand() * 0.2)));
+  const m = new VoxelModel(5, 5, H + 1);
+  const pole = m.material(ctx.ramp("pole"));
+  const arm = optional(ctx, m, "arm", pole);
+  const drum = optional(ctx, m, "transformer", arm);
+  for (let z = 0; z < H; z++) m.set(2, 2, z, pole);
+  for (let x = 0; x < 5; x++) m.set(x, 2, H - 2, arm);
+  m.set(0, 2, H - 1, arm);
+  m.set(4, 2, H - 1, arm);
+  if (rand() < param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(2, 3, z, drum);
+  return m;
+};
+
+export const BUILDING_GENERATORS: Record<string, Generator> = { machiya, midrise, kura, utilityPole };

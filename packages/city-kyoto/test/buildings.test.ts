@@ -23,7 +23,7 @@ const rampName = new Map([...rampIds].map(([n, i]) => [i, n]));
 const glassRamps = new Set(["glass", "lit", "lit-cool", "curtain-glass"]);
 type Mask = { sx: number; sy: number; on: Uint8Array };
 
-const KYOTO = new Set(["machiya", "midrise", "templeHall"]);
+const KYOTO = new Set(["machiya", "midrise", "templeHall", "kura"]);
 const GROUPS = Object.keys(style.assets).filter((g) => g.startsWith("building.") && KYOTO.has(style.assets[g]!.generator));
 
 function rect(sx: number, sy: number, cut = 0): Mask {
@@ -87,9 +87,18 @@ describe("Kyoto's pack", () => {
   it("keeps to 42 ramps, with a marker and a night palette", () => {
     expect(Object.keys(style.ramps).length).toBeLessThanOrEqual(42);
     expect(style.ramps.marker).toBeDefined();
-    expect(Object.keys(style.night.emissive).sort()).toEqual(["lit", "lit-cool", "marker"]);
+    // Gion's paper lanterns glow at night too (D-094)
+    expect(Object.keys(style.night.emissive).sort()).toEqual(["chochin", "lit", "lit-cool", "marker"]);
   });
 });
+
+/** No hints, a corner lot, a diagonal front, and each roof shape the data can give (D-094). */
+const HINTS: (GenContext["hints"] | undefined)[] = [
+  undefined,
+  { floors: 2, corner: true, front: 0 },
+  { floors: 5, front: 3 },
+  ...["gabled", "hipped", "skillion", "flat", "pyramidal"].map((roof) => ({ floors: 2, front: 6, roof, corner: roof === "flat" })),
+];
 
 describe("Kyoto's buildings", () => {
   it("are drawn by groups of the kyoto pack", () => expect(new Set(GROUPS.map((g) => style.assets[g]!.generator))).toEqual(KYOTO));
@@ -102,12 +111,12 @@ describe("Kyoto's buildings", () => {
     for (const group of GROUPS)
       for (const mask of masks)
         for (const H of [8, 20, 60])
-          for (const hints of [undefined, { floors: 2, corner: true, front: 0 }, { floors: 5, front: 3 }]) {
+          for (const hints of HINTS) {
             const m = gen(group, seed++, mask, H, hints);
             expect(problems(m, mask), `${group} ${mask.sx}×${mask.sy} H=${H} ${JSON.stringify(hints)}`).toEqual([]);
             n++;
           }
-    expect(n).toBe(GROUPS.length * masks.length * 3 * 3);
+    expect(n).toBe(GROUPS.length * masks.length * 3 * HINTS.length);
   }, 60_000);
 
   it("draws a machiya with a lattice front, a pent roof, slit windows and a ridge along the street", () => {
@@ -127,6 +136,37 @@ describe("Kyoto's buildings", () => {
     expect(ridgeY).toBeGreaterThan(4);
     for (let x = 1; x < 9; x++) expect(topAt(m, x, ridgeY)).toBe(topAt(m, 5, ridgeY));
     expect(topAt(m, 5, ridgeY)).toBe(m.sz - 3 + (topAt(m, 5, ridgeY) - (m.sz - 3)));
+  });
+
+  it("draws the roof the data gives: hipped or gabled houses, a shed, a pitched mid-rise (D-094)", () => {
+    const mask = rect(16, 16);
+    const at = (group: string, roof: string, H = 16) => gen(group, 9, mask, H, { floors: 2, front: 6, roof });
+    // gabled: the ridge runs the whole width; hipped: the ends fall away
+    const gabled = at("building.house.gabled", "gabled");
+    const hipped = at("building.house.gabled", "hipped");
+    const ridgeY = (m: VoxelModel) => Array.from({ length: 16 }, (_, y) => y).reduce((b, y) => (topAt(m, 8, y) > topAt(m, 8, b) ? y : b), 0);
+    expect(topAt(gabled, 0, ridgeY(gabled))).toBe(topAt(gabled, 8, ridgeY(gabled)));
+    expect(topAt(hipped, 0, ridgeY(hipped))).toBeLessThan(topAt(hipped, 8, ridgeY(hipped)) - 2);
+    // a shed rises from the front to the rear
+    const shed = at("building.house.gabled", "skillion");
+    expect(topAt(shed, 8, 14)).toBeGreaterThan(topAt(shed, 8, 3) + 2);
+    // flat only where the asset draws flat roofs: the default houses do, the wooden ones keep a pitch
+    // (behind the pent roof's two rows)
+    expect(topAt(at("building.residential", "flat"), 8, 8)).toBe(topAt(at("building.residential", "flat"), 8, 3));
+    expect(topAt(at("building.house.gabled", "flat"), 8, 8)).toBeGreaterThan(topAt(at("building.house.gabled", "flat"), 8, 3));
+    // a mid-rise with a pitched roof in the data wears one in tile, without the flat roof's parapet
+    const pitched = at("building.midrise", "hipped", 40);
+    expect(nameAt(pitched, 8, 8, topAt(pitched, 8, 8))).toBe("kawara");
+    expect(topAt(pitched, 8, 8)).toBeGreaterThan(topAt(pitched, 1, 8) + 2);
+  });
+
+  it("draws a kura: a namako skirt under white plaster and a steep tile roof (D-094)", () => {
+    const m = gen("building.kura", 3, rect(10, 14), 16, { floors: 2, front: 6 });
+    const side = (z: number) => Array.from({ length: 14 }, (_, y) => nameAt(m, 0, y, z));
+    expect(side(2)).toContain("kawara"); // the skirt's tiles
+    expect(side(2)).toContain("plaster"); // and their joints
+    expect(new Set(side(10))).toEqual(new Set(["plaster"]));
+    expect(topAt(m, 5, 7)).toBeGreaterThanOrEqual(topAt(m, 0, 7) + 2); // the ridge along the longer side
   });
 
   it("gives a deep machiya lot a front house and wings under roofs of their own", () => {
@@ -237,6 +277,18 @@ describe("Kyoto's landmarks", () => {
     const ring: string[] = [];
     for (let z = deck - 6; z < deck + 6; z++) for (let x = 0; x < m.sx; x++) ring.push(nameAt(m, x, c, z));
     expect(ring).toContain("lit");
+  });
+
+  it("draw a torii: two pillars open between them, a lintel wider than the span, stone lanterns (D-094)", () => {
+    const H = 16;
+    const m = generateModel(style.assets, rampIds, "landmark.torii", { seed: 1, heightVox: H });
+    const row = (z: number) => Array.from({ length: m.sx }, (_, x) => (m.get(x, 1, z) ? 1 : 0)).join("");
+    expect(row(4)).toMatch(/^0+1+0+1+0+$/); // two pillars, the passage open between them
+    expect(row(H - 1)).toMatch(/^1+$/); // the kasagi across the whole width
+    expect(nameAt(m, 0, 1, H)).toBe("timber-dark"); // its swept-up end
+    const lamps: string[] = [];
+    for (let y = 0; y < m.sy; y++) for (let x = 0; x < m.sx; x++) for (let z = 0; z < H; z++) lamps.push(nameAt(m, x, y, z));
+    expect(lamps).toContain("lit");
   });
 
   it("draw Kiyomizu-dera's hall on a stage of pillars over the slope", () => {

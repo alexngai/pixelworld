@@ -48,7 +48,8 @@
     "steel-grey": ["#1a1f2a", "#2a3242", "#3d485c", "#526077", "#6a7a92", "#8696ad"],
     "ai": ["#0e1222", "#161d36", "#20294d", "#2c3866", "#3c4b80", "#52629b"],
     "gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
-    "bronze": ["#1a1712", "#2a251c", "#3b3427", "#4e4533", "#625740", "#786b4f"]
+    "bronze": ["#1a1712", "#2a251c", "#3b3427", "#4e4533", "#625740", "#786b4f"],
+    "chochin": ["#3a0c0a", "#681410", "#9c2216", "#c8361f", "#e2583a", "#f2865f"]
   },
   "strataSets": { "kyoto": [{ "name": "Tamba chert", "aboveMeters": -100000, "ramp": "chert" }] },
   "defaultStrata": "kyoto",
@@ -182,7 +183,7 @@
         "window": "glass",
         "lit": "lit"
       },
-      "params": { "koshi": 0.35, "mushiko": 0.1, "fences": 0.1, "noren": 0.1, "hip": 0, "litFraction": 0.3 }
+      "params": { "koshi": 0.35, "mushiko": 0.1, "fences": 0.1, "noren": 0.1, "lanterns": 0.05, "udatsu": 0.1, "hip": 0, "litFraction": 0.3 }
     },
     "building.machiya": {
       "generator": "machiya",
@@ -202,6 +203,7 @@
         "noren": "ai",
         "noren.b": "plaster",
         "noren.c": "koshi",
+        "lantern": "chochin",
         "roof": "kawara",
         "roof.b": "kawara",
         "roof.c": "kawara-light",
@@ -209,7 +211,11 @@
         "window": "glass",
         "lit": "lit"
       },
-      "params": { "koshi": 1, "mushiko": 0.85, "fences": 0.4, "noren": 0.35, "hip": 0, "litFraction": 0.35 }
+      "params": { "koshi": 1, "mushiko": 0.85, "fences": 0.4, "noren": 0.35, "lanterns": 0.2, "udatsu": 0.25, "hip": 0, "litFraction": 0.35 }
+    },
+    "building.kura": {
+      "generator": "kura",
+      "ramps": { "wall": "plaster", "namako": "kawara", "door": "timber-dark", "base": "stone", "roof": "kawara", "ridge": "kawara-light" }
     },
     "building.midrise": {
       "generator": "midrise",
@@ -266,7 +272,7 @@
         "window": "glass",
         "lit": "lit"
       },
-      "params": { "koshi": 0.1, "mushiko": 0, "fences": 0, "noren": 0, "hip": 0.5, "litFraction": 0.3 }
+      "params": { "koshi": 0.1, "mushiko": 0, "fences": 0, "noren": 0, "hip": 0.5, "flat": 1, "litFraction": 0.3 }
     },
     "building.shrine": {
       "generator": "templeHall",
@@ -414,10 +420,20 @@
       },
       "params": { "hip": 0.35, "eave": 1, "roof": 0.5, "stage": 0.42, "stageDepth": 0.27, "width": 1.2, "depth": 1.33, "open": 1 }
     },
+    "landmark.torii": {
+      "generator": "torii",
+      "ramps": { "pillar": "vermilion", "cap": "timber-dark", "stone": "stone", "lamp": "lit" }
+    },
+    "landmark.torii.great": {
+      "generator": "torii",
+      "ramps": { "pillar": "vermilion", "cap": "timber-dark", "stone": "stone", "lamp": "lit" },
+      "params": { "width": 0.75, "lanterns": 0 }
+    },
     "landmark.tower.candle": {
       "generator": "candleTower",
       "ramps": { "wall": "concrete-white", "detail": "vermilion", "window": "glass", "lit": "lit" }
     },
+    "prop.pole": { "generator": "utilityPole", "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white" }, "params": { "height": 16, "transformers": 0.3 } },
     "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 5 } },
     "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 6 } },
     "rock.boulder": { "generator": "boulder", "ramps": { "rock": "chert" } },
@@ -499,6 +515,21 @@
       "generator": "car",
       "ramps": { "paint.a": "vermilion", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete" }
     },
+    "vehicle.ferry": {
+      "generator": "ferry",
+      "ramps": {
+        "hull.a": "concrete-white",
+        "hull.b": "ai",
+        "hull.c": "timber",
+        "band.a": "ai",
+        "band.b": "concrete-white",
+        "band.c": "vermilion",
+        "cabin": "concrete-white",
+        "window": "lit",
+        "roof": "concrete",
+        "trim": "steel-grey"
+      }
+    },
     "vehicle.lightrail": {
       "generator": "tram",
       "ramps": {
@@ -570,7 +601,8 @@
     "emissive": {
       "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
       "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
-      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+      "chochin": ["#4a100a", "#8a2010", "#c8401c", "#ec6a2c", "#ff9a4a", "#ffc890"]
     }
   }
 }

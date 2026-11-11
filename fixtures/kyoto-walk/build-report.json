@@ -1,28 +1,29 @@
 {
-  "packageHash": "70bada6f1ce35a84a987c8d9f6a1f5873a284fe90a3070a7401cacb16bf3fc4e",
+  "packageHash": "b53377ccbb76abae62e0be1e9f04ab9f5bd718229ac2ff037f506dddef2d40a1",
   "cells": [
     338,
     300
   ],
   "chunks": 30,
   "heightRange": [
-    5,
-    60
+    8,
+    89
   ],
   "inputs": {
     "roadSegments": 13868,
     "riverLines": 319
   },
   "objects": {
-    "building.commercial": 435,
-    "building.house": 336,
-    "building.house.gabled": 8210,
-    "building.machiya": 6260,
-    "building.midrise": 10946,
+    "building.commercial": 427,
+    "building.house": 332,
+    "building.house.gabled": 7924,
+    "building.kura": 91,
+    "building.machiya": 6451,
+    "building.midrise": 10923,
     "building.parking": 17,
-    "building.residential": 6905,
-    "building.shrine": 66,
-    "building.temple": 448,
+    "building.residential": 6888,
+    "building.shrine": 57,
+    "building.temple": 513,
     "building.tower": 64,
     "building.tower.hotel": 4,
     "landmark.gate.romon": 1,
@@ -30,10 +31,12 @@
     "landmark.pagoda": 1,
     "landmark.pagoda.three": 1,
     "landmark.temple.stage": 1,
+    "landmark.torii": 3,
     "landmark.tower.candle": 1,
+    "prop.pole": 2301,
     "prop.signal": 54,
     "prop.streetlight": 1142,
-    "tree": 22059,
+    "tree": 20870,
     "tree.street": 559
   },
   "roads": {

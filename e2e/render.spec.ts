@@ -352,7 +352,7 @@ test.describe("Paris (D-084, D-085, D-086)", () => {
   });
 });
 
-test.describe("Kyoto (D-089, D-090, D-091)", () => {
+test.describe("Kyoto (D-089, D-090, D-091, D-094)", () => {
   test("machiya streets under the Yasaka Pagoda: the walking level typed from PLATEAU", async ({ page }) => {
     // the kyoto style pack and its city pack, named by the world: machiya and
     // wooden houses under grey tile round a pagoda landmark
