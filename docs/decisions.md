@@ -101,6 +101,7 @@ Status values:
 | D-090 | Kyoto's look: a `kyoto` style pack and the `@pixelworlds/city-kyoto` generator plugin | Accepted (M5) |
 | D-091 | Kyoto's walking level: Nakagyō to Kiyomizu-dera and Kyoto Tower at 10 m, typed by structure, year, class and roof | Accepted (M5) |
 | D-094 | Kyoto refined: PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns | Accepted (M5) |
+| D-095 | Kyoto's driving and flying levels, and its blind test | Accepted (M5) |
 
 ---
 
@@ -1131,3 +1132,17 @@ The point is more room for visual interest; both halves are wanted.
   - **Poles from the data:** OSM maps three in the box.
 - **Later:** wires between poles (props are placed one by one); Gion's lanterns by neighbourhood (a `bounds` rule, which Tokyo's pack adds); stone lanterns along the approaches; shrines' torii from a land-use or path source.
 
+### D-095: Kyoto's driving and flying levels, and its blind test (accepted, M5)
+- **Why:** the walking level (D-091) covers Gion and Higashiyama; Kyoto's other recognisable places (Kinkaku-ji's hills, Nijō Castle, the Imperial Palace, Tō-ji, Heian Shrine, Ginkaku-ji) and the basin's ring of hills need the coarser levels, as San Francisco's and New York's have.
+- **What:**
+  - **Driving** (`worlds/kyoto/region.yaml`, `kyoto`): `[135.725, 34.960, 135.805, 35.045]` at 25 m, 294 × 378 = 111,132 cells; heights and relief 1.5×; the walking level's typology. Two more landmarks from Wikidata: Tō-ji's five-storey pagoda (55 m) and Heian Shrine's great torii (24.4 m, `landmark.torii.great`).
+  - **Flying** (`worlds/kyoto/fly.yaml`, `kyoto-fly`, extends `region.yaml`): `[135.65, 34.90, 135.85, 35.10]` at 100 m, 184 × 222 = 40,848 cells; relief 2×; landmarks only, drawn 3×; GSI read at 16 m; rivers without canals.
+  - The three levels list each other (`levels`), so the viewer and the game switch between them; `walk.yaml` stays a file of its own.
+  - **A golden** of the driving level (`kyoto-toji-r0.png`): Tō-ji's pagoda among the town.
+- **Measured** (build of 2026-11-11): driving 182,040 buildings, 170,903 with facts from 96 PLATEAU meshes, 78,043 roof shapes; houses 74,158, mid-rises 38,491, machiya 28,162, temple halls 1,144, kura 411, shrines 146; 7.5 MB, 140 s from the cache (380 s with its downloads); road report clean. Flying 6 landmarks, 392 KB, 15 s.
+- **Two settings that don't carry over from other cities:** `micro.dem.overview` was copied as 1 from New York, where the DEM is 10 m; on GSI it asks for 1 m tiles over the whole box, and the builds sat for 18 minutes before they were stopped (4 m for driving, 16 m for flying now). And Overture's `canal` subtype in the basin is mostly field and street-side channels: a cell wide each at 100 m, they made 12% of the flying level water.
+- **Blind test** (a fresh-context evaluator, six unlabelled views, then two again): every view read as Kyoto, at 30–90%. The landmarks were the strongest cues (Kyoto Tower 90%, the pagodas 75–80%); a walking view of Gion without one was the weakest (30%: "Japanese, not specifically Kyoto"; its roofs on irregular footprints merge into one). Tō-ji's halls first drew as green-roofed red shrines ("more Chinese than Kyoto", 65%), since OSM tags them `building=shrine`; with the halls typed by name they read as grey-tiled temple halls (75%). The walking level looked flat where Higashiyama climbs, before its relief went to 1.5×.
+- **Rejected alternatives:**
+  - **Buildings on the flying level:** almost nothing in Kyoto stands over 45 m (the city's height limits); the hills and the landmarks are what reads from the air.
+  - **A wider driving box** (Arashiyama, Fushimi Inari's mountain): 200,000 cells and 150 more meshes; they belong to a later level.
+- **Later:** the generic modern mid-rises dilute the look (the blind test's most common complaint); machiya rows mapped as one footprint draw one merged roof; Kinkaku-ji, Nijō Castle and the Imperial Palace have no landmark shapes; Kiyomizu-dera's stage reads best from the south and west.

@@ -1,0 +1,74 @@
+{
+  "packageHash": "7a2b0d1cd9866318aefdb5d655228dd0398bcb1b986d1f175d97dfd5a164c689",
+  "cells": [
+    294,
+    378
+  ],
+  "chunks": 30,
+  "heightRange": [
+    1,
+    56
+  ],
+  "inputs": {
+    "roadSegments": 29395,
+    "riverLines": 901
+  },
+  "objects": {
+    "building.commercial": 2808,
+    "building.house": 1538,
+    "building.house.gabled": 72620,
+    "building.kura": 411,
+    "building.machiya": 28162,
+    "building.midrise": 38491,
+    "building.parking": 65,
+    "building.residential": 36579,
+    "building.shrine": 146,
+    "building.temple": 1144,
+    "building.tower": 71,
+    "building.tower.hotel": 5,
+    "landmark.gate.romon": 1,
+    "landmark.gate.sanmon": 1,
+    "landmark.pagoda": 2,
+    "landmark.pagoda.three": 1,
+    "landmark.temple.stage": 1,
+    "landmark.torii.great": 1,
+    "landmark.tower.candle": 1,
+    "tree": 42179,
+    "tree.street": 3224
+  },
+  "roads": {
+    "cells": 36563,
+    "edges": 41421,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 29,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "rails": {
+    "street": 0,
+    "cable": 0,
+    "train": 1937
+  },
+  "lanes": {
+    "counted": 0,
+    "oneway": 13963,
+    "divided": 4933
+  },
+  "surfaces": {
+    "woodland": 24516,
+    "water": 1761,
+    "desert": 146,
+    "grass": 289,
+    "farmland": 268,
+    "urban": 79799,
+    "lawn": 4353
+  },
+  "routes": {
+    "ferry": 1,
+    "lightrail": 2,
+    "road": 13256,
+    "train": 70
+  }
+}

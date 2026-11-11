@@ -200,6 +200,35 @@ Sources and licenses:
 - Building records: 出典：国土交通省 PLATEAUウェブサイト (3D city models of Kyoto, 2025), processed. PDL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## kyoto
+
+Kyoto's driving level (D-095), built from [`worlds/kyoto/region.yaml`](../worlds/kyoto/region.yaml): the city centre at 25 m per cell (294 × 378 cells), from Kinkaku-ji's hills in the north-west to Tō-ji and Fushimi Inari's gate in the south and Ginkaku-ji in the east, with Nijō Castle, the Imperial Palace, the Kamo river and Heian Shrine's great torii. Heights 1.5×, relief 1.5×; the walking level's typology (D-091, D-094).
+
+- **Buildings:** 182,040 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
+- **Types:** wooden houses under gabled (72,620) and hipped (1,538) roofs, mid-rises (38,491), machiya (28,162), temple halls and pavilions (1,144; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (146); the defaults 36,579 houses, 2,808 low blocks, 76 taller blocks, 65 car parks.
+- **Also:** 42,179 canopy trees and 3,224 street trees, 4,353 lawn cells, 1,937 rail cells, 13,329 traffic routes.
+- **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m) and Heian Shrine's great torii (24.4 m).
+- **Road report:** clean (29 components).
+- **Size:** 7.5 MB. Built in about 140 s with the download cache (about 380 s the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/region.yaml
+```
+
+Sources and licenses: as `kyoto-walk`.
+
+## kyoto-fly
+
+Kyoto's flying level (D-095), built from [`worlds/kyoto/fly.yaml`](../worlds/kyoto/fly.yaml) (it extends `region.yaml`): the whole basin at 100 m per cell (184 × 222 cells), from Arashiyama to the slopes of Hiei and from the Kitayama hills south past Fushimi. Relief 2×. Only its landmarks are drawn, three times their size: Kyoto Tower, Tō-ji's and the Yasaka pagodas, Kiyomizu-dera's hall, Chion-in's Sanmon and Heian Shrine's great torii. GSI's tiles are read at 16 m. Rivers only, no canals: Overture's canals are mostly field and street-side channels, a whole cell wide here. 0 to 42 drawn steps. 392 KB, built in about 15 s with the cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/fly.yaml
+```
+
+Sources and licenses: as `kyoto-walk`, without the building records and tree canopy.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

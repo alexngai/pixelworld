@@ -1,0 +1,52 @@
+# Kyoto, flying level (D-095): the whole basin at 100 m per cell, from
+# Arashiyama and the Katsura river in the west to Mount Daimonji and the
+# slopes of Hiei in the east, and from the Kitayama hills south past Fushimi.
+# The hills that ring the city are what reads from the air; its landmarks are
+# drawn three times their size, and no other buildings (the walking and
+# driving levels draw the town).
+# Build: cd pipeline && uv run pixelworld build ../worlds/kyoto/fly.yaml
+extends: region.yaml
+id: kyoto-fly
+name: Kyoto basin (flying)
+level: fly
+bounds: [135.65, 34.90, 135.85, 35.10]
+
+metersPerCell: 100
+verticalExaggeration: 2.0
+maxSlope: 3
+start: { lon: 135.7593, lat: 34.9880 }
+
+sources:
+  # GSI's tiles at 16 m: zoom 13, about 50 tiles for the basin
+  dem: { kind: gsi-dem, overview: 16 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  roads:
+    classes: [motorway, trunk, primary]
+  # rivers only: Overture's canals are mostly field and street-side channels,
+  # each a whole cell wide at 100 m (they were 4,500 of its cells)
+  rivers:
+    subtypes: [river]
+
+widths: { scale: 3.0, minCells: 0.08, lanes: null } # no medians from the air (M3.5)
+micro: { k: 4, dem: { overview: 16 } } # GSI at 16 m: overview 1 would be 1 m tiles over the whole basin
+ground:
+  lawn: { wooded: null }
+
+objects:
+  # landmarks only: Kyoto has almost no buildings over 45 m to draw from the air
+  buildings: null
+  typology: null
+  vegetation: null
+  streetTrees: null
+  landmarks:
+    - kiyomizu-dera-hondo
+    - yasaka-pagoda
+    - chion-in-sanmon
+    - kyoto-tower
+    - toji-pagoda
+    - heian-jingu-otorii
+  depiction:
+    landmarks: { scale: 3 }
+    heightStretch: 2.0
+    scatter: 0.6
+    vehicleScale: 4

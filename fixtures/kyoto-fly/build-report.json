@@ -1,0 +1,53 @@
+{
+  "packageHash": "86835efebbfb282093c998a2689d31be985cd9f272a4adee2d2527440c35e4d8",
+  "cells": [
+    184,
+    222
+  ],
+  "chunks": 12,
+  "heightRange": [
+    0,
+    42
+  ],
+  "inputs": {
+    "roadSegments": 4757,
+    "riverLines": 971
+  },
+  "objects": {
+    "landmark.gate.sanmon": 1,
+    "landmark.pagoda": 2,
+    "landmark.temple.stage": 1,
+    "landmark.torii.great": 1,
+    "landmark.tower.candle": 1
+  },
+  "roads": {
+    "cells": 3471,
+    "edges": 3748,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 3,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "rails": {
+    "street": 0,
+    "cable": 0,
+    "train": 1772
+  },
+  "surfaces": {
+    "woodland": 20175,
+    "water": 3453,
+    "desert": 57,
+    "grass": 166,
+    "farmland": 1092,
+    "urban": 15143,
+    "lawn": 762
+  },
+  "routes": {
+    "ferry": 2,
+    "lightrail": 5,
+    "road": 732,
+    "train": 55
+  }
+}
