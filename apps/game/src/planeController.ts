@@ -3,7 +3,7 @@ import { Follow } from "./follow";
 import { FlyWorld } from "./ground";
 import { geoToPose, type GeoPose } from "./levels";
 import { FlightPilot, type Waypoint } from "./pilot";
-import { LEVEL_FLIGHT, flyPlane, throttleFor, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "./plane";
+import { LEVEL_FLIGHT, aoaFor, flyPlane, settleNose, throttleFor, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "./plane";
 import { roadUnder } from "./roads";
 import { FLY_PACE, PLANE, pace } from "./tuning";
 import type { Place } from "./carController";
@@ -15,8 +15,10 @@ import type { Place } from "./carController";
  * height reads as the gap between them. Steps the flight model (plane.ts);
  * a crash puts it back where it was a few seconds earlier, higher up.
  *
- * Keys: W/↑ climb, S/↓ descend, A/D or ←/→ bank, Shift or + throttle up,
- * Z or − throttle down. Low and slow over a road, it lands (`onLand`).
+ * Keys: W/↑ pull, S/↓ push (held, a loop), A/D or ←/→ roll (held, a roll
+ * right round), Q/E rudder, Shift or + throttle up, Z or − throttle down;
+ * hands off, it rolls upright and levels out. Low and slow over a road, it
+ * lands (`onLand`).
  */
 
 export interface PlaneControllerOptions {
@@ -35,7 +37,7 @@ export interface PlaneControllerOptions {
 
 export class PlaneController implements Controller {
   readonly id = "plane";
-  readonly state: PlaneState = { x: 0, y: 0, h: 0, heading: 0, speed: 0, climb: 0, bank: 0, throttle: 0.5 };
+  readonly state: PlaneState = { x: 0, y: 0, h: 0, heading: 0, speed: 0, climb: 0, bank: 0, rollRate: 0, alpha: 0, slip: 0, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 };
   params: PlaneParams = { pace: 1, ceiling: 30, length: 1.25 };
   paused = false;
   frozen = false;
@@ -64,6 +66,8 @@ export class PlaneController implements Controller {
   private readonly history: { t: number; s: PlaneState }[] = [];
   private unlisten: (() => void) | null = null;
   private ensured = { x: NaN, y: NaN };
+  /** The ground under the plane, eased, for the camera's height: cliffs and towers don't jolt the view. */
+  private camGround: number | null = null;
 
   constructor(private readonly opts: PlaneControllerOptions = {}) {
     this.follow = opts.follow ?? true;
@@ -118,19 +122,22 @@ export class PlaneController implements Controller {
     this.params.ceiling = Math.max(w.heightRange[1], ...tops) + PLANE.ceiling;
     const ground = this.world.groundAt(start.x, start.y) ?? 0;
     const speed = Math.max(this.opts.speed ?? 0, PLANE.cruiseSpeed * k);
+    // over the ground, and over a tower standing there (the Strip's start is among them)
+    const floor = Math.max(ground, (this.world.objectTopAt(start.x, start.y) ?? -Infinity) + PLANE.crashClearance);
     Object.assign(this.state, {
       x: start.x,
       y: start.y,
-      h: Math.min(this.params.ceiling, ground + (this.opts.agl ?? PLANE.startAgl)),
+      h: Math.min(this.params.ceiling, floor + (this.opts.agl ?? PLANE.startAgl)),
       heading,
       speed,
       climb: PLANE.startClimb,
-      bank: 0,
       throttle: throttleFor(speed, k, stall),
     });
+    this.level();
     const model = { group: PLANE.group, seed: PLANE.seed, size };
-    this.shadowEntity = view.entities.add({ model: { ...model, part: 1 }, x: start.x, y: start.y, h: ground + PLANE.shadowLift, heading: this.state.heading });
-    this.plane = view.entities.add({ model, x: start.x, y: start.y, h: this.state.h, heading: this.state.heading, silhouette: true, reveal: {} });
+    const headings = PLANE.headings;
+    this.shadowEntity = view.entities.add({ model: { ...model, part: 1 }, x: start.x, y: start.y, h: ground + PLANE.shadowLift, heading: this.state.heading, headings });
+    this.plane = view.entities.add({ model, x: start.x, y: start.y, h: this.state.h, heading: this.state.heading, headings, silhouette: true, reveal: {} });
     this.cam.snap(start.x, start.y, this.focusH(ground));
     if (this.follow) view.camera.setFocus(this.cam.x, this.cam.y, this.cam.h);
     this.remember();
@@ -152,8 +159,10 @@ export class PlaneController implements Controller {
   place(x: number, y: number, heading = this.state.heading, h?: number): void {
     const ground = this.world?.groundAt(x, y) ?? this.state.h - 2;
     const cruise = PLANE.cruiseSpeed * this.params.pace;
-    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, bank: 0, throttle: throttleFor(cruise, this.params.pace, this.params.stall) });
+    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, throttle: throttleFor(cruise, this.params.pace, this.params.stall) });
+    this.level();
     this.pilot = null;
+    this.camGround = null;
     this.history.length = 0;
     this.remember();
     this.draw(0);
@@ -187,13 +196,21 @@ export class PlaneController implements Controller {
 
   input(): PlaneInput {
     // past its last waypoint the pilot circles it
-    if (this.pilot && this.world) return this.pilot.input(this.state, this.world, this.params.pace);
+    if (this.pilot && this.world) return this.pilot.input(this.state, this.world, this.params);
     const k = this.keys;
     return {
       pitch: (k.has("arrowup") || k.has("w") ? 1 : 0) - (k.has("arrowdown") || k.has("s") ? 1 : 0),
       roll: (k.has("arrowright") || k.has("d") ? 1 : 0) - (k.has("arrowleft") || k.has("a") ? 1 : 0),
       throttle: (k.has("shift") || k.has("+") || k.has("=") ? 1 : 0) - (k.has("z") || k.has("-") ? 1 : 0),
+      yaw: (k.has("e") ? 1 : 0) - (k.has("q") ? 1 : 0),
     };
+  }
+
+  /** Wings level, no roll or slip, and the angle of attack that holds the height at this speed. */
+  private level(): void {
+    const s = this.state;
+    Object.assign(s, { bank: 0, slip: 0, rollRate: 0, stalled: false, alpha: Math.min(PLANE.stallAoa, aoaFor(s.speed, s.climb, 0, this.params)) });
+    settleNose(s);
   }
 
   private remember(): void {
@@ -208,13 +225,15 @@ export class PlaneController implements Controller {
     const back = this.history.find((h) => this.time - h.t <= PLANE.resetBack) ?? this.history[0];
     const s = back ? { ...back.s } : { ...this.state };
     const ground = this.world?.groundAt(s.x, s.y) ?? s.h;
+    // and over a tower there: back in it, it would only crash again
+    const tower = this.world?.objectTopAt(s.x, s.y) ?? -Infinity;
     Object.assign(this.state, s, {
-      h: Math.min(this.params.ceiling, Math.max(s.h, ground + PLANE.resetAgl)),
+      h: Math.min(this.params.ceiling, Math.max(s.h, ground + PLANE.resetAgl, tower + PLANE.resetAgl)),
       climb: 0,
-      bank: 0,
       speed: Math.max(s.speed, PLANE.cruiseSpeed * this.params.pace),
       throttle: throttleFor(PLANE.cruiseSpeed * this.params.pace, this.params.pace, this.params.stall),
     });
+    this.level();
     this.history.length = 0;
     this.remember();
   }
@@ -285,12 +304,17 @@ export class PlaneController implements Controller {
     if (!view || !plane || !shadow || !this.world) return;
     const s = this.state;
     plane.moveTo(s.x, s.y, s.h);
-    plane.heading = s.heading;
+    // the nose where it points, and its pitch and bank
+    plane.heading = s.yaw;
+    // the path climbs stepsPerCell steps per cell at 45°, where the sprite's cubic voxels climb 2: draw the nose as the path looks
+    plane.pitch = Math.atan((PLANE.stepsPerCell / 2) * Math.tan(s.pitch));
+    plane.roll = s.roll;
     const ground = this.world.groundAt(s.x, s.y);
+    if (ground !== null) this.camGround = this.camGround === null ? ground : ground + (this.camGround - ground) * Math.exp(-dt / PLANE.camGroundEase);
     shadow.moveTo(s.x, s.y, (this.shadowGround() ?? shadow.h - PLANE.shadowLift) + PLANE.shadowLift);
-    shadow.heading = s.heading;
+    shadow.heading = s.yaw;
     if (this.follow) {
-      const f = this.cam.update(s.x, s.y, this.focusH(ground), s.heading, s.speed, dt);
+      const f = this.cam.update(s.x, s.y, this.focusH(this.camGround), s.heading, s.speed, dt);
       view.camera.setFocus(f.x, f.y, f.h);
     }
   }
@@ -314,7 +338,7 @@ export class PlaneController implements Controller {
 
   keyDown(e: KeyInput): boolean {
     const k = e.key.toLowerCase();
-    if (!["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", "shift", "+", "=", "-", "z"].includes(k)) return false;
+    if (!["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", "q", "e", "shift", "+", "=", "-", "z"].includes(k)) return false;
     this.keys.add(k);
     if (k.startsWith("arrow")) e.preventDefault?.();
     this.pilot = null;

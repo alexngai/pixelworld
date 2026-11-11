@@ -114,7 +114,7 @@ describe("the traffic layer", () => {
     expect(drawn.complete).toBe(true);
     expect(drawn.list.length).toBe(layer.drawn.length);
     const v = layer.drawn[0]!;
-    expect(drawn.list[0]!.sx).toBe(Math.round(project(v.x, v.y, v.h + 0.2, 1).sx));
+    expect(drawn.list[0]!.sx).toBe(project(v.x, v.y, v.h + 0.2, 1).sx); // not rounded: it glides
     expect(drawn.list[0]!.silhouette).toBe(false);
   });
 

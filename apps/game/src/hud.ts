@@ -19,6 +19,10 @@ export interface HudInfo {
   aglMeters?: number | null;
   altitudeMeters?: number | null;
   throttle?: number;
+  /** The nose over the horizon and the bank (rad), and a stall. */
+  pitch?: number;
+  bank?: number;
+  stalled?: boolean;
   road?: string | null;
   assist?: boolean;
   fps: number;
@@ -34,12 +38,14 @@ const HELP = `<h2>Keys</h2>
 <tr><td>G</td><td>road assist on/off (keeps to the road while the wheel is straight)</td></tr>
 <tr><td>T</td><td>take off: fast on a long straight road</td></tr>
 <tr><th colspan="2">Plane</th></tr>
-<tr><td>W / ↑ · S / ↓</td><td>climb · descend</td></tr>
-<tr><td>A D / ← →</td><td>bank and turn</td></tr>
+<tr><td>W / ↑ · S / ↓</td><td>pull · push (hold W to loop)</td></tr>
+<tr><td>A D / ← →</td><td>roll (bank to turn; hold to roll right round)</td></tr>
+<tr><td>Q / E</td><td>rudder (yaw)</td></tr>
 <tr><td>Shift or + · Z or −</td><td>throttle up · down</td></tr>
+<tr><td>hands off</td><td>rolls upright and levels out by itself</td></tr>
 <tr><td>L</td><td>land: low and slow over a road (it lands by itself too)</td></tr>
 <tr><th colspan="2">Both</th></tr>
-<tr><td>Q / E</td><td>rotate the view</td></tr>
+<tr><td>[ / ]</td><td>rotate the view (Q / E in the car)</td></tr>
 <tr><td>1–6</td><td>zoom</td></tr>
 <tr><td>R</td><td>back onto the nearest road (car) · level out higher up (plane)</td></tr>
 <tr><td>V</td><td>traffic on/off</td></tr>
@@ -48,6 +54,8 @@ const HELP = `<h2>Keys</h2>
 <tr><td>H</td><td>this help</td></tr>
 </table>
 <p>URL: <code>?world=/sf/</code> · <code>?start=lon,lat</code> · <code>?traffic=0</code> · <code>?run=1</code> drives Las Vegas → Hoover Dam → the Grand Canyon and flies the canyon by itself, then shows its frame times.</p>`;
+
+const deg = (rad = 0) => `${rad >= 0 ? "+" : "−"}${Math.abs(Math.round((rad * 180) / Math.PI))}`;
 
 const CLASS_COLOUR: Record<string, string> = {
   motorway: "#f2c35b",
@@ -132,6 +140,7 @@ export class Hud {
       lines.push(
         `alt ${info.altitudeMeters == null ? "–" : Math.round(info.altitudeMeters)} m · ${info.aglMeters == null ? "–" : Math.round(info.aglMeters)} m over ground`,
         `throttle ${Math.round((info.throttle ?? 0) * 100)}%`,
+        `pitch ${deg(info.pitch)}° · bank ${deg(info.bank)}°${info.stalled ? " · STALL" : ""}`,
       );
     } else lines.push(`${info.road ? `on the ${info.road}` : "off-road"}${info.assist ? "" : " · assist off"}`);
     lines.push(info.place ? `near ${info.place}` : info.lonLat ? `${info.lonLat[1].toFixed(4)}°, ${info.lonLat[0].toFixed(4)}°` : "");
