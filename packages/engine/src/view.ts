@@ -560,8 +560,6 @@ class View implements WorldView {
           fracX: snap.fracX,
           fracY: snap.fracY,
           zoom: cam.zoom,
-          internalWidth: cam.internalWidth,
-          internalHeight: cam.internalHeight,
           depthRange: this.depthRange,
         };
         this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare);

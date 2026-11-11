@@ -15,9 +15,11 @@ import { FOG_NOISE_PERIOD, FOG_NOISE_TEXELS, fogNoiseTile, type FogField, type F
  * - **Patches:** noise on a horizontal plane inside the fog, drifting with the
  *   wind, so a patch is one shape on screen rather than streaks down walls.
  * - **Veil:** coverage picks a veil level, dithered between neighbouring levels
- *   with a 4×4 Bayer threshold anchored to absolute screen pixels (like the
- *   baker's AO dither, so panning moves the pattern with the world); the level's
- *   lookup row gives the pixel's new palette index (`fogLut`).
+ *   with a 4×4 Bayer threshold anchored to absolute screen (art) pixels (like
+ *   the baker's AO dither, so panning moves the pattern with the world); the
+ *   level's lookup row gives the pixel's new palette index (`fogLut`). The
+ *   frame is at canvas resolution: each target pixel is worked out at the art
+ *   pixel it falls in, so the fog stays pixel art.
  */
 
 const FOG_VS = /* glsl */ `#version 300 es
@@ -35,7 +37,8 @@ uniform sampler2D uIndex;   // frame: R index, G B A depth (24 bits, as gl_FragD
 uniform sampler2D uField;   // area coverage over world cells, linear
 uniform sampler2D uNoise;   // patch noise tile, linear, wrapping
 uniform sampler2D uLut;     // 256 × rows: veiled index per index and level
-uniform ivec2 uOrigin;      // absolute screen px of target pixel (0, 0)
+uniform vec2 uOrigin;       // absolute screen (art) px of the target's top-left
+uniform float uZoom;        // target px per art px
 uniform vec2 uDepthRange;
 uniform mat2 uUnrotate;     // view (u, v) → grid (x, y)
 uniform float uRS;          // render units per cell
@@ -64,7 +67,7 @@ void main() {
   if (c.r == 0) return;  // nothing drawn
   float z = float(c.g * 65536 + c.b * 256 + c.a) / 16777215.0;
   float d = uDepthRange.x + (1.0 - z) * (uDepthRange.y - uDepthRange.x);
-  ivec2 ap = uOrigin + p;
+  ivec2 ap = ivec2(floor(uOrigin + (vec2(p) + 0.5) / uZoom));
   vec2 s = vec2(ap) + 0.5;
   // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3
   float h = 0.75 * (d - s.y / 8.0);
@@ -155,7 +158,7 @@ export class FogPass {
   }
 
   /** Draw into the bound framebuffer: the frame's indices with fog. */
-  draw(fog: FogFrame, frame: WebGLTexture, origin: [number, number], depthRange: [number, number]): void {
+  draw(fog: FogFrame, frame: WebGLTexture, origin: [number, number], zoom: number, depthRange: [number, number]): void {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
@@ -175,7 +178,8 @@ export class FogPass {
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(u.loc(name), i);
     });
-    gl.uniform2i(u.loc("uOrigin"), origin[0], origin[1]);
+    gl.uniform2f(u.loc("uOrigin"), origin[0], origin[1]);
+    gl.uniform1f(u.loc("uZoom"), zoom);
     gl.uniform2fv(u.loc("uDepthRange"), depthRange);
     // inverse of the view rotation: view (u, v) → grid (x, y)
     gl.uniformMatrix2fv(u.loc("uUnrotate"), false, rotationMat2(((4 - fog.rotation) % 4) as Rotation));

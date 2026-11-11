@@ -442,6 +442,9 @@ export interface EntitySpec {
   heading?: number;
   /** Headings baked around the circle (default 16). */
   headings?: number;
+  /** The nose up and the right side down (radians; a plane's pitch and bank), baked to the nearest 10°. */
+  pitch?: number;
+  roll?: number;
   /** Raise the sprite this many steps above `h`. */
   lift?: number;
   /** Draw a dithered silhouette where the world hides it (default false). */
@@ -470,6 +473,9 @@ export interface Entity {
   readonly y: number;
   readonly h: number;
   heading: number;
+  /** The nose up and the right side down (radians), baked to the nearest 10°. */
+  pitch: number;
+  roll: number;
   visible: boolean;
   silhouette: boolean;
   /** Seeing through what stands in front of it (`EntitySpec.reveal`, with its defaults), or null. */
