@@ -321,7 +321,8 @@ const insetFrom = (steps: [number, number][]) => (z: number) => steps.reduce((a,
  * A 1920s tower: piers between recessed bays, setbacks, a crown.
  * params: piers (voxels from pier to pier: 2 or 3; 0 picks by seed),
  * setbacks (0–2; default 2), crown (0 stepped, 1 pinnacled, 2 lantern; -1 by
- * seed), width and depth (a point landmark's plan over its height).
+ * seed), width and depth (a point landmark's plan over its height), spire
+ * (the finial's height over the tower's; 0.05).
  * roles: wall, spandrel (behind the windows), trim (crown ornament and
  * finials), cap (a lantern's roof), roof, window, lit.
  */
@@ -330,7 +331,8 @@ const decoTower: Generator = (ctx) => {
   const H = Math.max(8, Math.round(heightVox ?? param("height", 60)));
   const mask = ctx.mask ?? boxMask(H, param("width", 0.32), param("depth", 0.28));
   const { depth, maxDepth: half } = footprintDepth(mask);
-  const m = new VoxelModel(mask.sx, mask.sy, H + Math.max(8, Math.round(H * 0.12)));
+  const finial = Math.max(2, Math.round(H * param("spire", 0.05)));
+  const m = new VoxelModel(mask.sx, mask.sy, H + Math.max(8, Math.round(H * 0.12), finial + 2));
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const P = param("piers", 0) >= 2 ? Math.round(param("piers", 0)) : rand() < 0.6 ? 2 : 3;
@@ -396,7 +398,7 @@ const decoTower: Generator = (ctx) => {
     },
   });
   // a finial or a flagpole on top
-  if (H >= 20) spire(m, Math.max(2, Math.round(H * 0.05)), p.trim);
+  if (H >= 20) spire(m, finial, p.trim);
   return m;
 };
 

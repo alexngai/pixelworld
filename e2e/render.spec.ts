@@ -330,6 +330,18 @@ test.describe("New York (D-078, D-080, D-081)", () => {
     await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9952,40.6944");
     await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-heights-r0.png");
   });
+
+  test("the Flatiron Building on its own wedge in Midtown (D-083)", async ({ page }) => {
+    // a landmark drawn on its building's footprint, with Madison Square's lawn beside it
+    await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9897,40.7411");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-flatiron-r0.png");
+  });
+
+  test("brownstone rows in Harlem: the driving level (D-083)", async ({ page }) => {
+    // Strivers' Row: rows typed from PLUTO's classes in Harlem's neighbourhoods
+    await open(page, "world=/nyc/&marker=0&zoom=2&rot=0&at=-73.9445,40.8180");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-harlem-r0.png");
+  });
 });
 
 test.describe("San Francisco (D-055, D-056)", () => {

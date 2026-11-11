@@ -1,0 +1,13 @@
+name: Williamsburg Bridge
+wikidata: Q125068
+# the suspension spans, anchorage to anchorage (490 m main span, 182 m side
+# spans): 885 m between the anchorages Overture maps (bridge supports) along
+# its roadway, with its towers 487 m apart between them
+line: [[-73.97701, 40.71506], [-73.96727, 40.71211]]
+crest: 41           # deck height above the water at mid-span (m): its 135 ft clearance
+base: 0             # the towers stand in the river
+thickness: 36       # the deck's width (Overture's outline: 36.5 m)
+bulge: 0
+snap: true          # turns with its road to the grid (D-049)
+depictions:
+  generic: { group: landmark.bridge.suspension.steel }   # braced steel towers; no name

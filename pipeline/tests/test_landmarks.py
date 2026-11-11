@@ -385,3 +385,32 @@ def test_a_level_can_switch_object_sections_off_with_null(registry):
     blocked = np.zeros(r.cells[::-1], dtype=bool)
     out, counts = objects.place(r, blocked, [])
     assert out == [] and counts == {}
+
+
+def test_a_footprint_landmark_stands_on_the_building_it_replaces(registry, monkeypatch):
+    (registry / "_landmarks" / "wedge.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "anchor": {"lon": -115.195, "lat": 36.005},
+                "height": 90,
+                "replaces": ["The Wedge"],
+                "footprint": True,
+                "depictions": {"generic": {"group": "landmark.block"}},
+            }
+        )
+    )
+    wedge = "POLYGON ((-115.1955 36.0045, -115.1945 36.0045, -115.1955 36.0055, -115.1955 36.0045))"
+    rows = [{"id": "w", "names": {"primary": "The Wedge"}, "geometry": wedge}]
+    monkeypatch.setattr(objects.overture, "buildings", lambda release, box: rows)
+    monkeypatch.setattr(objects.overture, "building_parts", lambda release, box: [])
+    monkeypatch.setattr(objects, "park_polygons", lambda *a: [])
+    r = _region(registry, {"landmarks": ["wedge"], "buildings": {"minArea": 10}})
+    assert r.objects["landmarks"][0]["footprint"] is True
+    blocked = np.zeros(r.cells[::-1], dtype=bool)
+    out, counts = objects.place(r, blocked, [])
+    assert counts == {"landmark.block": 1}  # the building itself is replaced
+    (lm,) = out
+    fp = np.asarray(lm["fp"])
+    assert len(fp) == 3 and lm["hm"] == 90  # its triangle, at its own height
+    assert lm["x"] == pytest.approx(fp[:, 0].mean(), abs=0.01)
+    assert lm["y"] == pytest.approx(fp[:, 1].mean(), abs=0.01)

@@ -1,0 +1,14 @@
+name: George Washington Bridge
+wikidata: Q125821
+# the suspension spans, anchorage to anchorage (Wikidata's 1,450 m: a
+# 1,067 m main span, side spans of 186 m in New Jersey and 198 m in
+# Manhattan), along its roadways from Overture's bridge supports: the towers
+# 1,065 m apart, the Manhattan anchorage 17 m from where this line ends
+line: [[-73.96091, 40.85329], [-73.94425, 40.85002]]
+crest: 65           # deck height above the water at mid-span (m): its 213 ft clearance
+base: 0
+thickness: 36       # Wikidata's width
+bulge: 0
+snap: true
+depictions:
+  generic: { group: landmark.bridge.suspension.steel.long }   # tall braced steel towers, short side spans; no name

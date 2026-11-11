@@ -926,6 +926,12 @@ BUILDINGS = Map(
         "minArea": Key(Num(0, unit="m²"), "Smaller footprints are left out.", "30"),
         "towerMeters": Key(Num(0, unit="m"), "Buildings this tall are towers.", "45"),
         "podiumMeters": Key(Num(0, unit="m"), "A tower's podium height.", "15"),
+        "tiers": Key(
+            Bool(),
+            "Parts standing on others (setback tiers) are drawn from the ground where they "
+            "stand over their building, not dropped.",
+            "off",
+        ),
         "houseMaxArea": Key(
             Num(0, unit="m²"), "Residential footprints up to this size are houses (0: none).", "0"
         ),
@@ -1096,6 +1102,9 @@ LANDMARK = Map(
             Num(0, lo_open=True), "Drawn this many times its size.", "`depiction.landmarks.scale`"
         ),
         "replaces": Key(ListOf(Str()), "Overture building names or ids it stands in for."),
+        "footprint": Key(
+            Bool(), "Drawn on the footprint of the building it replaces, not on a box.", "off"
+        ),
         "parts": Key(ListOf(LANDMARK_PART), "Sub-objects along a line landmark."),
         "hero": Key(Bool(), "Baked offline and painted over."),
     },

@@ -1,0 +1,9 @@
+name: Chrysler Building
+wikidata: Q11274
+# Wikidata's coordinate, on Lexington Avenue at 42nd Street
+anchor: { lon: -73.97572, lat: 40.75143 }
+height: 282          # Wikidata's architectural height; its needle reaches 318.9 m
+clear: 25
+replaces: [Chrysler Building]
+depictions:
+  generic: { group: landmark.tower.deco.steel }   # a white brick setback tower with a stepped steel crown; no name

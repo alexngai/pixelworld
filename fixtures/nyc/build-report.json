@@ -1,0 +1,84 @@
+{
+  "packageHash": "a77f9bba5c58479992d729253f9f87a8db8d9f3cd61da04cfc475053e2bddfd2",
+  "cells": [
+    424,
+    854
+  ],
+  "chunks": 98,
+  "heightRange": [
+    -4,
+    17
+  ],
+  "inputs": {
+    "roadSegments": 37032,
+    "riverLines": 111
+  },
+  "objects": {
+    "building.apartment.prewar": 5497,
+    "building.brownstone": 16981,
+    "building.commercial": 15326,
+    "building.commercial.historic": 14378,
+    "building.house": 16526,
+    "building.industrial": 4145,
+    "building.loft.castiron": 301,
+    "building.parking": 139,
+    "building.pier": 65,
+    "building.residential": 77830,
+    "building.tenement": 26185,
+    "building.tower": 349,
+    "building.tower.deco": 2871,
+    "building.tower.glass": 1640,
+    "building.tower.hotel": 5,
+    "building.tower.postmodern": 901,
+    "building.tower.slab": 2442,
+    "landmark.block.wedge": 1,
+    "landmark.bridge.cantilever": 4,
+    "landmark.bridge.suspension": 7,
+    "landmark.bridge.suspension.steel": 3,
+    "landmark.bridge.suspension.steel.long": 5,
+    "landmark.hall.terminal": 1,
+    "landmark.tower.deco.setback": 1,
+    "landmark.tower.deco.steel": 1,
+    "landmark.tower.gothic": 1,
+    "landmark.tower.obelisk.diagonal": 1,
+    "tree": 64837,
+    "tree.street": 31534
+  },
+  "roads": {
+    "cells": 86105,
+    "edges": 96387,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 10,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "rails": {
+    "street": 0,
+    "cable": 0,
+    "train": 8287
+  },
+  "lanes": {
+    "counted": 0,
+    "oneway": 92097,
+    "divided": 19988
+  },
+  "surfaces": {
+    "woodland": 51817,
+    "scrub": 1821,
+    "water": 72140,
+    "desert": 1757,
+    "grass": 1660,
+    "farmland": 188,
+    "urban": 181971,
+    "lawn": 23971,
+    "yard": 26771
+  },
+  "routes": {
+    "ferry": 63,
+    "lightrail": 7,
+    "road": 25252,
+    "train": 486
+  }
+}
