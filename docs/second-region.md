@@ -2,6 +2,8 @@
 
 Research date: 2026-11-09. Scope: the M5 "second region from coverage tier 1" decision (roadmap §M5, data-sources.md §4). No code was changed.
 
+**Tracking:** the index of every candidate place, and the research on more distinctive destinations (Venice, Santorini, Chongqing, Rio and others), is in [cities.md](cities.md).
+
 **Decided (D-078):** all three top candidates, in the order New York, Paris, Amsterdam. New York's sources were then checked directly from an open network (§7), which corrects §3 and §4 where they disagree.
 
 **How this was verified.** This session's network only allows the hosts in the pixelworld environment (DataSF, Wikidata, USGS and others). Every official portal tried was blocked: nyc.gov, opendata.cityofnewyork.us, data.cityofchicago.org, opendata.dc.gov, 3dbag.nl, mlit.go.jp, data.gv.at, hri.fi and data.gouv.fr. Facts below were checked in three ways:
