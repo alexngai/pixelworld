@@ -191,40 +191,38 @@ describe("Tokyo's wires (D-095)", () => {
       [a[0] - nx, a[1] - ny],
     ];
     const { mask, x0, y0 } = footprintMask(fp, voxel);
-    return generateModel(style.assets, rampIds, "prop.wire", { seed: 1, mask, frame: { x0, y0, voxel, line: { a, b, half: lw, rise } } });
+    const model = generateModel(style.assets, rampIds, "prop.wire", { seed: 1, mask, frame: { x0, y0, voxel, line: { a, b, half: lw, rise } } });
+    // a line's point in world cells and voxels up
+    const world = (p: [number, number, number]) => [x0 + p[0] * voxel, y0 + p[1] * voxel, p[2]];
+    return { model, world };
   }
 
-  it("runs a voxel thick from pole to pole at any angle, sagging between them, joined in every column", () => {
+  it("is a one-pixel line from pole to pole at any angle, unbroken, sagging between them", () => {
     for (const [a, b] of [
       [[0.5, 0.5], [3.5, 0.5]],
       [[0.5, 0.5], [2.6, 2.6]],
       [[0.5, 0.5], [3.1, 1.8]],
     ] as [number, number][][]) {
-      const m = span(a!, b!);
-      const tops: number[] = [];
-      let columns = 0;
-      for (let y = 0; y < m.sy; y++)
-        for (let x = 0; x < m.sx; x++) {
-          let n = 0;
-          for (let z = 0; z < m.sz; z++) if (m.get(x, y, z)) n++;
-          if (n) {
-            columns++;
-            tops.push(topAt(m, x, y));
-          }
-        }
-      // one column per voxel along the longer axis, not a band
-      const along = Math.max(Math.abs(b![0] - a![0]), Math.abs(b![1] - a![1])) * 16;
-      expect(columns, `${a} → ${b}`).toBeGreaterThanOrEqual(along - 2);
-      expect(columns, `${a} → ${b}`).toBeLessThanOrEqual(along + 3);
-      // at the poles' height (25) at its ends, a little lower in the middle
-      expect(Math.max(...tops)).toBe(25);
-      expect(Math.min(...tops)).toBeLessThanOrEqual(23);
+      const { model, world } = span(a!, b!);
+      expect(model.data.every((v) => v === 0)).toBe(true); // lines, not voxels
+      const { lines } = model;
+      expect(lines.length).toBeGreaterThan(4);
+      for (let k = 1; k < lines.length; k++) expect(lines[k]!.a).toEqual(lines[k - 1]!.b); // unbroken
+      // from one pole to the other, 25 voxels up at each, lower between them
+      const [sa, sb] = [world(lines[0]!.a), world(lines[lines.length - 1]!.b)];
+      expect(sa[0]).toBeCloseTo(a![0], 6);
+      expect(sa[1]).toBeCloseTo(a![1], 6);
+      expect(sb[0]).toBeCloseTo(b![0], 6);
+      expect(sb[1]).toBeCloseTo(b![1], 6);
+      expect([sa[2], sb[2]]).toEqual([25, 25]);
+      expect(Math.min(...lines.map((l) => l.b[2]))).toBeCloseTo(23, 0);
+      expect(rampName.get(model.materials[lines[0]!.m]!)).toBe("wire");
     }
   });
 
   it("climbs from a pole on low ground to one on higher ground", () => {
-    const m = span([0.5, 0.5], [3.5, 0.5], [0, 8]);
-    const ends = [0, m.sx - 1].map((x) => Math.max(...[...Array(m.sy).keys()].map((y) => topAt(m, x, y))));
-    expect(ends[1]! - ends[0]!).toBeGreaterThanOrEqual(7);
+    const { model } = span([0.5, 0.5], [3.5, 0.5], [0, 8]);
+    expect(model.lines[0]!.a[2]).toBe(25);
+    expect(model.lines[model.lines.length - 1]!.b[2]).toBe(33);
   });
 });

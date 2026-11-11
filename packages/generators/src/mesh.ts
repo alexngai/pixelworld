@@ -15,6 +15,8 @@ export const FACE_SLOPE = 1;
 export const FACE_CLIFF = 2;
 export const FACE_SKIRT = 3;
 export const FACE_OBJECT = 4;
+/** A one-pixel line (VoxelModel.lines; wires, D-095): drawn as GL lines, left alone by the composite's cleanup and outlines. */
+export const FACE_LINE = 5;
 
 export const DIRECT_RAMP_BASE = 100;
 
@@ -26,6 +28,8 @@ export interface MeshData {
   cell: Float32Array;
   road: Float32Array;
   geology: Float32Array;
+  /** "lines": every two vertices are a line segment drawn one pixel wide, not triangles. */
+  primitive?: "lines";
 }
 
 /** Per-vertex extras that most faces leave at zero. */

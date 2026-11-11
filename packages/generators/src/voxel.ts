@@ -7,6 +7,13 @@ import { DIRECT_RAMP_BASE, FACE_OBJECT, MeshBuilder, type MeshData } from "./mes
  */
 export class VoxelModel {
   readonly data: Uint8Array;
+  /**
+   * One-pixel lines (D-095), in the model's voxel coordinates (fractions allowed),
+   * each a material index as voxels have: drawn as lines, not voxels, so
+   * something as thin as a wire stays a pixel wide at any angle. Unique objects
+   * (footprints, landmarks) draw them; instanced ones don't.
+   */
+  readonly lines: { a: [number, number, number]; b: [number, number, number]; m: number }[] = [];
 
   constructor(
     readonly sx: number,
@@ -31,6 +38,11 @@ export class VoxelModel {
       this.materials.push(rampId);
     }
     return i;
+  }
+
+  /** A one-pixel line from a to b (voxel coordinates) in material m. */
+  line(a: [number, number, number], b: [number, number, number], m: number): void {
+    this.lines.push({ a, b, m });
   }
 
   inside(x: number, y: number, z: number): boolean {

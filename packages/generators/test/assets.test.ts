@@ -5,8 +5,10 @@ import {
   footprintMask,
   meshVoxels,
   objectVoxelScale,
+  registerGenerators,
   resolveAsset,
   rotateModel,
+  unregisterGenerators,
   type AssetCatalog,
 } from "../src/index";
 
@@ -125,6 +127,31 @@ describe("assets", () => {
     const used = rampsUsed(out.merged);
     expect(used.has(9)).toBe(true); // lit windows and neon trim
     expect(used.has(3) || used.has(5)).toBe(true); // a wall variant
+  });
+
+  it("draws a model's one-pixel lines as a lines mesh, placed as its voxels, with its line's ground heights (D-095)", () => {
+    registerGenerators(
+      {
+        strung: ({ mask, frame, ramp }) => {
+          const m = new VoxelModel(mask!.sx, mask!.sy, 1);
+          const [ra, rb] = frame!.line!.rise!;
+          m.line([0, 0, ra], [2, 1, rb], m.material(ramp("wire")));
+          return m;
+        },
+      },
+      { source: "test-lines" },
+    );
+    const wired = { ...catalog, "prop.wire": { generator: "strung", ramps: { wire: "glow" } } } as AssetCatalog;
+    const fp: [number, number][] = [[0, 0], [2, 0], [2, 0.5], [0, 0.5]];
+    const slope = { ...opts, catalog: wired, heightAt: (x: number) => 10 + x };
+    const out = buildObjects([{ g: "prop.wire", x: 1, y: 0.25, s: 1, fp, ln: [0, 0.25, 2, 0.25], lw: 0.25 }], slope);
+    expect(out.merged.vertexCount).toBe(0);
+    expect(out.lines.primitive).toBe("lines");
+    expect(out.lines.vertexCount).toBe(2);
+    // voxel (0, 0, 0) at the frame's corner and base; (2, 1) voxels on, at the far end's ground
+    expect(Array.from(out.lines.position)).toEqual([0, 0, 10, 0.5, 0.25, 10 + 2 * 0.5 * 2]);
+    expect(out.lines.material[1]).toBe(5); // FACE_LINE
+    unregisterGenerators("test-lines");
   });
 
   it("sits footprints on their lowest corner", () => {

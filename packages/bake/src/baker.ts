@@ -71,6 +71,8 @@ interface UploadedMesh {
   count: number;
   /** Instance count for instanced batches; 0 for plain meshes. */
   instances: number;
+  /** One-pixel lines (MeshData.primitive "lines", D-095): drawn as GL lines, and casting no shadow. */
+  lines: boolean;
 }
 
 interface UploadedField {
@@ -186,7 +188,7 @@ export class Baker {
       attrib(7, batch.cells, 2, 1);
     }
     gl.bindVertexArray(null);
-    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0 };
+    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0, lines: mesh.primitive === "lines" };
   }
 
   private free(up: UploadedMesh): void {
@@ -337,7 +339,7 @@ export class Baker {
       if (!d.count) continue;
       gl.bindVertexArray(d.vao);
       if (d.instances) gl.drawArraysInstanced(gl.TRIANGLES, 0, d.count, d.instances);
-      else gl.drawArrays(gl.TRIANGLES, 0, d.count);
+      else gl.drawArrays(d.lines ? gl.LINES : gl.TRIANGLES, 0, d.count);
     }
   }
 
@@ -408,7 +410,7 @@ export class Baker {
         gl.uniform2fv(u.loc("uLightDepth"), lb.depth);
       }
       gl.useProgram(this.shadow.prog);
-      this.drawScene(draws);
+      this.drawScene(draws.filter((d) => !d.lines));
       if (fields.length) {
         gl.useProgram(this.fieldShadow.prog);
         this.drawFields(this.fieldShadow.u, fields, rotation);

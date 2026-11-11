@@ -129,7 +129,7 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
-uniform highp usampler2D uFieldSegs; // (18·W) × H (D-082, D-094): per cell 6 (PIECES) road, 6 path then 6 rail corridor centre-line pieces, x0 y0 x1 y1 in 1/255 cell
+uniform highp usampler2D uFieldSegs; // (18·W) × H: per cell 6 road, 6 path, 6 rail pieces (D-082, D-094)
 uniform int uHasSegs;
 #endif
 
@@ -204,9 +204,7 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
-// Centre lines (D-082): a cell's pieces of road (slot 0), path (slot 6) or
-// rail corridor (slot 12, D-094) centre line, used slots first. A cell without
-// them draws its connections.
+// Centre lines (D-082): road (slot 0), path (6) or rail (12, D-094) pieces.
 uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 18 + slot, c.y), 0); }
 bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
 
@@ -278,14 +276,10 @@ float railsDecal(inout int ramp, inout int pattern) {
   // in cells: rails about a pixel wide at the native scale
   const float GAUGE = 0.08;  // a rail's centre from its track's
   const float RAIL = 0.035;  // a rail's half-width
-  // Rail corridors (D-094): a cell their tracks may reach (bit 11) looks two
-  // cells round for the nearest corridor centre-line piece, and draws that
-  // corridor's tracks (its cell's count, bits 8-10) side by side across it,
-  // TRACKS apart, on one ballast bed. Only points beside a piece count, not
-  // past its ends, so a corridor ends square, not in rings of rail.
+  // rail corridors (D-094): tracks side by side across the nearest piece; square ends
   bool inSlice = own.x >= 0 && own.y >= 0 && own.x < uSliceSize.x && own.y < uSliceSize.y;
   if (inSlice && uHasSegs == 1 && (texelFetch(uFieldRails, own, 0).r & 0x800) != 0) {
-    const float TRACKS = 0.36;  // track centre to track centre (roads.RAIL_TRACK_SPACING)
+    const float TRACKS = 0.36;  // roads.RAIL_TRACK_SPACING
     float bestC = 9.0;
     int kindC = 0;
     int tracks = 1;
@@ -803,11 +797,13 @@ void main() {
   const ivec2 N4[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
   int ramp = g.r - 1;
   int level = g.g;
+  // one-pixel lines (D-095): no cleanup, darkest shade
+  bool thin = (g.a >> 1) == 5;
 
   // Cleanup: a pixel whose four neighbours all agree with each other but not
   // with it is noise; adopt the neighbours' ramp and shade.
   ivec4 n0 = G(p + N4[0]);
-  bool agree = n0.r != 0;
+  bool agree = n0.r != 0 && !thin;
   for (int i = 1; i < 4; i++) {
     ivec4 ni = G(p + N4[i]);
     agree = agree && ni.r == n0.r && ni.g == n0.g;
@@ -827,7 +823,7 @@ void main() {
   float bayer = (BAYER[(a.y & 3) * 4 + (a.x & 3)] + 0.5) / 16.0;
   float aoDark = float(g.b) / 127.5;
   int shade = clamp(level - int(floor(aoDark + bayer)), 1, uShades - 1);
-  if (outline) shade = 0;
+  if (outline || thin) shade = 0;
 
   int index = 1 + ramp * uShades + shade;
   float local16 = clamp(floor((d - uDepthBase) * 256.0 + 0.5), 0.0, 65535.0);
