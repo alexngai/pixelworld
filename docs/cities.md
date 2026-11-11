@@ -37,7 +37,7 @@ Its rows say what that path would and wouldn't capture.
 | Amsterdam (and the rest of the Netherlands) | next | A | Canal houses with gables, canals, houseboats | 3D BAG LoD2.2 (roofs, heights, floors); BAG (year, use) | AHN 0.5 m DTM | CC0, CC BY 4.0 | docs | CityJSON ingestion comes with it |
 | Jerome, Arizona | spec only (`worlds/jerome`) | A | A mining town on a slope | Overture | USGS 3DEP | public domain, ODbL | direct | The worked example in worlds.md |
 | Montréal | candidate | A | Plexes with outdoor staircases, greystones | Assessment roll (year, floors, dwellings, use; CC BY 4.0); LoD2 for some boroughs | NRCan HRDEM 1 m | CC BY 4.0 | docs | second-region.md §4 |
-| Kyoto | candidate | B | Machiya rows, temples, tiled roofs | PLATEAU CityGML (year in ~83% of a sample, structure, use) | GSI 5 m | PDL 1.0 / CC BY | third-party | second-region.md §4 |
+| Kyoto | next | A | Machiya rows, temples and pagodas, tiled roofs, the Kamo river | PLATEAU 2025 (spec 5.0) LoD2, checked in three 1 km meshes (Nakagyō, Kiyomizu, Gion): build year 68–73% (back to the 1860s), structure 100% (`601` wooden on 39–52%), storeys 67–72%, measured height and use 100%; Overture: OSM footprints, heights 0% | GSI 1 m (`dem1a`) and 5 m DEM tiles, anonymous | PLATEAU PDL 1.0 / CC BY; GSI PDL 1.0 ("出典：国土地理院ウェブサイト", and say it was processed) | direct (2026-11-11) | One PLATEAU adapter serves every PLATEAU city |
 | Boston | candidate | B | Triple-deckers, bowfront brick rows | Property assessment (`BLDG_TYPE`, year, floors, roof; PDDL) | USGS 3DEP + lidar EPT | PDDL | docs | |
 | Washington DC | candidate | B | Victorian rowhouses, the Height Act skyline | CAMA (`STRUCT`, `STYLE`, `AYB`; CC BY 4.0) | USGS 3DEP + DC lidar | CC BY 4.0 | docs | lidar redacted around the White House |
 | Vienna | candidate | B | Gründerzeit blocks, Gemeindebau | Baukörpermodell LoD1.4; period per building part | City DGM | CC BY 4.0 | docs | |
@@ -46,7 +46,7 @@ Its rows say what that path would and wouldn't capture.
 | Zurich | candidate | B | Old town, lake | LoD2 roof model; GWR (year) | swissALTI3D | open, GWR ambiguous | docs | |
 | Barcelona | candidate | B | Eixample chamfered blocks | Catastro (year, use, floors per part) | PNOA lidar | Catastro's own licence; some city data CC BY-ND | docs | |
 | Copenhagen | candidate | B | Brick perimeter blocks | BBR (year, floors) | DHM 0.4 m | open with attribution, needs a token | docs | |
-| Tokyo (23 wards) | weak | B | Dense low-rise, pencil buildings | PLATEAU without build year | GSI 5 m | PDL 1.0 | third-party | |
+| Tokyo (23 wards) | next | B | Shibuya's scramble, Shinjuku's towers and neon, dense low-rise wooden quarters, elevated rail, Tokyo Tower and the Skytree | PLATEAU 2025 (spec 5.0) LoD2, checked in six meshes (Shibuya, Shinjuku, Asakusa, Yanaka, Ginza, Akihabara): **build year and structure 0%**, storeys 83–94%, measured height and use 100%; Overture: OSM footprints, heights 57% at Shibuya, 2% in Asakusa | GSI 1 m and 5 m DEM tiles | PDL 1.0 | direct (2026-11-11) | Typology by use, storeys, height and size, and by neighbourhood box; a mesh's CityGML is 80–230 MB |
 | Chicago | no | C | Two-flats, greystones | footprints and assessor data | USGS 3DEP | city terms grant no rights; county data unlicensed | docs | |
 | Philadelphia | no | C | Rowhouses | OPA building codes | USGS 3DEP | city keeps all rights | direct | |
 | London | no | C | Georgian and Victorian terraces | OS heights and age are paid | EA 1 m lidar | OS NGD paid | docs | |
