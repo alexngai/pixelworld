@@ -9,6 +9,8 @@ layout(location = 4) in vec2 aRoad;    // road mask, road class (top faces)
 layout(location = 5) in float aGeol;   // geology province id
 layout(location = 6) in vec3 aInstOffset; // instanced objects: position offset (0 otherwise)
 layout(location = 7) in vec2 aInstCell;   // instanced objects: owning cell (0 otherwise)
+layout(location = 8) in vec2 aFaceUv;     // faces drawn from texels: place on the face, in texels
+layout(location = 9) in vec4 aFaceRef;    // and the face's texels: offset / 4096, offset % 4096, width, height
 `;
 
 export const SHADOW_VS = /* glsl */ `#version 300 es
@@ -62,6 +64,8 @@ flat out vec2 vMat;
 flat out vec2 vCell;
 flat out vec2 vRoad;
 flat out float vGeol;
+out vec2 vFaceUv;
+flat out vec4 vFaceRef;
 
 void main() {
   vec3 pos = aPos + aInstOffset;
@@ -85,6 +89,8 @@ void main() {
   vCell = aCell + aInstCell;
   vRoad = aRoad;
   vGeol = aGeol;
+  vFaceUv = aFaceUv;
+  vFaceRef = aFaceRef;
 }
 `;
 
@@ -102,6 +108,11 @@ flat in vec2 vMat;
 flat in vec2 vCell;
 flat in vec2 vRoad;
 flat in float vGeol;
+#ifndef FIELD_WAYS
+in vec2 vFaceUv;
+flat in vec4 vFaceRef;
+uniform highp usampler2D uFaceTexels;  // a ramp per voxel face of the faces drawn from texels (material 99)
+#endif
 
 uniform vec2 uOrigin;
 uniform vec3 uSun;
@@ -609,6 +620,14 @@ void main() {
   float density;
   if (mat >= 100) {
     ramp = mat - 100; pattern = 0; density = 0.0;
+#ifndef FIELD_WAYS
+  } else if (mat == 99) {
+    // voxel faces of several colours merged into one rectangle: the colour of the one here
+    ivec2 l = clamp(ivec2(floor(vFaceUv)), ivec2(0), ivec2(vFaceRef.zw + 0.5) - 1);
+    int t = int(vFaceRef.x + 0.5) * 4096 + int(vFaceRef.y + 0.5) + l.y * int(vFaceRef.z + 0.5) + l.x;
+    int tw = textureSize(uFaceTexels, 0).x;
+    ramp = int(texelFetch(uFaceTexels, ivec2(t % tw, t / tw), 0).r); pattern = 0; density = 0.0;
+#endif
   } else {
     vec4 surf = uSurfaces[mat];
     ramp = int(surf.x); pattern = int(surf.y + 0.5); density = surf.z;

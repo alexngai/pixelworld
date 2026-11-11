@@ -69,6 +69,7 @@ export class BakeHost {
             heightStretch: objects.heightStretch,
             variants: objects.variants,
             heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0),
+            texels: true,
           });
           const scene = { meshes: [built.merged], batches: built.batches };
           const meshMs = performance.now() - t0;
@@ -199,6 +200,7 @@ export class BakeHost {
       heightStretch: objects.heightStretch,
       variants: objects.variants,
       heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0), // clamps to the slice
+      texels: true, // a facade of windows is one face, its colours texels (about a tenth of the vertices)
     });
   }
 

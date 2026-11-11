@@ -190,6 +190,8 @@ export interface ObjectBuildOptions {
   heightAt: (x: number, y: number) => number;
   /** Variants generated per group for instanced objects. */
   variants?: number;
+  /** Merge buildings' and landmarks' faces of several colours, the colours kept as texels (MeshData.texels). */
+  texels?: boolean;
 }
 
 export interface InstancedBatch {
@@ -305,7 +307,7 @@ export function footprintMask(
 
 /** Build meshes for a set of instances. */
 export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptions): ObjectMeshes {
-  const merged = new MeshBuilder();
+  const merged = new MeshBuilder({ texels: opts.texels });
   const variants = new Map<string, { mesh: MeshData; offsets: number[]; cells: number[] }>();
   const nVariants = opts.variants ?? 6;
   let skipped = 0;
