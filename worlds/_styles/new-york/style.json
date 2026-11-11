@@ -385,7 +385,7 @@
         "spans": 2,
         "side": 0.25,
         "towerRatio": 2.5,
-        "hangers": 2,
+        "hangers": 4,
         "tower": 1,
         "portals": 2,
         "leg": 0.3,
@@ -395,7 +395,7 @@
         "truss": 0.14,
         "pierTop": 0.15,
         "sag": 0,
-        "anchorTop": 1,
+        "anchorTop": 0.85,
         "sideBrace": 1,
         "sideDepth": 4
       }
