@@ -358,6 +358,11 @@ test.describe("Tokyo (D-092, D-093)", () => {
     await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.6912,35.6796");
     await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-yoyogi-r0.png");
   });
+
+  test("the Yamanote's tracks by Harajuku as one corridor along its centre line (D-094)", async ({ page }) => {
+    await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.7027,35.6700");
+    await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-harajuku-rails-r0.png");
+  });
 });
 
 test.describe("San Francisco (D-055, D-056)", () => {

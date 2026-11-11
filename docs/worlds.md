@@ -332,6 +332,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `names` | list of strings | — | Only lines whose name contains one of these. |
 | `unnamed` | true/false | — | Only lines without a name. |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only lines wholly inside this box. |
+| `bundle` | number, > 0 (m) | — | Parallel tracks within this distance are drawn as one corridor along its centre line, with its track count (D-094; micro-terrain worlds). |
 
 <a id="spec-smoothing"></a>
 #### `smoothing`

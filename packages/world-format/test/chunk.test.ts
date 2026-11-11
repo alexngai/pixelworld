@@ -110,6 +110,20 @@ describe("chunk codec", () => {
     expect(plain).not.toContain("RAIL");
   });
 
+  it("round-trips rail corridors' centre-line pieces and track counts (D-094)", () => {
+    const grid = new TerrainGrid(4, 4);
+    grid.rail[5] = (3 << 12) | (3 << 8) | 0x800; // a train corridor of four tracks
+    grid.railSeg[5 * 6 + 1] = 0x10ff2000; // its second slot
+    const bytes = new Uint8Array(encodeChunk({ x: 0, y: 0, size: 4, terrain: grid }));
+    const text = new TextDecoder().decode(bytes);
+    expect(text).toContain("TSG1");
+    expect(text).not.toContain("TSG0");
+    const back = decodeChunk(bytes.buffer).terrain;
+    expect(back.rail[5]).toBe((3 << 12) | (3 << 8) | 0x800);
+    expect(back.railSeg[5 * 6 + 1]).toBe(0x10ff2000);
+    expect(back.railSeg.filter((v) => v !== 0)).toHaveLength(1);
+  });
+
   it("round-trips lanes and medians (M3.5), and leaves them out when there are none", () => {
     const grid = new TerrainGrid(4, 4);
     grid.lane[5] = 4 | LANE_ONEWAY | LANE_DIVIDED; // a four-lane carriageway of a divided road

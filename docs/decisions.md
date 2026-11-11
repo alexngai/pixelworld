@@ -100,6 +100,7 @@ Status values:
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 | D-092 | Tokyo's look: a `tokyo` style pack and the `@pixelworlds/city-tokyo` generator plugin | Accepted (M5) |
 | D-093 | Tokyo's walking level: Shibuya to Shinjuku at 10 m, typed by use, storeys, size and neighbourhood boxes | Accepted (M5) |
+| D-094 | Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count | Accepted (M5) |
 
 ---
 
@@ -1114,3 +1115,22 @@ The point is more room for visual interest; both halves are wanted.
   - **Shibuya 109's cylinder** is drawn but barely reads: it rises a few metres over its block among taller neighbours; a taller sign tower, or the block and cylinder as one landmark, would show it.
   - **The scramble's diagonals** as stripes along each crosswalk's own direction, not screen-space zebras.
   - **Street trees:** only 341 on the avenues (the canopy map finds few of Omotesandō's zelkovas); Tokyo's street-tree records would place them.
+
+### D-094: Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count (accepted, M5)
+- **Why:** on `tokyo-walk` (D-093) the Yamanote and the other lines drew as broken, stepping strands. Two causes. Rails still drew from their cells' 8-way connections (D-061), which D-082 replaced for roads but left for rails, so a line at any other angle zigzagged. And OpenStreetMap maps every track on its own: by Harajuku and Shinjuku four to sixteen tracks run a few metres apart, landing in the same or neighbouring cells, where `drop_rungs` cuts the links between them, leaving gaps.
+- **What** (opt-in per rail rule, so other worlds are unchanged):
+  - **`bundle: <metres>`** on a `sources.rails` rule: its tracks within that distance of each other are drawn as one corridor. In the pipeline (`roads.bundle_tracks`): a kind's segments are first joined end to end where no third meets them (Overture splits a track at every switch); then, longest first, each track is sampled every quarter cell, and its stretches within reach of a corridor already laid join that corridor, while the rest (a cell or longer) start corridors of their own. Each corridor's line moves to the mean of its own and its joined tracks' points, averaged over about eight cells so it runs straight, and is simplified (0.15 cell); its track count is its median along it. A corridor that starts or ends where its track left another joins that one's line where its track was about two cells back, as a switch does.
+  - **Data:** the corridors' centre lines as pieces per cell, as roads' are (D-082): optional chunk sections `TSG0`–`TSG5`, `TerrainLayers.railSeg`, the field texture's third set of six slots (18 texels per cell). The `RAIL` layer keeps a corridor cell's track count less one in bits 8–10 (up to eight) and flags every cell its tracks may reach in bit 11. A bundled rule's tracks write no connections.
+  - **Drawing** (the micro-terrain shader): a flagged cell looks two cells round for the nearest corridor piece, counting only points beside a piece, not past its ends, so a corridor ends square instead of in rings of rail. It draws the corridor's tracks side by side across that line, 0.36 cell apart (about 3.6 m at 10 m), each a pair of one-pixel rails at the existing gauge, on one ballast bed. Street and cable-car tracks, and worlds without `bundle`, draw as before.
+  - **`tokyo-walk`** turns it on at 20 m (its golden of Yoyogi is unchanged), and a second golden shows the Yamanote's corridor by Harajuku (`tokyo-walk-harajuku-rails-r0.png`).
+- **Measured** (`tokyo-walk`): 255 tracks as 173 corridors over 1,560 cells, none with more than six pieces; the package stays 1.8 MB and builds in the same 53 s. Looked at with objects off and on: the Yamanote along the Meiji forest and through Harajuku as one straight band of tracks; Shinjuku's station throats as parallel corridors whose branches leave at an angle; the Chūō line meeting the Yamanote at Yoyogi, where the two corridors' tracks overlap. Tests: three parallel tracks and a continuation become one corridor on their middle; tracks that part become two corridors joined where they part; a corridor's cells carry kind, count and the reach flag; `TSG` round-trips in Python and TypeScript. Every existing golden is unchanged.
+- **Rejected alternatives:**
+  - **Each track along its own centre line** (not tried): ten tracks 0.4 cell apart would need more than six pieces in many cells, and their one-pixel rails would alias into a grey smear; the corridor draws the same number of tracks evenly spaced.
+  - **A count that changes along a corridor:** tried first; every change shifted all its tracks sideways by half a track, a visible step at every station throat. The median keeps them straight.
+  - **The medial axis of the tracks' buffered union** (not tried): it would follow the corridor exactly, but sprouts a spur at every branch, which would need pruning.
+  - **Smoothing the connections further (D-061's bent tracks):** still one track per cell, and still the gaps between parallel ones.
+- **Later:**
+  - **Viaducts and embankments:** Overture marks bridge stretches (`is_bridge`); much of Tokyo's rail runs on viaducts, which could be line objects as the bridges are.
+  - **Traffic's trains** still run on Overture's individual tracks, which lie inside the drawn corridor but not always on a drawn track.
+  - **Other worlds** (`nyc-walk`, `paris-walk`) could turn `bundle` on when their goldens are next regenerated; worlds without micro-terrain don't draw corridors.
+  - **Overhead wires** (D-092's Later) next: spans as line objects from pole to pole.

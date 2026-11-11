@@ -552,6 +552,11 @@ RAIL_RULE = Map(
         "names": Key(ListOf(Str()), "Only lines whose name contains one of these."),
         "unnamed": Key(Bool(), "Only lines without a name."),
         "bounds": Key(BBOX, "Only lines wholly inside this box."),
+        "bundle": Key(
+            Num(0, lo_open=True, unit="m"),
+            "Parallel tracks within this distance are drawn as one corridor along its centre "
+            "line, with its track count (D-094; micro-terrain worlds).",
+        ),
     }
 )
 

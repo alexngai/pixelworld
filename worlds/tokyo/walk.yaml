@@ -139,8 +139,10 @@ sources:
   rivers:
     subtypes: [river]
   # rails out of their tunnels: the Yamanote, Chūō and Saikyō lines, the
-  # Odakyū and Keiō where they surface
+  # Odakyū and Keiō where they surface. Each track is mapped on its own; the
+  # tracks of a line, and lines side by side, within 20 m of each other are
+  # drawn as one corridor along its centre line with its track count (D-094)
   rails:
-    - { draw: train, rail: [standard_gauge, narrow_gauge, subway, light_rail] }
+    - { draw: train, rail: [standard_gauge, narrow_gauge, subway, light_rail], bundle: 20 }
 
 geology: null

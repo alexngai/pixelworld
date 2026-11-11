@@ -581,6 +581,205 @@ def drop_rungs(rail: np.ndarray) -> np.ndarray:
     return out
 
 
+# Rail corridors (D-094): a cell holding a corridor's centre-line pieces also
+# stores its track count less one in bits 8-10 (up to RAIL_MAX_TRACKS), and every
+# cell the corridor's drawn tracks may reach is flagged in bit 11, so only those
+# cells look a couple of cells around for corridor pieces.
+RAIL_TRACK_SHIFT = 8
+RAIL_MAX_TRACKS = 8
+RAIL_NEAR = 1 << 11
+# a drawn corridor's half-width (cells) over its track count: tracks this far apart
+# (centre to centre), each its rails' gauge and its ballast out from its centre
+RAIL_TRACK_SPACING = 0.36
+RAIL_EDGE = 0.16
+
+
+def bundle_tracks(
+    lines: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray]]]],
+    reach: float,
+    step: float = 0.25,
+    min_run: float = 1.0,
+) -> list[tuple[str, int, list[tuple[np.ndarray, np.ndarray, np.ndarray]]]]:
+    """Parallel tracks as corridors (D-094). lines: (id, kind, parts in cells),
+    one line per mapped track. Longest first, each track is sampled every
+    `step` cells: its stretches within `reach` cells of a corridor of its kind
+    already laid join that corridor, and the rest (`min_run` cells or longer)
+    start corridors of their own, from the samples either side of them, so a
+    branch leaves its corridor where it diverges. Then each corridor's line
+    moves to the mean of its own and its joined tracks' points, averaged over
+    about eight cells, and counts them: (id, kind, [(xs, ys, tracks per vertex)]). A
+    corridor that starts or ends where its track left another is joined to that
+    one's line where its track was about two cells back, as a switch joins. A
+    corridor's count is its median along it (the same at every vertex)."""
+    import shapely
+    from shapely.ops import substring
+
+    # Overture splits a track at every switch and station: its segments, joined
+    # end to end where no third meets them, are each track's longest runs
+    items = []
+    for kind in sorted({ln[1] for ln in lines}):
+        segs = [
+            (seg_id, shapely.LineString(np.column_stack([xs, ys])))
+            for seg_id, k2, parts in sorted(lines, key=lambda ln: ln[0])
+            if k2 == kind
+            for xs, ys in parts
+            if len(xs) >= 2
+        ]
+        merged = shapely.line_merge(shapely.MultiLineString([g for _, g in segs if g.length > 0]))
+        for k, ln in enumerate(getattr(merged, "geoms", [merged])):
+            if ln.length > 0:
+                items.append((f"{kind}:{k}", kind, ln))
+    items.sort(key=lambda it: (-it[2].length, it[0]))
+    corridors: list[dict] = []
+    for t, (tid, kind, ln) in enumerate(items):
+        n = max(2, int(np.ceil(ln.length / step)) + 1)
+        ds = np.linspace(0.0, ln.length, n)
+        pts = shapely.line_interpolate_point(ln, ds)
+        same = [c for c in corridors if c["kind"] == kind]
+        near = np.zeros(n, dtype=bool)
+        nearest = np.zeros(n, dtype=int)
+        if same:
+            dist = np.stack([shapely.distance(pts, c["line"]) for c in same])
+            nearest = dist.argmin(axis=0)
+            near = dist.min(axis=0) <= reach
+        i = 0
+        while i < n:
+            j = i
+            while j + 1 < n and near[j + 1] == near[i]:
+                j += 1
+            if near[i]:
+                for q in range(i, j + 1):
+                    c = same[nearest[q]]
+                    c["joins"].append((t, c["line"].project(pts[q]), pts[q].x, pts[q].y))
+            elif ds[j] - ds[i] >= min_run or (i == 0 and j == n - 1):
+                a, b = max(i - 1, 0), min(j + 1, n - 1)
+                part = substring(ln, ds[a], ds[b])
+                # where it left a corridor (or meets one again), the point on its
+                # track about two cells back: joined there, it merges as a switch does
+                back, fwd = max(i - int(2.0 / step), 0), min(j + int(2.0 / step), n - 1)
+                corridors.append(
+                    {
+                        "id": f"{tid}@{ds[a]:.0f}" if a else tid,
+                        "kind": kind,
+                        "line": part,
+                        "joins": [],
+                        "attach": (pts[back] if i > 0 else None, pts[fwd] if j < n - 1 else None),
+                    }
+                )
+            i = j + 1
+    out_lines: list[shapely.LineString] = []
+    counts: list[np.ndarray] = []
+    for c in corridors:
+        line = shapely.segmentize(c["line"], 0.5)
+        xy = np.asarray(line.coords, dtype=np.float64)
+        sv = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(xy, axis=0).T))])
+        ns = np.ones(len(xy), dtype=np.int64)
+        if c["joins"]:
+            jt, js, jx, jy = (np.asarray(v) for v in zip(*c["joins"], strict=True))
+            moved = xy.copy()
+            for v in range(len(xy)):
+                sel = np.abs(js - sv[v]) <= 0.5
+                if not sel.any():
+                    continue
+                tracks = np.unique(jt[sel])
+                means = [(jx[sel & (jt == k)].mean(), jy[sel & (jt == k)].mean()) for k in tracks]
+                moved[v] = np.mean([xy[v], *means], axis=0)
+                ns[v] = 1 + len(tracks)
+            # the move, averaged over about eight cells, so the line runs on rather than
+            # wobbling with the joined tracks' samples (its outer tracks would wave)
+            xy = xy + _running_mean(moved - xy, 8)
+        # one count for the whole corridor, its typical one: a count that changed along
+        # it would shift every track sideways by half a track where it did
+        kept = shapely.simplify(shapely.LineString(xy), 0.15)
+        out_lines.append(kept)
+        counts.append(np.full(len(kept.coords), int(round(float(np.median(ns))))))
+    # corridors that start or end where their track left another: joined to its line
+    for k, c in enumerate(corridors):
+        xy = np.asarray(out_lines[k].coords)
+        ns = counts[k]
+        others = [m for m, o in enumerate(corridors) if m != k and o["kind"] == c["kind"]]
+        if not others:
+            continue
+        for end, ref in ((0, c["attach"][0]), (-1, c["attach"][1])):
+            if ref is None:
+                continue
+            m = min(others, key=lambda m: out_lines[m].distance(ref))
+            if out_lines[m].distance(ref) > 2.0 * reach:
+                continue
+            q = out_lines[m].interpolate(out_lines[m].project(ref))
+            if end == 0:
+                xy, ns = np.vstack([[q.x, q.y], xy]), np.concatenate([ns[:1], ns])
+            else:
+                xy, ns = np.vstack([xy, [q.x, q.y]]), np.concatenate([ns, ns[-1:]])
+        out_lines[k] = shapely.LineString(xy)
+        counts[k] = ns
+    return [
+        (c["id"], c["kind"], [(np.asarray(ln.coords)[:, 0], np.asarray(ln.coords)[:, 1], ns)])
+        for c, ln, ns in zip(corridors, out_lines, counts, strict=True)
+    ]
+
+
+def _running_mean(a: np.ndarray, r: int) -> np.ndarray:
+    """Mean over each row's r neighbours either side (fewer at the ends)."""
+    n = len(a)
+    c = np.concatenate([np.zeros((1,) + a.shape[1:]), np.cumsum(a, axis=0)])
+    lo = np.clip(np.arange(n) - r, 0, n)
+    hi = np.clip(np.arange(n) + r + 1, 0, n)
+    return (c[hi] - c[lo]) / (hi - lo).reshape((-1,) + (1,) * (a.ndim - 1))
+
+
+def rail_pieces(
+    corridors: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray, np.ndarray]]]],
+    shape: tuple[int, int],
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Corridors (bundle_tracks) as centre-line pieces per cell (D-094), as
+    roads' are (D-082): (pieces (cy, cx, PIECES), the RAIL layer's bits for
+    them (kind, track count, and RAIL_NEAR on every cell their tracks may
+    reach), cells with more pieces than fit)."""
+    cy, cx = shape
+    found: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    cells = np.zeros(shape, dtype=np.uint16)
+    reach = np.zeros(shape, dtype=np.int8)
+    for _cid, kind, parts in corridors:
+        for xs, ys, ns in parts:
+            mine: dict[tuple[int, int], list] = {}
+            tracks: dict[tuple[int, int], int] = {}
+            for i in range(len(xs) - 1):
+                n = int(min(RAIL_MAX_TRACKS, ns[i]))  # a vertex's count holds up to the next
+                for px, py, piece in cell_pieces(xs[i], ys[i], xs[i + 1], ys[i + 1]):
+                    if 0 <= px < cx and 0 <= py < cy:
+                        mine.setdefault((py, px), []).append(piece)
+                        tracks[(py, px)] = max(tracks.get((py, px), 1), n)
+            for (py, px), got in mine.items():
+                n = tracks[(py, px)]
+                for piece in merge_pieces(got):
+                    packed = pack_piece(*piece)
+                    if packed:
+                        found.setdefault((py, px), []).append((n, packed))
+                old = int(cells[py, px])
+                had = ((old >> RAIL_TRACK_SHIFT) & 7) + 1 if old else 0
+                k = max(kind, old >> RAIL_KIND_SHIFT)
+                cells[py, px] = (k << RAIL_KIND_SHIFT) | ((max(n, had) - 1) << RAIL_TRACK_SHIFT)
+                half = (max(n, had) - 1) / 2 * RAIL_TRACK_SPACING + RAIL_EDGE
+                reach[py, px] = max(int(reach[py, px]), int(np.ceil(half)))
+    out = np.zeros((cy, cx, PIECES), dtype=np.uint32)
+    dropped = 0
+    for (py, px), got in found.items():
+        uniq = list(dict.fromkeys(p for _, p in sorted(got, key=lambda g: -g[0])))
+        dropped += len(uniq) > PIECES
+        out[py, px, : min(PIECES, len(uniq))] = uniq[:PIECES]
+    # flag the cells each corridor's tracks may reach
+    near = np.zeros(shape, dtype=bool)
+    for r in range(1, int(reach.max(initial=0)) + 1):
+        src = reach >= r
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                near |= _neighbor(src, -dx, -dy, False)
+    near |= reach > 0
+    cells |= np.where(near, RAIL_NEAR, 0).astype(np.uint16)
+    return out, cells, dropped
+
+
 @dataclass
 class RoadLayer:
     mask: np.ndarray  # uint16 (cy, cx)

@@ -532,6 +532,8 @@ A full pack (`worlds/_styles/tokyo/style.json`), laid out like `paris` with its 
 | `landmark.tower.cylinder` | `cylinderTower` (Tokyo's) | Shibuya 109's cylinder, on its own round footprint: silver bands between bands of glass, a lit band under the top, a blank fin on top where the sign stands |
 | `landmark.gate.torii` | `myojinTorii` (Tokyo's) | the Meiji Shrine's great torii: two round pillars on dark bases, a tie beam through them, a strut, a second beam, and the lintel whose ends curve up, capped dark; unpainted cypress |
 
+**Rails:** in corridors (D-094): a line's parallel tracks within 20 m drawn as one band along its centre line, its tracks side by side on one ballast bed, in `steel`.
+
 **Street and traffic:** utility poles (`prop.pole`, `utilityPoles`, below), street lights and signals on grey poles, zelkovas for `tree.street` and the dark evergreen `forest` for `tree`, and `bay-area`'s vehicles in Tokyo's palette: silver trains with a green band, indigo taxis, white buses with a green band.
 
 **Utility poles** (`utilityPoles`): placed across residential streets (`streetProps` with `across: true`), one pole a model, 48 voxels (30 m at the walking level) apart. The pole stands at one kerb with a crossarm and a lower arm, a transformer on some; the power line runs from the crossarm along the street and sags to its lowest where one model meets the next, so it runs unbroken along a street that runs north–south or east–west. A prop turns only by quarter turns, so on streets at other angles the lines run in short staggered pieces. The telephone cable is a parameter (`cable`), off in the pack: two lines a voxel thick read as a dark band.

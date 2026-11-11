@@ -1,5 +1,8 @@
 import { LANE_DIVIDED, NO_WATER, PIECES, TerrainGrid } from "@pixelworlds/grid";
 
+/** Texels per cell in TerrainField.segs: road, path and rail pieces (D-082, D-094). */
+export const SEG_SLOTS = 3 * PIECES;
+
 /** The most cells the decal looks out for a median's two carriageways (M3.5). */
 export const MEDIAN_REACH = 3;
 /**
@@ -45,13 +48,15 @@ export interface TerrainField {
   wayReach: number;
   /**
    * Per cell (M3.5): rails drawn in the street, connections in bits 0-7 and
-   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
+   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN); a rail
+   * corridor's track count less one in bits 8-10 and RAIL_NEAR (D-094).
    */
   rails: Int16Array;
   /**
-   * Centre lines (D-082): per cell 2·PIECES RGBA8 texels, its road pieces
-   * then its path pieces (x0, y0, x1, y1 in 1/255 cell; empty slots last and
-   * zero), as a (2·PIECES·width) × height texture; null when the grid has none.
+   * Centre lines (D-082): per cell SEG_SLOTS RGBA8 texels, its road pieces,
+   * then its path pieces, then its rail corridors' (D-094) (x0, y0, x1, y1 in
+   * 1/255 cell; empty slots last and zero), as a (SEG_SLOTS·width) × height
+   * texture; null when the grid has none.
    */
   segs: Uint8Array | null;
   /** Height (steps) that world-edge skirts reach down to. */
@@ -204,12 +209,13 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
   const rails = new Int16Array(n);
   for (let i = 0; i < n; i++) rails[i] = grid.rail[i]! & 0x7fff;
   let segs: Uint8Array | null = null;
-  if (grid.roadSeg.some((v) => v !== 0) || grid.pathSeg.some((v) => v !== 0)) {
-    const words = new Uint32Array(n * 2 * PIECES); // little-endian: the bytes are x0, y0, x1, y1
+  if (grid.roadSeg.some((v) => v !== 0) || grid.pathSeg.some((v) => v !== 0) || grid.railSeg.some((v) => v !== 0)) {
+    const words = new Uint32Array(n * SEG_SLOTS); // little-endian: the bytes are x0, y0, x1, y1
     for (let i = 0; i < n; i++)
       for (let k = 0; k < PIECES; k++) {
-        words[i * 2 * PIECES + k] = grid.roadSeg[i * PIECES + k]!;
-        words[i * 2 * PIECES + PIECES + k] = grid.pathSeg[i * PIECES + k]!;
+        words[i * SEG_SLOTS + k] = grid.roadSeg[i * PIECES + k]!;
+        words[i * SEG_SLOTS + PIECES + k] = grid.pathSeg[i * PIECES + k]!;
+        words[i * SEG_SLOTS + 2 * PIECES + k] = grid.railSeg[i * PIECES + k]!;
       }
     segs = new Uint8Array(words.buffer);
   }
