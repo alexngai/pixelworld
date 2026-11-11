@@ -20,7 +20,7 @@
     "limit": "88 KB"
   },
   {
-    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API)",
+    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/094's centre lines and rail corridors and D-095's one-pixel lines)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js",
@@ -30,7 +30,7 @@
       "dist/generators.js"
     ],
     "gzip": true,
-    "limit": "100 KB"
+    "limit": "110 KB"
   },
   {
     "name": "pixelworld/format: reading a manifest and chunks (tree-shaken)",

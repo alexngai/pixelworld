@@ -71,7 +71,7 @@ interface UploadedMesh {
   count: number;
   /** Instance count for instanced batches; 0 for plain meshes. */
   instances: number;
-  /** One-pixel lines (MeshData.primitive "lines", D-095): drawn as GL lines, and casting no shadow. */
+  /** One-pixel lines (MeshData.primitive "lines", D-095), instanced or not: drawn as GL lines, and casting no shadow. */
   lines: boolean;
 }
 
@@ -338,7 +338,7 @@ export class Baker {
     for (const d of draws) {
       if (!d.count) continue;
       gl.bindVertexArray(d.vao);
-      if (d.instances) gl.drawArraysInstanced(gl.TRIANGLES, 0, d.count, d.instances);
+      if (d.instances) gl.drawArraysInstanced(d.lines ? gl.LINES : gl.TRIANGLES, 0, d.count, d.instances);
       else gl.drawArrays(d.lines ? gl.LINES : gl.TRIANGLES, 0, d.count);
     }
   }

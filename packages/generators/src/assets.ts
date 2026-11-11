@@ -1,7 +1,7 @@
 import { generateContained, type ModelFailure, type ModelSite } from "./failures";
-import { DIRECT_RAMP_BASE, FACE_LINE, MeshBuilder, type MeshData } from "./mesh";
+import { MeshBuilder, type MeshData } from "./mesh";
 import { getGenerator } from "./registry";
-import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
+import { VoxelModel, meshLines, meshVoxels, rng, type VoxelScale } from "./voxel";
 
 /**
  * Procedural assets for semantic groups (D-030). A style pack maps group
@@ -318,20 +318,9 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
   const merged = new MeshBuilder();
   const lines = new MeshBuilder();
   // a model's one-pixel lines (D-095), placed as its voxels are, owned by the object's cell
-  const addLines = (model: VoxelModel, origin: [number, number, number], cell: [number, number]) => {
-    for (const l of model.lines)
-      for (const p of [l.a, l.b])
-        lines.vertex(
-          [origin[0] + p[0] * opts.voxel.h, origin[1] + p[1] * opts.voxel.h, origin[2] + p[2] * opts.voxel.v],
-          [0, 0, 1],
-          DIRECT_RAMP_BASE + model.materials[l.m]!,
-          FACE_LINE,
-          1,
-          cell[0],
-          cell[1],
-        );
-  };
-  const variants = new Map<string, { mesh: MeshData; offsets: number[]; cells: number[] }>();
+  const addLines = (model: VoxelModel, origin: [number, number, number], cell: [number, number], into = lines) =>
+    meshLines(model, opts.voxel, origin, cell, into);
+  const variants = new Map<string, { mesh: MeshData; lines: MeshData | null; offsets: number[]; cells: number[] }>();
   const nVariants = opts.variants ?? 6;
   let skipped = 0;
   const failures: ModelFailure[] = [];
@@ -408,7 +397,10 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       const model = rotateModel(gen(makeContext(spec, opts, seed), { seed, repeated: true }), inst.r ?? 0);
       // instance origin is the model's bottom centre
       const origin: [number, number, number] = [-(model.sx * opts.voxel.h) / 2, -(model.sy * opts.voxel.h) / 2, 0];
-      batch = { mesh: meshVoxels(model, opts.voxel, origin, [0, 0]).build(), offsets: [], cells: [] };
+      const lb = new MeshBuilder();
+      addLines(model, origin, [0, 0], lb);
+      const ln = lb.vertexCount ? { ...lb.build(), primitive: "lines" as const } : null;
+      batch = { mesh: meshVoxels(model, opts.voxel, origin, [0, 0]).build(), lines: ln, offsets: [], cells: [] };
       variants.set(key, batch);
     }
     batch.offsets.push(inst.x, inst.y, base);
@@ -417,12 +409,13 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
   return {
     merged: merged.build(),
     lines: { ...lines.build(), primitive: "lines" },
-    // an empty variant would have no bounds: leave it out
-    batches: [...variants.values()].filter((b) => b.mesh.vertexCount > 0).map((b) => ({
-      mesh: b.mesh,
-      offsets: new Float32Array(b.offsets),
-      cells: new Float32Array(b.cells),
-    })),
+    // an empty variant would have no bounds: leave it out; a variant's lines are a batch of their own
+    // (a "lines" mesh, D-095), with copies of its offsets, which a render scale scales per batch
+    batches: [...variants.values()].flatMap((b) =>
+      [b.mesh, b.lines]
+        .filter((mesh): mesh is MeshData => !!mesh && mesh.vertexCount > 0)
+        .map((mesh) => ({ mesh, offsets: new Float32Array(b.offsets), cells: new Float32Array(b.cells) })),
+    ),
     skipped,
     failures,
   };

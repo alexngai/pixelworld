@@ -15,7 +15,9 @@ import { VoxelModel, type Generator } from "pixelworld/generators";
  * params: span (voxels across the street; 12), length (voxels between poles;
  * 48, 30 m at the walking level), height (the pole's voxels; 26), sag (2),
  * transformer (the share of poles with one; 0.3), cable (0: no telephone
- * cable), wires (0: none).
+ * cable), wires (0: none), lines (1: the arms and wires one-pixel lines,
+ * D-095, and a stay wire on some poles; 0), stay (the share of poles with
+ * one; 0.35).
  * roles: pole, wire, box (the transformer; pole if absent).
  */
 export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
@@ -34,11 +36,24 @@ export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
   // the crossarm, across the street at the top; the low-voltage arm below it
   const zTop = h - 2;
   const zLow = h - 6;
-  for (let x = px - 2; x <= px + 1; x++) m.set(x, py, zTop, pole);
-  for (let x = px - 1; x <= px; x++) m.set(x, py, zLow, pole);
+  const thin = param("lines", 0) > 0;
+  if (thin) {
+    // one-pixel lines (D-095): the arms, and on some poles a stay wire down to the ground along the street
+    m.line([px - 2, py + 0.5, zTop + 0.5], [px + 2, py + 0.5, zTop + 0.5], pole);
+    m.line([px - 1, py + 0.5, zLow + 0.5], [px + 1, py + 0.5, zLow + 0.5], pole);
+    if (rand() < param("stay", 0.35)) m.line([px + 0.5, py + 0.5, zLow], [px + 0.5, py + 0.5 + Math.round(h * 0.3), 0], wire);
+  } else {
+    for (let x = px - 2; x <= px + 1; x++) m.set(x, py, zTop, pole);
+    for (let x = px - 1; x <= px; x++) m.set(x, py, zLow, pole);
+  }
   // the lines along the street, lowest where they meet the next pole's
   const line = (x: number, z0: number) => {
     const zAt = (y: number) => z0 - Math.round(sag * ((y - py) / (L / 2)) ** 2);
+    if (thin) {
+      const zf = (y: number) => z0 + 0.5 - sag * ((y - py) / (L / 2)) ** 2;
+      for (let y = 1; y <= L; y++) m.line([x + 0.5, y - 1, zf(y - 1)], [x + 0.5, y, zf(y)], wire);
+      return;
+    }
     for (let y = 0; y < L; y++) {
       const z = zAt(y);
       const prev = y > 0 ? zAt(y - 1) : z;

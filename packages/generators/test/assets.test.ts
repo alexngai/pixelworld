@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   VoxelModel,
   buildObjects,
+  generateModel,
   footprintMask,
   meshVoxels,
   objectVoxelScale,
@@ -152,6 +153,43 @@ describe("assets", () => {
     expect(Array.from(out.lines.position)).toEqual([0, 0, 10, 0.5, 0.25, 10 + 2 * 0.5 * 2]);
     expect(out.lines.material[1]).toBe(5); // FACE_LINE
     unregisterGenerators("test-lines");
+  });
+
+  it("draws an instanced model's lines as an instanced lines batch of their own (D-095)", () => {
+    registerGenerators({ mast: ({ ramp }) => { const m = new VoxelModel(1, 1, 2); const c = m.material(ramp("wire")); m.set(0, 0, 0, c); m.line([0.5, 0.5, 1], [0.5, 0.5, 9], c); return m; } }, { source: "test-mast" });
+    const masts = { ...catalog, "prop.mast": { generator: "mast", ramps: { wire: "glow" } } } as AssetCatalog;
+    const out = buildObjects(
+      [0, 1, 2].map((k) => ({ g: "prop.mast", x: 1.5 + k, y: 1.5, s: 6 })), // one variant
+      { ...opts, catalog: masts, heightAt: () => 3 },
+    );
+    const [voxels, lines] = [out.batches.find((b) => !b.mesh.primitive)!, out.batches.find((b) => b.mesh.primitive === "lines")!];
+    expect(voxels.offsets.length / 3).toBe(3);
+    expect(lines.mesh.vertexCount).toBe(2);
+    expect(Array.from(lines.offsets)).toEqual(Array.from(voxels.offsets));
+    expect(lines.offsets).not.toBe(voxels.offsets); // its own copy: a render scale scales each batch's
+    // the line stands where the voxel does: from the model's bottom centre, 1 to 9 voxels up
+    expect(Array.from(lines.mesh.position)).toEqual([0, 0, 0.5, 0, 0, 4.5]);
+    unregisterGenerators("test-mast");
+  });
+
+  it("draws street lights and signals in one-pixel lines with `lines` (D-095), as voxels without", () => {
+    const props = {
+      ...catalog,
+      "prop.light": { generator: "streetLight", ramps: { pole: "glow", lamp: "glow" } },
+      "prop.light.thin": { generator: "streetLight", ramps: { pole: "glow", lamp: "glow" }, params: { lines: 1, height: 12, reach: 3 } },
+      "prop.signal": { generator: "trafficSignal", ramps: { pole: "glow", head: "pine", light: "glow" } },
+      "prop.signal.thin": { generator: "trafficSignal", ramps: { pole: "glow", head: "pine", light: "glow" }, params: { lines: 1, height: 10, reach: 4 } },
+    } as AssetCatalog;
+    const gen = (g: string) => generateModel(props, rampIds, g, { seed: 1 });
+    expect([gen("prop.light").count(), gen("prop.light").lines.length]).toEqual([8, 0]); // the voxel light as it was
+    expect([gen("prop.signal").count(), gen("prop.signal").lines.length]).toEqual([8, 0]);
+    const light = gen("prop.light.thin");
+    expect(light.count()).toBe(1); // the lamp; mast and arm are lines
+    expect(light.lines[0]!.a).toEqual([0.5, 0.5, 0]); // the mast from the ground
+    expect(light.lines.at(-1)!.b[0]).toBeCloseTo(3.5, 6); // the arm out to the lamp
+    const signal = gen("prop.signal.thin");
+    expect(signal.lines.length).toBe(2); // the pole and its arm
+    expect(signal.count()).toBe(6); // three lamps under a hood
   });
 
   it("sits footprints on their lowest corner", () => {

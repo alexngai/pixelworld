@@ -220,6 +220,25 @@ describe("Tokyo's wires (D-095)", () => {
     }
   });
 
+  it("hangs its poles' arms, and on some a stay wire, as one-pixel lines (D-095)", () => {
+    let stays = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const m = generateModel(style.assets, rampIds, "prop.pole", { seed });
+      const [arm, low, ...rest] = m.lines;
+      expect(arm!.a[2]).toBe(arm!.b[2]); // the crossarm level, across the street (x)
+      expect(Math.abs(arm!.b[0] - arm!.a[0])).toBe(4);
+      expect(low!.a[2]).toBeLessThan(arm!.a[2]);
+      if (rest.length) {
+        stays++;
+        expect(rest[0]!.b[2]).toBe(0); // down to the ground
+      }
+      // the pole itself stays a column of voxels
+      expect(m.count()).toBeGreaterThanOrEqual(26);
+    }
+    expect(stays).toBeGreaterThan(2);
+    expect(stays).toBeLessThan(15);
+  });
+
   it("climbs from a pole on low ground to one on higher ground", () => {
     const { model } = span([0.5, 0.5], [3.5, 0.5], [0, 8]);
     expect(model.lines[0]!.a[2]).toBe(25);

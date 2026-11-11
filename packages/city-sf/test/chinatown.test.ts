@@ -121,6 +121,26 @@ describe("lanterns strung across a street", () => {
       }
     });
 
+  it("string their wire as a one-pixel line with `lines` (D-095), the lanterns round it", () => {
+    const lined = { ...style.assets, "prop.lanterns": { ...style.assets["prop.lanterns"]!, params: { ...style.assets["prop.lanterns"]!.params, lines: 1 } } };
+    for (let seed = 1; seed <= 4; seed++) {
+      const m = generateModel(lined, rampIds, "prop.lanterns", { seed });
+      // no wire voxels, an unbroken line from one end to the other, sagging in the middle
+      for (let x = 0; x < m.sx; x++) for (let z = 0; z < m.sz; z++) expect(rampAt(m, x, 0, z)).not.toBe("asphalt");
+      expect(m.lines.length).toBe(m.sx - 1);
+      for (let k = 1; k < m.lines.length; k++) expect(m.lines[k]!.a).toEqual(m.lines[k - 1]!.b);
+      const zs = m.lines.map((l) => l.a[2]);
+      expect(Math.min(...zs)).toBeLessThan(zs[0]!);
+      // each lantern's top voxel holds the line where it hangs
+      for (let x = 0; x < m.sx; x++)
+        for (let z = 0; z < m.sz; z++)
+          if (rampAt(m, x, 0, z) === "chinatown-red" && !m.get(x, 0, z + 1)) {
+            const l = m.lines.find((s) => s.a[0] <= x + 0.5 && s.b[0] >= x + 0.5)!;
+            expect(Math.abs(l.a[2] - (z + 0.5))).toBeLessThanOrEqual(1);
+          }
+    }
+  });
+
   it("are registered with the style's groups", () => {
     expect(Object.keys(CHINATOWN_GENERATORS).sort()).toEqual(["gate", "lanterns"]);
     expect(style.assets["landmark.gate"]!.generator).toBe("gate");
