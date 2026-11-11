@@ -497,3 +497,41 @@ A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with i
 | `landmark.bridge.stone`, `.short` | `stoneArchBridge` (Paris's) | the Pont Neuf's two arms (seven arches and five): round arches between piers with pointed cutwaters, a half-round bastion over each pier with a lamp, a cornice of plain mascarons, stone pavements |
 
 **Street and traffic:** `prop.streetlight` and `prop.signal` in Wallace green, plane trees for `tree` and `tree.street` (broad pale-green crowns on pale trunks), and `bay-area`'s vehicles in Paris's palette, with white river boats.
+
+## 21. Tokyo (the `tokyo` pack, D-092)
+
+A full pack (`worlds/_styles/tokyo/style.json`), laid out like `paris` with its own 42 ramps and no fog. It names `["@pixelworlds/city-sf", "@pixelworlds/city-tokyo"]`: San Francisco's for `block`, `decoTower` and `sfTower` (civic blocks, warehouses, towers), Tokyo's for the seven generators below (`packages/city-tokyo`).
+
+**Ramps**
+- **Cladding:** `tile-beige`, `tile-brown` and `tile-white` (the tile of Tokyo's mid-rises and mansions), `concrete`, `granite`, `mortar` (houses' render), `siding` (houses' blue-grey metal siding), `tower-white`.
+- **Roofs:** `roof-metal` (galvalume, blue-grey), `roof-tile` (kawara, dark grey), `roof-flat`, `copper` (the shrine's roofs).
+- **Glass:** `glass`, `lit`, `lit-cool` and `curtain-glass` (blue-green curtain walls).
+- **Signs:** `neon-pink`, `neon-cyan`, `neon-yellow`, `sign-white` and `sign-red`, which glow at night with `lit`, `lit-cool` and `marker`: Tokyo by night is its signs.
+- **Street:** `asphalt`, `sidewalk`, white `marking` and `crosswalk` (the zebras' white), `pole` and `wire` (utility poles and their lines), `jr-green` (the Yamanote's band, buses, pharmacy signs), `steel` (rails, frames, the twin towers' dark stone), `taxi` (the indigo of Tokyo's taxis), `gravel` (the shrine's approaches), `cypress` (unpainted shrine timber), `zelkova` (street trees) and `forest` (the evergreen Meiji forest and the parks).
+
+**The fabric** (`buildings.ts` in `packages/city-tokyo`). Storeys are PLATEAU's, which count those above ground.
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.zakkyo`, `building.zakkyo.quiet`, `building.commercial` | `zakkyo` | The narrow mixed-use building (雑居ビル), any height, storeys from the record. At the street, a shopfront under a lit sign band, the stair's door on one side. Above, ribbon windows, punched windows or a glass front, with a tenant's sign panel across the spandrel of most floors. On most, a vertical sign board of stacked boxes, one a floor, stands on the shop's canopy in front of an upper front set back a voxel for it, and rises past the parapet; on some, a billboard on the roof; a stair and lift penthouse. Tile, concrete or granite. `.quiet` (narrow offices outside the entertainment districts, low shops) has fewer panels and boards; `building.commercial` is between them. |
+| `building.office` | `zakkyo` (`office: 1`) | A mid-rise office: ribbon windows or a glass front in curtain glass, few signs, no boards or billboards. |
+| `building.mansion`, `building.residential` | `mansion` | The apartment slab (マンション): its long side to the south, whatever the street, with a balcony at every floor: a light parapet band, the sliding doors' glass behind it, partitions between flats, an air conditioner's outdoor unit on some, all painted flush. The entrance hall's glass in the middle of the street floor, or shops under signs. The back is the open corridor: a parapet band at each floor over the flats' doors. A lift penthouse, and a water tank on a steel stand on some. Any height (tower flats too). |
+| `building.kodate`, `building.shophouse`, `building.shrine` | `kodate` | The detached house (戸建て): two storeys (one to three), siding, mortar or tile, under a gabled roof (its ridge along the longer side), a hipped one, a flat one on modern boxes or a shed roof, in metal or tile. A yard in front behind a low block wall open for the car; the door and a window at the street; a balcony's rail painted across the upper floor. `building.shophouse` puts a shopfront under a sign band on the street floor and has no yard. `building.shrine` draws the Meiji Shrine's halls: cypress walls under steep copper gables, no glass. |
+
+- **Nothing projects** (the building rules, §13): balconies are painted on the wall; a vertical sign board stands on a canopy in front of a front set back for it; a pitched roof steps in layer by layer inside the footprint.
+- **Paint schemes:** trim follows the wall's variant when they list the same variants (§15): a mansion's parapets are a shade lighter than its tile.
+
+**Reused from San Francisco:** `building.civic` (schools, hospitals, offices of government) and `building.industrial` use `block`; `building.tower` and `building.tower.shinjuku` use `sfTower` in white slabs, dark granite, tile-clad postmodern towers and blue-green glass (Shinjuku's mix has more slabs and granite); `landmark.tower.spire` uses `decoTower`.
+
+**Landmarks** (generic depictions, D-051; no names, logos, crests or clock faces)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.hall.twin` | `twinTowerHall` (Tokyo's) | the Tokyo Metropolitan Government Building No. 1: a slab whose upper third splits into a square tower at each end, each chamfered at its top storeys into a square turned 45° under a plant room and a mast; a grid of light stone piers and floor bands round dark panels and glass, dark stripes up the towers; a tall glazed lobby |
+| `landmark.tower.spire` | `decoTower` (San Francisco's) | the NTT Docomo Yoyogi Building: a slender tower stepping in at its top storeys under a tall spire |
+| `landmark.tower.cylinder` | `cylinderTower` (Tokyo's) | Shibuya 109's cylinder, on its own round footprint: silver bands between bands of glass, a lit band under the top, a blank fin on top where the sign stands |
+| `landmark.gate.torii` | `myojinTorii` (Tokyo's) | the Meiji Shrine's great torii: two round pillars on dark bases, a tie beam through them, a strut, a second beam, and the lintel whose ends curve up, capped dark; unpainted cypress |
+
+**Street and traffic:** utility poles (`prop.pole`, `utilityPoles`, below), street lights and signals on grey poles, zelkovas for `tree.street` and the dark evergreen `forest` for `tree`, and `bay-area`'s vehicles in Tokyo's palette: silver trains with a green band, indigo taxis, white buses with a green band.
+
+**Utility poles** (`utilityPoles`): placed across residential streets (`streetProps` with `across: true`), one pole a model, 48 voxels (30 m at the walking level) apart. The pole stands at one kerb with a crossarm and a lower arm, a transformer on some; the power line runs from the crossarm along the street and sags to its lowest where one model meets the next, so it runs unbroken along a street that runs north–south or east–west. A prop turns only by quarter turns, so on streets at other angles the lines run in short staggered pieces. The telephone cable is a parameter (`cable`), off in the pack: two lines a voxel thick read as a dark band.

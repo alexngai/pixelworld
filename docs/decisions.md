@@ -98,6 +98,7 @@ Status values:
 | D-087 | Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined | Accepted (M5) |
 | D-088 | More Paris landmarks, palaces typed by name, and footprints that keep their courtyards | Accepted (M5) |
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
+| D-092 | Tokyo's look: a `tokyo` style pack and the `@pixelworlds/city-tokyo` generator plugin | Accepted (M5) |
 
 ---
 
@@ -1066,3 +1067,26 @@ The point is more room for visual interest; both halves are wanted.
   - Neighbourhoods from each building's ward code (`uro:city`) and the code list `Common_localPublicAuthorities.xml`, for `hoods:` rules.
   - What `yearOfConstruction` means for rebuilt temples (Nishi Hongan-ji's 17th- and 18th-century halls read 1989), and why 14% of Kyoto's wooden buildings have flat LoD2 roofs.
   - Fetching GSI's tiles in parallel (one at a time now, about 0.5 s each).
+
+### D-092: Tokyo's look: a `tokyo` style pack and the `@pixelworlds/city-tokyo` generator plugin (accepted, M5)
+- **Why:** Tokyo reads by a fabric no other pack draws: narrow mixed-use mid-rises (zakkyo) faced in tile under stacked tenants' signs and vertical sign boards, apartment slabs whose fronts are all balconies, small detached houses under metal roofs behind block walls, utility poles and their wires over the residential streets, and, by night, the signs' neon. New York's and Paris's generators draw stoops, fire escapes, mansards; San Francisco's `block` and towers fit Tokyo's offices and skyscrapers but not its fabric. The walking level's landmarks (D-093) need three shapes the kit doesn't have: twin towers on a slab, a cylinder, a torii.
+- **What:**
+  - **The style pack** `worlds/_styles/tokyo`, a full pack laid out like `paris` (D-085), with 42 ramps (the limit): the beige, brown and white tile of Tokyo's mid-rises and mansions, concrete, granite, mortar and metal siding, galvalume and kawara roofs, copper, curtain glass, the signs' neon pink, cyan, yellow, white and red, utility-pole grey and wire, JR green, the crosswalks' white, zelkova street trees, the evergreen Meiji forest, the shrine's gravel and unpainted cypress, Tokyo's indigo taxis. At night the signs glow with the lit windows and the marker (style guide §21). It names `["@pixelworlds/city-sf", "@pixelworlds/city-tokyo"]`: San Francisco's `block` for civic blocks and warehouses, `sfTower` for towers (west Shinjuku's mix has more white slabs and dark granite), `decoTower` for the NTT Docomo Yoyogi Building.
+  - **The plugin** `packages/city-tokyo`, wired as `city-nyc` and `city-paris` are (core's `KNOWN_PLUGIN_GENERATORS`, the viewer's `CITY_PACKS`, the game's plugins, a changeset):
+    - `zakkyo`: any height, storeys from the record; a shopfront under a lit band; ribbon, punched or glass fronts with a sign panel across most floors' spandrels; on most, a vertical board of stacked boxes, one a floor, standing on the shop's canopy in front of an upper front set back a voxel for it and rising past the parapet; a roof billboard on some. Parameters make the quieter variant (`signs`, `vertical`, `billboard`) and offices (`office: 1`).
+    - `mansion`: balconies on the footprint's long side nearer south (`slabFront`), whatever the street: a light parapet band at every floor, the glass behind it, partitions between flats, outdoor units, all painted flush; the open corridor at the back; a lift penthouse and on some a water tank.
+    - `kodate`: two storeys (one to three) under a gabled (ridge along the longer side), hipped, flat or shed roof built by distance in from the eaves, so it stays inside the footprint; a yard behind a block wall open for the car; `shop: 1` makes a shop house, and parameters draw the Meiji Shrine's halls in cypress under copper.
+    - `twinTowerHall`, `cylinderTower` and `myojinTorii` (D-093's landmarks), and `utilityPoles`.
+  - **Utility poles:** the prop system can draw them: `streetProps` with `across: true` places a model on the street's line turned so its x runs across it; the pole stands at one kerb and its power line runs the model's length along the street, sagging to its lowest where one model meets the next, so on a street running north–south or east–west the line is unbroken from pole to pole.
+- **Checked:** tests build every Tokyo group over footprints from 1 × 4 to 40 × 18, a notched lot and a diagonal, at heights of 10, 40 and 140 voxels, with and without hints (567 models: inside the footprint, no overhangs, glass only on the skin), and check the zakkyo's signs and boards, the mansion's south-facing parapet bands, the kodate's ridge and hips, its block wall and gap, and the shrine's copper and absence of glass. Looked at in the model preview and in the world (D-093).
+- **Rejected alternatives:**
+  - **A variant of `paris` or `new-york` (`extends`):** committed packs can't use it, and Tokyo replaces nearly every ramp.
+  - **New types of New York's or San Francisco's generators:** their facade plans don't hold a sign board standing in front of a set-back front, balconies across a slab or a pitched roof stepping in from the eaves; a pack per city keeps versions apart (D-081).
+  - **A Shinjuku skyscraper generator:** `sfTower`'s white slabs, dark granite and glass towers already read as west Shinjuku's 1970s–2000s towers.
+  - **Projecting balconies and sign boards:** overhangs, which the building rules forbid (D-021).
+  - **Lettering on the signs:** none, as everywhere (D-051): the signs are blocks of colour that glow at night.
+  - **Three lines on each pole** (power, low voltage, telephone): a voxel is 0.6 m at the walking level and each line is outlined, so three lines side by side read as a black band across the rooftops; one line (the telephone cable is a parameter, off) still reads as Tokyo's wires.
+- **Later:**
+  - **Publishing `@pixelworlds/city-tokyo`**, as for New York and Paris.
+  - **Wires at any angle:** a prop turns by quarter turns only, so on streets at other angles the lines run in short staggered pieces; a line prop drawn between pole positions would follow any street.
+  - **Fabric left out:** exterior emergency stairs, the rooftop advertising towers of Shinjuku's east side, shuttered shopfronts by day, vending machines, the elevated expressways' structure, wooden row houses (nagaya) in the older quarters.
