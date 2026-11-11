@@ -352,6 +352,15 @@ test.describe("Paris (D-084, D-085, D-086)", () => {
   });
 });
 
+test.describe("Kyoto (D-089, D-090, D-091)", () => {
+  test("machiya streets under the Yasaka Pagoda: the walking level typed from PLATEAU", async ({ page }) => {
+    // the kyoto style pack and its city pack, named by the world: machiya and
+    // wooden houses under grey tile round a pagoda landmark
+    await open(page, "world=/kyoto-walk/&marker=0&zoom=2&rot=0&at=135.7790,34.9985");
+    await expect(page.locator("#view")).toHaveScreenshot("kyoto-walk-yasaka-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world

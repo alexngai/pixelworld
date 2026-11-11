@@ -1,0 +1,76 @@
+{
+  "packageHash": "70bada6f1ce35a84a987c8d9f6a1f5873a284fe90a3070a7401cacb16bf3fc4e",
+  "cells": [
+    338,
+    300
+  ],
+  "chunks": 30,
+  "heightRange": [
+    5,
+    60
+  ],
+  "inputs": {
+    "roadSegments": 13868,
+    "riverLines": 319
+  },
+  "objects": {
+    "building.commercial": 435,
+    "building.house": 336,
+    "building.house.gabled": 8210,
+    "building.machiya": 6260,
+    "building.midrise": 10946,
+    "building.parking": 17,
+    "building.residential": 6905,
+    "building.shrine": 66,
+    "building.temple": 448,
+    "building.tower": 64,
+    "building.tower.hotel": 4,
+    "landmark.gate.romon": 1,
+    "landmark.gate.sanmon": 1,
+    "landmark.pagoda": 1,
+    "landmark.pagoda.three": 1,
+    "landmark.temple.stage": 1,
+    "landmark.tower.candle": 1,
+    "prop.signal": 54,
+    "prop.streetlight": 1142,
+    "tree": 22059,
+    "tree.street": 559
+  },
+  "roads": {
+    "cells": 18589,
+    "edges": 19514,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 17,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 9083,
+    "cells": 19235
+  },
+  "rails": {
+    "street": 0,
+    "cable": 0,
+    "train": 1174
+  },
+  "lanes": {
+    "counted": 21041,
+    "oneway": 10066,
+    "divided": 3138
+  },
+  "surfaces": {
+    "woodland": 18916,
+    "water": 1211,
+    "desert": 237,
+    "grass": 177,
+    "farmland": 17,
+    "urban": 77362,
+    "lawn": 3480
+  },
+  "routes": {
+    "road": 3198,
+    "train": 68
+  }
+}

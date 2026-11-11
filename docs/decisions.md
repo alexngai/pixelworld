@@ -99,6 +99,7 @@ Status values:
 | D-088 | More Paris landmarks, palaces typed by name, and footprints that keep their courtyards | Accepted (M5) |
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 | D-090 | Kyoto's look: a `kyoto` style pack and the `@pixelworlds/city-kyoto` generator plugin | Accepted (M5) |
+| D-091 | Kyoto's walking level: Nakagyō to Kiyomizu-dera and Kyoto Tower at 10 m, typed by structure, year, class and roof | Accepted (M5) |
 
 ---
 
@@ -1088,3 +1089,26 @@ The point is more room for visual interest; both halves are wanted.
   - **Fabric left out:** udatsu firewalls, the inner garden (tsuboniwa) cut into a deep lot, teahouses' bamboo blinds and Gion's red lanterns, kura storehouses (black and white namako walls), torii (Tokyo's pack has `myojinTorii`; Kyoto's vermilion gates are left for a shared one).
   - **Roof shapes from PLATEAU on the generators:** the facts' `roof` types the buildings (`roofs:` rules) but the generator's hint is Overture's alone; typed groups pick gabled or hipped instead.
 
+### D-091: Kyoto's walking level: Nakagyō to Kiyomizu-dera and Kyoto Tower at 10 m, typed by structure, year, class and roof (accepted, M5)
+- **Why:** Kyoto's first world, on the Japan pack's facts and terrain (D-089) and the look of D-090. The walking level holds the most recognisable Kyoto in the fewest cells: the machiya streets of Nakagyō and Shimogyō, the Kamo river, Gion, the slopes of Higashiyama from Chion-in to Kiyomizu-dera, and Kyoto Tower by the station.
+- **What** (`worlds/kyoto/walk.yaml`, `fixtures/kyoto-walk`):
+  - **The box** `[135.752, 34.985, 135.789, 35.012]` at 10 m: 338 × 300 = 101,400 cells, the brief's box extended south to Kyoto Tower and a little west and east. The east edge first stood at 135.7875, where Shibutani-kaidō crosses it twice: the road report found the road split and two junctions disconnected; at 135.789 it lies inside.
+  - **Roads:** centre lines on and 16 directions (D-082) with a 6° snap angle: 27,244 of 50,696 road edges snap (the Heian grid); the lanes up the hills keep their angles.
+  - **Terrain:** GSI's tiles at 4 m (D-089), real heights (`verticalExaggeration` 1.0): the hills already rise 140 m over the town.
+  - **Typology rules** (first match wins): Overture's building class (OSM's `building=shrine`, then `building=roof` with PLATEAU's religious and civic usage code 422, then `building=temple`) as shrine halls and temple halls; PLATEAU's code 422 under a hipped roof (入母屋 is `hipped`, D-089), and wooden footprints at least 12 m wide under one, as temple halls, never by year (a 17th-century hall can read 1989); machiya by PLATEAU's structure (wood), year (before 1950), storeys (1–2), width (at most 10 m) and use (residential or mixed); later wooden houses by roof (hipped, else gabled); 3 to 14 storeys of anything else as mid-rises.
+  - **`kinds:`**, a typology rule field (pipeline, schema): Overture's building class of a building, exactly; its parts share it (`_cls` beside `_name`, D-088).
+  - **`base:` on an anchored landmark** (pipeline): its foot at that height above sea level, as a line landmark's already was. Kiyomizu-dera's hall stands at 115 m (GSI) with its stage reaching out over the slope; its model stands on 102 m, under the stage's south edge, so the deck comes level with the hall.
+  - **Landmarks** (`worlds/_landmarks/`, generic): Kiyomizu-dera's main hall on its stage (Wikidata's point; 30 m from the stage's foot, depicted), its three-storey pagoda (Overture's footprint; 31 m), the Yasaka Pagoda (Wikidata's point on Overture's 八坂の塔; 46 m), Yasaka Shrine's west gate (Overture's 西楼門, drawn on its footprint; PLATEAU's 9 m), Chion-in's Sanmon (Wikidata's point, on its footprint; 24 m) and Kyoto Tower (Wikidata's point and 131 m, rising through its hotel, which stays at Overture's 30.8 m). The others replace Overture's buildings by id. Wikidata has heights only for Kyoto Tower, and coordinates for neither the west gate nor Kiyomizu-dera's pagoda.
+  - **A golden** (`kyoto-walk-yasaka-r0.png`): machiya and wooden houses round the Yasaka Pagoda at zoom 2.
+- **Measured** (build of 2026-11-11): 33,691 buildings, 31,420 with facts (93%), 29,493 heights from facts. Types: mid-rises 10,946, gabled wooden houses 8,210, machiya 6,260, hipped wooden houses 336, temple halls and pavilions 448, shrine halls 66; the defaults 6,905 houses, 435 low blocks, 68 taller blocks, 17 car parks. 22,059 canopy and 559 street trees, 3,480 lawn cells, 1,142 street lights, 1,174 rail cells, 3,266 routes. Road report clean (17 components). The package is 2.0 MB (Paris's walking level: 2.9 MB) and builds in 55 s from the cache, 250 s with its downloads.
+- **Looked at** in headless views of the viewer: Gion's and Higashiyama's tile roofs and lattice fronts; the Yasaka Pagoda over the machiya of Yasaka-dōri; Kiyomizu-dera's hall on its stage over the wooded slope with the three-storey pagoda by the west gate; Chion-in's Sanmon at the foot of Maruyama Park; the west gate at the end of Shijō-dōri; the Kamo's gravel bed; Kyoto Tower over the station square; the office blocks of Shijō-Karasuma.
+- **Rejected alternatives:**
+  - **Temples by name (寺, 院), as the brief first suggested:** of the 262 buildings OSM classes `temple` or `shrine` in the box, 27 carry either character (halls are named 本堂, 御影堂, 鐘楼), while 141 buildings do, among them hotels (鈴 八坂高台寺), a vet clinic (病院), a computer school (学院), a shopping arcade (東本願寺お買い物広場) and streets' names (寺町). Overture's class and PLATEAU's code and roof find them; names stay a rule field for single buildings.
+  - **The year for machiya alone:** 75% of the box's buildings have a year; the structure (wood), storeys and width keep post-war wooden houses and pre-war concrete out.
+  - **OSM's footprints near the brief's points:** the first look put the Yasaka Pagoda on a 42 m² footprint 32 m from it, and the west gate 70 m off; Overture's named footprints (八坂の塔, 西楼門) and Wikidata's point agree.
+  - **A bigger box** (the Imperial Palace, Heian Shrine, Nishi Hongan-ji): within the budget, but beyond the brief; they belong to the driving level.
+- **Later:**
+  - **The driving and flying levels**, and the blind test.
+  - **The Kamo's banks:** the riverbed reads as gravel and water from the land cover; the paths along it and the stepping stones are Overture's.
+  - **Street detail:** utility poles and wires (Tokyo's pack draws them), Gion's lanterns, the shrines' torii and stone lanterns.
+  - **Typing by usage code more finely:** 461 (unknown) was 5,418 buildings in D-089's box, and the 422 class mixes schools, hospitals and temples; a temple's grounds from Overture's land use could type the halls inside them.

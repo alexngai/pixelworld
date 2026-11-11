@@ -1,0 +1,118 @@
+# Kyoto, walking level (D-091): from Nakagyō's machiya streets east across
+# the Kamo river to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto
+# Tower, at 10 m per cell. The wooden town of narrow, deep machiya under
+# grey tile is most of it; temple halls, pagodas and shrines stand among it
+# and up the Higashiyama hills, with modern mid-rises along the wide streets.
+# The only level so far: the driving and flying levels come later, and will
+# share a region.yaml with this one.
+# Build: cd pipeline && uv run pixelworld build ../worlds/kyoto/walk.yaml
+id: kyoto-walk
+name: Kyoto (walking)
+level: walk
+levels:
+  - { name: walk, world: kyoto-walk, label: Walking Gion and Higashiyama }
+bounds: [135.752, 34.985, 135.789, 35.012] # lon/lat: west, south, east, north (east of Kiyomizu-dera, past Shibutani-kaidō, which a nearer edge cuts twice)
+
+metersPerCell: 10
+# the Kamo river at 35 m, Kiyomizu-dera's stage at about 100 m and the
+# Higashiyama hills past 150 m: real heights, since the hills already rise
+# steeply over the town
+verticalExaggeration: 1.0
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Kyoto's streets are the Heian capital's grid, a few degrees off north:
+# within 6 degrees they snap to the 16 directions (D-049, D-082); the lanes up
+# the Higashiyama slopes keep their own angles, drawn along their centre lines
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  # ways drawn along their centre lines, not their cells' connections (D-082)
+  centrelines: true
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 4 }, smooth: { lawn: 15 } }
+
+# temple and shrine grounds, parks and the river's banks as lawn
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055) from PLATEAU (D-089): its structure (wood,
+  # reinforced concrete …), year built, storeys, usage code and LoD2 roof
+  # shape, and Overture's building class (OSM's building=temple / shrine).
+  # PLATEAU's years on temples are their records' (a 17th-century hall can
+  # read 1989), so temples are typed by class and roof, never by year.
+  # First match wins.
+  typology:
+    facts: { plugin: plateau, year: 2025 }
+    rules:
+      - { group: building.shrine, kinds: [shrine] }
+      # the pavilions of temples and shrines (OSM's building=roof: water basins, bell towers)
+      - { group: building.temple, kinds: [roof], classes: ["422"] }
+      - { group: building.temple, kinds: [temple] }
+      # temple halls and gates OSM leaves unclassed: PLATEAU's religious and
+      # civic usage code (422) under a hipped (入母屋) roof, of any structure
+      # (concrete rebuilds too), and large wooden footprints under one
+      - { group: building.temple, classes: ["422"], roofs: [hipped] }
+      - { group: building.temple, materials: [wood], roofs: [hipped], minWidth: 12 }
+      # machiya: wooden, before 1950, one or two storeys, narrow, a house or a shop-house
+      - { group: building.machiya, materials: [wood], year: [1000, 1950], floors: [1, 2], maxWidth: 10, uses: [residential, mixed] }
+      # the later wooden town: houses and shop-houses under tile
+      - { group: building.house, materials: [wood], roofs: [hipped] , floors: [1, 3] }
+      - { group: building.house.gabled, materials: [wood], floors: [1, 3] }
+      # concrete and steel: mid-rises along the wide streets
+      - { group: building.midrise, floors: [3, 14] }
+  vegetation:
+    # the temples' and the hills' trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    - { group: tree.street, roads: [tertiary, secondary, primary], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [kiyomizu-dera-hondo, yasaka-pagoda, yasaka-shrine-west-gate, chion-in-sanmon, kyoto-tower, kiyomizu-dera-pagoda]
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: kyoto
+start: { lon: 135.7752, lat: 35.0020 } # Hanamikōji in Gion
+
+sources:
+  # GSI's elevation tiles (D-089): DEM1A's lidar at 1 m, read at 4 m
+  dem: { kind: gsi-dem, overview: 4 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river, canal]
+  # the JR lines into Kyoto Station, where they run above ground
+  rails:
+    - { draw: train, rail: [standard_gauge, narrow_gauge] }
+
+geology: null

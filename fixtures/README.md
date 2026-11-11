@@ -175,6 +175,31 @@ Sources and licenses:
 - Building records: Apur, Emprise bâtie Paris and Quartier de Paris (ODbL 1.0); IGN, BD TOPO® (Licence Ouverte 2.0).
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## kyoto-walk
+
+Kyoto's walking level (D-091), built from [`worlds/kyoto/walk.yaml`](../worlds/kyoto/walk.yaml) on the `kyoto` style pack (D-090): from Nakagyō's machiya streets east across the Kamo river to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto Tower, at 10 m per cell (338 × 300 cells). Heights are true (`heightStretch` 1.0). Its roads and paths are drawn along their own centre lines, snapped to 16 directions within 6° of one (D-082): the Heian grid snaps, the lanes up the Higashiyama slopes keep their angles.
+
+- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 5 to 60 drawn steps, from the Kamo river up the Higashiyama hills.
+- **Buildings:** 33,691 from Overture footprints; 31,420 have facts from PLATEAU's 2025 building models (the `plateau` facts source, D-089: structure, year, storeys, usage code, LoD2 roof shape), and 29,493 that Overture gives no height take PLATEAU's.
+- **Types:** mid-rises (10,946), wooden houses under gabled (8,210) and hipped (336) roofs, machiya (6,260), temple halls and pavilions (448) and shrine halls (66); the rest keep the defaults (6,905 houses, 435 low blocks, 17 car parks, 68 taller blocks).
+- **Centre lines:** 20,250 road cells and 17,581 path cells carry pieces; 8 and 34 have more than six, and drop their narrowest.
+- **Also:** 22,059 canopy trees and 559 street trees, 3,480 lawn cells, 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
+- **Landmarks (generic depictions):** Kiyomizu-dera's main hall on its stage, its three-storey pagoda, the Yasaka Pagoda, Yasaka Shrine's west gate, Chion-in's Sanmon and Kyoto Tower.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 2.0 MB. Built in about 55 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: 出典：国土地理院ウェブサイト (地理院タイル 標高タイル), processed. Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: 出典：国土交通省 PLATEAUウェブサイト (3D city models of Kyoto, 2025), processed. PDL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

@@ -1,0 +1,12 @@
+name: Yasaka Pagoda (Hōkan-ji)
+wikidata: Q11555353
+# Wikidata's coordinates, on Overture's footprint of the pagoda (八坂の塔), at
+# the top of Yasaka-dōri
+anchor: { lon: 135.77924167, lat: 34.99855 }
+height: 46          # Overture's (OSM's) height, the temple's figure; Wikidata has none, and
+                    # PLATEAU's measured 28.7 m leaves out the finial
+clear: 6
+replaces: [b7fd415c-a911-4ed3-841f-783530104b0e]
+depictions:
+  # a five-storey pagoda with its finial; no name
+  generic: { group: landmark.pagoda }

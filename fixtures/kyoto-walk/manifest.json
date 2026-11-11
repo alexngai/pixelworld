@@ -1,0 +1,455 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "kyoto-walk",
+  "name": "Kyoto (walking)",
+  "chunkSize": 64,
+  "cellsX": 338,
+  "cellsY": 300,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "26fd6f77d666579d51bb742b99590d8866a11299331e1e555ff9377c92f107b7",
+      "heightRange": [
+        8,
+        11
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "e9fcb9ef20126cb14c7590b9d028f15bd058e8d5bc92b6916f4b7a99c10eaf89",
+      "heightRange": [
+        9,
+        11
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "cdd97eaa3207a34090a1838153e9ccfad6645fcdf1196c6d2628ba8bf5e9552f",
+      "heightRange": [
+        8,
+        11
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "6207594ce5860b3d296318f2d1479efd2f1b800b4d35e4d3cdebfb02dffd2787",
+      "heightRange": [
+        9,
+        12
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "0991852a0a6867f770bd2a7a262aabb209fe832fb1a2f4f3ddb5f9a19e87547b",
+      "heightRange": [
+        10,
+        40
+      ]
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "b7a3c358a84dd0c609a34089e3915be7d4cd325e423f24d9e7a00782b383df20",
+      "heightRange": [
+        11,
+        38
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "715b4a71f8cc547ac76ea3c63ac053d1bbb069ffed5f641d1aa7877deb3b6b2d",
+      "heightRange": [
+        8,
+        10
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "33268fd06e9872b6dba3f91e5023e0894ec19d999e30ac887deaf6540b86826b",
+      "heightRange": [
+        8,
+        10
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "c8ef5ac8ed246fe1b372a273da7b77bc367d4875b309ce2fb389091ec9e7f910",
+      "heightRange": [
+        7,
+        10
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "15122b3ac4effe1176f722ee6af4626b8d62d1448951a70d6c05199381ed2947",
+      "heightRange": [
+        8,
+        16
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "4f250ff8c3da9f02c465884c7c7257018630aa954d503911199c7890fad05ea6",
+      "heightRange": [
+        11,
+        53
+      ]
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "0d4ec3d968e2cbe515544fa7a8b7eb8edbd5e44083bc241ce0822b68c803adcb",
+      "heightRange": [
+        27,
+        54
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "bf9709c0431abb395956bba15a3b5fe303bcd0a91913caec171d45178370fdaa",
+      "heightRange": [
+        7,
+        9
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "33df28a0ef88682524f9847ab782e9007d3e140646d3abd096d943b777ced15d",
+      "heightRange": [
+        7,
+        9
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "442d3a7f70a5895767b06d076d6f60f5a2dff095329170e367334e551db440ad",
+      "heightRange": [
+        7,
+        10
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "705018dc5a3e11456e1d0c9c13825d56c2f059d6b090ef1cb7dabbe86023905c",
+      "heightRange": [
+        8,
+        19
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "bdbca2f7362ae557a07463f1133d4bd98b0680f51d71601104170ad1ead7436b",
+      "heightRange": [
+        14,
+        49
+      ]
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "68c4162b48559ad3a04a8835e9f20ae96ef99fbe5f78bedbb18cb564bcce00f4",
+      "heightRange": [
+        39,
+        55
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "41e3ef1d9615fe246070741761a22df8b1657982fdf86aa93a055f7a703efa3d",
+      "heightRange": [
+        5,
+        9
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "294b3f75fefe8360cb2d7ce6cac49b029e11e28455817b33e8738070d5f47c7a",
+      "heightRange": [
+        6,
+        8
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "9e61dc7db48530a8881a9c14d79dbeb625561fac0ae65e6b9187033d1a9aaf49",
+      "heightRange": [
+        6,
+        11
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "ab33a2c1a2e872ee29bf0bff4c91fd7f635f729b89ee6fd4b219df4141787b8c",
+      "heightRange": [
+        9,
+        21
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "5c7872f15e026e720e7735bb49495f8e1ab86bd0a900785b02ef33f66b170373",
+      "heightRange": [
+        13,
+        53
+      ]
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "826bc0db8b178b3b04c0a890abdfedc3d21d35c0d619502b1fcadfad90ca5912",
+      "heightRange": [
+        27,
+        60
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "e5b74a1301537c7864ade401e4f9688aefff0ffe6a3566189727a3325eb93070",
+      "heightRange": [
+        5,
+        8
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "f3d4bd644993f1239f8fee467bc7ba1ce070ed142fe7dfd36e431596b092ffed",
+      "heightRange": [
+        6,
+        9
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "a447ac66a1bacd93bb91f5c212bf900df7953ab197c5812602c2789a8ba8ab17",
+      "heightRange": [
+        6,
+        11
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "53e69ecdd8e21a2fba4c601db154c93580989db56e1b037d5805e41365ee9145",
+      "heightRange": [
+        9,
+        21
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "0270430e21d9e844cb53aa7f4c9e27c7dc3a5dec86d1daa5583e0907708f98f2",
+      "heightRange": [
+        16,
+        48
+      ]
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "path": "chunks/5_4.pxwc.gz",
+      "sha256": "1a918371f190b2aee3f4369dca1b550bb6db9b596726d8950efc6099cbd7b62c",
+      "heightRange": [
+        28,
+        50
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 4.082483,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.0
+  },
+  "heightRange": [
+    5,
+    60
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "kyoto",
+  "attribution": [
+    {
+      "name": "\u51fa\u5178\uff1a\u56fd\u571f\u5730\u7406\u9662\u30a6\u30a7\u30d6\u30b5\u30a4\u30c8 (\u5730\u7406\u9662\u30bf\u30a4\u30eb \u6a19\u9ad8\u30bf\u30a4\u30eb: DEM1A, DEM5A, DEM10B). \u5730\u7406\u9662\u30bf\u30a4\u30eb\uff08\u6a19\u9ad8\u30bf\u30a4\u30eb\uff08\u57fa\u76e4\u5730\u56f3\u60c5\u5831\u6570\u5024\u6a19\u9ad8\u30e2\u30c7\u30eb\uff09\uff09\u3092\u52a0\u5de5\u3057\u3066\u4f5c\u6210 (processed: mosaicked, resampled onto the world's grid and gaps filled; not GSI's data as published)",
+      "license": "Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "\u51fa\u5178\uff1a\u56fd\u571f\u4ea4\u901a\u7701 PLATEAU\u30a6\u30a7\u30d6\u30b5\u30a4\u30c8 (3D city models, building models, CityGML; the cities, release and spec as fetched, see the build log; copyright: each municipality). Processed: footprints, heights, storeys, years, uses, structures and roof shapes extracted per building (PLATEAU\u306e3D\u90fd\u5e02\u30e2\u30c7\u30eb\u3092\u52a0\u5de5\u3057\u3066\u4f5c\u6210)",
+      "license": "Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0",
+      "url": "https://www.mlit.go.jp/plateau/site-policy/"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 211,
+    "y": 111
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=34.9985 +lon_0=135.7705 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      135.752,
+      34.985,
+      135.789,
+      35.012
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "dd74ce805bf70f53",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 2
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "27fe913857620c4da9d43f8467297db956cba3d5814d143d4d0e9145f5e65af6",
+    "count": 57511
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "walk",
+      "world": "kyoto-walk",
+      "label": "Walking Gion and Higashiyama"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      23,
+      20
+    ],
+    "sha256": "e8e2eba110f2d76ac1ebb9f353e8285463f39c3d3b8e16de5c13458faefcac56"
+  },
+  "packageHash": "70bada6f1ce35a84a987c8d9f6a1f5873a284fe90a3070a7401cacb16bf3fc4e",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "9275af3b65098033a98b2d8195666e29ff1648a5a250926c11077495dc9dd372",
+    "version": 1,
+    "count": 3266
+  }
+}
