@@ -97,6 +97,7 @@ Status values:
 | D-086 | Paris's walking level: the Eiffel Tower to the Marais at 10 m, typed by period, fabric and storeys | Accepted (M5) |
 | D-087 | Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined | Accepted (M5) |
 | D-088 | More Paris landmarks, palaces typed by name, and footprints that keep their courtyards | Accepted (M5) |
+| D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 
 ---
 
@@ -1036,3 +1037,32 @@ The point is more room for visual interest; both halves are wanted.
   - The Louvre's pavilions (Flore, Marsan, the Horloge) have no roofs of their own; Overture's parts carry no heights to find them by.
   - Other worlds could turn courtyards on when their goldens are next regenerated.
 
+### D-089: Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles (accepted, M5)
+- **Why:** Kyoto and Tokyo (Shibuya–Shinjuku) are next ([cities.md](cities.md)), and both read from the same national data: MLIT's PLATEAU 3D city models for buildings and GSI's elevation tiles for terrain. Overture's footprints there are OSM's, with heights on 0.3% of Kyoto's and 15% of Shibuya–Shinjuku's buildings and roof shapes on almost none; Kyoto's look rests on its tiled roofs, machiya gables against temples' hip-and-gable roofs. One pack shared by every Japanese city, built before either city's look and world (Kyoto D-090–D-091, Tokyo D-092–D-093).
+- **Checked first** (second-region.md §9, 2026-11-11): PLATEAU's site policy and GSI's content terms (both PDL 1.0, compatible with CC BY 4.0, a credit and a processing note required; GSI's list of tiles puts the elevation tiles among those usable with the credit alone, no Survey Act application); the data catalog API, the building files and code lists of Kyoto's and Tokyo's 2025 packages; GSI's tiles and its elevation API.
+- **What:** the city pack `pixelworld-city-jp` (`pipeline/plugins/`), in the pipeline's `plugins` group and `plugins.KNOWN`:
+  - **Facts source `plateau`:** the region's box gives the 3rd-level (1 km) mesh codes of the standard grid (JIS X 0410); the catalog (`api.plateau.reearth.io/datacatalog/citygml/m:<mesh>`) gives each mesh's building file per city, and copies a Tokyo ward repeats from its neighbour (same feature and LoD counts) are read once. Each file is fetched gzip-encoded (4–14% of its 10–330 MB) and streamed through ElementTree's `iterparse`, about 2 s a mesh; only a compact extract per mesh is cached (`plateau/`, named by city code, release year, spec, mesh and an extract version; `keepGml: true` also keeps the gzipped file). Option `year` pins the release: the catalog serves only the current one, so a pinned build reads the extracts it cached. Facts: `height` (`measuredHeight`), `stories` (`storeysAboveGround`; 0 and 9999 unknown), `year` (`yearOfConstruction`; `0001` unknown), `use` (the usage code's group: 401–404 commercial, 411–412 residential, 413–415 mixed, 421, 422, 453 civic, 431–452 industrial), `class` (the usage code as is), `material` (`uro:buildingStructureType`: wood, steel reinforced concrete, reinforced concrete, steel, light steel, masonry, non-wood) and `roof`. Looked up by point in footprint: the LoD0 roof edge, else the LoD1 solid's base. The code lists' meanings are recorded in the module.
+  - **Roof shapes from the LoD2 roof surfaces,** in Overture's words: `flat` where half the plan area slopes under 5°; `skillion` (a shed roof) where 80% of the sloped area faces one way (the four ways from the facets' own aspects, modulo 90°); else `hipped` or `gabled` by the sloped edges' plan lengths. A hip joins two facets facing different ways that both fall away from it (a valley, where they fall towards it, doesn't count); a gable verge belongs to one facet and runs down to that facet's eave. So an L-shaped gable stays gabled, and a hip-and-gable roof (入母屋), whose gable stands on its hipped skirt, is hipped.
+  - **Terrain source `gsi-dem`:** GSI's PNG tiles on the Web Mercator grid, read at the zoom whose pixels are just finer than 1 m × the overview (17 at 1 m, 15 at 4 m), from DEM1A (1 m, lidar), else DEM5A (5 m), else DEM10B (10 m); a missing tile or one with holes (water) is filled from the next DEM's, the coarser reprojected first. Decoded from 24-bit RGB (0.01 m; 2²³ no data; above it below sea level), mosaicked per DEM, cached as tiles in `gsi/` (an empty file for a tile GSI doesn't have) and reprojected by `read_into`.
+  - **Attribution** in each plugin: "出典：国土交通省 PLATEAUウェブサイト" with "加工して作成", and "出典：国土地理院ウェブサイト" with "地理院タイル（標高タイル（基盤地図情報数値標高モデル））を加工して作成", both PDL 1.0.
+- **Measured** (second-region.md §9), Kyoto `[135.755, 34.990, 135.785, 35.012]` / Shibuya–Shinjuku `[139.690, 35.655, 139.712, 35.698]`:
+  - **Buildings:** 24,109 / 17,760 in 12 meshes each; 106.8 MB in 35 s / 82.7 MB in 29 s; extracted in 65 s / 52 s; read again from the cache at once.
+  - **Coverage:** height 100% / 96.9%; storeys 73.9% / 85.9%; year 75.1% (1868–2024, median 1983) / 0%; a known use 77.4% / 88.2%; a known structure 72.4% (wood 10,400) / 0% (Tokyo has fire resistance instead: fireproof 10,605); a roof 96.1% / 35.8% (Tokyo's LoD2 models cover about a third of its buildings).
+  - **Top codes:** Kyoto's usage 461 unknown 5,418, 411 house 5,049, 413 house with shop 3,941, 412 flats 3,802; Tokyo's 411 3,847, 401 offices 2,931, 412 2,759, 413 2,475. Kyoto's structure 601 wood 10,400, 611 unknown 6,663, 604 steel 4,362, 603 RC 2,146.
+  - **Roofs:** Kyoto gabled 13,041, flat 8,539, hipped 1,166, skillion 420; Tokyo flat 5,531, gabled 517, hipped 176, skillion 142. Wooden buildings in five Kyoto meshes: 78% gabled, 14% flat, 4% hipped. Against OSM's roof tags where Overture has them: 42 of 58 agree in Kyoto, 15 of 28 in Tokyo.
+  - **Against Overture:** 91.7% / 92.4% of Overture's buildings have a PLATEAU building at their centroid; 88.7% / 84.8% of PLATEAU's lie inside an Overture footprint. Where Overture has a height, it is PLATEAU's (median difference 0.0 m).
+  - **Elevation:** the adapter matches GSI's own elevation API within 0.4 m at ten points in both cities, the Kamo river among them (DEM10B where DEM1A and DEM5A have holes). A box at 4 m is about 125 tiles (8.5 MB) in 50–75 s, nothing on a second build.
+- **Rejected alternatives:**
+  - **Downloading each city's package:** the zips hold every feature type (Kyoto's 2025 package is 2.7 GB); the catalog's per-mesh building files are what a region needs, and come gzip-encoded.
+  - **Keeping the CityGML:** 10–330 MB a mesh as XML (1–45 MB gzipped) where the extract is under a megabyte; an option keeps it.
+  - **lxml or a CityGML library:** not a dependency, and `iterparse` streams a mesh in about 2 s.
+  - **Overture's footprints with PLATEAU's attributes joined to them:** the pipeline already asks facts at Overture's centroids; a join in the pack would add nothing.
+  - **Roof shape from the plane count or aspects alone:** an L- or T-shaped gable has four aspects like a hip; hip-and-gable roofs have long verges. The edges' topology tells them apart.
+  - **A `hipped-and-gabled` word** (OSM's tag for 入母屋): not one of Overture's roof shapes, which `roofs:` rules share.
+  - **Reading DEM1A at zoom 17 for every overview:** sixteen times the tiles at 4 m; GSI serves every DEM at coarser zooms.
+  - **PLATEAU's own DEM** (in each package, `dem/`): TIN reliefs of 60–800 MB per 2nd-level (about 10 km) mesh, where GSI's tiles come at any zoom.
+- **Later:**
+  - Tokyo's `uro:fireproofStructureType` and `uro:detailedUsage` (in the extract already) as facts, for the Tokyo session; Tokyo's detailed-use codes are the city's own list.
+  - Neighbourhoods from each building's ward code (`uro:city`) and the code list `Common_localPublicAuthorities.xml`, for `hoods:` rules.
+  - What `yearOfConstruction` means for rebuilt temples (Nishi Hongan-ji's 17th- and 18th-century halls read 1989), and why 14% of Kyoto's wooden buildings have flat LoD2 roofs.
+  - Fetching GSI's tiles in parallel (one at a time now, about 0.5 s each).

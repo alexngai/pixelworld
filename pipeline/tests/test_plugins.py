@@ -128,8 +128,9 @@ def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
 def test_a_missing_terrain_source_lists_terrain_sources_only():
     with pytest.raises(plugins.PluginNotFoundError) as e:
         rasters.source("ahn-dtm-05", "terrain", where="sources.dem.kind")
-    # the built-ins and Paris's city pack's (installed in this repository)
+    # the built-ins, and Paris's and Japan's city packs' (installed in this repository)
     assert e.value.available == [
+        "gsi-dem",
         "ign-lidar-hd-mnt",
         "ign-rgealti",
         "usgs-3dep-13arcsec",
