@@ -251,3 +251,31 @@ def test_use_group_takes_normalized_uses_as_they_are():
         assert typology.use_group(word.capitalize()) == word
     assert typology.use_group("Government") == "civic"
     assert typology.use_group("") == "" and typology.use_group(None) == ""
+
+
+def test_bounds_rules_keep_to_a_neighbourhoods_box_and_max_depth_to_small_lots():
+    insts = _row(1.0, 3)
+    f = typology.features(insts, STREET, None, 25.0)
+    # centroids in lon/lat, as type_buildings adds them where a rule has bounds
+    for g, ll in zip(f, [(139.70, 35.66), (139.69, 35.69), (139.75, 35.70)], strict=True):
+        g["lonlat"] = ll
+    spec = {
+        "rules": [
+            {"group": "building.zakkyo", "bounds": [139.695, 35.655, 139.705, 35.665]},
+            {
+                "group": "building.tower.glass",
+                "bounds": [[139.0, 35.0, 139.1, 35.1], [139.686, 35.685, 139.698, 35.695]],
+            },
+            {"group": "building.kodate", "maxDepth": 19.0},
+        ]
+    }
+    typology.classify(insts, spec, f)
+    # the third is outside both boxes, and 20 m deep
+    assert [i["g"] for i in insts] == [
+        "building.zakkyo",
+        "building.tower.glass",
+        "building.residential",
+    ]
+    assert not typology.matches(
+        {"group": "x", "bounds": [0, 0, 1, 1]}, "building.residential", {"floors": 1}
+    )

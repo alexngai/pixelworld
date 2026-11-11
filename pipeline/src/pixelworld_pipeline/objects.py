@@ -1015,6 +1015,17 @@ def type_buildings(
             f"{known}/{len(has)} buildings with facts, {filled} heights from facts"
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
+    if any("bounds" in r for r in spec.get("rules", [])):
+        # centroids in lon/lat, for rules kept to a neighbourhood's box
+        has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
+        lon, lat = transform_points(
+            region.crs,
+            "EPSG:4326",
+            [found[i]["_c"][0] for i in has],
+            [found[i]["_c"][1] for i in has],
+        )
+        for i, a, b in zip(has, lon, lat, strict=True):
+            feats[i]["lonlat"] = (a, b)
     counts = typology.classify(found, spec, feats)
     progress.log(f"typology: {counts}")
     return found

@@ -912,14 +912,15 @@ LIDAR = Map(
         "minTowerArea": Key(Num(0, unit="m²"), "Smallest tower part.", "600"),
     }
 )
+BOXES = OneOf(
+    (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
+    (lambda v: True, BBOX),
+    name="a box or a list of boxes",
+)
 BUILDINGS = Map(
     {
         "bounds": Key(
-            OneOf(
-                (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
-                (lambda v: True, BBOX),
-                name="a box or a list of boxes",
-            ),
+            BOXES,
             "Only buildings in this box (or these boxes).",
             "the whole region",
         ),
@@ -982,6 +983,7 @@ TYPOLOGY_RULE = Map(
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),
+        "maxDepth": Key(Num(0, unit="m"), "Deepest (the footprint's long side)."),
         "minParty": Key(Num(0, 1), "Least share of outline shared with neighbours."),
         "maxParty": Key(Num(0, 1), "Most share of outline shared with neighbours."),
         "floors": Key(num_range("[min, max]"), "Storeys."),
@@ -989,6 +991,9 @@ TYPOLOGY_RULE = Map(
         "maxHeight": Key(Num(0, unit="m"), "Tallest."),
         "onWater": Key(Bool(), "Stands over water."),
         "corner": Key(Bool(), "On a corner lot."),
+        "bounds": Key(
+            BOXES, "Only buildings whose centroid is in this box (or these boxes): a neighbourhood."
+        ),
     }
 )
 TYPOLOGY = Map(

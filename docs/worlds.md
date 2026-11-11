@@ -677,6 +677,7 @@ Other keys here are plugin options.
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
+| `maxDepth` | number, ≥ 0 (m) | — | Deepest (the footprint's long side). |
 | `minParty` | number, in [0, 1] | — | Least share of outline shared with neighbours. |
 | `maxParty` | number, in [0, 1] | — | Most share of outline shared with neighbours. |
 | `floors` | [min, max] | — | Storeys. |
@@ -684,6 +685,7 @@ Other keys here are plugin options.
 | `maxHeight` | number, ≥ 0 (m) | — | Tallest. |
 | `onWater` | true/false | — | Stands over water. |
 | `corner` | true/false | — | On a corner lot. |
+| `bounds` | a box or a list of boxes | — | Only buildings whose centroid is in this box (or these boxes): a neighbourhood. |
 
 <a id="spec-objects-vegetation"></a>
 #### `objects.vegetation[]`
