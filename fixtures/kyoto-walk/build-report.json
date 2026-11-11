@@ -1,5 +1,5 @@
 {
-  "packageHash": "b53377ccbb76abae62e0be1e9f04ab9f5bd718229ac2ff037f506dddef2d40a1",
+  "packageHash": "35587809bd1c150e1de422e9ff9305fba27d59d3f3fe4bf38be24aa50d491222",
   "cells": [
     338,
     300
@@ -33,7 +33,7 @@
     "landmark.temple.stage": 1,
     "landmark.torii": 3,
     "landmark.tower.candle": 1,
-    "prop.pole": 2301,
+    "prop.pole": 1265,
     "prop.signal": 54,
     "prop.streetlight": 1142,
     "tree": 20870,

@@ -197,7 +197,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "ef72144e6c877f9e",
+      "region": "e461aeedbbd4a13b",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -211,8 +211,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "61606453129ae58abfab7f02896b8627c8dc2a07a0a648510462ae736b855dd3",
-    "count": 6
+    "sha256": "b36bb95c183663f0534aaf0d6186661ebab8e43d8c84a6d84ebf75c213fcb4c6",
+    "count": 7
   },
   "depiction": {
     "heightStretch": 2.0,
@@ -246,7 +246,7 @@
     ],
     "sha256": "23b20939d24e2636cddfd9a13fe7ac0e791edbb1f3d0e3be9f4b8ffbd2347bae"
   },
-  "packageHash": "86835efebbfb282093c998a2689d31be985cd9f272a4adee2d2527440c35e4d8",
+  "packageHash": "56c1539aeeb16ef92abb1ad569e4294138afd2c68c17897251715571a7f70604",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "a5625f4cee9f3d8cf8ee23bd11a45775f22541dd7c213436ca32b64832134f16",

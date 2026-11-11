@@ -73,7 +73,10 @@ function roofDistance(f: Facade, from: number, wing: number, hipped: boolean, ed
  * have glass windows in place of the lattice and slits, and some a hipped
  * roof. The roof follows the data's shape where the hints give one (gabled,
  * hipped, a shed rising to the rear, and flat only with `flat`), else `hip`.
- * Nothing projects: the pent roof stands on the ground storey's front.
+ * A footprint wider than two houses (a row OSM mapped as one) is drawn as a
+ * row: a house every `unit`, each with its own wall height, tiles, door and
+ * front, party walls between them (D-096). Nothing projects: the pent roof
+ * stands on the ground storey's front.
  * params: koshi (share of fronts with a lattice; 1), mushiko (share of upper
  * storeys with mushiko-mado; 0.85), fences (share with an inuyarai; 0.4),
  * noren (share with a noren; 0.35), lanterns (share with a red paper lantern
@@ -81,7 +84,8 @@ function roofDistance(f: Facade, from: number, wing: number, hipped: boolean, ed
  * roof as firewalls; 0), hip (share with hipped roofs where the
  * data gives no shape; 0), flat (1: draw a flat roof where the data says
  * flat; 0, the default, keeps the group's: wooden houses' flat LoD2 roofs
- * are mostly unmodelled pitched ones), pitch
+ * are mostly unmodelled pitched ones), unit (a house's width over the
+ * height, in a row; 0.8), pitch
  * (voxels in for each up; 2), wing (the front house's depth in voxels; 16),
  * litFraction.
  * roles: wall (wall.* variants: the ground storey and its sides), upper
@@ -138,6 +142,24 @@ export const machiya: Generator = (ctx) => {
   const Hw = Math.max(4, H - 1 - rf(rMax));
   const n = Math.max(1, Math.min(sb ? want : 1, Math.floor(Hw / 4)));
   const g = n === 1 ? Hw : clamp(Math.round(Hw / (1 + 0.75 * (n - 1))), 4, Hw - 2);
+  // a row of houses mapped as one footprint: a house every `unit` (of the height) along the front, each
+  // with its own wall height (a voxel up or down), tiles, door and front (D-096)
+  const unitW = clamp(Math.round(H * param("unit", 0.8)), 5, 24);
+  const nU = W >= 2 * unitW ? Math.round(W / unitW) : 1;
+  const unitOf = (a: number) => Math.min(nU - 1, Math.floor((a * nU) / W));
+  const first = (u: number) => Math.ceil((u * W) / nU);
+  const roofs = ctx.ramps("roof");
+  const units = Array.from({ length: nU }, (_, u) => ({
+    dz: u === 0 || n < 2 ? 0 : Math.max(g + 2 - Hw, [-1, 0, 0, 1][Math.floor(rand() * 4)]!),
+    roof: u === 0 || !roofs.length ? roof : m.material(pick(rand, roofs)),
+    koshi: u === 0 ? koshi : rand() < param("koshi", 1),
+    mushiko: u === 0 ? mushiko : rand() < param("mushiko", 0.85),
+    left: rand() < 0.5,
+    s: first(u),
+    e: first(u + 1) - 1,
+  }));
+  const unitAt = (a: number) => units[unitOf(a)]!;
+  const party = (a: number) => a === 0 || a === W - 1 || (nU > 1 && (unitOf(a) !== unitOf(a - 1) || unitOf(a) !== unitOf(a + 1)));
 
   // the body: the ground storey, the upper storeys and the roof; the pent roof in front of the upper storey
   const top = new Int16Array(f.sx * f.sy).fill(-1);
@@ -149,7 +171,7 @@ export const machiya: Generator = (ctx) => {
       let z = 0;
       for (; z < Math.min(g, Hw); z++) m.set(x, y, z, body);
       if (d < sb) {
-        if (udatsu && W >= 5 && (f.along[i] === 0 || f.along[i] === W - 1)) {
+        if (udatsu && W >= 5 && party(f.along[i]!)) {
           // an udatsu: the party wall carried up through the pent roof in plaster, capped in tile
           for (; z <= g + sb; z++) m.set(x, y, z, upper);
           m.set(x, y, z++, roof);
@@ -158,12 +180,30 @@ export const machiya: Generator = (ctx) => {
           for (let t = 0; t <= d; t++, z++) m.set(x, y, z, roof);
         }
       } else {
-        for (; z < Hw; z++) m.set(x, y, z, upper);
+        const u = unitAt(f.along[i]!);
+        for (; z < Hw + u.dz; z++) m.set(x, y, z, upper);
         const r = rf(dist[i]!);
-        for (let t = 0; t <= r; t++, z++) m.set(x, y, z, roof);
+        for (let t = 0; t <= r; t++, z++) m.set(x, y, z, u.roof);
       }
       top[i] = z - 1;
     }
+  // between houses of a row, the taller one's gable end shows plaster above its neighbour's roof
+  if (nU > 1) {
+    const [lx, ly] = [f.front[1], -f.front[0]];
+    for (let y = 0; y < f.sy; y++)
+      for (let x = 0; x < f.sx; x++) {
+        const i = y * f.sx + x;
+        if (f.depth[i]! < sb) continue;
+        const a = f.along[i]!;
+        for (const s of [-1, 1]) {
+          const nx = x + s * lx;
+          const ny = y + s * ly;
+          if (nx < 0 || ny < 0 || nx >= f.sx || ny >= f.sy || f.depth[ny * f.sx + nx]! < sb) continue;
+          if (unitOf(f.along[ny * f.sx + nx]!) === unitOf(a)) continue;
+          for (let z = Math.max(Hw + unitAt(a).dz, top[ny * f.sx + nx]! + 1); z < top[i]!; z++) m.set(x, y, z, upper);
+        }
+      }
+  }
   // the ridge: a roof top no lower than its neighbours toward the front and rear
   const [fx, fy] = f.front;
   for (let y = 0; y < f.sy; y++)
@@ -185,47 +225,53 @@ export const machiya: Generator = (ctx) => {
 
   // the ground storey's front: a stone sill, pillars at the ends, a beam under the pent roof
   const ground = frontPainter(m, f, 0);
-  const left = rand() < 0.5;
-  const dw = W >= 7 ? 2 : W >= 3 ? 1 : 0;
-  const isDoor = (a: number) => dw > 0 && (left ? a >= 1 && a <= dw : a <= W - 2 && a >= W - 1 - dw);
+  const width = (u: (typeof units)[number]) => u.e - u.s + 1;
+  const dwOf = (u: (typeof units)[number]) => (width(u) >= 7 ? 2 : width(u) >= 3 ? 1 : 0);
+  const isDoor = (a: number) => {
+    const u = unitAt(a);
+    const dw = dwOf(u);
+    return dw > 0 && (u.left ? a >= u.s + 1 && a <= u.s + dw : a <= u.e - 1 && a >= u.e - dw);
+  };
   const glow = rand() < param("litFraction", 0.3) * 0.6 ? lit : gap;
   if (W >= 2 && g >= 4)
     for (let a = 0; a < W; a++) {
       ground(a, 0, base);
       ground(a, g - 1, timber);
-      const end = a === 0 || a === W - 1;
+      const u = unitAt(a);
       for (let z = 1; z < g - 1; z++) {
-        if (end) ground(a, z, timber);
+        if (party(a)) ground(a, z, timber);
         else if (isDoor(a)) ground(a, z, noren && z >= g - 1 - Math.max(1, Math.round((g - 2) * 0.45)) ? noren : gap);
-        else if (koshi) ground(a, z, fence && (z === 1 || (z === 2 && g >= 7)) ? fence : z === 1 || z === g - 2 || a % 2 === 0 ? lattice : glow);
-        else if (z >= 2 && z < g - 2 && a > 1 && a < W - 2) ground(a, z, pane());
+        else if (u.koshi) ground(a, z, fence && (z === 1 || (z === 2 && g >= 7)) ? fence : z === 1 || z === g - 2 || a % 2 === 0 ? lattice : glow);
+        else if (z >= 2 && z < g - 2 && a > u.s + 1 && a < u.e - 1) ground(a, z, pane());
       }
     }
-  // a red paper lantern (chōchin) beside the door, lit at night
-  if (lantern && dw > 0 && g >= 6) {
-    const a = left ? dw + 1 : W - 2 - dw;
-    if (a > 0 && a < W - 1) for (const z of [g - 3, g - 2]) ground(a, z, lantern);
+  // a red paper lantern (chōchin) beside the first house's door, lit at night
+  const u0 = units[0]!;
+  if (lantern && dwOf(u0) > 0 && g >= 6) {
+    const a = u0.left ? u0.s + dwOf(u0) + 1 : u0.e - 1 - dwOf(u0);
+    if (a > u0.s && a < u0.e) for (const z of [g - 3, g - 2]) ground(a, z, lantern);
   }
   // the upper storey's front, from above the pent roof to the beam under the eaves
   if (sb > 0 && n >= 2 && W >= 3) {
     const face = frontPainter(m, f, sb);
     const z0 = g + sb;
-    const zb = Hw - 1;
-    const rows = zb - z0;
     for (let a = 0; a < W; a++) {
-      const end = a === 0 || a === W - 1;
+      const u = unitAt(a);
+      const zb = Hw + u.dz - 1;
+      const rows = zb - z0;
       if (rows >= 1) face(a, zb, timber);
       for (let z = z0; z < zb; z++) {
-        if (end) {
+        if (party(a)) {
           face(a, z, timber);
           continue;
         }
-        const inner = a >= (W >= 7 ? 2 : 1) && a <= W - (W >= 7 ? 3 : 2);
+        const wide = width(u) >= 7;
+        const inner = a >= u.s + (wide ? 2 : 1) && a <= u.e - (wide ? 2 : 1);
         const slit = rows >= 3 ? z > z0 && z < zb - 1 : true;
         if (!inner || !slit) continue;
-        if (mushiko) face(a, z, a % 2 === 1 ? gap : upper);
-        else if (koshi) face(a, z, a % 2 === 0 ? lattice : glow);
-        else if (a > 1 && a < W - 2) face(a, z, pane());
+        if (u.mushiko) face(a, z, a % 2 === 1 ? gap : upper);
+        else if (u.koshi) face(a, z, a % 2 === 0 ? lattice : glow);
+        else if (a > u.s + 1 && a < u.e - 1) face(a, z, pane());
       }
     }
   }
@@ -248,11 +294,16 @@ export const machiya: Generator = (ctx) => {
  * vertical sign board on a front corner, both without lettering. On some a
  * rim of grey tile round the roof, as Kyoto's landscape rules ask of new
  * buildings, or a pitched tile roof where the data gives one (gabled or
- * hipped). Nothing projects: balconies and signs are painted flush.
- * params: flats (share that are flats; 0.5), shops (share with shopfronts;
+ * hipped). On some a pent eave of tile over the ground floor (the storeys
+ * above stand back a voxel), vertical louvres before an office's glass, an
+ * air conditioner's box on some flats' balconies, an old water tank on the
+ * roof (D-096). Nothing projects: balconies and signs are painted flush.
+ * params: hisashi (share with a pent eave; 0), louvres (share of offices
+ * with louvres; 0), tanks (share with a water tank; 0), flats (share that are flats; 0.5), shops (share with shopfronts;
  * 0.6), eaves (share with a tile rim; 0.35), litFraction.
  * roles: wall (wall.* variants), trim (trim.*, following the wall's), shop
- * (shopfront glass; window if absent), sign (sign.* variants), rail, roof,
+ * (shopfront glass; window if absent), sign (sign.* variants), rail, fin
+ * (the louvres; trim if absent), ac (air conditioners and tanks; trim if absent), roof,
  * eave, window, lit.
  */
 export const midrise: Generator = (ctx) => {
@@ -275,6 +326,9 @@ export const midrise: Generator = (ctx) => {
   const shopGlass = optional(ctx, m, "shop", glass);
   const flats = rand() < param("flats", 0.5);
   const shops = rand() < param("shops", 0.6);
+  const louvres = !flats && rand() < param("louvres", 0);
+  const fin = optional(ctx, m, "fin", trim);
+  const ac = optional(ctx, m, "ac", trim);
   const edge = edgeDistance(mask);
   // a pitched tile roof where the data gives one (D-094), rising a voxel for every two in
   const pitched = PITCHED.has(hints?.roof ?? "") && H >= 6;
@@ -287,6 +341,9 @@ export const midrise: Generator = (ctx) => {
   const n = clamp(Math.round(hints?.floors ?? Hb / 7), 1, 60);
   const fh = Math.max(3, Math.floor(Hb / n));
   const g = Math.max(fh, Hb - fh * (n - 1));
+  // a pent eave of tile over the ground floor, as Kyoto's landscape rules ask: the storeys above stand back a voxel
+  const hisashi = rand() < param("hisashi", 0) && n >= 2 && g >= 4 && f.maxDepth >= 4 && W >= 3;
+  const tank = !pitched && !pent && rand() < param("tanks", 0) && W >= 6 && f.maxDepth >= 6;
   // the body: walls to the parapet's top, the roof a voxel lower inside; a tile rim steps up from the wall
   const Hp = Hb - 1;
   for (let y = 0; y < f.sy; y++)
@@ -294,6 +351,11 @@ export const midrise: Generator = (ctx) => {
       const i = y * f.sx + x;
       const e = edge[i]!;
       if (!e) continue;
+      if (hisashi && f.depth[i] === 0) {
+        for (let z = 0; z < g; z++) m.set(x, y, z, body);
+        m.set(x, y, g, eave);
+        continue;
+      }
       if (pitched) {
         let z = 0;
         for (; z < Hb - 1; z++) m.set(x, y, z, body);
@@ -322,7 +384,19 @@ export const midrise: Generator = (ctx) => {
         m.set(x, y, Hp + ph, roof);
       }
   }
+  // an old water tank on the roof, toward a rear corner
+  if (tank)
+    for (let y = 0; y < f.sy; y++)
+      for (let x = 0; x < f.sx; x++) {
+        const i = y * f.sx + x;
+        const a = f.along[i]!;
+        const d = f.depth[i]!;
+        if (edge[i]! < 2 || a < 2 || a > 4 || d < f.maxDepth - 4 || d > f.maxDepth - 2) continue;
+        m.set(x, y, Hp, ac);
+        m.set(x, y, Hp + 1, ac);
+      }
   const paint = frontPainter(m, f, 0);
+  const upper = hisashi ? frontPainter(m, f, 1) : paint;
   const zTop = rim ? Hp - 2 : Hp;
   // the street: a shopfront under a sign band, or an entrance
   const door = Math.floor(W / 2);
@@ -347,11 +421,16 @@ export const midrise: Generator = (ctx) => {
         const z = z0 + zf;
         if (z >= zTop) break;
         if (flats && fh >= 4) {
-          // the balcony: the slab and a solid parapet, glass doors behind, partitions between units
-          if (zf <= 1) paint(a, z, zf === 0 ? trim : end ? trim : rail);
-          else if (end || a % unit === 0) paint(a, z, trim);
-          else if (zf < fh - 1) paint(a, z, pane());
-        } else if (zf >= 1 && zf < fh - 1 && spans.some(([a0, a1]) => a >= a0 && a <= a1)) paint(a, z, pane());
+          // the balcony: the slab and a solid parapet (an air conditioner's box on it by some partitions),
+          // glass doors behind, partitions between units
+          if (zf <= 1) upper(a, z, zf === 0 ? trim : end ? trim : zf === 1 && a % unit === 2 && (s * 7 + a) % 3 !== 0 ? ac : rail);
+          else if (end || a % unit === 0) upper(a, z, trim);
+          else if (zf < fh - 1) upper(a, z, pane());
+        } else if (louvres) {
+          // vertical louvres in front of the glass, a lattice of the modern town
+          if (end || a % 2 === 0) upper(a, z, fin);
+          else if (zf >= 1 && zf < fh - 1) upper(a, z, pane());
+        } else if (zf >= 1 && zf < fh - 1 && spans.some(([a0, a1]) => a >= a0 && a <= a1)) upper(a, z, pane());
       }
     }
   }
@@ -359,7 +438,7 @@ export const midrise: Generator = (ctx) => {
   if (shops && W >= 6 && n >= 3) {
     const a = rand() < 0.5 ? 1 : W - 2;
     const z1 = Math.min(zTop - 1, g + fh * Math.min(n - 1, 3));
-    for (let z = g; z < z1; z++) paint(a, z, sign);
+    for (let z = g + (hisashi ? 1 : 0); z < z1; z++) upper(a, z, sign);
   }
   // windows on the rear, and on a corner lot's side, every three voxels on each storey
   eachSide(f, (x, y, nx, ny, d, rear) => {
@@ -435,23 +514,40 @@ export const kura: Generator = (ctx) => {
 
 /**
  * A concrete utility pole (denchū): a slim pole, a steel crossarm near its
- * top with an insulator at each end, and on some a transformer drum. The
- * wires between poles aren't drawn.
- * params: height (16 voxels), transformers (share with a transformer; 0.3).
- * roles: pole, arm (pole if absent), transformer (arm if absent).
+ * top with an insulator at each end, and on some a transformer drum. With
+ * `span`, its wires: two power lines from the crossarm's ends and a thicker
+ * telecom cable lower down, reaching `span` voxels along y to each side and
+ * sagging toward their ends, where the next pole's meet them (placed with
+ * the street props' `along`, turned to run with the road; D-096). A prop:
+ * the wires hang in the air.
+ * params: height (16 voxels), transformers (share with a transformer; 0.3),
+ * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2).
+ * roles: pole, arm (pole if absent), transformer (arm if absent), wire (arm if absent).
  */
 export const utilityPole: Generator = (ctx) => {
   const { rand, param } = ctx;
   const H = Math.max(6, Math.round(param("height", 16) * (0.9 + rand() * 0.2)));
-  const m = new VoxelModel(5, 5, H + 1);
+  const span = Math.max(0, Math.round(param("span", 0)));
+  const sag = Math.max(0, Math.round(param("sag", 2)));
+  const c = span; // the pole's row
+  const m = new VoxelModel(5, 2 * span + 1, H + 1);
   const pole = m.material(ctx.ramp("pole"));
   const arm = optional(ctx, m, "arm", pole);
   const drum = optional(ctx, m, "transformer", arm);
-  for (let z = 0; z < H; z++) m.set(2, 2, z, pole);
-  for (let x = 0; x < 5; x++) m.set(x, 2, H - 2, arm);
-  m.set(0, 2, H - 1, arm);
-  m.set(4, 2, H - 1, arm);
-  if (rand() < param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(2, 3, z, drum);
+  const wire = optional(ctx, m, "wire", arm);
+  for (let z = 0; z < H; z++) m.set(2, c, z, pole);
+  for (let x = 0; x < 5; x++) m.set(x, c, H - 2, arm);
+  m.set(0, c, H - 1, arm);
+  m.set(4, c, H - 1, arm);
+  if (rand() < param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(3, c, z, drum);
+  for (let t = 1; t <= span; t++) {
+    const drop = Math.round(sag * (1 - (1 - t / span) ** 2));
+    for (const y of [c - t, c + t]) {
+      m.set(0, y, H - 1 - drop, wire);
+      m.set(4, y, H - 1 - drop, wire);
+      m.set(2, y, Math.max(1, H - 5 - drop), wire);
+    }
+  }
   return m;
 };
 

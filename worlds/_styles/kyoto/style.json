@@ -116,7 +116,7 @@
       "ramps": {
         "wall": "tile-beige",
         "wall.b": "concrete",
-        "wall.c": "tile-brown",
+        "wall.c": "kawara-light",
         "wall.d": "concrete-white",
         "trim": "concrete-white",
         "trim.b": "concrete-white",
@@ -133,7 +133,7 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "flats": 0.2, "shops": 0.8, "eaves": 0.25, "litFraction": 0.35 }
+      "params": { "flats": 0.2, "shops": 0.8, "eaves": 0.25, "hisashi": 0.45, "louvres": 0.3, "tanks": 0.15, "litFraction": 0.35 }
     },
     "building.house": {
       "generator": "machiya",
@@ -222,14 +222,18 @@
       "ramps": {
         "wall": "tile-beige",
         "wall.b": "concrete",
-        "wall.c": "tile-brown",
+        "wall.c": "concrete-white",
         "wall.d": "concrete-white",
         "wall.e": "tile-beige",
+        "wall.f": "kawara-light",
         "trim": "concrete-white",
         "trim.b": "concrete-white",
         "trim.c": "tile-beige",
         "trim.d": "concrete",
         "trim.e": "tile-brown",
+        "trim.f": "tile-beige",
+        "fin": "timber",
+        "ac": "concrete-white",
         "shop": "glass",
         "sign": "ai",
         "sign.b": "vermilion",
@@ -241,7 +245,37 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "flats": 0.5, "shops": 0.6, "eaves": 0.35, "litFraction": 0.35 }
+      "params": { "flats": 0.5, "shops": 0.6, "eaves": 0.35, "hisashi": 0.45, "louvres": 0.35, "tanks": 0.25, "litFraction": 0.35 }
+    },
+    "building.palace": {
+      "generator": "templeHall",
+      "ramps": {
+        "base": "stone",
+        "pillar": "timber",
+        "shadow": "timber-dark",
+        "bracket": "timber",
+        "wall": "plaster",
+        "roof": "kawara",
+        "ridge": "kawara-light",
+        "gable": "plaster",
+        "ornament": "gold"
+      },
+      "params": { "hip": 0.4, "eave": 0.6, "roof": 0.5 }
+    },
+    "building.palace.gosho": {
+      "generator": "templeHall",
+      "ramps": {
+        "base": "stone",
+        "pillar": "timber",
+        "shadow": "timber-dark",
+        "bracket": "timber",
+        "wall": "plaster",
+        "roof": "hiwada",
+        "ridge": "hiwada",
+        "gable": "plaster",
+        "ornament": "gold"
+      },
+      "params": { "hip": 0.4, "eave": 0.6, "roof": 0.55 }
     },
     "building.parking": {
       "generator": "midrise",
@@ -375,6 +409,10 @@
       },
       "params": { "lowerRoof": 1, "bays": 5, "width": 2.1, "depth": 0.6 }
     },
+    "landmark.pavilion.gold": {
+      "generator": "goldenPavilion",
+      "ramps": { "roof": "hiwada", "gold": "gold", "pillar": "timber", "wall": "plaster", "shadow": "timber-dark", "base": "stone" }
+    },
     "landmark.pagoda": {
       "generator": "pagoda",
       "ramps": {
@@ -433,7 +471,11 @@
       "generator": "candleTower",
       "ramps": { "wall": "concrete-white", "detail": "vermilion", "window": "glass", "lit": "lit" }
     },
-    "prop.pole": { "generator": "utilityPole", "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white" }, "params": { "height": 16, "transformers": 0.3 } },
+    "prop.pole": {
+      "generator": "utilityPole",
+      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
+      "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2 }
+    },
     "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 5 } },
     "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 6 } },
     "rock.boulder": { "generator": "boulder", "ramps": { "rock": "chert" } },

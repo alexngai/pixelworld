@@ -54,6 +54,12 @@ objects:
     facts: { plugin: plateau, year: 2025 }
     roofHints: true
     rules:
+      # Nijō Castle's two palaces and gates, and the Imperial Palace's halls and
+      # gates, by their names (D-096): PLATEAU has no models of the Imperial
+      # Palace, and Nijō's halls carry the code of temples and schools (422);
+      # `from` types their parts too (the 紫宸殿 is drawn in parts)
+      - { group: building.palace, names: [遠侍, 式台, 大広間, 蘇鉄の間, 黒書院, 白書院, 御清所, 台所, 雁の間, 唐門, 東大手門, 北大手門, 桃山門, 鳴子門, 東南隅櫓, 西南隅櫓, 米倉, 本丸御殿, 玄関], from: [building.residential, building.commercial, building.parking, building.tower] }
+      - { group: building.palace.gosho, names: [紫宸殿, 清涼殿, 小御所, 御学問所, 常御殿, 御常御殿, 春興殿, 飛香舎, 参内殿, 皇后宮常御殿, 御花御殿, 御三間, 御涼所, 諸大夫の間, 御車寄, 新御車寄, 建礼門, 建春門, 承明門, 日華門, 月華門, 宜秋門, 朔平門, 皇后門, 清所門], from: [building.residential, building.commercial, building.parking, building.tower] }
       # Buddhist halls by their names, whatever OSM's class: it tags many of them
       # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-094)
       - { group: building.temple, names: [本堂, 金堂, 講堂, 食堂, 御影堂, 阿弥陀堂, 開山堂, 法堂, 仏殿, 観音堂, 釈迦堂, 不動堂, 大師堂, 地蔵堂, 薬師堂, 太子堂, 経蔵, 鐘楼, 山門, 三門, 方丈, 庫裏, 宝蔵] }
@@ -82,6 +88,7 @@ objects:
     - kiyomizu-dera-pagoda
     - toji-pagoda
     - heian-jingu-otorii
+    - kinkaku-ji
   landmarkDepiction: generic
   depiction: { heightStretch: 1.5, scatter: 1.0 }
 

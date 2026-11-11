@@ -5,8 +5,9 @@ import { axisDistance, clamp, pick, rectMask, type Mask } from "./kit";
  * Kyoto's temples and shrines (D-090): the hall under a hip-and-gable roof
  * (`templeHall`, also Kiyomizu-dera's main hall on its stage), the two-storey
  * gate (`towerGate`: a shrine's vermilion rōmon, a temple's sanmon), the
- * pagoda (`pagoda`), and Kyoto Tower's type (`candleTower`). Depictions are
- * generic: no names, no lettering, no figures.
+ * pagoda (`pagoda`), the torii (`torii`), Kinkaku-ji's type of gilded
+ * pavilion (`goldenPavilion`) and Kyoto Tower's (`candleTower`). Depictions
+ * are generic: no names, no lettering, no figures.
  */
 
 interface HallMats {
@@ -157,11 +158,13 @@ function hall(m: VoxelModel, mask: Mask, s: HallSpec, mats: HallMats): { Hw: num
       const t = Hw + roofRise(i);
       if (a === g0 + 1 && f >= 2) {
         const from = g0 === 0 ? Hw : Hw + rise(Math.min(f, g0)) + 1;
-        for (let z = from; z < t; z++) m.set(x, y, z, z === t - 1 && f === D && t - from >= 3 ? mats.ornament : mats.gable);
+        // the ornament and the raised ridge ends only on a hall of some size: on a narrow
+        // corridor they would stand in rows like pinnacles
+        for (let z = from; z < t; z++) m.set(x, y, z, z === t - 1 && f === D && t - from >= 3 && D >= 5 ? mats.ornament : mats.gable);
       }
       if (a > g0 && f === D) {
         m.set(x, y, t, mats.ridge);
-        if (a === g0 + 1 && t + 1 < m.sz) m.set(x, y, t + 1, mats.ridge);
+        if (a === g0 + 1 && D >= 4 && t + 1 < m.sz) m.set(x, y, t + 1, mats.ridge);
       }
     }
   if (g0 >= L)
@@ -547,4 +550,84 @@ export const torii: Generator = (ctx) => {
   return m;
 };
 
-export const TEMPLE_GENERATORS: Record<string, Generator> = { templeHall, towerGate, pagoda, candleTower, torii };
+/**
+ * A three-storey pavilion by its pond (Kinkaku-ji's type): a stone footing;
+ * the first storey of natural wood, pillars and white panels, under a thin
+ * shingle pent roof; the second, gilded, set in a little, under a deep hipped
+ * shingle roof dark underneath; the third, a small gilded square, under a
+ * pyramid of shingles that curves up from its eaves, crowned by a gilt
+ * phoenix. Its plan comes from the height (a little wider than tall). A
+ * landmark: the eaves overhang.
+ * roles: roof (shingles), gold (the gilded storeys and the phoenix), pillar,
+ * wall (the first storey's panels), shadow, base.
+ */
+export const goldenPavilion: Generator = (ctx) => {
+  const H = clamp(Math.round(ctx.heightVox ?? ctx.param("height", 30)), 14, 300);
+  const ex = Math.max(5, Math.round(H * 0.55));
+  const ey = Math.max(4, Math.round(H * 0.45));
+  const m = new VoxelModel(2 * ex + 1, 2 * ey + 1, H + 1);
+  const roof = m.material(ctx.ramp("roof"));
+  const gold = m.material(ctx.ramp("gold"));
+  const opt = (role: string, fallback: number) => (ctx.ramps(role).length ? m.material(ctx.ramp(role)) : fallback);
+  const pillar = opt("pillar", roof);
+  const wall = opt("wall", pillar);
+  const shadow = opt("shadow", roof);
+  const base = opt("base", pillar);
+  const cx = ex;
+  const cy = ey;
+  /** A body of half-extents (bx, by) from z0 to z1: `face` paints its outer ring. */
+  const body = (bx: number, by: number, z0: number, z1: number, face: (along: number, z: number) => number) => {
+    for (let y = cy - by; y <= cy + by; y++)
+      for (let x = cx - bx; x <= cx + bx; x++) {
+        const ring = Math.abs(x - cx) === bx || Math.abs(y - cy) === by;
+        const along = Math.abs(x - cx) === bx ? y - cy : x - cx;
+        for (let z = z0; z < z1; z++) m.set(x, y, z, ring ? face(along, z) : wall);
+      }
+  };
+  /** A hipped roof from eave half-extents (ax, ay) at ze, rising `rise` to (bx, by), dark underneath; a pyramid if `apex`. */
+  const hipRoof = (ax: number, ay: number, bx: number, by: number, ze: number, rise: number, apex = false) => {
+    for (let y = cy - ay; y <= cy + ay; y++)
+      for (let x = cx - ax; x <= cx + ax; x++) {
+        const tx = (Math.abs(x - cx) - bx) / Math.max(1, ax - bx);
+        const ty = (Math.abs(y - cy) - by) / Math.max(1, ay - by);
+        const t = apex ? Math.max(Math.abs(x - cx) / ax, Math.abs(y - cy) / ay) : Math.max(tx, ty);
+        if (t > 1) continue;
+        const zt = ze + Math.round(rise * Math.pow(1 - Math.max(0, t), 1.7));
+        const from = t <= 0 && !apex ? ze : Math.max(ze - 1, zt - 1);
+        for (let z = from; z <= zt; z++) m.set(x, y, z, z === from && t > 0 ? shadow : roof);
+      }
+  };
+  const z1 = Math.round(H * 0.28);
+  const b1x = Math.round(ex * 0.68);
+  const b1y = Math.round(ey * 0.68);
+  for (let y = cy - b1y - 1; y <= cy + b1y + 1; y++) for (let x = cx - b1x - 1; x <= cx + b1x + 1; x++) m.set(x, y, 0, base);
+  // the first storey: natural wood, pillars every third voxel, white panels
+  body(b1x, b1y, 1, z1, (a, z) => (a % 3 === 0 || z === z1 - 1 ? pillar : wall));
+  // its thin pent roof, reaching a little past the storey
+  const r1 = Math.max(2, Math.round(H * 0.05));
+  hipRoof(Math.round(ex * 0.8), Math.round(ey * 0.8), b1x - 1, b1y - 1, z1, r1);
+  // the second storey, gilded, a dark band of windows
+  const z2a = z1 + r1;
+  const z2 = z2a + Math.round(H * 0.24);
+  body(b1x - 1, b1y - 1, z2a, z2, (a, z) => (z > z2a && z < z2 - 1 && a % 2 === 0 && Math.abs(a) < b1x - 2 ? shadow : gold));
+  // its deep hipped roof
+  const b3 = Math.max(2, Math.round(Math.min(b1x, b1y) * 0.62));
+  const r2 = Math.max(2, Math.round(H * 0.08));
+  hipRoof(Math.round(ex * 0.82), Math.round(ey * 0.82), b3, b3, z2, r2);
+  // the third storey: a small gilded square
+  const z3a = z2 + r2;
+  const z3 = z3a + Math.max(3, Math.round(H * 0.18));
+  body(b3, b3, z3a, z3, (a, z) => (z > z3a && z < z3 - 1 && Math.abs(a) <= Math.max(0, b3 - 2) && a % 2 === 0 ? shadow : gold));
+  // the pyramid, then the phoenix
+  const e3 = Math.round(b3 * 1.6);
+  const zp = H - Math.max(2, Math.round(H * 0.08));
+  hipRoof(Math.min(ex, e3), Math.min(ey, e3), 0, 0, z3, Math.max(2, zp - z3), true);
+  for (let z = zp + 1; z <= H; z++) m.set(cx, cy, z, gold);
+  if (H - zp >= 2) {
+    m.set(cx - 1, cy, H - 1, gold);
+    m.set(cx + 1, cy, H - 1, gold);
+  }
+  return m;
+};
+
+export const TEMPLE_GENERATORS: Record<string, Generator> = { templeHall, towerGate, pagoda, candleTower, torii, goldenPavilion };

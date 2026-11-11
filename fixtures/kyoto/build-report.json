@@ -1,5 +1,5 @@
 {
-  "packageHash": "7a2b0d1cd9866318aefdb5d655228dd0398bcb1b986d1f175d97dfd5a164c689",
+  "packageHash": "200b6ae8de54dc3d6bad2f2d9aab0b3a3b613f67dece981227f3ed9a03444039",
   "cells": [
     294,
     378
@@ -14,22 +14,25 @@
     "riverLines": 901
   },
   "objects": {
-    "building.commercial": 2808,
+    "building.commercial": 2781,
     "building.house": 1538,
-    "building.house.gabled": 72620,
+    "building.house.gabled": 72608,
     "building.kura": 411,
     "building.machiya": 28162,
-    "building.midrise": 38491,
+    "building.midrise": 38479,
+    "building.palace": 33,
+    "building.palace.gosho": 32,
     "building.parking": 65,
-    "building.residential": 36579,
-    "building.shrine": 146,
-    "building.temple": 1144,
+    "building.residential": 36551,
+    "building.shrine": 145,
+    "building.temple": 1138,
     "building.tower": 71,
     "building.tower.hotel": 5,
     "landmark.gate.romon": 1,
     "landmark.gate.sanmon": 1,
     "landmark.pagoda": 2,
     "landmark.pagoda.three": 1,
+    "landmark.pavilion.gold": 1,
     "landmark.temple.stage": 1,
     "landmark.torii.great": 1,
     "landmark.tower.candle": 1,

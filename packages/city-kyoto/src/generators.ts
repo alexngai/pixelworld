@@ -7,7 +7,7 @@ export const PLUGIN_NAME = "@pixelworlds/city-kyoto";
 
 /**
  * Kyoto's generators: the street fabric (`machiya`, `midrise`, `kura`, `utilityPole`) and its
- * temples and shrines (`templeHall`, `towerGate`, `pagoda`) its torii (`torii`) and Kyoto Tower's type (`candleTower`). A function, so a
+ * temples and shrines (`templeHall`, `towerGate`, `pagoda`) its torii (`torii`), Kinkaku-ji's type (`goldenPavilion`) and Kyoto Tower's (`candleTower`). A function, so a
  * page that only names the plugin (`cityPlugin`) doesn't bundle them.
  */
 export function kyotoGenerators(): Record<string, Generator> {

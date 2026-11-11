@@ -1,5 +1,5 @@
 {
-  "packageHash": "86835efebbfb282093c998a2689d31be985cd9f272a4adee2d2527440c35e4d8",
+  "packageHash": "56c1539aeeb16ef92abb1ad569e4294138afd2c68c17897251715571a7f70604",
   "cells": [
     184,
     222
@@ -16,6 +16,7 @@
   "objects": {
     "landmark.gate.sanmon": 1,
     "landmark.pagoda": 2,
+    "landmark.pavilion.gold": 1,
     "landmark.temple.stage": 1,
     "landmark.torii.great": 1,
     "landmark.tower.candle": 1

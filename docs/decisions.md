@@ -102,6 +102,7 @@ Status values:
 | D-091 | Kyoto's walking level: Nakagyō to Kiyomizu-dera and Kyoto Tower at 10 m, typed by structure, year, class and roof | Accepted (M5) |
 | D-094 | Kyoto refined: PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns | Accepted (M5) |
 | D-095 | Kyoto's driving and flying levels, and its blind test | Accepted (M5) |
+| D-096 | Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces | Accepted (M5) |
 
 ---
 
@@ -1146,3 +1147,20 @@ The point is more room for visual interest; both halves are wanted.
   - **Buildings on the flying level:** almost nothing in Kyoto stands over 45 m (the city's height limits); the hills and the landmarks are what reads from the air.
   - **A wider driving box** (Arashiyama, Fushimi Inari's mountain): 200,000 cells and 150 more meshes; they belong to a later level.
 - **Later:** the generic modern mid-rises dilute the look (the blind test's most common complaint); machiya rows mapped as one footprint draw one merged roof; Kinkaku-ji, Nijō Castle and the Imperial Palace have no landmark shapes; Kiyomizu-dera's stage reads best from the south and west.
+
+### D-096: Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces (accepted, M5)
+- **Why:** the owner took up D-095's Later list: the blind test's most common complaint, generic modern mid-rises; machiya rows OSM maps as one footprint, drawn as one merged roof; no wires between the utility poles; and no shapes for Kinkaku-ji, Nijō Castle or the Imperial Palace.
+- **What:**
+  - **Kyoto's mid-rises** (`midrise`): a pent eave of tile over the ground floor with the storeys above set back a voxel, as Kyoto's landscape rules ask (45% of `building.midrise`); vertical louvres before an office's glass; an air conditioner's box on some flats' balconies; an old water tank on some roofs. Walls in beige, white and grey tile and concrete: in the blind test the brown tile read as American brick ("New York, Midtown South"), so brown is gone from the mid-rise and commercial groups.
+  - **Rows split into houses** (`machiya`): a footprint wider than two houses (`unit`, 0.8 of the height) is a row: each house its own wall height (a voxel up or down), tiles, door, lattice and slits, paired pillars at the party walls, plaster where a taller house's gable stands over its neighbour's roof.
+  - **Wires** (`utilityPole`, `span`, `sag`): two power lines from the crossarm and a telecom cable, reaching half the spacing to each side and sagging toward mid-span, where the next pole's meet them. A street-prop option `along` (pipeline) puts one row on one side of a road and turns each prop to run with it; the poles use it (1,265 on the walking level, where they were 2,301 on both sides).
+  - **Kinkaku-ji** (`goldenPavilion`, `landmark.pavilion.gold`, Wikidata's point, 12.5 m drawn 1.5×): a first storey of natural wood and white panels under a thin shingle pent roof, a gilded second storey under a hipped shingle roof, a small gilded third under a curved pyramid, a gilt phoenix.
+  - **Nijō Castle and the Imperial Palace** (driving level): their halls and gates typed by name (`building.palace`, tile; `building.palace.gosho`, cypress bark), with `from` so a hall drawn in parts (the 紫宸殿) is typed whole; `templeHall` draws them with white walls between dark pillars under shallow eaves. PLATEAU has no models of the Imperial Palace's buildings, and gives Nijō's halls the code of temples and schools (422) with gabled roofs, which had drawn them as houses.
+  - **Pinnacles:** a hall's gable ornament and raised ridge ends only on halls of some size; on narrow corridors they stood in rows "like Gothic pinnacles".
+- **Measured** (builds of 2026-11-11): Nijō 33 pieces and the Imperial Palace 32 typed by name; the walking level 2.1 MB, the driving 7.5 MB, the flying 392 KB, all road reports clean. Tests: the row's heights and party walls, the pent eave, the pavilion's storeys and phoenix, the wires' sag, `along`'s one side and turns.
+- **Blind test** (a fresh evaluator, five new views): Nijō Castle 65% ("the Ninomaru Palace and the moated inner enclosure"), the Imperial Palace 65%, Kinkaku-ji 40% (the pavilion brown at that scale, its pond drawn as sand), a temple compound in Gion as Kyoto 45%; the weakest, Shijō-Karasuma's office blocks, as New York at 25%: what led to the paler palette above. That view wasn't tested again after the change.
+- **Rejected alternatives:**
+  - **Splitting rows in the pipeline** (cutting footprints at plausible party walls): every later step would see more, smaller buildings and lose the footprint's facts' match; the generator knows its front and draws the row.
+  - **Wires as props of their own between poles:** props stand alone and don't know their neighbours; a pole drawing half of each span meets the next one's.
+  - **The Imperial Palace's unnamed buildings by the park they stand in:** the Gyoen is one `park` among many; only names single out the palace.
+- **Later:** the Imperial Palace's covered corridors (unnamed) still draw as low modern blocks, and its courts and the park as lawn where they are gravel; Nijō's stone walls and corner towers; Kinkaku-ji's pond (ESA reads it as bare ground); wires follow quarter turns, so on a diagonal street they run off the road's line.

@@ -169,6 +169,29 @@ describe("Kyoto's buildings", () => {
     expect(topAt(m, 5, 7)).toBeGreaterThanOrEqual(topAt(m, 0, 7) + 2); // the ridge along the longer side
   });
 
+  it("draws a row mapped as one footprint as houses of their own, party walls between (D-096)", () => {
+    // 30 m of front, 19 m deep, two storeys: about five houses
+    const heights = new Set<number>();
+    let pillars = 0;
+    for (const seed of [11, 12, 13]) {
+      const m = gen("building.machiya", seed, rect(48, 30), 13, { floors: 2, front: 6 });
+      for (let x = 1; x < 47; x++) heights.add(topAt(m, x, 9));
+      for (let x = 1; x < 47; x++) if (nameAt(m, x, 0, 3) === "timber") pillars++;
+    }
+    expect(heights.size).toBeGreaterThan(1); // the houses' roofs stand at more than one height
+    expect(pillars).toBeGreaterThanOrEqual(3 * 8); // a pair of pillars at each of four party walls
+  });
+
+  it("gives some mid-rises a pent eave of tile over the ground floor (D-096)", () => {
+    let found = false;
+    for (let seed = 1; seed < 40 && !found; seed++) {
+      const m = gen("building.midrise", seed, rect(20, 20), 48, { floors: 6, front: 6 });
+      const front = topAt(m, 10, 0);
+      if (front < topAt(m, 10, 2) - 10 && nameAt(m, 10, 0, front) === "kawara") found = true;
+    }
+    expect(found).toBe(true);
+  });
+
   it("gives a deep machiya lot a front house and wings under roofs of their own", () => {
     const m = gen("building.machiya", 4, rect(9, 64), 19, { floors: 2, front: 6 });
     const tops = Array.from({ length: 64 }, (_, y) => topAt(m, 4, y));
@@ -180,7 +203,13 @@ describe("Kyoto's buildings", () => {
   it("draws a mid-rise's flats with a balcony across every storey", () => {
     for (let seed = 1; seed < 40; seed++) {
       const m = gen("building.midrise", seed, rect(24, 20), 56, { floors: 7, front: 6 });
-      const rails = Array.from({ length: m.sz }, (_, z) => frontRow(m, z)).filter((r) => r.slice(1, -1).every((n) => n === "steel-grey"));
+      // a rail across the front (an air conditioner's box on it here and there), on the face a pent eave may set back
+      const rails = Array.from({ length: m.sz }, (_, z) => [frontRow(m, z), frontRow(m, z, 1)])
+        .map(([a, b]) => (a!.slice(1, -1).some((n) => n === "steel-grey") ? a! : b!))
+        .filter((r) => {
+          const mid = r.slice(1, -1);
+          return mid.filter((n) => n === "steel-grey").length >= mid.length * 0.6 && mid.every((n) => n === "steel-grey" || n === "concrete-white" || n === "tile-beige");
+        });
       if (rails.length) {
         expect(rails.length).toBe(6); // every storey above the ground
         return;
@@ -289,6 +318,41 @@ describe("Kyoto's landmarks", () => {
     const lamps: string[] = [];
     for (let y = 0; y < m.sy; y++) for (let x = 0; x < m.sx; x++) for (let z = 0; z < H; z++) lamps.push(nameAt(m, x, y, z));
     expect(lamps).toContain("lit");
+  });
+
+  it("draw a gilded pavilion: three storeys, the upper two gold, a phoenix on its pyramid (D-096)", () => {
+    const H = 40;
+    const m = generateModel(style.assets, rampIds, "landmark.pavilion.gold", { seed: 1, heightVox: H });
+    const cx = Math.floor(m.sx / 2);
+    const cy = Math.floor(m.sy / 2);
+    expect(topAt(m, cx, cy)).toBe(H);
+    expect(nameAt(m, cx, cy, H)).toBe("gold");
+    const facing = (z: number) => {
+      for (let y = 0; y < m.sy; y++) if (m.get(cx + 1, y, z)) return nameAt(m, cx + 1, y, z);
+      return "";
+    };
+    expect(facing(Math.round(H * 0.15))).not.toBe("gold"); // the first storey, natural wood
+    const golds = Array.from({ length: H }, (_, z) => facing(z)).filter((n) => n === "gold").length;
+    expect(golds).toBeGreaterThan(H * 0.15);
+    // the lower roof reaches further than the top one
+    const reach = (z0: number, z1: number) => {
+      let r = 0;
+      for (let z = z0; z < z1; z++) for (let x = 0; x <= cx; x++) if (m.get(x, cy, z)) r = Math.max(r, cx - x);
+      return r;
+    };
+    expect(reach(H * 0.3, H * 0.6)).toBeGreaterThan(reach(H * 0.75, H));
+  });
+
+  it("draw utility poles whose wires reach along y, sagging toward their ends (D-096)", () => {
+    const m = generateModel(style.assets, rampIds, "prop.pole", { seed: 2 });
+    const c = Math.floor(m.sy / 2);
+    expect(m.sy).toBeGreaterThan(40); // 24 voxels each side
+    const at = (y: number) => {
+      for (let z = m.sz - 1; z >= 0; z--) if (m.get(0, y, z)) return z;
+      return -1;
+    };
+    expect(at(c + 1)).toBeGreaterThan(at(m.sy - 1)); // lower at mid-span than by the pole
+    expect(at(0)).toBe(at(m.sy - 1));
   });
 
   it("draw Kiyomizu-dera's hall on a stage of pillars over the slope", () => {

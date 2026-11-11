@@ -45,6 +45,7 @@ objects:
     - kyoto-tower
     - toji-pagoda
     - heian-jingu-otorii
+    - kinkaku-ji
   depiction:
     landmarks: { scale: 3 }
     heightStretch: 2.0

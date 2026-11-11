@@ -183,7 +183,7 @@ Kyoto's walking level (D-091, D-094), built from [`worlds/kyoto/walk.yaml`](../w
 - **Buildings:** 33,691 from Overture footprints; 31,420 have facts from PLATEAU's 2025 building models (the `plateau` facts source, D-089: structure, year, storeys, usage code, LoD2 roof shape), 29,493 that Overture gives no height take PLATEAU's, and 29,976 take PLATEAU's roof shape as their generator's hint (`roofHints`, D-094).
 - **Types:** mid-rises (10,923), wooden houses under gabled (7,924) and hipped (332) roofs, machiya (6,451), temple halls and pavilions (513, 180 buildings stand in temple and shrine grounds), kura (91) and shrine halls (57); the rest keep the defaults (6,888 houses, 427 low blocks, 17 car parks, 68 taller blocks).
 - **Centre lines:** 20,250 road cells and 17,581 path cells carry pieces; 8 and 34 have more than six, and drop their narrowest.
-- **Also:** 20,870 canopy trees and 559 street trees, 3,480 lawn cells, 2,301 utility poles, 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
+- **Also:** 20,870 canopy trees and 559 street trees, 3,480 lawn cells, 1,265 utility poles strung with wires (one side of each lane, D-096), 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
 - **Landmarks (generic depictions):** Kiyomizu-dera's main hall on its stage, its three-storey pagoda, the Yasaka Pagoda, Yasaka Shrine's west gate, Chion-in's Sanmon, Kyoto Tower, and three torii (Jishu Shrine's and two in Gion).
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
 - **Size:** 2.1 MB. Built in about 55 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
@@ -204,10 +204,10 @@ Sources and licenses:
 
 Kyoto's driving level (D-095), built from [`worlds/kyoto/region.yaml`](../worlds/kyoto/region.yaml): the city centre at 25 m per cell (294 × 378 cells), from Kinkaku-ji's hills in the north-west to Tō-ji and Fushimi Inari's gate in the south and Ginkaku-ji in the east, with Nijō Castle, the Imperial Palace, the Kamo river and Heian Shrine's great torii. Heights 1.5×, relief 1.5×; the walking level's typology (D-091, D-094).
 
-- **Buildings:** 182,040 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
-- **Types:** wooden houses under gabled (72,620) and hipped (1,538) roofs, mid-rises (38,491), machiya (28,162), temple halls and pavilions (1,144; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (146); the defaults 36,579 houses, 2,808 low blocks, 76 taller blocks, 65 car parks.
+- **Buildings:** 182,019 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
+- **Types:** wooden houses under gabled (72,608) and hipped (1,538) roofs, mid-rises (38,479), machiya (28,162), temple halls and pavilions (1,138; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (145), Nijō Castle's palace halls and gates (33) and the Imperial Palace's (32 pieces), by name (D-096); the defaults 36,551 houses, 2,781 low blocks, 76 taller blocks, 65 car parks.
 - **Also:** 42,179 canopy trees and 3,224 street trees, 4,353 lawn cells, 1,937 rail cells, 13,329 traffic routes.
-- **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m) and Heian Shrine's great torii (24.4 m).
+- **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m), Heian Shrine's great torii (24.4 m) and Kinkaku-ji's Golden Pavilion (D-096).
 - **Road report:** clean (29 components).
 - **Size:** 7.5 MB. Built in about 140 s with the download cache (about 380 s the first time).
 
@@ -220,7 +220,7 @@ Sources and licenses: as `kyoto-walk`.
 
 ## kyoto-fly
 
-Kyoto's flying level (D-095), built from [`worlds/kyoto/fly.yaml`](../worlds/kyoto/fly.yaml) (it extends `region.yaml`): the whole basin at 100 m per cell (184 × 222 cells), from Arashiyama to the slopes of Hiei and from the Kitayama hills south past Fushimi. Relief 2×. Only its landmarks are drawn, three times their size: Kyoto Tower, Tō-ji's and the Yasaka pagodas, Kiyomizu-dera's hall, Chion-in's Sanmon and Heian Shrine's great torii. GSI's tiles are read at 16 m. Rivers only, no canals: Overture's canals are mostly field and street-side channels, a whole cell wide here. 0 to 42 drawn steps. 392 KB, built in about 15 s with the cache.
+Kyoto's flying level (D-095), built from [`worlds/kyoto/fly.yaml`](../worlds/kyoto/fly.yaml) (it extends `region.yaml`): the whole basin at 100 m per cell (184 × 222 cells), from Arashiyama to the slopes of Hiei and from the Kitayama hills south past Fushimi. Relief 2×. Only its landmarks are drawn, three times their size: Kyoto Tower, Tō-ji's and the Yasaka pagodas, Kiyomizu-dera's hall, Chion-in's Sanmon, Heian Shrine's great torii and Kinkaku-ji. GSI's tiles are read at 16 m. Rivers only, no canals: Overture's canals are mostly field and street-side channels, a whole cell wide here. 0 to 42 drawn steps. 392 KB, built in about 15 s with the cache.
 
 ```sh
 cd pipeline
