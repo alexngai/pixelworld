@@ -1,0 +1,576 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "id": "kyoto",
+  "name": "Kyoto",
+  "plugins": ["@pixelworlds/city-kyoto"],
+  "shades": 6,
+  "background": "#1b1c22",
+  "silhouette": "#ffe36e",
+  "outline": { "depthThreshold": 2.0 },
+  "ao": { "strength": 2.2 },
+  "terrain": { "steepRockSlope": 0.7 },
+  "ramps": {
+    "chert": ["#2e2b2a", "#47423e", "#625b54", "#7e766c", "#9a9186", "#b7aea2"],
+    "grass": ["#1e2619", "#2d3a22", "#41532d", "#576d38", "#708846", "#8ca35a"],
+    "moss": ["#132015", "#1d321d", "#294726", "#365d2e", "#477337", "#5d8a43"],
+    "scrub": ["#22251f", "#363a2e", "#4e523f", "#686b51", "#838565", "#a0a07c"],
+    "water": ["#14232a", "#1c3239", "#26434a", "#33565c", "#456b6f", "#5c8485"],
+    "urban": ["#24252b", "#393a41", "#52535a", "#6d6e74", "#8a8b8f", "#a9a9ab"],
+    "asphalt": ["#1d1d22", "#29292f", "#35363c", "#43444a", "#535459", "#65666a"],
+    "marking": ["#3c3c3a", "#66665f", "#919188", "#b9b9ae", "#d9d9cf", "#efefe8"],
+    "sidewalk": ["#2a2927", "#44423e", "#615e58", "#807c74", "#a09b91", "#bfbab0"],
+    "concrete": ["#2b2c30", "#46474b", "#646569", "#848589", "#a4a5a7", "#c3c3c4"],
+    "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"],
+    "gravel": ["#3a3833", "#5c5951", "#817d73", "#a39f94", "#c3bfb4", "#dfdbd1"],
+    "bark": ["#231c17", "#352a22", "#4a3b2f", "#604d3e", "#77614f", "#8f7762"],
+    "leaf": ["#16220f", "#223317", "#30471f", "#405d28", "#537533", "#6a8e41"],
+    "pine": ["#0d1a17", "#13261f", "#1b3428", "#244432", "#2f553d", "#3d684a"],
+    "maple": ["#1f2a10", "#2f4016", "#43591d", "#5a7425", "#74902f", "#91ac3d"],
+    "timber": ["#1a120e", "#281c15", "#38281e", "#4a3628", "#5e4533", "#745640"],
+    "timber-dark": ["#0c0907", "#140f0b", "#1d1510", "#271c15", "#32241b", "#3e2d22"],
+    "koshi": ["#1f0f0b", "#331811", "#4a2318", "#612f20", "#783c29", "#8f4b34"],
+    "bamboo": ["#3b3220", "#5c4f31", "#7e6d45", "#9e8b5a", "#bba872", "#d4c38d"],
+    "kawara": ["#16181d", "#22252c", "#30343c", "#40444d", "#51565f", "#646973"],
+    "kawara-light": ["#23252a", "#363940", "#4c5058", "#646871", "#7d818a", "#989ca4"],
+    "hiwada": ["#1e120d", "#2f1c14", "#42281c", "#563526", "#6b4431", "#82553e"],
+    "copper-green": ["#0f2420", "#16362f", "#1f4a3f", "#2a5f50", "#387563", "#4a8c77"],
+    "plaster": ["#4f4c47", "#77736b", "#9e9a90", "#c2beb3", "#dedad0", "#f1eee6"],
+    "tsuchi": ["#3f3222", "#5f4c34", "#806849", "#9f8460", "#ba9f7a", "#d1b895"],
+    "vermilion": ["#3a0f08", "#62180c", "#8c2412", "#b5341a", "#d44a25", "#e86a3a"],
+    "stone": ["#2f2e2c", "#4b4946", "#6a6762", "#8a8780", "#aaa69e", "#c8c4bb"],
+    "concrete-white": ["#2e2f3c", "#4f5262", "#7a7e8c", "#a4a8b3", "#cbced3", "#ecedee"],
+    "tile-beige": ["#4a4237", "#6d6352", "#90846f", "#b0a48c", "#cbc0a7", "#e1d8c3"],
+    "tile-brown": ["#2e1f18", "#4a3226", "#664636", "#825b47", "#9c725b", "#b48b72"],
+    "glass": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "lit-cool": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
+    "curtain-glass": ["#141c26", "#1f2c3a", "#2d4152", "#3e586a", "#557385", "#7090a0"],
+    "steel-grey": ["#1a1f2a", "#2a3242", "#3d485c", "#526077", "#6a7a92", "#8696ad"],
+    "ai": ["#0e1222", "#161d36", "#20294d", "#2c3866", "#3c4b80", "#52629b"],
+    "gold": ["#2d2118", "#4f3a1f", "#7a5a26", "#a47b2e", "#c99d3e", "#e6c25c"],
+    "bronze": ["#1a1712", "#2a251c", "#3b3427", "#4e4533", "#625740", "#786b4f"]
+  },
+  "strataSets": { "kyoto": [{ "name": "Tamba chert", "aboveMeters": -100000, "ramp": "chert" }] },
+  "defaultStrata": "kyoto",
+  "provinces": {},
+  "surfaces": {
+    "none": { "ramp": "urban", "pattern": "none" },
+    "rock": { "ramp": "strata", "pattern": "speckle", "density": 0.03 },
+    "woodland": { "ramp": "pine", "pattern": "trees", "density": 0.14 },
+    "forest": { "ramp": "pine", "pattern": "trees", "density": 0.2 },
+    "scrub": { "ramp": "scrub", "pattern": "speckle", "density": 0.06 },
+    "water": { "ramp": "water", "pattern": "sparkle", "density": 0.03 },
+    "sand": { "ramp": "gravel", "pattern": "speckle", "density": 0.05 },
+    "desert": { "ramp": "gravel", "pattern": "speckle", "density": 0.04 },
+    "grass": { "ramp": "grass", "pattern": "speckle", "density": 0.05 },
+    "farmland": { "ramp": "moss", "pattern": "fields", "density": 0.5 },
+    "urban": { "ramp": "urban", "pattern": "blocks", "density": 0.18 },
+    "snow": { "ramp": "concrete-white", "pattern": "sparkle", "density": 0.02 },
+    "lawn": { "ramp": "moss", "pattern": "speckle", "density": 0.03, "light": "slope" },
+    "yard": { "ramp": "moss", "pattern": "fields", "density": 0.6 }
+  },
+  "roads": {
+    "asphalt": "asphalt",
+    "marking": "marking",
+    "lanes": { "ramp": "marking", "minPixels": 4, "dash": [1, 2], "median": 1 },
+    "rail": "steel-grey",
+    "classes": {
+      "motorway": { "halfWidth": 0.2, "centerLine": true, "lanes": true },
+      "trunk": { "halfWidth": 0.17, "centerLine": true, "lanes": true },
+      "primary": { "halfWidth": 0.1, "centerLine": true, "lanes": true },
+      "secondary": { "halfWidth": 0.07, "centerLine": true, "lanes": true },
+      "tertiary": { "halfWidth": 0.05, "centerLine": false, "lanes": true },
+      "residential": { "halfWidth": 0.035, "centerLine": false },
+      "unclassified": { "halfWidth": 0.035, "centerLine": false },
+      "living_street": { "halfWidth": 0.03, "centerLine": false },
+      "service": { "halfWidth": 0.03, "centerLine": false },
+      "brick": { "halfWidth": 0.035, "centerLine": false, "ramp": "stone" }
+    }
+  },
+  "scatter": {
+    "woodland": [{ "group": "tree.pine", "perCell": 1.2 }, { "group": "tree", "perCell": 1.0 }],
+    "forest": [{ "group": "tree.pine", "perCell": 1.4 }, { "group": "tree", "perCell": 1.2 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.9 }],
+    "grass": [{ "group": "shrub", "perCell": 0.12 }],
+    "desert": [{ "group": "shrub", "perCell": 0.08 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.05 }],
+    "urban": [{ "group": "shrub.garden", "perCell": 0.04 }],
+    "yard": [{ "group": "tree.maple", "perCell": 0.08 }, { "group": "shrub.garden", "perCell": 0.3 }]
+  },
+  "paths": {
+    "classes": {
+      "sidewalk": { "ramp": "sidewalk" },
+      "footway": { "ramp": "sidewalk" },
+      "pedestrian": { "ramp": "stone" },
+      "steps": { "ramp": "stone" },
+      "crosswalk": { "ramp": "sidewalk", "stripes": true },
+      "cycleway": { "ramp": "sidewalk" },
+      "path": { "ramp": "gravel" }
+    }
+  },
+  "objects": { "heightStretch": 1.5, "variants": 8, "surfaces": { "urban": { "ramp": "urban", "pattern": "speckle", "density": 0.04 } } },
+  "assets": {
+    "building.commercial": {
+      "generator": "midrise",
+      "ramps": {
+        "wall": "tile-beige",
+        "wall.b": "concrete",
+        "wall.c": "tile-brown",
+        "wall.d": "concrete-white",
+        "trim": "concrete-white",
+        "trim.b": "concrete-white",
+        "trim.c": "tile-beige",
+        "trim.d": "concrete",
+        "shop": "glass",
+        "sign": "ai",
+        "sign.b": "vermilion",
+        "sign.c": "concrete-white",
+        "rail": "steel-grey",
+        "roof": "concrete",
+        "eave": "kawara",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "flats": 0.2, "shops": 0.8, "eaves": 0.25, "litFraction": 0.35 }
+    },
+    "building.house": {
+      "generator": "machiya",
+      "ramps": {
+        "wall": "tsuchi",
+        "wall.b": "plaster",
+        "wall.c": "tile-beige",
+        "wall.d": "timber",
+        "timber": "timber",
+        "lattice": "koshi",
+        "gap": "timber-dark",
+        "upper": "tsuchi",
+        "upper.b": "plaster",
+        "upper.c": "tile-beige",
+        "upper.d": "tsuchi",
+        "base": "stone",
+        "fence": "bamboo",
+        "noren": "ai",
+        "roof": "kawara",
+        "roof.b": "kawara-light",
+        "ridge": "kawara-light",
+        "window": "glass",
+        "lit": "lit"
+      },
+      "params": { "koshi": 0.2, "mushiko": 0, "fences": 0.05, "noren": 0.05, "hip": 1, "litFraction": 0.3 }
+    },
+    "building.house.gabled": {
+      "generator": "machiya",
+      "ramps": {
+        "wall": "tsuchi",
+        "wall.b": "plaster",
+        "wall.c": "tile-beige",
+        "wall.d": "timber",
+        "timber": "timber",
+        "lattice": "koshi",
+        "gap": "timber-dark",
+        "upper": "tsuchi",
+        "upper.b": "plaster",
+        "upper.c": "tile-beige",
+        "upper.d": "tsuchi",
+        "base": "stone",
+        "fence": "bamboo",
+        "noren": "ai",
+        "roof": "kawara",
+        "roof.b": "kawara-light",
+        "ridge": "kawara-light",
+        "window": "glass",
+        "lit": "lit"
+      },
+      "params": { "koshi": 0.35, "mushiko": 0.1, "fences": 0.1, "noren": 0.1, "hip": 0, "litFraction": 0.3 }
+    },
+    "building.machiya": {
+      "generator": "machiya",
+      "ramps": {
+        "wall": "timber",
+        "wall.b": "timber",
+        "wall.c": "tsuchi",
+        "timber": "timber",
+        "lattice": "koshi",
+        "lattice.b": "timber",
+        "gap": "timber-dark",
+        "upper": "tsuchi",
+        "upper.b": "plaster",
+        "upper.c": "tsuchi",
+        "base": "stone",
+        "fence": "bamboo",
+        "noren": "ai",
+        "noren.b": "plaster",
+        "noren.c": "koshi",
+        "roof": "kawara",
+        "roof.b": "kawara",
+        "roof.c": "kawara-light",
+        "ridge": "kawara-light",
+        "window": "glass",
+        "lit": "lit"
+      },
+      "params": { "koshi": 1, "mushiko": 0.85, "fences": 0.4, "noren": 0.35, "hip": 0, "litFraction": 0.35 }
+    },
+    "building.midrise": {
+      "generator": "midrise",
+      "ramps": {
+        "wall": "tile-beige",
+        "wall.b": "concrete",
+        "wall.c": "tile-brown",
+        "wall.d": "concrete-white",
+        "wall.e": "tile-beige",
+        "trim": "concrete-white",
+        "trim.b": "concrete-white",
+        "trim.c": "tile-beige",
+        "trim.d": "concrete",
+        "trim.e": "tile-brown",
+        "shop": "glass",
+        "sign": "ai",
+        "sign.b": "vermilion",
+        "sign.c": "concrete-white",
+        "rail": "steel-grey",
+        "roof": "concrete",
+        "eave": "kawara",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "flats": 0.5, "shops": 0.6, "eaves": 0.35, "litFraction": 0.35 }
+    },
+    "building.parking": {
+      "generator": "midrise",
+      "ramps": { "wall": "concrete", "trim": "concrete-white", "rail": "steel-grey", "roof": "concrete", "eave": "kawara", "window": "glass" },
+      "params": { "flats": 0, "shops": 0, "eaves": 0, "litFraction": 0 }
+    },
+    "building.residential": {
+      "generator": "machiya",
+      "ramps": {
+        "wall": "tile-beige",
+        "wall.b": "plaster",
+        "wall.c": "concrete-white",
+        "wall.d": "tsuchi",
+        "timber": "timber",
+        "lattice": "koshi",
+        "gap": "timber-dark",
+        "upper": "tile-beige",
+        "upper.b": "plaster",
+        "upper.c": "concrete-white",
+        "upper.d": "tsuchi",
+        "base": "concrete",
+        "fence": "bamboo",
+        "noren": "ai",
+        "roof": "kawara",
+        "roof.b": "kawara-light",
+        "roof.c": "steel-grey",
+        "ridge": "kawara-light",
+        "window": "glass",
+        "lit": "lit"
+      },
+      "params": { "koshi": 0.1, "mushiko": 0, "fences": 0, "noren": 0, "hip": 0.5, "litFraction": 0.3 }
+    },
+    "building.shrine": {
+      "generator": "templeHall",
+      "ramps": {
+        "base": "stone",
+        "pillar": "vermilion",
+        "shadow": "timber-dark",
+        "bracket": "vermilion",
+        "wall": "plaster",
+        "roof": "hiwada",
+        "roof.b": "copper-green",
+        "ridge": "copper-green",
+        "gable": "plaster",
+        "ornament": "gold"
+      },
+      "params": { "hip": 0.35, "eave": 0.6, "roof": 0.5, "gables": 0.5 }
+    },
+    "building.temple": {
+      "generator": "templeHall",
+      "ramps": {
+        "base": "stone",
+        "pillar": "timber",
+        "shadow": "timber-dark",
+        "bracket": "koshi",
+        "wall": "plaster",
+        "roof": "kawara",
+        "roof.b": "kawara",
+        "roof.c": "kawara-light",
+        "ridge": "kawara-light",
+        "gable": "plaster",
+        "ornament": "gold"
+      },
+      "params": { "hip": 0.4, "eave": 1, "roof": 0.58 }
+    },
+    "building.tower": {
+      "generator": "midrise",
+      "ramps": {
+        "wall": "concrete-white",
+        "wall.b": "tile-beige",
+        "wall.c": "concrete",
+        "trim": "concrete",
+        "trim.b": "concrete-white",
+        "trim.c": "concrete-white",
+        "shop": "glass",
+        "sign": "ai",
+        "rail": "steel-grey",
+        "roof": "concrete",
+        "eave": "kawara",
+        "window": "curtain-glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "flats": 0.2, "shops": 0.8, "eaves": 0.2, "litFraction": 0.45 }
+    },
+    "building.tower.hotel": {
+      "generator": "midrise",
+      "ramps": {
+        "wall": "concrete-white",
+        "wall.b": "tile-beige",
+        "trim": "concrete",
+        "trim.b": "concrete-white",
+        "shop": "glass",
+        "sign": "ai",
+        "rail": "steel-grey",
+        "roof": "concrete",
+        "eave": "kawara",
+        "window": "glass",
+        "lit": "lit",
+        "lit.cool": "lit-cool"
+      },
+      "params": { "flats": 0, "shops": 1, "eaves": 0.3, "litFraction": 0.5 }
+    },
+    "landmark.gate.romon": {
+      "generator": "towerGate",
+      "ramps": {
+        "base": "stone",
+        "pillar": "vermilion",
+        "shadow": "timber-dark",
+        "bracket": "vermilion",
+        "wall": "plaster",
+        "roof": "hiwada",
+        "ridge": "copper-green",
+        "gable": "plaster",
+        "ornament": "gold"
+      },
+      "params": { "lowerRoof": 0, "bays": 3, "width": 0.85, "depth": 0.45 }
+    },
+    "landmark.gate.sanmon": {
+      "generator": "towerGate",
+      "ramps": {
+        "base": "stone",
+        "pillar": "timber",
+        "shadow": "timber-dark",
+        "bracket": "timber",
+        "wall": "timber",
+        "roof": "kawara",
+        "ridge": "kawara-light",
+        "gable": "timber",
+        "ornament": "gold"
+      },
+      "params": { "lowerRoof": 1, "bays": 5, "width": 2.1, "depth": 0.6 }
+    },
+    "landmark.pagoda": {
+      "generator": "pagoda",
+      "ramps": {
+        "base": "stone",
+        "pillar": "vermilion",
+        "shadow": "timber-dark",
+        "bracket": "vermilion",
+        "wall": "plaster",
+        "roof": "kawara",
+        "finial": "bronze",
+        "ornament": "gold"
+      },
+      "params": { "tiers": 5 }
+    },
+    "landmark.pagoda.three": {
+      "generator": "pagoda",
+      "ramps": {
+        "base": "stone",
+        "pillar": "vermilion",
+        "shadow": "timber-dark",
+        "bracket": "vermilion",
+        "wall": "plaster",
+        "roof": "hiwada",
+        "finial": "bronze",
+        "ornament": "gold"
+      },
+      "params": { "tiers": 3 }
+    },
+    "landmark.temple.stage": {
+      "generator": "templeHall",
+      "ramps": {
+        "base": "stone",
+        "pillar": "timber",
+        "shadow": "timber-dark",
+        "bracket": "koshi",
+        "wall": "plaster",
+        "roof": "hiwada",
+        "ridge": "copper-green",
+        "gable": "plaster",
+        "ornament": "gold",
+        "deck": "timber",
+        "rail": "timber"
+      },
+      "params": { "hip": 0.35, "eave": 1, "roof": 0.5, "stage": 0.42, "stageDepth": 0.27, "width": 1.2, "depth": 1.33, "open": 1 }
+    },
+    "landmark.tower.candle": {
+      "generator": "candleTower",
+      "ramps": { "wall": "concrete-white", "detail": "vermilion", "window": "glass", "lit": "lit" }
+    },
+    "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 5 } },
+    "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 6 } },
+    "rock.boulder": { "generator": "boulder", "ramps": { "rock": "chert" } },
+    "shrub": {
+      "generator": "blob",
+      "ramps": { "body": "scrub" },
+      "params": { "radius": 0.6, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.1 }
+    },
+    "shrub.garden": {
+      "generator": "blob",
+      "ramps": { "body": "leaf" },
+      "params": { "radius": 0.7, "radiusJitter": 0.4, "height": 0.6, "trunk": 0, "holes": 0.08 }
+    },
+    "tree": {
+      "generator": "roundTree",
+      "ramps": { "body": "leaf", "trunk": "bark" },
+      "params": { "radius": 2.6, "radiusJitter": 0.6, "height": 2.0, "trunk": 2, "lobes": 5, "holes": 0.08 }
+    },
+    "tree.maple": {
+      "generator": "roundTree",
+      "ramps": { "body": "maple", "trunk": "bark" },
+      "params": { "radius": 2.2, "radiusJitter": 0.5, "height": 1.5, "trunk": 2, "lobes": 6, "holes": 0.12 }
+    },
+    "tree.pine": {
+      "generator": "conifer",
+      "ramps": { "crown": "pine", "trunk": "bark" },
+      "params": { "radius": 2, "minHeight": 8, "heightJitter": 5 }
+    },
+    "tree.street": {
+      "generator": "roundTree",
+      "ramps": { "body": "maple", "trunk": "bark" },
+      "params": { "radius": 2.2, "radiusJitter": 0.4, "height": 2.0, "trunk": 2, "lobes": 5, "holes": 0.08 }
+    },
+    "vehicle.bus": {
+      "generator": "bus",
+      "ramps": {
+        "body.a": "moss",
+        "body.b": "concrete-white",
+        "body.c": "moss",
+        "band.a": "concrete-white",
+        "band.b": "maple",
+        "band.c": "tile-beige",
+        "window": "lit",
+        "door": "glass",
+        "tyre": "asphalt",
+        "light": "lit-cool",
+        "tail": "marker",
+        "roof": "concrete",
+        "trim": "steel-grey",
+        "sign": "lit"
+      }
+    },
+    "vehicle.car": {
+      "generator": "car",
+      "ramps": {
+        "paint.a": "concrete-white",
+        "paint.b": "concrete-white",
+        "paint.c": "concrete",
+        "paint.d": "plaster",
+        "paint.e": "kawara",
+        "paint.f": "asphalt",
+        "paint.g": "ai",
+        "paint.h": "vermilion",
+        "paint.i": "timber-dark",
+        "paint.j": "steel-grey",
+        "paint.k": "concrete-white",
+        "paint.l": "tile-beige",
+        "paint.m": "concrete",
+        "taxi": "ai",
+        "glass": "glass",
+        "tyre": "asphalt",
+        "light": "lit-cool",
+        "tail": "marker",
+        "trim": "concrete",
+        "sign": "lit"
+      }
+    },
+    "vehicle.car.player": {
+      "generator": "car",
+      "ramps": { "paint.a": "vermilion", "glass": "glass", "tyre": "asphalt", "light": "lit-cool", "tail": "marker", "trim": "concrete" }
+    },
+    "vehicle.lightrail": {
+      "generator": "tram",
+      "ramps": {
+        "upper.a": "concrete-white",
+        "upper.b": "tile-beige",
+        "lower.a": "moss",
+        "lower.b": "ai",
+        "roof": "steel-grey",
+        "window": "lit",
+        "tyre": "asphalt",
+        "light": "lit-cool",
+        "tail": "marker"
+      },
+      "params": { "pantograph": 1, "joints": 1 }
+    },
+    "vehicle.plane": {
+      "generator": "plane",
+      "ramps": {
+        "body.a": "concrete-white",
+        "body.b": "plaster",
+        "body.c": "concrete-white",
+        "stripe.a": "vermilion",
+        "stripe.b": "ai",
+        "stripe.c": "steel-grey",
+        "glass": "glass",
+        "trim": "steel-grey",
+        "tyre": "asphalt",
+        "light": "lit-cool",
+        "tail": "marker",
+        "shadow": "asphalt"
+      }
+    },
+    "vehicle.train": {
+      "generator": "train",
+      "ramps": {
+        "loco.a": "concrete-white",
+        "loco.b": "steel-grey",
+        "loco.c": "concrete-white",
+        "stripe.a": "ai",
+        "stripe.b": "vermilion",
+        "stripe.c": "moss",
+        "wagon.a": "steel-grey",
+        "wagon.b": "concrete",
+        "wagon.c": "timber",
+        "wagon.d": "concrete",
+        "wagon.e": "kawara",
+        "container.a": "vermilion",
+        "container.b": "ai",
+        "container.c": "copper-green",
+        "container.d": "tile-beige",
+        "container.e": "concrete-white",
+        "container.f": "steel-grey",
+        "coach": "concrete-white",
+        "band": "ai",
+        "window": "lit",
+        "tyre": "asphalt",
+        "light": "lit-cool",
+        "tail": "marker",
+        "roof": "concrete",
+        "trim": "asphalt"
+      }
+    }
+  },
+  "night": {
+    "background": "#0a0c16",
+    "saturation": 0.5,
+    "multiply": [0.3, 0.35, 0.5],
+    "add": [5, 8, 18],
+    "emissive": {
+      "lit": ["#3a2610", "#8a5a1c", "#d08f2c", "#f2b748", "#ffd27a", "#ffe9b0"],
+      "lit-cool": ["#1c2a3a", "#4a6a8a", "#8fb3d0", "#c0dcef", "#e0f0fa", "#f6fbff"],
+      "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
+    }
+  }
+}

@@ -41,6 +41,12 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   glassPalace: "@pixelworlds/city-paris",
   stoneArchBridge: "@pixelworlds/city-paris",
   palace: "@pixelworlds/city-paris",
+  machiya: "@pixelworlds/city-kyoto",
+  midrise: "@pixelworlds/city-kyoto",
+  templeHall: "@pixelworlds/city-kyoto",
+  towerGate: "@pixelworlds/city-kyoto",
+  pagoda: "@pixelworlds/city-kyoto",
+  candleTower: "@pixelworlds/city-kyoto",
 };
 
 export interface GeneratorInfo {

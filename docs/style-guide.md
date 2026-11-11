@@ -497,3 +497,37 @@ A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with i
 | `landmark.bridge.stone`, `.short` | `stoneArchBridge` (Paris's) | the Pont Neuf's two arms (seven arches and five): round arches between piers with pointed cutwaters, a half-round bastion over each pier with a lamp, a cornice of plain mascarons, stone pavements |
 
 **Street and traffic:** `prop.streetlight` and `prop.signal` in Wallace green, plane trees for `tree` and `tree.street` (broad pale-green crowns on pale trunks), and `bay-area`'s vehicles in Paris's palette, with white river boats.
+
+## 21. Kyoto (the `kyoto` pack, D-090)
+
+A full pack (`worlds/_styles/kyoto/style.json`), laid out like `paris` with its own 39 ramps and no fog. It names only `["@pixelworlds/city-kyoto"]` (`packages/city-kyoto`): every building group is drawn by Kyoto's generators.
+
+**Ramps**
+- **Timber and lattice:** `timber` (dark weathered wood: pillars, beams, the boards of party walls), `timber-dark` (near black: the gaps between slats, slits and doorways, and the shadow under deep eaves), `koshi` (the lattice's red-brown, bengara), `bamboo` (the inuyarai fence at a machiya's foot).
+- **Roofs and walls:** `kawara` (grey tile) and `kawara-light` (silvered tile and ridges), `hiwada` (cypress bark), `copper-green` (copper roofs and ridges), `plaster` (white shikkui), `tsuchi` (earthen plaster), `stone` (granite platforms and steps).
+- **Shrines and temples:** `vermilion` (shrine lacquer), `gold` (ornaments), `bronze` (a pagoda's finial).
+- **Greens and water:** `moss` (lawns and temple grounds), `pine` (the Higashiyama hills' woods), `maple` (garden and street trees), `leaf`, `water` (the shallow grey-green Kamo), `gravel` (its banks and temple courts).
+- **The modern town:** `tile-beige` and `tile-brown` (the tile cladding of mid-rises), `concrete`, `concrete-white`, `curtain-glass`, `steel-grey`, `ai` (indigo noren and signs). Only `lit`, `lit-cool` and `marker` glow at night.
+
+**The fabric** (`buildings.ts`). Storeys are counted as in Japan and in PLATEAU: the ground floor is the first.
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.machiya` | `machiya` | Narrow and deep, two storeys. The ground storey's front is a lattice of red-brown slats with dark gaps (glass glowing behind some at night), between end pillars, over a stone sill and under a beam; a door at one end, a noren over it on some, a bamboo fence at the lattice's foot on some. A pent roof of grey tile over the ground floor: the low upper storey stands back a voxel or two behind it, so nothing projects. The upper storey's earthen or white plaster front has mushiko-mado, plastered bars with dark slits between. A gabled tile roof, its ridge along the street and silvered, rising a voxel for every two in; a deep lot has a front house and wings behind it under roofs of their own. Party walls show dark boards below and plaster above. |
+| `building.house.gabled`, `building.house`, `building.residential` | `machiya` | The wooden town after the machiya: the same pent roof and gable, glass windows in place of most lattices and slits, earthen, white or tile-clad walls; `building.house` under hipped roofs, `building.residential` (untyped) under hipped or gabled roofs. |
+| `building.midrise`, `building.commercial`, `building.tower`, `.hotel`, `building.parking` | `midrise` | A modest block under a flat roof with a parapet and a stair and lift house: flats with a balcony across every storey (a slab, a steel rail, glass doors behind, the units' partitions), or offices and shops with windows in bays, a shopfront under a sign band and a vertical sign board on a front corner (no lettering). On some a rim of grey tile round the roof. |
+| `building.temple`, `building.shrine` | `templeHall` | A stone platform; walls whose deep eaves are drawn by filling the space under them with shadow, pillars on its face, a band of plaster and of brackets under the roof; a hip-and-gable roof (irimoya) whose ridge runs along the longer side, flat at the eaves and steepening toward the ridge, lifted at the corners, the gable plastered with a gilt ornament under its apex and the ridge's ends raised. Temples in tile on dark timber; shrines with shallow eaves, white walls between vermilion pillars, under cypress bark or copper. |
+
+- **Nothing projects** (the building rules, §13): the pent roof stands on the ground storey's front, deep eaves are filled with their shadow, balconies and signs are painted flush.
+
+**Landmarks** (generic depictions, D-051)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.temple.stage` | `templeHall` (`stage`, `open`) | Kiyomizu-dera's main hall: a hall under a cypress-bark hip-and-gable roof on a stone terrace, and to the south its stage of boards with a rail on a lattice of pillars and tie beams over the slope, between two small roofed wings; the eaves open over the walls |
+| `landmark.pagoda`, `.three` | `pagoda` | The Yasaka Pagoda (five storeys, tile) and Kiyomizu-dera's (three, cypress bark): a stone platform; each storey a body of vermilion pillars and white walls with a dark door and a band of brackets, under a square roof whose eaves reach far out, flat at the eaves and steep toward the body, lifted at the corners and dark underneath; a bronze finial of nine rings with a gilt top |
+| `landmark.gate.romon` | `towerGate` | Yasaka Shrine's west gate: a vermilion two-storey gate of three bays, the middle one open, the end ones latticed, a balcony with a rail, a hip-and-gable roof of cypress bark with a copper ridge |
+| `landmark.gate.sanmon` | `towerGate` (`lowerRoof`) | Chion-in's Sanmon, on its footprint: five bays of dark timber, the middle three open, a skirt roof of tile round the lower storey, a deep hip-and-gable tile roof |
+| `landmark.tower.candle` | `candleTower` | Kyoto Tower: a slender white shaft rising through its building, an observation deck wider than the shaft with a band of windows (they glow at night) over a vermilion rim, a spire with vermilion bands and tip |
+
+**Street and traffic:** steel-grey street lights, concrete signals, maple street trees, pines and broadleaves on the hills, and `bay-area`'s vehicles in Kyoto's palette: pale green city buses, white and grey cars, indigo taxis.
