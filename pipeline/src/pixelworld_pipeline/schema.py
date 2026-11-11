@@ -930,6 +930,11 @@ BUILDINGS = Map(
             Num(0, unit="m²"), "Residential footprints up to this size are houses (0: none).", "0"
         ),
         "simplifyMeters": Key(Num(0, unit="m"), "Footprint simplification.", "2"),
+        "courtyards": Key(
+            Bool(),
+            "Keep footprints' courtyards (their holes, as `fh`) instead of filling them.",
+            "false",
+        ),
         "implausible": Key(
             Map(
                 {
@@ -963,6 +968,10 @@ TYPOLOGY_RULE = Map(
         "roofs": Key(ListOf(AnyValue("string")), "Roof shapes."),
         "materials": Key(
             ListOf(AnyValue("string")), "Facade materials (from the facts source; any case)."
+        ),
+        "names": Key(
+            ListOf(AnyValue("string")),
+            "Overture names (a building's primary name; its parts share it), exactly.",
         ),
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),

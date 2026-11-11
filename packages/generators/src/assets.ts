@@ -25,6 +25,8 @@ export interface ObjectInstance {
   r?: number;
   /** Footprint polygon in world cells (buildings). */
   fp?: [number, number][];
+  /** The footprint's courtyards: rings in world cells, left out of it (buildings; D-088). */
+  fh?: [number, number][][];
   /** Real height in metres (buildings, landmarks). */
   hm?: number;
   /** Real metres per cell at the instance (warped worlds; the world's scale otherwise). */
@@ -260,10 +262,11 @@ function makeContext(spec: AssetSpec, opts: ObjectBuildOptions, seed: number): G
   };
 }
 
-/** Rasterize a footprint polygon (world cells) into voxel columns. */
+/** Rasterize a footprint polygon (world cells) into voxel columns, leaving out its courtyards (`holes`). */
 export function footprintMask(
   fp: [number, number][],
   voxelCells: number,
+  holes: readonly [number, number][][] = [],
 ): { mask: { sx: number; sy: number; on: Uint8Array }; x0: number; y0: number } {
   let minX = Infinity;
   let minY = Infinity;
@@ -280,17 +283,20 @@ export function footprintMask(
   const sx = Math.max(1, Math.ceil((maxX - x0) / voxelCells));
   const sy = Math.max(1, Math.ceil((maxY - y0) / voxelCells));
   const on = new Uint8Array(sx * sy);
+  const within = (ring: readonly [number, number][], px: number, py: number) => {
+    let inside = false;
+    for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) {
+      const [xa, ya] = ring[a]!;
+      const [xb, yb] = ring[b]!;
+      if (ya > py !== yb > py && px < ((xb - xa) * (py - ya)) / (yb - ya) + xa) inside = !inside;
+    }
+    return inside;
+  };
   for (let j = 0; j < sy; j++)
     for (let i = 0; i < sx; i++) {
       const px = x0 + (i + 0.5) * voxelCells;
       const py = y0 + (j + 0.5) * voxelCells;
-      let inside = false;
-      for (let a = 0, b = fp.length - 1; a < fp.length; b = a++) {
-        const [xa, ya] = fp[a]!;
-        const [xb, yb] = fp[b]!;
-        if (ya > py !== yb > py && px < ((xb - xa) * (py - ya)) / (yb - ya) + xa) inside = !inside;
-      }
-      on[j * sx + i] = inside ? 1 : 0;
+      on[j * sx + i] = within(fp, px, py) && !holes.some((h) => within(h, px, py)) ? 1 : 0;
     }
   // tiny footprints still get one column
   if (!on.some((v) => v)) on[Math.floor(sy / 2) * sx + Math.floor(sx / 2)] = 1;
@@ -340,7 +346,7 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       let origin: [number, number, number];
       let model: VoxelModel;
       if (inst.fp) {
-        const fpm = footprintMask(inst.fp, opts.voxel.h);
+        const fpm = footprintMask(inst.fp, opts.voxel.h, inst.fh);
         ctx.mask = fpm.mask;
         ctx.frame = { x0: fpm.x0, y0: fpm.y0, voxel: opts.voxel.h };
         if (inst.ln && inst.lw !== undefined)

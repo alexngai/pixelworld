@@ -615,6 +615,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `podiumMeters` | number, ≥ 0 (m) | 15 | A tower's podium height. |
 | `houseMaxArea` | number, ≥ 0 (m²) | 0 | Residential footprints up to this size are houses (0: none). |
 | `simplifyMeters` | number, ≥ 0 (m) | 2 | Footprint simplification. |
+| `courtyards` | true/false | false | Keep footprints' courtyards (their holes, as `fh`) instead of filling them. |
 | `implausible` | [mapping](#spec-objects-buildings-implausible) | on | Footprints in parks that are really trees are dropped (null keeps every one). |
 | `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from USGS 3DEP lidar. |
 
@@ -671,6 +672,7 @@ Other keys here are plugin options.
 | `classes` | list of strings | — | Class codes: exact, or a prefix ending in `*`. |
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
+| `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |

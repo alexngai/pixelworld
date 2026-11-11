@@ -35,6 +35,15 @@ describe("objects file", () => {
     expect(v2.instances[1]).toEqual({ g: "tree", x: 3.5, y: 7.25, s: 7, r: 2 });
   });
 
+  it("decodes courtyards (fh) relative to the anchor, as the footprint (D-088)", () => {
+    const v2 = parseObjects({
+      version: 2,
+      instances: [{ g: "building.palace", x: 10, y: 20, s: 1, fp: [[-100, -100], [100, -100], [100, 100], [-100, 100]], fh: [[[-50, -50], [50, -50], [50, 50], [-50, 50]]] }],
+    });
+    expect(v2.instances[0]?.fp?.[0]).toEqual([9, 19]);
+    expect(v2.instances[0]?.fh).toEqual([[[9.5, 19.5], [10.5, 19.5], [10.5, 20.5], [9.5, 20.5]]]);
+  });
+
   it("reproduces v1's footprint numbers exactly", () => {
     // footprints written as two-decimal text and anchors as three-decimal text,
     // as the pipeline writes them, parsed back from JSON like a v1 file
