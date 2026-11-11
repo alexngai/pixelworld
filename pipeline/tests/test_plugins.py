@@ -128,7 +128,14 @@ def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
 def test_a_missing_terrain_source_lists_terrain_sources_only():
     with pytest.raises(plugins.PluginNotFoundError) as e:
         rasters.source("ahn-dtm-05", "terrain", where="sources.dem.kind")
-    assert e.value.available == ["usgs-3dep-13arcsec", "usgs-3dep-1arcsec"]
+    # the built-ins, and Paris's and Japan's city packs' (installed in this repository)
+    assert e.value.available == [
+        "gsi-dem",
+        "ign-lidar-hd-mnt",
+        "ign-rgealti",
+        "usgs-3dep-13arcsec",
+        "usgs-3dep-1arcsec",
+    ]
     assert "no terrain source named 'ahn-dtm-05' (named by sources.dem.kind)" in str(e.value)
     with pytest.raises(plugins.PluginError, match="is a landcover source, not a terrain source"):
         rasters.source("esa-worldcover-2021", "terrain")
@@ -286,3 +293,68 @@ def test_a_registered_facts_source_types_buildings(capsys):
     assert [b["g"] for b in found] == ["building.rowhouse.brownstone", "building.tenement"]
     assert all(b["yr"] == 1890 and b["fl"] == 4 for b in found)
     assert "typology facts: test records 2026, 2/2 buildings with facts" in capsys.readouterr().err
+
+
+class Heights(facts.FactsSource):
+    def at(self, xs, ys):
+        return [{"height": 60.0 if x > 0 else 24.0} for x in xs]
+
+
+def test_facts_heights_fill_only_buildings_without_one(capsys):
+    """D-084: a facts `height` replaces only a default height (`_hdef`), and a
+    building it lifts to the tower height becomes a tower."""
+    region = Region.from_dict(SPEC)
+    found = []
+    for k, (cx, hdef) in enumerate(((-2.0, True), (-1.0, False), (2.0, True))):
+        fp = [[cx, 1.0], [cx + 0.3, 1.0], [cx + 0.3, 1.8], [cx, 1.8]]
+        b = {"g": "building.residential", "x": cx, "y": 1.4, "fp": fp, "hm": 6.0}
+        b.update({"_grp": f"b{k}", "_c": (cx * 1000.0, 0.0)})
+        if hdef:
+            b["_hdef"] = True
+        found.append(b)
+    with plugins.registered(plugins.FACTS, "heights", Heights):
+        objects.type_buildings(region, found, {"facts": "heights", "rules": []}, None, None, 45.0)
+    assert [b["hm"] for b in found] == [24.0, 6.0, 60.0]
+    assert [b["g"] for b in found] == ["building.residential"] * 2 + ["building.tower"]
+    assert not any("_hdef" in b for b in found)
+    assert "2 heights from facts" in capsys.readouterr().err
+
+
+def test_names_rules_match_a_building_and_its_parts_by_overture_name():
+    """D-088: `names:` matches Overture's primary name, which a building's parts share."""
+    from pixelworld_pipeline import typology
+
+    louvre = {"g": "building.residential", "_grp": "a", "_name": "Palais du Louvre"}
+    part = {"g": "building.residential", "_grp": "a", "_name": "Palais du Louvre"}
+    other = {"g": "building.residential", "_grp": "b", "_name": "Hôtel du Louvre"}
+    rule = {
+        "group": "building.palace",
+        "names": ["Palais du Louvre"],
+        "from": ["building.residential"],
+    }
+    for inst, want in ((louvre, True), (part, True), (other, False)):
+        f = {"name": inst["_name"], "parts": True, "height": 20.0}
+        assert typology.matches(rule, inst["g"], f) is want
+
+
+def test_courtyards_are_kept_as_holes_and_move_with_the_footprint():
+    """D-088: with `courtyards`, a footprint's holes go out as `fh` rings,
+    turned with it when snapped, scaled with it when depicted, and stored
+    relative to the anchor as `fp` is."""
+    from pixelworld_pipeline import world_format
+
+    outer = [[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]]
+    court = [[1.0, 1.0], [3.0, 1.0], [3.0, 3.0], [1.0, 3.0]]
+    inst = {"g": "building.palace", "x": 2.0, "y": 2.0, "s": 1, "fp": outer, "fh": [court]}
+    # scaled twice about the anchor, as depict_buildings scales the outline
+    out = objects._moved_rings(inst["fh"], lambda r: (r - (2.0, 2.0)) * 2 + (2.0, 2.0))
+    assert out == [[[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]]]
+    # stored as hundredths from the anchor, and read back
+    blob = world_format.encode_objects([inst])
+    back = world_format.decode_objects(blob)
+    assert back[0]["fh"] == [court] and back[0]["fp"] == outer
+    # snapping turns them with the outline
+    turned = objects.snap_buildings(
+        [{**inst, "_grp": "a", "fp": [[0, 0], [4, 0.2], [3.8, 4.2], [-0.2, 4]]}], {"angle": 12}
+    )
+    assert turned[0]["fh"] != [court] and len(turned[0]["fh"][0]) == 4

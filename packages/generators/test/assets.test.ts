@@ -79,6 +79,22 @@ describe("assets", () => {
     expect(mask.on.every((v) => v === 1)).toBe(true);
   });
 
+  it("leaves a footprint's courtyards out of its mask (D-088)", () => {
+    const ring = (a: number, b: number): [number, number][] => [
+      [a, a],
+      [b, a],
+      [b, b],
+      [a, b],
+    ];
+    const { mask } = footprintMask(ring(0, 3), 0.5, [ring(1, 2)]);
+    expect([mask.sx, mask.sy]).toEqual([6, 6]);
+    const at = (i: number, j: number) => mask.on[j * mask.sx + i];
+    // the court (cells 1–2, voxels 2–3) is open; the wings round it are not
+    expect([at(2, 2), at(3, 3), at(2, 3)]).toEqual([0, 0, 0]);
+    expect([at(0, 0), at(1, 2), at(4, 3), at(5, 5)]).toEqual([1, 1, 1, 1]);
+    expect(mask.on.reduce((s, v) => s + v, 0)).toBe(36 - 4);
+  });
+
   it("instances repeated objects per variant and merges unique ones", () => {
     const out = buildObjects(
       [

@@ -1,0 +1,14 @@
+name: Grand Palais
+wikidata: Q457318
+# Overture's footprint centroid; the nave runs north-south along the Avenue
+# Winston-Churchill, which its main front faces (east)
+anchor: { lon: 2.31238, lat: 48.86616 }
+height: 50          # to the top of the dome (Overture's tallest part)
+orient: 1           # the nave north-south, the main front to the east
+clear: 40
+replaces: [Grand Palais]
+depictions:
+  # an exhibition palace: stone walls with a colonnade under barrel vaults of
+  # glass on iron ribs, a glass dome over the crossing, a stone wing behind;
+  # the quadrigas are plain blocks; no name
+  generic: { group: landmark.hall.glass }

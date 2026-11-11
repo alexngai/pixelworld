@@ -12,6 +12,7 @@ Region spec (all sections optional):
         minArea: 30
         towerMeters: 45
         podiumMeters: 15
+        tiers: true      # stacked parts (setback tiers) drawn from the ground (default: dropped)
         # footprints that are likely trees, dropped where they stand in a park
         # (these are the defaults; `implausible: null` keeps every footprint)
         implausible: { maxArea: 200, minHeight: 8, minAspect: 2.5, landUse: [park, ...] }
@@ -658,8 +659,10 @@ def building_group(cls: str | None, height_m: float, tower_m: float) -> str:
     return "building.commercial"
 
 
-def _footprint(p: Placement, poly, tolerance: float) -> list[list[float]]:
-    ring = poly.simplify(tolerance).exterior
+def _footprint(p: Placement, poly, tolerance: float, ring=None) -> list[list[float]]:
+    """A footprint's outline in cells; with `ring` (a hole of `poly`), that
+    ring, placed exactly as the outline is."""
+    ring = poly.simplify(tolerance).exterior if ring is None else ring
     coords = np.asarray(ring.coords)[:-1]
     if p.layout is None:
         cx, cy = p.to_cells(coords[:, 0], coords[:, 1], shift=False)
@@ -680,6 +683,26 @@ def _footprint(p: Placement, poly, tolerance: float) -> list[list[float]]:
 
 # Overture roof shapes the building generator draws (anything else is flat)
 ROOF_SHAPES = {"flat", "pyramidal", "dome", "hipped", "half_hipped", "gabled", "skillion"}
+
+
+def _courtyards(p: Placement, poly, tolerance: float, min_area: float) -> list[list[list[float]]]:
+    """A footprint's courtyards (its holes) in cells, placed as its outline is;
+    those under `min_area` m² are left filled."""
+    out = []
+    for hole in poly.interiors:
+        h = shapely.Polygon(hole)
+        if h.area < min_area:
+            continue
+        ring = h.simplify(tolerance).exterior
+        if len(ring.coords) >= 4:
+            out.append(_footprint(p, poly, tolerance, ring))
+    return out
+
+
+def _moved_rings(rings: list, f) -> list:
+    """Courtyard rings (`fh`) through the same transform as the outline: f maps
+    an (n, 2) array of cells."""
+    return [[[round(float(x), 2), round(float(y), 2)] for x, y in f(np.asarray(r))] for r in rings]
 
 
 def _hints(row: dict) -> dict:
@@ -820,6 +843,7 @@ def place_buildings(
     one of the `parks` (projected polygons) are left out; `stats` counts those
     that would have been drawn."""
     min_area = float(spec.get("minArea", 30))
+    courtyards = bool(spec.get("courtyards", False))
     tower_m = float(spec.get("towerMeters", 45))
     podium_m = float(spec.get("podiumMeters", 15))
     tolerance = float(spec.get("simplifyMeters", 2))
@@ -828,8 +852,12 @@ def place_buildings(
     out: list[dict] = []
     polys = []
     parts_by_building: dict[str, list[dict]] = {}
+    # parts standing on others (Overture's setback tiers) are dropped, or with
+    # `tiers` drawn from the ground (where they stand over their building's
+    # footprint), so a setback tower keeps its upper tiers
+    tiers = bool(spec.get("tiers"))
     for part in parts:
-        if float(part.get("min_height") or 0) <= 3:
+        if tiers or float(part.get("min_height") or 0) <= 3:
             parts_by_building.setdefault(part["building_id"], []).append(part)
 
     def placed(poly) -> tuple | None:
@@ -848,7 +876,7 @@ def place_buildings(
         return len(hits) > 0
 
     def add(
-        row: dict, cls: str | None, height_m: float, group: str, hints: dict, geom=None
+        row: dict, cls: str | None, height_m: float, group: str, hints: dict, geom=None, name=""
     ) -> None:
         geom = geom if geom is not None else p.project(shapely.from_wkt(row["geometry"]))
         for poly in list(geom.geoms) if hasattr(geom, "geoms") else [geom]:
@@ -866,10 +894,15 @@ def place_buildings(
                 "hm": round(height_m, 1),
                 "_grp": group,  # building id (parts join their building); see depict_buildings
                 "_c": (float(c.x), float(c.y)),  # projected centroid (facts lookup, D-055)
+                "_name": name,  # the building's Overture name (`names:` rules); parts share it
                 **hints,
             }
             if p.layout is not None:
                 inst["m"] = round(p.scale_at(c.x, c.y), 2)
+            if courtyards and poly.interiors:
+                holes = _courtyards(p, poly, tolerance, min_area)
+                if holes:
+                    inst["fh"] = holes
             out.append(inst)
 
     small_house_m2 = float(spec.get("houseMaxArea", 0))
@@ -891,7 +924,15 @@ def place_buildings(
             cls = "house"
         height = _height(row, _kind(cls))
         my_parts = parts_by_building.get(row["id"], []) if row.get("has_parts") else []
+        if tiers:
+            my_parts = [
+                pt
+                for pt in my_parts
+                if float(pt.get("min_height") or 0) <= 3
+                or geom.contains(p.project(shapely.from_wkt(pt["geometry"])).representative_point())
+            ]
         hints = _hints(row)
+        name = str((row.get("names") or {}).get("primary") or "")
         if heights and not my_parts:
             got = None
             for grid in heights:  # the first grid that covers the footprint
@@ -904,18 +945,21 @@ def place_buildings(
                     stats["lidarHeights"] = stats.get("lidarHeights", 0) + 1
                     stats["lidarTowers"] = stats.get("lidarTowers", 0) + len(towers)
                 if towers:
-                    add(row, cls, podium, row["id"], {}, geom)
+                    add(row, cls, podium, row["id"], {}, geom, name)
                     for k, (poly, h) in enumerate(towers):
-                        add({"id": f"{row['id']}#t{k}"}, cls, h, row["id"], hints, poly)
+                        add({"id": f"{row['id']}#t{k}"}, cls, h, row["id"], hints, poly, name)
                 else:
-                    add(row, cls, podium, row["id"], hints, geom)
+                    add(row, cls, podium, row["id"], hints, geom, name)
                 continue
         if my_parts:
-            add(row, cls, min(height, podium_m), row["id"], {}, geom)
+            add(row, cls, min(height, podium_m), row["id"], {}, geom, name)
             for part in sorted(my_parts, key=lambda r: r["id"]):
-                add(part, cls, _height(part, "other"), row["id"], hints)
+                add(part, cls, _height(part, "other"), row["id"], hints, name=name)
         else:
-            add(row, cls, height, row["id"], hints, geom)
+            if not row.get("height") and not row.get("num_floors"):
+                # a default height: a facts source's may replace it (type_buildings)
+                hints = {**hints, "_hdef": True}
+            add(row, cls, height, row["id"], hints, geom, name)
     return out, polys
 
 
@@ -937,9 +981,13 @@ def park_polygons(region: Region, spec: dict[str, Any], boxes: list) -> list | N
     return project_rows(region, [rows[k] for k in sorted(rows)])
 
 
-def type_buildings(region: Region, found: list[dict], spec: dict, streets, water) -> list[dict]:
+def type_buildings(
+    region: Region, found: list[dict], spec: dict, streets, water, tower_m: float = 45.0
+) -> list[dict]:
     """Building typologies (D-055): features, facts and the spec's rules. The
-    facts come from the facts source plugin the spec names (`facts:`)."""
+    facts come from the facts source plugin the spec names (`facts:`). A
+    building Overture gives no height or floors takes the facts' `height`
+    (D-084), and becomes a tower at `tower_m` or more."""
     from . import facts as facts_sources
     from . import typology
 
@@ -953,12 +1001,18 @@ def type_buildings(region: Region, found: list[dict], spec: dict, streets, water
         if len(got) != len(has):
             raise ValueError(f"facts source answered {len(got)} of {len(has)} points")
         facts = [None] * len(found)
+        filled = 0
         for i, f in zip(has, got, strict=True):
             facts[i] = f
+            if f and f.get("height") and found[i].pop("_hdef", False):
+                found[i]["hm"] = round(float(f["height"]), 1)
+                if found[i]["hm"] >= tower_m and found[i]["g"] in typology.GENERIC[:2]:
+                    found[i]["g"] = "building.tower"
+                filled += 1
         known = sum(f is not None for f in got)
         progress.log(
             f"typology facts: {facts_sources.describe(source)}, "
-            f"{known}/{len(has)} buildings with facts"
+            f"{known}/{len(has)} buildings with facts, {filled} heights from facts"
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
     counts = typology.classify(found, spec, feats)
@@ -1002,14 +1056,15 @@ def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
         o = np.array([root["x"], root["y"]])
         fp = (np.asarray(inst["fp"]) - o) @ rot.T + o
         xy = rot @ (np.array([inst["x"], inst["y"]]) - o) + o
-        out.append(
-            {
-                **inst,
-                "x": round(float(xy[0]), 3),
-                "y": round(float(xy[1]), 3),
-                "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
-            }
-        )
+        new = {
+            **inst,
+            "x": round(float(xy[0]), 3),
+            "y": round(float(xy[1]), 3),
+            "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
+        }
+        if inst.get("fh"):
+            new["fh"] = _moved_rings(inst["fh"], lambda r, o=o, rot=rot: (r - o) @ rot.T + o)
+        out.append(new)
     return out
 
 
@@ -1100,6 +1155,8 @@ def clear_of_roads(
                     "y": round(float(inst["y"] + moved[1]), 3),
                     "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
                 }
+                if inst.get("fh"):
+                    out[i]["fh"] = _moved_rings(inst["fh"], lambda r, v=moved: r + v)
             continue
         stats["trimmed"] += 1
         for i, poly in zip(members, polys, strict=True):
@@ -1147,6 +1204,10 @@ def depict_buildings(p: Placement, instances: list[dict], spec: dict[str, Any]) 
                 "fp": [[round(float(x), 2), round(float(y), 2)] for x, y in fp],
                 "m": round(inst.get("m", p.m) / scale, 2),
             }
+            if inst.get("fh"):
+                new["fh"] = _moved_rings(
+                    inst["fh"], lambda r, ax=ax, ay=ay: (r - (ax, ay)) * scale + (ax, ay)
+                )
             moved.append(new)
         if scale > 1.0:
             shape = shapely.union_all([shapely.Polygon(i["fp"]).buffer(0) for i in moved])
@@ -1466,6 +1527,7 @@ def place(
         return any(math.hypot(x - lx, y - ly) < r for lx, ly, r in clear_zones)
 
     replaces = {r for lm in landmarks for r in lm.get("replaces", [])}
+    fp_landmarks: dict[int, Any] = {}
     lidar_stats: dict[str, int] = {}
     building_polys = []
     if spec.get("buildings") is not None:
@@ -1482,6 +1544,20 @@ def place(
             parts += overture.building_parts(release, tuple(box))
         parts = list({pt["id"]: pt for pt in parts}.values())
         rows.sort(key=lambda r: r["id"])
+        # landmarks drawn on the footprint of the building they replace (the
+        # largest of its polygons), not on a box sized from their height
+        for k, lm in enumerate(landmarks):
+            if lm.get("footprint"):
+                names = {r.lower() for r in lm.get("replaces", [])} | set(lm.get("replaces", []))
+                polys = [
+                    g
+                    for r in rows
+                    if replaced_by_landmark(r, names)
+                    for geom in [p.project(shapely.from_wkt(r["geometry"]))]
+                    for g in getattr(geom, "geoms", [geom])
+                ]
+                if polys:
+                    fp_landmarks[k] = max(polys, key=lambda g: g.area)
         grids = []
         lidar_spec = spec["buildings"].get("lidar")
         if lidar_spec:
@@ -1521,7 +1597,14 @@ def place(
             found, cleared = clear_of_roads(found, road_strips(*roads), nudge)
             progress.log(f"buildings off the roads: {cleared}")
         if spec.get("typology"):
-            found = type_buildings(region, found, spec["typology"], streets, water)
+            found = type_buildings(
+                region,
+                found,
+                spec["typology"],
+                streets,
+                water,
+                float(spec["buildings"].get("towerMeters", 45)),
+            )
         instances += depict_buildings(p, found, depiction.get("buildings", {}))
     tree = shapely.STRtree(building_polys) if building_polys else None
 
@@ -1575,6 +1658,11 @@ def place(
             inst["m"] = round(local / lm_scale[k], 2)
         if "orient" in lm:
             inst["r"] = int(lm["orient"]) % 4
+        if k in fp_landmarks:
+            poly = fp_landmarks[k]
+            cx, cy = p.to_cells(np.array([poly.centroid.x]), np.array([poly.centroid.y]))
+            inst["x"], inst["y"] = float(cx[0]), float(cy[0])
+            inst["fp"] = _footprint(p, poly, float(spec["buildings"].get("simplifyMeters", 2)))
         if "line" in lm:
             snap_deg = None
             if lm.get("snap") and region.snap:

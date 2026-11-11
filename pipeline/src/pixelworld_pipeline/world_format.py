@@ -348,6 +348,11 @@ def encode_objects(instances: list[dict[str, Any]], version: int = OBJECTS_VERSI
                     **inst,
                     "fp": [[_hundredths(px) - ax, _hundredths(py) - ay] for px, py in inst["fp"]],
                 }
+                if inst.get("fh"):
+                    inst["fh"] = [
+                        [[_hundredths(px) - ax, _hundredths(py) - ay] for px, py in ring]
+                        for ring in inst["fh"]
+                    ]
             out.append(inst)
         instances = out
     blob = json.dumps({"version": version, "instances": instances}, separators=(",", ":"))
@@ -369,6 +374,11 @@ def decode_objects(blob: bytes) -> list[dict[str, Any]]:
             if inst.get("fp"):
                 ax, ay = _hundredths(inst["x"]), _hundredths(inst["y"])
                 inst["fp"] = [[(ax + dx) / 100, (ay + dy) / 100] for dx, dy in inst["fp"]]
+                if inst.get("fh"):
+                    inst["fh"] = [
+                        [[(ax + dx) / 100, (ay + dy) / 100] for dx, dy in ring]
+                        for ring in inst["fh"]
+                    ]
     return instances
 
 

@@ -1,0 +1,126 @@
+# Paris, walking level (D-078, D-086): from the Eiffel Tower and the
+# Trocadéro east to the Île de la Cité and the Marais at 10 m per cell, with
+# the Seine and its bridges between the Champ de Mars, the Invalides and the
+# Louvre on one side and the Champs-Élysées, the Opéra and the grands
+# boulevards on the other. The Haussmann street wall is most of it; the
+# Marais and the islands keep their older, narrower houses.
+# The only level so far: the driving and flying levels come later, and will
+# share a region.yaml with this one.
+# Build: cd pipeline && uv run pixelworld build ../worlds/paris/walk.yaml
+id: paris-walk
+name: Paris (walking)
+level: walk
+levels:
+  - { name: walk, world: paris-walk, label: Walking central Paris }
+bounds: [2.285, 48.848, 2.368, 48.877] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+# the Chaillot hill rises 40 m over the Seine and the quays drop to the
+# water; 1.5x as for New York, so both read without lifting the streets
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Paris's streets run at every angle: Haussmann's avenues radiate from the
+# Étoile, the Opéra and the Bastille. Only streets within 6 degrees of one of
+# the 16 directions (the 8 and the 2:1 ones) snap to it (D-049, D-082); the
+# rest keep their angle and are drawn along their own centre lines.
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  # ways drawn along their centre lines, not their cells' connections (D-082)
+  centrelines: true
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 4 }, smooth: { lawn: 15 } }
+
+# parks and squares as lawn (the Champ de Mars, the Tuileries, the
+# Trocadéro's gardens, the squares of the Marais)
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+    # courtyards stay open (D-088): 4,002 of the box's footprints have them
+    courtyards: true
+  # Building typologies (D-055) from APUR and IGN (D-084): APUR's
+  # construction period (each period stands for one year, or the footprint's
+  # own year inside it), its urban fabric class, and BD TOPO's storeys, which
+  # count the ground floor and the mansard's. First match wins.
+  typology:
+    facts: { plugin: apur, version: "2026-07-30" }
+    rules:
+      # palaces by Overture's name (D-088): the Louvre's wings round its
+      # courtyards, and the Hôtel des Invalides round the dome's church
+      - { group: building.palace, names: ["Palais du Louvre", "Hôtel des Invalides"], from: [building.residential, building.commercial, building.tower] }
+      # the Louvre's pyramid is a protected work: a plain modern block
+      - { group: building.modern, names: ["Pyramide du Louvre"] }
+      # APUR's "remarkable buildings": churches, ministries, palaces, museums
+      - { group: building.civic, classes: [ER] }
+      # the 1920s-30s: HBM's brick blocks (APUR's own HBM class first)
+      - { group: building.hbm, classes: [HBM] }
+      - { group: building.hbm, year: [1920, 1940], uses: [residential, mixed], floors: [5, 9] }
+      # Haussmann's Paris: 1851-1914, 5 to 8 storeys counted as BD TOPO does
+      - { group: building.haussmann, year: [1851, 1915], floors: [5, 8] }
+      # before 1850: the faubourg's narrow plastered houses, up to 5 storeys;
+      # taller ones (the Restoration's and July Monarchy's stone rental
+      # blocks) keep the stone default
+      - { group: building.faubourg, year: [1000, 1851], floors: [1, 5] }
+      # after the war (APUR's 1940-1967 period and later): slabs and blocks
+      - { group: building.modern, year: [1940, 2100] }
+      - { group: building.industrial, uses: [industrial] }
+  vegetation:
+    # park trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    # the boulevards' plane trees
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [eiffel-tower, notre-dame, arc-de-triomphe, palais-garnier, pont-alexandre-iii, invalides-dome, grand-palais, pont-neuf-north, pont-neuf-south]
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: paris
+start: { lon: 2.3340, lat: 48.8680 } # the Avenue de l'Opéra
+
+sources:
+  # IGN's RGE ALTI 1 m DTM (D-084), read at 4 m. LiDAR HD's 50 cm DTM is
+  # sharper, but has pits and spikes here (an excavation 18 m deep, a roof
+  # read as ground 20 m up) that a walking level would show
+  dem: { kind: ign-rgealti, overview: 4 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river]
+  # rails out of their tunnels: the RER and metro where they surface
+  rails:
+    - { draw: train, rail: [subway, standard_gauge] }
+
+geology: null

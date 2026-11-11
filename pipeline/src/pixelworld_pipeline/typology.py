@@ -23,7 +23,8 @@ group:
 
 Rule fields (all optional): year [from, to) · uses (residential, mixed,
 commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
-facts' class codes: exact, or a prefix ending in `*`) · roofs (roof shapes:
+facts' class codes: exact, or a prefix ending in `*`) · names (Overture's
+primary name of the building, exactly; its parts share it) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
 minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
 max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
@@ -112,7 +113,10 @@ def features(
         m = float(inst.get("m") or m_per_cell)
         rect = poly.minimum_rotated_rectangle
         rc = np.asarray(rect.exterior.coords)[:4] if rect.geom_type == "Polygon" else None
-        f: dict[str, Any] = {"height": float(inst.get("hm") or 0.0)}
+        f: dict[str, Any] = {
+            "height": float(inst.get("hm") or 0.0),
+            "name": inst.get("_name") or "",
+        }
         if rc is None:
             out[i] = f
             continue
@@ -184,7 +188,11 @@ def features(
         if fact and (g not in shared or (fact.get("year") and not shared[g].get("year"))):
             shared[g] = fact
     for i in in_parts:
-        f = {"height": float(instances[i].get("hm") or 0.0), "parts": True}
+        f = {
+            "height": float(instances[i].get("hm") or 0.0),
+            "parts": True,
+            "name": instances[i].get("_name") or "",
+        }
         fact = shared.get(instances[i].get("_grp"))
         if fact:
             f["year"] = fact.get("year")
@@ -242,6 +250,8 @@ def matches(rule: dict, group: str, f: dict) -> bool:
     if "materials" in rule and str(f.get("material") or "").casefold() not in {
         str(m).casefold() for m in rule["materials"]
     }:
+        return False
+    if "names" in rule and f.get("name", "") not in [str(n) for n in rule["names"]]:
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),

@@ -1,80 +1,89 @@
 {
-  "packageHash": "e1c2aa8ca0ed7e1f76214b4235f86a4734664b2e59850895ef29679ed22e8b55",
+  "packageHash": "8bc2cd1fc767bc276a7d7f89eb19ca6b0a69e63942e9825787815062afa1161b",
   "cells": [
-    424,
-    434
+    634,
+    1134
   ],
-  "chunks": 49,
+  "chunks": 180,
   "heightRange": [
-    -7,
-    12
+    -9,
+    25
   ],
   "inputs": {
-    "roadSegments": 8539,
-    "riverLines": 3
+    "roadSegments": 19997,
+    "riverLines": 26
   },
   "objects": {
-    "building.apartment.prewar": 443,
-    "building.brownstone": 973,
-    "building.commercial": 1839,
-    "building.commercial.historic": 1868,
-    "building.industrial": 83,
-    "building.loft.castiron": 258,
-    "building.parking": 19,
-    "building.pier": 10,
-    "building.residential": 3150,
-    "building.tenement": 3492,
-    "building.tower": 54,
-    "building.tower.deco": 613,
-    "building.tower.glass": 275,
-    "building.tower.postmodern": 127,
-    "building.tower.slab": 375,
+    "building.apartment.prewar": 3364,
+    "building.brownstone": 8250,
+    "building.commercial": 7599,
+    "building.commercial.historic": 7219,
+    "building.house": 805,
+    "building.industrial": 1032,
+    "building.loft.castiron": 297,
+    "building.parking": 73,
+    "building.pier": 30,
+    "building.residential": 16460,
+    "building.tenement": 13623,
+    "building.tower": 284,
+    "building.tower.deco": 3261,
+    "building.tower.glass": 1678,
+    "building.tower.hotel": 4,
+    "building.tower.postmodern": 988,
+    "building.tower.slab": 2403,
+    "landmark.block.wedge": 1,
+    "landmark.bridge.cantilever": 10,
     "landmark.bridge.suspension": 17,
+    "landmark.bridge.suspension.steel": 8,
+    "landmark.hall.terminal": 1,
+    "landmark.tower.deco.setback": 1,
+    "landmark.tower.deco.steel": 1,
     "landmark.tower.gothic": 1,
     "landmark.tower.obelisk.diagonal": 1,
-    "prop.signal": 142,
-    "prop.streetlight": 2702,
-    "tree": 15281,
-    "tree.street": 3615
+    "prop.signal": 438,
+    "prop.streetlight": 12366,
+    "tree": 62094,
+    "tree.street": 14764
   },
   "roads": {
-    "cells": 24276,
-    "edges": 25620,
+    "cells": 90448,
+    "edges": 95104,
     "discontinuous_edges": 0,
     "steep_edges": 0,
-    "components": 11,
+    "components": 29,
     "split_segments": 0,
     "disconnected_junctions": 0,
     "ok": true
   },
   "paths": {
-    "segments": 21873,
-    "cells": 65310
+    "segments": 45497,
+    "cells": 260031
   },
   "rails": {
     "street": 0,
     "cable": 0,
-    "train": 866
+    "train": 2880
   },
   "lanes": {
-    "counted": 37672,
-    "oneway": 28967,
-    "divided": 9556
+    "counted": 152552,
+    "oneway": 118032,
+    "divided": 23065
   },
   "surfaces": {
-    "woodland": 14874,
-    "scrub": 120,
-    "water": 52725,
-    "desert": 1632,
-    "grass": 389,
-    "farmland": 1,
-    "urban": 90122,
-    "lawn": 14646,
-    "yard": 9507
+    "woodland": 56659,
+    "scrub": 292,
+    "water": 181948,
+    "desert": 3127,
+    "grass": 1413,
+    "farmland": 172,
+    "urban": 380349,
+    "lawn": 45603,
+    "yard": 49393
   },
   "routes": {
-    "ferry": 44,
-    "road": 3706,
-    "train": 19
+    "ferry": 82,
+    "lightrail": 4,
+    "road": 12858,
+    "train": 129
   }
 }

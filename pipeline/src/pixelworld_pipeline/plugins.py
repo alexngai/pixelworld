@@ -56,6 +56,11 @@ BUILTIN: dict[str, dict[str, str]] = {
 KNOWN: dict[tuple[str, str], str] = {
     (FACTS, "datasf"): "pixelworld-city-sf",
     (FACTS, "pluto"): "pixelworld-city-nyc",
+    (FACTS, "apur"): "pixelworld-city-paris",
+    (SOURCES, "ign-rgealti"): "pixelworld-city-paris",
+    (SOURCES, "ign-lidar-hd-mnt"): "pixelworld-city-paris",
+    (FACTS, "plateau"): "pixelworld-city-jp",
+    (SOURCES, "gsi-dem"): "pixelworld-city-jp",
 }
 
 _registered: dict[str, dict[str, Any]] = {g: {} for g in GROUPS}

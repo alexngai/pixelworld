@@ -613,8 +613,10 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `minArea` | number, ≥ 0 (m²) | 30 | Smaller footprints are left out. |
 | `towerMeters` | number, ≥ 0 (m) | 45 | Buildings this tall are towers. |
 | `podiumMeters` | number, ≥ 0 (m) | 15 | A tower's podium height. |
+| `tiers` | true/false | off | Parts standing on others (setback tiers) are drawn from the ground where they stand over their building, not dropped. |
 | `houseMaxArea` | number, ≥ 0 (m²) | 0 | Residential footprints up to this size are houses (0: none). |
 | `simplifyMeters` | number, ≥ 0 (m) | 2 | Footprint simplification. |
+| `courtyards` | true/false | false | Keep footprints' courtyards (their holes, as `fh`) instead of filling them. |
 | `implausible` | [mapping](#spec-objects-buildings-implausible) | on | Footprints in parks that are really trees are dropped (null keeps every one). |
 | `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from USGS 3DEP lidar. |
 
@@ -671,6 +673,7 @@ Other keys here are plugin options.
 | `classes` | list of strings | — | Class codes: exact, or a prefix ending in `*`. |
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
+| `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
@@ -753,6 +756,7 @@ Other keys here are plugin options.
 | `orient` | integer | 0 | Quarter turns. |
 | `scale` | number, > 0 | `depiction.landmarks.scale` | Drawn this many times its size. |
 | `replaces` | list of strings | — | Overture building names or ids it stands in for. |
+| `footprint` | true/false | off | Drawn on the footprint of the building it replaces, not on a box. |
 | `parts` | [list of mappings](#spec-objects-landmarks-parts) | — | Sub-objects along a line landmark. |
 | `hero` | true/false | — | Baked offline and painted over. |
 

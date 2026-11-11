@@ -1,0 +1,67 @@
+{
+  "name": "@pixelworlds/city-paris",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Paris's city pack for pixelworld: the Haussmann, faubourg and HBM building generators and the Gothic cathedral and triumphal arch its style pack names",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexngai/pixelworld.git",
+    "directory": "packages/city-paris"
+  },
+  "homepage": "https://github.com/alexngai/pixelworld/blob/main/docs/plugins.md",
+  "bugs": "https://github.com/alexngai/pixelworld/issues",
+  "keywords": [
+    "pixelworld",
+    "pixelworld-plugin",
+    "city-pack",
+    "paris",
+    "pixel-art",
+    "isometric",
+    "voxel",
+    "procedural"
+  ],
+  "sideEffects": [
+    "./src/worker.ts",
+    "./dist/worker.js"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./worker.js": "./src/worker.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./worker.js": {
+        "types": "./dist/worker.d.ts",
+        "default": "./dist/worker.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "prepack": "node build.mjs"
+  },
+  "peerDependencies": {
+    "pixelworld": "workspace:^"
+  },
+  "devDependencies": {
+    "@pixelworlds/city-sf": "workspace:*",
+    "pixelworld": "workspace:*",
+    "tsup": "9.0.0"
+  }
+}

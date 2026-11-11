@@ -2,7 +2,9 @@
 
 Research date: 2026-11-09. Scope: the M5 "second region from coverage tier 1" decision (roadmap §M5, data-sources.md §4). No code was changed.
 
-**Decided (D-078):** all three top candidates, in the order New York, Paris, Amsterdam. New York's sources were then checked directly from an open network (§7), which corrects §3 and §4 where they disagree.
+**Tracking:** the index of every candidate place, and the research on more distinctive destinations (Venice, Santorini, Chongqing, Rio and others), is in [cities.md](cities.md).
+
+**Decided (D-078):** all three top candidates, in the order New York, Paris, Amsterdam. New York's and Paris's sources were then checked directly from an open network (§7, §8), which corrects §3 and §4 where they disagree.
 
 **How this was verified.** This session's network only allows the hosts in the pixelworld environment (DataSF, Wikidata, USGS and others). Every official portal tried was blocked: nyc.gov, opendata.cityofnewyork.us, data.cityofchicago.org, opendata.dc.gov, 3dbag.nl, mlit.go.jp, data.gv.at, hri.fi and data.gouv.fr. Facts below were checked in three ways:
 - **Search:** web-search results that quote the official dataset, metadata and licence pages. The URLs given are the official pages those results came from.
@@ -353,7 +355,7 @@ The **GTFS reader** is optional for all three, since `transit.py` already gets r
   - The VBB and Wiener Linien GTFS licences are unverified.
 - **Helsinki:** field meanings come from code comments, not the official data description PDF.
 - **Zurich:** the GWR licence is ambiguous.
-- **Paris:**
+- **Paris:** *(the licences and BD TOPO's fields are answered in §8)*
   - The LiDAR HD licence shows "not specified" on data.gouv; Etalab 2.0 is per a secondary source. The RGE ALTI licence wasn't checked.
   - The BDNB open-tier fields and the exact BD TOPO field names weren't checked.
 - **London:** the EA lidar licence wording needs a re-check against our doc's "OGL".
@@ -412,3 +414,89 @@ Read from an open network: Socrata dataset metadata and SoQL queries against the
 2. **Heights.** Buildings come from Overture, whose New York heights come from OSM's 2013–14 import of these same footprints. The city's are edited daily. Using them needs either a buildings source (no such plugin kind yet) or a height key read from facts.
 3. **Rule fields.** LPC's material and style are the strongest signals for the brownstone and cast-iron fabric, and no rule reads them yet: `materials:` (facts' `material`) and maybe `styles:`. Both are pipeline changes beyond an adapter.
 4. **Depiction (data-sources.md §7).** The Statue of Liberty is sculpture, not architecture, so it needs a stylized variant. The Empire State Building's image is used as a trademark by its owners; check before a canonical depiction.
+
+---
+
+## 8. Paris, checked directly (2026-11-10)
+
+Read from an open network: APUR's open-data catalogue (`opendata.apur.org/data.json`), its ArcGIS REST service and geocatalogue record; IGN's catalogue records (the Géoplateforme's CSW), its WFS and WMS-Raster and their capabilities; the Géoplateforme's terms of use; and the City of Paris's Opendatasoft API. Counts are from queries on that date. This corrects §3 and §4 where they disagree.
+
+### Licences
+- **APUR** (Atelier parisien d'urbanisme): ODbL. Three places say so: the catalogue (`data.json`) links the ODbL summary for every layer below; the layer's ArcGIS Online item gives "ODbL"; and its geocatalogue record (`urn:apur:emprise_batie_od`) lists the use limitations "Données ouvertes" and "Licence ODbL". The item credits Apur, the DGFiP, the Ville de Paris (STDF) and Aerodata's orthophotos of 2005–2015.
+- **IGN** (BD TOPO, RGE ALTI, LiDAR HD): Licence Ouverte / Open Licence 2.0 (Etalab). IGN's own catalogue records give it in `otherConstraints`, linking Etalab's licence PDF: BD TOPO (edition 3.5, record of 2026-11-06), RGE ALTI (edition 2.0, 2026-10-01) and LiDAR HD (2026-10-15). Each also says "Aucune contrainte" for use and no restriction on public access under INSPIRE. **This settles §6's conflict:** data.gouv's "not specified" is a gap in its harvest of the records, not another licence. The Géoplateforme's terms (cartes.gouv.fr/cgu, version of 15 October 2024) apply the licence the data's provider records in its metadata, and the Licence Ouverte where none is recorded. The WFS and WMS-Raster capabilities say "Fees: none" and need no key.
+- **City of Paris, "Les arbres"**: ODbL (the dataset's metadata: "Open Database License (ODbL)"), published by the Direction des Espaces Verts et de l'Environnement.
+- **For us:** all three allow derived databases. ODbL world packages already carry OpenStreetMap's ODbL; the Licence Ouverte asks for the source and the date of its last update, which the attribution gives (the fetch date is in the build log).
+
+### Datasets
+
+| Dataset (publisher) | Access | Fields we read | Measured |
+|---|---|---|---|
+| **Emprise bâtie Paris** (APUR), the built footprints; its ArcGIS layer is called "Période de construction" | ArcGIS REST, `carto2.apur.org/apur/rest/services/OPENDATA/EMPRISE_BATIE_PARIS/MapServer/0`: envelope queries, `f=geojson`, `outSR=4326`, 3,000 rows a page, paging and statistics supported. Also CSV, shapefile and GeoJSON downloads. Last updated 2026-07-30 | `c_perconst` (period), `an_const` (year), `h_med` (median height, m; also `h_moy`, `h_min`, `h_max`), `c_forme_toit` (roof form), `c_tissu` (urban fabric), `c_morpho`, `c_toiture_mat`, `n_sq_ar` (arrondissement, `7500000NN`), `b_igh` | 128,206 footprints city-wide; 29,517 in the walking box `[2.285, 48.850, 2.365, 48.875]`. **Periods:** 1851–1914 56,949; 1801–1850 17,679; before 1800 11,223; 1915–1939 10,204; undated 7,786; 1940–1967 6,133; 1990–1999 4,657; 1968–1975 4,468; 2008 on 2,432; 1982–1989 2,260; 2000–2007 2,222; 1976–1981 2,185 (no code 4). A year on 81,150 (63%), 53% of them multiples of ten. Height missing or zero on 116. **Roof form:** brisis-terrasson (mansard) 91,492, flat 23,204, two slopes in tile 8,475, two slopes of small-scale fabric 4,704. **Fabric:** regular (`TR`) 66,059, composite (`TC`) 37,999, discontinuous (`TD`) 10,194, small-scale (`TPE`) 7,039, remarkable buildings (`ER`) 3,050, HBM (regular with open courts) 1,317, high-rise over 37 m (`IGH`) 626, industrial (`TI`) 248 |
+| **Quartier de Paris** (APUR) | same service, `QUARTIER/MapServer/0` | `L_QU` (name), `C_AR` | the 80 administrative quartiers |
+| **BD TOPO, bâtiment** (IGN) | Géoplateforme WFS, `data.geopf.fr/wfs`, type `BDTOPO_V3:batiment`; 5,000 features a page; GeoJSON in lon/lat | `nombre_d_etages`, `nombre_de_logements`, `usage_1`, `usage_2`, `hauteur`, `materiaux_des_murs`, `materiaux_de_la_toiture`, `date_d_apparition`, `nature`, `identifiants_rnb` | 24,366 buildings in the walking box. Storeys on 73.9% (7: 6,102; 6: 3,717; 5: 1,929; 8: 1,883), height on 92.8%, a date on 63.9%, materials (as codes) on 53%. **Use** on all: residential 15,178, undifferentiated 5,054, commercial and services 3,804, annex 204, religious 109 |
+| **RGE ALTI** 1 m and **LiDAR HD** 50 cm DTMs (IGN) | Géoplateforme WMS-Raster, `data.geopf.fr/wms-r`: layers `ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES` and `IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93`, as float32 GeoTIFF (`image/geotiff`; also `image/x-bil;bits=32`) in Lambert-93, up to 5,010 pixels a side | elevation, metres | Montmartre's summit reads 130.7 m (RGE ALTI) and 131.9 m (LiDAR HD). Over a 7 × 3.8 km box at 5 m, neither has a gap, and they agree within ±0.8 m on 90% of pixels (1st–99th percentiles −2.6 to +2.3 m). LiDAR HD keeps cuttings that RGE ALTI smooths: the boulevard périphérique's trench at Porte Maillot reads 10.5 m against 22 m. The service labels its Lambert-93 with an unnamed datum: the adapter writes EPSG:2154 into each tile |
+| **Les arbres** (City of Paris) | Opendatasoft, `opendata.paris.fr/api/explore/v2.1/catalog/datasets/les-arbres` | `idbase`, `genre`, `espece`, `libellefrancais`, `hauteurenm`, `circonferenceencm`, `domanialite`, `stadedeveloppement`, `remarquable`, `geo_point_2d` | 220,339 trees (200,256 with a height), updated 2026-11-06. In the walking box 26,950: street trees (`Alignement`) 19,167, gardens 6,878; plane trees 9,109, horse chestnuts 5,928, limes 2,948 |
+
+**Overture's buildings** in the walking box (release 2026-10-21.0): 20,435, with a height on 637 (3%) and floors on 12,528 (61%). The other 37% would stand at the pipeline's default height, which is why the facts carry APUR's height (D-084).
+
+### What the city pack is
+- **`pixelworld-city-paris`** (D-084), with the facts source `apur` and the terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`.
+- **Facts** per APUR footprint: `year` (its own year inside its period, else the period's representative year), `stories`, `units` and `use` from the BD TOPO building under its representative point, `class` (APUR's fabric), `roof` (APUR's roof form), `height` (APUR's median) and `hood` (the quartier).
+- **Not used yet:** the tree points (trees come from the canopy height map, as elsewhere; street trees from records would be a new pipeline input), BDNB, IDFM's GTFS (rails come from Overture), BD TOPO's materials (codes, on half the buildings).
+- **Not checked:** the RGE ALTI's source per area (its quality mask layer exists on the WMS-Raster), LiDAR HD's flight dates over Paris.
+
+### Depiction (data-sources.md §7)
+- France's freedom of panorama covers only non-commercial use by individuals, so a building whose architect died less than 70 years ago is drawn as an ordinary footprint, not a landmark: the Louvre's pyramid and the Centre Pompidou, both inside the walking box, stay generic Overture buildings.
+- The walking level's landmarks are all out of copyright as architecture (the Eiffel Tower, Notre-Dame, the Arc de Triomphe, the Palais Garnier, the Pont Alexandre III) and still drawn as generic shapes: no names, no statues, no reliefs. The Eiffel Tower is unlit: its night lighting is a protected work.
+
+## 9. Japan: PLATEAU and GSI, checked directly (2026-11-11)
+
+Read from an open network: PLATEAU's site policy, its data catalog API, the building files and code lists of Kyoto's and Tokyo's 2025 packages; GSI's content terms, its list of tiles, the elevation tiles' specification, the tiles and GSI's elevation API. Counts come from the Japan pack's extracts (D-089) of two boxes: **Kyoto** `[135.755, 34.990, 135.785, 35.012]` (Shijō-Karasuma to Gion and Kiyomizu-zaka, down to Kyoto Station's north side) and **Shibuya–Shinjuku** `[139.690, 35.655, 139.712, 35.698]`. This adds to §4 and to the Kyoto and Tokyo rows of [cities.md](cities.md).
+
+### Licences
+- **PLATEAU** (`www.mlit.go.jp/plateau/site-policy/`, §3): the site's content, including the 3D city models published on G空間情報センター, is usable under the **Public Data License 1.0** where nothing else is stated. The models' copyright is each municipality's, not MLIT's. The credit's example is "出典：国土交通省 PLATEAUウェブサイト（URL）". Edited or processed content must say so separately ("…を加工して作成"), and mustn't be presented as if MLIT made it. The rules are compatible with **CC BY 4.0**: MLIT lets users use the content under CC BY, and doesn't stand in the way of ODC-BY or ODbL. So derived world packages are fine, with the credit and the processing note in the attribution.
+- **GSI** (国土地理院コンテンツ利用規約, revised 2025-11-20, `www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html`, read with curl: Python's TLS refuses the host's legacy renegotiation): **PDL 1.0** where nothing else is stated; credit "出典：国土地理院ウェブサイト（URL）"; processed content must say so (its example: "地理院タイル（標高タイル（基盤地図情報数値標高モデル））を加工して作成") and mustn't pass as GSI's. The terms warn that some content is restricted by law, the Survey Act's applications for copying survey results among them. **The elevation tiles aren't:** GSI's list of tiles (`maps.gsi.go.jp/development/ichiran.html`) puts them under "基本測量成果以外で出典の記載のみで利用可能なもの" (not basic survey results; usable with the credit alone, no application), credited "国土地理院" or "地理院タイル" with a link to that list.
+
+### Datasets
+
+| Dataset (publisher) | Access | Fields we read | Measured |
+|---|---|---|---|
+| **PLATEAU data catalog** (MLIT) | `api.plateau.reearth.io/datacatalog/citygml/m:<3rd-level mesh>`, anonymous JSON | per city covering the mesh: city code and name, release `year`, `spec`, the package zip, and per feature type the files (`bldg`: `code`, `url`, `fileSize`, `features`, `lod0`–`lod4` counts) | Only each city's current release (a `year` parameter is ignored). Tokyo's ward packages (`…_pref_2025…`, made by the metropolitan government) repeat border meshes in full: mesh 53393596 is in Minato's and Shibuya's, 1,946 buildings each with the same `gml:id`s, the files 0.5% apart in size; 53394506 in Minato's and Shibuya's, 1.9% apart. The feature and LoD counts match exactly |
+| **Building models** (`udx/bldg/<mesh>_bldg_6697_op.gml`; copyright: each municipality) | the file URLs in the catalog, on Google Cloud Storage, stored gzipped: asked with `Accept-Encoding: gzip` they come at 4–14% of their size (Kyoto's 52354600: 107.5 MB as 7.9 MB; 52354601, by Kawaramachi: 326 MB as 43.9 MB). Range requests are ignored. The code lists sit beside them (`<package>/codelists/*.xml`) | CityGML 2.0 with i-UR 3.2 (`uro`), EPSG:6697 (JGD2011 latitude, longitude, height). Per `bldg:Building`: `lod0RoofEdge` (every building; no `lod0FootPrint`), `lod1Solid` (every one), LoD2 `RoofSurface`s, `bldg:measuredHeight`, `storeysAboveGround`, `yearOfConstruction`, `usage`; `uro:buildingStructureType` (Kyoto), `uro:fireproofStructureType` and `uro:detailedUsage` (Tokyo). No `BuildingPart`s and no `roofType` in either | Kyoto's 12 meshes: 24,109 buildings in the box, 106.8 MB to download (35 s), extracted in 65 s in all. Shibuya–Shinjuku's 12: 17,760 buildings, 82.7 MB (29 s), 52 s |
+| **Elevation tiles** (GSI, 標高タイル: 基盤地図情報数値標高モデル) | `cyberjapandata.gsi.go.jp/xyz/{dem1a_png,dem5a_png,dem_png}/{z}/{x}/{y}.png`, anonymous, 256-pixel PNG tiles on the Web Mercator grid. DEM1A (1 m, lidar) to zoom 17, DEM5A (5 m, lidar) to 15, DEM10B (10 m) to 14, each from zoom 1 (GSI's list) | the height, 24 bits in RGB: x = R·2¹⁶ + G·2⁸ + B; below 2²³ it is 0.01·x m, 2²³ (128, 0, 0) is no data, above it 0.01·(x − 2²⁴) | Both boxes have DEM1A; it has holes over the Kamo river, which DEM5A also lacks and DEM10B fills (Shijō Ōhashi reads 38.0 m, GSI's API says "10m"). Reading each box at 4 m (zoom 15) took about 125 tiles (8.5 MB; 64 of DEM1A, 44 of DEM5A, 17 of DEM10B for Kyoto) in 50–75 s, nothing on a second build. Kyoto's box runs 22.8–177.9 m (up the Higashiyama), Shibuya–Shinjuku's 9.1–45.6 m |
+
+**Coverage of the facts** (share of the box's PLATEAU buildings):
+
+| Fact | Kyoto | Shibuya–Shinjuku |
+|---|---|---|
+| `height` (`measuredHeight`; −9999 is none) | 100% (median 8.8 m, 95th percentile 22.9 m, tallest 69 m) | 96.9% (551 at −9999; median 11.9 m, tallest 240.6 m) |
+| `stories` (0 and 9999 are unknown) | 73.9% (6,299 at 0) | 85.9% (2,497 at 9999) |
+| `year` (`0001` is unknown) | 75.1%: 1868–2024, median 1983, 2,882 before 1912 | 0% (no element) |
+| `use` (a known usage code) | 77.4%. Codes: 461 unknown 5,418; 411 house 5,049; 413 house with shop 3,941; 412 flats 3,802; 402 commercial 1,908; 422 education, welfare and religious 1,233; 403 lodging 919; 401 offices 806 | 88.2%. 411 3,847; 401 2,931; 412 2,759; 413 2,475; 402 2,367; 461 1,941; 422 814; 403 159 |
+| `material` (a known structure) | 72.4% (the code on all). 601 wood 10,400; 611 unknown 6,663; 604 steel 4,362; 603 RC 2,146; 602 SRC 273; 605 light steel 221; 606 masonry 44 | 0% (no element). Instead fire resistance on all: 1001 fireproof 10,605; 1003 other 2,764; 1011 unknown 2,504; 1002 quasi-fireproof 1,887 |
+| `roof` (LoD2 roof surfaces) | 96.1%: gabled 13,041, flat 8,539, hipped 1,166, skillion 420 | 35.8% (LoD2 models only for some buildings: 739 of mesh 53393596's 1,946): flat 5,531, gabled 517, hipped 176, skillion 142 |
+
+- **Year:** Kyoto's temples carry recent years: Nishi Hongan-ji's Goei-dō and Amida-dō (built 1636 and 1760) read 1989. Likely a rebuilding or a survey's date, so `year:` rules shouldn't be read as founding dates for 422 buildings.
+- **Roofs** (D-089's rule): wooden buildings in five Kyoto meshes read 78% gabled, 14% flat, 4% hipped; Nishi Hongan-ji's two halls, hip-and-gable (入母屋), read hipped. Against OSM's roof tags (Overture's `roof_shape`, on 67 of Kyoto's buildings) the shapes agree on 42 of 58 compared; five OSM calls gabled read hipped, three of them temple and shrine structures (a bell tower, two water pavilions), whose roofs are often hip-and-gable; seven OSM calls gabled or flat read the other way. In Tokyo, 15 of 28 agree; seven of the rest are domes and curved roofs (`round`, `dome`, `gambrel`) that the rule has no word for.
+- **`detailedUsage`** in Tokyo is the city's own code list (1310, 1210, 1320, 1230, …; 0 for unknown), not the national one shipped with Kyoto's package (401101, 412102, …).
+
+**Overture's buildings** (release 2026-10-21.0) against PLATEAU's:
+
+| | Kyoto | Shibuya–Shinjuku |
+|---|---|---|
+| Overture buildings (OSM footprints) | 28,652; a height on 74, a roof shape on 67 | 16,274; a height on 2,442, a roof shape on 75 |
+| with a PLATEAU building at their centroid (what the pipeline asks) | 26,280 (91.7%) | 15,045 (92.4%) |
+| PLATEAU buildings inside an Overture footprint | 21,383 of 24,109 (88.7%) | 15,054 of 17,760 (84.8%) |
+| heights where both have one | the same (median difference 0.0 m, 74) | the same (0.0 m, 2,336): Overture's heights here are PLATEAU's |
+
+**GSI's tiles through the adapter** (1 m, bilinear) against GSI's own elevation API at the same points: Shijō-Karasuma 36.92 / 36.9 m (1 m lidar); Shijō Ōhashi 37.99 / 38 (10 m); Yasaka shrine's gate 49.59 / 49.6; Gojō-zaka 40.94 / 41.3; Kyoto Station's Karasuma side 28.12 / 28.3; the Shibuya crossing 15.18 / 15.2; Shinjuku's west exit 39.45 / 39.5; Yoyogi Park 35.06 / 35.1. All within 0.4 m.
+
+### What the city pack is
+- **`pixelworld-city-jp`** (D-089), shared by every Japanese city: the facts source `plateau` and the terrain source `gsi-dem`.
+- **Facts** per PLATEAU building: `height`, `stories`, `year`, `use` (the usage code's group), `class` (the usage code), `material` (the structure code) and `roof` (from the LoD2 roof planes); looked up by point in footprint.
+- **Not used yet:** Tokyo's fire resistance and detailed use (kept in the extract), neighbourhoods (the ward code is in each building's `uro:city`), PLATEAU's own DEM, land use, roads and LoD2 textures.
+
+### Not checked
+- **Spot heights:** Hakone-yama's posted 44.6 m (Toyama Park) wasn't found: the highest DEM1A ground within 300 m of where it was looked for is 39.2 m. The coordinates were from memory; GSI's own API agrees with the adapter, so the decoding isn't in question.
+- What `yearOfConstruction` records for rebuilt temples, and why 14% of Kyoto's wooden buildings have flat LoD2 roofs.
+- PLATEAU's older releases (the catalog serves only the current one) and how long a release stays.

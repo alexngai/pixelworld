@@ -4,7 +4,9 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "pixelworld-city-jp",
     "pixelworld-city-nyc",
+    "pixelworld-city-paris",
     "pixelworld-city-sf",
     "pixelworld-pipeline",
 ]
@@ -187,9 +189,47 @@ wheels = [
 ]
 
 [[package]]
+name = "pixelworld-city-jp"
+version = "0.0.0"
+source = { editable = "plugins/pixelworld-city-jp" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pixelworld-pipeline" },
+    { name = "rasterio" },
+    { name = "shapely" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pixelworld-pipeline", editable = "." },
+    { name = "rasterio", specifier = ">=1.4" },
+    { name = "shapely", specifier = ">=2.2.0" },
+]
+
+[[package]]
 name = "pixelworld-city-nyc"
 version = "0.0.0"
 source = { editable = "plugins/pixelworld-city-nyc" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pixelworld-pipeline" },
+    { name = "rasterio" },
+    { name = "shapely" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pixelworld-pipeline", editable = "." },
+    { name = "rasterio", specifier = ">=1.4" },
+    { name = "shapely", specifier = ">=2.2.0" },
+]
+
+[[package]]
+name = "pixelworld-city-paris"
+version = "0.0.0"
+source = { editable = "plugins/pixelworld-city-paris" }
 dependencies = [
     { name = "numpy" },
     { name = "pixelworld-pipeline" },
@@ -246,7 +286,9 @@ dev = [
     { name = "ruff" },
 ]
 plugins = [
+    { name = "pixelworld-city-jp" },
     { name = "pixelworld-city-nyc" },
+    { name = "pixelworld-city-paris" },
     { name = "pixelworld-city-sf" },
 ]
 
@@ -269,7 +311,9 @@ dev = [
     { name = "ruff", specifier = ">=0.6" },
 ]
 plugins = [
+    { name = "pixelworld-city-jp", editable = "plugins/pixelworld-city-jp" },
     { name = "pixelworld-city-nyc", editable = "plugins/pixelworld-city-nyc" },
+    { name = "pixelworld-city-paris", editable = "plugins/pixelworld-city-paris" },
     { name = "pixelworld-city-sf", editable = "plugins/pixelworld-city-sf" },
 ]
 

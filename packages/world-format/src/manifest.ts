@@ -133,6 +133,8 @@ export interface ObjectsFile {
     r?: number;
     /** Footprint polygon in cells. */
     fp?: [number, number][];
+    /** The footprint's courtyards, rings in cells left out of it (version 2 stores them relative to the anchor, as fp). */
+    fh?: [number, number][][];
     hm?: number;
     /** Real metres per cell at the instance (warped worlds). */
     m?: number;

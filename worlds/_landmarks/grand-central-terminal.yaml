@@ -1,0 +1,10 @@
+name: Grand Central Terminal
+wikidata: Q11290
+# Wikidata's coordinate, on 42nd Street at Park Avenue. Drawn on its own
+# footprint (Overture's: the head house and the concourse over the tracks).
+anchor: { lon: -73.977222, lat: 40.752778 }
+height: 46           # Overture's 45.8 m: Wikidata has no height for it
+replaces: [Grand Central Terminal]
+footprint: true
+depictions:
+  generic: { group: landmark.hall.terminal }   # a long stone hall of tall windows, its head on 42nd Street; no clock or sculpture

@@ -1,0 +1,15 @@
+name: Queensboro Bridge
+wikidata: Q125157
+# a cantilever bridge in five spans, anchor pier to anchor pier (Wikidata's
+# 1,135 m): from the anchor pier by First Avenue over the west channel (360 m)
+# to two piers on Roosevelt Island, then over the east channel (300 m) to
+# Queens. The four main piers and both anchor piers are Overture's bridge
+# supports along its roadways.
+line: [[-73.96060, 40.75952], [-73.94892, 40.75444]]
+crest: 41           # deck height above the water mid-channel (m): its 135 ft clearance
+base: 0
+thickness: 29       # the deck's width (Overture's outline)
+bulge: 0
+snap: true
+depictions:
+  generic: { group: landmark.bridge.cantilever }   # steel trusses over two channels; no name

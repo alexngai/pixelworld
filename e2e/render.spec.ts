@@ -330,6 +330,26 @@ test.describe("New York (D-078, D-080, D-081)", () => {
     await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9952,40.6944");
     await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-heights-r0.png");
   });
+
+  test("the Flatiron Building on its own wedge in Midtown (D-083)", async ({ page }) => {
+    // a landmark drawn on its building's footprint, with Madison Square's lawn beside it
+    await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9897,40.7411");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-flatiron-r0.png");
+  });
+
+  test("brownstone rows in Harlem: the driving level (D-083)", async ({ page }) => {
+    // Strivers' Row: rows typed from PLUTO's classes in Harlem's neighbourhoods
+    await open(page, "world=/nyc/&marker=0&zoom=2&rot=0&at=-73.9445,40.8180");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-harlem-r0.png");
+  });
+});
+
+test.describe("Paris (D-084, D-085, D-086)", () => {
+  test("Haussmann blocks in the Gros-Caillou: the walking level typed from APUR and IGN", async ({ page }) => {
+    // the paris style pack and its city pack, named by the world
+    await open(page, "world=/paris-walk/&marker=0&zoom=2&rot=0&at=2.3027,48.8570");
+    await expect(page.locator("#view")).toHaveScreenshot("paris-walk-gros-caillou-r0.png");
+  });
 });
 
 test.describe("San Francisco (D-055, D-056)", () => {

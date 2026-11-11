@@ -97,7 +97,8 @@ A facts source gives each building facts from public records, for the building t
 | `class` | str | the source's native building class code (PLUTO's `bldgclass`, Boston's `BLDG_TYPE`, DataSF's property class) | `classes:` rules |
 | `hood` | str | the neighbourhood | `hoods:` rules |
 | `roof` | str | the roof shape in Overture's words (`flat`, `gabled`, `hipped`, `mansard`, …) | `roofs:` rules |
-| `material` | str | the main facade material | (nothing yet) |
+| `material` | str | the main facade material | `materials:` rules |
+| `height` | float | the building's height in metres | buildings Overture gives no height or floors take it, and become towers at `towerMeters` (D-084) |
 
 **Rules that read them:**
 - `classes: [A4, "C*"]` matches a class code exactly, or by a prefix ending in `*`.
@@ -189,9 +190,8 @@ A source adapter is a `RasterSource` (`pixelworld_pipeline.sources.rasters`). Th
 
 USGS 3DEP is the first terrain adapter (`rasters.USGS3DEP`); it implements `tiles`.
 
-**A non-US terrain source** is a plugin like any other. None ships yet. Each candidate needs its licence confirmed first, as [data-sources.md](data-sources.md) requires:
+**A non-US terrain source** is a plugin like any other. The first is France's: `ign-rgealti` and `ign-lidar-hd-mnt` in Paris's city pack (`pipeline/plugins/pixelworld-city-paris/src/pixelworld_city_paris/ign.py`, D-084). They override `read_into`: the Géoplateforme's WMS-Raster resamples to any resolution, so the adapter asks for tiles at `native_m × overview` on a fixed Lambert-93 grid, caches them, and reprojects them itself. Japan's is the second: `gsi-dem` in Japan's city pack (`pipeline/plugins/pixelworld-city-jp/src/pixelworld_city_jp/gsi.py`, D-089). It also overrides `read_into`: GSI serves anonymous PNG tiles on the Web Mercator grid, so the adapter picks the zoom whose pixels are just finer than `native_m × overview`, takes each tile from the finest of three DEMs that has it (1 m, 5 m, 10 m), decodes, mosaics, caches and reprojects them. Other candidates need their licence confirmed first, as [data-sources.md](data-sources.md) requires:
 - the Dutch **AHN** 0.5 m DTM (CC0; PDOK's ATOM feed or WCS);
-- the French **LiDAR HD** or RGE ALTI DTM (licence metadata to check; see second-region.md);
 - **Copernicus GLO-30** as a global fallback (a surface model, not bare earth).
 
 A sketch for Copernicus GLO-30's public cloud-optimized tiles. Check the tile naming and the licence's attribution text before you use it:
@@ -300,7 +300,7 @@ The module of the build stages is still `pixelworld_pipeline.build`: `from pixel
 
 ## 9. Generator plugins (TypeScript)
 
-A style pack maps each asset group to a **generator** by name (D-030): `"building.rowhouse.victorian": { "generator": "rowhouse", … }`. `pixelworld/generators` holds a registry of them. The workspace's private packages import the same module as `@pixelworlds/generators`; a city pack imports the public name, as `packages/city-sf` does, and so does the code here. The built-ins cover what every region uses: terrain, trees, rocks, the generic building, city blocks, dams, signs, the landmark kit's generic landmarks, street props and vehicles. A city's own building types come from a **generator plugin** (D-071). San Francisco's is the browser half of its city pack: `@pixelworlds/city-sf` (`packages/city-sf`), with `rowhouse` (Victorians, Edwardians and the Sunset's stucco rows), `block` (apartments, Chinatown, piers), `decoTower`, `sfTower`, and Chinatown's `gate` and `lanterns`. New York's is `@pixelworlds/city-nyc` (`packages/city-nyc`, D-081), with `brownstone`, `tenement`, `castIronLoft` and `prewarBlock`. Its style pack names San Francisco's too, for `block` and the towers.
+A style pack maps each asset group to a **generator** by name (D-030): `"building.rowhouse.victorian": { "generator": "rowhouse", … }`. `pixelworld/generators` holds a registry of them. The workspace's private packages import the same module as `@pixelworlds/generators`; a city pack imports the public name, as `packages/city-sf` does, and so does the code here. The built-ins cover what every region uses: terrain, trees, rocks, the generic building, city blocks, dams, signs, the landmark kit's generic landmarks, street props and vehicles. A city's own building types come from a **generator plugin** (D-071). San Francisco's is the browser half of its city pack: `@pixelworlds/city-sf` (`packages/city-sf`), with `rowhouse` (Victorians, Edwardians and the Sunset's stucco rows), `block` (apartments, Chinatown, piers), `decoTower`, `sfTower`, and Chinatown's `gate` and `lanterns`. New York's is `@pixelworlds/city-nyc` (`packages/city-nyc`, D-081), with `brownstone`, `tenement`, `castIronLoft` and `prewarBlock`. Its style pack names San Francisco's too, for `block` and the towers. Paris's is `@pixelworlds/city-paris` (`packages/city-paris`, D-085, D-087), with `haussmann`, `faubourg` and `hbm`, a `palace` for the Louvre's and the Invalides' wings, and eight landmark shapes drawn on the proportions of Paris's landmarks: `cathedral`, `triumphalArch`, `latticeArchTower`, `operaHouse`, `steelArchBridge`, `domedChurch`, `glassPalace` and `stoneArchBridge`; its style pack names San Francisco's too.
 
 ### 9.1 Using one
 

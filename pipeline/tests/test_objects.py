@@ -168,6 +168,20 @@ def test_place_buildings_footprints_parts_and_clear_zones(monkeypatch):
     cleared, _ = objects.place_buildings(p, {}, rows[:1], [], lambda x, y: True)
     assert cleared == []
 
+    # a setback tier standing on b's part (from 60 m to 90 m), and a skybridge
+    # off b's footprint: both dropped, or with `tiers` the tier drawn from the ground
+    tier = {"id": "b2", "building_id": "b", "height": 90, "min_height": 60}
+    tier["geometry"] = square(lon0 + 0.00002, lat0 + 0.00102, 0.00006)
+    bridge = {"id": "b3", "building_id": "b", "height": 20, "min_height": 10}
+    bridge["geometry"] = square(lon0 + 0.0004, lat0 + 0.001, 0.0001)
+    stacked = parts + [tier, bridge]
+    dropped, _ = objects.place_buildings(p, {"minArea": 1}, rows[1:2], stacked, no_clear)
+    assert [o["hm"] for o in dropped] == [15, 60]
+    kept, _ = objects.place_buildings(
+        p, {"minArea": 1, "tiers": True}, rows[1:2], stacked, no_clear
+    )
+    assert [o["hm"] for o in kept] == [15, 60, 90]
+
 
 def _rect(w: float, d: float, x: float = 0.0, y: float = 0.0):
     return shapely.box(x, y, x + w, y + d)

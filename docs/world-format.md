@@ -81,6 +81,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - `s`: seed, which picks the variant
   - optional `r`: quarter-turns
   - optional `fp`: footprint polygon, as `[dx, dy]` points in integer hundredths of a cell from the anchor rounded to hundredths. A point is at `((⌊100·x + ½⌋ + dx) / 100, (⌊100·y + ½⌋ + dy) / 100)` cells, with the rounding computed in double precision. Relative points cut the driving level of San Francisco from 8.30 to 6.15 MB.
+  - optional `fh`: the footprint's courtyards (D-088), a list of rings in the same relative points as `fp`. Columns inside a ring are left out of the footprint. Written only when the spec turns on `objects.buildings.courtyards`.
     - **Version 1** stored the points in absolute cells with two decimals. Readers still accept it. Version 2 decodes to the same numbers wherever those had at most two decimals, as the pipeline writes them, except that −0 reads back as 0.
     - **Readers:** `world_format.decode_objects` (Python) and `parseObjects` (TypeScript) return absolute footprints whatever the version. The shared golden files `testdata/world-format/objects-v1.json` and `objects-v2.json` hold the same instances in both versions.
   - optional `hm`: real or depicted height in metres
