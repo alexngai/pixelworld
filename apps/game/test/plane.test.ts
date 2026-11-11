@@ -3,7 +3,7 @@ import type { PlaneWorld } from "../src/ground";
 import { wrapAngle } from "../src/car";
 import { FlightPilot } from "../src/pilot";
 import { LEVEL_FLIGHT, aoaFor, flyPlane, settleNose, throttleFor, throttleSpeed, type PlaneInput, type PlaneParams, type PlaneState } from "../src/plane";
-import { PLANE } from "../src/tuning";
+import { FLY_PACE, PLANE, pace } from "../src/tuning";
 
 /**
  * The flight model over a made-up world: flat ground at 2 steps, a ridge
@@ -56,19 +56,19 @@ describe("the flight model", () => {
     expect(d.speed).toBeGreaterThan(PLANE.cruiseSpeed);
   });
 
-  it("goes as fast as the throttle says, between the stall and the top speed", () => {
-    expect(throttleSpeed(0, 1)).toBe(PLANE.stallSpeed);
+  it("goes as fast as the throttle says, between its slowest and the top speed", () => {
+    expect(throttleSpeed(0, 1)).toBe(PLANE.slowSpeed);
     expect(throttleSpeed(1, 1)).toBe(PLANE.maxSpeed);
     expect(throttleSpeed(1, 0.5)).toBe(PLANE.maxSpeed / 2);
     expect(throttleSpeed(throttleFor(5, 1), 1)).toBeCloseTo(5, 9);
-    // a walking level's lower stall: the throttle's slowest, and the plane flies it without stalling
-    expect(throttleSpeed(0, 1, PLANE.walkStallSpeed)).toBe(PLANE.walkStallSpeed);
-    expect(throttleSpeed(throttleFor(5, 1, PLANE.walkStallSpeed), 1, PLANE.walkStallSpeed)).toBeCloseTo(5, 9);
+    // a walking level's lower slowest: the plane flies it, holding its height
+    expect(throttleSpeed(0, 1, PLANE.walkSlowSpeed)).toBe(PLANE.walkSlowSpeed);
+    expect(throttleSpeed(throttleFor(5, 1, PLANE.walkSlowSpeed), 1, PLANE.walkSlowSpeed)).toBeCloseTo(5, 9);
     const slow = { ...plane(5, 100, 10), throttle: 0 };
     let crashed: string | null = null;
-    for (let t = 0; t < 10 && !crashed; t += 1 / 30) crashed = flyPlane(slow, LEVEL_FLIGHT, WORLD, { ...PARAMS, stall: PLANE.walkStallSpeed }, 1 / 30).crashed;
+    for (let t = 0; t < 10 && !crashed; t += 1 / 30) crashed = flyPlane(slow, LEVEL_FLIGHT, WORLD, { ...PARAMS, slowest: PLANE.walkSlowSpeed }, 1 / 30).crashed;
     expect(crashed).toBeNull();
-    expect(Math.abs(slow.speed - PLANE.walkStallSpeed)).toBeLessThan(0.05);
+    expect(Math.abs(slow.speed - PLANE.walkSlowSpeed)).toBeLessThan(0.05);
     expect(Math.abs(slow.h - 10)).toBeLessThan(0.5); // it sinks a little while it slows, and levels out
     expect(Math.abs(slow.climb)).toBeLessThan(0.01);
     expect(slow.pitch).toBeGreaterThan(0.1); // slow: the nose rides high
@@ -163,21 +163,29 @@ describe("the flight model", () => {
     expect(high.h).toBeLessThanOrEqual(30);
   });
 
-  it("stalls slow with the stick back: the nose drops though the stick stays back, and it flies again with speed", () => {
-    const s = { ...plane(1000, 1000, 40), speed: PLANE.stallSpeed * 0.8, throttle: 0 };
-    let stalledAt: number | null = null;
+  // the plane's settings on each map: the flying map's pace, the driving map's (400 m cells), and the walking map's (its own slowest)
+  const MAPS: [string, PlaneParams][] = [
+    ["flying", { ...HIGH, pace: 1 }],
+    ["driving", { ...HIGH, pace: pace(400, FLY_PACE.ref, FLY_PACE.floor) }],
+    ["walking", { ...HIGH, pace: FLY_PACE.floor, slowest: PLANE.walkSlowSpeed }],
+  ];
+  it.each(MAPS)("never stalls on the %s map: slow with the stick held back it flies on, and hands off it levels out and holds its height", (_, p) => {
+    const slowest = (p.slowest ?? PLANE.slowSpeed) * p.pace;
+    const s: PlaneState = { x: 1000, y: 1000, h: 40, heading: 0, speed: slowest * 0.5, climb: 0, bank: 0, rollRate: 0, alpha: 0, slip: 0, throttle: 0, yaw: 0, pitch: 0, roll: 0 };
     let lowest = Infinity;
-    for (let t = 0; t < 2.5; t += 1 / 30) {
-      const r = flyPlane(s, { ...LEVEL_FLIGHT, pitch: 1 }, OPEN, HIGH, 1 / 30);
-      if (r.stalled && stalledAt === null) stalledAt = s.pitch;
-      if (stalledAt !== null) lowest = Math.min(lowest, s.pitch);
+    for (let t = 0; t < 3; t += 1 / 30) {
+      expect(flyPlane(s, { ...LEVEL_FLIGHT, pitch: 1 }, OPEN, p, 1 / 30).crashed).toBeNull();
+      lowest = Math.min(lowest, s.speed);
+      expect(s.alpha).toBeLessThanOrEqual(PLANE.maxAoa + 1e-9); // the wing's most, no further: the nose never drops on its own
     }
-    expect(stalledAt).not.toBeNull();
-    expect(lowest).toBeLessThan(stalledAt! - 0.05);
-    fly(s, { throttle: 1 }, 4, OPEN);
-    expect(s.stalled).toBe(false);
-    expect(s.speed).toBeGreaterThan(PLANE.stallSpeed);
-    expect(Math.abs(s.climb)).toBeLessThan(0.1);
+    expect(lowest).toBeGreaterThanOrEqual(slowest * PLANE.floorShare - 1e-9); // never slower than holds it up
+    for (let t = 0; t < 5; t += 1 / 30) flyPlane(s, LEVEL_FLIGHT, OPEN, p, 1 / 30);
+    expect(Math.abs(s.climb)).toBeLessThan(0.05);
+    expect(Math.abs(s.bank)).toBeLessThan(0.05);
+    // at its slowest, hands off, it holds its height
+    const h = s.h;
+    for (let t = 0; t < 5; t += 1 / 30) flyPlane(s, LEVEL_FLIGHT, OPEN, p, 1 / 30);
+    expect(Math.abs(s.h - h)).toBeLessThan(0.5);
   });
 
   it("flies a pilot through waypoints over a ridge without hitting it", () => {

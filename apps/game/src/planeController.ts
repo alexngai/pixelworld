@@ -56,6 +56,8 @@ export class PlaneController implements Controller {
   /** Land by itself when it can (else only on request). */
   autoLand = true;
   private landing = 0;
+  /** When the plane was last put back after a crash: another crash soon after puts it somewhere safe. */
+  private resetAt = -Infinity;
   private view: ControllerView | null = null;
   private world: FlyWorld | null = null;
   private plane: Entity | null = null;
@@ -101,8 +103,8 @@ export class PlaneController implements Controller {
     const k = pace(m.scale.metersPerCell, FLY_PACE.ref, FLY_PACE.floor) / w.renderScale;
     const vox = PLANE.voxels;
     const size = { length: vox.length * w.renderScale, width: vox.width * w.renderScale, height: vox.height * w.renderScale };
-    const stall = m.level === "walk" ? PLANE.walkStallSpeed : PLANE.stallSpeed;
-    this.params = { pace: k, ceiling: w.heightRange[1] + PLANE.ceiling, length: vox.length / 16, stall };
+    const slowest = m.level === "walk" ? PLANE.walkSlowSpeed : PLANE.slowSpeed;
+    this.params = { pace: k, ceiling: w.heightRange[1] + PLANE.ceiling, length: vox.length / 16, slowest };
     this.world = new FlyWorld(view.query, w.cellsX, w.cellsY);
     let start = { x: (m.start?.x ?? w.cellsX / 2) + 0.5, y: (m.start?.y ?? w.cellsY / 2) + 0.5 };
     let heading = this.opts.heading ?? 0;
@@ -122,8 +124,9 @@ export class PlaneController implements Controller {
     this.params.ceiling = Math.max(w.heightRange[1], ...tops) + PLANE.ceiling;
     const ground = this.world.groundAt(start.x, start.y) ?? 0;
     const speed = Math.max(this.opts.speed ?? 0, PLANE.cruiseSpeed * k);
-    // over the ground, and over a tower standing there (the Strip's start is among them)
-    const floor = Math.max(ground, (this.world.objectTopAt(start.x, start.y) ?? -Infinity) + PLANE.crashClearance);
+    // over the ground, and clear of the towers there and just ahead (the Strip's start is among them)
+    const top = this.clearance(start.x, start.y, heading, PLANE.cruiseSpeed * k, 1) ?? ground;
+    const floor = top > ground ? top + PLANE.crashClearance : ground;
     Object.assign(this.state, {
       x: start.x,
       y: start.y,
@@ -131,7 +134,7 @@ export class PlaneController implements Controller {
       heading,
       speed,
       climb: PLANE.startClimb,
-      throttle: throttleFor(speed, k, stall),
+      throttle: throttleFor(speed, k, slowest),
     });
     this.level();
     const model = { group: PLANE.group, seed: PLANE.seed, size };
@@ -159,7 +162,7 @@ export class PlaneController implements Controller {
   place(x: number, y: number, heading = this.state.heading, h?: number): void {
     const ground = this.world?.groundAt(x, y) ?? this.state.h - 2;
     const cruise = PLANE.cruiseSpeed * this.params.pace;
-    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, throttle: throttleFor(cruise, this.params.pace, this.params.stall) });
+    Object.assign(this.state, { x, y, heading, h: h ?? ground + 2, speed: cruise, climb: 0, throttle: throttleFor(cruise, this.params.pace, this.params.slowest) });
     this.level();
     this.pilot = null;
     this.camGround = null;
@@ -209,7 +212,7 @@ export class PlaneController implements Controller {
   /** Wings level, no roll or slip, and the angle of attack that holds the height at this speed. */
   private level(): void {
     const s = this.state;
-    Object.assign(s, { bank: 0, slip: 0, rollRate: 0, stalled: false, alpha: Math.min(PLANE.stallAoa, aoaFor(s.speed, s.climb, 0, this.params)) });
+    Object.assign(s, { bank: 0, slip: 0, rollRate: 0, alpha: Math.min(PLANE.maxAoa, aoaFor(s.speed, s.climb, 0, this.params)) });
     settleNose(s);
   }
 
@@ -220,22 +223,57 @@ export class PlaneController implements Controller {
     while (this.history.length > 0 && this.time - this.history[0]!.t > PLANE.resetBack + 1) this.history.shift();
   }
 
-  /** After a crash (or on R): back where it was `resetBack` seconds ago, at least `resetAgl` up, level, at cruise. */
+  /**
+   * The highest ground or object top (steps) within `radius` cells of the
+   * way from (x, y) `ahead` cells along `heading`; null where nothing is loaded.
+   */
+  clearance(x: number, y: number, heading: number, ahead: number, radius: number): number | null {
+    const w = this.world;
+    if (!w) return null;
+    const c = Math.cos(heading);
+    const n = Math.sin(heading);
+    let top: number | null = null;
+    for (let u = -radius; u <= ahead; u += 0.5)
+      for (let v = -radius; v <= radius; v += 0.5) {
+        const px = x + c * u - n * v;
+        const py = y + n * u + c * v;
+        for (const t of [w.groundAt(px, py), w.objectTopAt(px, py)]) if (t !== null) top = Math.max(top ?? -Infinity, t);
+      }
+    return top;
+  }
+
+  /**
+   * After a crash: back where it was `resetBack` seconds ago, level, at
+   * cruise, `resetAgl` over everything on its way for a few seconds, so it
+   * doesn't fly into the same tower again. A second crash soon after puts it
+   * somewhere safe (`safeReset`) instead.
+   */
   reset(): void {
+    if (this.time - this.resetAt < PLANE.retryWindow) return this.safeReset();
     const back = this.history.find((h) => this.time - h.t <= PLANE.resetBack) ?? this.history[0];
-    const s = back ? { ...back.s } : { ...this.state };
-    const ground = this.world?.groundAt(s.x, s.y) ?? s.h;
-    // and over a tower there: back in it, it would only crash again
-    const tower = this.world?.objectTopAt(s.x, s.y) ?? -Infinity;
+    this.putBack(back ? { ...back.s } : { ...this.state }, 1);
+    this.resetAt = this.time;
+  }
+
+  /** Somewhere safe, here (R): level, at cruise, `resetAgl` over everything for `safeRadius` cells around and a few seconds ahead. */
+  safeReset(): void {
+    this.putBack({ ...this.state }, PLANE.safeRadius);
+    this.resetAt = -Infinity;
+  }
+
+  private putBack(s: PlaneState, radius: number): void {
+    const cruise = PLANE.cruiseSpeed * this.params.pace;
+    const clear = this.clearance(s.x, s.y, s.heading, cruise * PLANE.clearAhead, radius) ?? s.h;
     Object.assign(this.state, s, {
-      h: Math.min(this.params.ceiling, Math.max(s.h, ground + PLANE.resetAgl, tower + PLANE.resetAgl)),
+      h: Math.min(this.params.ceiling, Math.max(s.h, clear + PLANE.resetAgl)),
       climb: 0,
-      speed: Math.max(s.speed, PLANE.cruiseSpeed * this.params.pace),
-      throttle: throttleFor(PLANE.cruiseSpeed * this.params.pace, this.params.pace, this.params.stall),
+      speed: Math.max(s.speed, cruise),
+      throttle: throttleFor(cruise, this.params.pace, this.params.slowest),
     });
     this.level();
     this.history.length = 0;
     this.remember();
+    this.draw(0);
   }
 
   /** Step the flight by dt seconds with an input (default the keys' or the pilot's), and draw. */

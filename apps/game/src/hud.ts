@@ -3,7 +3,8 @@ import type { RouteNetwork } from "@pixelworlds/sim";
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),
  * a banner for events, a minimap of the world's roads (top right), the
- * landmarks' names over them, and the key help (H). Plain DOM over the canvas.
+ * landmarks' names over them, buttons for the world's levels and a reset
+ * (bottom left), and the key help (H). Plain DOM over the canvas.
  */
 
 export interface HudInfo {
@@ -19,10 +20,9 @@ export interface HudInfo {
   aglMeters?: number | null;
   altitudeMeters?: number | null;
   throttle?: number;
-  /** The nose over the horizon and the bank (rad), and a stall. */
+  /** The nose over the horizon and the bank (rad). */
   pitch?: number;
   bank?: number;
-  stalled?: boolean;
   road?: string | null;
   assist?: boolean;
   fps: number;
@@ -47,7 +47,9 @@ const HELP = `<h2>Keys</h2>
 <tr><th colspan="2">Both</th></tr>
 <tr><td>[ / ]</td><td>rotate the view (Q / E in the car)</td></tr>
 <tr><td>1–6</td><td>zoom</td></tr>
-<tr><td>R</td><td>back onto the nearest road (car) · level out higher up (plane)</td></tr>
+<tr><td>Tab</td><td>next map, here: driving → walking → flying (in the same vehicle)</td></tr>
+<tr><td>C</td><td>car ⇄ plane, here, on the same map (the buttons bottom left do both)</td></tr>
+<tr><td>R</td><td>back to safety: onto the nearest road (car) · level, over everything around (plane)</td></tr>
 <tr><td>V</td><td>traffic on/off</td></tr>
 <tr><td>P</td><td>pause</td></tr>
 <tr><td>M</td><td>minimap</td></tr>
@@ -75,6 +77,9 @@ export class Hud {
   private bannerUntil = 0;
   private readonly root: HTMLElement;
   private readonly labelEls: HTMLElement[] = [];
+  private readonly bar: HTMLElement;
+  /** A button was clicked: "vehicle:car", "vehicle:plane", "map:drive" (or walk, fly), or "reset". */
+  onButton: ((what: string) => void) | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -91,6 +96,35 @@ export class Hud {
     this.help.innerHTML = HELP;
     this.help.classList.add("hidden");
     this.map = el("minimap", "canvas") as HTMLCanvasElement;
+    this.bar = el("modes");
+    this.bar.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button");
+      if (!b) return;
+      b.blur(); // keys stay the game's
+      this.onButton?.(b.dataset.go!);
+    });
+  }
+
+  /** The vehicle and map buttons (the current ones marked), and the reset. */
+  setButtons(maps: readonly { name: string; label: string }[], map: string, mode: "car" | "plane"): void {
+    const short: Record<string, string> = { drive: "Drive", walk: "Walk", fly: "Fly" };
+    const button = (go: string, text: string, title: string, on = false) => {
+      const e = document.createElement("button");
+      e.dataset.go = go;
+      e.textContent = text;
+      e.title = title;
+      e.tabIndex = -1;
+      e.classList.toggle("on", on);
+      return e;
+    };
+    const caption = (text: string) => Object.assign(document.createElement("span"), { textContent: text });
+    this.bar.replaceChildren(
+      button("vehicle:car", "Car", "Drive here (C)", mode === "car"),
+      button("vehicle:plane", "Plane", "Fly here (C)", mode === "plane"),
+      caption("map"),
+      ...maps.map((m) => button(`map:${m.name}`, short[m.name] ?? m.label, `${m.label} map (Tab)`, m.name === map)),
+      button("reset", "Reset", "Back to safety (R)"),
+    );
   }
 
   toggleHelp(): void {
@@ -102,7 +136,7 @@ export class Hud {
   }
 
   hide(): void {
-    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, ...this.labelEls]) e.classList.add("hidden");
+    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, this.bar, ...this.labelEls]) e.classList.add("hidden");
   }
 
   /** Names over places on the canvas (CSS px from its top-left, as the camera projects them). */
@@ -140,7 +174,7 @@ export class Hud {
       lines.push(
         `alt ${info.altitudeMeters == null ? "–" : Math.round(info.altitudeMeters)} m · ${info.aglMeters == null ? "–" : Math.round(info.aglMeters)} m over ground`,
         `throttle ${Math.round((info.throttle ?? 0) * 100)}%`,
-        `pitch ${deg(info.pitch)}° · bank ${deg(info.bank)}°${info.stalled ? " · STALL" : ""}`,
+        `pitch ${deg(info.pitch)}° · bank ${deg(info.bank)}°`,
       );
     } else lines.push(`${info.road ? `on the ${info.road}` : "off-road"}${info.assist ? "" : " · assist off"}`);
     lines.push(info.place ? `near ${info.place}` : info.lonLat ? `${info.lonLat[1].toFixed(4)}°, ${info.lonLat[0].toFixed(4)}°` : "");

@@ -15,9 +15,9 @@ import { MAX_STEP, PLANE } from "./tuning";
  * - **Hands off** (stick centred): it rolls the short way to wings level and
  *   flies the angle of attack that holds its height, easing its path level.
  * - **Lift** grows with the angle of attack and the square of the speed, up
- *   to the stall: past it the lift goes, the nose drops and a banked wing
- *   drops further, until the plane flies again. Slow down and the nose must
- *   ride higher to hold the height; too slow and it sinks.
+ *   to the wing's most at `maxAoa`: there is no stall. Slow down and the nose
+ *   rides higher to hold the height; the plane never flies slower than the
+ *   speed that still holds it up, so hands off it always flies level.
  * - **Turns:** banked lift turns the path; pulling turns it tighter.
  * - **Speed:** toward the throttle's; climbing costs speed, diving adds it,
  *   and pulling g's or slipping bleeds it. A loop wants speed going in.
@@ -51,8 +51,6 @@ export interface PlaneState {
   alpha: number;
   /** The nose off the path to the right (rad): the rudder's slip. */
   slip: number;
-  /** Stalled: past the stalling angle, and not yet back under `stallExit` of it. */
-  stalled?: boolean;
   /** 0–1. */
   throttle: number;
   /** The nose's yaw, pitch and roll (rad; pitch −π/2 to π/2): worked out each step, for drawing. */
@@ -81,8 +79,8 @@ export interface PlaneParams {
   ceiling: number;
   /** The plane's length (cells): its nose is tested too. */
   length: number;
-  /** The stall speed (cells/s at pace 1; default PLANE.stallSpeed): the throttle's slowest. */
-  stall?: number;
+  /** The throttle's slowest (cells/s at pace 1; default PLANE.slowSpeed). */
+  slowest?: number;
 }
 
 export interface PlaneStep {
@@ -90,8 +88,6 @@ export interface PlaneStep {
   crashed: string | null;
   /** Height over the ground (steps), or null where nothing is loaded. */
   agl: number | null;
-  /** The wing is past its stalling angle. */
-  stalled?: boolean;
 }
 
 type V3 = [number, number, number];
@@ -131,26 +127,24 @@ export function angles(f: V3, r: V3, n: V3): { yaw: number; pitch: number; roll:
 }
 
 /** The speed the throttle asks for (cells/s, paced). */
-export function throttleSpeed(throttle: number, pace: number, stall = PLANE.stallSpeed): number {
-  return (stall + (PLANE.maxSpeed - stall) * clamp(throttle, 0, 1)) * pace;
+export function throttleSpeed(throttle: number, pace: number, slowest = PLANE.slowSpeed): number {
+  return (slowest + (PLANE.maxSpeed - slowest) * clamp(throttle, 0, 1)) * pace;
 }
 
 /** The throttle that holds a speed (inverse of throttleSpeed). */
-export function throttleFor(speed: number, pace: number, stall = PLANE.stallSpeed): number {
-  return clamp((speed / pace - stall) / (PLANE.maxSpeed - stall), 0, 1);
+export function throttleFor(speed: number, pace: number, slowest = PLANE.slowSpeed): number {
+  return clamp((speed / pace - slowest) / (PLANE.maxSpeed - slowest), 0, 1);
 }
 
-/** The wing: the most lift it gives (as a share of cruise's), and the angle of attack (rad) for cruise's. */
-function wing(stall: number): { clMax: number; a1: number } {
-  const clMax = (PLANE.cruiseSpeed / (stall * PLANE.stallMargin)) ** 2;
-  return { clMax, a1: PLANE.stallAoa / clMax };
+/** The wing: the most lift it gives (as a share of cruise's; enough for level flight at the slowest it flies), and the angle of attack (rad) for cruise's. */
+function wing(slowest: number): { clMax: number; a1: number } {
+  const clMax = (PLANE.cruiseSpeed / (slowest * PLANE.floorShare)) ** 2;
+  return { clMax, a1: PLANE.maxAoa / clMax };
 }
 
-/** The lift (a share of cruise's) at an angle of attack: linear up to the stall, falling off past it. */
+/** The lift (a share of cruise's) at an angle of attack: linear, no more than the wing's most (no stall). */
 function liftAt(alpha: number, a1: number, clMax: number): number {
-  const a = Math.abs(alpha);
-  const cl = a <= PLANE.stallAoa ? a / a1 : clMax * (1 - 0.5 * Math.min(1, (a - PLANE.stallAoa) / PLANE.stallAoa));
-  return Math.sign(alpha) * cl;
+  return clamp(alpha / a1, -clMax, clMax);
 }
 
 /**
@@ -165,7 +159,7 @@ function bankLoad(bank: number): number {
 
 /** The angle of attack (rad) that holds the height on a path at a speed (paced) and bank: negative inverted. */
 export function aoaFor(speed: number, climb: number, bank: number, p: PlaneParams): number {
-  const { a1 } = wing(p.stall ?? PLANE.stallSpeed);
+  const { a1 } = wing(p.slowest ?? PLANE.slowSpeed);
   const q = (speed / p.pace / PLANE.cruiseSpeed) ** 2;
   return (a1 * Math.cos(climb) * bankLoad(bank)) / Math.max(1e-3, q);
 }
@@ -186,8 +180,8 @@ export function settleNose(s: PlaneState): void {
 
 export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p: PlaneParams, dt: number): PlaneStep {
   const k = p.pace;
-  const stall = p.stall ?? PLANE.stallSpeed;
-  const { clMax, a1 } = wing(stall);
+  const slowest = p.slowest ?? PLANE.slowSpeed;
+  const { clMax, a1 } = wing(slowest);
   const G = PLANE.gravity;
   s.throttle = clamp(s.throttle + clamp(input.throttle, -1, 1) * PLANE.throttleRate * dt, 0, 1);
   const v = Math.max(0.3, s.speed / k); // pace-1 units below
@@ -196,12 +190,10 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
   const rIn = clamp(input.roll, -1, 1);
   const yIn = clamp(input.yaw ?? 0, -1, 1);
   const cosB = Math.cos(s.bank);
-  // the angle of attack that holds the height, and the pull and push the stick reaches (no further than the stall)
-  const hold = clamp(aoaFor(s.speed, s.climb, s.bank, p), -PLANE.stallAoa, PLANE.stallAoa);
-  const pull = Math.max(hold, Math.min(PLANE.stallAoa * 1.05, (a1 * PLANE.maxLoad) / q));
-  const push = Math.min(hold, Math.max(-PLANE.stallAoa, (-a1 * PLANE.maxPush) / q));
-  // a stall breaks past the stalling angle and lasts until the wing is well clear of it
-  const stalled = (s.stalled = Math.abs(s.alpha) > PLANE.stallAoa || (!!s.stalled && Math.abs(s.alpha) > PLANE.stallAoa * PLANE.stallExit));
+  // the angle of attack that holds the height, and the pull and push the stick reaches (no further than the wing's most)
+  const hold = clamp(aoaFor(s.speed, s.climb, s.bank, p), -PLANE.maxAoa, PLANE.maxAoa);
+  const pull = Math.max(hold, Math.min(PLANE.maxAoa, (a1 * PLANE.maxLoad) / q));
+  const push = Math.min(hold, Math.max(-PLANE.maxAoa, (-a1 * PLANE.maxPush) / q));
 
   // the stick: an angle of attack; hands off, the height-holding one, eased toward a level path
   let alphaCmd: number;
@@ -211,13 +203,11 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
     const K = (G * q * Math.max(0.3, Math.abs(cosB))) / (a1 * v); // the path's response (1/s per rad)
     alphaCmd = clamp(hold - (Math.sign(cosB || 1) * PLANE.levelClimb * s.climb) / K, push, pull);
   }
-  if (stalled) alphaCmd = Math.sign(s.alpha) * PLANE.stallAoa * 0.5; // the nose drops, whatever the stick says
   s.alpha = ease(s.alpha, alphaCmd, PLANE.pitchLag, dt);
   // the rudder: a slip
   s.slip = ease(s.slip, yIn * PLANE.maxSlip, PLANE.yawLag, dt);
-  // roll: the stick's rate, or hands off, the short way back to wings level; a stalled wing drops; a slip rolls it
-  let rollCmd = rIn !== 0 ? rIn * PLANE.rollRate : pIn === 0 ? -wrapAngle(s.bank) * PLANE.levelRoll : 0;
-  if (stalled) rollCmd += Math.sign(s.bank) * PLANE.stallRoll;
+  // roll: the stick's rate, or hands off, the short way back to wings level; a slip rolls it
+  const rollCmd = rIn !== 0 ? rIn * PLANE.rollRate : pIn === 0 ? -wrapAngle(s.bank) * PLANE.levelRoll : 0;
   s.rollRate = ease(s.rollRate, rollCmd, PLANE.rollLag, dt);
   s.bank = wrapAngle(s.bank + (s.rollRate + s.slip * PLANE.slipRoll) * dt);
 
@@ -240,10 +230,10 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
   const load = Math.abs(lift) / G;
 
   // speed (pace 1): toward the throttle's; less on a climb, more on a dive; g's and slip cost speed
-  const target = throttleSpeed(s.throttle, 1, stall);
+  const target = throttleSpeed(s.throttle, 1, slowest);
   let v1 = v + (Math.min(PLANE.maxAccel, PLANE.thrust * (target - v)) - PLANE.climbCost * u[2]) * dt;
   v1 -= (PLANE.loadDrag * Math.max(0, load - 1) + PLANE.slipDrag * Math.abs(s.slip) * v) * dt;
-  s.speed = Math.max(0.3 * stall, v1) * k;
+  s.speed = Math.max(PLANE.floorShare * slowest, v1) * k; // never slower than holds it up
 
   // move
   const run = s.speed * dt;
@@ -257,11 +247,11 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
   const ny = s.y + (Math.sin(s.yaw) * p.length) / 2;
   const nose = world.groundAt(nx, ny);
   const agl = ground === null ? null : s.h - ground;
-  if (ground !== null && s.h - ground < PLANE.crashClearance) return { crashed: "ground", agl, stalled };
-  if (nose !== null && s.h - nose < PLANE.crashClearance) return { crashed: "ground", agl, stalled };
+  if (ground !== null && s.h - ground < PLANE.crashClearance) return { crashed: "ground", agl };
+  if (nose !== null && s.h - nose < PLANE.crashClearance) return { crashed: "ground", agl };
   const tower = world.objectTopAt(s.x, s.y);
-  if (tower !== null && s.h < tower) return { crashed: "tower", agl, stalled };
-  return { crashed: null, agl, stalled };
+  if (tower !== null && s.h < tower) return { crashed: "tower", agl };
+  return { crashed: null, agl };
 }
 
 /** Advance the plane by dt in steps of at most MAX_STEP; stops at a crash. */

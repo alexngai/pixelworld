@@ -52,6 +52,12 @@ export interface GameDebug {
   /** Plan a road route to a lon/lat and drive it with a fixed dt; returns its samples. */
   driveTo(lon: number, lat: number, opts?: { dt?: number; maxSeconds?: number; stop?: boolean }): Promise<{ planned: number; byClass: Record<string, number>; samples: Sample[]; reached: boolean }>;
   takeOff(force?: boolean): Promise<boolean>;
+  /** Another map ("drive", "walk", "fly") here, in the same vehicle (Tab, the map buttons). */
+  switchMap(name: string): Promise<boolean>;
+  /** The other vehicle (or this one) here, on the same map (C, the vehicle buttons). */
+  switchVehicle(mode?: "car" | "plane"): Promise<boolean>;
+  /** Back to safety (R). */
+  reset(): void;
   land(force?: boolean): Promise<boolean>;
   /** Fly a landing approach to the nearest road within a radius (cells) of the plane: the cell, or null without one. */
   approachRoad(radius: number): { x: number; y: number } | null;
@@ -136,6 +142,9 @@ async function main() {
       return { planned: plan.cells, byClass: plan.byClass, samples, reached: pilot.done };
     },
     takeOff: (force) => game.takeOff(force),
+    switchMap: (name) => game.switchMap(name),
+    switchVehicle: (mode) => game.switchVehicle(mode),
+    reset: () => game.reset(),
     land: (force) => game.land(force),
     approachRoad: (radius) => {
       const p = game.plane?.state;

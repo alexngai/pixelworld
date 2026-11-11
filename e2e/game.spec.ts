@@ -208,6 +208,43 @@ test.describe("the game (M4)", () => {
     expect(landed.h).toBeCloseTo(landed.ground!, 6);
   });
 
+  test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", async ({ page }) => {
+    await open(page, "");
+    const from = (await state(page)).lonLat!;
+    const km = (a: [number, number]) => Math.hypot((a[0] - from[0]) * 90, (a[1] - from[1]) * 111);
+    const arrive = async (want: { mode: string; world: string }) => {
+      await page.waitForFunction((w) => window.__game!.state().world === w.world && window.__game!.state().mode === w.mode && !window.__game!.game.transition, want, { timeout: 120_000 });
+      await page.evaluate(() => window.__game!.ready());
+      const s = await state(page);
+      expect(km(s.lonLat!)).toBeLessThan(2);
+      if (s.mode === "plane") expect(s.agl as number).toBeGreaterThan(2);
+      return s;
+    };
+    // Tab: the car on the walking map, the flying map, back on the driving map
+    for (const world of ["southwest-walk", "southwest-fly", "southwest"]) {
+      await page.keyboard.press("Tab");
+      await arrive({ mode: "car", world });
+    }
+    // C: the plane over the driving map; Tab: over the walking map; C: the car on it
+    await page.keyboard.press("c");
+    await arrive({ mode: "plane", world: "southwest" });
+    await page.keyboard.press("Tab");
+    await arrive({ mode: "plane", world: "southwest-walk" });
+    await page.keyboard.press("c");
+    await arrive({ mode: "car", world: "southwest-walk" });
+    // flying low beside the Strip's towers, upside down and diving: R levels it out over everything around
+    expect(await page.evaluate(() => window.__game!.switchVehicle("plane"))).toBe(true);
+    await page.evaluate(() => {
+      const p = window.__game!.game.plane!;
+      Object.assign(p.state, { h: p.state.h - (p.agl ?? 0) + 0.6, bank: Math.PI, climb: -0.6 });
+      window.__game!.reset();
+    });
+    const safe = await state(page);
+    expect(safe.agl as number).toBeGreaterThanOrEqual(2.5);
+    const flight = (await page.evaluate(() => window.__game!.fly(null, 3, 1 / 30))) as Sample[];
+    expect(flight.every((f) => f.blocked === null)).toBe(true);
+  });
+
   test("starts San Francisco on the Embarcadero, and anywhere with start=lon,lat", async ({ page }) => {
     await open(page, "world=/sf/");
     const sf = await state(page);

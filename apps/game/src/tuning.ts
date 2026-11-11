@@ -113,13 +113,14 @@ export const TAKEOFF = {
 
 /** The plane (speeds at the flying level's pace; heights in steps). */
 export const PLANE = {
-  stallSpeed: 2.6,
+  /** The throttle's slowest (cells/s). Nothing stalls: see `maxAoa`. */
+  slowSpeed: 2.6,
   /**
    * Over a walking level (10–20 m cells, flown over itself): a much lower
-   * stall, so the throttle can slow the plane to a sightseeing drift past the
-   * towers (cruise and top speed stay).
+   * slowest, so the throttle can slow the plane to a sightseeing drift past
+   * the towers (cruise and top speed stay).
    */
-  walkStallSpeed: 1.2,
+  walkSlowSpeed: 1.2,
   cruiseSpeed: 5,
   maxSpeed: 8,
   /** Speed toward the throttle's: this share of the difference per second, gaining at most `maxAccel` (cells/s²). */
@@ -129,10 +130,14 @@ export const PLANE = {
   throttleRate: 0.6,
   /** Gravity on the flight path (cells/s² at pace 1): a level turn's rate is gravity·tan(bank)/speed. */
   gravity: 3.5,
-  /** The wing stalls past this angle of attack (rad); it stalls in level flight at `stallMargin` of the stall speed (the throttle's slowest). */
-  stallAoa: (16 * Math.PI) / 180,
-  stallMargin: 0.85,
-  /** The stick: the most it pulls and pushes (g, up to the stall), its roll rate (rad/s), the rudder's slip (rad), and the lags to reach them (s). */
+  /**
+   * No stall, on any map: past this angle of attack (rad) the wing just gives
+   * no more lift, and the plane never flies slower than `floorShare` of the
+   * throttle's slowest, where that most lift still holds it level.
+   */
+  maxAoa: (16 * Math.PI) / 180,
+  floorShare: 0.85,
+  /** The stick: the most it pulls and pushes (g, up to `maxAoa`), its roll rate (rad/s), the rudder's slip (rad), and the lags to reach them (s). */
   maxLoad: 3,
   maxPush: 1.5,
   pitchLag: 0.15,
@@ -156,9 +161,6 @@ export const PLANE = {
   climbCost: 3,
   loadDrag: 0.6,
   slipDrag: 0.6,
-  /** A stall lasts until the angle of attack is back under this share of the stalling angle; meanwhile a banked wing drops further (rad/s). */
-  stallExit: 0.7,
-  stallRoll: 0.6,
   /** The autopilot's steepest climb and dive (flight path angle, rad) and bank (rad). */
   pilotClimb: (20 * Math.PI) / 180,
   pilotDive: (25 * Math.PI) / 180,
@@ -179,6 +181,8 @@ export const PLANE = {
   roadReach: 1.5,
   /** Seconds of low, slow flight over a road before the plane lands by itself. */
   landDwell: 0.6,
+  /** Switched to flying (Tab, the level buttons): this high over what stands there (steps). */
+  switchAgl: 5,
   /** After a take-off: height over the ground (steps) and climb (rad). */
   startAgl: 1.6,
   startClimb: (6 * Math.PI) / 180,
@@ -188,9 +192,17 @@ export const PLANE = {
   seed: 1,
   /** The shadow rides this far over the ground (steps), so the terrain's own pixels don't hide it. */
   shadowLift: 0.06,
-  /** A crash puts the plane back where it was this many seconds earlier, at least `resetAgl` up. */
+  /**
+   * A crash puts the plane back where it was `resetBack` seconds earlier,
+   * `resetAgl` over everything on its way for `clearAhead` seconds at cruise;
+   * a second crash within `retryWindow` seconds, or R, puts it that far over
+   * everything within `safeRadius` cells too.
+   */
   resetBack: 3,
   resetAgl: 2.5,
+  clearAhead: 3,
+  retryWindow: 6,
+  safeRadius: 4,
 };
 
 /** The camera: it looks ahead of the vehicle by `ahead` seconds of travel, at most `max` cells, and eases toward it. */
