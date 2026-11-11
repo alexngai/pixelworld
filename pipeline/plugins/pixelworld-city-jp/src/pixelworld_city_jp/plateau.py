@@ -43,8 +43,10 @@ from __future__ import annotations
 
 import gzip
 import io
+import itertools
 import json
 import math
+import os
 import xml.etree.ElementTree as ET
 from collections import Counter
 from collections.abc import Iterator
@@ -63,7 +65,7 @@ JGD2011 = "EPSG:6668"  # the files' EPSG:6697 is JGD2011 lat/lon plus heights
 # the box's margin (degrees): footprints that cross it
 PAD_DEG = 0.002
 # what an extract holds; bump it when that changes, so old extracts are re-read
-EXTRACT = 2
+EXTRACT = 3
 
 ATTRIBUTION = [
     {
@@ -124,6 +126,15 @@ STRUCTURE = {
 NO_YEAR = 1
 NO_STOREYS = (0, 9999)
 
+
+def write_atomic(path, data: bytes) -> None:
+    """Write a cache file whole or not at all: the cache is shared between
+    worktrees, and a killed or concurrent build mustn't leave half a file."""
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.part")
+    tmp.write_bytes(data)
+    os.replace(tmp, path)
+
+
 # ---- mesh codes -----------------------------------------------------------------------------
 
 
@@ -152,7 +163,9 @@ def catalog(mesh: str) -> list[dict]:
     """The building files PLATEAU's catalog lists for a mesh, one per distinct
     dataset: {city, cityName, year, spec, url, size, features, lods}. Tokyo's
     wards each list their border meshes in full; those copies (the same
-    counts of features and of LoD0–2 models, sizes 1–2% apart) are read once."""
+    counts of features and of LoD0–2 models, sizes 0.5–2% apart) are read
+    once. Buildings are deduplicated by id anyway, so a copy read twice only
+    costs a download."""
     doc = json.loads(get(CATALOG + mesh, timeout=120))
     out: list[dict] = []
     for city in doc.get("cities", []):
@@ -170,7 +183,10 @@ def catalog(mesh: str) -> list[dict]:
                 "lods": [int(f.get(f"lod{i}") or 0) for i in range(3)],
             }
             if not any(
-                (o["features"], o["lods"]) == (entry["features"], entry["lods"]) for o in out
+                (o["features"], o["lods"]) == (entry["features"], entry["lods"])
+                and entry["features"] > 0
+                and abs(o["size"] - entry["size"]) <= 0.05 * o["size"]
+                for o in out
             ):
                 out.append(entry)
     return out
@@ -216,9 +232,8 @@ def _footprint(polys) -> shapely.Geometry | None:
             shapes.append(p)
     if not shapes:
         return None
-    g = shapes[0] if len(shapes) == 1 else shapely.union_all(shapes)
-    g = shapely.get_parts(g)
-    g = [p for p in g if isinstance(p, shapely.Polygon)]
+    # the union flattens what make_valid nests (a collection of a multipolygon and a line)
+    g = [p for p in shapely.get_parts(shapely.union_all(shapes)) if p.geom_type == "Polygon"]
     return None if not g else g[0] if len(g) == 1 else shapely.MultiPolygon(g)
 
 
@@ -359,6 +374,14 @@ _ATTRS = {
 }
 
 
+def _own(elem: ET.Element) -> Iterator[ET.Element]:
+    """An element's descendants, without its building parts."""
+    for child in elem:
+        if _local(child.tag) != "consistsOfBuildingPart":
+            yield child
+            yield from _own(child)
+
+
 def _building(elem: ET.Element) -> dict | None:
     """One bldg:Building (with its parts) as an extract record, or None
     without a footprint."""
@@ -367,13 +390,14 @@ def _building(elem: ET.Element) -> dict | None:
     lod0_edge: list = []
     lod1: list = []
     roofs: list[np.ndarray] = []
+    # the building's own attributes first, its parts' where it has none
+    for child in itertools.chain(_own(elem), elem.iter()):
+        key = _ATTRS.get(_local(child.tag))
+        if key is not None and key not in rec and child.text and child.text.strip():
+            rec[key] = child.text.strip()
     for child in elem.iter():
         name = _local(child.tag)
-        key = _ATTRS.get(name)
-        if key is not None:
-            if key not in rec and child.text and child.text.strip():
-                rec[key] = child.text.strip()
-        elif name == "lod0FootPrint":
+        if name == "lod0FootPrint":
             lod0 += _rings(child)
         elif name == "lod0RoofEdge":
             lod0_edge += _rings(child)
@@ -399,20 +423,19 @@ def _building(elem: ET.Element) -> dict | None:
 def parse(stream) -> Iterator[dict]:
     """The extract records of a PLATEAU building file (CityGML), streamed."""
     root = None
+    depth = 0
     for event, elem in ET.iterparse(stream, events=("start", "end")):
-        if root is None:
-            root = elem
+        if event == "start":
+            root = elem if root is None else root
+            depth += 1
             continue
-        if (
-            event == "end"
-            and _local(elem.tag) == "Building"
-            and elem.get("{http://www.opengis.net/gml}id")
-        ):
+        depth -= 1
+        if _local(elem.tag) == "Building" and elem.get("{http://www.opengis.net/gml}id"):
             rec = _building(elem)
             if rec is not None:
                 yield rec
-        if event == "end" and _local(elem.tag) == "cityObjectMember":
-            root.clear()  # drop what's been read
+        if depth == 1:
+            root.clear()  # a member of the model is read: drop it (and appearances, textures)
 
 
 def _extract_path(entry: dict, mesh: str):
@@ -433,10 +456,10 @@ def extract(entry: dict, mesh: str, keep_gml: bool = False) -> list[dict]:
         progress.log(f"plateau: {entry['cityName']} {entry['year']} mesh {mesh}")
         data = get(entry["url"], headers={"Accept-Encoding": "gzip"}, timeout=900)
     stream = gzip.GzipFile(fileobj=io.BytesIO(data)) if data[:2] == b"\x1f\x8b" else None
-    records = list(parse(stream or io.BytesIO(data)))
+    records = list(parse(stream if stream is not None else io.BytesIO(data)))
     if keep_gml and not gml.exists():
-        gml.write_bytes(data if stream else gzip.compress(data))
-    path.write_bytes(gzip.compress(json.dumps(records, separators=(",", ":")).encode()))
+        write_atomic(gml, data if stream is not None else gzip.compress(data))
+    write_atomic(path, gzip.compress(json.dumps(records, separators=(",", ":")).encode()))
     return records
 
 
@@ -505,23 +528,29 @@ class FootprintFacts:
 
     @staticmethod
     def _entries(mesh: str, year: int | None) -> list[dict]:
-        """A mesh's catalog entries; with a pinned year, the extracts cached from it."""
+        """A mesh's catalog entries. Each answer is kept, named by the releases
+        it lists (`catalog-<mesh>-2025.json`, `…-2024_2025.json`, `…-none.json`
+        for a mesh without models); a pinned year reads the newest that lists
+        it (or none), so a pinned build needs no network."""
+        cache = cache_dir("plateau")
         if year is not None:
-            index = cache_dir("plateau") / f"catalog-{year}-{mesh}.json"
-            if index.exists():
-                return json.loads(index.read_text())
+            kept = [
+                p
+                for p in cache.glob(f"catalog-{mesh}-*.json")
+                if str(year) in p.stem.split("-")[-1].split("_") or p.stem.endswith("-none")
+            ]
+            if kept:
+                return json.loads(max(kept, key=lambda p: p.stat().st_mtime).read_text())
         entries = catalog(mesh)
-        if year is not None:
-            moved = sorted({e["year"] for e in entries} - {year})
-            if moved:
-                raise RuntimeError(
-                    f"plateau: mesh {mesh} isn't cached from the {year} release, and the "
-                    f"catalog now serves {', '.join(map(str, moved))}: unpin `year` (or set "
-                    "it to the catalog's) to read the current release"
-                )
-        for y in {e["year"] for e in entries}:
-            same = [e for e in entries if e["year"] == y]
-            (cache_dir("plateau") / f"catalog-{y}-{mesh}.json").write_text(json.dumps(same))
+        years = sorted({e["year"] for e in entries})
+        if year is not None and entries and year not in years:
+            raise RuntimeError(
+                f"plateau: mesh {mesh} isn't cached from the {year} release, and the "
+                f"catalog now serves {', '.join(map(str, years))}: unpin `year` (or set "
+                "it to the catalog's) to read the current release"
+            )
+        tag = "_".join(map(str, years)) or "none"
+        write_atomic(cache / f"catalog-{mesh}-{tag}.json", json.dumps(entries).encode())
         return entries
 
     def at(self, xs: np.ndarray, ys: np.ndarray) -> list[dict | None]:

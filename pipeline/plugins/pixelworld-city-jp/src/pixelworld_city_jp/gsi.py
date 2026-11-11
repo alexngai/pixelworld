@@ -46,6 +46,8 @@ from rasterio.warp import Resampling, reproject
 from pixelworld_pipeline.sources.http import cache_dir, get
 from pixelworld_pipeline.sources.rasters import RasterSource
 
+from .plateau import write_atomic
+
 TILES = "https://cyberjapandata.gsi.go.jp/xyz/{dem}/{z}/{x}/{y}.png"
 # (tile set, its deepest zoom), finest first
 DEMS = (("dem1a_png", 17), ("dem5a_png", 15), ("dem_png", 14))
@@ -94,7 +96,7 @@ def tile(dem: str, z: int, x: int, y: int) -> np.ndarray | None:
                 raise
             data = b""
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data)
+        write_atomic(path, data)  # an empty file left by a killed build would read as "no tile"
     return decode(data) if data else None
 
 

@@ -276,6 +276,30 @@ def test_a_citygml_file_reads_into_footprints_and_attributes():
     assert fc["material"] == "reinforced concrete" and fc["height"] == 21.5
 
 
+def test_a_self_crossing_footprint_keeps_its_area_and_a_building_its_own_attributes():
+    # a bow-tie with a spike: make_valid nests a multipolygon beside a line
+    ring_ = np.array(
+        [(y, x, 0.0) for x, y in [(0, 0), (2, 2), (2, 0), (0, 2), (-1, 3), (0, 2), (0, 0)]]
+    )
+    g = plateau._footprint([(ring_, [])])
+    assert g is not None and g.geom_type == "MultiPolygon" and g.area == pytest.approx(2.0)
+    # a part's attributes come after its own in document order, but the building's win
+    part = building("bldg_p", {"usage": "402"}, uro={"buildingStructureType": "604"})
+    part = part.replace("core:cityObjectMember", "bldg:consistsOfBuildingPart")
+    part = part.replace("bldg:Building ", "bldg:BuildingPart ").replace(
+        "</bldg:Building>", "</bldg:BuildingPart>"
+    )
+    whole = building("bldg_w", {"usage": "411"}, lod0=(box(0, 0, 10, 6), []))
+    whole = whole.replace(
+        "</bldg:Building>",
+        part + "<uro:buildingDetailAttribute>"
+        "<uro:BuildingDetailAttribute><uro:buildingStructureType>601</uro:buildingStructureType>"
+        "</uro:BuildingDetailAttribute></uro:buildingDetailAttribute></bldg:Building>",
+    )
+    (rec,) = plateau.parse(io.BytesIO(citygml(whole)))
+    assert (rec["id"], rec["usage"], rec["structure"]) == ("bldg_w", "411", "601")
+
+
 def test_codes_map_to_use_groups_and_materials():
     use = lambda code: plateau.building_facts({"usage": code})["use"]  # noqa: E731
     assert [use(c) for c in ("401", "403", "411", "412", "414", "422", "441", "461")] == [
@@ -332,12 +356,39 @@ def test_catalog_reads_a_ward_border_mesh_once(monkeypatch):
         _city("13113", "渋谷区", "53393596", 101_932_486, 1946),
         _city("13104", "新宿区", "53393596", 5_000_000, 120),
         _city("13110", "目黒区", "53393586", 9_000_000, 300),  # another mesh's file
+        _city("13109", "品川区", "53393596", 7_000_000, 120),  # Shinjuku's counts by chance
     )
     monkeypatch.setattr(plateau, "get", lambda url, timeout=120: doc)
     entries = plateau.catalog("53393596")
-    # Minato's copy of the border mesh stands for Shibuya's; Shinjuku's own file is kept
-    assert [(e["city"], e["features"]) for e in entries] == [("13103", 1946), ("13104", 120)]
+    # Minato's copy of the border mesh stands for Shibuya's; Shinjuku's and
+    # Shinagawa's own files (the same counts, sizes 40% apart) are both kept
+    assert [(e["city"], e["features"]) for e in entries] == [
+        ("13103", 1946),
+        ("13104", 120),
+        ("13109", 120),
+    ]
     assert entries[0]["year"] == 2025 and entries[0]["spec"] == "5.0"
+
+
+def test_a_mesh_two_cities_publish_in_different_years_pins_either(tmp_path, monkeypatch):
+    monkeypatch.setattr(http, "CACHE_ROOT", tmp_path)
+    doc = _catalog(
+        _city("26100", "京都市", "52354600", 1000, 3),
+        _city("26208", "向日市", "52354600", 500, 2, year=2024),
+    )
+    calls = []
+    monkeypatch.setattr(plateau, "get", lambda url, timeout=120: calls.append(url) or doc)
+    entries = plateau.FootprintFacts._entries("52354600", 2025)
+    assert [e["city"] for e in entries] == ["26100", "26208"] and len(calls) == 1
+    assert (tmp_path / "plateau" / "catalog-52354600-2024_2025.json").exists()
+    for year in (2024, 2025):  # both read the kept answer
+        assert [e["city"] for e in plateau.FootprintFacts._entries("52354600", year)] == [
+            "26100",
+            "26208",
+        ]
+    assert len(calls) == 1
+    with pytest.raises(RuntimeError, match="isn't cached from the 2023 release"):
+        plateau.FootprintFacts._entries("52354600", 2023)
 
 
 def test_facts_from_the_catalog_and_the_extract_cache(tmp_path, monkeypatch):
@@ -365,8 +416,8 @@ def test_facts_from_the_catalog_and_the_extract_cache(tmp_path, monkeypatch):
     gml = [u for u in got if u.endswith(".gml")]
     assert len(gml) == 1  # the duplicate listing is read once
     cached = sorted(p.name for p in (tmp_path / "plateau").iterdir())
-    assert "26100-2025-spec5_0-52354600-x2.json.gz" in cached
-    assert "catalog-2025-52354600.json" in cached
+    assert "26100-2025-spec5_0-52354600-x3.json.gz" in cached
+    assert "catalog-52354600-2025.json" in cached
     assert not any(n.endswith(".gml.gz") for n in cached)  # the GML isn't kept
     assert "PLATEAU 京都市 2025 (spec 5.0): 3 buildings in 1 mesh" in src.summary()
 
@@ -383,10 +434,10 @@ def test_facts_from_the_catalog_and_the_extract_cache(tmp_path, monkeypatch):
     got.clear()
     plateau.PlateauFacts(REGION, {})
     assert got and not any(u.endswith(".gml") for u in got)
-    # pinned to the release it cached: no network at all
+    # pinned to the release it cached: no network at all (meshes without models included)
     got.clear()
     plateau.PlateauFacts(REGION, {"year": 2025})
-    assert [u for u in got if mesh in u] == []
+    assert got == []
     # pinned to a release it never cached, which the catalog no longer serves: an error
     with pytest.raises(RuntimeError, match="isn't cached from the 2024 release"):
         plateau.PlateauFacts(REGION, {"year": 2024})

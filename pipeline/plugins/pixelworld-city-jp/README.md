@@ -40,7 +40,7 @@ The code meanings are PLATEAU's code lists (`codelists/` in each city's package,
 - PLATEAU (MLIT; the models' copyright is each municipality's): Public Data License 1.0, compatible with CC BY 4.0. Credit "出典：国土交通省 PLATEAUウェブサイト", say the data was processed, and don't present processed data as MLIT's.
 - GSI's elevation tiles: GSI's content terms (revised 2025-11-20), PDL 1.0, CC BY 4.0-compatible. Credit "出典：国土地理院ウェブサイト", and say the tiles were processed ("地理院タイル（標高タイル）を加工して作成").
 
-Downloads go to the pipeline's shared cache: `plateau/` (one extract per mesh, named by city code, release year, spec, mesh and extract version; and per release and mesh, the catalog's entries) and `gsi/<DEM>/<z>/<x>/<y>.png` (an empty file marks a tile the server doesn't have).
+Downloads go to the pipeline's shared cache: `plateau/` (one extract per mesh, named by city code, release year, spec, mesh and extract version; and per mesh, the catalog's answer, named by the releases it lists: `catalog-<mesh>-2025.json`, or `-none` for a mesh without models). Files are written whole or not at all (a temporary file, then renamed), since worktrees share the cache and `gsi/<DEM>/<z>/<x>/<y>.png` (an empty file marks a tile the server doesn't have).
 
 ## Layout
 
