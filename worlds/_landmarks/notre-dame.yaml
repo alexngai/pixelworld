@@ -1,0 +1,11 @@
+name: Notre-Dame de Paris
+wikidata: Q2981
+# the crossing, on the Île de la Cité; its west front faces the parvis
+anchor: { lon: 2.3498, lat: 48.8530 }
+height: 96          # to the top of the spire (the towers are 69 m)
+clear: 45
+replaces: [Cathédrale Notre-Dame de Paris]
+depictions:
+  # a generic Gothic cathedral: twin west towers, a nave with flying
+  # buttresses, a spire over the crossing; no statues, no name
+  generic: { group: landmark.cathedral.gothic }

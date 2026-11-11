@@ -93,6 +93,7 @@ Status values:
 | D-082 | Roads drawn along their own centre lines, and snapped to 16 directions | Accepted (M5) |
 | D-084 | Paris's sources and plugins: APUR's footprints with IGN's BD TOPO, IGN's DTMs, and heights from facts | Accepted (M5) |
 | D-085 | Paris's look: a `paris` style pack and the `@pixelworlds/city-paris` generator plugin | Accepted (M5) |
+| D-086 | Paris's walking level: the Eiffel Tower to the Marais at 10 m, typed by period, fabric and storeys | Accepted (M5) |
 
 ---
 
@@ -938,4 +939,25 @@ The point is more room for visual interest; both halves are wanted.
   - **Publishing `@pixelworlds/city-paris`**, as for New York (D-081).
   - **Fabric left out:** the cut corners (pans coupés) of Haussmann's crossroads, rotundas, roof terraces, courtyards seen from above (footprints come whole), Art Deco and Art Nouveau fronts of 1900–1939, and the grands magasins' domes.
   - **Landmark shapes:** the cathedral has no transept roses at its real angle (its axis runs about 23° off east), the Palais Garnier is a generic domed hall, and the Pont Alexandre III's lamps and statues are left out. The Louvre's pyramid and the Centre Pompidou are protected works and stay ordinary footprints (second-region.md §8).
+
+### D-086: Paris's walking level: the Eiffel Tower to the Marais at 10 m, typed by period, fabric and storeys (accepted, M5)
+- **Why:** Paris's first world (D-078), on the sources and plugins of D-084 and the look of D-085. The walking level carries the most recognisable places in the fewest cells: the Eiffel Tower over the Champ de Mars, the Seine and its quays, the Étoile, the Louvre, the Opéra and the islands, with Haussmann's 7th and 8th arrondissements and the older Marais around them.
+- **What** (`worlds/paris/walk.yaml`, `fixtures/paris-walk`):
+  - **The box** `[2.285, 48.848, 2.368, 48.877]` at 10 m: 610 × 324 = 197,640 cells. It is a little wider than the first sketch so the whole Place de l'Étoile (to 48.875) and the Marais's east edge fit.
+  - **Roads:** centre lines on and 16 directions (D-082), with a 6° snap angle (New York's is 12°): 44,153 of 171,001 road edges snap; the rest keep their angle. 45,185 road cells and 82,732 path cells carry pieces.
+  - **Terrain:** RGE ALTI at 4 m (D-084), 1.5× vertical exaggeration as for New York: the Chaillot hill and the drop to the lower quays read without lifting the streets.
+  - **Typology rules** (first match wins): APUR's remarkable buildings (`classes: [ER]`) as stone civic buildings; APUR's HBM class, then 1920–1939 residential at 5–9 storeys, as HBM; 1851–1914 at 5–8 storeys as Haussmann blocks; before 1851 at up to 5 storeys as faubourg houses; 1940 on as post-war blocks; industrial use as warehouses. Storeys are BD TOPO's, which count the ground floor and the mansard's, so Haussmann's six or seven storeys are 5–8 here. APUR's 1940–1967 period straddles the brief's "after 1960", so it is all post-war.
+  - **Landmarks** (`worlds/_landmarks/`, generic): the Eiffel Tower (`landmark.tower.lattice`, unlit), Notre-Dame (`landmark.cathedral.gothic`), the Arc de Triomphe (`landmark.arch.triumphal`, turned so its great arch runs along the Champs-Élysées), the Palais Garnier (`landmark.hall.domed`) and the Pont Alexandre III (`landmark.bridge.arch`, quay to quay along Overture's carriageway). Each replaces Overture's building of the same name.
+  - **A golden** (`paris-walk-gros-caillou-r0.png`): Haussmann blocks of the Gros-Caillou at zoom 2.
+- **Measured** (build of 2026-11-10): 24,136 buildings, 19,125 with facts (79%; the rest have no APUR footprint under their centroid), 5,144 heights from facts. Types: Haussmann 5,783, faubourg 2,475, post-war 1,411, civic 453, HBM 388, warehouses 12, the stone default 13,584, towers 29. 16,346 canopy and 7,776 street trees, 13,096 lawn cells, 3,554 street lights, 5,850 routes. Road report clean (0 discontinuous or steep edges, 0 disconnected junctions, 19 components). The package is 2.9 MB (New York's walking level: 1.8 MB) and builds in 66 s from the cache.
+- **Looked at** in headless views of the viewer and the game: the Haussmann fabric reads as cream fronts under zinc mansards with dormers; the Marais as rendered houses under steep roofs; the Arc in the Étoile with its twelve avenues; Notre-Dame from the parvis with its two towers, rose, portals and spire; the whole Eiffel Tower over the Champ de Mars; the game's car on the Avenue de l'Opéra, with the reveal (D-079).
+- **Rejected alternatives:**
+  - **Faubourg for every building before 1851:** 6,646 of them, a third of the typed fabric, drawn as narrow rendered houses. Central Paris's pre-1850 buildings of six storeys or more are mostly the Restoration's and July Monarchy's stone rental blocks, close to Haussmann's; capped at 5 storeys, 2,475 are faubourg and the rest keep the stone default.
+  - **HBM only from APUR's HBM class:** 27 footprints in the box; the rule by period (1920–1939 residential, 5–9 storeys) gives 388, as the owner's brief asked. Whether each is brick or stone isn't in the facts; see Later.
+  - **The Pont Neuf** as the bridge landmark: twelve stone arches, which `archBridge` (one arch) can't draw; the Pont Alexandre III is one steel arch.
+  - **A bigger box** (Montmartre, Belleville, the Latin Quarter): past the 300,000-cell budget at 10 m; they belong to the driving level.
+- **Later:**
+  - **The driving and flying levels** (Montmartre and Belleville are why the terrain source reads better than 30 m), and the blind test.
+  - **HBM:** the 1920s–30s blocks inside the box are as often stone as brick; APUR's `c_morpho` or BD TOPO's wall materials could tell them apart.
+  - **Street trees from the city's records** (D-084 Later), courtyards and pans coupés (D-085 Later).
 

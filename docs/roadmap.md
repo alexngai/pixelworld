@@ -786,6 +786,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 - Zoom-level (semantic LOD) bakes: blocks → city silhouettes → landmark icons.
 - More regions from coverage tier 1, in order (D-078): New York, then Paris, then Amsterdam. CityJSON/CityGML ingestion comes with Amsterdam (3D BAG).
   - **New York, walking level: built** (`nyc-walk`, Lower Manhattan at 10 m). Its buildings are typed from NYC Open Data (D-080) and drawn by the `new-york` pack and the `city-nyc` generators (D-081). In the game, the player sees through the towers in front of it (D-079). Still to come: the driving and flying levels, the blind test, heights from the city's footprints, and stacked setback tiers.
+  - **Paris, walking level: built** (`paris-walk`, from the Eiffel Tower to the Marais at 10 m). Its sources were checked directly (second-region.md §8); its buildings are typed from APUR's periods and fabric classes and IGN's BD TOPO, with heights from APUR where Overture has none, on IGN's RGE ALTI terrain (D-084), and drawn by the `paris` pack and the `city-paris` generators: Haussmann blocks, faubourg houses, HBM blocks, a cathedral and a triumphal arch (D-085, D-086). Still to come: the driving and flying levels, the blind test, pans coupés and courtyards, street trees from the city's records.
 - A second style pack.
 - CDN hosting with archive range requests.
 - Performance budgets met on mid-range phones.

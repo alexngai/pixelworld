@@ -332,6 +332,14 @@ test.describe("New York (D-078, D-080, D-081)", () => {
   });
 });
 
+test.describe("Paris (D-084, D-085, D-086)", () => {
+  test("Haussmann blocks in the Gros-Caillou: the walking level typed from APUR and IGN", async ({ page }) => {
+    // the paris style pack and its city pack, named by the world
+    await open(page, "world=/paris-walk/&marker=0&zoom=2&rot=0&at=2.3027,48.8570");
+    await expect(page.locator("#view")).toHaveScreenshot("paris-walk-gros-caillou-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world

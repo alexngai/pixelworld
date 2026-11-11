@@ -1,0 +1,11 @@
+name: Palais Garnier
+wikidata: Q187840
+# Overture's footprint centroid; the front faces the Place de l'Opéra (south)
+anchor: { lon: 2.331691, lat: 48.872034 }
+height: 56          # to the top of the dome
+orient: 1           # its long side runs north-south
+clear: 40
+replaces: [Opéra Garnier]
+depictions:
+  # a domed hall in stone under a green copper dome; no statues, no name
+  generic: { group: landmark.hall.domed }
