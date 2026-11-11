@@ -523,3 +523,33 @@ def test_props_along_a_street_stand_on_one_side_turned_with_it():
     ew = [i for i in one if abs(i["y"] - ay) < 0.5 and abs(i["x"] - ax) >= 0.5]
     assert ns and ew
     assert {i["r"] for i in ns} == {0} and {i["r"] for i in ew} == {1}
+
+
+def test_props_along_a_diagonal_street_take_their_diagonal_group():
+    """D-097: with `diagonal`, props along a road running diagonally take that
+    group, turned for the diagonal they follow."""
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.198 36.002, -115.192 36.008)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.198 36.008, -115.192 36.002)",
+        },
+        {
+            "id": "c",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)",
+        },
+    ]
+    rule = {"group": "prop.pole", "roads": ["residential"], "spacing": 100, "along": True}
+    out = objects.street_trees(p, rule | {"diagonal": "prop.pole.diagonal"}, rows, _none, "t")
+    diag = [i for i in out if i["g"] == "prop.pole.diagonal"]
+    assert diag and {i["r"] for i in diag} == {0, 1}
+    assert all(i["g"] == "prop.pole" for i in objects.street_trees(p, rule, rows, _none, "t"))

@@ -520,7 +520,9 @@ def street_trees(
     where its road runs east-west, so a model drawn along x spans the street:
     lanterns strung across it. With `along`, one row on the road's left
     side, turned the same way so a model drawn along y runs with its road:
-    utility poles whose wires reach to the next (D-096). `bounds` ([w, s, e,
+    utility poles whose wires reach to the next (D-096); with `diagonal`, that
+    group stands where the road runs within 22.5° of a diagonal, for a model
+    drawn along x = y (D-097). `bounds` ([w, s, e,
     n], lon/lat) keeps a rule to one stretch of its roads.
     """
     classes = set(rule["roads"])
@@ -528,11 +530,13 @@ def street_trees(
     offset = float(rule.get("offset", 12))
     across = bool(rule.get("across"))
     along = bool(rule.get("along"))
+    diagonal = rule.get("diagonal") if along else None
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
     rng = np.random.default_rng(_seed(p.region, f"street|{tag}|{rule['group']}"))
     xs: list[float] = []
     ys: list[float] = []
     turns: list[int] = []
+    groups: list[str] = []
     name = rule.get("name", "").lower()
     if name:
         # names aren't in the road layer's columns; fetch them for this rule only
@@ -570,7 +574,15 @@ def street_trees(
                     xs.append(c.x - side * ty / norm * offset)
                     ys.append(c.y + side * tx / norm * offset)
                     if along:
-                        turns.append(0 if abs(ty) >= abs(tx) else 1)
+                        # within 22.5° of a diagonal: the `diagonal` group, drawn along x = y
+                        # (south-east in cells, where y grows south), a quarter turn for the other
+                        a = math.degrees(math.atan2(ty, tx)) % 90.0
+                        if diagonal and 22.5 <= a < 67.5:
+                            groups.append(diagonal)
+                            turns.append(0 if tx * ty < 0 else 1)
+                        else:
+                            groups.append(rule["group"])
+                            turns.append(0 if abs(ty) >= abs(tx) else 1)
     if not xs:
         return []
     ax, ay = np.asarray(xs), np.asarray(ys)
@@ -587,7 +599,7 @@ def street_trees(
     rots = np.asarray(turns) if across or along else rng.integers(0, 4, size=ax.size)
     return [
         {
-            "g": rule["group"],
+            "g": groups[k] if groups else rule["group"],
             "x": float(cx[k]),
             "y": float(cy[k]),
             "s": int(seeds[k]),

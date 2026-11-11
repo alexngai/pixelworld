@@ -612,6 +612,19 @@ SOURCES = Map(
             "River lines.",
             "`{ subtypes: [river] }`",
         ),
+        "lakes": Key(
+            Map(
+                {
+                    "classes": Key(
+                        ListOf(AnyValue("string"), min_items=1),
+                        "Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …).",
+                        required=True,
+                    )
+                }
+            ),
+            "Overture's water areas drawn as still water beside land cover's (D-097): a "
+            "garden's pond, a castle's moat. Each is levelled as a lake.",
+        ),
         "paths": Key(
             Map(
                 {
@@ -855,6 +868,10 @@ LAWN = Map(
         ),
         "over": Key(ListOf(Str(surface_names)), "Surfaces a lawn replaces.", "`[grass]`"),
         "keep": Key(ListOf(Str()), "Natural land (Overture base `land` classes) left as it is."),
+        "paved": Key(
+            ListOf(Str()),
+            "Land-use classes inside a park left as they are (`pedestrian`: courts and plazas).",
+        ),
         "maxSlope": Key(Num(0), "A park steeper than this (rise over run) stays wild.", "0.2"),
         "slopeMeters": Key(Num(0), "Slopes are measured over about this distance.", "50"),
         "wooded": Key(
@@ -1080,6 +1097,11 @@ ROW_RULE_KEYS = {
     "across": Key(Bool(), "Over the road, turned across it (strung lanterns)."),
     "along": Key(
         Bool(), "On one side only, turned to run with the road (utility poles and their wires)."
+    ),
+    "diagonal": Key(
+        Str(),
+        "With `along`: the group placed where the road runs diagonally, for a model drawn "
+        "along x = y.",
     ),
     "canopy": Key(
         Num(0, unit="m"),

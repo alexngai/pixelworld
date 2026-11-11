@@ -335,6 +335,14 @@ def land_use(
     return _areas(release, bbox, "land_use", classes)
 
 
+def water_areas(
+    release: str, bbox: tuple[float, float, float, float], classes: list[str]
+) -> list[dict]:
+    """Water polygons of the given classes (base theme `water`, from
+    OpenStreetMap's natural=water and its kinds): ponds, moats, lakes, …"""
+    return _areas(release, bbox, "water", classes)
+
+
 def land(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
     """Natural land polygons of the given classes (base theme `land`, from
     OpenStreetMap's natural tags): grassland, scrub, heath, beach, sand, …"""

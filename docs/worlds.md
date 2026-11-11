@@ -272,6 +272,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `overture` | [mapping](#spec-sources-overture) | **required** | Overture Maps: roads, paths, rivers, rail, buildings, land use. |
 | `roads` | [mapping](#spec-sources-roads) | **required** | The road network. |
 | `rivers` | [mapping](#spec-sources-rivers) | `{ subtypes: [river] }` | River lines. |
+| `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-097): a garden's pond, a castle's moat. Each is levelled as a lake. |
 | `paths` | [mapping](#spec-sources-paths) | — | Footways and cycleways (walking levels). |
 | `rails` | [list of mappings](#spec-sources-rails) | — | Rails drawn in the street, each segment by the first rule it matches. |
 
@@ -314,6 +315,13 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `subtypes` | list of strings | `[river]` | Overture water lines burned in as rivers (`river`, `stream`, `canal`, …). Lakes and the sea come from land cover. |
+
+<a id="spec-sources-lakes"></a>
+#### `sources.lakes`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `classes` | list of strings | **required** | Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …). |
 
 <a id="spec-sources-paths"></a>
 #### `sources.paths`
@@ -557,6 +565,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `landUse` | list of strings | **required** | Overture land-use classes that are lawns (`park`, `golf_course`, …). |
 | `over` | list of strings | `[grass]` | Surfaces a lawn replaces. |
 | `keep` | list of strings | — | Natural land (Overture base `land` classes) left as it is. |
+| `paved` | list of strings | — | Land-use classes inside a park left as they are (`pedestrian`: courts and plazas). |
 | `maxSlope` | number, ≥ 0 | 0.2 | A park steeper than this (rise over run) stays wild. |
 | `slopeMeters` | number, ≥ 0 | 50 | Slopes are measured over about this distance. |
 | `wooded` | [mapping](#spec-ground-lawn-wooded) | — | Lawn under open tree cover. |
@@ -714,6 +723,7 @@ Other keys here are plugin options.
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
 | `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
@@ -733,6 +743,7 @@ Other keys here are plugin options.
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
 | `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
