@@ -274,6 +274,11 @@
       },
       "params": { "type": 1, "litFraction": 0.35 }
     },
+    "building.palace": {
+      "generator": "palace",
+      "ramps": { "wall": "limestone", "trim": "limestone-warm", "roof": "slate", "window": "glass", "lit": "lit", "chimney": "limestone" },
+      "params": { "pitch": 1.7, "litFraction": 0.15 }
+    },
     "building.parking": {
       "generator": "building",
       "ramps": { "wall": "concrete", "roof": "concrete", "window": "glass" },
@@ -354,21 +359,57 @@
       "ramps": { "wall": "limestone", "detail": "limestone-warm", "roof": "stone-grey" },
       "params": { "width": 0.9, "depth": 0.44 }
     },
-    "landmark.bridge.arch": { "generator": "archBridge", "ramps": { "structure": "steel-grey", "deck": "asphalt", "detail": "gold" } },
+    "landmark.bridge.arch.steel": {
+      "generator": "steelArchBridge",
+      "ramps": { "structure": "steel-grey", "deck": "asphalt", "stone": "limestone", "gilt": "gold", "lamp": "lit" },
+      "params": { "abutment": 0.12, "pylon": 2.1, "ribs": 15 }
+    },
+    "landmark.bridge.stone": {
+      "generator": "stoneArchBridge",
+      "ramps": { "stone": "limestone-warm", "deck": "asphalt", "detail": "stone-grey", "lamp": "lit" },
+      "params": { "arches": 7, "deck": 0.72 }
+    },
+    "landmark.bridge.stone.short": {
+      "generator": "stoneArchBridge",
+      "ramps": { "stone": "limestone-warm", "deck": "asphalt", "detail": "stone-grey", "lamp": "lit" },
+      "params": { "arches": 5, "deck": 0.72 }
+    },
     "landmark.cathedral.gothic": {
       "generator": "cathedral",
       "ramps": { "wall": "limestone", "roof": "slate", "window": "glass", "detail": "stone-grey", "rose": "shop-navy", "door": "iron" },
       "params": { "towers": 0.72, "length": 1.33 }
     },
-    "landmark.hall.domed": {
-      "generator": "domedHall",
-      "ramps": { "wall": "limestone-warm", "roof": "zinc", "window": "stone-grey", "dome": "verdigris" },
-      "params": { "length": 2.6, "depth": 1.9, "hall": 0.5, "dome": 0.24 }
+    "landmark.church.domed": {
+      "generator": "domedChurch",
+      "ramps": { "wall": "limestone", "roof": "slate", "window": "stone-grey", "detail": "limestone-warm", "gilt": "gold" }
+    },
+    "landmark.hall.glass": {
+      "generator": "glassPalace",
+      "ramps": {
+        "wall": "limestone",
+        "glass": "plaster-grey",
+        "structure": "verdigris",
+        "window": "stone-grey",
+        "detail": "limestone-warm",
+        "roof": "slate",
+        "bronze": "verdigris"
+      }
+    },
+    "landmark.hall.opera": {
+      "generator": "operaHouse",
+      "ramps": {
+        "wall": "limestone-warm",
+        "roof": "zinc",
+        "dome": "verdigris",
+        "window": "stone-grey",
+        "detail": "limestone",
+        "column": "limestone",
+        "gilt": "gold"
+      }
     },
     "landmark.tower.lattice": {
-      "generator": "latticeTower",
-      "ramps": { "structure": "eiffel-brown", "deck": "eiffel-brown", "accent": "gold" },
-      "params": { "baseRatio": 0.19 }
+      "generator": "latticeArchTower",
+      "ramps": { "structure": "eiffel-brown", "deck": "eiffel-brown", "accent": "gold", "window": "glass" }
     },
     "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "wallace-green", "head": "iron", "light": "marker" }, "params": { "height": 5 } },
     "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "wallace-green", "lamp": "lit" }, "params": { "height": 6 } },

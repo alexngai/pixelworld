@@ -149,7 +149,7 @@ describe("city-pack-check tool", () => {
     const registry = readFileSync(new URL("../packages/generators/src/registry.ts", import.meta.url), "utf8");
     expect(knownGenerators(registry, NAME).sort()).toEqual(["block", "decoTower", "gate", "lanterns", "rowhouse", "sfTower"]);
     expect(knownGenerators(registry, "@pixelworlds/city-nyc").sort()).toEqual(["brownstone", "castIronLoft", "prewarBlock", "tenement"]);
-    expect(knownGenerators(registry, "@pixelworlds/city-paris").sort()).toEqual(["cathedral", "faubourg", "haussmann", "hbm", "triumphalArch"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-paris").sort()).toEqual(["cathedral", "domedChurch", "faubourg", "glassPalace", "haussmann", "hbm", "latticeArchTower", "operaHouse", "palace", "steelArchBridge", "stoneArchBridge", "triumphalArch"]);
     expect(knownGenerators(registry, "@my-org/city-vegas")).toEqual([]);
   });
 

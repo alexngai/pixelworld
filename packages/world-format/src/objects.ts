@@ -28,7 +28,9 @@ export function parseObjects(json: unknown): ObjectsFile {
     const ax = hundredths(inst.x);
     const ay = hundredths(inst.y);
     const fp = inst.fp.map(([dx, dy]) => [(ax + dx) / 100, (ay + dy) / 100] as [number, number]);
-    return { ...inst, fp };
+    if (!inst.fh) return { ...inst, fp };
+    const fh = inst.fh.map((ring) => ring.map(([dx, dy]) => [(ax + dx) / 100, (ay + dy) / 100] as [number, number]));
+    return { ...inst, fp, fh };
   });
   return { version: 2, instances };
 }

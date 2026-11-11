@@ -155,10 +155,11 @@ Paris's walking level (D-078, D-086), built from [`worlds/paris/walk.yaml`](../w
 
 - **Terrain:** IGN's RGE ALTI 1 m DTM read at 4 m (the `ign-rgealti` terrain source, D-084): 9 to 25 drawn steps, from the Seine's quays to the Chaillot hill.
 - **Buildings:** 24,136 from Overture footprints; 19,125 have facts from APUR and IGN (the `apur` facts source, D-084: APUR's footprints, periods and fabric classes, BD TOPO's storeys and use, APUR's quartiers), and 5,144 of those that Overture gives no height take APUR's.
-- **Types:** Haussmann blocks (5,783), faubourg houses (2,475), post-war blocks (1,411), civic stone buildings (453), HBM blocks (388) and warehouses (12); the rest keep the stone default (`haussmann`: 9,824 residential, 3,760 commercial), and 29 towers.
+- **Types:** Haussmann blocks (5,783), faubourg houses (2,475), post-war blocks (1,412), civic stone buildings (452), HBM blocks (388), palaces by name (33 pieces: the Louvre and the Hôtel des Invalides, D-088) and warehouses (12); the rest keep the stone default (`haussmann`: 9,820 residential, 3,711 commercial), and 28 towers.
+- **Courtyards:** kept open (`courtyards: true`, D-088): 2,791 buildings carry theirs.
 - **Centre lines:** 45,185 road cells and 82,732 path cells carry pieces; 14 and 990 have more than six, and drop their narrowest.
-- **Also:** 16,346 canopy trees and 7,776 street trees, 13,096 lawn cells, 3,554 street lights and 296 signals, 327 rail cells, 5,850 traffic routes.
-- **Landmarks (generic depictions):** the Eiffel Tower (unlit), Notre-Dame, the Arc de Triomphe, the Palais Garnier and the Pont Alexandre III.
+- **Also:** 16,347 canopy trees and 7,776 street trees, 13,096 lawn cells, 3,554 street lights and 296 signals, 327 rail cells, 5,856 traffic routes.
+- **Landmarks (generic depictions, drawn on their own proportions, D-087, D-088):** the Eiffel Tower (unlit), Notre-Dame, the Arc de Triomphe, the Palais Garnier, the Pont Alexandre III, the Dôme des Invalides, the Grand Palais and the Pont Neuf's two arms.
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
 - **Size:** 2.9 MB. Built in about 70 s with the download cache.
 

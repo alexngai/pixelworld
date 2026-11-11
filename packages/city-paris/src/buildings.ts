@@ -296,4 +296,96 @@ export const hbm: Generator = (ctx) => {
   return m;
 };
 
-export const BUILDING_GENERATORS: Record<string, Generator> = { haussmann, faubourg, hbm };
+/**
+ * A French palace (the Louvre's and the Invalides' type) on any footprint,
+ * courtyards included: stone walls of three storeys on every face (a
+ * rusticated ground storey with arched windows, a tall principal storey
+ * between pilasters, an attic) under a high slate roof that rises from every
+ * wall, the courtyards' too, so it runs along each wing and stands higher
+ * where wings meet; dormers along its foot. Its height comes from the wing:
+ * the walls 1.6 voxels and the roof `pitch` voxels for each voxel of the
+ * wing's half-width (a palace's proportion), or the record's height where
+ * that is taller.
+ * params: pitch (the roof's rise for each voxel in; 1.0), litFraction.
+ * roles: wall, trim (bands, pilasters, rustication, dormers), roof, window, lit.
+ */
+export const palace: Generator = (ctx) => {
+  const { mask, param } = ctx;
+  if (!mask) throw new Error("palace needs a footprint");
+  const { sx, sy, on } = mask;
+  // each column's distance to the outside, in voxels (1 on a wall)
+  const dist = new Int16Array(sx * sy);
+  const queue: number[] = [];
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < sx && y < sy && on[y * sx + x] === 1;
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++)
+      if (inside(x, y) && (!inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1))) {
+        dist[y * sx + x] = 1;
+        queue.push(y * sx + x);
+      }
+  let maxD = 1;
+  for (let q = 0; q < queue.length; q++) {
+    const i = queue[q]!;
+    const x = i % sx;
+    const y = (i - x) / sx;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (inside(nx, ny) && dist[ny * sx + nx] === 0) {
+        dist[ny * sx + nx] = dist[i]! + 1;
+        maxD = Math.max(maxD, dist[i]! + 1);
+        queue.push(ny * sx + nx);
+      }
+    }
+  }
+  const pitch = param("pitch", 1.0);
+  const Hw = Math.max(6, Math.round((ctx.heightVox ?? 0) * 0.75), Math.round(maxD * 1.6));
+  const Hr = Math.max(1, Math.round((maxD - 1) * pitch) + 1);
+  const m = new VoxelModel(sx, sy, Hw + Hr + 3);
+  const p = paints(ctx, m);
+  const top = new Int16Array(sx * sy).fill(-1);
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++) {
+      const d = dist[y * sx + x]!;
+      if (!d) continue;
+      let z = 0;
+      for (; z < Hw; z++) m.set(x, y, z, p.body);
+      for (let dz = 0; dz < Hr && d >= 1 + Math.floor(dz / pitch); dz++, z++) m.set(x, y, z, p.roof);
+      top[y * sx + x] = z - 1;
+    }
+  // the walls: rustication and arched windows, a band, pilasters and tall windows, a band, the attic
+  const g = Math.max(2, Math.round(Hw * 0.32));
+  const n1 = Math.max(g + 2, Math.round(Hw * 0.78));
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++) {
+      if (dist[y * sx + x] !== 1) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        if (inside(x + dx, y + dy)) continue;
+        const run = dx !== 0 ? y : x;
+        const bay = run % 6;
+        const paintAt = (z: number) => {
+          if (z === g || z === n1 || z === Hw - 1) return p.trim;
+          if (z < g) return bay >= 2 && bay <= 3 && z < g - 1 ? (z === g - 2 && Hw >= 12 ? p.trim : p.pane()) : z % 3 === 0 ? p.trim : -1;
+          if (z < n1) return bay === 0 ? p.trim : bay >= 2 && bay <= 3 && z > g + 1 && z < n1 - 1 ? p.pane() : -1;
+          return bay >= 2 && bay <= 3 && z > n1 + 1 && z < Hw - 2 ? p.pane() : -1;
+        };
+        for (let z = 1; z < Hw; z++) {
+          const mat = paintAt(z);
+          if (mat >= 0) m.set(x, y, z, mat);
+        }
+      }
+    }
+  // dormers along the roof's foot, a voxel in from the walls
+  for (let y = 0; y < sy; y++)
+    for (let x = 0; x < sx; x++) {
+      const i = y * sx + x;
+      if (dist[i] !== 2 || (x + y) % 12 !== 6 || Hr < 3) continue;
+      const t = top[i]!;
+      if (t + 3 > m.sz) continue;
+      m.set(x, y, t + 1, p.pane());
+      m.set(x, y, t + 2, p.trim);
+    }
+  return m;
+};
+
+export const BUILDING_GENERATORS: Record<string, Generator> = { haussmann, faubourg, hbm, palace };

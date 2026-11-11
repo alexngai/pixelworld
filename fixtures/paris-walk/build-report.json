@@ -1,5 +1,5 @@
 {
-  "packageHash": "14f30de99c7a4ad2c6b07f00f1151a7f86e1ce999ec58c9ba7aee3a92928a4c3",
+  "packageHash": "b99ae04ecaa09422c2e57e55b38c00884e583c785496396eae5de726276aea3a",
   "cells": [
     610,
     324
@@ -14,25 +14,30 @@
     "riverLines": 27
   },
   "objects": {
-    "building.civic": 453,
-    "building.commercial": 3760,
+    "building.civic": 452,
+    "building.commercial": 3711,
     "building.faubourg": 2475,
     "building.haussmann": 5783,
     "building.hbm": 388,
     "building.industrial": 12,
-    "building.modern": 1411,
+    "building.modern": 1412,
+    "building.palace": 33,
     "building.parking": 1,
-    "building.residential": 9824,
-    "building.tower": 28,
+    "building.residential": 9820,
+    "building.tower": 27,
     "building.tower.hotel": 1,
     "landmark.arch.triumphal": 1,
-    "landmark.bridge.arch": 2,
+    "landmark.bridge.arch.steel": 2,
+    "landmark.bridge.stone": 2,
+    "landmark.bridge.stone.short": 1,
     "landmark.cathedral.gothic": 1,
-    "landmark.hall.domed": 1,
+    "landmark.church.domed": 1,
+    "landmark.hall.glass": 1,
+    "landmark.hall.opera": 1,
     "landmark.tower.lattice": 1,
     "prop.signal": 296,
     "prop.streetlight": 3554,
-    "tree": 16346,
+    "tree": 16347,
     "tree.street": 7776
   },
   "roads": {
@@ -55,21 +60,21 @@
     "train": 327
   },
   "lanes": {
-    "counted": 51415,
-    "oneway": 42790,
+    "counted": 51396,
+    "oneway": 42787,
     "divided": 6590
   },
   "surfaces": {
     "woodland": 12442,
-    "water": 7040,
-    "desert": 192,
+    "water": 7066,
+    "desert": 188,
     "grass": 24,
-    "urban": 164846,
+    "urban": 164824,
     "lawn": 13096
   },
   "routes": {
     "ferry": 2,
-    "road": 5837,
+    "road": 5843,
     "train": 11
   }
 }

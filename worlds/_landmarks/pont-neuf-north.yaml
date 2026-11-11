@@ -1,0 +1,14 @@
+name: Pont Neuf
+wikidata: Q335277
+# the arm across the Seine's right channel, seven arches, from the tip of the
+# Île de la Cité to the Quai du Louvre, along Overture's carriageway
+line: [[2.34152, 48.85732], [2.34246, 48.85848]]
+crest: 34           # the deck, metres above sea level
+base: 27            # the Seine's level in Paris
+thickness: 28       # the deck (about 20 m) and the bastions over the piers
+bulge: 0
+snap: true
+depictions:
+  # a stone bridge of round arches, half-round bastions over the piers, a
+  # cornice of plain mascarons; no name
+  generic: { group: landmark.bridge.stone }

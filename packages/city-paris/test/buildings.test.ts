@@ -32,6 +32,14 @@ function rect(sx: number, sy: number, cut = 0): Mask {
   return { sx, sy, on };
 }
 
+/** A block round a courtyard: s across, the court c across in its middle. */
+function courtyard(s: number, c: number): Mask {
+  const on = new Uint8Array(s * s);
+  const a = Math.floor((s - c) / 2);
+  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) on[y * s + x] = x >= a && x < a + c && y >= a && y < a + c ? 0 : 1;
+  return { sx: s, sy: s, on };
+}
+
 /** A footprint on a diagonal (a lot on a radial avenue). */
 function diamond(r: number): Mask {
   const s = 2 * r + 1;
@@ -82,7 +90,7 @@ describe("Paris's buildings", () => {
     let n = 0;
     let seed = 1;
     // a sliver, a narrow faubourg lot, a deep lot, a corner notch, a wide block, a diagonal
-    const masks = [rect(1, 4), rect(3, 3), rect(5, 12), rect(12, 24), rect(16, 30, 5), rect(40, 32), diamond(9)];
+    const masks = [rect(1, 4), rect(3, 3), rect(5, 12), rect(12, 24), rect(16, 30, 5), rect(40, 32), diamond(9), courtyard(30, 10)];
     for (const group of GROUPS)
       for (const mask of masks)
         for (const H of [10, 50, 140])
@@ -133,6 +141,20 @@ describe("Paris's buildings", () => {
     expect(rampName.get(m.materials[m.get(12, 15, roofTop)]!)).toMatch(/zinc|slate/);
   });
 
+  it("steps roofs in from a courtyard's walls too, and puts windows on them (D-088)", () => {
+    const mask = courtyard(30, 10); // the court is columns 10–19
+    for (const group of ["building.haussmann", "building.palace"]) {
+      const m = gen(group, 3, mask, 50, { floors: 7, front: 6 });
+      expect(topAt(m, 15, 15), group).toBe(-1); // the court is open
+      // beside the court the roof is lower than in the middle of the wing
+      expect(topAt(m, 15, 9), group).toBeLessThan(topAt(m, 15, 5));
+      // glass on the court's walls
+      let glass = 0;
+      for (let z = 0; z < m.sz; z++) for (const [x, y] of [[15, 9], [9, 15], [20, 15], [15, 20]] as const) if (glassRamps.has(rampName.get(m.materials[m.get(x, y, z)]!) ?? "")) glass++;
+      expect(glass, group).toBeGreaterThan(0);
+    }
+  });
+
   it("gives a faubourg house a pitched roof whose ridge runs along the street", () => {
     const m = gen("building.faubourg", 3, rect(10, 16), 40, { floors: 4, front: 6 });
     expect(facadeOf(rect(10, 16), 6).width).toBe(10);
@@ -177,6 +199,53 @@ describe("Paris's landmarks", () => {
     }
     expect(best[0]).toBeGreaterThan(tower);
     expect(best[1]).toBeGreaterThan(m.sx * 0.4);
+  });
+
+  it("draw a lattice tower on four separate piers that merge toward the top, with a hollow first platform", () => {
+    const H = 300;
+    const m = generateModel(style.assets, rampIds, "landmark.tower.lattice", { seed: 1, heightVox: H });
+    const c = m.sx / 2;
+    // at the foot, the middle of the base is open: the piers stand apart
+    let solidMiddle = 0;
+    for (let x = Math.floor(c - H * 0.05); x < c + H * 0.05; x++) for (let y = Math.floor(c - H * 0.05); y < c + H * 0.05; y++) if (m.get(x, y, 2)) solidMiddle++;
+    expect(solidMiddle).toBe(0);
+    // the first platform is a ring: decked at its rim, open over the middle
+    const p1 = Math.round(H * 0.175);
+    expect(m.get(Math.round(c - H * 0.115), Math.floor(c), p1)).not.toBe(0);
+    expect(m.get(Math.floor(c), Math.floor(c), p1)).toBe(0);
+    // the second platform is solid across
+    expect(m.get(Math.floor(c), Math.floor(c), Math.round(H * 0.35))).not.toBe(0);
+    // the mast reaches the top
+    expect(topAt(m, Math.floor(c) - 1, Math.floor(c) - 1)).toBe(H - 1);
+  });
+
+  it("draw an opera house whose stage house stands highest, behind a low dome, behind a lower front", () => {
+    const H = 90;
+    const m = generateModel(style.assets, rampIds, "landmark.hall.opera", { seed: 1, heightVox: H });
+    expect(m.sx).toBeGreaterThan(m.sy);
+    const c = Math.floor(m.sy / 2);
+    const front = topAt(m, 5, c);
+    const dome = topAt(m, Math.round(H * 1.36), c);
+    const stage = topAt(m, Math.round(H * 2.05), c);
+    expect(front).toBeLessThan(dome);
+    expect(dome).toBeLessThan(stage);
+    expect(stage).toBeGreaterThanOrEqual(H - 2);
+    // copper on the dome
+    expect(rampName.get(m.materials[m.get(Math.round(H * 1.36), c, dome - 1)]!)).toMatch(/verdigris|gold/);
+  });
+
+  it("draw a steel arch bridge: a flat arch under the deck between abutments, pylons at the corners", () => {
+    const mask = rect(120, 40);
+    const H = 14;
+    const m = generateModel(style.assets, rampIds, "landmark.bridge.arch.steel", { seed: 1, heightVox: H, mask });
+    // the deck at H all along; under its middle the arch's crown, and open water below that
+    expect(m.get(60, 20, H)).not.toBe(0);
+    expect(m.get(60, 0, H - 2)).not.toBe(0);
+    expect(m.get(60, 20, 2)).toBe(0);
+    // the abutments are solid; the pylons at the corners rise far above the deck
+    expect(m.get(3, 20, 2)).not.toBe(0);
+    expect(topAt(m, 1, 1)).toBeGreaterThan(H * 2.5);
+    expect(topAt(m, 60, 20)).toBe(H);
   });
 
   it("draw a triumphal arch open through both pairs of faces", () => {
