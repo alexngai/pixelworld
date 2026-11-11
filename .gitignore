@@ -26,6 +26,10 @@ __pycache__/
 fixtures/_try/
 fixtures/_variants/
 
+# Start tiles (tools/prebake.mjs): stale after any change to the bake code, plugins,
+# style or package, so built where they are served rather than committed
+fixtures/*/start-tiles.bin
+
 # Agent worktrees (local, never committed)
 .claude/worktrees/
 

@@ -36,6 +36,8 @@ export interface GameOptions {
   traffic?: { enabled?: boolean; seed?: number; paused?: boolean; density?: number };
   fog?: boolean;
   cache?: boolean;
+  /** Read the world's start tiles, its first view baked ahead (default true; tools/prebake.mjs bakes without). */
+  startTiles?: boolean;
   /** A fixed canvas size (device px); default: follow the page. */
   size?: { width: number; height: number };
   zoom?: number | "auto";
@@ -189,6 +191,7 @@ export class Game {
       style: opts.style,
       size: opts.size,
       cache: opts.cache ?? true,
+      ...(opts.startTiles === false ? { startTiles: false as const } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
         : { rotation: opts.rotation ?? 0, zoom: opts.zoom ?? "auto" },
