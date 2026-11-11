@@ -75,6 +75,9 @@ interface TileEntry {
   bare?: boolean;
 }
 
+/** Bake workers by default: the cores less one for the page, at most 4 (each keeps its own copy of the world's objects). */
+const defaultBakeWorkers = (): number => Math.max(1, Math.min(4, (globalThis.navigator?.hardwareConcurrency ?? 2) - 1));
+
 /** Screen px around a reveal whose bare tiles are baked ahead of it moving there. */
 const REVEAL_AHEAD_PX = 32;
 
@@ -117,6 +120,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
   const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
     plugins: plugins.refs,
+    workers: opts.bakeWorkers ?? defaultBakeWorkers(),
   });
   service.failures.unloaded = plugins.missing; // named in failures of generators nobody registered (D-072)
   await mainThread.catch((e: unknown) => {
@@ -671,6 +675,7 @@ class View implements WorldView {
     return {
       renderer: this.service.renderer,
       bakeMode: this.service.mode,
+      bakeWorkers: this.service.workers,
       tilesBaked: t.tiles,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,

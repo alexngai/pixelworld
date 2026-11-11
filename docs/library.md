@@ -234,6 +234,7 @@ interface WorldViewOptions {
   controller?: Controller;
   recordBakes?: boolean;                              // tile timings for the bench
   onError?: (message: string) => void;
+  bakeWorkers?: number;                               // default the cores less one, at most 4
   workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]); // generator plugins (§8)
   replace?: WorldView;                                // take over from a view on the same canvas (M4, §7.9)
