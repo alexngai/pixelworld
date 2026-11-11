@@ -92,10 +92,14 @@ describe("Chinatown's gate", () => {
 });
 
 describe("lanterns strung across a street", () => {
+  // the voxel wire, as a pack without `lines` draws it (bay-area turns lines on, D-096)
+  const voxelWire = Object.fromEntries(
+    Object.entries(style.assets).map(([g, a]) => [g, g.startsWith("prop.lanterns") ? { ...a, params: { ...a.params, lines: 0 } } : a]),
+  ) as AssetCatalog;
   for (const group of ["prop.lanterns", "prop.lanterns.wide"])
     it(`hang red (and gold) lanterns from a wire across the whole span (${group})`, () => {
       for (let seed = 1; seed <= 8; seed++) {
-        const m = generateModel(style.assets, rampIds, group, { seed });
+        const m = generateModel(voxelWire, rampIds, group, { seed });
         // the wire reaches both ends, sagging toward the middle
         const wireZ = (x: number) => {
           for (let z = m.sz - 1; z >= 0; z--) if (rampAt(m, x, 0, z) === "asphalt") return z;
@@ -121,10 +125,10 @@ describe("lanterns strung across a street", () => {
       }
     });
 
-  it("string their wire as a one-pixel line with `lines` (D-095), the lanterns round it", () => {
-    const lined = { ...style.assets, "prop.lanterns": { ...style.assets["prop.lanterns"]!, params: { ...style.assets["prop.lanterns"]!.params, lines: 1 } } };
+  it("string their wire as a one-pixel line with `lines` (D-096; bay-area's), the lanterns round it", () => {
+    expect(style.assets["prop.lanterns"]!.params!.lines).toBe(1);
     for (let seed = 1; seed <= 4; seed++) {
-      const m = generateModel(lined, rampIds, "prop.lanterns", { seed });
+      const m = generateModel(style.assets, rampIds, "prop.lanterns", { seed });
       // no wire voxels, an unbroken line from one end to the other, sagging in the middle
       for (let x = 0; x < m.sx; x++) for (let z = 0; z < m.sz; z++) expect(rampAt(m, x, 0, z)).not.toBe("asphalt");
       expect(m.lines.length).toBe(m.sx - 1);

@@ -242,12 +242,12 @@
     "prop.streetlight": {
       "generator": "streetLight",
       "ramps": { "pole": "concrete", "lamp": "lit" },
-      "params": { "height": 6 }
+      "params": { "height": 8, "lines": 1, "reach": 2 }
     },
     "prop.signal": {
       "generator": "trafficSignal",
       "ramps": { "pole": "iron", "head": "asphalt", "light": "marker" },
-      "params": { "height": 5 }
+      "params": { "height": 6, "lines": 1, "reach": 3 }
     },
     "landmark.tower.lattice": {
       "generator": "latticeTower",

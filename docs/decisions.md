@@ -102,7 +102,7 @@ Status values:
 | D-093 | Tokyo's walking level: Shibuya to Shinjuku at 10 m, typed by use, storeys, size and neighbourhood boxes | Accepted (M5) |
 | D-094 | Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count | Accepted (M5) |
 | D-095 | Wires strung from pole to pole: utility poles along whole streets, each span a one-pixel line at any angle | Accepted (M5) |
-| D-096 | Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms as options | Accepted (M5) |
+| D-096 | Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack | Accepted (M5) |
 
 ---
 
@@ -1156,19 +1156,20 @@ The point is more room for visual interest; both halves are wanted.
   - **Wires across junctions** between streets that meet at an angle, and the service drops from poles to houses.
   - **Lines on instanced props** (only unique objects draw them now), and other thin things as lines: tram and trolleybus wires, railings, flagpoles.
 
-### D-096: Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms as options (accepted, M5)
+### D-096: Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack (accepted, M5)
 - **Why:** the owner asked for the other props to have options for the detail the wires got (D-095). A street light was a column of voxels three voxels wide, 2.5 m tall at the walking scale; a signal, a column with three voxels on top; Chinatown's lanterns hung from a wire a voxel thick, and a utility pole's arms were voxels too. Their thin parts are what one-pixel lines draw well. But lines were drawn for unique objects only, and props are instanced.
 - **What:**
   - **Lines on instanced props:** a variant's lines are a batch of their own, a `primitive: "lines"` mesh with its own copies of the instances' offsets and cells (a render scale scales each batch's), drawn with `drawArraysInstanced(gl.LINES)`, casting no shadow. `meshLines` (beside `meshVoxels`) places a model's lines as its voxels are placed, for unique objects, instanced ones and the model preview, which now shows them.
-  - **Options, off by default** so every pack and golden but Tokyo's is unchanged:
+  - **Options, off by default in the generators** (a pack turns them on):
     - `streetLight` with `lines: 1`: a mast a pixel wide and an arm that rises and curves out `reach` voxels to the lamp, the lamp still a voxel that glows at night.
     - `trafficSignal` with `lines: 1`: a pole and a mast arm reaching `reach` voxels over the street, the head of three lamps (the middle one dark) under a hood at its end.
     - `lanterns` (`@pixelworlds/city-sf`) with `lines: 1`: the wire a one-pixel line sagging smoothly, each lantern's top voxel round it.
     - `utilityPoles` with `lines: 1`: the crossarm and the low arm as lines, and on some poles (`stay`, 0.35) a stay wire from the low arm down to the ground along the street; the pole stays a column of voxels, as thick as a concrete pole looks.
   - **The tokyo pack** turns them on: street lights 16 voxels tall (about 7 m at the walking scale) with a 3-voxel arm, signals 12 voxels with a 5-voxel arm, poles with arms and stays. Its two goldens are regenerated (the Yoyogi view's poles; 1% of the Harajuku view's pixels, its lights and signals).
+  - **Every pack, at the owner's word:** `bay-area`, `new-york` and `paris` take Tokyo's lights and signals (all their props stand on 10 m walking levels), and `bay-area`'s and `new-york`'s lanterns their one-pixel wire; `desert-southwest`, whose walking level has 20 m cells and so voxels twice the size, takes lights 8 voxels tall with a 2-voxel arm and signals 6 tall with a 3-voxel arm (about the same metres). Two goldens moved: Paris's Gros-Caillou (192 pixels at its left edge, a street light) and the Southwest's flying view of the Strip (2 pixels); every other golden is unchanged, its props out of view or within it unchanged.
   - **The package budget:** the untree-shaken sum of every entry point is 100.2 KB with D-082's and D-094's centre lines and D-095–D-096's lines; its limit is raised from 100 to 110 KB, as the owner allowed for features. createWorldView (78.9 of 80 KB) and a view with traffic (87.1 of 88) stay within theirs.
-- **Checked:** in the model preview and in `tokyo-walk` at zooms 2 to 4: Omotesandō's street lights as slender masts with curved arms, Yoyogi's poles with their arms and stay wires. Tests: the voxel light and signal as they were; their line versions' masts, arms, lamps and heads; an instanced model's lines as their own batch with copied offsets; the lantern wire as an unbroken sagging line through its lanterns; poles' arms and a share of stays.
+- **Checked:** in the model preview and in `tokyo-walk` at zooms 2 to 4: Omotesandō's street lights as slender masts with curved arms, Yoyogi's poles with their arms and stay wires; and at zoom 3 Chinatown's lanterns on Grant Avenue, the Champs-Élysées' lights and signals, the Strip's lights, Union Square's. Tests: the voxel light and signal as they were; their line versions' masts, arms, lamps and heads; an instanced model's lines as their own batch with copied offsets; the lantern wire as an unbroken sagging line through its lanterns; poles' arms and a share of stays.
 - **Rejected alternatives:**
-  - **Lines on by default:** every pack's street lights and signals, and their goldens, would change at once; packs can turn them on when they next regenerate.
+  - **Lines on by default in the generators:** a pack written for the voxel props (a plugin's, or one outside the repository) would change under it; a pack turns them on.
   - **The utility pole itself as a line** (not tried): a concrete pole is about half a voxel thick, and a one-pixel mast would draw it as thin as its own wires.
-- **Later:** the cable car's and streetcar's trolley poles, railings, flagpoles and bridge hangers as lines; turning the options on in the other packs.
+- **Later:** the cable car's and streetcar's trolley poles, railings, flagpoles and bridge hangers as lines; Kyoto's pack (on its own branch) can turn the options on too.
