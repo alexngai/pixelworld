@@ -2,4 +2,4 @@
 "pixelworld": patch
 ---
 
-Core knows Paris's generators (`haussmann`, `faubourg`, `hbm`, `cathedral`, `triumphalArch`, from `@pixelworlds/city-paris`), so a style that names one without its plugin loaded says which plugin to load.
+Core knows Paris's generators (`haussmann`, `faubourg`, `hbm`, `cathedral`, `triumphalArch`, `latticeArchTower`, `operaHouse`, `steelArchBridge`, from `@pixelworlds/city-paris`), so a style that names one without its plugin loaded says which plugin to load.

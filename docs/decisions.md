@@ -94,6 +94,7 @@ Status values:
 | D-084 | Paris's sources and plugins: APUR's footprints with IGN's BD TOPO, IGN's DTMs, and heights from facts | Accepted (M5) |
 | D-085 | Paris's look: a `paris` style pack and the `@pixelworlds/city-paris` generator plugin | Accepted (M5) |
 | D-086 | Paris's walking level: the Eiffel Tower to the Marais at 10 m, typed by period, fabric and storeys | Accepted (M5) |
+| D-087 | Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined | Accepted (M5) |
 
 ---
 
@@ -960,4 +961,25 @@ The point is more room for visual interest; both halves are wanted.
   - **The driving and flying levels** (Montmartre and Belleville are why the terrain source reads better than 30 m), and the blind test.
   - **HBM:** the 1920s–30s blocks inside the box are as often stone as brick; APUR's `c_morpho` or BD TOPO's wall materials could tell them apart.
   - **Street trees from the city's records** (D-084 Later), courtyards and pans coupés (D-085 Later).
+
+### D-087: Paris's landmarks drawn on their own proportions: four shapes of the Paris pack's own, two refined (accepted, M5)
+- **Why:** the owner asked for more detail and likeness in Paris's landmarks. Looked at on `paris-walk` (D-086), the Eiffel Tower drew as the landmark kit's generic lattice tower, a solid stepped pyramid on four thin legs; the Palais Garnier as a big box under a small dome with a grid of windows, like an office block; the Pont Alexandre III as a plain deck over an arch hidden under it, with its four pylons drawn by Overture as ordinary buildings with shopfronts. Notre-Dame and the Arc de Triomphe read, but without their belfries, roses' tracery, the chevet's buttresses or the Arc's sculpture.
+- **The rule kept:** depictions stay generic (D-051, data-sources.md §7): no names, no statues (where sculpture stands, a recessed panel or a plain gilt block), and the Eiffel Tower unlit. All five are out of copyright as architecture, so the shapes can follow the buildings closely; the shared built-in generators are untouched, since other worlds use them (`latticeTower` draws Las Vegas's Eiffel replica).
+- **What** (`packages/city-paris/src/landmarks.ts`, style guide §20):
+  - **`latticeArchTower`** (`landmark.tower.lattice`): four hollow piers of X-braced lattice whose outer edges follow the tower's curve, 0.186·e^(−z/0.30H) + 0.003 of its height H from the axis, fitted to its base (125 m square), its first platform (57 m up, about 70 m across) and its second (116 m, about 40 m); the piers thin from 0.078 H to 0.01 H and merge into one shaft near the top. A great arch on each face under the first platform, which is a hollow square with a frieze and glazed pavilions; two decks on the second; a top platform at 0.84 H with a glazed campanile, a lantern and a mast.
+  - **`operaHouse`** (`landmark.hall.opera`, a new group): the front block (an arcade of seven arches, a loggia of paired columns, a frieze and an attic, between end pavilions crowned with gilt blocks, under a copper hipped roof), the foyer block with a copper cupola, the auditorium's drum under a low copper dome with gilt ribs and a crown, a domed rotunda on each side, the stage house (the tallest, with pediment gables) and the administration block. Over its height H (56 m, the stage house's ridge): 3.1 long and 2.2 wide, as the building's 173 × 125 m. It is turned three quarter turns so its front faces south, onto the Place de l'Opéra.
+  - **`steelArchBridge`** (`landmark.bridge.arch.steel`, a new group): a line landmark whose pieces measure along the whole line (`frame.line`), as the kit's bridges do. A very flat arch of fifteen steel ribs (spring at 0.2 H, crown just under the deck) between stone abutments, open spandrels of posts and rings, a deck with stone sidewalks, a balustrade and lamp standards, and four stone pylons at the corners crowned in gilt. Its line now runs between the pairs of Overture's pylon footprints (a little beyond them), 46 m wide, and it replaces the four pylons by id.
+  - **`cathedral`**, refined: two tall lancets on every face of each tower and a pierced balustrade on top, the open gallery across the whole west front, tracery in the west and transept roses, pinnacled buttress piers, and seven flying buttresses radiating round the apse.
+  - **`triumphalArch`**, refined: the four great groups at the piers' feet, the reliefs above them and over the side arches as panels recessed one voxel, which the outline and ambient occlusion pick out; an archivolt round the great arch, the impost band, a frieze, a cornice and the attic's shields.
+  - A helper `box` fills a box with both corners included: `VoxelModel.fill` excludes the far corner, and a first draft that read it as inclusive drew no single-layer roofs.
+- **Checked:** in the model preview (`model.html?style=paris&group=…`) in two to four rotations each, and in the world: the whole Eiffel Tower over the Champ de Mars (a 900 × 1,100 view), Notre-Dame from the parvis and from the east, the Arc in the Étoile, the opera house from the Place de l'Opéra and from behind, the bridge from both banks. Tests check the tower's open foot, hollow first platform, solid second platform and mast; the opera house's heights (front below dome below stage house) and copper dome; the bridge's deck, arch crown, open water under the span, solid abutments and pylons.
+- **Rejected alternatives:**
+  - **Changing the kit's `latticeTower`, `domedHall` and `archBridge`:** they draw other worlds' landmarks (Las Vegas's replica, San Francisco's and New York's halls, the Hoover Dam bypass), whose goldens must not change, and are meant to stay generic types.
+  - **Hero assets painted over a bake (D-053):** the most faithful, but hand-drawn per rotation; the generators get most of the likeness for a fraction of the work, and stay in the palette and its night.
+  - **Statues and reliefs as figures:** sculpture, which the depiction rules keep generic even where it is out of copyright.
+- **Later:**
+  - Notre-Dame's axis runs about 23° south of east; landmarks turn only by quarter turns.
+  - The Eiffel Tower's lattice is one panel size at every height; in life the panels grow finer toward the top.
+  - The Palais Garnier's front is drawn at one depth (no projecting pavilions) and its loggia's columns as paint; the opera's statues and the bridge's are gilt blocks.
+  - More landmarks in the box: the Invalides' dome, the Grand Palais's glass roof, the Louvre's Cour Carrée, the Pont Neuf (twelve arches; a bridge generator of several spans).
 

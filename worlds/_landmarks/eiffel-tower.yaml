@@ -7,6 +7,7 @@ height: 330         # to the top of its antennas
 clear: 70
 replaces: [Tour Eiffel]
 depictions:
-  # a four-legged lattice tower, unlit: its night lighting is a protected
-  # work in France (docs/data-sources.md §7); no name
+  # a lattice tower on four arched piers with its three platforms, unlit:
+  # its night lighting is a protected work in France (docs/data-sources.md
+  # §7); no name
   generic: { group: landmark.tower.lattice }

@@ -179,6 +179,53 @@ describe("Paris's landmarks", () => {
     expect(best[1]).toBeGreaterThan(m.sx * 0.4);
   });
 
+  it("draw a lattice tower on four separate piers that merge toward the top, with a hollow first platform", () => {
+    const H = 300;
+    const m = generateModel(style.assets, rampIds, "landmark.tower.lattice", { seed: 1, heightVox: H });
+    const c = m.sx / 2;
+    // at the foot, the middle of the base is open: the piers stand apart
+    let solidMiddle = 0;
+    for (let x = Math.floor(c - H * 0.05); x < c + H * 0.05; x++) for (let y = Math.floor(c - H * 0.05); y < c + H * 0.05; y++) if (m.get(x, y, 2)) solidMiddle++;
+    expect(solidMiddle).toBe(0);
+    // the first platform is a ring: decked at its rim, open over the middle
+    const p1 = Math.round(H * 0.175);
+    expect(m.get(Math.round(c - H * 0.115), Math.floor(c), p1)).not.toBe(0);
+    expect(m.get(Math.floor(c), Math.floor(c), p1)).toBe(0);
+    // the second platform is solid across
+    expect(m.get(Math.floor(c), Math.floor(c), Math.round(H * 0.35))).not.toBe(0);
+    // the mast reaches the top
+    expect(topAt(m, Math.floor(c) - 1, Math.floor(c) - 1)).toBe(H - 1);
+  });
+
+  it("draw an opera house whose stage house stands highest, behind a low dome, behind a lower front", () => {
+    const H = 90;
+    const m = generateModel(style.assets, rampIds, "landmark.hall.opera", { seed: 1, heightVox: H });
+    expect(m.sx).toBeGreaterThan(m.sy);
+    const c = Math.floor(m.sy / 2);
+    const front = topAt(m, 5, c);
+    const dome = topAt(m, Math.round(H * 1.36), c);
+    const stage = topAt(m, Math.round(H * 2.05), c);
+    expect(front).toBeLessThan(dome);
+    expect(dome).toBeLessThan(stage);
+    expect(stage).toBeGreaterThanOrEqual(H - 2);
+    // copper on the dome
+    expect(rampName.get(m.materials[m.get(Math.round(H * 1.36), c, dome - 1)]!)).toMatch(/verdigris|gold/);
+  });
+
+  it("draw a steel arch bridge: a flat arch under the deck between abutments, pylons at the corners", () => {
+    const mask = rect(120, 40);
+    const H = 14;
+    const m = generateModel(style.assets, rampIds, "landmark.bridge.arch.steel", { seed: 1, heightVox: H, mask });
+    // the deck at H all along; under its middle the arch's crown, and open water below that
+    expect(m.get(60, 20, H)).not.toBe(0);
+    expect(m.get(60, 0, H - 2)).not.toBe(0);
+    expect(m.get(60, 20, 2)).toBe(0);
+    // the abutments are solid; the pylons at the corners rise far above the deck
+    expect(m.get(3, 20, 2)).not.toBe(0);
+    expect(topAt(m, 1, 1)).toBeGreaterThan(H * 2.5);
+    expect(topAt(m, 60, 20)).toBe(H);
+  });
+
   it("draw a triumphal arch open through both pairs of faces", () => {
     const m = generateModel(style.assets, rampIds, "landmark.arch.triumphal", { seed: 1, heightVox: 100 });
     const cx = Math.floor(m.sx / 2);

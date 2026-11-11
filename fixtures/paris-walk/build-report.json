@@ -1,5 +1,5 @@
 {
-  "packageHash": "14f30de99c7a4ad2c6b07f00f1151a7f86e1ce999ec58c9ba7aee3a92928a4c3",
+  "packageHash": "55e83902a082ef79eb7122ac873281f1527e2a7fcd37c24f8ba3dafe9175c74d",
   "cells": [
     610,
     324
@@ -22,13 +22,13 @@
     "building.industrial": 12,
     "building.modern": 1411,
     "building.parking": 1,
-    "building.residential": 9824,
+    "building.residential": 9820,
     "building.tower": 28,
     "building.tower.hotel": 1,
     "landmark.arch.triumphal": 1,
-    "landmark.bridge.arch": 2,
+    "landmark.bridge.arch.steel": 2,
     "landmark.cathedral.gothic": 1,
-    "landmark.hall.domed": 1,
+    "landmark.hall.opera": 1,
     "landmark.tower.lattice": 1,
     "prop.signal": 296,
     "prop.streetlight": 3554,
@@ -61,10 +61,10 @@
   },
   "surfaces": {
     "woodland": 12442,
-    "water": 7040,
+    "water": 7044,
     "desert": 192,
     "grass": 24,
-    "urban": 164846,
+    "urban": 164842,
     "lawn": 13096
   },
   "routes": {

@@ -241,7 +241,7 @@
       "x": 3,
       "y": 2,
       "path": "chunks/3_2.pxwc.gz",
-      "sha256": "06e2e27e3d30ada23e3f9e004946f030a8e764abf1dbd1ea8c1178298cdfa514",
+      "sha256": "2fec6fcbb601ec65dba7a669d7fc257435dabfa2981e329909c0b2f7980aa6be",
       "heightRange": [
         9,
         13
@@ -717,7 +717,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "ddfcb1314ceac4f0",
+      "region": "4c089d886e77eef8",
       "overtureRelease": "2026-10-21.0",
       "maxSlope": 3,
       "bilateral": [
@@ -731,8 +731,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "95acae009374df56980b72900880a9e82d936f0013f17b2a1f2f74d8e583b2a2",
-    "count": 52114
+    "sha256": "fe112f875eaaa3a5d6abd39c0f5e99626950b4bba5730b9887c7896fecc8425c",
+    "count": 52110
   },
   "depiction": {
     "heightStretch": 1.0,
@@ -755,10 +755,10 @@
     ],
     "sha256": "27d50aba77c75ee90fcae46e4f5f07b7bfe41fd120fad4ddfd49112709b0dc32"
   },
-  "packageHash": "14f30de99c7a4ad2c6b07f00f1151a7f86e1ce999ec58c9ba7aee3a92928a4c3",
+  "packageHash": "55e83902a082ef79eb7122ac873281f1527e2a7fcd37c24f8ba3dafe9175c74d",
   "routes": {
     "path": "routes.json.gz",
-    "sha256": "a7eda517d53b4fc46f1ccbcf75f66ab4f4a817463d4b8b6614115950c549fbd1",
+    "sha256": "f6b54c8ad98837eb4644bb6a8170c4e5dca189f181fc65e91e1c646b3a844927",
     "version": 1,
     "count": 5850
   }

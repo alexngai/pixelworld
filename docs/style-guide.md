@@ -460,7 +460,7 @@ A full pack (`worlds/_styles/new-york/style.json`), laid out like `bay-area` but
 
 ## 20. Paris (the `paris` pack, D-085)
 
-A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with its own 41 ramps and no fog. It names `["@pixelworlds/city-sf", "@pixelworlds/city-paris"]`: San Francisco's for `block` and `sfTower` (post-war blocks, warehouses, towers), Paris's for the five generators below (`packages/city-paris`).
+A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with its own 41 ramps and no fog. It names `["@pixelworlds/city-sf", "@pixelworlds/city-paris"]`: San Francisco's for `block` and `sfTower` (post-war blocks, warehouses, towers), Paris's for the eight generators below (`packages/city-paris`).
 
 **Ramps**
 - **Stone and render:** `limestone` (the cream Lutetian stone of the Haussmann front), `limestone-warm` (an older, warmer stone, and the trim on cream fronts), `stone-grey` (weathered stone, the cathedral's buttresses), `plaster`, `plaster-ochre` and `plaster-grey` (the faubourg's renders), `brick` (HBM's red-orange) and `brick-pale` (its buff bands), `calcaire` (the bedrock, for cuttings).
@@ -481,14 +481,14 @@ A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with i
 
 **Reused from San Francisco:** `building.modern` (post-war slabs and blocks: concrete, pale stone, curtain glass) and `building.industrial` use `block`; `building.tower` uses `sfTower`.
 
-**Landmarks** (generic depictions, D-051)
+**Landmarks** (generic depictions, D-051; drawn on the proportions of their Paris landmark, D-087)
 
 | Group | Generator | Landmark |
 |---|---|---|
-| `landmark.tower.lattice` | `latticeTower` (built in) | the Eiffel Tower: a four-legged lattice tower in bronze-brown, unlit |
-| `landmark.cathedral.gothic` | `cathedral` (Paris's) | Notre-Dame: two square west towers with flat tops and a rose window between them, three portals and a band of niches, a nave with clerestory windows and flying buttresses at each bay, a transept with a rose at each end, a rounded apse and a slender spire over the crossing; no statues |
-| `landmark.arch.triumphal` | `triumphalArch` (Paris's) | the Arc de Triomphe: a stone block with one great round arch through its wide faces and smaller ones through its narrow faces, an entablature, an attic with plain shields, and darker panels where its reliefs are |
-| `landmark.hall.domed` | `domedHall` (built in) | the Palais Garnier: warm stone under a copper dome |
-| `landmark.bridge.arch` | `archBridge` (built in) | the Pont Alexandre III: one steel arch under the deck, gilt rails; no statues |
+| `landmark.tower.lattice` | `latticeArchTower` (Paris's) | the Eiffel Tower: four hollow X-braced lattice piers on the tower's own curve (their outer edges 0.186·e^(−z/0.30H) + 0.003 of H from the axis), splayed at the foot and merging toward the top; a great arch between the piers on each face; the first platform a hollow square with a gilt-flecked frieze and glazed pavilions, the second with two decks, the top platform with a glazed campanile and a mast; bronze-brown and unlit |
+| `landmark.cathedral.gothic` | `cathedral` (Paris's) | Notre-Dame: two square west towers with two tall lancets on every face and a pierced balustrade, three portals, the gallery of kings, a west rose with tracery and the open gallery above it; a nave with clerestory windows and pinnacled flying buttresses; transept roses with tracery; the chevet's flying buttresses radiating round the apse; a slender spire over the crossing; no statues |
+| `landmark.arch.triumphal` | `triumphalArch` (Paris's) | the Arc de Triomphe: a stone block with one great round arch through its wide faces, framed by an archivolt and springing from an impost band, smaller arches through its narrow faces; the four great groups at the piers' feet, the reliefs above them and over the side arches as panels recessed a voxel, so they catch shadow; a frieze, a cornice, the attic with its shields; no figures |
+| `landmark.hall.opera` | `operaHouse` (Paris's) | the Palais Garnier: an arcade of seven arches under a loggia of paired columns, a frieze and an attic, between end pavilions crowned with gilt blocks, under a copper hipped roof; the foyer block with a copper cupola; the auditorium's drum under a low copper dome with gilt ribs and a crown, with a domed rotunda each side; the stage house, the tallest block, with pediment gables and gilt blocks at its apexes; the administration block behind; no statues |
+| `landmark.bridge.arch.steel` | `steelArchBridge` (Paris's) | the Pont Alexandre III: a very flat arch of fifteen steel ribs between stone abutments, open spandrels of posts and rings on its faces, a deck with stone sidewalks, a balustrade and lamp standards (they glow at night), and the four stone pylons at its corners crowned in gilt (it replaces Overture's four pylon footprints); no statues |
 
 **Street and traffic:** `prop.streetlight` and `prop.signal` in Wallace green, plane trees for `tree` and `tree.street` (broad pale-green crowns on pale trunks), and `bay-area`'s vehicles in Paris's palette, with white river boats.
