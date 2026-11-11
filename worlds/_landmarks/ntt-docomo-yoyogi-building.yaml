@@ -1,0 +1,11 @@
+name: NTT Docomo Yoyogi Building
+wikidata: Q2090752
+# Wikidata's coordinate; Overture's footprint is about 40 by 45 m
+anchor: { lon: 139.70325, lat: 35.684361 }
+height: 240          # the roof; the spire reaches 272 m
+clear: 25
+replaces: [ドコモ代々木タワー]
+depictions:
+  # a slender tower stepping in at its top storeys under a tall spire; no
+  # clock faces, no logo
+  generic: { group: landmark.tower.spire }

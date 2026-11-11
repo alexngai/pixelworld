@@ -1,0 +1,146 @@
+# Tokyo, walking level (D-093): Shibuya to Shinjuku at 10 m per cell. The
+# scramble crossing and Dōgenzaka's lanes of narrow mixed-use mid-rises in
+# the south; Harajuku, Takeshita Street and Omotesandō's zelkovas; Yoyogi
+# Park and the Meiji Shrine's forest in the middle, with its great torii;
+# west Shinjuku's skyscrapers and the station's lanes in the north. Between
+# them, the residential streets of Sendagaya, Yoyogi and Tomigaya: small
+# detached houses and apartment slabs under utility poles and their wires.
+# The only level so far: the driving and flying levels come later, and will
+# share a region.yaml with this one.
+# Build: cd pipeline && uv run pixelworld build ../worlds/tokyo/walk.yaml
+id: tokyo-walk
+name: Tokyo (walking)
+level: walk
+levels:
+  - { name: walk, world: tokyo-walk, label: Walking Shibuya to Shinjuku }
+# the mesh lines of PLATEAU's 1 km grid at 139.6875 and 139.7125: the
+# Metropolitan Government Building's plaza and the Omotesandō crossing in
+bounds: [139.6875, 35.655, 139.7125, 35.698] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+# the Yamanote's valleys: Shibuya sits 20 m below Dōgenzaka and Aoyama's
+# ridge, and Shinjuku's plateau 40 m up; 1.5x as for New York and Paris
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Tokyo's streets run every way. Only streets within 6 degrees of one of
+# the 16 directions (the 8 and the 2:1 ones) snap to it (D-049, D-082); the
+# rest keep their angle and are drawn along their own centre lines.
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  # ways drawn along their centre lines (D-082): the scramble's diagonals too
+  centrelines: true
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 4 }, smooth: { lawn: 15 } }
+
+# parks and grounds as lawn (Yoyogi Park, the shrine's lawns, Shinjuku
+# Central Park); the Meiji forest stays woodland
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055) from PLATEAU (D-089): Tokyo's models carry
+  # no year and no structure, so the rules read use, storeys, height and the
+  # footprint's size, and neighbourhood boxes where those aren't enough
+  # (D-093). PLATEAU's storeys count those above ground. First match wins.
+  typology:
+    facts: { plugin: plateau, year: 2025 }
+    rules:
+      # the Meiji Shrine's halls in its forest: civic (422), low
+      - { group: building.shrine, uses: [civic], floors: [1, 3], bounds: [139.6950, 35.6720, 139.7020, 35.6810] }
+      # west Shinjuku's skyscrapers: slabs, granite and glass of the 1970s on
+      - { group: building.tower.shinjuku, from: [building.tower], bounds: [139.6875, 35.6830, 139.6990, 35.6975] }
+      # tower flats (412, 414) elsewhere: the slab with balconies, at height
+      - { group: building.mansion, from: [building.tower], classes: ["412", "414"] }
+      # in the entertainment districts (Shibuya, Dōgenzaka, Kabukichō and
+      # Shinjuku-sanchōme, Takeshita Street) every commercial or mixed
+      # building of 2–12 storeys up to 26 m wide is a zakkyo under signs
+      - group: building.zakkyo
+        uses: [commercial, mixed]
+        floors: [2, 12]
+        maxWidth: 26
+        bounds:
+          - [139.6935, 35.6550, 139.7060, 35.6635] # Shibuya, Dōgenzaka, Udagawachō
+          - [139.6990, 35.6865, 139.7125, 35.6980] # east Shinjuku, Kabukichō, Shinjuku-sanchōme
+          - [139.7010, 35.6680, 139.7070, 35.6730] # Takeshita Street
+      # elsewhere, zakkyo are the narrow ones of 4–10 storeys; narrow offices
+      # (401) carry fewer signs
+      - { group: building.zakkyo.quiet, classes: ["401"], floors: [4, 10], maxWidth: 14 }
+      - { group: building.zakkyo, uses: [commercial, mixed], floors: [4, 10], maxWidth: 14 }
+      # mid-rise offices: commercial (401–404) of 4 storeys or more
+      - { group: building.office, uses: [commercial], floors: [4, 60] }
+      # mansions: flats (412) and flats over shops (414) of 4 storeys or more
+      - { group: building.mansion, uses: [residential, mixed], floors: [4, 60] }
+      # kodate: houses (411) and small flats (412) of 1–3 storeys on a small footprint
+      - { group: building.kodate, uses: [residential], floors: [1, 3], maxWidth: 13, maxDepth: 20 }
+      # shop houses (413, 415): a shop under a small house
+      - { group: building.shophouse, uses: [mixed], floors: [1, 3], maxWidth: 13, maxDepth: 20 }
+      # low shops and offices, and wider shop houses: a shopfront, few signs
+      - { group: building.zakkyo.quiet, uses: [commercial, mixed], floors: [1, 3] }
+      # wider low flats: the two-storey apāto
+      - { group: building.mansion, uses: [residential], floors: [2, 3] }
+      - { group: building.industrial, uses: [industrial] }
+      - { group: building.civic, uses: [civic] }
+      # what's left that is small and low (sheds, unknown uses, buildings
+      # PLATEAU has no record of): houses
+      - { group: building.kodate, floors: [1, 3], maxWidth: 13, maxDepth: 20 }
+  vegetation:
+    # park and shrine trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    # Omotesandō's zelkovas, and the avenues' gingkos and plane trees
+    - { group: tree.street, roads: [tertiary, secondary, primary, trunk], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # utility poles and their wires down the residential streets
+    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, across: true }
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [tokyo-metropolitan-government-building, ntt-docomo-yoyogi-building, shibuya-109, meiji-jingu-otorii]
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: tokyo
+start: { lon: 139.7005, lat: 35.6595 } # the scramble crossing
+
+sources:
+  # GSI's elevation tiles (D-089): DEM5A here, read at 4 m
+  dem: { kind: gsi-dem, overview: 4 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river]
+  # rails out of their tunnels: the Yamanote, Chūō and Saikyō lines, the
+  # Odakyū and Keiō where they surface
+  rails:
+    - { draw: train, rail: [standard_gauge, narrow_gauge, subway, light_rail] }
+
+geology: null
