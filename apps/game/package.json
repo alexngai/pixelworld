@@ -14,6 +14,7 @@
     "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*",
     "@pixelworlds/city-nyc": "workspace:*",
+    "@pixelworlds/city-paris": "workspace:*",
     "@pixelworlds/style": "workspace:*"
   }
 }
