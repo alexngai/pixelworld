@@ -51,6 +51,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&w=640&
 | `marker=0` | shown | Don't draw the rover (clean screenshots) |
 | `hud=0` | shown | Hide the HUD, help line, attribution and layer panel |
 | `cache=0` | on | Skip the IndexedDB tile cache: every tile is baked fresh by the code as it is now. Not needed after code edits: the cache key follows the code that bakes tiles (D-072) ([CONTRIBUTING.md §6](../CONTRIBUTING.md#6-the-tile-cache)) |
+| `startTiles=0` | on | Skip the world's start tiles (`start-tiles.bin`, built by `tools/prebake.mjs`): the first view is baked too |
 
 **Traffic** (D-060; worlds whose package has routes)
 
