@@ -1,4 +1,4 @@
-import { DIRECT_RAMP_BASE, FACE_OBJECT, FACE_TEXELS, MeshBuilder, type MeshData } from "./mesh";
+import { DIRECT_RAMP_BASE, FACE_LINE, FACE_OBJECT, FACE_TEXELS, MeshBuilder, type MeshData } from "./mesh";
 
 /**
  * Small voxel models for procedural (and later hand-made .vox) objects.
@@ -7,6 +7,13 @@ import { DIRECT_RAMP_BASE, FACE_OBJECT, FACE_TEXELS, MeshBuilder, type MeshData 
  */
 export class VoxelModel {
   readonly data: Uint8Array;
+  /**
+   * One-pixel lines (D-098), in the model's voxel coordinates (fractions allowed),
+   * each a material index as voxels have: drawn as lines, not voxels, so
+   * something as thin as a wire stays a pixel wide at any angle. Unique and
+   * instanced objects both draw them.
+   */
+  readonly lines: { a: [number, number, number]; b: [number, number, number]; m: number }[] = [];
 
   constructor(
     readonly sx: number,
@@ -31,6 +38,11 @@ export class VoxelModel {
       this.materials.push(rampId);
     }
     return i;
+  }
+
+  /** A one-pixel line from a to b (voxel coordinates) in material m. */
+  line(a: [number, number, number], b: [number, number, number], m: number): void {
+    this.lines.push({ a, b, m });
   }
 
   inside(x: number, y: number, z: number): boolean {
@@ -60,6 +72,32 @@ export class VoxelModel {
 export interface VoxelScale {
   h: number;
   v: number;
+}
+
+/**
+ * A model's one-pixel lines (VoxelModel.lines, D-098) as line segments in
+ * `mb`, placed as meshVoxels places its voxels (origin, scale), owned by
+ * `cell`; build() it and mark it `primitive: "lines"`.
+ */
+export function meshLines(
+  model: VoxelModel,
+  scale: VoxelScale,
+  origin: readonly [number, number, number],
+  cell: readonly [number, number],
+  mb: MeshBuilder = new MeshBuilder(),
+): MeshBuilder {
+  for (const l of model.lines)
+    for (const p of [l.a, l.b])
+      mb.vertex(
+        [origin[0] + p[0] * scale.h, origin[1] + p[1] * scale.h, origin[2] + p[2] * scale.v],
+        [0, 0, 1],
+        DIRECT_RAMP_BASE + model.materials[l.m]!,
+        FACE_LINE,
+        1,
+        cell[0],
+        cell[1],
+      );
+  return mb;
 }
 
 /**

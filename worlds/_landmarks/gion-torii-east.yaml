@@ -1,0 +1,9 @@
+name: Torii by Marishiten-dō (east)
+# OSM's line for an unnamed torii ("Torii") on the lane by 摩利支天堂 in Gion,
+# across the way it stands in; Wikidata has no item for it
+anchor: { lon: 135.7721926, lat: 34.9997560 }
+height: 4           # depicted
+clear: 0
+orient: 1           # its lintel along OSM's line, which runs north-south
+depictions:
+  generic: { group: landmark.torii }

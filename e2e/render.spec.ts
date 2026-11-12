@@ -352,6 +352,34 @@ test.describe("Paris (D-084, D-085, D-086)", () => {
   });
 });
 
+test.describe("Kyoto (D-089, D-090, D-091, D-100, D-101)", () => {
+  test("machiya streets under the Yasaka Pagoda: the walking level typed from PLATEAU", async ({ page }) => {
+    // the kyoto style pack and its city pack, named by the world: machiya and
+    // wooden houses under grey tile round a pagoda landmark
+    await open(page, "world=/kyoto-walk/&marker=0&zoom=2&rot=0&at=135.7790,34.9985");
+    await expect(page.locator("#view")).toHaveScreenshot("kyoto-walk-yasaka-r0.png");
+  });
+
+  test("Tō-ji's pagoda among the town: the driving level (D-101)", async ({ page }) => {
+    // 25 m cells: the machiya and houses as small tile-roofed blocks round a temple's grounds
+    await open(page, "world=/kyoto/&marker=0&zoom=2&rot=0&at=135.7487,34.9799");
+    await expect(page.locator("#view")).toHaveScreenshot("kyoto-toji-r0.png");
+  });
+});
+
+test.describe("Tokyo (D-092, D-093)", () => {
+  test("houses, apartment slabs and utility poles in Yoyogi: the walking level typed from PLATEAU", async ({ page }) => {
+    // the tokyo style pack and its city pack, named by the world
+    await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.6912,35.6796");
+    await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-yoyogi-r0.png");
+  });
+
+  test("the Yamanote's tracks by Harajuku as one corridor along its centre line (D-097)", async ({ page }) => {
+    await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.7027,35.6700");
+    await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-harajuku-rails-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world

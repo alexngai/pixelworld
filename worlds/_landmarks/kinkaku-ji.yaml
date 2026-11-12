@@ -1,0 +1,10 @@
+name: Kinkaku-ji (the Golden Pavilion)
+wikidata: Q126391445
+# Wikidata's coordinates: the pavilion on the north shore of its pond
+anchor: { lon: 135.7284561, lat: 35.0395099 }
+height: 12.5        # the temple's figure, to the phoenix (Wikidata has none)
+clear: 6
+scale: 1.5          # drawn half as large again: at 25 m its gilded storeys would be a few voxels tall
+depictions:
+  # a three-storey pavilion, its upper two gilded, shingle roofs, a gilt phoenix; no name
+  generic: { group: landmark.pavilion.gold }

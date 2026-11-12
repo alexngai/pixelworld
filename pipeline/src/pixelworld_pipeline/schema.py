@@ -552,6 +552,11 @@ RAIL_RULE = Map(
         "names": Key(ListOf(Str()), "Only lines whose name contains one of these."),
         "unnamed": Key(Bool(), "Only lines without a name."),
         "bounds": Key(BBOX, "Only lines wholly inside this box."),
+        "bundle": Key(
+            Num(0, lo_open=True, unit="m"),
+            "Parallel tracks within this distance are drawn as one corridor along its centre "
+            "line, with its track count (D-097; micro-terrain worlds).",
+        ),
     }
 )
 
@@ -611,6 +616,19 @@ SOURCES = Map(
             ),
             "River lines.",
             "`{ subtypes: [river] }`",
+        ),
+        "lakes": Key(
+            Map(
+                {
+                    "classes": Key(
+                        ListOf(AnyValue("string"), min_items=1),
+                        "Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …).",
+                        required=True,
+                    )
+                }
+            ),
+            "Overture's water areas drawn as still water beside land cover's (D-103): a "
+            "garden's pond, a castle's moat. Each is levelled as a lake.",
         ),
         "paths": Key(
             Map(
@@ -855,6 +873,10 @@ LAWN = Map(
         ),
         "over": Key(ListOf(Str(surface_names)), "Surfaces a lawn replaces.", "`[grass]`"),
         "keep": Key(ListOf(Str()), "Natural land (Overture base `land` classes) left as it is."),
+        "paved": Key(
+            ListOf(Str()),
+            "Land-use classes inside a park left as they are (`pedestrian`: courts and plazas).",
+        ),
         "maxSlope": Key(Num(0), "A park steeper than this (rise over run) stays wild.", "0.2"),
         "slopeMeters": Key(Num(0), "Slopes are measured over about this distance.", "50"),
         "wooded": Key(
@@ -912,14 +934,15 @@ LIDAR = Map(
         "minTowerArea": Key(Num(0, unit="m²"), "Smallest tower part.", "600"),
     }
 )
+BOXES = OneOf(
+    (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
+    (lambda v: True, BBOX),
+    name="a box or a list of boxes",
+)
 BUILDINGS = Map(
     {
         "bounds": Key(
-            OneOf(
-                (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
-                (lambda v: True, BBOX),
-                name="a box or a list of boxes",
-            ),
+            BOXES,
             "Only buildings in this box (or these boxes).",
             "the whole region",
         ),
@@ -979,9 +1002,24 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")),
             "Overture names (a building's primary name; its parts share it), exactly.",
         ),
+        "grounds": Key(
+            ListOf(AnyValue("string")),
+            "Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) "
+            "the building's centroid stands in.",
+        ),
+        "kinds": Key(
+            ListOf(AnyValue("string")),
+            "Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts "
+            "share it), exactly.",
+        ),
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),
+        "maxDepth": Key(Num(0, unit="m"), "Deepest (the footprint's long side)."),
+        "maxFill": Key(
+            Num(0, 1),
+            "Most share of its smallest enclosing rectangle the footprint fills (a ring, a C).",
+        ),
         "minParty": Key(Num(0, 1), "Least share of outline shared with neighbours."),
         "maxParty": Key(Num(0, 1), "Most share of outline shared with neighbours."),
         "floors": Key(num_range("[min, max]"), "Storeys."),
@@ -989,6 +1027,9 @@ TYPOLOGY_RULE = Map(
         "maxHeight": Key(Num(0, unit="m"), "Tallest."),
         "onWater": Key(Bool(), "Stands over water."),
         "corner": Key(Bool(), "On a corner lot."),
+        "bounds": Key(
+            BOXES, "Only buildings whose centroid is in this box (or these boxes): a neighbourhood."
+        ),
     }
 )
 TYPOLOGY = Map(
@@ -1010,6 +1051,12 @@ TYPOLOGY = Map(
             "`{ plugin: datasf, …options }`.",
         ),
         "rules": Key(ListOf(TYPOLOGY_RULE), "Matched in order; the first match picks the group."),
+        "roofHints": Key(
+            Bool(),
+            "The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof "
+            "hint where Overture gives none.",
+            "false",
+        ),
     },
     options="facts source options (the older form)",
 )
@@ -1062,6 +1109,19 @@ ROW_RULE_KEYS = {
     "bounds": Key(BBOX, "Only within this box."),
     "landcover": Key(ListOf(Str(landcover_classes)), "Only on these land-cover classes."),
     "across": Key(Bool(), "Over the road, turned across it (strung lanterns)."),
+    "along": Key(
+        Bool(), "On one side only, turned to run with the road (utility poles and their wires)."
+    ),
+    "diagonal": Key(
+        Str(),
+        "With `along`: the group placed where the road runs diagonally, for a model drawn "
+        "along x = y.",
+    ),
+    "slants": Key(
+        ListOf(Str()),
+        "With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for "
+        "models drawn along (2, −1) and (1, −2).",
+    ),
     "canopy": Key(
         Num(0, unit="m"),
         "On the verge past the drawn asphalt, where the canopy map has trees this tall.",
@@ -1073,7 +1133,15 @@ ROW_RULE_KEYS = {
 STREET_TREE_RULE = Map(dict(ROW_RULE_KEYS), rule=_row_rule)
 STREET_PROP_RULE = Map(
     ROW_RULE_KEYS
-    | {"at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners.")},
+    | {
+        "at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners."),
+        "wires": Key(
+            Str(),
+            "Strung props (D-098): one row on each street's left at `offset` (default 3 m), "
+            "joined through junctions where the street runs on straight, and a span of "
+            "this group from each prop to the next.",
+        ),
+    },
     rule=_row_rule,
 )
 LANDMARK_PART = Map(
@@ -1164,6 +1232,24 @@ OBJECTS = Map(
         "streetTrees": Key(ListOf(STREET_TREE_RULE), "Rows of trees along roads."),
         "streetProps": Key(
             ListOf(STREET_PROP_RULE), "Street lights and signals: rows, or at junctions."
+        ),
+        "walls": Key(
+            ListOf(
+                Map(
+                    {
+                        "group": Key(Str(), "The group of a wall's segment.", required=True),
+                        "classes": Key(
+                            ListOf(Str(), min_items=1),
+                            "Overture barrier classes (`retaining_wall`, `wall` …).",
+                            required=True,
+                        ),
+                        "spacing": Key(Num(0, unit="m"), "Segment length.", required=True),
+                        "diagonal": Key(Str(), "The group on diagonal lines."),
+                        "slants": Key(ListOf(Str()), "The groups on the 2:1 lines."),
+                    }
+                )
+            ),
+            "Walls along Overture's barrier lines, in segments turned with them (D-104).",
         ),
         "landmarks": Key(
             ListOf(

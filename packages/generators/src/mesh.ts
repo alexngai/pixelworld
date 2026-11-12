@@ -17,6 +17,8 @@ export const FACE_SKIRT = 3;
 export const FACE_OBJECT = 4;
 /** A micro-terrain field's water plane (D-094), drawn by the baker's field shader. */
 export const FACE_WATER = 5;
+/** A one-pixel line (VoxelModel.lines; wires, D-098): drawn as GL lines, left alone by the composite's cleanup and outlines. */
+export const FACE_LINE = 6;
 
 export const DIRECT_RAMP_BASE = 100;
 /** Material of a face drawn from texels (`MeshData.texels`): voxel faces of several colours merged into one rectangle. */
@@ -32,6 +34,8 @@ export interface MeshData {
   cell: Float32Array;
   road: Float32Array;
   geology: Float32Array;
+  /** "lines": every two vertices are a line segment drawn one pixel wide, not triangles. */
+  primitive?: "lines";
   /** Faces drawn from texels (FACE_TEXELS), per vertex: its place on its face, in texels (u, v). */
   faceUv?: Float32Array;
   /** …and its face's texels: offset in `texels` (÷ TEXEL_ROW, % TEXEL_ROW), width, height. */

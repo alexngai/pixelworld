@@ -39,6 +39,8 @@ packages/pixelworld/LICENSE-*
 packages/city-sf/LICENSE-*
 packages/city-nyc/LICENSE-*
 packages/city-paris/LICENSE-*
+packages/city-kyoto/LICENSE-*
+packages/city-tokyo/LICENSE-*
 *.tgz
 docs/api/
 

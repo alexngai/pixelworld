@@ -1,7 +1,9 @@
 import type { PluginDescriptor } from "@pixelworlds/engine";
+import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
 import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin } from "@pixelworlds/city-sf";
+import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { StyleError, parseStyleJson, resolveStyleExtends, suggest } from "@pixelworlds/style";
 import type { CarInput } from "./car";
 import { Game } from "./game";
@@ -13,7 +15,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
 /**
  * pixelworld's example game (M4): drive and fly a world package, built only
  * on the public API of `@pixelworlds/engine` and `@pixelworlds/sim`, the
- * style packs and the city packs (San Francisco's, New York's, Paris's).
+ * style packs and the city packs (San Francisco's, New York's, Paris's, Tokyo's).
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
  * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
@@ -33,7 +35,7 @@ async function stylePack(id: string): Promise<object> {
 }
 
 // The city packs the game can load, by name (D-071); a world's style pack names the ones it needs.
-const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris };
+const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris, [kyoto.name]: kyoto, [tokyo.name]: tokyo };
 
 const params = new URLSearchParams(location.search);
 const num = (key: string, fallback: number) => {

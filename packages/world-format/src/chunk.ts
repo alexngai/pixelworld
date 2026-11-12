@@ -94,6 +94,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   };
   const roadSeg = pieces("RSG");
   const pathSeg = pieces("PSG");
+  const railSeg = pieces("TSG");
 
   const base = new Int16Array(n);
   const water = new Int16Array(n).fill(NO_WATER);
@@ -151,6 +152,7 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
       lane,
       ...(roadSeg ? { roadSeg } : {}),
       ...(pathSeg ? { pathSeg } : {}),
+      ...(railSeg ? { railSeg } : {}),
       micro,
     }),
   };
@@ -230,7 +232,7 @@ export function encodeChunk(chunk: Chunk): ArrayBuffer {
   if (any(terrain.pathWidth)) payloads.push(["PWID", terrain.pathWidth.slice()]);
   if (any(terrain.rail)) payloads.push(["RAIL", u16(terrain.rail)]);
   if (any(terrain.lane)) payloads.push(["LANE", terrain.lane.slice()]);
-  for (const [prefix, arr] of [["RSG", terrain.roadSeg], ["PSG", terrain.pathSeg]] as const)
+  for (const [prefix, arr] of [["RSG", terrain.roadSeg], ["PSG", terrain.pathSeg], ["TSG", terrain.railSeg]] as const)
     for (let k = 0; k < PIECES; k++) {
       const slot = new Uint32Array(n);
       for (let i = 0; i < n; i++) slot[i] = arr[i * PIECES + k]!;

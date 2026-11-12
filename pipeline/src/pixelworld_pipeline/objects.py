@@ -510,6 +510,33 @@ def _in_footprints(instances: list[dict]):
     return fn
 
 
+# the 16 directions modulo a half turn, in degrees from east (projected, y north)
+_ALONG_ANGLES = (0.0, 26.57, 45.0, 63.43, 90.0, 116.57, 135.0, 153.43)
+
+
+def along_turn(tx: float, ty: float, rule: dict[str, Any]) -> tuple[str, int]:
+    """The group and quarter turns of a prop drawn along a line running
+    (tx, ty) (projected, y north), for `along` (D-102, D-104). Its `group`
+    is a model drawn along y (north-south), `diagonal` one drawn along
+    x = y in cells (south-east), `slants` two drawn along (2, −1) and
+    (1, −2) in cells (26.6° and 63.4° from east): each covers its
+    direction and, turned a quarter, the one at right angles. A direction
+    without its group takes the nearest one there is."""
+    a = math.degrees(math.atan2(ty, tx)) % 180.0
+    near = min(_ALONG_ANGLES, key=lambda d: min(abs(a - d), 180.0 - abs(a - d)))
+    slants = list(rule.get("slants") or [])
+    diagonal = rule.get("diagonal")
+    if near in (26.57, 116.57) and slants:
+        return slants[0], 0 if near == 26.57 else 1
+    if near in (63.43, 153.43) and len(slants) > 1:
+        return slants[1], 0 if near == 63.43 else 1
+    if near in (45.0, 135.0) or (near not in (0.0, 90.0) and diagonal):
+        if diagonal:
+            # the nearest diagonal: 135 (south-east in cells) as drawn, 45 turned
+            return diagonal, 0 if (near - 90.0) % 180.0 < 90.0 else 1
+    return rule["group"], 0 if abs(ty) >= abs(tx) else 1
+
+
 def street_trees(
     p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
 ) -> list[dict]:
@@ -518,18 +545,24 @@ def street_trees(
     With `across`, one prop stands on the road's line at each step instead,
     over the road (road cells are otherwise kept clear) and turned a quarter
     where its road runs east-west, so a model drawn along x spans the street:
-    lanterns strung across it. `bounds` ([w, s, e, n], lon/lat) keeps a rule
-    to one stretch of its roads.
+    lanterns strung across it. With `along`, one row on the road's left
+    side, turned the same way so a model drawn along y runs with its road:
+    utility poles whose wires reach to the next (D-102); with `diagonal`, that
+    group stands where the road runs nearest a diagonal, and with `slants`
+    two more at the 2:1 directions (see along_turn; D-103, D-104). `bounds` ([w, s, e,
+    n], lon/lat) keeps a rule to one stretch of its roads.
     """
     classes = set(rule["roads"])
     spacing = float(rule["spacing"])
     offset = float(rule.get("offset", 12))
     across = bool(rule.get("across"))
+    along = bool(rule.get("along"))
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
     rng = np.random.default_rng(_seed(p.region, f"street|{tag}|{rule['group']}"))
     xs: list[float] = []
     ys: list[float] = []
     turns: list[int] = []
+    groups: list[str] = []
     name = rule.get("name", "").lower()
     if name:
         # names aren't in the road layer's columns; fetch them for this rule only
@@ -563,15 +596,21 @@ def street_trees(
                     ys.append(c.y)
                     turns.append(0 if abs(ty) >= abs(tx) else 1)
                     continue
-                for side in (-1, 1):
+                for side in (1,) if along else (-1, 1):
                     xs.append(c.x - side * ty / norm * offset)
                     ys.append(c.y + side * tx / norm * offset)
+                    if along:
+                        g, r = along_turn(tx, ty, rule)
+                        groups.append(g)
+                        turns.append(r)
     if not xs:
         return []
     ax, ay = np.asarray(xs), np.asarray(ys)
     cx, cy = p.to_cells(ax, ay)
-    # over the road, only the world's edge, buildings and landmarks keep props off
-    ok = (p.inside(cx, cy) if across else p.free(cx, cy)) & ~occupied(ax, ay)
+    # over the road (or on a wall's line), only the world's edge, buildings and
+    # landmarks keep props off
+    over = across or bool(rule.get("_over"))
+    ok = (p.inside(cx, cy) if over else p.free(cx, cy)) & ~occupied(ax, ay)
     if codes is not None:
         ok &= np.isin(p.landcover_at(ax, ay), list(codes))
     if "bounds" in rule:
@@ -579,10 +618,10 @@ def street_trees(
         bx, by = transform_points("EPSG:4326", p.region.crs, [w, e], [s, n])
         ok &= (ax >= min(bx)) & (ax <= max(bx)) & (ay >= min(by)) & (ay <= max(by))
     seeds = rng.integers(0, 2**31, size=ax.size)
-    rots = np.asarray(turns) if across else rng.integers(0, 4, size=ax.size)
+    rots = np.asarray(turns) if across or along else rng.integers(0, 4, size=ax.size)
     return [
         {
-            "g": rule["group"],
+            "g": groups[k] if groups else rule["group"],
             "x": float(cx[k]),
             "y": float(cy[k]),
             "s": int(seeds[k]),
@@ -590,6 +629,135 @@ def street_trees(
         }
         for k in np.nonzero(ok)[0]
     ]
+
+
+def _strokes(lines: list, max_turn: float = 30.0) -> list[np.ndarray]:
+    """Streets as continuous lines (coordinate arrays): lines joined end to end
+    where only two meet, and through a junction where one runs on into
+    another, turning less than `max_turn` degrees; at each junction the
+    straightest pairs join first."""
+    parts = [g for ln in lines for g in (getattr(ln, "geoms", None) or [ln]) if g.length > 0]
+    if not parts:
+        return []
+    merged = shapely.line_merge(shapely.MultiLineString(parts))
+    segs = [np.asarray(g.coords) for g in getattr(merged, "geoms", [merged]) if g.length > 0]
+    nodes: dict[tuple[float, float], list[tuple[int, int, np.ndarray]]] = {}
+    for i, c in enumerate(segs):
+        ln = shapely.LineString(c)
+        for side in (0, 1):
+            end = c[0] if side == 0 else c[-1]
+            inner = ln.interpolate(
+                min(5.0, ln.length / 2) if side == 0 else max(0, ln.length - 5.0)
+            )
+            d = np.array([inner.x, inner.y]) - end
+            d = d / max(float(np.hypot(*d)), 1e-9)
+            nodes.setdefault((round(end[0], 1), round(end[1], 1)), []).append((i, side, d))
+    partner: dict[tuple[int, int], tuple[int, int]] = {}
+    cos_max = math.cos(math.radians(max_turn))
+    for ends in nodes.values():
+        pairs = sorted(
+            (float(np.dot(a[2], -b[2])), ka, kb)
+            for ka, a in enumerate(ends)
+            for kb, b in enumerate(ends)
+            if ka < kb and a[0] != b[0]
+        )
+        for straight, ka, kb in reversed(pairs):
+            ea, eb = ends[ka][:2], ends[kb][:2]
+            if straight >= cos_max and ea not in partner and eb not in partner:
+                partner[ea], partner[eb] = eb, ea
+    out: list[np.ndarray] = []
+    seen: set[int] = set()
+    for i in range(len(segs)):
+        if i in seen:
+            continue
+        # back to the chain's free end (or round a ring to where it started)
+        line, enter = i, 0
+        while (line, enter) in partner:
+            j, sj = partner[(line, enter)]
+            if j == i:
+                break
+            line, enter = j, 1 - sj
+        coords: list[np.ndarray] = []
+        while line not in seen:
+            seen.add(line)
+            c = segs[line] if enter == 0 else segs[line][::-1]
+            coords.append(c if not coords else c[1:])
+            nxt = partner.get((line, 1 - enter))
+            if nxt is None:
+                break
+            line, enter = nxt
+        out.append(np.vstack(coords))
+    return out
+
+
+def wired_props(
+    p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
+) -> list[dict]:
+    """Props strung together (D-098), utility poles and their wires: along each
+    street of the rule's road classes (_strokes), a prop every `spacing`
+    metres on its left, `offset` metres from its centre line, turned as an
+    `across` prop is (its x across the street); and between each two in a row,
+    a span of the `wires` group, a line object from one to the next (`ln`, the
+    props' positions in cells), drawn by its generator at any angle."""
+    classes = set(rule["roads"])
+    spacing = float(rule["spacing"])
+    offset = float(rule.get("offset", 3.0))
+    lines = [
+        p.project(shapely.from_wkt(row["geometry"]))
+        for row in sorted(road_rows, key=lambda r: r["id"])
+        if row["class"] in classes
+    ]
+    rng = np.random.default_rng(_seed(p.region, f"wired|{tag}|{rule['group']}"))
+    half = 0.06  # a span's footprint either side of its line, cells (about a voxel)
+    out: list[dict] = []
+    for stroke in _strokes(lines):
+        ln = shapely.LineString(stroke)
+        ds = np.arange(spacing / 2, ln.length, spacing)
+        if not len(ds):
+            continue
+        c = shapely.line_interpolate_point(ln, ds)
+        a = shapely.line_interpolate_point(ln, np.maximum(ds - 1, 0))
+        b = shapely.line_interpolate_point(ln, np.minimum(ds + 1, ln.length))
+        tx, ty = shapely.get_x(b) - shapely.get_x(a), shapely.get_y(b) - shapely.get_y(a)
+        norm = np.maximum(np.hypot(tx, ty), 1e-9)
+        ax = shapely.get_x(c) - ty / norm * offset
+        ay = shapely.get_y(c) + tx / norm * offset
+        cx, cy = p.to_cells(ax, ay)
+        ok = p.inside(cx, cy) & ~occupied(ax, ay)
+        if "bounds" in rule:
+            w, s, e, n = (float(v) for v in rule["bounds"])
+            bx, by = transform_points("EPSG:4326", p.region.crs, [w, e], [s, n])
+            ok &= (ax >= min(bx)) & (ax <= max(bx)) & (ay >= min(by)) & (ay <= max(by))
+        seeds = rng.integers(0, 2**31, size=len(ds) * 2)
+        for k in np.nonzero(ok)[0]:
+            out.append(
+                {
+                    "g": rule["group"],
+                    "x": float(cx[k]),
+                    "y": float(cy[k]),
+                    "s": int(seeds[2 * k]),
+                    "r": 0 if abs(ty[k]) >= abs(tx[k]) else 1,
+                }
+            )
+            if k == 0 or not ok[k - 1]:
+                continue
+            pa, pb = np.array([cx[k - 1], cy[k - 1]]), np.array([cx[k], cy[k]])
+            u = (pb - pa) / max(float(np.hypot(*(pb - pa))), 1e-9)
+            nrm = np.array([u[1], -u[0]]) * half
+            ring = [pa + nrm, pb + nrm, pb - nrm, pa - nrm]
+            mid = 0.5 * (pa + pb)
+            out.append(
+                {
+                    "g": rule["wires"],
+                    "x": round(float(mid[0]), 3),
+                    "y": round(float(mid[1]), 3),
+                    "s": int(seeds[2 * k + 1]),
+                    "fp": [[round(float(x), 3), round(float(y), 3)] for x, y in ring],
+                    "ln": [round(float(v), 3) for v in (*pa, *pb)],
+                    "lw": half,
+                }
+            )
+    return out
 
 
 def junction_props(
@@ -895,6 +1063,7 @@ def place_buildings(
                 "_grp": group,  # building id (parts join their building); see depict_buildings
                 "_c": (float(c.x), float(c.y)),  # projected centroid (facts lookup, D-055)
                 "_name": name,  # the building's Overture name (`names:` rules); parts share it
+                "_cls": cls or "",  # its Overture class (`kinds:` rules); parts share it
                 **hints,
             }
             if p.layout is not None:
@@ -987,7 +1156,9 @@ def type_buildings(
     """Building typologies (D-055): features, facts and the spec's rules. The
     facts come from the facts source plugin the spec names (`facts:`). A
     building Overture gives no height or floors takes the facts' `height`
-    (D-084), and becomes a tower at `tower_m` or more."""
+    (D-084), and becomes a tower at `tower_m` or more. With `roofHints`, one
+    Overture gives no roof shape takes the facts' `roof` as its generator's
+    hint (D-100)."""
     from . import facts as facts_sources
     from . import typology
 
@@ -1001,7 +1172,8 @@ def type_buildings(
         if len(got) != len(has):
             raise ValueError(f"facts source answered {len(got)} of {len(has)} points")
         facts = [None] * len(found)
-        filled = 0
+        filled = roofed = 0
+        roof_hints = bool(spec.get("roofHints"))
         for i, f in zip(has, got, strict=True):
             facts[i] = f
             if f and f.get("height") and found[i].pop("_hdef", False):
@@ -1009,15 +1181,56 @@ def type_buildings(
                 if found[i]["hm"] >= tower_m and found[i]["g"] in typology.GENERIC[:2]:
                     found[i]["g"] = "building.tower"
                 filled += 1
+            # the facts' roof shape as the generator's hint where Overture gives none (D-100)
+            if roof_hints and f and f.get("roof") in ROOF_SHAPES and "rs" not in found[i]:
+                found[i]["rs"] = f["roof"]
+                roofed += 1
         known = sum(f is not None for f in got)
         progress.log(
             f"typology facts: {facts_sources.describe(source)}, "
             f"{known}/{len(has)} buildings with facts, {filled} heights from facts"
+            + (f", {roofed} roof shapes from facts" if roof_hints else "")
         )
     feats = typology.features(found, streets, water, region.meters_per_cell, facts)
+    grounds = sorted({str(c) for rule in spec.get("rules", []) for c in rule.get("grounds", [])})
+    if grounds:
+        _ground_features(region, found, feats, grounds)
+    if any("bounds" in r for r in spec.get("rules", [])):
+        # centroids in lon/lat, for rules kept to a neighbourhood's box
+        has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
+        lon, lat = transform_points(
+            region.crs,
+            "EPSG:4326",
+            [found[i]["_c"][0] for i in has],
+            [found[i]["_c"][1] for i in has],
+        )
+        for i, a, b in zip(has, lon, lat, strict=True):
+            feats[i]["lonlat"] = (a, b)
     counts = typology.classify(found, spec, feats)
     progress.log(f"typology: {counts}")
     return found
+
+
+def _ground_features(region: Region, found: list[dict], feats: list[dict], classes: list[str]):
+    """The land-use class (Overture's, of `classes`) under each building's
+    centroid, as the feature `ground` (`grounds:` rules, D-100): a temple's or
+    a shrine's grounds (OSM's landuse=religious), a cemetery."""
+    from .ground import project_rows
+
+    release = region.sources["overture"]["release"]
+    rows = overture.land_use(release, tuple(region.lonlat_envelope()), classes)
+    polys = project_rows(region, rows)
+    if not polys:
+        return
+    kinds = [str(r.get("class") or "") for r in rows]
+    tree = shapely.STRtree(polys)
+    has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
+    pts = shapely.points([found[i]["_c"] for i in has])
+    hit, poly = tree.query(pts, predicate="within")
+    for k, j in zip(hit.tolist(), poly.tolist(), strict=True):
+        feats[has[k]]["ground"] = kinds[j]
+    n = len(set(hit.tolist()))
+    progress.log(f"typology grounds: {n} buildings in {len(polys)} areas of {classes}")
 
 
 def snap_buildings(instances: list[dict], spec: dict[str, Any]) -> list[dict]:
@@ -1643,8 +1856,21 @@ def place(
     for i, rule in enumerate(spec.get("streetProps") or []):
         if rule.get("at") == "junctions":
             instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
+        elif rule.get("wires"):
+            instances += wired_props(p, rule, road_rows, occupied, f"w{i}")
         else:
             instances += street_trees(p, rule, road_rows, occupied, f"p{i}")
+    # walls along Overture's barrier lines (D-104): segments one `spacing` apart on
+    # the line, turned with it; over water's edge and cliffs too, off buildings
+    for i, rule in enumerate(spec.get("walls") or []):
+        rows = overture.barriers(
+            region.sources["overture"]["release"], region.lonlat_envelope(), list(rule["classes"])
+        )
+        line_rule = {**rule, "roads": list(rule["classes"]), "along": True, "offset": 0.0}
+        line_rule["_over"] = True
+        walls = street_trees(p, line_rule, rows, occupied, f"w{i}")
+        progress.log(f"walls: {len(walls)} {rule['group']} on {len(rows)} {rule['classes']} lines")
+        instances += walls
     for k, lm in enumerate(landmarks):
         lx, ly, _ = clear_zones[k]
         cx, cy = p.to_cells(np.array([lx]), np.array([ly]), shift="line" not in lm)
@@ -1658,6 +1884,9 @@ def place(
             inst["m"] = round(local / lm_scale[k], 2)
         if "orient" in lm:
             inst["r"] = int(lm["orient"]) % 4
+        if "line" not in lm and heights is not None and "baseMeters" in lm:
+            # an anchored landmark's foot below its anchor's ground (a hall's stage down a slope)
+            inst["z0"] = round(float(heights(lx, ly, float(lm["baseMeters"]))), 2)
         if k in fp_landmarks:
             poly = fp_landmarks[k]
             cx, cy = p.to_cells(np.array([poly.centroid.x]), np.array([poly.centroid.y]))

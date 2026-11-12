@@ -411,8 +411,8 @@
       "generator": "latticeArchTower",
       "ramps": { "structure": "eiffel-brown", "deck": "eiffel-brown", "accent": "gold", "window": "glass" }
     },
-    "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "wallace-green", "head": "iron", "light": "marker" }, "params": { "height": 5 } },
-    "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "wallace-green", "lamp": "lit" }, "params": { "height": 6 } },
+    "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "wallace-green", "head": "iron", "light": "marker" }, "params": { "height": 12, "lines": 1, "reach": 5 } },
+    "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "wallace-green", "lamp": "lit" }, "params": { "height": 16, "lines": 1, "reach": 3 } },
     "rock.boulder": { "generator": "boulder", "ramps": { "rock": "calcaire" } },
     "shrub": {
       "generator": "blob",

@@ -12,6 +12,7 @@ region spec's optional `ground` section tells them apart:
         maxSlope: 0.2      # a park steeper than this (median) stays wild
         slopeMeters: 50    # slopes measured over about this distance
         wooded: { over: [woodland], maxCover: 0.5 }  # tree cover, where the canopy map is open
+        paved: [pedestrian]  # land use inside a park left as it is (courts, plazas)
         spread: { over: [grass], meters: 20 }  # into the open grass around a lawn
       yard:   # backyards and front gardens, beside houses (after objects)
         near: [building.rowhouse, building.house, building.residential, building.apartment]
@@ -210,6 +211,11 @@ def lawn(
         natural = project_rows(region, overture.land(release, bbox, list(rule["keep"])))
         pts, _ = points_in(natural, xs, ys)
         wild.ravel()[pts] = True
+    if rule.get("paved"):
+        # courts and plazas inside a park (land use `pedestrian`) stay as they are (D-103)
+        courts = project_rows(region, overture.land_use(release, bbox, list(rule["paved"])))
+        pts, _ = points_in(courts, xs, ys)
+        wild.ravel()[pts] = True
     cover = None
     wooded = rule.get("wooded")
     if wooded:
@@ -224,6 +230,20 @@ def lawn(
     out = lawn_cells(surface, names, gentle, wild, rule, cover)
     if rule.get("spread"):
         out = spread_lawn(out, surface, names, wild, rule["spread"], region.meters_per_cell)
+    return out
+
+
+def water_area_cells(region: Region, shape: tuple[int, int], classes: list[str]) -> np.ndarray:
+    """Cells whose centre lies in an Overture water area of `classes` (ponds,
+    moats, lakes): still water beside land cover's, which misses a pond in a
+    garden or a castle's moat (D-103). Uniform layouts; cells as laid out."""
+    release = region.sources["overture"]["release"]
+    polys = project_rows(region, overture.water_areas(release, region.lonlat_envelope(), classes))
+    out = np.zeros(shape, dtype=bool)
+    if polys:
+        xs, ys = drawn_cell_points(region, shape)
+        pts, _ = points_in(polys, xs, ys)
+        out.ravel()[pts] = True
     return out
 
 

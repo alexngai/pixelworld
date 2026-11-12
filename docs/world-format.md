@@ -158,8 +158,9 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `PATH` | `u16[]` | no | path network (footways, sidewalks, crosswalks, …), encoded like `ROAD` |
 | `PCLS` | `u8[]` | no | path class ID (see `manifest.pathClasses`); 0 = none |
 | `PWID` | `u8[]` | no | path half-width, in 1/32 cell |
-| `RAIL` | `u16[]` | no | rails drawn in the street (M3.5, D-061): connections in bits 0–7, encoded like `ROAD`; what is drawn in bits 12–15 (1 street tracks, 2 cable-car tracks with a slot, 3 a train's tracks on ballast; the highest where kinds meet) |
+| `RAIL` | `u16[]` | no | rails drawn in the street (M3.5, D-061): connections in bits 0–7, encoded like `ROAD`; what is drawn in bits 12–15 (1 street tracks, 2 cable-car tracks with a slot, 3 a train's tracks on ballast; the highest where kinds meet). Rail corridors (D-097): a cell holding a corridor's pieces (`TSG`) has its track count less one in bits 8–10; bit 11 flags every cell its drawn tracks may reach |
 | `LANE` | `u8[]` | no | lanes and medians (M3.5, D-065), for the widest road through the cell (the one `RWID` describes): its lane count in bits 0–3 (0 = none), bit 4 one-way (no centre line), bit 5 divided (a carriageway with its partner across a median); bits 6–7 are 0 |
+| `RSG0`–`RSG5`, `PSG0`–`PSG5`, `TSG0`–`TSG5` | `u32[]` | no | centre-line pieces (D-082; rail corridors D-097): up to six per cell of road (`RSG`), path (`PSG`) and rail corridor (`TSG`) centre line, one section per slot, written only where the slot holds data; each the stretch of line inside the cell, its ends as four bytes x0, y0, x1, y1 (little-endian) in 1/255 cell (0: an empty slot, used slots first). Drawn instead of the connection bits where a cell has them |
 
 Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 

@@ -10,7 +10,8 @@ objects.place uses. A landmark file holds:
     height: 350                     # metres (towers, wheels)
     crest: 376                      # metres above sea level (dam crests, bridge decks)
     reservoir: 10                   # a dam's lake stands this many metres below its crest
-    base: 0                         # metres: a long landmark's foot (a bridge's water level)
+    base: 0                         # metres: a long landmark's foot (a bridge's water level),
+                                    # or an anchored one's below its anchor (a stage on a slope)
     snap: true                      # a bridge turns to the grid direction of its road (D-049)
     thickness: 45                   # metres across a line landmark
     bulge: 0.15                     # how far a line landmark bows to the left of its direction

@@ -1,0 +1,10 @@
+name: Heian Shrine Great Torii (Ōtorii)
+wikidata: Q18457837
+# Wikidata's coordinates, astride Jingū-michi south of the shrine, between the
+# museums of Okazaki; its lintel spans the road east-west
+anchor: { lon: 135.78269153, lat: 35.012563065 }
+height: 24.4        # Wikidata's height
+clear: 0
+depictions:
+  # a great vermilion torii without lanterns; no plaque lettering
+  generic: { group: landmark.torii.great }

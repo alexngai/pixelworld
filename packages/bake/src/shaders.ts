@@ -143,7 +143,7 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
-uniform highp usampler2D uFieldSegs; // (12·W) × H (D-082): per cell 6 (PIECES) road then 6 path centre-line pieces, x0 y0 x1 y1 in 1/255 cell
+uniform highp usampler2D uFieldSegs; // (18·W) × H: per cell 6 road, 6 path, 6 rail pieces (D-082, D-097)
 uniform int uHasSegs;
 #endif
 
@@ -239,9 +239,8 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
-// Centre lines (D-082): a cell's pieces of road (slot 0) or path (slot 6)
-// centre line, used slots first. A cell without them draws its connections.
-uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 12 + slot, c.y), 0); }
+// Centre lines (D-082): road (slot 0), path (6) or rail (12, D-097) pieces.
+uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 18 + slot, c.y), 0); }
 bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
 
 // The nearest point q (cell-local) on a cell's pieces, its distance, and that piece's direction.
@@ -309,6 +308,45 @@ float railDistance(vec2 local, ivec2 c, int mask) {
 float railsDecal(inout int ramp, inout int pattern) {
   if (uRailRamp < 0) return 0.0;
   ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
+  // in cells: rails about a pixel wide at the native scale
+  const float GAUGE = 0.08;  // a rail's centre from its track's
+  const float RAIL = 0.035;  // a rail's half-width
+  // rail corridors (D-097): tracks side by side across the nearest piece; square ends
+  bool inSlice = own.x >= 0 && own.y >= 0 && own.x < uSliceSize.x && own.y < uSliceSize.y;
+  if (inSlice && uHasSegs == 1 && (texelFetch(uFieldRails, own, 0).r & 0x800) != 0) {
+    const float TRACKS = 0.36;  // roads.RAIL_TRACK_SPACING
+    float bestC = 9.0;
+    int kindC = 0;
+    int tracks = 1;
+    for (int dy = -2; dy <= 2; dy++) {
+      for (int dx = -2; dx <= 2; dx++) {
+        ivec2 c = own + ivec2(dx, dy);
+        if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y || !hasPieces(c, 12)) continue;
+        int r = texelFetch(uFieldRails, c, 0).r;
+        vec2 local = vGrid - vec2(uSliceOrigin + c);
+        for (int s = 0; s < 6; s++) {
+          uvec4 p = piece(c, 12 + s);
+          if (p == uvec4(0u)) break;
+          vec2 a = vec2(p.xy) / 255.0;
+          vec2 ab = vec2(p.zw) / 255.0 - a;
+          float len = length(ab);
+          float along = dot(local - a, ab) / max(len, 1e-4);
+          if (along < -0.03 || along > len + 0.03) continue;
+          float d = length(local - a - ab * clamp(along / max(len, 1e-4), 0.0, 1.0));
+          if (d < bestC) { bestC = d; kindC = (r >> 12) & 15; tracks = ((r >> 8) & 7) + 1; }
+        }
+      }
+    }
+    if (kindC != 0) {
+      float hw = float(tracks - 1) * 0.5 * TRACKS;
+      for (int i = 0; i < 8; i++) {
+        if (i >= tracks) break;
+        float o = abs(float(i) * TRACKS - hw);
+        if (abs(bestC - abs(o - GAUGE)) < RAIL || abs(bestC - (o + GAUGE)) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
+      }
+      if (kindC == 3 && bestC < hw + GAUGE + 0.08) { ramp = uRailRamp; pattern = 0; return -2.0; }  // ballast
+    }
+  }
   float best = 9.0;
   int kind = 0;
   for (int dy = -1; dy <= 1; dy++) {
@@ -324,9 +362,6 @@ float railsDecal(inout int ramp, inout int pattern) {
       if (d < best) { best = d; kind = (r >> 12) & 15; }
     }
   }
-  // in cells: rails about a pixel wide at the native scale
-  const float GAUGE = 0.08;  // a rail's centre from its track's
-  const float RAIL = 0.035;  // a rail's half-width
   if (kind == 0) return 0.0;
   if (abs(best - GAUGE) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
   if (kind == 2 && best < 0.03) { ramp = uAsphaltRamp; pattern = 0; return -2.0; }  // the cable's slot
@@ -592,6 +627,71 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   float period = (uLanes.y + uLanes.z) * lw;
   if (fract(dot(vGrid, dir) / period) * (uLanes.y + uLanes.z) < uLanes.y && uLaneRamp >= 0) ramp = uLaneRamp;
 }
+
+// Ground surfaces per pixel (D-096). Each pixel takes the surface of the cell
+// a warped point lands in: two octaves of world-anchored value noise bend the
+// cells' borders into smooth, crinkled shapes, and a dither of screen pixels
+// either side softens them. Rock follows the ground's slope: where it's
+// steeper than the style's steep-rock slope (varied ±ROCK_VARY across the
+// ground, dithered over ROCK_SOFT) natural ground is bare rock; a cell the
+// pipeline called rock (a cliff's) stays rock down to ROCK_CLIFF of that slope
+// and shows the ground beside it where it's gentler. Water: without planes (packages before D-094) water cells keep
+// their exact cells; with them, ground above the plane takes the land beside it.
+uniform int uSteepDrop;          // micro-steps per micro-cell (= steps per cell) from which ground is bare rock (0 = off)
+uniform int uRockSurface;        // -1 = none
+uniform int uWaterSurface;
+uniform int uSnowSurface;
+uniform int uShores;             // the package's water is drawn as planes (D-094)
+const float WARP_BROAD = 0.45;   // cells: borders bent by up to this, over about 1.2 cells
+const float WARP_FINE = 0.15;    // cells: and crinkled by up to this, over about 0.3 cell
+const float WARP_DITHER = 0.1;   // cells: pixels dithered either side of a border
+const float ROCK_VARY = 0.3;
+const float ROCK_SOFT = 0.25;
+const float ROCK_CLIFF = 0.25;   // a cliff's cell (rock to the pipeline) stays rock down to this much of it
+
+int surfaceAt(ivec2 c) { return texelFetch(uFieldCells, clamp(c, ivec2(0), uSliceSize - 1), 0).x; }
+
+// The surface of the cell nearest q (slice cells) among c and its 8
+// neighbours that is neither a nor b; -1 if there's none.
+int nearestOther(vec2 q, ivec2 c, int a, int b) {
+  int best = -1;
+  float bd = 1e9;
+  for (int j = 0; j < 9; j++) {
+    ivec2 n = c + ivec2(j % 3 - 1, j / 3 - 1);
+    int s = surfaceAt(n);
+    if (s == a || s == b) continue;
+    vec2 d = q - (vec2(n) + 0.5);
+    if (dot(d, d) < bd) { bd = dot(d, d); best = s; }
+  }
+  return best;
+}
+
+int groundSurface(int own, ivec2 ap) {
+  vec2 g = vGrid;
+  vec2 broad = vec2(valueNoise(g * 0.8, 21), valueNoise(g * 0.8 + 17.0, 21)) - 0.5;
+  vec2 fine = vec2(valueNoise(g * 3.3, 22), valueNoise(g * 3.3 + 17.0, 22)) - 0.5;
+  vec2 dith = vec2(bayer4(ap), bayer4(ap + ivec2(1, 2))) - 0.5;
+  vec2 q = g - vec2(uSliceOrigin) + 2.0 * (broad * WARP_BROAD + fine * WARP_FINE + dith * WARP_DITHER);
+  ivec2 qc = ivec2(floor(q));
+  int s = surfaceAt(qc);
+  if (uShores == 0) {
+    if (own == uWaterSurface || s == uWaterSurface) s = own;
+  } else if (s == uWaterSurface) {
+    int land = nearestOther(q, qc, uWaterSurface, uWaterSurface);
+    if (land >= 0) s = land;
+  }
+  if (uSteepDrop <= 0 || uRockSurface < 0 || s == uWaterSurface || s == uSnowSurface) return s;
+  int p = int(uSurfaces[s].y + 0.5);
+  if (s != uRockSurface && p != PATTERN_TREES && p != PATTERN_SPECKLE) return s;  // fields, city blocks
+  float steep = float(uSteepDrop) * uStepWorld * (1.0 + ROCK_VARY * (2.0 * valueNoise(g * 1.3, 23) - 1.0));
+  if (s == uRockSurface) steep *= ROCK_CLIFF;
+  if (length(vShape.xy) / steep - 1.0 + (bayer4(ap) - 0.5) * ROCK_SOFT > 0.0) return uRockSurface;
+  if (s == uRockSurface) {
+    int soil = nearestOther(q, qc, uRockSurface, uWaterSurface);
+    if (soil >= 0) return soil;
+  }
+  return s;
+}
 #endif
 
 int strataRampAt(int set, float h, out float above) {
@@ -612,6 +712,9 @@ void main() {
   int mat = int(vMat.x + 0.5);
   int kind = int(vMat.y + 0.5);
   bool vertical = kind == 2 || kind == 3;
+#ifdef FIELD_WAYS
+  if (kind < 2 && mat < 99) mat = groundSurface(mat, ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin));
+#endif
   int geol = int(vGeol + 0.5);
   int strataSet = uProvinceSet[geol >> 2][geol & 3];
 
@@ -813,11 +916,13 @@ void main() {
   const ivec2 N4[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
   int ramp = g.r - 1;
   int level = g.g;
+  // one-pixel lines (D-098): no cleanup, darkest shade
+  bool thin = (g.a >> 1) == 6;  // FACE_LINE (packages/generators; 5 is FACE_WATER)
 
   // Cleanup: a pixel whose four neighbours all agree with each other but not
   // with it is noise; adopt the neighbours' ramp and shade.
   ivec4 n0 = G(p + N4[0]);
-  bool agree = n0.r != 0;
+  bool agree = n0.r != 0 && !thin;
   for (int i = 1; i < 4; i++) {
     ivec4 ni = G(p + N4[i]);
     agree = agree && ni.r == n0.r && ni.g == n0.g;
@@ -837,7 +942,7 @@ void main() {
   float bayer = (BAYER[(a.y & 3) * 4 + (a.x & 3)] + 0.5) / 16.0;
   float aoDark = float(g.b) / 127.5;
   int shade = clamp(level - int(floor(aoDark + bayer)), 1, uShades - 1);
-  if (outline) shade = 0;
+  if (outline || thin) shade = 0;
 
   int index = 1 + ramp * uShades + shade;
   float local16 = clamp(floor((d - uDepthBase) * 256.0 + 0.5), 0.0, 65535.0);
@@ -1091,10 +1196,7 @@ uniform vec3 uLightUp;
 uniform float uScale;
 uniform sampler2D uFieldAo;      // (k·W + 1) × (k·H + 1): AO at each corner's lowest and highest height
 uniform sampler2D uFieldShape;   // (k·W + 1) × (k·H + 1): FIELD_SHAPE_FS at each corner
-uniform int uSteepDrop;          // micro-steps; tops this far above a neighbour are bare rock (0 = off)
-uniform int uRockSurface;        // surface id drawn on steep tops (-1 = none)
 uniform int uWaterSurface;
-uniform int uSnowSurface;
 
 out vec3 vNormal;
 out vec3 vLight;
@@ -1145,31 +1247,7 @@ void main() {
   ivec2 cell = m / uK;
   ivec4 attr = texelFetch(uFieldCells, cell, 0);
   int surface = kind == FACE_WATER ? uWaterSurface : attr.x;
-  // Ragged land-cover borders: each micro-cell takes its surface from a point
-  // jittered by up to ±0.4 cell (hashed in world coordinates, so tiles agree).
-  // Water keeps its exact cells: its geometry is flat only there.
-  if (kind != FACE_WATER) {
-    ivec2 wm = uSliceOrigin * uK + m;
-    uint hx = uint(wm.x) * 0x8da6b343u ^ uint(wm.y) * 0xd8163841u;
-    hx ^= hx >> 16; hx *= 0x7feb352du; hx ^= hx >> 15; hx *= 0x846ca68bu; hx ^= hx >> 16;
-    vec2 jit = vec2(float(hx & 0xffffu), float(hx >> 16)) / 65536.0 - 0.5;
-    ivec2 jc = clamp(ivec2(floor((vec2(m) + 0.5) / float(uK) + jit * 0.8)), ivec2(0), uSliceSize - 1);
-    int js = texelFetch(uFieldCells, jc, 0).x;
-    if (surface != uWaterSurface && js != uWaterSurface) surface = js;
-  }
-  if (kind <= 1 && uSteepDrop > 0 && uRockSurface >= 0 && surface != uWaterSurface && surface != uSnowSurface) {
-    ivec4 h = cornersAt(m);
-    bool steep = false;
-    for (int e = 0; e < 4; e++) {
-      ivec2 nb = m + EDGE_NEIGHBOR[e];
-      if (!inSlice(nb)) continue;
-      ivec4 nh = cornersAt(nb);
-      ivec2 ec = EDGE_CORNERS[e];
-      ivec2 nc = EDGE_NB_CORNERS[e];
-      if (min(h[ec.x], h[ec.y]) - max(nh[nc.x], nh[nc.y]) >= uSteepDrop) steep = true;
-    }
-    if (steep) surface = uRockSurface;
-  }
+  // tops take their surface per pixel in the fragment shader (groundSurface, D-096)
 
   vec2 uv = uRot * pos.xy;
   float h = pos.z;

@@ -31,6 +31,7 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 - **Cast shadows** subtract 1.6 levels, then round. Shadows come from a per-tile shadow map that includes neighbouring terrain, so they cross tile seams correctly.
 - **Shading is quantized, not smooth.** A face has one shade. Gradients exist only through dithering (§5).
 - **Natural ground (D-095):** surfaces drawn with trees or speckle (woods, scrub, grass, sand, desert, rock) are lit on their tops by the ground's slope over about a cell, not by each micro-tile, so a hillside reads as one slope rather than as triangle facets. Its light falls between shades in a 4×4 ordered dither. Ground a fifth of a step or more below the mean of a ring a cell around it (a hollow, a gully) is dithered a shade darker, fully at 0.7 steps; ground as far above it (a ridge, a knoll) a shade lighter. World-anchored patches about 2.5 cells across are a shade darker or lighter, with dithered rims (not on strata). Walls keep their own light and strata.
+- **Ground surfaces (D-096):** chosen per pixel from the cells' land cover, with borders bent by world-anchored noise and dithered over a few pixels; natural ground is bare rock where it's steeper than the style's `terrain.steepRockSlope` (varied by noise, dithered at its edge), and cliff cells show the ground beside them where gentle.
 - **Water (D-094):** a flat plane at the water's level; the shoreline is where the ground crosses it. Water within a micro-step of the ground under it is a shade lighter, dithered half-and-half down to two micro-steps.
 
 ## 4. Materials
@@ -265,6 +266,7 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 - **Sidewalk trees** (`objects.streetTrees` with `canopy`, group `tree.street`): road cells are kept clear of everything else, so sidewalk trees stand on the verge just past the drawn asphalt, in rows along straight road cells, where the canopy map shows trees beside the real road. This is the one exception to keeping a band beside roads clear.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
 - **Strung across a street** (`across: true`, optionally limited by `name` and a lon/lat `bounds`): one prop on the road's line, turned across it. San Francisco strings `prop.lanterns` (a sagging wire of red and gold lanterns) over Grant Avenue and Stockton Street in Chinatown.
+- **One-pixel lines** (D-098, D-099): a model may draw its thinnest parts as lines a native pixel wide at any angle (`VoxelModel.line`), in the ramp's darkest shade, casting no shadow. Options, off by default: `streetLight` and `trafficSignal` with `lines: 1` (a slender mast with an arm curving out to the lamp; a pole with a mast arm over the street and a three-lamp head, `reach` voxels out), `lanterns` with `lines: 1` (the wire), `utilityPoles` with `lines: 1` (its arms and stay wires). Every pack in the repository turns them on (`desert-southwest` at half the voxels, its walking level's cells being twice the size).
 
 ## 15. San Francisco (the `bay-area` pack)
 
@@ -499,3 +501,83 @@ A full pack (`worlds/_styles/paris/style.json`), laid out like `new-york` with i
 | `landmark.bridge.stone`, `.short` | `stoneArchBridge` (Paris's) | the Pont Neuf's two arms (seven arches and five): round arches between piers with pointed cutwaters, a half-round bastion over each pier with a lamp, a cornice of plain mascarons, stone pavements |
 
 **Street and traffic:** `prop.streetlight` and `prop.signal` in Wallace green, plane trees for `tree` and `tree.street` (broad pale-green crowns on pale trunks), and `bay-area`'s vehicles in Paris's palette, with white river boats.
+
+## 21. Tokyo (the `tokyo` pack, D-092)
+
+A full pack (`worlds/_styles/tokyo/style.json`), laid out like `paris` with its own 42 ramps and no fog. It names `["@pixelworlds/city-sf", "@pixelworlds/city-tokyo"]`: San Francisco's for `block`, `decoTower` and `sfTower` (civic blocks, warehouses, towers), Tokyo's for the seven generators below (`packages/city-tokyo`).
+
+**Ramps**
+- **Cladding:** `tile-beige`, `tile-brown` and `tile-white` (the tile of Tokyo's mid-rises and mansions), `concrete`, `granite`, `mortar` (houses' render), `siding` (houses' blue-grey metal siding), `tower-white`.
+- **Roofs:** `roof-metal` (galvalume, blue-grey), `roof-tile` (kawara, dark grey), `roof-flat`, `copper` (the shrine's roofs).
+- **Glass:** `glass`, `lit`, `lit-cool` and `curtain-glass` (blue-green curtain walls).
+- **Signs:** `neon-pink`, `neon-cyan`, `neon-yellow`, `sign-white` and `sign-red`, which glow at night with `lit`, `lit-cool` and `marker`: Tokyo by night is its signs.
+- **Street:** `asphalt`, `sidewalk`, white `marking` and `crosswalk` (the zebras' white), `pole` and `wire` (utility poles and their lines), `jr-green` (the Yamanote's band, buses, pharmacy signs), `steel` (rails, frames, the twin towers' dark stone), `taxi` (the indigo of Tokyo's taxis), `gravel` (the shrine's approaches), `cypress` (unpainted shrine timber), `zelkova` (street trees) and `forest` (the evergreen Meiji forest and the parks).
+
+**The fabric** (`buildings.ts` in `packages/city-tokyo`). Storeys are PLATEAU's, which count those above ground.
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.zakkyo`, `building.zakkyo.quiet`, `building.commercial` | `zakkyo` | The narrow mixed-use building (雑居ビル), any height, storeys from the record. At the street, a shopfront under a lit sign band, the stair's door on one side. Above, ribbon windows, punched windows or a glass front, with a tenant's sign panel across the spandrel of most floors. On most, a vertical sign board of stacked boxes, one a floor, stands on the shop's canopy in front of an upper front set back a voxel for it, and rises past the parapet; on some, a billboard on the roof; a stair and lift penthouse. Tile, concrete or granite. `.quiet` (narrow offices outside the entertainment districts, low shops) has fewer panels and boards; `building.commercial` is between them. |
+| `building.office` | `zakkyo` (`office: 1`) | A mid-rise office: ribbon windows or a glass front in curtain glass, few signs, no boards or billboards. |
+| `building.mansion`, `building.residential` | `mansion` | The apartment slab (マンション): its long side to the south, whatever the street, with a balcony at every floor: a light parapet band, the sliding doors' glass behind it, partitions between flats, an air conditioner's outdoor unit on some, all painted flush. The entrance hall's glass in the middle of the street floor, or shops under signs. The back is the open corridor: a parapet band at each floor over the flats' doors. A lift penthouse, and a water tank on a steel stand on some. Any height (tower flats too). |
+| `building.kodate`, `building.shophouse`, `building.shrine` | `kodate` | The detached house (戸建て): two storeys (one to three), siding, mortar or tile, under a gabled roof (its ridge along the longer side), a hipped one, a flat one on modern boxes or a shed roof, in metal or tile. A yard in front behind a low block wall open for the car; the door and a window at the street; a balcony's rail painted across the upper floor. `building.shophouse` puts a shopfront under a sign band on the street floor and has no yard. `building.shrine` draws the Meiji Shrine's halls: cypress walls under steep copper gables, no glass. |
+
+- **Nothing projects** (the building rules, §13): balconies are painted on the wall; a vertical sign board stands on a canopy in front of a front set back for it; a pitched roof steps in layer by layer inside the footprint.
+- **Paint schemes:** trim follows the wall's variant when they list the same variants (§15): a mansion's parapets are a shade lighter than its tile.
+
+**Reused from San Francisco:** `building.civic` (schools, hospitals, offices of government) and `building.industrial` use `block`; `building.tower` and `building.tower.shinjuku` use `sfTower` in white slabs, dark granite, tile-clad postmodern towers and blue-green glass (Shinjuku's mix has more slabs and granite); `landmark.tower.spire` uses `decoTower`.
+
+**Landmarks** (generic depictions, D-051; no names, logos, crests or clock faces)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.hall.twin` | `twinTowerHall` (Tokyo's) | the Tokyo Metropolitan Government Building No. 1: a slab whose upper third splits into a square tower at each end, each chamfered at its top storeys into a square turned 45° under a plant room and a mast; a grid of light stone piers and floor bands round dark panels and glass, dark stripes up the towers; a tall glazed lobby |
+| `landmark.tower.spire` | `decoTower` (San Francisco's) | the NTT Docomo Yoyogi Building: a slender tower stepping in at its top storeys under a tall spire |
+| `landmark.tower.cylinder` | `cylinderTower` (Tokyo's) | Shibuya 109's cylinder, on its own round footprint: silver bands between bands of glass, a lit band under the top, a blank fin on top where the sign stands |
+| `landmark.gate.torii` | `myojinTorii` (Tokyo's) | the Meiji Shrine's great torii: two round pillars on dark bases, a tie beam through them, a strut, a second beam, and the lintel whose ends curve up, capped dark; unpainted cypress |
+
+**Rails:** in corridors (D-097): a line's parallel tracks within 20 m drawn as one band along its centre line, its tracks side by side on one ballast bed, in `steel`.
+
+**Street and traffic:** utility poles (`prop.pole`, `utilityPoles`, below), street lights (slender masts with curved arms) and signals (mast arms over the street) drawn in one-pixel lines (D-099), zelkovas for `tree.street` and the dark evergreen `forest` for `tree`, and `bay-area`'s vehicles in Tokyo's palette: silver trains with a green band, indigo taxis, white buses with a green band.
+
+**Utility poles and wires** (`utilityPoles`, `wireSpan`, D-098): a pole every 30 m on one side of each residential street, 3 m off its centre line, its crossarm across the street and a transformer on some; streets run on through junctions where they go straight. From each pole to the next, a wire span: a one-pixel line (a voxel model's `lines`, drawn as GL lines in the ramp's darkest shade) at the street's own angle, from a voxel over the crossarm at one pole to the same at the next, sagging between them and climbing where the ground does.
+
+## 22. Kyoto (the `kyoto` pack, D-090)
+
+A full pack (`worlds/_styles/kyoto/style.json`), laid out like `paris` with its own 40 ramps and no fog. It names only `["@pixelworlds/city-kyoto"]` (`packages/city-kyoto`): every building group is drawn by Kyoto's generators.
+
+**Ramps**
+- **Timber and lattice:** `timber` (dark weathered wood: pillars, beams, the boards of party walls), `timber-dark` (near black: the gaps between slats, slits and doorways, and the shadow under deep eaves), `koshi` (the lattice's red-brown, bengara), `bamboo` (the inuyarai fence at a machiya's foot).
+- **Roofs and walls:** `kawara` (grey tile) and `kawara-light` (silvered tile and ridges), `hiwada` (cypress bark), `copper-green` (copper roofs and ridges), `plaster` (white shikkui), `tsuchi` (earthen plaster), `stone` (granite platforms and steps).
+- **Shrines and temples:** `vermilion` (shrine lacquer), `gold` (ornaments), `bronze` (a pagoda's finial).
+- **Greens and water:** `moss` (lawns and temple grounds), `pine` (the Higashiyama hills' woods), `maple` (garden and street trees), `leaf`, `water` (the shallow grey-green Kamo), `gravel` (its banks and temple courts).
+- **The modern town:** `tile-beige` and `tile-brown` (the tile cladding of mid-rises), `concrete`, `concrete-white`, `curtain-glass`, `steel-grey`, `ai` (indigo noren and signs).
+- **Night:** `lit`, `lit-cool`, `marker` and `chochin` (the red paper lanterns of Gion's fronts, D-100) glow; nothing else does.
+
+**The fabric** (`buildings.ts`). Storeys are counted as in Japan and in PLATEAU: the ground floor is the first.
+
+| Group | Generator | Drawn as |
+|---|---|---|
+| `building.machiya` | `machiya` | Narrow and deep, two storeys. The ground storey's front is a lattice of red-brown slats with dark gaps (glass glowing behind some at night), between end pillars, over a stone sill and under a beam; a door at one end, a noren over it on some, a red paper lantern beside it on some, a bamboo fence at the lattice's foot on some; on some the party walls rise through the pent roof as plastered firewalls (udatsu). A footprint wider than two houses (a row OSM mapped as one) is drawn as a row of houses, each with its own wall height, tiles, door and front, paired pillars at the party walls between them (D-102). A pent roof of grey tile over the ground floor: the low upper storey stands back a voxel or two behind it, so nothing projects. The upper storey's earthen or white plaster front has mushiko-mado, plastered bars with dark slits between. A gabled tile roof, its ridge along the street and silvered, rising a voxel for every two in; a deep lot has a front house and wings behind it under roofs of their own. Party walls show dark boards below and plaster above. |
+| `building.house.gabled`, `building.house`, `building.residential` | `machiya` | The wooden town after the machiya: the same pent roof and gable, glass windows in place of most lattices and slits, earthen, white or tile-clad walls; `building.house` under hipped roofs, `building.residential` (untyped) under hipped or gabled roofs. |
+| `building.midrise`, `building.commercial`, `building.tower`, `.hotel`, `building.parking` | `midrise` | A modest block under a flat roof with a parapet and a stair and lift house: flats with a balcony across every storey (a slab, a steel rail, glass doors behind, the units' partitions), or offices and shops with windows in bays, a shopfront under a sign band and a vertical sign board on a front corner (no lettering). On some a rim of grey tile round the roof; on some a pent eave of tile over the ground floor, the storeys above set back a voxel (Kyoto's landscape rules); vertical louvres before an office's glass on some; air conditioners' boxes on some flats' balconies; an old water tank on some roofs (D-102). |
+| `building.palace`, `.gosho` | `templeHall` | Nijō Castle's palaces and gates under tile, and the Imperial Palace's halls and gates under cypress bark, typed by their names (D-102): white walls between dark pillars under shallow eaves, hip-and-gable roofs. |
+| `building.kura` | `kura` | A storehouse: thick white plaster over a skirt of namako (dark tiles in a diagonal grid of white joints), a door at the street and a small shuttered window high above it, a steep gabled tile roof along the longer side. |
+| `building.temple`, `building.shrine` | `templeHall` | A stone platform; walls whose deep eaves are drawn by filling the space under them with shadow, pillars on its face, a band of plaster and of brackets under the roof; a hip-and-gable roof (irimoya) whose ridge runs along the longer side, flat at the eaves and steepening toward the ridge, lifted at the corners, the gable plastered with a gilt ornament under its apex and the ridge's ends raised. Temples in tile on dark timber; shrines with shallow eaves, white walls between vermilion pillars, under cypress bark or copper. |
+
+- **Roofs from the data** (D-100): with `roofHints`, PLATEAU's LoD2 roof shape is each building's hint. `machiya` draws gabled, hipped and shed roofs from it, and flat ones only where the asset sets `flat` (the untyped `building.residential`), since most wooden houses' flat LoD2 roofs are pitched roofs the model left out. `midrise` puts a pitched tile roof on a block the data says is gabled or hipped. `templeHall` draws a plain gable (kirizuma) for `gabled` and a pyramid (hōgyō) for `pyramidal`.
+- **Nothing projects** (the building rules, §13): the pent roof stands on the ground storey's front, deep eaves are filled with their shadow, balconies and signs are painted flush.
+
+**Landmarks** (generic depictions, D-051)
+
+| Group | Generator | Landmark |
+|---|---|---|
+| `landmark.temple.stage` | `templeHall` (`stage`, `open`) | Kiyomizu-dera's main hall: a hall under a cypress-bark hip-and-gable roof on a stone terrace, and to the south its stage of boards with a rail on a lattice of pillars and tie beams over the slope, between two small roofed wings; the eaves open over the walls |
+| `landmark.pagoda`, `.three` | `pagoda` | The Yasaka Pagoda (five storeys, tile) and Kiyomizu-dera's (three, cypress bark): a stone platform; each storey a body of vermilion pillars and white walls with a dark door and a band of brackets, under a square roof whose eaves reach far out, flat at the eaves and steep toward the body, lifted at the corners and dark underneath; a bronze finial of nine rings with a gilt top |
+| `landmark.gate.romon` | `towerGate` | Yasaka Shrine's west gate: a vermilion two-storey gate of three bays, the middle one open, the end ones latticed, a balcony with a rail, a hip-and-gable roof of cypress bark with a copper ridge |
+| `landmark.gate.sanmon` | `towerGate` (`lowerRoof`) | Chion-in's Sanmon, on its footprint: five bays of dark timber, the middle three open, a skirt roof of tile round the lower storey, a deep hip-and-gable tile roof |
+| `landmark.torii`, `.great` | `torii` | A vermilion myōjin torii: round pillars on black feet, a tie beam through them, a strut with a blank plaque, the double top lintel black on top and swept up at its ends; `landmark.torii` with a stone lantern before each pillar (their fireboxes glow at night), `.great` (Heian Shrine's) without |
+| `landmark.pavilion.gold` | `goldenPavilion` | Kinkaku-ji: a stone footing, a first storey of natural wood and white panels under a thin shingle pent roof, a gilded second storey under a hipped shingle roof, a small gilded third under a curved shingle pyramid, a gilt phoenix (D-102) |
+| `landmark.tower.candle` | `candleTower` | Kyoto Tower: a slender white shaft rising through its building, an observation deck wider than the shaft with a band of windows (they glow at night) over a vermilion rim, a spire with vermilion bands and tip |
+
+**Street and traffic:** concrete utility poles with a steel crossarm, some with a transformer, on one side of the lanes with their wires (two power lines and a telecom cable) sagging to meet the next pole's (`prop.pole`, `utilityPole`, placed with the street props' `along`, D-102; `prop.pole.diagonal`, `.slant` and `.slant2` on diagonal and 2:1 streets, their wires along them, D-103, D-104), stone walls along OSM's retaining walls on the driving level (`wall.stone` and its diagonal and 2:1 groups, `stoneWall`: two voxels thick with a cap course, D-104), steel-grey street lights and concrete mast-arm signals drawn in one-pixel lines (as every pack's, D-099; D-104), concrete signals, maple street trees, pines and broadleaves on the hills, and `bay-area`'s vehicles in Kyoto's palette: pale green city buses, white and grey cars, indigo taxis.
