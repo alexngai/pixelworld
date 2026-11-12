@@ -99,7 +99,7 @@ const gate: Generator = ({ ramp, ramps, param, heightVox }) => {
  * string runs along x; the pipeline turns it across its street.
  * params: span (voxels; 24), height (the wire at its ends; 12), every
  * (voxels from one lantern to the next; 4), sag (voxels; 2), lines (1: the
- * wire a one-pixel line, D-095; 0).
+ * wire a one-pixel line, D-098; 0).
  * roles: lantern, wire, gold (lantern if absent).
  */
 const lanterns: Generator = ({ rand, ramp, ramps, param }) => {

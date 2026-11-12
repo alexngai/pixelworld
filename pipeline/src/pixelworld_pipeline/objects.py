@@ -654,7 +654,7 @@ def _strokes(lines: list, max_turn: float = 30.0) -> list[np.ndarray]:
 def wired_props(
     p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
 ) -> list[dict]:
-    """Props strung together (D-095), utility poles and their wires: along each
+    """Props strung together (D-098), utility poles and their wires: along each
     street of the rule's road classes (_strokes), a prop every `spacing`
     metres on its left, `offset` metres from its centre line, turned as an
     `across` prop is (its x across the street); and between each two in a row,

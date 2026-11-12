@@ -78,7 +78,7 @@ LAYERS = (
     # in 1/255 cell; drawn instead of the connection bits where a cell has them
     *((f"road_seg{k}", f"RSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
     *((f"path_seg{k}", f"PSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
-    # rail corridors (D-094): the same for rail corridors' centre lines; their
+    # rail corridors (D-097): the same for rail corridors' centre lines; their
     # track counts are in the RAIL layer's bits 8-10
     *((f"rail_seg{k}", f"TSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
 )
@@ -577,7 +577,8 @@ def write_package(
     if render is not None:
         manifest["render"] = render
     if micro is not None:
-        manifest["micro"] = {"k": int(micro[1])}
+        # shores: water is a plane over shaped shores (D-094); older packages lack it
+        manifest["micro"] = {"k": int(micro[1]), "shores": True}
     if warp_info is not None:
         manifest["warp"] = warp_info
     objects_path = out_dir / OBJECTS_FILE

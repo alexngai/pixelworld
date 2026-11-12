@@ -69,6 +69,7 @@ export class BakeHost {
             heightStretch: objects.heightStretch,
             variants: objects.variants,
             heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0),
+            texels: true,
           });
           const scene = { meshes: [built.merged, built.lines], batches: built.batches };
           const meshMs = performance.now() - t0;
@@ -107,7 +108,7 @@ export class BakeHost {
       const world = { width: init.worldWidth, height: init.worldHeight };
       if (grid.micro) {
         // micro-terrain: the GPU builds the geometry from height textures
-        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor });
+        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor, shores: init.shores });
         scene = { meshes: [], batches: [], fields: [field] };
       } else {
         const terrain = buildTerrainMesh(
@@ -133,7 +134,7 @@ export class BakeHost {
         }
       }
       this.meshCache.set(key, scene);
-      if (this.meshCache.size > BakeHost.MESH_CACHE) {
+      if (this.meshCache.size > (init.meshScenes ?? BakeHost.MESH_CACHE)) {
         const oldest = this.meshCache.keys().next().value!;
         this.baker.releaseScene(this.meshCache.get(oldest)!);
         this.meshCache.delete(oldest);
@@ -199,6 +200,7 @@ export class BakeHost {
       heightStretch: objects.heightStretch,
       variants: objects.variants,
       heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0), // clamps to the slice
+      texels: true, // a facade of windows is one face, its colours texels (about a tenth of the vertices)
     });
   }
 

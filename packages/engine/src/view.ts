@@ -5,6 +5,7 @@ import {
   BakeService,
   Camera,
   Compositor,
+  StartTiles,
   TileCache,
   revealRect,
   tileKey,
@@ -74,10 +75,15 @@ interface TileEntry {
   bare?: boolean;
 }
 
+/** Bake workers by default: the cores less one for the page, at most 4 (each keeps its own copy of the world's objects). */
+const defaultBakeWorkers = (): number => Math.max(1, Math.min(4, (globalThis.navigator?.hardwareConcurrency ?? 2) - 1));
+
 /** Screen px around a reveal whose bare tiles are baked ahead of it moving there. */
 const REVEAL_AHEAD_PX = 32;
 
 type ScreenBox = { left: number; top: number; right: number; bottom: number };
+
+const withSlash = (u: URL): URL => (u.pathname.endsWith("/") ? u : new URL(u.pathname + "/" + u.search, u));
 
 const overlaps = (img: BakedImage, b: ScreenBox): boolean =>
   img.left < b.right && img.left + img.width > b.left && img.top < b.bottom && img.top + img.height > b.top;
@@ -95,13 +101,17 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
   const cache = await openTileCache(opts.cache);
+  // the first view's tiles baked ahead, read before the cache (tools/prebake.mjs)
+  const start = opts.startTiles === false ? Promise.resolve(null) : StartTiles.load(opts.startTiles ?? new URL("start-tiles.bin", withSlash(w.base)));
+  const keyed = cache !== null || opts.startTiles !== false;
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
-  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, cache ? await pluginsKey(plugins.descriptors) : []));
+  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
-    if (cache) {
-      const hit = await cache.get((await cacheKeyReady)(t));
+    if (keyed) {
+      const key = (await cacheKeyReady)(t);
+      const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
       if (hit) return { cached: hit };
     }
     return { slice: await tileSlice(w, t) };
@@ -110,6 +120,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
   const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
     plugins: plugins.refs,
+    workers: opts.bakeWorkers ?? defaultBakeWorkers(),
   });
   service.failures.unloaded = plugins.missing; // named in failures of generators nobody registered (D-072)
   await mainThread.catch((e: unknown) => {
@@ -553,8 +564,6 @@ class View implements WorldView {
           fracX: snap.fracX,
           fracY: snap.fracY,
           zoom: cam.zoom,
-          internalWidth: cam.internalWidth,
-          internalHeight: cam.internalHeight,
           depthRange: this.depthRange,
         };
         this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare);
@@ -666,6 +675,7 @@ class View implements WorldView {
     return {
       renderer: this.service.renderer,
       bakeMode: this.service.mode,
+      bakeWorkers: this.service.workers,
       tilesBaked: t.tiles,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,

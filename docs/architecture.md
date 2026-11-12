@@ -78,7 +78,7 @@ Because of this, the same real building can take up more or fewer cells dependin
   - **Street networks:** they are straightened as a whole. Each road edge within a few degrees of a grid direction is made to run exactly along it, with junctions moving as little as possible (under 2 cells) and staying shared. A slightly rotated street grid therefore comes out aligned rather than full of one-cell jogs.
   - **Long runs:** roads are laid in long runs, so in-between angles alternate a few long runs instead of single steps.
   - **Buildings:** they move with their streets and turn to the nearest grid direction when they're close to one.
-- **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree.
+- **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree. Water is drawn as a flat plane at each water body's level over its cells and their neighbours, and the micro-terrain sinks under it where the map's water polygons and river lines lie (D-094), so shorelines follow the map at micro-cell resolution.
 - **Chunk:** 64×64 cells, the unit of streaming and storage. Bake tiles, the unit of client baking, may be smaller (to be tuned in M0).
 
 ### 3.4 Projection (initial constants, tuned in M0)
@@ -289,14 +289,14 @@ Bakes run in two places with the same code:
 
 ### 8.2 Runtime compositor
 
-1. Draw bake tiles into an **index + depth** framebuffer at the internal resolution. Each tile writes its baked depth.
-2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth: the runtime layers' sprites (traffic), then the entities' (the rover). Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test.
-3. Draw the silhouette of entities that ask for one (the player) where they are hidden: pixels that fail the depth test are drawn with a dither pattern.
+1. Draw bake tiles into an **index + depth** framebuffer at the canvas's own resolution, each art pixel a zoom × zoom block on the art-pixel grid. Each tile writes its baked depth.
+2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth: the runtime layers' sprites (traffic), then the entities' (the rover, the player's car and plane). Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test. Sprites are placed to the canvas pixel, not the art pixel: their blocks may sit between the grid's lines, so a moving vehicle glides over the world (and the world under a followed one) instead of stepping a whole art pixel at a time.
+3. Draw the silhouette of entities that ask for one (the player) where they are hidden: pixels that fail the depth test are drawn with a dither pattern on the sprite's own art pixels.
 4. **Atmosphere (fog, D-063):** a layer's screen pass. Where a fog layer is in view, a pass recovers each pixel's ground position and height from its screen position and depth (tiles write their depth beside the index), and veils its colour index toward the fog's through per-level lookup tables, dithered on the screen's Bayer pattern. It is skipped when no fog is in view.
 5. **Palette pass:** index → RGB through a palette LUT. Swapping LUTs gives time of day, seasons, style variants and **palette cycling** (water, lights) almost for free.
-6. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
+6. The camera's position is not snapped: its sub-pixel part is where the art-pixel blocks fall on the canvas, so scrolling stays smooth. Dithers (fog, the reveal, the silhouette) are worked out per art pixel, so they stay pixel art.
 
-- **Internal resolution:** chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270).
+- **Internal resolution:** the art-pixel grid, chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270); the framebuffers are the canvas's size.
 - **Zoom:** integer zooms only. Coarser views are separate scale levels (§3.5) with their own generalization and oversized landmarks, not shrunken images.
 
 ### 8.3 The engine (the world view as a library)

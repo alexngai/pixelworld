@@ -670,7 +670,7 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
 
   /**
    * Street light: a pole, an arm over the street, a lamp that glows at night.
-   * With `lines: 1` (D-095) the pole and its arm are one-pixel lines, a
+   * With `lines: 1` (D-098) the pole and its arm are one-pixel lines, a
    * slender mast whose arm rises and curves out `reach` voxels to the lamp.
    * params: height (6), lines (0), reach (2, with lines).
    */
@@ -703,7 +703,7 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
   },
 
   /**
-   * Traffic signal: a pole with a signal head. With `lines: 1` (D-095) the
+   * Traffic signal: a pole with a signal head. With `lines: 1` (D-098) the
    * pole is a one-pixel line and a mast arm, another, reaches `reach` voxels
    * out over the street to a head of three lights side by side under a hood.
    * params: height (5), lines (0), reach (3, with lines).

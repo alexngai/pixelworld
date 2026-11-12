@@ -581,7 +581,7 @@ def drop_rungs(rail: np.ndarray) -> np.ndarray:
     return out
 
 
-# Rail corridors (D-094): a cell holding a corridor's centre-line pieces also
+# Rail corridors (D-097): a cell holding a corridor's centre-line pieces also
 # stores its track count less one in bits 8-10 (up to RAIL_MAX_TRACKS), and every
 # cell the corridor's drawn tracks may reach is flagged in bit 11, so only those
 # cells look a couple of cells around for corridor pieces.
@@ -600,7 +600,7 @@ def bundle_tracks(
     step: float = 0.25,
     min_run: float = 1.0,
 ) -> list[tuple[str, int, list[tuple[np.ndarray, np.ndarray, np.ndarray]]]]:
-    """Parallel tracks as corridors (D-094). lines: (id, kind, parts in cells),
+    """Parallel tracks as corridors (D-097). lines: (id, kind, parts in cells),
     one line per mapped track. Longest first, each track is sampled every
     `step` cells: its stretches within `reach` cells of a corridor of its kind
     already laid join that corridor, and the rest (`min_run` cells or longer)
@@ -732,7 +732,7 @@ def rail_pieces(
     corridors: list[tuple[str, int, list[tuple[np.ndarray, np.ndarray, np.ndarray]]]],
     shape: tuple[int, int],
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    """Corridors (bundle_tracks) as centre-line pieces per cell (D-094), as
+    """Corridors (bundle_tracks) as centre-line pieces per cell (D-097), as
     roads' are (D-082): (pieces (cy, cx, PIECES), the RAIL layer's bits for
     them (kind, track count, and RAIL_NEAR on every cell their tracks may
     reach), cells with more pieces than fit)."""

@@ -100,9 +100,11 @@ Status values:
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 | D-092 | Tokyo's look: a `tokyo` style pack and the `@pixelworlds/city-tokyo` generator plugin | Accepted (M5) |
 | D-093 | Tokyo's walking level: Shibuya to Shinjuku at 10 m, typed by use, storeys, size and neighbourhood boxes | Accepted (M5) |
-| D-094 | Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count | Accepted (M5) |
-| D-095 | Wires strung from pole to pole: utility poles along whole streets, each span a one-pixel line at any angle | Accepted (M5) |
-| D-096 | Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack | Accepted (M5) |
+| D-094 | Water as a plane over a shaped shore: shorelines from the map's water polygons at micro-cell resolution | Accepted (M5) |
+| D-095 | Natural ground lit by its slope, with dithered light, hollows, ridges and patches | Accepted (M5) |
+| D-097 | Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count | Accepted (M5) |
+| D-098 | Wires strung from pole to pole: utility poles along whole streets, each span a one-pixel line at any angle | Accepted (M5) |
+| D-099 | Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack | Accepted (M5) |
 
 ---
 
@@ -1118,7 +1120,37 @@ The point is more room for visual interest; both halves are wanted.
   - **The scramble's diagonals** as stripes along each crosswalk's own direction, not screen-space zebras.
   - **Street trees:** only 341 on the avenues (the canopy map finds few of Omotesandō's zelkovas); Tokyo's street-tree records would place them.
 
-### D-094: Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count (accepted, M5)
+### D-094: Water as a plane over a shaped shore: shorelines from the map's water polygons at micro-cell resolution (accepted, M5)
+- **Why:** water was a cell layer. Micro-terrain flattened whole water cells to their level and the shader kept their exact cells, so every shore was a staircase of cells: 10 m on the walking levels, 400–500 m in the desert (M1.6's known issue). Lakes and the sea came from WorldCover per cell; Overture's water polygons weren't read.
+- **What:**
+  - **Shoreline field** (`micro.shore_field`): the signed distance (micro-cells, negative in water) from every micro-corner to the shoreline. It's drawn from Overture's `base/water` polygons (classes ocean, river, lake, pond, reservoir, water, dock, canal and lagoon; not pools, wastewater or the named bays and shoals over the sea) and river lines (half `riverWidthMeters`, at least 0.75 micro-cell), rasterized on a grid up to 4 times finer than the micro-corners (a 12 M pixel budget), with scipy's distance transform. Water cells with neither within 2 cells (a lake the map lacks) are rounded by a 0.5-cell Gaussian instead of keeping their staircase.
+  - **Planes** (`micro.plane_levels`): the level the client draws over each cell: a water cell's own, else the highest of its 8 neighbours', none on a dry road cell. The baker computes the same from the cell water layer, so nothing new is stored. Beside the water, ground more than the deepest bed (3 micro-steps) under a neighbour's plane isn't its shore (the canyon below a dam, a cliff's foot): the pipeline leaves it as it is and the baker draws no plane over it.
+  - **Shore** (`micro.shape_shore`): wet micro-corners sink under every plane over them, a micro-step deeper per micro-cell out from the shore, at most 3; dry ones stand at least a micro-step above. Corners touching a road cell stay dry. Ground other than urban, rock or none slopes into the water: a micro-step above it for a micro-cell, then 1.4 micro-steps per micro-cell up to 6 above the nearest plane, reaching past the planes, so no micro-cell on a natural shore spans more than a slope tile's 3 micro-steps (even across its diagonal) and the bank draws as slopes; higher ground stands behind it as a cliff. Quays and rock meet the water in walls.
+  - **Unchanged:** the cell layers (water, base, shape, surface), so gameplay still reads water by cell; the road report. Bridge decks' water (D-056) re-sinks only the cells under the decks.
+  - **Packages say so:** the manifest's `micro.shores: true` marks a package built this way; the baker draws planes only for those (`TerrainField.shores`). Packages built before keep water cells flat at their level, drawn as before, until they're rebuilt.
+  - **Baker:** a third field draw in the G-buffer pass, one flat quad per micro-cell at its plane's level where its ground dips below it (face kind `FACE_WATER`, 5: 4 is objects'); the depth test draws the shoreline where ground and plane cross, at pixel resolution. The plane carries the water's depth over the ground: a shade lighter within a micro-step, dithered to two. No way or rail decals on it, no AO; not in the shadow map. Field bounds include the water levels.
+- **Measured** (New York, walking): 173 water polygons and 26 river lines; micro-terrain 9.6 s; chunks 3.10 → 3.12 MB; the road report unchanged. FDR Drive's bulkhead is a straight line along the esplanade instead of 10 m steps, and the Reservoir follows its curve.
+- **Rejected alternatives:**
+  - **Water per micro-cell:** still a staircase, at 5 m, and a new chunk layer.
+  - **A stored shore field or per-micro-cell levels:** the plane levels follow from the cell water layer by one rule both sides share, and the micro-heights carry the shore.
+  - **Water wherever the ground is under the level, without a plane:** the bed would be drawn at its own height, sunk below its shores.
+  - **WorldCover at the micro-corners:** its 10 m pixels are a staircase of their own and have no piers.
+- **Later:** rivers that step down meet with no face between their planes; vehicles over water read the bed; foam and palette cycling at the waterline; streams narrower than a micro-cell as way decals; warped layouts map the polygons through the layout but aren't checked against the Southwest yet.
+
+### D-095: Natural ground lit by its slope, with dithered light, hollows, ridges and patches (accepted, M5)
+- **Why:** micro-tiles are planar triangles and each took one shade, so hillsides read as crumpled facets (the Black Canyon, the desert ranges), while large woods and fields were one flat colour.
+- **What** (`GBUFFER_FS`, micro-terrain only): the tops of surfaces whose pattern is trees or speckle, off pavement:
+  - **Light:** lit by the ground's slope over about a cell (`groundShape`, the plane through a 3×3 ring a cell apart, as lawns were), with the light between shades dithered on a 4×4 ordered pattern anchored to screen pixels rather than rounded. The ring is sampled once per micro-corner in a prepass beside the AO's (`FIELD_SHAPE_FS`, RGBA8: slopes as angles, hollowness in steps) and read per vertex: sampled per pixel, it nearly tripled a forest tile's bake in software rendering.
+  - **Hollows and ridges:** the same ring's mean height minus the height here; 0.2 steps or more below it dithers a shade darker, fully at 0.7; as far above, a shade lighter.
+  - **Patches:** two octaves of world-anchored value noise, about 2.5 render cells across; the lowest values a shade darker, the highest a shade lighter, with dithered rims. Not on strata.
+  - **Walls** keep their own light and strata, so canyon ledges stay.
+- **Measured** (`tools/bench.mjs`, software rendering, median tile bake): Grand Canyon Village 802 ms against 784 ms without it (2,171 ms when each pixel sampled the ring); Alamo Square unchanged within the run-to-run noise. Five e2e goldens change, in their ground only (Hoover Dam, Las Vegas, the flying Strip, Coit Tower, Brooklyn Heights).
+- **Rejected alternatives:**
+  - **`light: "slope"` on natural surfaces in the style packs:** it also turns their risers into the surface's own colour, where cliffs should show rock.
+  - **Second ramps per surface (dry grass, pale sand):** new style tables for what a shade shift already reads as.
+  - **Style knobs for the constants:** every pack takes the same values for now; add them when one needs others.
+
+### D-097: Rail corridors: parallel tracks bundled into one corridor, drawn along its centre line with its track count (accepted, M5)
 - **Why:** on `tokyo-walk` (D-093) the Yamanote and the other lines drew as broken, stepping strands. Two causes. Rails still drew from their cells' 8-way connections (D-061), which D-082 replaced for roads but left for rails, so a line at any other angle zigzagged. And OpenStreetMap maps every track on its own: by Harajuku and Shinjuku four to sixteen tracks run a few metres apart, landing in the same or neighbouring cells, where `drop_rungs` cuts the links between them, leaving gaps.
 - **What** (opt-in per rail rule, so other worlds are unchanged):
   - **`bundle: <metres>`** on a `sources.rails` rule: its tracks within that distance of each other are drawn as one corridor. In the pipeline (`roads.bundle_tracks`): a kind's segments are first joined end to end where no third meets them (Overture splits a track at every switch); then, longest first, each track is sampled every quarter cell, and its stretches within reach of a corridor already laid join that corridor, while the rest (a cell or longer) start corridors of their own. Each corridor's line moves to the mean of its own and its joined tracks' points, averaged over about eight cells so it runs straight, and is simplified (0.15 cell); its track count is its median along it. A corridor that starts or ends where its track left another joins that one's line where its track was about two cells back, as a switch does.
@@ -1137,7 +1169,7 @@ The point is more room for visual interest; both halves are wanted.
   - **Other worlds** (`nyc-walk`, `paris-walk`) could turn `bundle` on when their goldens are next regenerated; worlds without micro-terrain don't draw corridors.
   - **Overhead wires** (D-092's Later) next: spans as line objects from pole to pole.
 
-### D-095: Wires strung from pole to pole: utility poles along whole streets, each span a one-pixel line at any angle (accepted, M5)
+### D-098: Wires strung from pole to pole: utility poles along whole streets, each span a one-pixel line at any angle (accepted, M5)
 - **Why:** D-092 drew a utility pole and its wires as one prop placed across the street. A prop turns by quarter turns only, so the wire in it lined up with the next pole's only on streets running north–south or east–west: everywhere else, short staggered black strokes, heavier still where four lines a voxel thick were outlined side by side. Looked at on `tokyo-walk` at zoom 1, they read as scribbles over the rooftops.
 - **What:**
   - **Streets, not segments** (`objects._strokes`): a street prop rule's roads are joined end to end where only two meet, and through a junction where a road runs on into another, turning less than 30°, the straightest pairs first. A Tokyo block is shorter than two poles' spacing, so poles placed per Overture segment would rarely have a neighbour to string a wire to.
@@ -1156,8 +1188,8 @@ The point is more room for visual interest; both halves are wanted.
   - **Wires across junctions** between streets that meet at an angle, and the service drops from poles to houses.
   - **Lines on instanced props** (only unique objects draw them now), and other thin things as lines: tram and trolleybus wires, railings, flagpoles.
 
-### D-096: Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack (accepted, M5)
-- **Why:** the owner asked for the other props to have options for the detail the wires got (D-095). A street light was a column of voxels three voxels wide, 2.5 m tall at the walking scale; a signal, a column with three voxels on top; Chinatown's lanterns hung from a wire a voxel thick, and a utility pole's arms were voxels too. Their thin parts are what one-pixel lines draw well. But lines were drawn for unique objects only, and props are instanced.
+### D-099: Props with one-pixel detail: lines on instanced props; slender street lights, mast-arm signals, lantern wires and pole arms, on in every pack (accepted, M5)
+- **Why:** the owner asked for the other props to have options for the detail the wires got (D-098). A street light was a column of voxels three voxels wide, 2.5 m tall at the walking scale; a signal, a column with three voxels on top; Chinatown's lanterns hung from a wire a voxel thick, and a utility pole's arms were voxels too. Their thin parts are what one-pixel lines draw well. But lines were drawn for unique objects only, and props are instanced.
 - **What:**
   - **Lines on instanced props:** a variant's lines are a batch of their own, a `primitive: "lines"` mesh with its own copies of the instances' offsets and cells (a render scale scales each batch's), drawn with `drawArraysInstanced(gl.LINES)`, casting no shadow. `meshLines` (beside `meshVoxels`) places a model's lines as its voxels are placed, for unique objects, instanced ones and the model preview, which now shows them.
   - **Options, off by default in the generators** (a pack turns them on):
@@ -1167,7 +1199,7 @@ The point is more room for visual interest; both halves are wanted.
     - `utilityPoles` with `lines: 1`: the crossarm and the low arm as lines, and on some poles (`stay`, 0.35) a stay wire from the low arm down to the ground along the street; the pole stays a column of voxels, as thick as a concrete pole looks.
   - **The tokyo pack** turns them on: street lights 16 voxels tall (about 7 m at the walking scale) with a 3-voxel arm, signals 12 voxels with a 5-voxel arm, poles with arms and stays. Its two goldens are regenerated (the Yoyogi view's poles; 1% of the Harajuku view's pixels, its lights and signals).
   - **Every pack, at the owner's word:** `bay-area`, `new-york` and `paris` take Tokyo's lights and signals (all their props stand on 10 m walking levels), and `bay-area`'s and `new-york`'s lanterns their one-pixel wire; `desert-southwest`, whose walking level has 20 m cells and so voxels twice the size, takes lights 8 voxels tall with a 2-voxel arm and signals 6 tall with a 3-voxel arm (about the same metres). Two goldens moved: Paris's Gros-Caillou (192 pixels at its left edge, a street light) and the Southwest's flying view of the Strip (2 pixels); every other golden is unchanged, its props out of view or within it unchanged.
-  - **The package budget:** the untree-shaken sum of every entry point is 100.2 KB with D-082's and D-094's centre lines and D-095–D-096's lines; its limit is raised from 100 to 110 KB, as the owner allowed for features. createWorldView (78.9 of 80 KB) and a view with traffic (87.1 of 88) stay within theirs.
+  - **The package budget:** the untree-shaken sum of every entry point was 100.2 KB with D-082's and D-097's centre lines and D-098–D-099's lines; its limit is raised from 100 to 110 KB, as the owner allowed for features. Merged with `nyc-walk`'s bake pool, start tiles, faster object meshes, water planes and natural ground (which alone put it at 105.3 KB, createWorldView at 84.0 of 80 and a view with traffic at 92.1 of 88), the sums are 104.9, 83.5 and 91.6 KB: createWorldView's budget goes to 90 KB and a view with traffic's to 100.
 - **Checked:** in the model preview and in `tokyo-walk` at zooms 2 to 4: Omotesandō's street lights as slender masts with curved arms, Yoyogi's poles with their arms and stay wires; and at zoom 3 Chinatown's lanterns on Grant Avenue, the Champs-Élysées' lights and signals, the Strip's lights, Union Square's. Tests: the voxel light and signal as they were; their line versions' masts, arms, lamps and heads; an instanced model's lines as their own batch with copied offsets; the lantern wire as an unbroken sagging line through its lanterns; poles' arms and a share of stays.
 - **Rejected alternatives:**
   - **Lines on by default in the generators:** a pack written for the voxel props (a plugin's, or one outside the repository) would change under it; a pack turns them on.

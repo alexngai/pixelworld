@@ -117,7 +117,7 @@ export interface GenContext {
     x0: number;
     y0: number;
     voxel: number;
-    /** A line object's ends and half-width (cells), and the ground's height at its ends above its base (voxels; D-095). */
+    /** A line object's ends and half-width (cells), and the ground's height at its ends above its base (voxels; D-098). */
     line?: { a: [number, number]; b: [number, number]; half: number; rise?: [number, number] };
   };
   /** Target size in voxels (traffic vehicles, D-064): along, across, up. */
@@ -198,6 +198,8 @@ export interface ObjectBuildOptions {
   heightAt: (x: number, y: number) => number;
   /** Variants generated per group for instanced objects. */
   variants?: number;
+  /** Merge buildings' and landmarks' faces of several colours, the colours kept as texels (MeshData.texels). */
+  texels?: boolean;
 }
 
 export interface InstancedBatch {
@@ -211,7 +213,7 @@ export interface InstancedBatch {
 export interface ObjectMeshes {
   /** Unique objects (buildings, landmarks) merged into one mesh. */
   merged: MeshData;
-  /** Their one-pixel lines (VoxelModel.lines, D-095), a "lines" mesh. */
+  /** Their one-pixel lines (VoxelModel.lines, D-098), a "lines" mesh. */
   lines: MeshData;
   /** Repeated objects (vegetation, rocks) drawn instanced per variant. */
   batches: InstancedBatch[];
@@ -315,9 +317,9 @@ export function footprintMask(
 
 /** Build meshes for a set of instances. */
 export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptions): ObjectMeshes {
-  const merged = new MeshBuilder();
+  const merged = new MeshBuilder({ texels: opts.texels });
   const lines = new MeshBuilder();
-  // a model's one-pixel lines (D-095), placed as its voxels are, owned by the object's cell
+  // a model's one-pixel lines (D-098), placed as its voxels are, owned by the object's cell
   const addLines = (model: VoxelModel, origin: [number, number, number], cell: [number, number], into = lines) =>
     meshLines(model, opts.voxel, origin, cell, into);
   const variants = new Map<string, { mesh: MeshData; lines: MeshData | null; offsets: number[]; cells: number[] }>();
@@ -410,7 +412,7 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
     merged: merged.build(),
     lines: { ...lines.build(), primitive: "lines" },
     // an empty variant would have no bounds: leave it out; a variant's lines are a batch of their own
-    // (a "lines" mesh, D-095), with copies of its offsets, which a render scale scales per batch
+    // (a "lines" mesh, D-098), with copies of its offsets, which a render scale scales per batch
     batches: [...variants.values()].flatMap((b) =>
       [b.mesh, b.lines]
         .filter((mesh): mesh is MeshData => !!mesh && mesh.vertexCount > 0)

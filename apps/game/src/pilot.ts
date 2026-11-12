@@ -1,6 +1,6 @@
 import { CAR, PLANE } from "./tuning";
 import { turnRate, wrapAngle, type CarInput, type CarState } from "./car";
-import type { PlaneInput, PlaneState } from "./plane";
+import type { PlaneInput, PlaneParams, PlaneState } from "./plane";
 import type { PlaneWorld } from "./ground";
 import type { Point } from "./roads";
 
@@ -241,25 +241,29 @@ export class FlightPilot {
     return Number.isFinite(ground) ? ground : null;
   }
 
-  input(plane: PlaneState, world: PlaneWorld, pace: number): PlaneInput {
+  input(plane: PlaneState, world: PlaneWorld, params: PlaneParams): PlaneInput {
     let wp = this.waypoints[this.i];
     while (wp && Math.hypot(wp.x - plane.x, wp.y - plane.y) < 1.5) wp = this.waypoints[++this.i];
     // past the last: circle it, at its height and speed
     wp ??= this.waypoints[this.waypoints.length - 1];
     if (!wp) return { pitch: 0, roll: 0, throttle: 0 };
+    // bank into the turn toward it, and roll to that bank
     const want = Math.atan2(wp.y - plane.y, wp.x - plane.x);
     const err = wrapAngle(want - plane.heading);
-    const roll = clamp(err * 1.8, -1, 1);
+    const bank = clamp(err * 1.6, -PLANE.pilotBank, PLANE.pilotBank);
+    const roll = clamp((bank - plane.bank) * 2.5 - plane.rollRate * 0.1, -1, 1);
     // height: over the highest ground on the way ahead (a slow approach looks only just ahead)
     const approach = wp.speed !== undefined;
     const reach = approach ? 1.5 : 2.5 * plane.speed + 2;
     const ground = FlightPilot.groundAhead(plane, world, reach);
     const targetH = (ground ?? plane.h) + wp.agl;
-    let pitch = clamp((targetH - plane.h) * 0.8, -1, 1);
+    let climb = clamp((targetH - plane.h) * 0.3, -PLANE.pilotDive, PLANE.pilotClimb);
     // about to meet the ground: climb
     const near = FlightPilot.groundAhead(plane, world, Math.max(2, plane.speed * 0.6));
-    if (near !== null && near > plane.h - (approach ? 0.35 : 0.6)) pitch = 1;
-    const speed = wp.speed ?? PLANE.cruiseSpeed * pace;
+    if (near !== null && near > plane.h - (approach ? 0.35 : 0.6)) climb = PLANE.pilotClimb;
+    // the stick (an angle of attack) to bring the path there
+    const pitch = clamp((climb - plane.climb) * 4, -1, 1);
+    const speed = wp.speed ?? PLANE.cruiseSpeed * params.pace;
     const throttle = clamp((speed - plane.speed) * 2, -1, 1);
     return { pitch, roll, throttle };
   }

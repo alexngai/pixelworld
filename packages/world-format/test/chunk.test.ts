@@ -110,7 +110,7 @@ describe("chunk codec", () => {
     expect(plain).not.toContain("RAIL");
   });
 
-  it("round-trips rail corridors' centre-line pieces and track counts (D-094)", () => {
+  it("round-trips rail corridors' centre-line pieces and track counts (D-097)", () => {
     const grid = new TerrainGrid(4, 4);
     grid.rail[5] = (3 << 12) | (3 << 8) | 0x800; // a train corridor of four tracks
     grid.railSeg[5 * 6 + 1] = 0x10ff2000; // its second slot

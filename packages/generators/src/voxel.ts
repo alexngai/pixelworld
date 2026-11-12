@@ -1,4 +1,4 @@
-import { DIRECT_RAMP_BASE, FACE_LINE, FACE_OBJECT, MeshBuilder, type MeshData } from "./mesh";
+import { DIRECT_RAMP_BASE, FACE_LINE, FACE_OBJECT, FACE_TEXELS, MeshBuilder, type MeshData } from "./mesh";
 
 /**
  * Small voxel models for procedural (and later hand-made .vox) objects.
@@ -8,7 +8,7 @@ import { DIRECT_RAMP_BASE, FACE_LINE, FACE_OBJECT, MeshBuilder, type MeshData } 
 export class VoxelModel {
   readonly data: Uint8Array;
   /**
-   * One-pixel lines (D-095), in the model's voxel coordinates (fractions allowed),
+   * One-pixel lines (D-098), in the model's voxel coordinates (fractions allowed),
    * each a material index as voxels have: drawn as lines, not voxels, so
    * something as thin as a wire stays a pixel wide at any angle. Unique and
    * instanced objects both draw them.
@@ -75,7 +75,7 @@ export interface VoxelScale {
 }
 
 /**
- * A model's one-pixel lines (VoxelModel.lines, D-095) as line segments in
+ * A model's one-pixel lines (VoxelModel.lines, D-098) as line segments in
  * `mb`, placed as meshVoxels places its voxels (origin, scale), owned by
  * `cell`; build() it and mark it `primitive: "lines"`.
  */
@@ -106,7 +106,9 @@ export function meshLines(
  * corner sits at `origin` (world units); `cell` is the owning cell, or
  * "column" to give every voxel column the cell under it (objects bigger than
  * a bake tile's margin: each tile then bakes its own part, and faces are not
- * merged across cell lines).
+ * merged across cell lines). A builder with texels merges coplanar faces of
+ * any material, keeping each voxel face's colour as a texel: a facade of
+ * windows is then one rectangle, not one per window.
  */
 export function meshVoxels(
   model: VoxelModel,
@@ -116,7 +118,11 @@ export function meshVoxels(
   mb: MeshBuilder = new MeshBuilder(),
 ): MeshBuilder {
   const dims = [model.sx, model.sy, model.sz];
+  // flat strides into model.data along x, y, z: the sweeps below run over every voxel, so no get()
+  const strides = [1, model.sx, model.sx * model.sy];
+  const data = model.data;
   const perColumn = cell === "column";
+  const texels = mb.texels;
   const cellOf = (x: number, y: number): [number, number] => [
     Math.floor(origin[0] + (x + 0.5) * scale.h),
     Math.floor(origin[1] + (y + 0.5) * scale.h),
@@ -135,26 +141,27 @@ export function meshVoxels(
     const v = (d + 2) % 3;
     const du = dims[u]!;
     const dv = dims[v]!;
+    const nd = dims[d]!;
+    const [sd, su, sv] = [strides[d]!, strides[u]!, strides[v]!];
+    const column = strides[2]!; // voxels per layer: an index modulo it is the voxel's column
     const mask = new Int32Array(du * dv);
     const owner = new Int32Array(du * dv);
     for (const dir of [-1, 1] as const) {
-      for (let slice = 0; slice < dims[d]!; slice++) {
+      for (let slice = 0; slice < nd; slice++) {
         mask.fill(0);
-        const p = [0, 0, 0];
-        const q = [0, 0, 0];
-        q[d] = dir;
+        // the neighbour across the face, when it is inside the model (outside is empty)
+        const across = slice + dir >= 0 && slice + dir < nd ? dir * sd : 0;
+        let faces = false;
         for (let j = 0; j < dv; j++)
-          for (let i = 0; i < du; i++) {
-            p[d] = slice;
-            p[u] = i;
-            p[v] = j;
-            const m = model.get(p[0]!, p[1]!, p[2]!);
-            if (!m) continue;
-            if (model.get(p[0]! + q[0]!, p[1]! + q[1]!, p[2]! + q[2]!)) continue;
+          for (let i = 0, k = slice * sd + j * sv; i < du; i++, k += su) {
+            const m = data[k]!;
+            if (!m || (across && data[k + across])) continue;
             mask[j * du + i] = m;
-            if (colKey) owner[j * du + i] = colKey[p[1]! * model.sx + p[0]!]!;
+            if (colKey) owner[j * du + i] = colKey[k % column]!;
+            faces = true;
           }
-        // greedy rectangles
+        if (!faces) continue;
+        // greedy rectangles: of one material, or with texels of any
         for (let j = 0; j < dv; j++)
           for (let i = 0; i < du; ) {
             const m = mask[j * du + i]!;
@@ -163,13 +170,31 @@ export function meshVoxels(
               continue;
             }
             const o = owner[j * du + i]!;
-            const same = (k: number) => mask[k] === m && owner[k] === o;
+            const same = texels ? (k: number) => mask[k] !== 0 && owner[k] === o : (k: number) => mask[k] === m && owner[k] === o;
             let w = 1;
             while (i + w < du && same(j * du + i + w)) w++;
             let h = 1;
             outer: while (j + h < dv) {
               for (let k = 0; k < w; k++) if (!same((j + h) * du + i + k)) break outer;
               h++;
+            }
+            // several colours: one texel per voxel face, row by row
+            let tex: [number, number, number] | null = null;
+            if (texels)
+              for (let jj = 0; jj < h && !tex; jj++)
+                for (let k = 0; k < w; k++)
+                  if (mask[(j + jj) * du + i + k] !== m) {
+                    tex = [mb.reserveTexels(w * h), w, h];
+                    break;
+                  }
+            if (tex) {
+              const out = mb.texelData;
+              for (let jj = 0; jj < h; jj++)
+                for (let k = 0; k < w; k++) {
+                  const ramp = model.materials[mask[(j + jj) * du + i + k]!]!;
+                  if (ramp > 255) throw new Error(`meshVoxels: ramp id ${ramp} doesn't fit a texel (at most 255)`);
+                  out[tex[0] + jj * w + k] = ramp;
+                }
             }
             for (let jj = 0; jj < h; jj++) for (let k = 0; k < w; k++) mask[(j + jj) * du + i + k] = 0;
             let own: readonly [number, number];
@@ -180,7 +205,7 @@ export function meshVoxels(
               at[v] = j;
               own = cellOf(at[0]!, at[1]!);
             } else own = cell as readonly [number, number];
-            emitFace(mb, d, u, v, dir, slice, i, j, w, h, model.materials[m]!, scale, origin, own);
+            emitFace(mb, d, u, v, dir, slice, i, j, w, h, model.materials[m]!, scale, origin, own, tex);
             i += w;
           }
       }
@@ -204,6 +229,7 @@ function emitFace(
   scale: VoxelScale,
   origin: readonly [number, number, number],
   cell: readonly [number, number],
+  texels: readonly [number, number, number] | null = null,
 ): void {
   const plane = dir > 0 ? slice + 1 : slice;
   const corner = (a: number, b: number): [number, number, number] => {
@@ -219,8 +245,15 @@ function emitFace(
   const b = corner(i + w, j);
   const c = corner(i + w, j + h);
   const e = corner(i, j + h);
-  const mat = DIRECT_RAMP_BASE + ramp;
-  for (const vtx of [a, b, c, a, c, e]) mb.vertex(vtx, n, mat, FACE_OBJECT, 1, cell[0], cell[1]);
+  if (!texels) {
+    for (const vtx of [a, b, c, a, c, e]) mb.vertex(vtx, n, DIRECT_RAMP_BASE + ramp, FACE_OBJECT, 1, cell[0], cell[1]);
+    return;
+  }
+  // texel (k, jj) is the voxel face k along u and jj along v from (i, j)
+  const uvs = [[0, 0], [w, 0], [w, h], [0, 0], [w, h], [0, h]] as const;
+  [a, b, c, a, c, e].forEach((vtx, q) =>
+    mb.vertex(vtx, n, FACE_TEXELS, FACE_OBJECT, 1, cell[0], cell[1], { faceU: uvs[q]![0], faceV: uvs[q]![1], texels }),
+  );
 }
 
 /** Small deterministic PRNG (mulberry32) for generators. */

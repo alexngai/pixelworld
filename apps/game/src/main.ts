@@ -18,7 +18,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
  * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
- * `cache=0`, `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
+ * `cache=0`, `startTiles=0` (bake the first view too), `workers` (bake workers), `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
  * scripted run in real time, then its frame times).
  */
 
@@ -54,6 +54,12 @@ export interface GameDebug {
   /** Plan a road route to a lon/lat and drive it with a fixed dt; returns its samples. */
   driveTo(lon: number, lat: number, opts?: { dt?: number; maxSeconds?: number; stop?: boolean }): Promise<{ planned: number; byClass: Record<string, number>; samples: Sample[]; reached: boolean }>;
   takeOff(force?: boolean): Promise<boolean>;
+  /** Another map ("drive", "walk", "fly") here, in the same vehicle (Tab, the map buttons). */
+  switchMap(name: string): Promise<boolean>;
+  /** The other vehicle (or this one) here, on the same map (C, the vehicle buttons). */
+  switchVehicle(mode?: "car" | "plane"): Promise<boolean>;
+  /** Back to safety (R). */
+  reset(): void;
   land(force?: boolean): Promise<boolean>;
   /** Fly a landing approach to the nearest road within a radius (cells) of the plane: the cell, or null without one. */
   approachRoad(radius: number): { x: number; y: number } | null;
@@ -108,6 +114,8 @@ async function main() {
     },
     fog: params.get("fog") !== "0",
     cache: params.get("cache") !== "0",
+    startTiles: params.get("startTiles") !== "0",
+    bakeWorkers: params.has("workers") ? num("workers", 0) : undefined,
     size,
     zoom: params.has("zoom") ? num("zoom", 2) : "auto",
     rotation: num("rot", 0) & 3,
@@ -138,6 +146,9 @@ async function main() {
       return { planned: plan.cells, byClass: plan.byClass, samples, reached: pilot.done };
     },
     takeOff: (force) => game.takeOff(force),
+    switchMap: (name) => game.switchMap(name),
+    switchVehicle: (mode) => game.switchVehicle(mode),
+    reset: () => game.reset(),
     land: (force) => game.land(force),
     approachRoad: (radius) => {
       const p = game.plane?.state;

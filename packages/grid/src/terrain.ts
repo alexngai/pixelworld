@@ -228,7 +228,7 @@ export interface TerrainLayers {
    */
   roadSeg: Uint32Array;
   pathSeg: Uint32Array;
-  /** Rail corridors (D-094): their centre lines' pieces, as roadSeg; their track counts are in `rail`. */
+  /** Rail corridors (D-097): their centre lines' pieces, as roadSeg; their track counts are in `rail`. */
   railSeg: Uint32Array;
 }
 
@@ -241,7 +241,7 @@ const PER_CELL: Partial<Record<keyof TerrainLayers, number>> = { roadSeg: PIECES
 export const RAIL_STREET = 1;
 export const RAIL_CABLE = 2;
 export const RAIL_TRAIN = 3;
-/** TerrainLayers.rail (D-094): a corridor's track count less one (bits 8-10), and cells its tracks may reach (bit 11). */
+/** TerrainLayers.rail (D-097): a corridor's track count less one (bits 8-10), and cells its tracks may reach (bit 11). */
 export const RAIL_TRACKS_SHIFT = 8;
 export const RAIL_NEAR = 0x800;
 

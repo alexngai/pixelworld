@@ -12,10 +12,14 @@ export interface InitMessage {
   margin: number;
   /** Height (steps) of world-edge skirts. */
   floor: number;
+  /** The package's micro-terrain sinks under its water, drawn as planes (manifest micro.shores, D-094). */
+  shores?: boolean;
   worldWidth: number;
   worldHeight: number;
   /** Render units per world cell (manifest render.scale); 1 if absent. */
   renderScale?: number;
+  /** Tile scenes (meshes) to keep for a tile's other rotations and bare variant (default 6). */
+  meshScenes?: number;
   /** Placed objects for the whole world (experiment worlds are small). */
   objects?: WorldObjects;
   /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */

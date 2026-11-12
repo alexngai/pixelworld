@@ -92,7 +92,7 @@ describe("Chinatown's gate", () => {
 });
 
 describe("lanterns strung across a street", () => {
-  // the voxel wire, as a pack without `lines` draws it (bay-area turns lines on, D-096)
+  // the voxel wire, as a pack without `lines` draws it (bay-area turns lines on, D-099)
   const voxelWire = Object.fromEntries(
     Object.entries(style.assets).map(([g, a]) => [g, g.startsWith("prop.lanterns") ? { ...a, params: { ...a.params, lines: 0 } } : a]),
   ) as AssetCatalog;
@@ -125,7 +125,7 @@ describe("lanterns strung across a street", () => {
       }
     });
 
-  it("string their wire as a one-pixel line with `lines` (D-096; bay-area's), the lanterns round it", () => {
+  it("string their wire as a one-pixel line with `lines` (D-099; bay-area's), the lanterns round it", () => {
     expect(style.assets["prop.lanterns"]!.params!.lines).toBe(1);
     for (let seed = 1; seed <= 4; seed++) {
       const m = generateModel(style.assets, rampIds, "prop.lanterns", { seed });

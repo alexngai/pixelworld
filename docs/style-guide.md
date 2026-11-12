@@ -30,6 +30,8 @@ Rows from top to bottom: `kaibab`, `toroweap`, `coconino`, `hermit`, `supai`, `r
 - **Standard faces:** a lit top face lands on shade 4, a left-facing wall on 3 and a right-facing wall on 2. Slopes facing the sun reach 5; slopes facing away drop to 3.
 - **Cast shadows** subtract 1.6 levels, then round. Shadows come from a per-tile shadow map that includes neighbouring terrain, so they cross tile seams correctly.
 - **Shading is quantized, not smooth.** A face has one shade. Gradients exist only through dithering (§5).
+- **Natural ground (D-095):** surfaces drawn with trees or speckle (woods, scrub, grass, sand, desert, rock) are lit on their tops by the ground's slope over about a cell, not by each micro-tile, so a hillside reads as one slope rather than as triangle facets. Its light falls between shades in a 4×4 ordered dither. Ground a fifth of a step or more below the mean of a ring a cell around it (a hollow, a gully) is dithered a shade darker, fully at 0.7 steps; ground as far above it (a ridge, a knoll) a shade lighter. World-anchored patches about 2.5 cells across are a shade darker or lighter, with dithered rims (not on strata). Walls keep their own light and strata.
+- **Water (D-094):** a flat plane at the water's level; the shoreline is where the ground crosses it. Water within a micro-step of the ground under it is a shade lighter, dithered half-and-half down to two micro-steps.
 
 ## 4. Materials
 
@@ -93,7 +95,7 @@ World-anchored patterns follow the terrain through rotations and slopes. Screen-
 
 - **How AO is calculated:** per vertex, from the horizon angle of nearby terrain in 8 directions. It darkens cliff feet and canyon floors.
 - **Dead zone:** occlusion below a threshold is ignored, so open ground stays a clean flat colour.
-- **How occlusion becomes shades:** it's mapped to whole shade steps with a 4×4 ordered (Bayer) dither anchored to screen pixels. Dithering appears only where there's real occlusion.
+- **How occlusion becomes shades:** it's mapped to whole shade steps with a 4×4 ordered (Bayer) dither anchored to screen pixels. Dithering appears only where there's real occlusion, in natural ground's light, hollows and patches (§3) and in shallow water.
 
 ## 6. Outlines
 
@@ -263,7 +265,7 @@ Buildings come from data, Overture footprints with lidar heights and massing (D-
 - **Sidewalk trees** (`objects.streetTrees` with `canopy`, group `tree.street`): road cells are kept clear of everything else, so sidewalk trees stand on the verge just past the drawn asphalt, in rows along straight road cells, where the canopy map shows trees beside the real road. This is the one exception to keeping a band beside roads clear.
 - **Street furniture** (walking level): `prop.streetlight` every 45 m along main streets, 13 m from the centre line, and `prop.signal` at junctions of three or more street segments. Both are thin iron poles with a lit head, so they read as points of light at night.
 - **Strung across a street** (`across: true`, optionally limited by `name` and a lon/lat `bounds`): one prop on the road's line, turned across it. San Francisco strings `prop.lanterns` (a sagging wire of red and gold lanterns) over Grant Avenue and Stockton Street in Chinatown.
-- **One-pixel lines** (D-095, D-096): a model may draw its thinnest parts as lines a native pixel wide at any angle (`VoxelModel.line`), in the ramp's darkest shade, casting no shadow. Options, off by default: `streetLight` and `trafficSignal` with `lines: 1` (a slender mast with an arm curving out to the lamp; a pole with a mast arm over the street and a three-lamp head, `reach` voxels out), `lanterns` with `lines: 1` (the wire), `utilityPoles` with `lines: 1` (its arms and stay wires). Every pack in the repository turns them on (`desert-southwest` at half the voxels, its walking level's cells being twice the size).
+- **One-pixel lines** (D-098, D-099): a model may draw its thinnest parts as lines a native pixel wide at any angle (`VoxelModel.line`), in the ramp's darkest shade, casting no shadow. Options, off by default: `streetLight` and `trafficSignal` with `lines: 1` (a slender mast with an arm curving out to the lamp; a pole with a mast arm over the street and a three-lamp head, `reach` voxels out), `lanterns` with `lines: 1` (the wire), `utilityPoles` with `lines: 1` (its arms and stay wires). Every pack in the repository turns them on (`desert-southwest` at half the voxels, its walking level's cells being twice the size).
 
 ## 15. San Francisco (the `bay-area` pack)
 
@@ -533,8 +535,8 @@ A full pack (`worlds/_styles/tokyo/style.json`), laid out like `paris` with its 
 | `landmark.tower.cylinder` | `cylinderTower` (Tokyo's) | Shibuya 109's cylinder, on its own round footprint: silver bands between bands of glass, a lit band under the top, a blank fin on top where the sign stands |
 | `landmark.gate.torii` | `myojinTorii` (Tokyo's) | the Meiji Shrine's great torii: two round pillars on dark bases, a tie beam through them, a strut, a second beam, and the lintel whose ends curve up, capped dark; unpainted cypress |
 
-**Rails:** in corridors (D-094): a line's parallel tracks within 20 m drawn as one band along its centre line, its tracks side by side on one ballast bed, in `steel`.
+**Rails:** in corridors (D-097): a line's parallel tracks within 20 m drawn as one band along its centre line, its tracks side by side on one ballast bed, in `steel`.
 
-**Street and traffic:** utility poles (`prop.pole`, `utilityPoles`, below), street lights (slender masts with curved arms) and signals (mast arms over the street) drawn in one-pixel lines (D-096), zelkovas for `tree.street` and the dark evergreen `forest` for `tree`, and `bay-area`'s vehicles in Tokyo's palette: silver trains with a green band, indigo taxis, white buses with a green band.
+**Street and traffic:** utility poles (`prop.pole`, `utilityPoles`, below), street lights (slender masts with curved arms) and signals (mast arms over the street) drawn in one-pixel lines (D-099), zelkovas for `tree.street` and the dark evergreen `forest` for `tree`, and `bay-area`'s vehicles in Tokyo's palette: silver trains with a green band, indigo taxis, white buses with a green band.
 
-**Utility poles and wires** (`utilityPoles`, `wireSpan`, D-095): a pole every 30 m on one side of each residential street, 3 m off its centre line, its crossarm across the street and a transformer on some; streets run on through junctions where they go straight. From each pole to the next, a wire span: a one-pixel line (a voxel model's `lines`, drawn as GL lines in the ramp's darkest shade) at the street's own angle, from a voxel over the crossarm at one pole to the same at the next, sagging between them and climbing where the ground does.
+**Utility poles and wires** (`utilityPoles`, `wireSpan`, D-098): a pole every 30 m on one side of each residential street, 3 m off its centre line, its crossarm across the street and a transformer on some; streets run on through junctions where they go straight. From each pole to the next, a wire span: a one-pixel line (a voxel model's `lines`, drawn as GL lines in the ramp's darkest shade) at the street's own angle, from a voxel over the crossarm at one pole to the same at the next, sagging between them and climbing where the ground does.

@@ -283,7 +283,7 @@ export function previewScene(model: VoxelModel, groundRamp: number | null): Bake
   const hx = (model.sx * voxel.h) / 2;
   const hy = (model.sy * voxel.h) / 2;
   const meshes = [meshVoxels(model, voxel, [-hx, -hy, 0], [0, 0]).build()];
-  // its one-pixel lines (D-095), as a world tile draws them
+  // its one-pixel lines (D-098), as a world tile draws them
   if (model.lines.length) meshes.push({ ...meshLines(model, voxel, [-hx, -hy, 0], [0, 0]).build(), primitive: "lines" });
   if (groundRamp !== null) {
     const m = 2 * voxel.h;

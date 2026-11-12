@@ -162,7 +162,7 @@ def test_smoothing_flattens_noise_on_its_cells_only():
     water = np.full((3, 6), NO_WATER, dtype=np.int16)
     water[2, 0] = 10
     mc = micro.build_micro(q, 4.0, k, base, shape, water, np.zeros((3, 6), np.uint16), smooth=sigma)
-    assert (mc[2 * k :, : k + 1] == 40).all()  # the water cell stays flat at its level
+    assert mc[3 * k - 1, 1] < 40  # the water cell's bed lies under its level
     plain = micro.build_micro(q, 4.0, k, base, shape, water, np.zeros((3, 6), np.uint16))
     assert (mc[:, 3 * k + 1 :] == plain[:, 3 * k + 1 :]).all()
     assert (

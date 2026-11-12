@@ -555,7 +555,7 @@ RAIL_RULE = Map(
         "bundle": Key(
             Num(0, lo_open=True, unit="m"),
             "Parallel tracks within this distance are drawn as one corridor along its centre "
-            "line, with its track count (D-094; micro-terrain worlds).",
+            "line, with its track count (D-097; micro-terrain worlds).",
         ),
     }
 )
@@ -1087,7 +1087,7 @@ STREET_PROP_RULE = Map(
         "at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners."),
         "wires": Key(
             Str(),
-            "Strung props (D-095): one row on each street's left at `offset` (default 3 m), "
+            "Strung props (D-098): one row on each street's left at `offset` (default 3 m), "
             "joined through junctions where the street runs on straight, and a span of "
             "this group from each prop to the next.",
         ),

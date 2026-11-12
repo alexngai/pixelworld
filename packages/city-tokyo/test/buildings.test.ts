@@ -176,7 +176,7 @@ describe("Tokyo's buildings", () => {
   });
 });
 
-describe("Tokyo's wires (D-095)", () => {
+describe("Tokyo's wires (D-098)", () => {
   /** A wire span's line object as the pipeline gives it: a band of half-width lw around a → b (cells), and its frame. */
   function span(a: [number, number], b: [number, number], rise: [number, number] = [0, 0]) {
     const voxel = 1 / 16;
@@ -220,7 +220,7 @@ describe("Tokyo's wires (D-095)", () => {
     }
   });
 
-  it("hangs its poles' arms, and on some a stay wire, as one-pixel lines (D-095)", () => {
+  it("hangs its poles' arms, and on some a stay wire, as one-pixel lines (D-098)", () => {
     let stays = 0;
     for (let seed = 1; seed <= 20; seed++) {
       const m = generateModel(style.assets, rampIds, "prop.pole", { seed });

@@ -6,7 +6,9 @@ heights in micro-steps of 1/K step. The cell layers stay the gameplay summary;
 micro-terrain is what gets drawn and what vehicles drive on.
 
 Constraints from the cell layers keep the two consistent:
-- water cells are flat at their water level;
+- water is a flat plane the client draws at each water body's level, and
+  the ground under it sinks below the level, so the shoreline is where the
+  ground crosses it (D-094);
 - roads run on a bed cut along the line between connected road-cell centres,
   following the cells' road profile, so road decals sit on smooth ground;
 - sidewalks and crossings beside a road lie on its profile too where the
@@ -28,6 +30,23 @@ ROAD_BED_RADIUS = 0.3
 # How far (cells) beyond its road's bed a sidewalk may lie and still follow it
 PATH_BED_REACH = 1.5
 
+# Water (D-094): the client draws water as a flat plane at its level over the
+# water cells and their neighbours (plane_levels), and the micro-terrain
+# shapes the ground under it (shape_shore), so shorelines follow the map at
+# micro-cell resolution rather than the cells' staircase.
+SHORE_SLOPE = 1.0  # micro-steps of depth per micro-cell out from the shore
+SHORE_DEPTH = 3  # micro-steps: the deepest bed under the plane
+# A natural bank stays a micro-step above the water for SHORE_LIP micro-cells,
+# then rises SHORE_BANK per micro-cell: with the waterline's two micro-steps
+# (one above, one under), no micro-cell on it spans more than a slope tile's
+# 3, even across its diagonal, so the bank draws as slopes, not terraces.
+SHORE_LIP = 1.0
+SHORE_BANK = 1.4
+SHORE_BANK_TOP = 6  # micro-steps above the water: higher ground stands behind the bank as a cliff
+SHORE_SMOOTH = 0.5  # cells: the Gaussian that rounds water known only by its cells
+SHORE_FAR = 64.0  # micro-cells: distances are clipped here
+SHORE_FINE_PIXELS = 12e6  # the shoreline raster's budget: finer when it fits
+
 
 def expand(cells: np.ndarray, k: int) -> np.ndarray:
     """Per-cell values → per-micro-cell values."""
@@ -43,19 +62,159 @@ def corner_min(micro_cells: np.ndarray, fill: float) -> np.ndarray:
 
 
 def flatten_water(q: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
-    """Set the micro-corners of every water cell to its level (micro-steps)."""
+    """Set the micro-corners of every water cell a micro-step under its level
+    (micro-steps): a flat bed under the plane the client draws there."""
     if not (water != NO_WATER).any():
         return q
     level = np.where(water != NO_WATER, water.astype(np.float64) * k, np.inf)
     at = corner_min(expand(level, k), np.inf)
-    return np.where(np.isfinite(at), at, q)
+    return np.where(np.isfinite(at), at - 1, q)
+
+
+def plane_levels(water: np.ndarray, road_mask: np.ndarray) -> np.ndarray:
+    """The level (steps) of the water plane the client draws over each cell,
+    NO_WATER for none: a water cell's own, else the highest of its 8
+    neighbours', but none on a dry road cell. Mirrors fieldVertex's water
+    plane (packages/bake shaders), which also leaves out a neighbour's
+    micro-cells whose ground lies more than SHORE_DEPTH under the plane:
+    not its shore (shape_shore)."""
+    from scipy import ndimage
+
+    has = water != NO_WATER
+    if not has.any():
+        return water
+    nb = ndimage.maximum_filter(water, size=3, mode="constant", cval=NO_WATER)
+    road = (road_mask & 0x0FFF) != 0
+    return np.where(has, water, np.where(road, NO_WATER, nb)).astype(np.int16)
+
+
+def shore_field(
+    shape: tuple[int, int],
+    k: int,
+    water_cells: np.ndarray,
+    areas: list | None = None,
+    lines: list | None = None,
+    half_width: float = 0.5,
+) -> np.ndarray:
+    """Signed distance (micro-cells) from every micro-corner to the shoreline,
+    negative in water, shape (K·cy + 1, K·cx + 1).
+
+    areas: water polygons in cell coordinates. lines: river centre lines
+    (`(id, rank, [(xs, ys), ...])` in cells), water half_width cells either
+    side. Water cells with neither within 2 cells (a lake the map lacks, or a
+    world without shoreline data) are rounded by a Gaussian of SHORE_SMOOTH
+    cells, so their shores don't follow the cells' staircase. Shorelines are
+    drawn on a grid up to 4 times finer than the micro-corners, so they land
+    within a fraction of a micro-cell of the data.
+    """
+    import shapely
+    from rasterio import features
+    from rasterio.transform import Affine
+    from scipy import ndimage
+
+    cy, cx = shape
+    s = int(max(1, min(4, np.sqrt(SHORE_FINE_PIXELS / ((cy * k + 1) * (cx * k + 1))))))
+    ks = k * s
+    rows, cols = cy * ks + 1, cx * ks + 1
+    # pixel centres on the fine corners: pixel (c, r) lies at cell (c / ks, r / ks)
+    t = Affine(1 / ks, 0, -0.5 / ks, 0, 1 / ks, -0.5 / ks)
+
+    def burn(geoms, all_touched=False) -> np.ndarray:
+        return features.rasterize(
+            ((g, 1) for g in geoms),
+            (rows, cols),
+            transform=t,
+            dtype="uint8",
+            all_touched=all_touched,
+        ).astype(bool)
+
+    wet = np.zeros((rows, cols), dtype=bool)
+    if areas:
+        wet |= burn(areas)
+    river = [
+        shapely.LineString(np.column_stack([xs, ys]))
+        for _id, _rank, parts in lines or []
+        for xs, ys in parts
+        if len(xs) >= 2
+    ]
+    if river:
+        wet |= ndimage.distance_transform_edt(~burn(river, all_touched=True)) <= half_width * ks
+    cells = water_cells.copy()
+    if wet.any():
+        mapped = wet[: cy * ks, : cx * ks].reshape(cy, ks, cx, ks).any(axis=(1, 3))
+        cells &= ~ndimage.binary_dilation(mapped, iterations=2)
+    if cells.any():
+        ys = np.minimum(np.arange(rows) // ks, cy - 1)
+        xs = np.minimum(np.arange(cols) // ks, cx - 1)
+        fine = cells[ys][:, xs].astype(np.float32)
+        wet |= ndimage.gaussian_filter(fine, SHORE_SMOOTH * ks) > 0.5
+    if not wet.any() or wet.all():
+        return np.full((cy * k + 1, cx * k + 1), -SHORE_FAR if wet.any() else SHORE_FAR)
+    inside = ndimage.distance_transform_edt(wet)
+    outside = ndimage.distance_transform_edt(~wet)
+    sd = np.where(wet, 0.5 - inside, outside - 0.5) / s
+    return np.clip(sd[::s, ::s], -SHORE_FAR, SHORE_FAR)
+
+
+def shape_shore(
+    q: np.ndarray,
+    shore: np.ndarray,
+    water: np.ndarray,
+    road_mask: np.ndarray,
+    k: int,
+    bank: np.ndarray | None = None,
+) -> np.ndarray:
+    """Shape the ground under and around the water planes (micro-steps): wet
+    micro-corners sink under every plane drawn over them, SHORE_SLOPE deeper
+    per micro-cell out from the shore up to SHORE_DEPTH, so the shoreline is
+    where the ground crosses the plane; dry ones stand at least a micro-step
+    above it. Corners touching a road cell stay dry: roads keep their beds.
+    Beside the water cells, ground more than SHORE_DEPTH + 1 micro-steps
+    under a plane (below a dam, at a cliff's foot) isn't its shore: it's left
+    as it is, and the baker draws no plane over it (plane_levels).
+
+    bank: per cell, ground that slopes into the water (parks, beaches, woods)
+    rather than meeting it in a wall (quays, rock): a micro-step above the
+    water for SHORE_LIP micro-cells, then SHORE_BANK per micro-cell up until
+    it meets the ground, so the shore draws as slope tiles, not terraces. It
+    reaches past the planes, from the nearest one's level, up to
+    SHORE_BANK_TOP above it; ground higher still stands behind it."""
+    plane = plane_levels(water, road_mask)
+    lv = expand(np.where(plane != NO_WATER, plane.astype(np.float64) * k, np.inf), k)
+    lo = corner_min(lv, np.inf)
+    hi = -corner_min(np.where(np.isfinite(lv), -lv, np.inf), np.inf)
+    road = expand((road_mask & 0x0FFF) != 0, k)
+    by_road = corner_min(np.where(road, 0.0, 1.0), 1.0) == 0
+    in_water = corner_min(np.where(expand(water != NO_WATER, k), 0.0, 1.0), 1.0) == 0
+    shore_of = in_water | (q >= lo - SHORE_DEPTH - 1)
+    wet = (shore < 0) & np.isfinite(lo) & ~by_road & shore_of
+    dry = ~wet & np.isfinite(hi) & shore_of
+    depth = np.clip(1 + np.floor(-shore * SHORE_SLOPE), 1, SHORE_DEPTH)
+    q = np.where(wet, lo - depth, q)
+    q = np.where(dry, np.maximum(q, hi + 1), q)
+    if bank is not None and np.isfinite(hi).any():
+        from scipy import ndimage
+
+        # the nearest plane's level, as far out as a bank reaches
+        reach = SHORE_LIP + (SHORE_BANK_TOP - 1) / SHORE_BANK  # micro-cells
+        dist, (iy, ix) = ndimage.distance_transform_edt(plane == NO_WATER, return_indices=True)
+        near = np.where(
+            dist <= np.ceil(reach / k) + 1, plane[iy, ix].astype(np.float64) * k, np.inf
+        )
+        near = expand(near, k)
+        level = -corner_min(np.where(np.isfinite(near), -near, np.inf), np.inf)
+        soft = (corner_min(np.where(expand(bank, k), 1.0, 0.0), 1.0) == 1) & ~wet & ~by_road
+        rise = 1 + SHORE_BANK * np.maximum(shore - SHORE_LIP, 0)
+        soft &= np.isfinite(level) & (shore >= 0) & (rise <= SHORE_BANK_TOP)
+        q = np.where(soft, np.minimum(q, level + rise), q)
+    return q
 
 
 def reflood(micro_corners: np.ndarray, water: np.ndarray, k: int) -> np.ndarray:
-    """Finished micro-corners (int16) flattened again to the water's level, for
+    """Finished micro-corners (int16) sunk under the water's level again, for
     cells that turned to water after micro-terrain was built (bridge decks over
-    water, D-056): the road bed cut there must not show through the water.
-    Idempotent where the water hasn't changed."""
+    water, D-056; `water` holds only them): the road bed cut there must not
+    show through the water."""
     q = flatten_water(micro_corners.astype(np.float64), water, k)
     return round_half_up(q).astype(np.int16)
 
@@ -258,6 +417,8 @@ def build_micro(
     path_mask: np.ndarray | None = None,
     path_half_width: np.ndarray | None = None,
     bed_margin: float = 0.0,
+    shore: np.ndarray | None = None,
+    bank: np.ndarray | None = None,
 ) -> np.ndarray:
     """Integer micro-corner heights (micro-steps) from micro-corner elevations.
 
@@ -270,6 +431,9 @@ def build_micro(
     bed_margin: cells added to every road bed's radius. Roads drawn along
     their centre lines (D-082) lie up to about 0.7 cell off the centre-to-
     centre line their bed follows, so their beds widen to stay under them.
+    shore: signed distance (micro-cells) to the shoreline at every micro-corner
+    (shore_field), negative in water; from the water cells when None.
+    bank: per cell, ground that slopes into the water (shape_shore).
     Micro-cells follow from world_format.micro_cells.
     """
     cy, cx = base.shape
@@ -278,7 +442,9 @@ def build_micro(
     q = corner_m / (step_m / k)
     if smooth is not None and (smooth > 0).any():
         q = smooth_cells(q, smooth, k)
-    q = flatten_water(q, water, k)
+    if shore is None:
+        shore = shore_field(base.shape, k, water != NO_WATER)
+    q = shape_shore(q, shore, water, road_mask, k, bank)
     centre = cell_corner_heights(base, shape).mean(axis=0)
     beds = road_segments(road_mask, centre, road_half_width, bed_margin)
     if path_mask is not None and (path_mask & CONNECT_MASK).any():
@@ -291,5 +457,7 @@ def build_micro(
         q = follow_beds(q, beds, segs, k)
     else:
         q = cut_road_beds(q, beds, k)
-    q = flatten_water(q, water, k)  # water wins where a road bed touches a shore
+    q = shape_shore(
+        q, shore, water, road_mask, k, bank
+    )  # the shore wins where a road bed reaches it
     return round_half_up(q).astype(np.int16)

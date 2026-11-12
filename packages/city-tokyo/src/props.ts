@@ -11,12 +11,12 @@ import { VoxelModel, type Generator } from "pixelworld/generators";
  * from pole to pole. A transformer on some poles. Wires and arms overhang,
  * as the strung lanterns' wire does: a prop, not a building.
  * With `wires: 0` it is the pole alone, in the middle of a small model,
- * for streets whose wires are spans of their own (`wireSpan`, D-095).
+ * for streets whose wires are spans of their own (`wireSpan`, D-098).
  * params: span (voxels across the street; 12), length (voxels between poles;
  * 48, 30 m at the walking level), height (the pole's voxels; 26), sag (2),
  * transformer (the share of poles with one; 0.3), cable (0: no telephone
  * cable), wires (0: none), lines (1: the arms and wires one-pixel lines,
- * D-095, and a stay wire on some poles; 0), stay (the share of poles with
+ * D-098, and a stay wire on some poles; 0), stay (the share of poles with
  * one; 0.35).
  * roles: pole, wire, box (the transformer; pole if absent).
  */
@@ -38,7 +38,7 @@ export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
   const zLow = h - 6;
   const thin = param("lines", 0) > 0;
   if (thin) {
-    // one-pixel lines (D-095): the arms, and on some poles a stay wire down to the ground along the street
+    // one-pixel lines (D-098): the arms, and on some poles a stay wire down to the ground along the street
     m.line([px - 2, py + 0.5, zTop + 0.5], [px + 2, py + 0.5, zTop + 0.5], pole);
     m.line([px - 1, py + 0.5, zLow + 0.5], [px + 1, py + 0.5, zLow + 0.5], pole);
     if (rand() < param("stay", 0.35)) m.line([px + 0.5, py + 0.5, zLow], [px + 0.5, py + 0.5 + Math.round(h * 0.3), 0], wire);
@@ -69,7 +69,7 @@ export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
 };
 
 /**
- * A wire's span from one utility pole to the next (D-095): a line object
+ * A wire's span from one utility pole to the next (D-098): a line object
  * (`frame.line`, its ends the poles' positions) drawn as a one-pixel line
  * (VoxelModel.lines) at any angle: from `height` voxels over the ground at
  * one pole to the same over the ground at the other, sagging between them in

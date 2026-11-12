@@ -92,6 +92,61 @@ export class TileCache {
   }
 }
 
+/**
+ * A world's start tiles (tools/prebake.mjs): the tiles of its first view,
+ * baked ahead, read before baking so a first visit shows them at once. Keyed
+ * as the tile cache is (package, style, bake code, plugins), so after a change
+ * to any of them its tiles no longer match and are baked as before. The file:
+ * "PXST", the header's length (u32, little-endian), the header (JSON: each
+ * tile's key, placement and the span of its gzip pixels), then the pixels.
+ */
+export class StartTiles {
+  private constructor(
+    private readonly tiles: Map<string, StartTile>,
+    private readonly data: Uint8Array,
+  ) {}
+
+  /** The pack at `url`, or null without one (a dev server answers a missing file with its index.html). */
+  static async load(url: string | URL): Promise<StartTiles | null> {
+    try {
+      const res = await fetch(url);
+      return res.ok ? StartTiles.parse(new Uint8Array(await res.arrayBuffer())) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static parse(file: Uint8Array): StartTiles | null {
+    if (file.length < 8 || new TextDecoder().decode(file.subarray(0, 4)) !== "PXST") return null;
+    const n = new DataView(file.buffer, file.byteOffset).getUint32(4, true);
+    const head = JSON.parse(new TextDecoder().decode(file.subarray(8, 8 + n))) as { tiles: StartTile[] };
+    return new StartTiles(new Map(head.tiles.map((t) => [t.key, t])), file.subarray(8 + n));
+  }
+
+  get size(): number {
+    return this.tiles.size;
+  }
+
+  async get(key: string): Promise<BakedImage | null> {
+    const t = this.tiles.get(key);
+    if (!t) return null;
+    const pixels = new Uint8Array(await gunzip(this.data.slice(t.offset, t.offset + t.length).buffer));
+    return { left: t.left, top: t.top, width: t.width, height: t.height, depthBase: t.depthBase, pixels };
+  }
+}
+
+interface StartTile {
+  key: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  depthBase: number;
+  /** Its gzip pixels in the data after the header. */
+  offset: number;
+  length: number;
+}
+
 interface StoredTile {
   left: number;
   top: number;

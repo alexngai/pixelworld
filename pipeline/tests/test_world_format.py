@@ -174,7 +174,7 @@ def test_objects_golden_files_hold_the_same_instances():
 
 
 def test_rail_corridor_pieces_round_trip_and_are_left_out_when_empty():
-    # D-094: TSG sections, one per used slot, beside the RAIL layer's counts
+    # D-097: TSG sections, one per used slot, beside the RAIL layer's counts
     chunk = golden_chunk()
     n = chunk.base.shape[0]
     chunk.rail = np.zeros((n, n), np.uint16)

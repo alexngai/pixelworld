@@ -75,6 +75,19 @@ ROAD_ORDER = (
 PATH_ORDER = ("path", "cycleway", "steps", "footway", "sidewalk", "crosswalk", "pedestrian")
 # the river lines a spec without `sources.rivers` draws
 RIVER_SUBTYPES = ["river"]
+# the map's water polygons that shape shores in the micro-terrain (D-094):
+# not pools, fountains, wastewater tanks or the named bays and shoals over the sea
+WATER_AREA_CLASSES = [
+    "ocean",
+    "river",
+    "lake",
+    "pond",
+    "reservoir",
+    "water",
+    "dock",
+    "canal",
+    "lagoon",
+]
 # paths that lie on the bed of the road they belong to (micro.follow_beds); footways,
 # pedestrian streets and plazas keep their own ground
 PATHS_ON_ROAD_BEDS = ("sidewalk", "crosswalk")
@@ -251,7 +264,7 @@ def water_under_decks(
     surface = np.where(under, S["water"], surface).astype(surface.dtype)
     if micro is not None:
         mc, k = micro
-        micro = (micro_stage.reflood(mc, water, k), k)
+        micro = (micro_stage.reflood(mc, np.where(under, water, NO_WATER), k), k)
     return base, shape, water, surface, micro
 
 
@@ -576,7 +589,7 @@ def rail_lines(
     half cell, so a track bends where its street was straightened, then
     simplified again (`simplify` cells) so it's drawn in long runs rather
     than wobbling from row to row. `bundle_of`, if given, gets each line
-    whose rule bundles its tracks (D-094): its id → the rule's `bundle` metres."""
+    whose rule bundles its tracks (D-097): its id → the rule's `bundle` metres."""
     out = []
     claimed: set[str] = set()
     for rule in rules:
@@ -624,6 +637,27 @@ def _lines_in_cells(layout, rows: list[dict], rank_of) -> list:
             cell_parts.append((xs, ys))
         if cell_parts:
             out.append((row["id"], rank_of(row), cell_parts))
+    return out
+
+
+def _areas_in_cells(layout, rows: list[dict], bbox) -> list:
+    """Polygons (lon/lat rows) clipped to around the box and mapped into cells."""
+    w, s, e, n = bbox
+    pad = 0.01
+    out = []
+    for row in rows:
+        geom = shapely.clip_by_rect(
+            shapely.from_wkt(row["geometry"]), w - pad, s - pad, e + pad, n + pad
+        )
+        if geom.is_empty:
+            continue
+        if layout.warped:
+            geom = shapely.segmentize(geom, 0.01)  # as _lines_in_cells: the warp bends long edges
+        out.append(
+            shapely.transform(
+                geom, lambda c: np.column_stack(layout.lonlat_to_cell(c[:, 0], c[:, 1]))
+            )
+        )
     return out
 
 
@@ -877,7 +911,7 @@ def build(
         )
         progress.log(f"rails: {int((rail != 0).sum())} cells from {len(rail_rows)} segments")
         if bundle_of:
-            # rail corridors (D-094): a rule's parallel tracks as one corridor each,
+            # rail corridors (D-097): a rule's parallel tracks as one corridor each,
             # drawn along its centre line with its track count
             corridors = []
             for kind, reach in sorted(
@@ -979,6 +1013,18 @@ def build(
         if path_layer is not None and path_hw is not None:
             on_bed = [i for i, c in path_ids.items() if c in PATHS_ON_ROAD_BEDS]
             path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
+        # shorelines (D-094): the map's water polygons and river lines shape the
+        # ground under the water planes, at micro-cell resolution
+        areas = _areas_in_cells(
+            layout, overture.water_areas(release, bbox, WATER_AREA_CLASSES), bbox
+        )
+        river_hw = (
+            terrain.get("riverWidthMeters", region.meters_per_cell) / 2 / region.meters_per_cell
+        )
+        shore = micro_stage.shore_field(
+            (cy, cx), k, water != NO_WATER, areas, river_lines, max(river_hw, 0.75 / k)
+        )
+        progress.log(f"shores: {len(areas)} water areas, {len(river_lines)} river lines")
         mc = micro_stage.build_micro(
             micro_m,
             step_m,
@@ -993,6 +1039,9 @@ def build(
             None if path_hw is None else path_hw / 32.0,
             # ponytail: a wider bed, not one cut along the pieces; cut along them if hills show it
             bed_margin=CENTRELINE_BED_MARGIN if centrelines else 0.0,
+            shore=shore,
+            # quays and rock meet the water in walls; other ground slopes into it
+            bank=~np.isin(surface, [S["none"], S["urban"], S["rock"]]),
         )
         micro = (mc, k)
         progress.log(f"micro: K={k}, {mc.shape[1] - 1}×{mc.shape[0] - 1} micro-cells")
