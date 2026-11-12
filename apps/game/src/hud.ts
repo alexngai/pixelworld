@@ -3,7 +3,8 @@ import type { RouteNetwork } from "@pixelworlds/sim";
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),
  * a banner for events, a minimap of the world's roads (top right), the
- * landmarks' names over them, and the key help (H). Plain DOM over the canvas.
+ * landmarks' names over them, buttons for the world's levels and a reset
+ * (bottom left), and the key help (H). Plain DOM over the canvas.
  */
 
 export interface HudInfo {
@@ -19,6 +20,9 @@ export interface HudInfo {
   aglMeters?: number | null;
   altitudeMeters?: number | null;
   throttle?: number;
+  /** The nose over the horizon and the bank (rad). */
+  pitch?: number;
+  bank?: number;
   road?: string | null;
   assist?: boolean;
   fps: number;
@@ -34,20 +38,26 @@ const HELP = `<h2>Keys</h2>
 <tr><td>G</td><td>road assist on/off (keeps to the road while the wheel is straight)</td></tr>
 <tr><td>T</td><td>take off: fast on a long straight road</td></tr>
 <tr><th colspan="2">Plane</th></tr>
-<tr><td>W / ↑ · S / ↓</td><td>climb · descend</td></tr>
-<tr><td>A D / ← →</td><td>bank and turn</td></tr>
+<tr><td>W / ↑ · S / ↓</td><td>pull · push (hold W to loop)</td></tr>
+<tr><td>A D / ← →</td><td>roll (bank to turn; hold to roll right round)</td></tr>
+<tr><td>Q / E</td><td>rudder (yaw)</td></tr>
 <tr><td>Shift or + · Z or −</td><td>throttle up · down</td></tr>
+<tr><td>hands off</td><td>rolls upright and levels out by itself</td></tr>
 <tr><td>L</td><td>land: low and slow over a road (it lands by itself too)</td></tr>
 <tr><th colspan="2">Both</th></tr>
-<tr><td>Q / E</td><td>rotate the view</td></tr>
+<tr><td>[ / ]</td><td>rotate the view (Q / E in the car)</td></tr>
 <tr><td>1–6</td><td>zoom</td></tr>
-<tr><td>R</td><td>back onto the nearest road (car) · level out higher up (plane)</td></tr>
+<tr><td>Tab</td><td>next map, here: driving → walking → flying (in the same vehicle)</td></tr>
+<tr><td>C</td><td>car ⇄ plane, here, on the same map (the buttons bottom left do both)</td></tr>
+<tr><td>R</td><td>back to safety: onto the nearest road (car) · level, over everything around (plane)</td></tr>
 <tr><td>V</td><td>traffic on/off</td></tr>
 <tr><td>P</td><td>pause</td></tr>
 <tr><td>M</td><td>minimap</td></tr>
 <tr><td>H</td><td>this help</td></tr>
 </table>
 <p>URL: <code>?world=/sf/</code> · <code>?start=lon,lat</code> · <code>?traffic=0</code> · <code>?run=1</code> drives Las Vegas → Hoover Dam → the Grand Canyon and flies the canyon by itself, then shows its frame times.</p>`;
+
+const deg = (rad = 0) => `${rad >= 0 ? "+" : "−"}${Math.abs(Math.round((rad * 180) / Math.PI))}`;
 
 const CLASS_COLOUR: Record<string, string> = {
   motorway: "#f2c35b",
@@ -67,6 +77,9 @@ export class Hud {
   private bannerUntil = 0;
   private readonly root: HTMLElement;
   private readonly labelEls: HTMLElement[] = [];
+  private readonly bar: HTMLElement;
+  /** A button was clicked: "vehicle:car", "vehicle:plane", "map:drive" (or walk, fly), or "reset". */
+  onButton: ((what: string) => void) | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -83,6 +96,35 @@ export class Hud {
     this.help.innerHTML = HELP;
     this.help.classList.add("hidden");
     this.map = el("minimap", "canvas") as HTMLCanvasElement;
+    this.bar = el("modes");
+    this.bar.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button");
+      if (!b) return;
+      b.blur(); // keys stay the game's
+      this.onButton?.(b.dataset.go!);
+    });
+  }
+
+  /** The vehicle and map buttons (the current ones marked), and the reset. */
+  setButtons(maps: readonly { name: string; label: string }[], map: string, mode: "car" | "plane"): void {
+    const short: Record<string, string> = { drive: "Drive", walk: "Walk", fly: "Fly" };
+    const button = (go: string, text: string, title: string, on = false) => {
+      const e = document.createElement("button");
+      e.dataset.go = go;
+      e.textContent = text;
+      e.title = title;
+      e.tabIndex = -1;
+      e.classList.toggle("on", on);
+      return e;
+    };
+    const caption = (text: string) => Object.assign(document.createElement("span"), { textContent: text });
+    this.bar.replaceChildren(
+      button("vehicle:car", "Car", "Drive here (C)", mode === "car"),
+      button("vehicle:plane", "Plane", "Fly here (C)", mode === "plane"),
+      caption("map"),
+      ...maps.map((m) => button(`map:${m.name}`, short[m.name] ?? m.label, `${m.label} map (Tab)`, m.name === map)),
+      button("reset", "Reset", "Back to safety (R)"),
+    );
   }
 
   toggleHelp(): void {
@@ -94,7 +136,7 @@ export class Hud {
   }
 
   hide(): void {
-    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, ...this.labelEls]) e.classList.add("hidden");
+    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, this.bar, ...this.labelEls]) e.classList.add("hidden");
   }
 
   /** Names over places on the canvas (CSS px from its top-left, as the camera projects them). */
@@ -132,6 +174,7 @@ export class Hud {
       lines.push(
         `alt ${info.altitudeMeters == null ? "–" : Math.round(info.altitudeMeters)} m · ${info.aglMeters == null ? "–" : Math.round(info.aglMeters)} m over ground`,
         `throttle ${Math.round((info.throttle ?? 0) * 100)}%`,
+        `pitch ${deg(info.pitch)}° · bank ${deg(info.bank)}°`,
       );
     } else lines.push(`${info.road ? `on the ${info.road}` : "off-road"}${info.assist ? "" : " · assist off"}`);
     lines.push(info.place ? `near ${info.place}` : info.lonLat ? `${info.lonLat[1].toFixed(4)}°, ${info.lonLat[0].toFixed(4)}°` : "");

@@ -338,8 +338,8 @@ def land_use(
 def water_areas(
     release: str, bbox: tuple[float, float, float, float], classes: list[str]
 ) -> list[dict]:
-    """Water polygons of the given classes (base theme `water`, from
-    OpenStreetMap's natural=water and its kinds): ponds, moats, lakes, …"""
+    """Water polygons of the given classes (base theme `water`): the sea from
+    OpenStreetMap's coastline, rivers' banks, lakes and docks."""
     return _areas(release, bbox, "water", classes)
 
 

@@ -5,6 +5,7 @@ import {
   BakeService,
   Camera,
   Compositor,
+  StartTiles,
   TileCache,
   revealRect,
   tileKey,
@@ -72,12 +73,19 @@ interface TileEntry {
   ty: number;
   /** A bare variant (buildings left out), for a reveal. */
   bare?: boolean;
+  /** The ground alone, drawn until the whole tile is baked. */
+  ground?: boolean;
 }
+
+/** Bake workers by default: the cores less one for the page, at most 4 (each keeps its own copy of the world's objects). */
+const defaultBakeWorkers = (): number => Math.max(1, Math.min(4, (globalThis.navigator?.hardwareConcurrency ?? 2) - 1));
 
 /** Screen px around a reveal whose bare tiles are baked ahead of it moving there. */
 const REVEAL_AHEAD_PX = 32;
 
 type ScreenBox = { left: number; top: number; right: number; bottom: number };
+
+const withSlash = (u: URL): URL => (u.pathname.endsWith("/") ? u : new URL(u.pathname + "/" + u.search, u));
 
 const overlaps = (img: BakedImage, b: ScreenBox): boolean =>
   img.left < b.right && img.left + img.width > b.left && img.top < b.bottom && img.top + img.height > b.top;
@@ -95,14 +103,19 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
   const cache = await openTileCache(opts.cache);
+  // the first view's tiles baked ahead, read before the cache (tools/prebake.mjs)
+  const start = opts.startTiles === false ? Promise.resolve(null) : StartTiles.load(opts.startTiles ?? new URL("start-tiles.bin", withSlash(w.base)));
+  const keyed = cache !== null || opts.startTiles !== false;
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
-  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, cache ? await pluginsKey(plugins.descriptors) : []));
+  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
-    if (cache) {
-      const hit = await cache.get((await cacheKeyReady)(t));
-      if (hit) return { cached: hit };
+    if (keyed) {
+      // a ground request is answered with the whole tile where that is kept
+      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t);
+      const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
+      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}) };
     }
     return { slice: await tileSlice(w, t) };
   };
@@ -110,6 +123,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
   const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
     plugins: plugins.refs,
+    workers: opts.bakeWorkers ?? defaultBakeWorkers(),
   });
   service.failures.unloaded = plugins.missing; // named in failures of generators nobody registered (D-072)
   await mainThread.catch((e: unknown) => {
@@ -173,6 +187,7 @@ class View implements WorldView {
   private readonly baked: BakedTiles;
   private readonly motion = new CameraMotion();
   private readonly lookAhead: number;
+  private readonly groundFirst: boolean;
   private readonly prefetches = new Prefetches();
   /** Where a revealing entity cleared the world last frame (absolute screen px), or null. */
   private revealBox: ScreenBox | null = null;
@@ -192,6 +207,7 @@ class View implements WorldView {
     this.bakes = opts.recordBakes ? [] : null;
     this.replacing = opts.replace ?? null;
     this.lookAhead = Math.max(0, opts.lookAhead ?? LOOK_AHEAD_S);
+    this.groundFirst = opts.groundFirst !== false;
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
@@ -284,18 +300,21 @@ class View implements WorldView {
         const { meshMs, bakeMs, vertices } = res.stats;
         this.bakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
       }
-      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : {}) };
+      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : res.ground ? { ground: true } : {}) };
+      const whole = !res.bare && !res.ground;
+      // the ground came after the whole tile: not needed
+      if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
       if (res.image) {
         const img = this.compositor.upload(res.image);
         const bytes = res.image.width * res.image.height * 4;
         this.gpuBytes += bytes;
         this.gpu.set(res.key, { img, bytes, lastDrawn: this.frameNo, ...at });
         // a tile with missing-model markers isn't kept: a reload bakes it again and reports why (D-072)
-        if (!res.fromCache && !res.modelsFailed && this.cache) void this.cache.put(this.cacheKey(res), res.image);
+        if (!res.fromCache && !res.modelsFailed && !res.ground && this.cache) void this.cache.put(this.cacheKey(res), res.image);
       } else {
         this.gpu.set(res.key, { img: null, bytes: 0, lastDrawn: this.frameNo, ...at });
       }
-      if (!res.bare) this.baked.set(res.rotation, res.tx, res.ty, !!res.image);
+      if (whole) this.baked.set(res.rotation, res.tx, res.ty, !!res.image);
       this.dirty = true;
     };
     this.service.onError = opts.onError ?? ((m) => console.error(m));
@@ -497,11 +516,17 @@ class View implements WorldView {
     const asked = this.prefetches.size
       ? this.prefetches.wanted(`${r}:${info.view.width}x${info.view.height}`, (area) => this.prefetchTiles(r, area))
       : [];
-    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, this.bareWanted(r, order));
+    // the ground of visible tiles not drawn yet, first: quick, so the view is never blank
+    const ground = this.groundFirst
+      ? order.filter((t) => t.visible && !this.gpu.has(tileKey(r, t.tx, t.ty))).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, ground: true }))
+      : [];
+    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, this.bareWanted(r, order), ground);
     this.service.want(this.wanted);
     if (this.prefetches.size) this.prefetches.settle((t) => this.gpu.has(tileKey(t.rotation, t.tx, t.ty)));
 
     const drawTiles: GpuImage[] = [];
+    // tiles' ground alone, under everything while they bake (a whole tile leaves holes where its neighbours' buildings stand)
+    const grounds: GpuImage[] = [];
     let complete = true;
     for (const t of order) {
       const entry = this.gpu.get(tileKey(r, t.tx, t.ty));
@@ -509,6 +534,16 @@ class View implements WorldView {
         entry.lastDrawn = this.frameNo;
         if (entry.img) drawTiles.push(entry.img);
       } else if (t.visible) complete = false;
+      const ground = this.gpu.get(tileKey(r, t.tx, t.ty, false, true));
+      if (ground) {
+        ground.lastDrawn = this.frameNo;
+        if (ground.img) grounds.push(ground.img);
+      }
+    }
+    // every visible tile whole: the grounds have done their part
+    if (complete && grounds.length) {
+      for (const [key, e] of [...this.gpu]) if (e.ground) this.drop(key);
+      grounds.length = 0;
     }
 
     let drawn = this.dirty;
@@ -553,11 +588,9 @@ class View implements WorldView {
           fracX: snap.fracX,
           fracY: snap.fracY,
           zoom: cam.zoom,
-          internalWidth: cam.internalWidth,
-          internalHeight: cam.internalHeight,
           depthRange: this.depthRange,
         };
-        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare);
+        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds);
         this.redrawLast();
         this.renderMs = performance.now() - t0;
         this.dirty = !complete; // keep redrawing while tiles stream in
@@ -608,6 +641,16 @@ class View implements WorldView {
     return out;
   }
 
+  /** Release a tile image, to be baked again if wanted. */
+  private drop(key: TileKey): void {
+    const e = this.gpu.get(key);
+    if (!e) return;
+    if (e.img) this.compositor.release(e.img);
+    this.gpuBytes -= e.bytes;
+    this.gpu.delete(key);
+    this.service.forget(key);
+  }
+
   private evict(): void {
     if (this.gpuBytes <= GPU_BUDGET_BYTES) return;
     const old = [...this.gpu.entries()]
@@ -618,7 +661,7 @@ class View implements WorldView {
       this.compositor.release(e.img!);
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
-      if (!e.bare) this.baked.set(e.rotation, e.tx, e.ty, false);
+      if (!e.bare && !e.ground) this.baked.set(e.rotation, e.tx, e.ty, false);
       this.service.forget(key);
     }
   }
@@ -666,10 +709,12 @@ class View implements WorldView {
     return {
       renderer: this.service.renderer,
       bakeMode: this.service.mode,
+      bakeWorkers: this.service.workers,
       tilesBaked: t.tiles,
+      groundTiles: t.ground,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
-      tilesPending: this.wanted.filter((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty, t.bare))).length,
+      tilesPending: this.wanted.filter((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
       chunksLoaded: this.w.store.loadedCount,
       chunksTotal: this.w.manifest.chunks.length,
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,

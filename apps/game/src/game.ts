@@ -13,6 +13,7 @@ import { Hud } from "./hud";
 import { levelLabel, levelUrl, poseToGeo, startFor, type GeoPose } from "./levels";
 import { landmarkName, landmarkPlaces, nearestPlace, GAZETTEER, type NamedPlace } from "./places";
 import { PlaneController } from "./planeController";
+import { ViewTransitions } from "./transition";
 import { DRIVE_PACE, FLY_PACE, GAUGE_KMH, PLANE } from "./tuning";
 
 /**
@@ -20,8 +21,13 @@ import { DRIVE_PACE, FLY_PACE, GAUGE_KMH, PLANE } from "./tuning";
  * plane as the view's controller. Taking off and landing load the other
  * scale level at the same lon/lat into a new view that replaces the old one
  * on the same canvas when its first frame is complete (the engine's
- * `replace`), so the page never reloads and never flashes.
+ * `replace`), so the page never reloads and never flashes; the old frame
+ * then zooms away into the new one (transition.ts), as do zooms and turns
+ * of the view.
  */
+
+/** How long the view's changes take (ms), and how long a turn of the view waits for its tiles. */
+const FX = { level: 800, zoom: 240, turn: 280, turnWait: 500 };
 
 export interface GameOptions {
   canvas: HTMLCanvasElement;
@@ -36,6 +42,12 @@ export interface GameOptions {
   traffic?: { enabled?: boolean; seed?: number; paused?: boolean; density?: number };
   fog?: boolean;
   cache?: boolean;
+  /** Read the world's start tiles, its first view baked ahead (default true; tools/prebake.mjs bakes without). */
+  startTiles?: boolean;
+  /** Bake workers (default the engine's: the cores less one, at most 4). */
+  bakeWorkers?: number;
+  /** Show visible tiles' ground while they bake (default true). */
+  groundFirst?: boolean;
   /** A fixed canvas size (device px); default: follow the page. */
   size?: { width: number; height: number };
   zoom?: number | "auto";
@@ -78,6 +90,8 @@ export interface GameState {
   aglMeters?: number | null;
   altitudeMeters?: number | null;
   throttle?: number;
+  pitch?: number;
+  bank?: number;
   shadow?: { x: number; y: number; h: number };
   canLand?: boolean;
   crashes?: number;
@@ -127,7 +141,7 @@ export class Game {
   /** The world's landmarks, named, for the labels over them. */
   private marks: { id: string; name: string; x: number; y: number; top?: number }[] = [];
   /** A level change in progress. */
-  transition: "takeoff" | "landing" | null = null;
+  transition: "takeoff" | "landing" | "switch" | null = null;
   /** Scripts step the controllers (`paused` on every controller, now and after level changes). */
   paused = false;
   readonly frames = new FrameStats();
@@ -136,9 +150,21 @@ export class Game {
   readonly changes: { from: string; to: string; ms: number }[] = [];
   private hudT = 0;
   private offFrame: (() => void) | null = null;
+  private readonly fx: ViewTransitions;
+  /** While another level loads: keep a copy of each frame of this one, and where its vehicle is, for the change. */
+  private holding = false;
+  private changeFrom: ReturnType<Game["anchor"]> | null = null;
 
   private constructor(private readonly opts: GameOptions) {
     this.hud = opts.hud ? new Hud(opts.hud) : null;
+    if (this.hud)
+      this.hud.onButton = (what) => {
+        const [kind, name] = what.split(":");
+        if (kind === "reset") this.reset();
+        else if (kind === "vehicle") void this.switchVehicle(name as Mode);
+        else if (kind === "map" && name) void this.switchMap(name);
+      };
+    this.fx = new ViewTransitions(opts.canvas);
   }
 
   static async create(opts: GameOptions): Promise<Game> {
@@ -189,6 +215,9 @@ export class Game {
       style: opts.style,
       size: opts.size,
       cache: opts.cache ?? true,
+      ...(opts.startTiles === false ? { startTiles: false as const } : {}),
+      ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
+      ...(opts.groundFirst === false ? { groundFirst: false } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
         : { rotation: opts.rotation ?? 0, zoom: opts.zoom ?? "auto" },
@@ -221,6 +250,7 @@ export class Game {
     this.marks = view.query.landmarks().map((l) => ({ id: l.id, name: landmarkName(l.id), x: l.x, y: l.y }));
     this.places = [...landmarkPlaces(view.query.landmarks(), view.query.cellToLonLat), ...GAZETTEER];
     this.hud?.setWorld(view.world.cellsX, view.world.cellsY, routes, view.query.landmarks());
+    this.hud?.setButtons(this.levels, this.map, this.mode);
     this.offFrame = view.onFrame((e) => this.onFrame(e.now, e.dt));
     if (old && !same) this.changes.push({ from: old.world.level ?? "", to: view.world.level ?? "", ms: performance.now() - t0 });
     this.transition = null;
@@ -231,6 +261,10 @@ export class Game {
     this.frames.tick(now);
     // the old vehicle rises from the road while the flying level loads
     if (this.transition === "takeoff" && this.car) this.car.coast(dt, 2.5);
+    if (this.holding) {
+      this.fx.refresh();
+      this.changeFrom = this.anchor(); // the old vehicle coasts on while the new level loads
+    }
     this.labelLandmarks();
     if (now - this.hudT < 100) return;
     this.hudT = now;
@@ -261,6 +295,8 @@ export class Game {
         ? "taking off…"
         : this.transition === "landing"
           ? "landing…"
+          : this.transition === "switch"
+            ? "on the way…"
           : this.mode === "car" && this.car?.canTakeOff
             ? "T: take off"
             : this.mode === "plane" && this.plane?.canLand
@@ -306,6 +342,8 @@ export class Game {
         aglMeters: altitude === null || under === null ? null : altitude - under,
         altitudeMeters: altitude,
         throttle: p.state.throttle,
+        pitch: p.state.pitch,
+        bank: p.state.bank,
         shadow: p.shadowPose ?? undefined,
         canLand: p.canLand,
         crashes: p.crashes,
@@ -340,16 +378,19 @@ export class Game {
     this.transition = "takeoff";
     car.frozen = true;
     this.hud?.say("Taking off…", 2);
+    const gen = this.beginChange(here);
     try {
       const manifest = here ? this.manifest : await fetchManifest(url);
       // on the same map the plane keeps the car's speed (another level's speeds differ)
       await this.load(url, manifest, () => new PlaneController({ pose, agl: PLANE.startAgl, speed: here ? s.speed : undefined }));
     } catch (e) {
+      this.endChange(null);
       this.transition = null;
       car.frozen = false;
       car.lift = 0;
       throw e;
     }
+    this.endChange(gen);
     this.hud?.say(here ? "Airborne" : `Airborne · ${levelLabel(this.manifest)} level`, 2.5);
     return true;
   }
@@ -371,19 +412,155 @@ export class Game {
     this.transition = "landing";
     plane.frozen = true;
     this.hud?.say("Landing…", 2);
+    const gen = this.beginChange(here);
     try {
       const manifest = here ? this.manifest : await fetchManifest(url);
       // touch down rolling: half the road's speed at the driving level's pace
       const dk = Math.max(DRIVE_PACE.floor, Math.min(1, Math.pow(manifest.scale.metersPerCell / DRIVE_PACE.ref, 0.3)));
       await this.load(url, manifest, (routes) => new CarController({ pose, snap: 8, speed: 3 * dk, routes, traffic: () => this.trafficOn() }));
     } catch (e) {
+      this.endChange(null);
       this.transition = null;
       plane.frozen = false;
       throw e;
     }
+    this.endChange(gen);
     const car = this.car;
     this.hud?.say(car?.outside ? "That place is outside the driving map: starting at its start." : here ? "Landed" : `Landed · ${levelLabel(this.manifest)} level`, 2.5);
     return true;
+  }
+
+  /** Where the ground under the vehicle is on the canvas (CSS px; the two levels' ground meets), and the view's pixels per metre. */
+  private anchor(): { x: number; y: number; pxPerMetre: number } {
+    const s = this.controller.state;
+    const p = this.view.camera.project(s.x, s.y) ?? this.view.camera.project(s.x, s.y, s.h);
+    return { x: p.x, y: p.y, pxPerMetre: (this.view.camera.zoom * this.view.world.renderScale) / this.manifest.scale.metersPerCell };
+  }
+
+  /**
+   * A level change begins: hold the frame. On the same view (flying over a
+   * walking level) the vehicles swap under a still frame; another level
+   * loads while this one runs on, so its frames are copied as they come.
+   */
+  private beginChange(same: boolean): number {
+    const gen = this.fx.hold(same);
+    this.holding = !same;
+    this.changeFrom = this.anchor();
+    return gen;
+  }
+
+  /** …and ends (null: it failed): the held frame zooms into the new level's, at the vehicle. */
+  private endChange(gen: number | null): void {
+    this.holding = false;
+    const from = this.changeFrom;
+    this.changeFrom = null;
+    if (gen === null || !from) return this.fx.stop();
+    const to = this.anchor();
+    void this.fx.release(gen, { ms: FX.level, scale: to.pxPerMetre / from.pxPerMetre, from, to });
+  }
+
+  /** Turn the view a quarter, the old frame turning away as the new one comes in. */
+  private turnView(d: 1 | -1): void {
+    const view = this.view;
+    if (this.transition) return view.camera.rotate(d); // a level change holds the frame already
+    const gen = this.fx.hold();
+    view.camera.rotate(d);
+    // its tiles first (they may not be baked in this rotation yet), but not for long
+    void Promise.race([view.ready(), new Promise((r) => setTimeout(r, FX.turnWait))]).then(() => this.fx.release(gen, { ms: FX.turn, turn: d * 12 }));
+  }
+
+  /** Zoom the view, the old frame zooming into the new one. */
+  private zoomView(z: number): void {
+    const camera = this.view.camera;
+    const z0 = camera.zoom;
+    if (z === z0) return;
+    if (this.transition) {
+      camera.zoom = z; // a level change holds the frame already
+      return;
+    }
+    const gen = this.fx.hold();
+    camera.zoom = z;
+    void this.fx.release(gen, { ms: FX.zoom, scale: camera.zoom / z0 });
+  }
+
+  /** The world's levels, in the order Tab goes through them: driving, walking, flying (those it has). */
+  get levels(): { name: string; label: string }[] {
+    const all = this.manifest.levels ?? [];
+    return ["drive", "walk", "fly"].flatMap((name) => all.filter((l) => l.name === name).map((l) => ({ name, label: l.label ?? name })));
+  }
+
+  /** The map (level) the game is on: "drive", "walk" or "fly". */
+  get map(): string {
+    return this.manifest.level ?? "drive";
+  }
+
+  /**
+   * Any vehicle on any map, at the same place: the map of a level ("drive",
+   * "walk", "fly") and the car (on the nearest road there) or the plane (in
+   * the air, clear of what stands there). The same map: only the vehicle
+   * changes, under a still frame.
+   */
+  async goTo(name: string, mode: Mode): Promise<boolean> {
+    const vehicle = this.controller;
+    if (this.transition || !vehicle) return false;
+    const fly = mode === "plane";
+    const same = name === this.map;
+    if (same && mode === this.mode) return false; // there already
+    const url = same ? this.worldUrl : levelUrl(this.worldUrl, this.manifest, name, location.href);
+    if (!url) {
+      this.hud?.say(`This world has no ${name === "drive" ? "driving" : name === "walk" ? "walking" : "flying"} level.`);
+      return false;
+    }
+    const s = vehicle.state;
+    const pose = poseToGeo(this.view.query, s.x, s.y, s.heading);
+    if (!pose) return false;
+    this.transition = "switch";
+    vehicle.frozen = true;
+    const gen = this.beginChange(same);
+    try {
+      const manifest = same ? this.manifest : await fetchManifest(url);
+      await this.load(url, manifest, (routes) =>
+        fly ? new PlaneController({ pose, agl: PLANE.switchAgl }) : new CarController({ pose, snap: 8, routes, traffic: () => this.trafficOn() }),
+      );
+    } catch (e) {
+      this.endChange(null);
+      this.transition = null;
+      vehicle.frozen = false;
+      throw e;
+    }
+    this.endChange(gen);
+    const what = `${fly ? "Plane" : "Car"} · ${levelLabel(this.manifest)}`;
+    this.hud?.say(this.car?.outside ? "That place is outside this map: starting at its start." : what, 2.5);
+    return true;
+  }
+
+  /** Another map here, in the same vehicle (Tab, the map buttons). */
+  switchMap(name: string): Promise<boolean> {
+    return this.goTo(name, this.mode);
+  }
+
+  /** The other vehicle here, on the same map (C, the vehicle buttons). */
+  switchVehicle(mode: Mode = this.mode === "car" ? "plane" : "car"): Promise<boolean> {
+    return this.goTo(this.map, mode);
+  }
+
+  /** The next map along (Tab): driving → walking → flying → driving, in the same vehicle. */
+  nextMap(): Promise<boolean> {
+    const names = this.levels.map((l) => l.name);
+    const next = names[(names.indexOf(this.map) + 1) % names.length];
+    return next && next !== this.map ? this.switchMap(next) : Promise.resolve(false);
+  }
+
+  /** Back to safety (R): the car onto the nearest road; the plane level, over everything around it. */
+  reset(): void {
+    if (this.transition) return;
+    if (this.mode === "car") {
+      this.hud?.say(this.car?.toRoad() ? "Back on the road" : "No road within reach", 1.5);
+    } else if (this.plane) {
+      this.plane.flyRoute(null);
+      this.plane.safeReset();
+      this.hud?.say("Back in clear air", 1.5);
+    }
   }
 
   /** A landing approach: fly low and slow to a place (cells) and circle it; over a road, the plane lands. */
@@ -407,9 +584,10 @@ export class Game {
     if (!view) return;
     if (k === "h" || k === "?") this.hud?.toggleHelp();
     else if (k === "m") this.hud?.toggleMap();
-    else if (k === "q") view.camera.rotate(-1);
-    else if (k === "e") view.camera.rotate(1);
-    else if (k >= "1" && k <= "6" && k.length === 1) view.camera.zoom = Number(k);
+    // Q/E turn the view in the car; in the plane they are the rudder ([ and ] turn the view in both)
+    else if (k === "[" || (k === "q" && this.mode === "car")) this.turnView(-1);
+    else if (k === "]" || (k === "e" && this.mode === "car")) this.turnView(1);
+    else if (k >= "1" && k <= "6" && k.length === 1) this.zoomView(Number(k));
     else if (k === "v" && this.traffic) view.layers.enable(this.traffic.id, !this.traffic.enabled);
     else if (k === "p") {
       // the view's game time: the vehicle, traffic and fog hold still together
@@ -422,10 +600,12 @@ export class Game {
     } else if (k === "l" && this.mode === "plane") {
       if (!this.plane?.canLand) this.hud?.say("To land: low and slow over a road.", 2);
       else void this.land();
-    } else if (k === "r") {
-      if (this.mode === "car") this.car?.toRoad();
-      else this.plane?.reset();
-    } else this.controller?.keyDown?.(e);
+    } else if (k === "r") this.reset();
+    else if (k === "tab") {
+      e.preventDefault();
+      void this.nextMap();
+    } else if (k === "c") void this.switchVehicle();
+    else this.controller?.keyDown?.(e);
   }
 
   keyUp(e: KeyboardEvent): void {

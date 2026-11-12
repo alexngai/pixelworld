@@ -668,9 +668,31 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
     return m;
   },
 
-  /** Street light: a pole, an arm over the street, a lamp that glows at night. */
+  /**
+   * Street light: a pole, an arm over the street, a lamp that glows at night.
+   * With `lines: 1` (D-098) the pole and its arm are one-pixel lines, a
+   * slender mast whose arm rises and curves out `reach` voxels to the lamp.
+   * params: height (6), lines (0), reach (2, with lines).
+   */
   streetLight: ({ ramp, param }) => {
     const h = Math.round(param("height", 6));
+    if (param("lines", 0) > 0) {
+      const reach = Math.max(1, Math.round(param("reach", 2)));
+      const m = new VoxelModel(reach + 1, 1, h + 2);
+      const pole = m.material(ramp("pole"));
+      m.set(reach, 0, h - 1, m.material(ramp("lamp")));
+      const top: [number, number, number] = [0.5, 0.5, h + 0.5];
+      m.line([0.5, 0.5, 0], top, pole);
+      // the arm: up a little from the mast's top, then out and down to the lamp
+      let prev = top;
+      for (let k = 1; k <= 4; k++) {
+        const t = k / 4;
+        const next: [number, number, number] = [0.5 + reach * t, 0.5, h + 0.5 + 0.8 * Math.sin(Math.PI * t) - 0.5 * t];
+        m.line(prev, next, pole);
+        prev = next;
+      }
+      return m;
+    }
     const m = new VoxelModel(3, 1, h + 1);
     const pole = m.material(ramp("pole"));
     const lamp = m.material(ramp("lamp"));
@@ -680,9 +702,29 @@ const LANDMARK_GENERATORS: Record<string, Generator> = {
     return m;
   },
 
-  /** Traffic signal: a pole with a signal head. */
+  /**
+   * Traffic signal: a pole with a signal head. With `lines: 1` (D-098) the
+   * pole is a one-pixel line and a mast arm, another, reaches `reach` voxels
+   * out over the street to a head of three lights side by side under a hood.
+   * params: height (5), lines (0), reach (3, with lines).
+   */
   trafficSignal: ({ ramp, param }) => {
     const h = Math.round(param("height", 5));
+    if (param("lines", 0) > 0) {
+      const reach = Math.max(2, Math.round(param("reach", 3)));
+      const m = new VoxelModel(reach + 1, 1, h + 2);
+      const pole = m.material(ramp("pole"));
+      const head = m.material(ramp("head"));
+      const light = m.material(ramp("light"));
+      m.line([0.5, 0.5, 0], [0.5, 0.5, h + 1], pole);
+      m.line([0.5, 0.5, h + 0.5], [reach + 0.5, 0.5, h + 0.5], pole);
+      // the head at the arm's far end: three lamps side by side, the middle one dark, under a hood
+      for (let x = reach - 2; x <= reach; x++) {
+        m.set(x, 0, h - 1, x === reach - 1 ? head : light);
+        m.set(x, 0, h, head);
+      }
+      return m;
+    }
     const m = new VoxelModel(2, 1, h + 2);
     const pole = m.material(ramp("pole"));
     const head = m.material(ramp("head"));

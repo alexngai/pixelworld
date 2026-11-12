@@ -226,6 +226,7 @@ interface WorldViewOptions {
   size?: { width: number; height: number };           // device px; default: follow the canvas on the page
   renderScale?: number;                               // default the package's
   cache?: boolean | TileStore;                        // IndexedDB by default
+  startTiles?: string | URL | false;                  // the first view baked ahead (tools/prebake.mjs); default start-tiles.bin in the package
   objects?: boolean; scatter?: boolean; heroes?: boolean;
   palette?: "day" | "night";
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
@@ -233,6 +234,7 @@ interface WorldViewOptions {
   controller?: Controller;
   recordBakes?: boolean;                              // tile timings for the bench
   onError?: (message: string) => void;
+  bakeWorkers?: number;                               // default the cores less one, at most 4
   workerUrl?: string | URL;                           // the bake worker from elsewhere (§3.5); default beside the engine
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]); // generator plugins (§8)
   replace?: WorldView;                                // take over from a view on the same canvas (M4, §7.9)

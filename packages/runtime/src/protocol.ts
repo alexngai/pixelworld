@@ -12,10 +12,14 @@ export interface InitMessage {
   margin: number;
   /** Height (steps) of world-edge skirts. */
   floor: number;
+  /** The package's micro-terrain sinks under its water, drawn as planes (manifest micro.shores, D-094). */
+  shores?: boolean;
   worldWidth: number;
   worldHeight: number;
   /** Render units per world cell (manifest render.scale); 1 if absent. */
   renderScale?: number;
+  /** Tile scenes (meshes) to keep for a tile's other rotations and bare variant (default 6). */
+  meshScenes?: number;
   /** Placed objects for the whole world (experiment worlds are small). */
   objects?: WorldObjects;
   /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */
@@ -55,6 +59,8 @@ export interface BakeTileMessage {
   ty: number;
   /** Leave the placed objects out of the image (they still cast shadows): the ground behind them. */
   bare?: boolean;
+  /** The ground alone: no placed objects built at all, nothing kept (shown while the whole tile bakes). */
+  ground?: boolean;
   /** The tile's cells plus a context margin, clipped to the world. */
   slice: TerrainSlice;
 }

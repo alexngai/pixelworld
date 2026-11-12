@@ -552,6 +552,11 @@ RAIL_RULE = Map(
         "names": Key(ListOf(Str()), "Only lines whose name contains one of these."),
         "unnamed": Key(Bool(), "Only lines without a name."),
         "bounds": Key(BBOX, "Only lines wholly inside this box."),
+        "bundle": Key(
+            Num(0, lo_open=True, unit="m"),
+            "Parallel tracks within this distance are drawn as one corridor along its centre "
+            "line, with its track count (D-097; micro-terrain worlds).",
+        ),
     }
 )
 
@@ -929,14 +934,15 @@ LIDAR = Map(
         "minTowerArea": Key(Num(0, unit="m²"), "Smallest tower part.", "600"),
     }
 )
+BOXES = OneOf(
+    (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
+    (lambda v: True, BBOX),
+    name="a box or a list of boxes",
+)
 BUILDINGS = Map(
     {
         "bounds": Key(
-            OneOf(
-                (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
-                (lambda v: True, BBOX),
-                name="a box or a list of boxes",
-            ),
+            BOXES,
             "Only buildings in this box (or these boxes).",
             "the whole region",
         ),
@@ -1009,6 +1015,7 @@ TYPOLOGY_RULE = Map(
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),
+        "maxDepth": Key(Num(0, unit="m"), "Deepest (the footprint's long side)."),
         "maxFill": Key(
             Num(0, 1),
             "Most share of its smallest enclosing rectangle the footprint fills (a ring, a C).",
@@ -1020,6 +1027,9 @@ TYPOLOGY_RULE = Map(
         "maxHeight": Key(Num(0, unit="m"), "Tallest."),
         "onWater": Key(Bool(), "Stands over water."),
         "corner": Key(Bool(), "On a corner lot."),
+        "bounds": Key(
+            BOXES, "Only buildings whose centroid is in this box (or these boxes): a neighbourhood."
+        ),
     }
 )
 TYPOLOGY = Map(
@@ -1123,7 +1133,15 @@ ROW_RULE_KEYS = {
 STREET_TREE_RULE = Map(dict(ROW_RULE_KEYS), rule=_row_rule)
 STREET_PROP_RULE = Map(
     ROW_RULE_KEYS
-    | {"at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners.")},
+    | {
+        "at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners."),
+        "wires": Key(
+            Str(),
+            "Strung props (D-098): one row on each street's left at `offset` (default 3 m), "
+            "joined through junctions where the street runs on straight, and a span of "
+            "this group from each prop to the next.",
+        ),
+    },
     rule=_row_rule,
 )
 LANDMARK_PART = Map(

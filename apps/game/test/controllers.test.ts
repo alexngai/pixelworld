@@ -136,6 +136,50 @@ describe("the plane controller", () => {
   });
 });
 
+describe("getting the plane out of trouble", () => {
+  // a tall tower across the way east, 30 steps high
+  const towered = () => {
+    const w = world();
+    w.objects.push(building(30, 0, 33, 40, "building.tower", 30));
+    return w;
+  };
+
+  it("after a crash into a tower, comes back clear of it and flies on over it", async () => {
+    const { view } = fakeView(towered(), { level: "fly", metersPerCell: 1500 });
+    const plane = new PlaneController({ start: { x: 12.5, y: 20.5 }, heading: 0, agl: 2 });
+    await plane.attach(view);
+    plane.paused = true;
+    // hands off, straight at the tower
+    for (let i = 0; i < 300 && !plane.crashes; i++) plane.step(1 / 30, { pitch: 0, roll: 0, throttle: 0 });
+    expect(plane.lastCrash?.reason).toBe("tower");
+    expect(plane.state.h).toBeGreaterThan(30); // over the tower ahead, not just the ground where it was
+    for (let i = 0; i < 300; i++) plane.step(1 / 30, { pitch: 0, roll: 0, throttle: 0 });
+    expect(plane.crashes).toBe(1);
+    expect(plane.state.x).toBeGreaterThan(33); // past it
+  });
+
+  it("crashing again soon after, or on R, it goes somewhere safe: level, over everything around", async () => {
+    const { view } = fakeView(towered(), { level: "fly", metersPerCell: 1500 });
+    const plane = new PlaneController({ start: { x: 26.5, y: 20.5 }, heading: Math.PI / 2, agl: 2 });
+    await plane.attach(view);
+    plane.paused = true;
+    // upside down and diving, beside the tower
+    Object.assign(plane.state, { bank: Math.PI, climb: -0.8, rollRate: 2 });
+    plane.safeReset();
+    expect(plane.state.h).toBeGreaterThan(30); // the tower is within reach
+    expect(plane.state.bank).toBe(0);
+    expect(plane.state.climb).toBe(0);
+    expect(plane.state.speed).toBeGreaterThanOrEqual(PLANE.cruiseSpeed * plane.params.pace - 1e-9);
+    // two crashes in quick succession: the second goes somewhere safe
+    for (let k = 0; k < 2; k++) {
+      Object.assign(plane.state, { h: 1.05, climb: -0.5 });
+      plane.step(1 / 30, { pitch: -1, roll: 0, throttle: 0 });
+    }
+    expect(plane.crashes).toBe(2);
+    expect(plane.state.h).toBeGreaterThan(30);
+  });
+});
+
 describe("moving between levels", () => {
   const manifest = {
     id: "southwest",

@@ -1,0 +1,14 @@
+name: Tokyo Metropolitan Government Building No. 1
+wikidata: Q111973
+# Wikidata's coordinate; the slab (Overture's footprint: 111 m north-south,
+# 61 m east-west) splits at the 33rd floor into the north and south towers
+anchor: { lon: 139.69171, lat: 35.68951 }
+height: 243          # to the towers' roofs (48 storeys)
+orient: 1            # its long side north-south
+clear: 30
+replaces: [東京都庁舎 第一本庁舎]
+depictions:
+  # a granite slab whose top third splits into two square towers, each
+  # chamfered at its top storeys, under a grid of light and dark stone; no
+  # name, no emblem
+  generic: { group: landmark.hall.twin }

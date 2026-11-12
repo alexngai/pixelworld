@@ -1,0 +1,14 @@
+name: Meiji Jingū's great torii (Ōtorii)
+wikidata: Q287165    # the shrine's; the gate has no item of its own
+# OpenStreetMap's way 469908912 (height 12 m, width 17.1 m): where the south
+# approach from Harajuku meets the north one from Sangūbashi
+anchor: { lon: 139.7013085, lat: 35.6740966 }
+height: 12
+orient: 1           # its lintel runs north-south, across the approach
+clear: 6
+replaces: [大鳥居]
+depictions:
+  # a myōjin torii of unpainted cypress: two round pillars, a lintel curving
+  # up at its ends over a second beam, a tie beam through the pillars, a
+  # strut between; no plaque lettering
+  generic: { group: landmark.gate.torii }

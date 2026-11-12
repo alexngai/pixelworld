@@ -98,7 +98,8 @@ const gate: Generator = ({ ramp, ramps, param, heightVox }) => {
  * ones between the red on some strings. Chinatown red glows at night. The
  * string runs along x; the pipeline turns it across its street.
  * params: span (voxels; 24), height (the wire at its ends; 12), every
- * (voxels from one lantern to the next; 4), sag (voxels; 2).
+ * (voxels from one lantern to the next; 4), sag (voxels; 2), lines (1: the
+ * wire a one-pixel line, D-098; 0).
  * roles: lantern, wire, gold (lantern if absent).
  */
 const lanterns: Generator = ({ rand, ramp, ramps, param }) => {
@@ -112,19 +113,24 @@ const lanterns: Generator = ({ rand, ramp, ramps, param }) => {
   const gold = m.material(ramps("gold")[0] ?? ramp("lantern"));
   const golden = rand() < 0.35;
   const off = 1 + Math.floor(rand() * every);
+  const lines = param("lines", 0) > 0;
   const wireZ = (x: number) => {
     const t = (2 * x) / (S - 1) - 1;
     return h - Math.round(sag * (1 - t * t));
   };
+  // with lines, the wire a one-pixel line through the middle of its voxels' row, sagging smoothly
+  const lineZ = (x: number) => h + 0.5 - sag * (1 - ((2 * x) / (S - 1) - 1) ** 2);
   for (let x = 0; x < S; x++) {
     const z = wireZ(x);
     // the wire steps down toward the middle and up again, unbroken
     const zPrev = x > 0 ? wireZ(x - 1) : z;
-    for (let zz = Math.min(z, zPrev); zz <= Math.max(z, zPrev); zz++) m.set(x, 0, zz, wire);
+    if (lines) {
+      if (x > 0) m.line([x - 0.5, 0.5, lineZ(x - 1)], [x + 0.5, 0.5, lineZ(x)], wire);
+    } else for (let zz = Math.min(z, zPrev); zz <= Math.max(z, zPrev); zz++) m.set(x, 0, zz, wire);
     const k = x - off;
     if (k < 0 || k % every !== 0 || x + 1 >= S - 1) continue;
-    // a lantern under the wire's lowest voxel here, a gold tassel under it
-    const lo = Math.min(z, zPrev);
+    // a lantern under the wire's lowest voxel here (on a line, its top round the line), a gold tassel under it
+    const lo = Math.min(z, zPrev) + (lines ? 1 : 0);
     const mat = golden && (k / every) % 2 === 1 ? gold : red;
     for (let dx = 0; dx < 2; dx++) for (let dy = 0; dy < 2; dy++) for (let dz = 1; dz <= 2; dz++) m.set(x + dx, dy, lo - dz, mat);
     m.set(x, 0, lo - 3, gold);

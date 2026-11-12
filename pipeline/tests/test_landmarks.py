@@ -384,9 +384,11 @@ def test_micro_terrain_under_a_bridge_deck_is_flat_water():
     assert k2 == k and mc2.dtype == np.int16
     assert (water[under] == 0).all() and (surface[under] == S["water"]).all()
     assert not road.mask[under].any() and not hw[under].any()
-    # flat at the water level, like every other water cell
-    assert (mc2[4 * k : 5 * k + 1, 2 * k : 8 * k + 1] == 0).all()
-    assert (mc2[: 4 * k + 1] == 0).all() and (mc2[5 * k :] == 0).all()
+    # flat a micro-step under the water level, under the plane the client draws
+    assert (mc2[4 * k : 5 * k + 1, 2 * k : 8 * k + 1] == -1).all()
+    # the sea's bed under its level, untouched by the deck's water
+    assert (mc2[: 4 * k] < 0).all() and (mc2[5 * k + 1 :] < 0).all()
+    assert (mc2[: 4 * k] == mc[: 4 * k]).all()
     # the road on either shore keeps its bed (the edges it shares with water are water's)
     for x0, x1 in ((0, 2), (8, 10)):
         bed = (slice(4 * k + 1, 5 * k), slice(x0 * k + 1, x1 * k - 1))

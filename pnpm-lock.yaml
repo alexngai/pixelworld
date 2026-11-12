@@ -55,6 +55,9 @@ importers:
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../../packages/city-tokyo
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -82,6 +85,9 @@ importers:
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../../packages/city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../../packages/city-tokyo
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -160,6 +166,18 @@ importers:
 
   packages/city-sf:
     devDependencies:
+      pixelworld:
+        specifier: workspace:*
+        version: link:../pixelworld
+      tsup:
+        specifier: 9.0.0
+        version: 9.0.0(postcss@8.5.32)(typescript@6.0.3)(yaml@2.9.1)
+
+  packages/city-tokyo:
+    devDependencies:
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../city-sf
       pixelworld:
         specifier: workspace:*
         version: link:../pixelworld

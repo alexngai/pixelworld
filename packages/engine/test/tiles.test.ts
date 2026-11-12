@@ -155,5 +155,9 @@ describe("the bake order", () => {
     const bare = [{ rotation: 0 as const, tx: 2, ty: 0, bare: true }];
     const order = bakeOrder(near, [], [], bare);
     expect(order.map((t) => key(t) + (t.bare ? "b" : ""))).toEqual(["1,0", "2,0", "2,0b", "3,0", "4,0"]);
+    // the ground of visible tiles first, beside the same tiles whole
+    const ground = [{ rotation: 0 as const, tx: 2, ty: 0, ground: true }];
+    const first = bakeOrder(near, [], [], [], ground);
+    expect(first.map((t) => key(t) + (t.ground ? "g" : ""))).toEqual(["2,0g", "1,0", "2,0", "3,0", "4,0"]);
   });
 });

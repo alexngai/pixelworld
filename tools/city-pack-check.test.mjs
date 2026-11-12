@@ -151,6 +151,7 @@ describe("city-pack-check tool", () => {
     expect(knownGenerators(registry, "@pixelworlds/city-nyc").sort()).toEqual(["brownstone", "castIronLoft", "prewarBlock", "tenement"]);
     expect(knownGenerators(registry, "@pixelworlds/city-paris").sort()).toEqual(["cathedral", "domedChurch", "faubourg", "glassPalace", "haussmann", "hbm", "latticeArchTower", "operaHouse", "palace", "steelArchBridge", "stoneArchBridge", "triumphalArch"]);
     expect(knownGenerators(registry, "@pixelworlds/city-kyoto").sort()).toEqual(["candleTower", "goldenPavilion", "kura", "machiya", "midrise", "pagoda", "stoneWall", "templeHall", "torii", "towerGate", "utilityPole"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-tokyo").sort()).toEqual(["cylinderTower", "kodate", "mansion", "myojinTorii", "twinTowerHall", "utilityPoles", "wireSpan", "zakkyo"]);
     expect(knownGenerators(registry, "@my-org/city-vegas")).toEqual([]);
   });
 
