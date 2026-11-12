@@ -20,12 +20,13 @@
     "models": "pnpm --filter @pixelworlds/web exec vite --open /model.html",
     "bench:headless": "node tools/bench.mjs",
     "example:minimal": "pnpm --filter @pixelworlds/example-minimal-viewer dev",
-    "package:build": "pnpm --filter pixelworld --filter @pixelworlds/city-sf build",
+    "package:build": "pnpm --filter pixelworld --filter \"@pixelworlds/city-*\" build",
     "package:check": "node tools/pack-check.mjs && node tools/city-pack-check.mjs",
     "package:size": "pnpm --filter pixelworld size",
     "package:consumers": "node tools/consumers.mjs",
     "docs:api": "pnpm --filter pixelworld docs",
     "changeset": "changeset",
+    "release:version": "changeset version && node tools/version-pins.mjs --write",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

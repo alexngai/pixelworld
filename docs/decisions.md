@@ -113,6 +113,7 @@ Status values:
 | D-102 | Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces | Accepted (M5) |
 | D-103 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
 | D-104 | Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets | Accepted (M5) |
+| D-105 | Releases from CI through npm trusted publishing, and every city pack published | Accepted |
 
 ---
 
@@ -1350,3 +1351,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Walls as line landmarks:** each is a hand-placed line in the registry; OSM's lines are already there.
   - **Every barrier class:** plain walls (1,399 of them, 48 km) and fences would wall in every garden; retaining walls are the stone ones.
 - **Later:** the walking level's retaining walls (its voxel is smaller, so its wall groups would need their own span); the palace's few corridor blocks that fill more than half their rectangle; props turned by the 16 directions in the engine would make the four groups one.
+
+### D-105: Releases from CI through npm trusted publishing, and every city pack published (accepted)
+- **Why:** the owner asked to set up publishing for the open-source release. Publishing was by hand from a maintainer's machine (D-074), and npm is ending direct publishing with granular tokens (January 2027); trusted publishing (OIDC) needs no stored token at all.
+- **What:**
+  - **`.github/workflows/release.yml`**, changesets' trusted-publishing workflow: on main, pending changesets open or update the "Version packages" pull request (`pnpm release:version`: `changeset version`, then the version pins); merging it packs the packages whose versions aren't on npm, checks the tarballs (`pnpm package:check`), and publishes them with the npm CLI's OIDC exchange, with tags and GitHub releases. Only the publish job gets `id-token: write`.
+  - **All five city packs public:** `@pixelworlds/city-nyc`, `-paris`, `-kyoto` and `-tokyo` lose `private` and get a first-release changeset each. `tools/city-pack-check.mjs` checks any number of city pack tarballs (without arguments, it packs every `packages/city-*`); CI's package job packs and checks them all.
+  - **The first release of each package is by hand** (docs/npm.md §9): npm attaches a trusted publisher only to a package that exists.
+- **Rejected alternatives:**
+  - **An npm token in the repository's secrets:** a long-lived credential to leak, and granular tokens stop publishing directly in January 2027.
+  - **Staged publishing:** changesets doesn't support it yet; merging the version pull request is the human step.
+- **Later:** consumer examples for the other city packs (`tools/consumers.mjs` covers San Francisco's); provenance, which npm adds only from a public repository.

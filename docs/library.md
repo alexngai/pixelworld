@@ -159,8 +159,8 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
    - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
    - **Not yet:** Overture, canopy, lidar and transit as adapters; 3D city models; stage hooks.
 8. **Builds and releases:** package builds, `exports`, changesets, and CI release jobs for npm and PyPI.
-   - **Done for npm (§3.5):** the `pixelworld` package, its build, `exports`, changesets, and a CI job that builds, packs and checks it on every push.
-   - **Not yet:** publishing from CI (it is manual), the style packs as packages, PyPI extras and a PyPI job.
+   - **Done for npm (§3.5):** the `pixelworld` package and the city packs, their builds, `exports`, changesets, a CI job that builds, packs and checks them on every push, and a release workflow that publishes them through npm trusted publishing (D-105).
+   - **Not yet:** the style packs as packages, PyPI extras and a PyPI job.
 9. **Export CLI:** generalized from the hero bake tool.
 10. **Docs and examples:** the guides above, and an examples workspace that uses only the published packages.
 

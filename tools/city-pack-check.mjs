@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Checks the npm tarball of a city pack, `@pixelworlds/city-sf` (D-074,
- * docs/plugins.md §9.5), before anyone publishes it, as pack-check.mjs does
- * for `pixelworld`: its files and manifest (`pixelworld` as its only peer, no
- * dependencies), its exports, the descriptor's
+ * Checks the npm tarballs of the city packs, `@pixelworlds/city-*` (D-074,
+ * docs/plugins.md §9.5), before anyone publishes them, as pack-check.mjs does
+ * for `pixelworld`: their files and manifest (`pixelworld` as their only peer,
+ * no dependencies), their exports, the descriptor's
  * `new URL("./worker.js", import.meta.url)`, and the worker module: it must
  * be self-contained, define the plugin when imported, and register the
  * generators core expects of the pack (KNOWN_PLUGIN_GENERATORS). CI runs it on
  * every push.
  *
- *   node tools/city-pack-check.mjs [pixelworlds-city-sf-x.y.z.tgz]
+ *   node tools/city-pack-check.mjs [pixelworlds-city-*.tgz ...]
  *
- * Without a tarball it packs packages/city-sf (`pnpm pack` builds it) into a
- * temporary directory.
+ * Without tarballs it packs every packages/city-* (`pnpm pack` builds them)
+ * into a temporary directory.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
@@ -22,7 +22,6 @@ import { fileURLToPath } from "node:url";
 import { readTarball } from "./pack-check.mjs";
 
 const REPO = fileURLToPath(new URL("..", import.meta.url));
-const PACKAGE_DIR = join(REPO, "packages/city-sf");
 
 /** What the descriptor's URL must be built with, so that bundlers copy the worker module beside the entry. */
 export const WORKER_URL_LITERAL = 'new URL("./worker.js", import.meta.url)';
@@ -165,37 +164,45 @@ export function knownGenerators(registrySource, name) {
   return [...table.matchAll(/(\w+):\s*["']([^"']+)["']/g)].filter(([, , p]) => p === name).map(([, g]) => g);
 }
 
-async function main() {
-  let tarball = process.argv[2];
-  const pkg = JSON.parse(readFileSync(join(PACKAGE_DIR, "package.json"), "utf8"));
-  if (!tarball) {
-    const dir = mkdtempSync(join(tmpdir(), "city-pack-"));
-    const r = spawnSync("pnpm", ["--filter", pkg.name, "pack", "--pack-destination", dir], { cwd: REPO, stdio: "inherit" });
-    if (r.status !== 0) process.exit(r.status ?? 1);
-    tarball = join(dir, readdirSync(dir).find((f) => f.endsWith(".tgz")));
-  }
+/** Check one tarball; the problems found (printed with its listing and sizes). */
+async function checkTarball(tarball) {
   const buf = readFileSync(resolve(tarball));
   const files = readTarball(buf);
+  const name = JSON.parse(files.get("package.json")?.toString("utf8") ?? "{}").name ?? "(no package.json)";
   const kb = (n) => `${(n / 1024).toFixed(1)} KB`.padStart(10);
-  console.log(`${tarball}: ${files.size} files`);
+  console.log(`${tarball}: ${name}, ${files.size} files`);
   for (const [f, b] of [...files].sort()) console.log(`  ${kb(b.length)}  ${f}`);
 
   const pixelworld = JSON.parse(readFileSync(join(REPO, "packages/pixelworld/package.json"), "utf8"));
-  const generators = knownGenerators(readFileSync(join(REPO, "packages/generators/src/registry.ts"), "utf8"), pkg.name);
-  if (!generators.length) throw new Error(`KNOWN_PLUGIN_GENERATORS names no generators of ${pkg.name}`);
+  const generators = knownGenerators(readFileSync(join(REPO, "packages/generators/src/registry.ts"), "utf8"), name);
+  if (!generators.length) return [`KNOWN_PLUGIN_GENERATORS names no generators of ${name}`];
   const licences = Object.fromEntries(["LICENSE-MIT", "LICENSE-APACHE"].map((f) => [f, readFileSync(join(REPO, f))]));
-  const problems = await checkCityPack(files, { name: pkg.name, generators, peerRange: `^${pixelworld.version}`, licences });
-  console.log("\nsize budgets");
+  const problems = await checkCityPack(files, { name, generators, peerRange: `^${pixelworld.version}`, licences });
+  console.log("size budgets");
   for (const [label, bytes, budget] of sizes(files, buf.length)) {
     const over = bytes > budget;
     console.log(`  ${over ? "OVER" : "ok  "} ${label.padEnd(16)} ${kb(bytes)} of ${kb(budget).trim()}`);
     if (over) problems.push(`${label} is ${kb(bytes).trim()}, over its ${kb(budget).trim()} budget`);
   }
+  console.log(problems.length ? "" : `passed: the worker registers ${generators.join(", ")}\n`);
+  return problems.map((p) => `${name}: ${p}`);
+}
+
+async function main() {
+  let tarballs = process.argv.slice(2);
+  if (!tarballs.length) {
+    const dir = mkdtempSync(join(tmpdir(), "city-pack-"));
+    const r = spawnSync("pnpm", ["--filter", "@pixelworlds/city-*", "pack", "--pack-destination", dir], { cwd: REPO, stdio: "inherit" });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+    tarballs = readdirSync(dir).filter((f) => f.endsWith(".tgz")).map((f) => join(dir, f));
+  }
+  const problems = [];
+  for (const t of tarballs) problems.push(...(await checkTarball(t)));
   if (problems.length) {
-    console.error(`\n${problems.length} problem(s):\n${problems.map((p) => `  - ${p}`).join("\n")}`);
+    console.error(`${problems.length} problem(s):\n${problems.map((p) => `  - ${p}`).join("\n")}`);
     process.exit(1);
   }
-  console.log(`\ncity pack check passed: the worker registers ${generators.join(", ")}`);
+  console.log(`city pack check passed: ${tarballs.length} tarball(s)`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

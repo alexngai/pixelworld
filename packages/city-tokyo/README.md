@@ -2,7 +2,11 @@
 
 Tokyo's city pack for [pixelworld](https://www.npmjs.com/package/pixelworld): the generators its `tokyo` style pack names. They draw the narrow mixed-use mid-rises of the entertainment districts under their stacked signs (`zakkyo`), apartment slabs with balconies across their fronts (`mansion`), small detached houses behind block walls (`kodate`), the landmark shapes `twinTowerHall`, `cylinderTower` and `myojinTorii`, and utility poles with the wires strung between them (`utilityPoles`, `wireSpan`). The `tokyo` pack names San Francisco's pack too, `@pixelworlds/city-sf`, for its blocks and towers, so load both. The pipeline half (PLATEAU's building facts and GSI's elevation tiles) is the Python distribution `pixelworld-city-jp`.
 
-Not published yet (D-092). In this repository the viewer, the example game and the model preview load it.
+```sh
+npm install pixelworld @pixelworlds/city-sf @pixelworlds/city-tokyo
+```
+
+`pixelworld` is a peer dependency: the pack uses your app's copy of its generator registry.
 
 ```ts
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";

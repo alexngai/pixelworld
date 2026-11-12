@@ -1,7 +1,6 @@
 {
   "name": "@pixelworlds/city-nyc",
   "version": "0.0.0",
-  "private": true,
   "description": "New York's city pack for pixelworld: the brownstone, tenement, cast-iron loft and prewar block generators its style pack names",
   "license": "MIT OR Apache-2.0",
   "type": "module",
