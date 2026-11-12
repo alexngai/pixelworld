@@ -4,7 +4,7 @@
 # grey tile is most of it; temple halls, pagodas and shrines stand among it
 # and up the Higashiyama hills, with modern mid-rises along the wide streets.
 # The driving level (region.yaml) and the flying level (fly.yaml) are its
-# neighbours (D-095).
+# neighbours (D-101).
 # Build: cd pipeline && uv run pixelworld build ../worlds/kyoto/walk.yaml
 id: kyoto-walk
 name: Kyoto (walking)
@@ -18,7 +18,7 @@ bounds: [135.752, 34.985, 135.789, 35.012] # lon/lat: west, south, east, north (
 metersPerCell: 10
 # the Kamo river at 35 m, Kiyomizu-dera's stage at about 100 m and the
 # Higashiyama hills past 150 m: 1.5x, as for New York and Paris, so the
-# lanes up to Kiyomizu-dera and the Yasaka Pagoda read as climbing (D-094)
+# lanes up to Kiyomizu-dera and the Yasaka Pagoda read as climbing (D-100)
 verticalExaggeration: 1.5
 maxSlope: 3
 chunkSize: 64
@@ -50,7 +50,7 @@ ground:
     slopeMeters: 50
     wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
     spread: { over: [grass], meters: 25 }
-    # a park's courts and plazas stay paved (D-097)
+    # a park's courts and plazas stay paved (D-103)
     paved: [pedestrian]
 
 terrain: { minLakeArea: 4000 }
@@ -69,11 +69,11 @@ objects:
   # First match wins.
   typology:
     facts: { plugin: plateau, year: 2025 }
-    # PLATEAU's LoD2 roof shape draws the roof where Overture gives none (D-094)
+    # PLATEAU's LoD2 roof shape draws the roof where Overture gives none (D-100)
     roofHints: true
     rules:
       # Buddhist halls by their names, whatever OSM's class: it tags many of them
-      # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-094)
+      # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-100)
       - { group: building.temple, names: [本堂, 金堂, 講堂, 食堂, 御影堂, 阿弥陀堂, 開山堂, 法堂, 仏殿, 観音堂, 釈迦堂, 不動堂, 大師堂, 地蔵堂, 薬師堂, 太子堂, 経蔵, 鐘楼, 山門, 三門, 方丈, 庫裏, 宝蔵] }
       - { group: building.shrine, kinds: [shrine] }
       # the pavilions of temples and shrines (OSM's building=roof: water basins, bell towers)
@@ -85,9 +85,9 @@ objects:
       - { group: building.temple, classes: ["422"], roofs: [hipped] }
       - { group: building.temple, materials: [wood], roofs: [hipped], minWidth: 12 }
       # the halls, priests' quarters and gates inside a temple's or shrine's
-      # grounds (OSM's landuse=religious), under pitched roofs (D-094)
+      # grounds (OSM's landuse=religious), under pitched roofs (D-100)
       - { group: building.temple, grounds: [religious], roofs: [gabled, hipped], maxHeight: 25 }
-      # kura: wooden storehouses (PLATEAU's warehouses, 431) of one or two storeys (D-094)
+      # kura: wooden storehouses (PLATEAU's warehouses, 431) of one or two storeys (D-100)
       - { group: building.kura, classes: ["431"], materials: [wood], floors: [1, 2] }
       # machiya: wooden, before 1950, one or two storeys, narrow, a house, flats
       # or a shop-house (PLATEAU's 411–415), or of unknown use (461)
@@ -106,8 +106,8 @@ objects:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
     # concrete utility poles along one side of the lanes and side streets, at their
-    # edge (D-094), turned with the road so their wires reach the next (D-096),
-    # along the diagonal on a diagonal street (D-097), and the 2:1 ones (D-098)
+    # edge (D-100), turned with the road so their wires reach the next (D-102),
+    # along the diagonal on a diagonal street (D-103), and the 2:1 ones (D-104)
     - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, along: true, diagonal: prop.pole.diagonal, slants: [prop.pole.slant, prop.pole.slant2] }
     - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, along: true, diagonal: prop.pole.diagonal, slants: [prop.pole.slant, prop.pole.slant2] }
   # new ones go at the end: a landmark's seed is its place in the list
@@ -129,7 +129,7 @@ sources:
     excludeSubclasses: [parking_aisle, driveway]
     joinIslands: [parking_aisle]
   paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
-  # ponds and moats from Overture as still water, which land cover misses (D-097)
+  # ponds and moats from Overture as still water, which land cover misses (D-103)
   lakes: { classes: [pond, moat, lake, reservoir] }
   rivers:
     subtypes: [river, canal]

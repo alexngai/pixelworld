@@ -1,4 +1,4 @@
-# Kyoto, driving level (D-095): the city centre at 25 m per cell, from
+# Kyoto, driving level (D-101): the city centre at 25 m per cell, from
 # Kinkaku-ji in the north-west to Tō-ji and Fushimi Inari's gate in the south
 # and Ginkaku-ji in the east: Nijō Castle, the Imperial Palace, the Kamo
 # river, Heian Shrine's great torii and the Higashiyama hills. The walking
@@ -40,7 +40,7 @@ ground:
     slopeMeters: 50
     wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
     spread: { over: [grass], meters: 25 }
-    # a park's courts and plazas stay paved: the Imperial Palace's gravel courts (D-097)
+    # a park's courts and plazas stay paved: the Imperial Palace's gravel courts (D-103)
     paved: [pedestrian]
 
 terrain: { minLakeArea: 4000 }
@@ -51,24 +51,24 @@ objects:
     towerMeters: 45
     podiumMeters: 18
     houseMaxArea: 350
-  # the walking level's typology (D-091, D-094); see walk.yaml for the reasons
+  # the walking level's typology (D-091, D-100); see walk.yaml for the reasons
   typology:
     facts: { plugin: plateau, year: 2025 }
     roofHints: true
     rules:
       # Nijō Castle's two palaces and gates, and the Imperial Palace's halls and
-      # gates, by their names (D-096): PLATEAU has no models of the Imperial
+      # gates, by their names (D-102): PLATEAU has no models of the Imperial
       # Palace, and Nijō's halls carry the code of temples and schools (422);
       # `from` types their parts too (the 紫宸殿 is drawn in parts)
       - { group: building.palace, names: [遠侍, 式台, 大広間, 蘇鉄の間, 黒書院, 白書院, 御清所, 台所, 雁の間, 唐門, 東大手門, 北大手門, 桃山門, 鳴子門, 東南隅櫓, 西南隅櫓, 米倉, 本丸御殿, 玄関], from: [building.residential, building.commercial, building.parking, building.tower] }
       - { group: building.palace.gosho, names: [紫宸殿, 清涼殿, 小御所, 御学問所, 常御殿, 御常御殿, 春興殿, 飛香舎, 参内殿, 皇后宮常御殿, 御花御殿, 御三間, 御涼所, 諸大夫の間, 御車寄, 新御車寄, 建礼門, 建春門, 承明門, 日華門, 月華門, 宜秋門, 朔平門, 皇后門, 清所門], from: [building.residential, building.commercial, building.parking, building.tower] }
       # the Imperial Palace's covered corridors, unnamed: narrow, long and low inside
-      # the Gyoen park (D-097)
+      # the Gyoen park (D-103)
       - { group: building.palace.gosho, grounds: [park], minWidth: 3, maxWidth: 7, minDepth: 25, maxHeight: 12 }
-      # and those mapped as one thin C round each court, filling little of their rectangle (D-098)
+      # and those mapped as one thin C round each court, filling little of their rectangle (D-104)
       - { group: building.palace.gosho, grounds: [park], maxFill: 0.5, minDepth: 25, maxHeight: 12 }
       # Buddhist halls by their names, whatever OSM's class: it tags many of them
-      # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-094)
+      # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-100)
       - { group: building.temple, names: [本堂, 金堂, 講堂, 食堂, 御影堂, 阿弥陀堂, 開山堂, 法堂, 仏殿, 観音堂, 釈迦堂, 不動堂, 大師堂, 地蔵堂, 薬師堂, 太子堂, 経蔵, 鐘楼, 山門, 三門, 方丈, 庫裏, 宝蔵] }
       - { group: building.shrine, kinds: [shrine] }
       - { group: building.temple, kinds: [roof], classes: ["422"] }
@@ -85,7 +85,7 @@ objects:
     - { group: tree, canopy: 3, spacing: 16, density: 0.9 }
   streetTrees:
     - { group: tree.street, roads: [tertiary, secondary, primary], canopy: 3, spacing: 16, kerb: 2, offset: 9 }
-  # stone walls along OSM's retaining walls: Nijō Castle's ishigaki round its moats (D-098)
+  # stone walls along OSM's retaining walls: Nijō Castle's ishigaki round its moats (D-104)
   walls:
     - { group: wall.stone, classes: [retaining_wall], spacing: 12.5, diagonal: wall.stone.diagonal, slants: [wall.stone.slant, wall.stone.slant2] }
   # new ones go at the end: a landmark's seed is its place in the list
@@ -114,7 +114,7 @@ sources:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
   rivers:
     subtypes: [river, canal]
-  # ponds and moats from Overture as still water: Kinkaku-ji's pond, Nijō Castle's moats (D-097)
+  # ponds and moats from Overture as still water: Kinkaku-ji's pond, Nijō Castle's moats (D-103)
   lakes: { classes: [pond, moat, lake, reservoir] }
   rails:
     - { draw: train, rail: [standard_gauge, narrow_gauge] }

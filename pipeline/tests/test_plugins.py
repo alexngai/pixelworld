@@ -331,7 +331,7 @@ class Roofs:
 
 
 def test_roof_hints_take_the_facts_roof_where_overture_has_none():
-    """D-094: with `roofHints`, a building without Overture's roof shape takes the
+    """D-100: with `roofHints`, a building without Overture's roof shape takes the
     facts' as its generator's hint (`rs`); one with Overture's keeps it; off by default."""
     region = Region.from_dict(SPEC)
     for hints, want in ((True, ["gabled", "flat"]), (False, [None, "flat"])):
@@ -381,7 +381,7 @@ def test_kinds_rules_match_a_building_and_its_parts_by_overture_class():
 
 
 def test_grounds_rules_match_buildings_standing_in_a_land_use_area(monkeypatch):
-    """D-094: `grounds:` matches the Overture land-use class under a building's
+    """D-100: `grounds:` matches the Overture land-use class under a building's
     centroid (a temple's grounds); the areas are fetched only when a rule names one."""
     import numpy as np
     import shapely
@@ -415,7 +415,7 @@ def test_grounds_rules_match_buildings_standing_in_a_land_use_area(monkeypatch):
 
 
 def test_max_fill_finds_a_ring_or_a_c_shaped_footprint():
-    """D-098: `fill` is the footprint's share of its smallest enclosing rectangle."""
+    """D-104: `fill` is the footprint's share of its smallest enclosing rectangle."""
     from pixelworld_pipeline import typology
 
     block = [[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]]

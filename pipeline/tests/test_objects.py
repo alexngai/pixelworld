@@ -496,7 +496,7 @@ def test_lowrise_blocks_cover_free_built_up_cells():
 
 
 def test_props_along_a_street_stand_on_one_side_turned_with_it():
-    """D-096: `along` puts one row of props on one side of a road, turned so a
+    """D-102: `along` puts one row of props on one side of a road, turned so a
     model drawn along y runs with the road (utility poles and their wires)."""
     region = Region.from_dict(SPEC)
     cx, cy = region.cells
@@ -527,7 +527,7 @@ def test_props_along_a_street_stand_on_one_side_turned_with_it():
 
 
 def test_props_along_a_diagonal_street_take_their_diagonal_group():
-    """D-097: with `diagonal`, props along a road running diagonally take that
+    """D-103: with `diagonal`, props along a road running diagonally take that
     group, turned for the diagonal they follow."""
     region = Region.from_dict(SPEC)
     cx, cy = region.cells
@@ -557,7 +557,7 @@ def test_props_along_a_diagonal_street_take_their_diagonal_group():
 
 
 def test_along_turns_pick_the_group_drawn_nearest_the_lines_direction():
-    """D-098: straight, diagonal and the two 2:1 groups, each with the quarter
+    """D-104: straight, diagonal and the two 2:1 groups, each with the quarter
     turn for the direction at right angles; a missing group falls back."""
     rule = {"group": "g", "diagonal": "d", "slants": ["s1", "s2"]}
     cases = {
@@ -582,7 +582,7 @@ def test_along_turns_pick_the_group_drawn_nearest_the_lines_direction():
 
 
 def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
-    """D-098: `objects.walls` puts one segment every `spacing` on Overture's barrier
+    """D-104: `objects.walls` puts one segment every `spacing` on Overture's barrier
     lines of the given classes, turned with each line, over water's edge too."""
     from pixelworld_pipeline.sources import overture
 

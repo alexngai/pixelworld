@@ -272,7 +272,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `overture` | [mapping](#spec-sources-overture) | **required** | Overture Maps: roads, paths, rivers, rail, buildings, land use. |
 | `roads` | [mapping](#spec-sources-roads) | **required** | The road network. |
 | `rivers` | [mapping](#spec-sources-rivers) | `{ subtypes: [river] }` | River lines. |
-| `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-097): a garden's pond, a castle's moat. Each is levelled as a lake. |
+| `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-103): a garden's pond, a castle's moat. Each is levelled as a lake. |
 | `paths` | [mapping](#spec-sources-paths) | — | Footways and cycleways (walking levels). |
 | `rails` | [list of mappings](#spec-sources-rails) | — | Rails drawn in the street, each segment by the first rule it matches. |
 
@@ -608,7 +608,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `vegetation` | [list of mappings](#spec-objects-vegetation) | — | Trees and shrubs scattered by land cover. |
 | `streetTrees` | [list of mappings](#spec-objects-streettrees) | — | Rows of trees along roads. |
 | `streetProps` | [list of mappings](#spec-objects-streetprops) | — | Street lights and signals: rows, or at junctions. |
-| `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-098). |
+| `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-104). |
 | `landmarks` | list of ids or mappings | — | Landmarks: registry ids (`worlds/_landmarks/`), `{ id, …overrides }`, or inline mappings. |
 | `landmarkDepiction` | string | `generic` | Which registry depiction to draw. |
 | `depiction` | [mapping](#spec-objects-depiction) | — | How big things are drawn at this scale level. |

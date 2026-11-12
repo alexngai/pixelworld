@@ -129,7 +129,7 @@ def features(
         lengths = [float(np.hypot(*(b - a))) * m for a, b in sides]
         f["width"] = min(lengths)
         f["depth"] = max(lengths)
-        # the footprint's share of its smallest enclosing rectangle: low for a ring or a C (D-098)
+        # the footprint's share of its smallest enclosing rectangle: low for a ring or a C (D-104)
         f["fill"] = float(poly.area) / max(float(rect.area), 1e-9)
         # shared walls
         shared = 0.0

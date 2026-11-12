@@ -75,7 +75,7 @@ function roofDistance(f: Facade, from: number, wing: number, hipped: boolean, ed
  * hipped, a shed rising to the rear, and flat only with `flat`), else `hip`.
  * A footprint wider than two houses (a row OSM mapped as one) is drawn as a
  * row: a house every `unit`, each with its own wall height, tiles, door and
- * front, party walls between them (D-096). Nothing projects: the pent roof
+ * front, party walls between them (D-102). Nothing projects: the pent roof
  * stands on the ground storey's front.
  * params: koshi (share of fronts with a lattice; 1), mushiko (share of upper
  * storeys with mushiko-mado; 0.85), fences (share with an inuyarai; 0.4),
@@ -119,7 +119,7 @@ export const machiya: Generator = (ctx) => {
   const noren = rand() < param("noren", 0.35) ? optional(ctx, m, "noren", 0) : 0;
   const lantern = rand() < param("lanterns", 0) ? optional(ctx, m, "lantern", 0) : 0;
   const udatsu = rand() < param("udatsu", 0);
-  // the roof's shape: the data's (PLATEAU's LoD2 roofs, D-094) where it gives one, else the group's
+  // the roof's shape: the data's (PLATEAU's LoD2 roofs, D-100) where it gives one, else the group's
   const shape = hints?.roof;
   const flat = shape === "flat" && param("flat", 0) >= 1;
   const shed = shape === "skillion";
@@ -143,7 +143,7 @@ export const machiya: Generator = (ctx) => {
   const n = Math.max(1, Math.min(sb ? want : 1, Math.floor(Hw / 4)));
   const g = n === 1 ? Hw : clamp(Math.round(Hw / (1 + 0.75 * (n - 1))), 4, Hw - 2);
   // a row of houses mapped as one footprint: a house every `unit` (of the height) along the front, each
-  // with its own wall height (a voxel up or down), tiles, door and front (D-096)
+  // with its own wall height (a voxel up or down), tiles, door and front (D-102)
   const unitW = clamp(Math.round(H * param("unit", 0.8)), 5, 24);
   const nU = W >= 2 * unitW ? Math.round(W / unitW) : 1;
   const unitOf = (a: number) => Math.min(nU - 1, Math.floor((a * nU) / W));
@@ -297,7 +297,7 @@ export const machiya: Generator = (ctx) => {
  * hipped). On some a pent eave of tile over the ground floor (the storeys
  * above stand back a voxel), vertical louvres before an office's glass, an
  * air conditioner's box on some flats' balconies, an old water tank on the
- * roof (D-096). Nothing projects: balconies and signs are painted flush.
+ * roof (D-102). Nothing projects: balconies and signs are painted flush.
  * params: hisashi (share with a pent eave; 0), louvres (share of offices
  * with louvres; 0), tanks (share with a water tank; 0), flats (share that are flats; 0.5), shops (share with shopfronts;
  * 0.6), eaves (share with a tile rim; 0.35), litFraction.
@@ -330,7 +330,7 @@ export const midrise: Generator = (ctx) => {
   const fin = optional(ctx, m, "fin", trim);
   const ac = optional(ctx, m, "ac", trim);
   const edge = edgeDistance(mask);
-  // a pitched tile roof where the data gives one (D-094), rising a voxel for every two in
+  // a pitched tile roof where the data gives one (D-100), rising a voxel for every two in
   const pitched = PITCHED.has(hints?.roof ?? "") && H >= 6;
   const inFrom = (i: number) => (hints?.roof === "gabled" ? Math.min(f.depth[i]!, f.back[i]!) : edge[i]! - 1);
   let dMax = 0;
@@ -518,12 +518,12 @@ export const kura: Generator = (ctx) => {
  * `span`, its wires: two power lines from the crossarm's ends and a thicker
  * telecom cable lower down, reaching `span` voxels along y to each side and
  * sagging toward their ends, where the next pole's meet them (placed with
- * the street props' `along`, turned to run with the road; D-096). A prop:
+ * the street props' `along`, turned to run with the road; D-102). A prop:
  * the wires hang in the air.
  * params: height (16 voxels), transformers (share with a transformer; 0.3),
  * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2), wx,
  * wy (the wires' direction in voxels: 0, 1 along y; 1, 1 a diagonal street;
- * 2, −1 and 1, −2 the 2:1 streets; D-097, D-098).
+ * 2, −1 and 1, −2 the 2:1 streets; D-103, D-104).
  * roles: pole, arm (pole if absent), transformer (arm if absent), wire (arm if absent).
  */
 export const utilityPole: Generator = (ctx) => {
@@ -571,7 +571,7 @@ function lineCells(c: number, wx: number, wy: number, reach: number): [number, n
 /** Steps along a line's longer axis for `voxels` of its length. */
 const stepsFor = (voxels: number, wx: number, wy: number) => Math.round((voxels * Math.max(Math.abs(wx), Math.abs(wy))) / Math.hypot(wx, wy));
 
-/** The pole on a diagonal or 2:1 street (D-097, D-098): its crossarm across (wx, wy), its wires along it. */
+/** The pole on a diagonal or 2:1 street (D-103, D-104): its crossarm across (wx, wy), its wires along it. */
 function slantPole(ctx: GenContext, H: number, span: number, sag: number, wx: number, wy: number): VoxelModel {
   const reach = stepsFor(span, wx, wy);
   const c = reach + 3;
@@ -601,7 +601,7 @@ function slantPole(ctx: GenContext, H: number, span: number, sag: number, wx: nu
  * A stretch of stone wall (a castle's ishigaki, a retaining wall) along
  * (wx, wy), `span` voxels to each side of its middle, two voxels thick, a cap
  * course on top; placed with `objects.walls` along Overture's barrier lines,
- * one segment every `spacing`, turned with the line (D-098). A prop.
+ * one segment every `spacing`, turned with the line (D-104). A prop.
  * params: height (4 voxels), span (voxels each side; 4), wx, wy (the line's
  * direction in voxels: 0, 1 along y; 1, 1 a diagonal; 2, −1 and 1, −2 the 2:1 lines).
  * roles: stone, cap (stone if absent).

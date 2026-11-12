@@ -352,7 +352,7 @@ test.describe("Paris (D-084, D-085, D-086)", () => {
   });
 });
 
-test.describe("Kyoto (D-089, D-090, D-091, D-094, D-095)", () => {
+test.describe("Kyoto (D-089, D-090, D-091, D-100, D-101)", () => {
   test("machiya streets under the Yasaka Pagoda: the walking level typed from PLATEAU", async ({ page }) => {
     // the kyoto style pack and its city pack, named by the world: machiya and
     // wooden houses under grey tile round a pagoda landmark
@@ -360,7 +360,7 @@ test.describe("Kyoto (D-089, D-090, D-091, D-094, D-095)", () => {
     await expect(page.locator("#view")).toHaveScreenshot("kyoto-walk-yasaka-r0.png");
   });
 
-  test("Tō-ji's pagoda among the town: the driving level (D-095)", async ({ page }) => {
+  test("Tō-ji's pagoda among the town: the driving level (D-101)", async ({ page }) => {
     // 25 m cells: the machiya and houses as small tile-roofed blocks round a temple's grounds
     await open(page, "world=/kyoto/&marker=0&zoom=2&rot=0&at=135.7487,34.9799");
     await expect(page.locator("#view")).toHaveScreenshot("kyoto-toji-r0.png");

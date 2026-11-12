@@ -185,7 +185,7 @@ def test_lawn_spreads_into_the_open_grass_around_it_only():
 
 
 def test_a_lawn_leaves_a_parks_courts_paved(monkeypatch):
-    """D-097: `paved` land use inside a park (a palace's gravel courts) stays as it is."""
+    """D-103: `paved` land use inside a park (a palace's gravel courts) stays as it is."""
     region = Region.from_dict(SPEC)
     cx, cy = region.cells
     w, s, e, n = region.bounds
@@ -205,7 +205,7 @@ def test_a_lawn_leaves_a_parks_courts_paved(monkeypatch):
 
 
 def test_water_areas_are_the_cells_whose_centres_they_cover(monkeypatch):
-    """D-097: Overture's ponds and moats as cells (still water beside land cover's)."""
+    """D-103: Overture's ponds and moats as cells (still water beside land cover's)."""
     region = Region.from_dict(SPEC)
     cx, cy = region.cells
     w, s, e, n = region.bounds

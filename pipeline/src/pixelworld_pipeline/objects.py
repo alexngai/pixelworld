@@ -516,7 +516,7 @@ _ALONG_ANGLES = (0.0, 26.57, 45.0, 63.43, 90.0, 116.57, 135.0, 153.43)
 
 def along_turn(tx: float, ty: float, rule: dict[str, Any]) -> tuple[str, int]:
     """The group and quarter turns of a prop drawn along a line running
-    (tx, ty) (projected, y north), for `along` (D-096, D-098). Its `group`
+    (tx, ty) (projected, y north), for `along` (D-102, D-104). Its `group`
     is a model drawn along y (north-south), `diagonal` one drawn along
     x = y in cells (south-east), `slants` two drawn along (2, −1) and
     (1, −2) in cells (26.6° and 63.4° from east): each covers its
@@ -547,9 +547,9 @@ def street_trees(
     where its road runs east-west, so a model drawn along x spans the street:
     lanterns strung across it. With `along`, one row on the road's left
     side, turned the same way so a model drawn along y runs with its road:
-    utility poles whose wires reach to the next (D-096); with `diagonal`, that
+    utility poles whose wires reach to the next (D-102); with `diagonal`, that
     group stands where the road runs nearest a diagonal, and with `slants`
-    two more at the 2:1 directions (see along_turn; D-097, D-098). `bounds` ([w, s, e,
+    two more at the 2:1 directions (see along_turn; D-103, D-104). `bounds` ([w, s, e,
     n], lon/lat) keeps a rule to one stretch of its roads.
     """
     classes = set(rule["roads"])
@@ -1029,7 +1029,7 @@ def type_buildings(
     building Overture gives no height or floors takes the facts' `height`
     (D-084), and becomes a tower at `tower_m` or more. With `roofHints`, one
     Overture gives no roof shape takes the facts' `roof` as its generator's
-    hint (D-094)."""
+    hint (D-100)."""
     from . import facts as facts_sources
     from . import typology
 
@@ -1052,7 +1052,7 @@ def type_buildings(
                 if found[i]["hm"] >= tower_m and found[i]["g"] in typology.GENERIC[:2]:
                     found[i]["g"] = "building.tower"
                 filled += 1
-            # the facts' roof shape as the generator's hint where Overture gives none (D-094)
+            # the facts' roof shape as the generator's hint where Overture gives none (D-100)
             if roof_hints and f and f.get("roof") in ROOF_SHAPES and "rs" not in found[i]:
                 found[i]["rs"] = f["roof"]
                 roofed += 1
@@ -1073,7 +1073,7 @@ def type_buildings(
 
 def _ground_features(region: Region, found: list[dict], feats: list[dict], classes: list[str]):
     """The land-use class (Overture's, of `classes`) under each building's
-    centroid, as the feature `ground` (`grounds:` rules, D-094): a temple's or
+    centroid, as the feature `ground` (`grounds:` rules, D-100): a temple's or
     a shrine's grounds (OSM's landuse=religious), a cemetery."""
     from .ground import project_rows
 
@@ -1718,7 +1718,7 @@ def place(
             instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
         else:
             instances += street_trees(p, rule, road_rows, occupied, f"p{i}")
-    # walls along Overture's barrier lines (D-098): segments one `spacing` apart on
+    # walls along Overture's barrier lines (D-104): segments one `spacing` apart on
     # the line, turned with it; over water's edge and cliffs too, off buildings
     for i, rule in enumerate(spec.get("walls") or []):
         rows = overture.barriers(

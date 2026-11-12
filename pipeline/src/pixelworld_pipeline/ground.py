@@ -212,7 +212,7 @@ def lawn(
         pts, _ = points_in(natural, xs, ys)
         wild.ravel()[pts] = True
     if rule.get("paved"):
-        # courts and plazas inside a park (land use `pedestrian`) stay as they are (D-097)
+        # courts and plazas inside a park (land use `pedestrian`) stay as they are (D-103)
         courts = project_rows(region, overture.land_use(release, bbox, list(rule["paved"])))
         pts, _ = points_in(courts, xs, ys)
         wild.ravel()[pts] = True
@@ -236,7 +236,7 @@ def lawn(
 def water_area_cells(region: Region, shape: tuple[int, int], classes: list[str]) -> np.ndarray:
     """Cells whose centre lies in an Overture water area of `classes` (ponds,
     moats, lakes): still water beside land cover's, which misses a pond in a
-    garden or a castle's moat (D-097). Uniform layouts; cells as laid out."""
+    garden or a castle's moat (D-103). Uniform layouts; cells as laid out."""
     release = region.sources["overture"]["release"]
     polys = project_rows(region, overture.water_areas(release, region.lonlat_envelope(), classes))
     out = np.zeros(shape, dtype=bool)

@@ -739,7 +739,7 @@ def build(
     min_lake_cells = round(terrain.get("minLakeArea", 0) / region.meters_per_cell**2)
     lake = landcover == 80
     if (region.sources.get("lakes") or {}).get("classes"):
-        # Overture's ponds and moats as still water too (D-097)
+        # Overture's ponds and moats as still water too (D-103)
         if layout.warped:
             progress.log("lakes: Overture's water areas aren't laid out on warped layouts yet")
         else:

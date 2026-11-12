@@ -211,7 +211,7 @@ export const templeHall: Generator = (ctx) => {
   const mask = ctx.mask ?? rectMask(Math.max(5, Math.round(H * param("width", 1.6))), Math.max(5, Math.round(H * param("depth", 1.3))));
   const m = new VoxelModel(mask.sx, mask.sy, H + 3);
   const mats = hallMats(ctx, m);
-  // the data's roof shape where it gives one (D-094): a plain gable (kirizuma), or a pyramid (hōgyō)
+  // the data's roof shape where it gives one (D-100): a plain gable (kirizuma), or a pyramid (hōgyō)
   const shape = ctx.hints?.roof;
   const hip = shape === "gabled" ? 0 : shape === "pyramidal" ? 1 : param("hip", 0.4);
   const spec = { hip, roof: param("roof", 0.55), eave: param("eave", 1), open: param("open", 0) >= 1 };

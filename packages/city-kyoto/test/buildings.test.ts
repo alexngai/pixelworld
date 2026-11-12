@@ -87,12 +87,12 @@ describe("Kyoto's pack", () => {
   it("keeps to 42 ramps, with a marker and a night palette", () => {
     expect(Object.keys(style.ramps).length).toBeLessThanOrEqual(42);
     expect(style.ramps.marker).toBeDefined();
-    // Gion's paper lanterns glow at night too (D-094)
+    // Gion's paper lanterns glow at night too (D-100)
     expect(Object.keys(style.night.emissive).sort()).toEqual(["chochin", "lit", "lit-cool", "marker"]);
   });
 });
 
-/** No hints, a corner lot, a diagonal front, and each roof shape the data can give (D-094). */
+/** No hints, a corner lot, a diagonal front, and each roof shape the data can give (D-100). */
 const HINTS: (GenContext["hints"] | undefined)[] = [
   undefined,
   { floors: 2, corner: true, front: 0 },
@@ -138,7 +138,7 @@ describe("Kyoto's buildings", () => {
     expect(topAt(m, 5, ridgeY)).toBe(m.sz - 3 + (topAt(m, 5, ridgeY) - (m.sz - 3)));
   });
 
-  it("draws the roof the data gives: hipped or gabled houses, a shed, a pitched mid-rise (D-094)", () => {
+  it("draws the roof the data gives: hipped or gabled houses, a shed, a pitched mid-rise (D-100)", () => {
     const mask = rect(16, 16);
     const at = (group: string, roof: string, H = 16) => gen(group, 9, mask, H, { floors: 2, front: 6, roof });
     // gabled: the ridge runs the whole width; hipped: the ends fall away
@@ -160,7 +160,7 @@ describe("Kyoto's buildings", () => {
     expect(topAt(pitched, 8, 8)).toBeGreaterThan(topAt(pitched, 1, 8) + 2);
   });
 
-  it("draws a kura: a namako skirt under white plaster and a steep tile roof (D-094)", () => {
+  it("draws a kura: a namako skirt under white plaster and a steep tile roof (D-100)", () => {
     const m = gen("building.kura", 3, rect(10, 14), 16, { floors: 2, front: 6 });
     const side = (z: number) => Array.from({ length: 14 }, (_, y) => nameAt(m, 0, y, z));
     expect(side(2)).toContain("kawara"); // the skirt's tiles
@@ -169,7 +169,7 @@ describe("Kyoto's buildings", () => {
     expect(topAt(m, 5, 7)).toBeGreaterThanOrEqual(topAt(m, 0, 7) + 2); // the ridge along the longer side
   });
 
-  it("draws a row mapped as one footprint as houses of their own, party walls between (D-096)", () => {
+  it("draws a row mapped as one footprint as houses of their own, party walls between (D-102)", () => {
     // 30 m of front, 19 m deep, two storeys: about five houses
     const heights = new Set<number>();
     let pillars = 0;
@@ -182,7 +182,7 @@ describe("Kyoto's buildings", () => {
     expect(pillars).toBeGreaterThanOrEqual(3 * 8); // a pair of pillars at each of four party walls
   });
 
-  it("gives some mid-rises a pent eave of tile over the ground floor (D-096)", () => {
+  it("gives some mid-rises a pent eave of tile over the ground floor (D-102)", () => {
     let found = false;
     for (let seed = 1; seed < 40 && !found; seed++) {
       const m = gen("building.midrise", seed, rect(20, 20), 48, { floors: 6, front: 6 });
@@ -308,7 +308,7 @@ describe("Kyoto's landmarks", () => {
     expect(ring).toContain("lit");
   });
 
-  it("draw a torii: two pillars open between them, a lintel wider than the span, stone lanterns (D-094)", () => {
+  it("draw a torii: two pillars open between them, a lintel wider than the span, stone lanterns (D-100)", () => {
     const H = 16;
     const m = generateModel(style.assets, rampIds, "landmark.torii", { seed: 1, heightVox: H });
     const row = (z: number) => Array.from({ length: m.sx }, (_, x) => (m.get(x, 1, z) ? 1 : 0)).join("");
@@ -320,7 +320,7 @@ describe("Kyoto's landmarks", () => {
     expect(lamps).toContain("lit");
   });
 
-  it("draw a gilded pavilion: three storeys, the upper two gold, a phoenix on its pyramid (D-096)", () => {
+  it("draw a gilded pavilion: three storeys, the upper two gold, a phoenix on its pyramid (D-102)", () => {
     const H = 40;
     const m = generateModel(style.assets, rampIds, "landmark.pavilion.gold", { seed: 1, heightVox: H });
     const cx = Math.floor(m.sx / 2);
@@ -343,7 +343,7 @@ describe("Kyoto's landmarks", () => {
     expect(reach(H * 0.3, H * 0.6)).toBeGreaterThan(reach(H * 0.75, H));
   });
 
-  it("draw utility poles whose wires reach along y, sagging toward their ends (D-096)", () => {
+  it("draw utility poles whose wires reach along y, sagging toward their ends (D-102)", () => {
     const m = generateModel(style.assets, rampIds, "prop.pole", { seed: 2 });
     const c = Math.floor(m.sy / 2);
     expect(m.sy).toBeGreaterThan(40); // 24 voxels each side
@@ -355,7 +355,7 @@ describe("Kyoto's landmarks", () => {
     expect(at(0)).toBe(at(m.sy - 1));
   });
 
-  it("draw a diagonal street's pole with its wires along x = y (D-097)", () => {
+  it("draw a diagonal street's pole with its wires along x = y (D-103)", () => {
     const m = generateModel(style.assets, rampIds, "prop.pole.diagonal", { seed: 2 });
     expect(m.sx).toBe(m.sy);
     const c = Math.floor(m.sx / 2);
@@ -365,7 +365,7 @@ describe("Kyoto's landmarks", () => {
     for (let z = 0; z < m.sz; z++) expect(m.get(c + c - 1, c - (c - 1), z)).toBe(0); // nothing along the other diagonal
   });
 
-  it("draw stone wall segments along each of the four directions, and the 2:1 streets' poles (D-098)", () => {
+  it("draw stone wall segments along each of the four directions, and the 2:1 streets' poles (D-104)", () => {
     const along = (group: string, dx: number, dy: number) => {
       const m = generateModel(style.assets, rampIds, group, { seed: 1 });
       const c = Math.floor(m.sx / 2);

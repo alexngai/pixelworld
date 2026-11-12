@@ -622,7 +622,7 @@ SOURCES = Map(
                     )
                 }
             ),
-            "Overture's water areas drawn as still water beside land cover's (D-097): a "
+            "Overture's water areas drawn as still water beside land cover's (D-103): a "
             "garden's pond, a castle's moat. Each is levelled as a lake.",
         ),
         "paths": Key(
@@ -1231,7 +1231,7 @@ OBJECTS = Map(
                     }
                 )
             ),
-            "Walls along Overture's barrier lines, in segments turned with them (D-098).",
+            "Walls along Overture's barrier lines, in segments turned with them (D-104).",
         ),
         "landmarks": Key(
             ListOf(
