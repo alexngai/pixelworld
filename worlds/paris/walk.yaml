@@ -66,7 +66,6 @@ objects:
   # own year inside it), its urban fabric class, and BD TOPO's storeys, which
   # count the ground floor and the mansard's. First match wins.
   typology:
-    facts: { plugin: apur, version: "2026-07-30" }
     rules:
       # palaces by Overture's name (D-088): the Louvre's wings round its
       # courtyards, and the Hôtel des Invalides round the dome's church
@@ -110,8 +109,8 @@ sources:
   # read as ground 20 m up) that a walking level would show
   dem: { kind: ign-rgealti, overview: 4 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: apur, version: "2026-07-30" }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
     excludeSubclasses: [parking_aisle, driveway]

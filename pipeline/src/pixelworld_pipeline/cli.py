@@ -173,10 +173,10 @@ def parser() -> argparse.ArgumentParser:
 
     plg = add(
         "plugins",
-        "list the installed plugins (facts sources, terrain and land-cover sources)",
+        "list the data sources by role (built in, installed and registered)",
     )
     plg.add_argument(
-        "region", type=Path, nargs="?", help="also check the plugins this region spec names"
+        "region", type=Path, nargs="?", help="also check the sources this region spec names"
     )
     return p
 
@@ -216,20 +216,26 @@ def run(args: argparse.Namespace) -> int:
     if args.command == "plugins":
         from . import plugins
 
-        for group in plugins.GROUPS:
-            print(f"{group} ({plugins.GROUPS[group]}s):")
-            found = plugins.available(group)
-            name_w = max([len(n) for n in found] + [4]) + 2
-            origin_w = max([len(p.origin) for p in found.values()] + [6]) + 2
-            for name, plugin in found.items():
+        found = plugins.available(plugins.SOURCES)
+        roles = {name: plugins.role_of(name) for name in found}
+        name_w = max([len(n) for n in found] + [4]) + 2
+        origin_w = max([len(p.origin) for p in found.values()] + [6]) + 2
+        for role, (key, default) in plugins.ROLES.items():
+            print(f"{role} (sources.{key}{f', default {default}' if default else ''}):")
+            mine = [name for name in found if roles[name] == role]
+            for name in mine:
+                plugin = found[name]
                 print(f"  {name:{name_w}}{plugin.origin:{origin_w}}{plugin.ref}")
-            if not found:
+            if not mine:
                 print("  (none)")
+        odd = [name for name, role in roles.items() if role not in plugins.ROLES]
+        if odd:
+            print(f"not loadable, or of no known role: {', '.join(odd)}")
         if args.region:
             region = Region.load(args.region)
             plugins.check(region)
             names = [name for _, name, _ in plugins.spec_plugins(region)]
-            print(f"{args.region}: every plugin it names is installed ({', '.join(names)})")
+            print(f"{args.region}: every source it names is installed ({', '.join(names)})")
         return OK
 
     if args.command == "routes":

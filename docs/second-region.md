@@ -50,9 +50,9 @@ From `sources/datasf.py`, `typology.py`, `objects.py` and `rasters.py`:
   1. Turn `if spec.get("facts") == "datasf"` into a registry of facts sources, all returning one normalized dict: `year, stories, units, use, class, hood`, plus optional `roof` and `material`.
   2. Add rule fields `classes:` (a source's native building class: PLUTO `bldgclass`, Boston `BLDG_TYPE`, DC `STRUCT`, Philadelphia `building_code_description`, Helsinki `rakennusaine_s`) and `roofs:`. In most candidates the iconic type is in the class code, not in year plus use.
 - **Status (after this research):** both refactors are done, and DEMs are plugins too ([plugins.md](plugins.md)):
-  - facts sources are plugins (`pixelworld.facts`), and DataSF is the city pack `pixelworld-city-sf`;
+  - facts sources are plugins (`pixelworld.facts`; since D-110, sources of role `facts` in the one group `pixelworld.sources`), and DataSF was the city pack `pixelworld-city-sf` (merged back into the pipeline in D-110);
   - `classes:` and `roofs:` are rule fields;
-  - a "DEM kind" below is now a terrain source plugin (`pixelworld.sources`), and 3DEP is the first.
+  - a "DEM kind" below is now a terrain source (`pixelworld.sources`), and 3DEP is the first.
 
 ---
 
@@ -399,7 +399,7 @@ Read from an open network: Socrata dataset metadata and SoQL queries against the
 - **Lidar:** the bucket has one New York City EPT, `NY_NewYorkCity` (4.76 billion points; the survey year isn't in its metadata). There is no `NY_NewYorkCity_2021`, contrary to §3 and §4 before this check. The footprints already carry heights, so lidar is optional.
 
 ### What the city pack would be
-- **`pixelworld-city-nyc`**, with one facts source named after its data, `pluto` (plugins.md §6). It looks up by point in footprint, not point in lot:
+- **`pixelworld-city-nyc`** (merged back into the pipeline in D-110), with one facts source named after its data, `pluto` (plugins.md §6). It looks up by point in footprint, not point in lot:
   1. footprints in the box (spatial query);
   2. PLUTO by BBL, fetched by its lot `latitude`/`longitude` box;
   3. LPC by BIN.
@@ -440,7 +440,7 @@ Read from an open network: APUR's open-data catalogue (`opendata.apur.org/data.j
 **Overture's buildings** in the walking box (release 2026-10-21.0): 20,435, with a height on 637 (3%) and floors on 12,528 (61%). The other 37% would stand at the pipeline's default height, which is why the facts carry APUR's height (D-084).
 
 ### What the city pack is
-- **`pixelworld-city-paris`** (D-084), with the facts source `apur` and the terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`.
+- **`pixelworld-city-paris`** (D-084, merged back into the pipeline in D-110), with the facts source `apur` and the terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`.
 - **Facts** per APUR footprint: `year` (its own year inside its period, else the period's representative year), `stories`, `units` and `use` from the BD TOPO building under its representative point, `class` (APUR's fabric), `roof` (APUR's roof form), `height` (APUR's median) and `hood` (the quartier).
 - **Not used yet:** the tree points (trees come from the canopy height map, as elsewhere; street trees from records would be a new pipeline input), BDNB, IDFM's GTFS (rails come from Overture), BD TOPO's materials (codes, on half the buildings).
 - **Not checked:** the RGE ALTI's source per area (its quality mask layer exists on the WMS-Raster), LiDAR HD's flight dates over Paris.
@@ -492,7 +492,7 @@ Read from an open network: PLATEAU's site policy, its data catalog API, the buil
 **GSI's tiles through the adapter** (1 m, bilinear) against GSI's own elevation API at the same points: Shijō-Karasuma 36.92 / 36.9 m (1 m lidar); Shijō Ōhashi 37.99 / 38 (10 m); Yasaka shrine's gate 49.59 / 49.6; Gojō-zaka 40.94 / 41.3; Kyoto Station's Karasuma side 28.12 / 28.3; the Shibuya crossing 15.18 / 15.2; Shinjuku's west exit 39.45 / 39.5; Yoyogi Park 35.06 / 35.1. All within 0.4 m.
 
 ### What the city pack is
-- **`pixelworld-city-jp`** (D-089), shared by every Japanese city: the facts source `plateau` and the terrain source `gsi-dem`.
+- **`pixelworld-city-jp`** (D-089, merged back into the pipeline in D-110), shared by every Japanese city: the facts source `plateau` and the terrain source `gsi-dem`.
 - **Facts** per PLATEAU building: `height`, `stories`, `year`, `use` (the usage code's group), `class` (the usage code), `material` (the structure code) and `roof` (from the LoD2 roof planes); looked up by point in footprint.
 - **Not used yet:** Tokyo's fire resistance and detailed use (kept in the extract), neighbourhoods (the ward code is in each building's `uro:city`), PLATEAU's own DEM, land use, roads and LoD2 textures.
 

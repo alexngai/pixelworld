@@ -4,14 +4,12 @@ floors, units) and, inside designated landmarks and historic districts, to
 the Landmarks Preservation Commission's building database (date, facade
 material), with its 2020 Neighborhood Tabulation Area as the neighbourhood.
 
-The `pluto` facts source (PlutoFacts) is registered through the
-`pixelworld.facts` entry point. A region names it in its typology section:
+The `pluto` facts source (PlutoFacts) is built in. A region selects it:
 
-    objects:
-      typology:
-        facts: pluto
-        # or pinned to a PLUTO release:
-        facts: { plugin: pluto, version: "26v2" }
+    sources:
+      facts: { kind: pluto }
+      # or pinned to a PLUTO release:
+      facts: { kind: pluto, version: "26v2" }
 
 Options:
 - version: the PLUTO release the downloads are cached under (default: the
@@ -41,6 +39,7 @@ import shapely
 from rasterio.warp import transform as transform_points
 
 from pixelworld_pipeline.facts import FactsSource
+from pixelworld_pipeline.schema import Key, Str
 from pixelworld_pipeline.sources.http import cache_dir, get
 
 BASE = "https://data.cityofnewyork.us/resource/"
@@ -249,6 +248,10 @@ OPTIONS = ("version",)
 
 class PlutoFacts(FactsSource):
     """The `pluto` facts source: New York's footprints, tax lots and landmark records."""
+
+    options_schema = {
+        "version": Key(Str(), "The PLUTO release the downloads are cached under (e.g. `26v2`)."),
+    }
 
     attribution = ATTRIBUTION
 

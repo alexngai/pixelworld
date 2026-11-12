@@ -62,19 +62,8 @@ objects:
   # Building typologies (D-055) with no records to read (D-107): each
   # neighbourhood names its buildings' hood, and gives the ones OSM has no
   # floors for its typical height (the median of OSM's floors on footprints under 300 m² there,
-  # measured 2026-11-11: open data only). First match wins.
+  # measured 2026-11-11: open data only). First match wins. The boxes are sources.facts.
   typology:
-    facts:
-      plugin: areas
-      areas:
-        - { hood: Tsim Sha Tsui, bounds: [114.167, 22.290, 114.178, 22.303], floors: 9 }
-        - { hood: Jordan, bounds: [114.166, 22.303, 114.174, 22.309], floors: 6 }
-        - { hood: Yau Ma Tei, bounds: [114.166, 22.309, 114.174, 22.316], floors: 6 }
-        - { hood: Mong Kok, bounds: [114.164, 22.316, 114.175, 22.326], floors: 8 }
-        - { hood: Tai Kok Tsui, bounds: [114.156, 22.316, 114.164, 22.326], floors: 6 }
-        - { hood: Prince Edward, bounds: [114.156, 22.326, 114.178, 22.330], floors: 7 }
-        - { hood: King's Park, bounds: [114.174, 22.303, 114.178, 22.316], floors: 8 }
-        - { hood: West Kowloon, bounds: [114.156, 22.290, 114.166, 22.316], floors: 4 }
     rules:
       # towers of 25 storeys and up: flats where OSM says so, and in the old
       # districts every narrow one (the pencil towers); glass elsewhere
@@ -117,8 +106,19 @@ sources:
   # Copernicus GLO-30 with buildings filtered off (D-107)
   dem: { kind: copernicus-glo30-ground, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  # facts by neighbourhood box (D-107), for objects.typology: no records to read
+  facts:
+    kind: areas
+    areas:
+      - { hood: Tsim Sha Tsui, bounds: [114.167, 22.290, 114.178, 22.303], floors: 9 }
+      - { hood: Jordan, bounds: [114.166, 22.303, 114.174, 22.309], floors: 6 }
+      - { hood: Yau Ma Tei, bounds: [114.166, 22.309, 114.174, 22.316], floors: 6 }
+      - { hood: Mong Kok, bounds: [114.164, 22.316, 114.175, 22.326], floors: 8 }
+      - { hood: Tai Kok Tsui, bounds: [114.156, 22.316, 114.164, 22.326], floors: 6 }
+      - { hood: Prince Edward, bounds: [114.156, 22.326, 114.178, 22.330], floors: 7 }
+      - { hood: King's Park, bounds: [114.174, 22.303, 114.178, 22.316], floors: 8 }
+      - { hood: West Kowloon, bounds: [114.156, 22.290, 114.166, 22.316], floors: 4 }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
     excludeSubclasses: [parking_aisle, driveway]

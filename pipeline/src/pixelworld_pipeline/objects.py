@@ -61,9 +61,9 @@ import numpy as np
 import shapely
 from rasterio.warp import transform as transform_points
 
-from . import progress
+from . import plugins, progress
 from .region import Region
-from .sources import overture, rasters
+from .sources import rasters
 
 LANDCOVER_CODES = {name: code for code, name in rasters.WORLDCOVER.items()}
 RESIDENTIAL = {
@@ -567,14 +567,8 @@ def street_trees(
     not_name = rule.get("notName", "").lower()
     if name or not_name:
         # names aren't in the road layer's columns; fetch them for this rule only
-        road_rows = overture.query(
-            p.region.sources["overture"]["release"],
-            "transportation",
-            "segment",
-            p.region.lonlat_envelope(),
-            ["id", "class", "names", "geometry"],
-            lambda r: r["class"] in classes,
-            filter_tag=f"classes:{','.join(sorted(classes))}",
+        road_rows = plugins.source(p.region, "features").streets(
+            p.region.lonlat_envelope(), classes
         )
     for row in sorted(road_rows, key=lambda r: r["id"]):
         if row["class"] not in classes:
@@ -1144,10 +1138,10 @@ def park_polygons(region: Region, spec: dict[str, Any], boxes: list) -> list | N
         return None
     lawn = (region.ground or {}).get("lawn") or {}
     classes = list(rule.get("landUse") or lawn.get("landUse") or PARK_LAND_USE)
-    release = region.sources["overture"]["release"]
+    source = plugins.source(region, "features")
     rows: dict[str, dict] = {}
     for box in boxes:
-        for r in overture.land_use(release, tuple(box), classes):
+        for r in source.land_use(tuple(box), classes):
             rows[r["id"]] = r
     return project_rows(region, [rows[k] for k in sorted(rows)])
 
@@ -1156,7 +1150,7 @@ def type_buildings(
     region: Region, found: list[dict], spec: dict, streets, water, tower_m: float = 45.0
 ) -> list[dict]:
     """Building typologies (D-055): features, facts and the spec's rules. The
-    facts come from the facts source plugin the spec names (`facts:`). A
+    facts come from the facts source the spec selects (`sources.facts`). A
     building Overture gives no height or floors takes the facts' `height`
     (D-084), and becomes a tower at `tower_m` or more. With `roofHints`, one
     Overture gives no roof shape takes the facts' `roof` as its generator's
@@ -1165,7 +1159,7 @@ def type_buildings(
     from . import typology
 
     facts = None
-    source = facts_sources.open_facts(region, spec)
+    source = facts_sources.open_facts(region)
     if source is not None:
         has = [i for i, inst in enumerate(found) if "_c" in inst]
         xs = np.array([found[i]["_c"][0] for i in has])
@@ -1219,8 +1213,7 @@ def _ground_features(region: Region, found: list[dict], feats: list[dict], class
     a shrine's grounds (OSM's landuse=religious), a cemetery."""
     from .ground import project_rows
 
-    release = region.sources["overture"]["release"]
-    rows = overture.land_use(release, tuple(region.lonlat_envelope()), classes)
+    rows = plugins.source(region, "features").land_use(tuple(region.lonlat_envelope()), classes)
     polys = project_rows(region, rows)
     if not polys:
         return
@@ -1746,17 +1739,17 @@ def place(
     lidar_stats: dict[str, int] = {}
     building_polys = []
     if spec.get("buildings") is not None:
-        release = region.sources["overture"]["release"]
+        source = plugins.source(region, "features")
         bounds = spec["buildings"].get("bounds", region.lonlat_envelope())
         # one box, or a list of boxes (e.g. the Strip and Grand Canyon Village)
         boxes = bounds if isinstance(bounds[0], (list, tuple)) else [bounds]
         rows, parts, seen = [], [], set()
         for box in boxes:
-            for r in overture.buildings(release, tuple(box)):
+            for r in source.buildings(tuple(box)):
                 if r["id"] not in seen:
                     seen.add(r["id"])
                     rows.append(r)
-            parts += overture.building_parts(release, tuple(box))
+            parts += source.building_parts(tuple(box))
         parts = list({pt["id"]: pt for pt in parts}.values())
         rows.sort(key=lambda r: r["id"])
         # landmarks drawn on the footprint of the building they replace (the
@@ -1775,12 +1768,10 @@ def place(
                     fp_landmarks[k] = max(polys, key=lambda g: g.area)
         grids = []
         lidar_spec = spec["buildings"].get("lidar")
-        if lidar_spec:
-            from .sources import lidar as lidar_source
-
+        if lidar_spec is not None:  # `lidar: {}` reads with the defaults
+            heights = plugins.source(region, "heights")
             for box in boxes:
-                g = lidar_source.height_grid(
-                    lidar_spec["project"],
+                g = heights.height_grid(
                     tuple(box),
                     region.crs,
                     float(lidar_spec.get("res", 4.0)),
@@ -1839,9 +1830,7 @@ def place(
     canopy = None
     rules = (spec.get("vegetation") or []) + (spec.get("streetTrees") or [])
     if any("canopy" in rule for rule in rules):
-        from .sources.canopy import CanopyGrid
-
-        canopy = CanopyGrid(region.lonlat_envelope())
+        canopy = plugins.source(region, "canopy").grid(region.lonlat_envelope())
     for i, rule in enumerate(spec.get("vegetation") or []):
         instances += scatter(p, rule, occupied, f"{i}", canopy)
     drawn = None
@@ -1865,8 +1854,8 @@ def place(
     # walls along Overture's barrier lines (D-104): segments one `spacing` apart on
     # the line, turned with it; over water's edge and cliffs too, off buildings
     for i, rule in enumerate(spec.get("walls") or []):
-        rows = overture.barriers(
-            region.sources["overture"]["release"], region.lonlat_envelope(), list(rule["classes"])
+        rows = plugins.source(region, "features").barriers(
+            region.lonlat_envelope(), list(rule["classes"])
         )
         line_rule = {**rule, "roads": list(rule["classes"]), "along": True, "offset": 0.0}
         line_rule["_over"] = True

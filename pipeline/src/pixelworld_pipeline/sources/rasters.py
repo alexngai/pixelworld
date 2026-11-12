@@ -18,6 +18,7 @@ for warped layouts. An adapter that isn't tiled GeoTIFFs overrides `read_into`.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import warnings
 from collections.abc import Iterable
@@ -106,8 +107,9 @@ def _warp_tiles(
 # ---- source adapters ------------------------------------------------------------------------
 
 
-class RasterSource:
-    """A raster source adapter (entry point group `pixelworld.sources`).
+class RasterSource(plugins.Source):
+    """A raster source (entry point group `pixelworld.sources`), of role
+    `terrain` (`sources.dem`, `micro.dem`) or `landcover` (`sources.landcover`).
 
     role: `terrain` (elevation in metres, float; gaps are NaN and get filled
       from their neighbours) or `landcover` (ESA WorldCover class codes, uint8;
@@ -124,10 +126,8 @@ class RasterSource:
     anything else.
     """
 
-    role: str = ""
     native_m: float = 0.0
     deepest_overview: int | None = None
-    attribution: dict | None = None
 
     def tiles(self, bounds: tuple[float, float, float, float]) -> list[str]:
         """URLs (or local paths) of the GeoTIFFs covering a lon/lat box (west,
@@ -153,34 +153,21 @@ class RasterSource:
         return _warp_tiles(self.tiles(bounds), dst, transform, crs, overview, resampling, nodata)
 
 
-def _roles(names: list[str]) -> dict[str, str]:
-    out = {}
-    for name in names:
-        try:
-            out[name] = getattr(source(name), "role", "")
-        except plugins.PluginError:
-            out[name] = ""
-    return out
+Ref = str | dict
 
 
-def source(kind: str, role: str | None = None, *, where: str | None = None) -> RasterSource:
-    """The raster source adapter a region's `kind` names, checked to have `role`."""
-    try:
-        obj = plugins.load(plugins.SOURCES, kind, where=where)
-    except plugins.PluginNotFoundError as e:
-        if role is None:
-            raise
-        same = [n for n, r in _roles(e.available).items() if r == role]
-        raise plugins.PluginNotFoundError(plugins.SOURCES, kind, same, where, role) from None
-    if isinstance(obj, type):
-        obj = obj()
-    if role is not None and getattr(obj, "role", None) != role:
-        at = f" (named by {where})" if where else ""
-        raise plugins.PluginError(
-            f"source '{kind}'{at} is a {getattr(obj, 'role', None) or 'raster'} source, "
-            f"not a {role} source"
-        )
-    return obj
+def source(ref: Ref, role: str | None = None, region: Region | None = None, *, where=None):
+    """The raster source a spec block (`{kind, …options}`) or a bare kind names,
+    opened for the region and checked to have `role` (by default, its own)."""
+    kind, _ = plugins.split_ref(ref, where)
+    return plugins.open_source(role or plugins.role_of(kind) or "terrain", ref, region, where=where)
+
+
+def _ref_key(ref: Ref) -> str:
+    """A spec block's part of a cache key: its kind, and its options if it has any
+    (so caches written before options existed still match)."""
+    kind, options = plugins.split_ref(ref)
+    return kind + (json.dumps(options, sort_keys=True) if options else "")
 
 
 # 3DEP DEM products: region-spec kind → (product directory, file prefix).
@@ -353,11 +340,11 @@ def dem_corners(region: Region, k: int = 1, spec: dict | None = None) -> np.ndar
     shape (K·cells_y + 1, K·cells_x + 1); `spec` overrides the DEM source.
     """
     spec = spec or region.sources["dem"]
-    src = source(spec["kind"], "terrain", where="sources.dem.kind")
+    src = source(spec, "terrain", region, where="sources.dem")
     overview = int(spec.get("overview", 4))
     # average when shrinking the source; bilinear when cells are finer than it
     resampling = Resampling[spec.get("resampling", "average")]
-    params = f"{spec['kind']}|{overview}"
+    params = f"{_ref_key(spec)}|{overview}"
     if resampling != Resampling.average:
         params += f"|{resampling.name}"
     if k != 1:
@@ -437,9 +424,9 @@ WORLDCOVER = {
 def landcover_cells(region: Region) -> np.ndarray:
     """ESA WorldCover class per cell (mode of the overview pixels), shape (cy, cx)."""
     spec = region.sources["landcover"]
-    src = source(spec["kind"], "landcover", where="sources.landcover.kind")
+    src = source(spec, "landcover", region, where="sources.landcover")
     overview = int(spec.get("overview", 16))
-    path = _cache_path(region, "landcover", f"{spec['kind']}|{overview}")
+    path = _cache_path(region, "landcover", f"{_ref_key(spec)}|{overview}")
     if path.exists():
         return np.load(path)
     cx, cy = region.cells
@@ -468,11 +455,11 @@ def landcover_fine(region: Region, meters: float = 10.0) -> tuple[np.ndarray, fl
     place objects at the source's own resolution, whatever the cell size.
     """
     spec = region.sources["landcover"]
-    src = source(spec["kind"], "landcover", where="sources.landcover.kind")
+    src = source(spec, "landcover", region, where="sources.landcover")
     m = region.meters_per_cell
     factor = max(1, round(m / meters))
     px = m / factor
-    path = _cache_path(region, "landcover-fine", f"{spec['kind']}|{px}")
+    path = _cache_path(region, "landcover-fine", f"{_ref_key(spec)}|{px}")
     if path.exists():
         return np.load(path), px
     cx, cy = region.cells
@@ -506,20 +493,20 @@ _MAX_LEVEL = 4  # 16× native: the coarsest level points sample
 # overview and averaged down while reprojecting.
 
 
-def overview_factor(kind: str, res: float) -> tuple[int, int]:
+def overview_factor(kind: Ref, res: float, region: Region | None = None) -> tuple[int, int]:
     """(the decimation factor a level at `res` stands for, the overview it is read from)."""
-    src = source(kind)
+    src = source(kind, region=region)
     factor = max(1, int(round(res / src.native_m)))
     return factor, min(factor, src.deepest_overview or factor)
 
 
-def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -> np.ndarray:
+def _block(region: Region, kind: Ref, res: float, bx: int, by: int, mode: str) -> np.ndarray:
     """Pixels of block (bx, by) at resolution res, with a 1-pixel apron on every side."""
     size = BLOCK_PX + 2
     x0 = bx * BLOCK_PX * res - res
     y1 = (by + 1) * BLOCK_PX * res + res  # blocks count northward
-    factor, read = overview_factor(kind, res)
-    key = f"{kind}|{res}|{bx}|{by}|{mode}"
+    factor, read = overview_factor(kind, res, region)
+    key = f"{_ref_key(kind)}|{res}|{bx}|{by}|{mode}"
     if read < factor:
         # averaged down from a finer overview (older caches hold these blocks empty:
         # the overview they asked for doesn't exist, so every tile read failed)
@@ -529,7 +516,7 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
     crs_tag = region.crs.to_proj4()
     if path.exists() and path_tag.exists() and path_tag.read_text() == f"{key}|{crs_tag}":
         return np.load(path)
-    src = source(kind)
+    src = source(kind, region=region)
     is_dem = src.role == "terrain"
     dst = np.full((size, size), np.nan if is_dem else 0, dtype=np.float32 if is_dem else np.uint8)
     transform = rasterio.Affine(res, 0, x0, 0, -res, y1)
@@ -561,14 +548,14 @@ def _block(region: Region, kind: str, res: float, bx: int, by: int, mode: str) -
 
 def sample_points(
     region: Region,
-    kind: str,
+    kind: Ref,
     x: np.ndarray,
     y: np.ndarray,
     spacing: np.ndarray,
 ) -> np.ndarray:
     """Sample a source at projected points (metres): bilinear for elevation,
     nearest for land cover, from the level that matches each point's spacing."""
-    src = source(kind)
+    src = source(kind, region=region)
     is_dem = src.role == "terrain"
     native = src.native_m
     x = np.asarray(x, dtype=np.float64).ravel()
@@ -615,16 +602,16 @@ def sample_points(
 _SMOOTHED: dict[tuple, tuple] = {}
 
 
-def smoothed_dem(region: Region, kind: str, sigma_m: float, res: float = 480.0):
+def smoothed_dem(region: Region, kind: Ref, sigma_m: float, res: float = 480.0):
     """The whole region's elevation at `res`, Gaussian-smoothed (σ in metres), as
     (grid, x0, y1, res) for bilinear sampling: the reference for relief exaggeration."""
-    key = (_grid_key(region), kind, sigma_m, res)
+    key = (_grid_key(region), _ref_key(kind), sigma_m, res)
     if key not in _SMOOTHED:
         _SMOOTHED[key] = _smoothed_dem(region, kind, sigma_m, res)
     return _SMOOTHED[key]
 
 
-def _smoothed_dem(region: Region, kind: str, sigma_m: float, res: float):
+def _smoothed_dem(region: Region, kind: Ref, sigma_m: float, res: float):
     from ..gridify import smooth
 
     x0, y0, x1, y1 = region._projected_envelope()

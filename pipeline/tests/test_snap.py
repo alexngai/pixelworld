@@ -9,6 +9,7 @@ import pytest
 from pixelworld_pipeline import objects
 from pixelworld_pipeline import roads as R
 from pixelworld_pipeline.region import Region
+from pixelworld_pipeline.sources import features
 
 
 def _kinks(layer: R.RoadLayer) -> int:
@@ -275,7 +276,6 @@ def test_rungs_between_parallel_tracks_go_but_crossings_stay():
 def test_rail_rules_pick_segments_and_tunnels_are_left_out():
     from pixelworld_pipeline.build import rail_lines
     from pixelworld_pipeline.layout import UniformLayout
-    from pixelworld_pipeline.sources import overture
 
     def line(coords):
         return f"LINESTRING ({', '.join(f'{x} {y}' for x, y in coords)})"
@@ -318,8 +318,8 @@ def test_rail_rules_pick_segments_and_tunnels_are_left_out():
         {"draw": "street", "rail": ["tram"]},
         {"draw": "train", "rail": ["standard_gauge"]},
     ]
-    assert overture.rail_matches(rules[0], rows[1]) and not overture.rail_matches(rules[0], rows[0])
-    assert len(overture.rail_open_parts(rows[0])) == 2  # either side of the tunnel
+    assert features.rail_matches(rules[0], rows[1]) and not features.rail_matches(rules[0], rows[0])
+    assert len(features.rail_open_parts(rows[0])) == 2  # either side of the tunnel
     region = Region.from_dict(
         {
             "id": "s",

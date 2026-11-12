@@ -19,7 +19,7 @@ SPEC = {
     "sources": {
         "dem": {"kind": "usgs-3dep-1arcsec"},
         "landcover": {"kind": "esa-worldcover-2021"},
-        "overture": {"release": "2026-10-21.0"},
+        "features": {"kind": "overture", "release": "2026-10-21.0"},
         "roads": {"classes": ["primary"]},
     },
 }

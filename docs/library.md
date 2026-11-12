@@ -30,9 +30,9 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 
   It is now a client of `@pixelworlds/engine` (about 430 lines: URL parameters, HUD, layer panel, levels, debug API).
 - **The pipeline (Python):** one package with a CLI (`pixelworld build|routes|heroes|serve|plugins`) and a Python API (`pixelworld_pipeline.build(spec)`). Region specs select sources by name.
-  - **Plugins:** terrain and land-cover sources and facts sources are found by name through entry points ([plugins.md](plugins.md)).
-  - **San Francisco's facts (DataSF)** are a separate package, the city pack `pixelworld-city-sf` in `pipeline/plugins/`.
-  - **Still built in:** stages, and the Overture, canopy, lidar and transit sources.
+  - **Sources:** every external data source has a role (terrain, land cover, features, facts, canopy, heights, importance) and is chosen by name in the spec (`sources:`). Installed packages add sources through the `pixelworld.sources` entry points ([plugins.md](plugins.md)).
+  - **City sources:** DataSF, PLUTO, APUR, PLATEAU and the IGN and GSI terrain sources are built in (D-110); they were city packs before.
+  - **Still built in:** the stages. Overture, the canopy map, lidar and Wikidata are sources like the rest, which a spec can swap (D-110).
 - **Generator plugins (TypeScript):** the generator registry is public, and plugins add generators to it, in the bake worker and on the main thread (§8, [plugins.md](plugins.md) §9). San Francisco's facades, towers and Chinatown are the city pack's browser half, the package `@pixelworlds/city-sf` in `packages/city-sf`.
 - **Contracts:** the world format is specified in prose (docs/world-format.md) with codecs on both sides; style packs are JSON checked against a JSON Schema (`packages/style/schema/`, D-075).
 - **Licences:** MIT OR Apache-2.0 for the code, CC BY 4.0 for the style packs, ODbL for the world packages (§6, D2).
@@ -51,8 +51,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworlds/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
 | `@pixelworlds/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
 | `@pixelworlds/style-desert-southwest`, `@pixelworlds/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
-| `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, source adapters, plugins | `pipeline/` |
-| `pixelworld-city-sf` (PyPI) | San Francisco's city pack, pipeline half: DataSF facts | `pipeline/plugins/pixelworld-city-sf/` |
+| `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, every built-in source (the city facts and terrain sources too), plugins | `pipeline/` |
 | `@pixelworlds/city-sf` (npm) | San Francisco's city pack, browser half: its generators (facades, towers, Chinatown) as a plugin | `packages/city-sf` (§8) |
 | `@pixelworlds/viewer` (app) | the reference viewer: rover, HUD, layer panel, level switching | `apps/web` |
 | `@pixelworlds/editor` (app) | the warp editor | `apps/editor` |
@@ -96,7 +95,7 @@ The engine owns streaming, baking, compositing and the frame loop. It owns no in
 | Extension | Interface | Registered by | Examples today |
 |---|---|---|---|
 | **Source adapters** (pipeline) | **built for rasters:** a `RasterSource` of role `terrain` or `landcover` lists the GeoTIFFs for a box (or fills a grid itself); the pipeline reprojects, resamples and caches | Python entry points (`pixelworld.sources`), selected by `sources.dem.kind` and `sources.landcover.kind` ([plugins.md](plugins.md)) | built in: 3DEP (terrain), WorldCover (land cover). Overture, canopy, lidar and transit aren't adapters yet |
-| **Facts sources** (pipeline) | **built:** `factory(region, options)`, then facts per building by projected point: year, storeys, units, use, class code, neighbourhood, roof | entry points (`pixelworld.facts`), selected by `objects.typology.facts` | `datasf`, in the city pack `pixelworld-city-sf` |
+| **Facts sources** (pipeline) | **built:** `factory(region, options)`, then facts per building by projected point: year, storeys, units, use, class code, neighbourhood, roof | entry points (`pixelworld.sources`), selected by `sources.facts` | `datasf`, `pluto`, `apur`, `plateau`, built in |
 | **3D city models** (pipeline) | footprints, heights and roof shapes from CityJSON or CityGML | entry points | none yet (M5's tier-1 regions) |
 | **Stage hooks** (pipeline) | code run at named points of a build | entry points (`pixelworld.stages`), reserved | none yet |
 | **Generators** | **built:** `(ctx) => VoxelModel` for a semantic group | `registerGenerators(record, { source })`, or a plugin (`definePlugin`) loaded with `createWorldView({ plugins })` in the bake worker and on the main thread ([plugins.md](plugins.md) §9); a style pack maps groups to them and names the plugins it needs | built in: buildings, landmarks, trees, vehicles; San Francisco's facades, towers and Chinatown in the city pack `@pixelworlds/city-sf` |
@@ -128,7 +127,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
   - **Sizes** (`pnpm package:size`, size-limit; gzipped, as a consumer bundles it): `createWorldView` 75 KB, with traffic 84 KB, all six entry points 96 KB (D3 estimated 89 KB; it grew with D-072, D-073 and D-075); `parseManifest` and `decodeChunk` 3 KB; `project` from `pixelworld/grid` 0.2 KB. The worker, as a bundler minifies it, is 129 KB, 46 KB gzipped (D3: 145 KB); as shipped, 196 KB, 61 KB gzipped. The tarball is about 600 KB, 2.2 MB unpacked, most of it source maps.
   - **Checks:** `pnpm package:check` (the tarball's files, manifest, exports, the worker literal, licences and size budgets), `pnpm package:size` (size-limit budgets) and `pnpm package:consumers` (Vite dev and build, webpack 5, plain ESM and a CDN, each from the tarball in headless Chromium, checking the worker baked). CI runs all three on every push.
   - **Versions:** changesets, for `pixelworld` only (the private packages aren't versioned). Releases are made by hand with `pnpm publish` ([npm.md §9](npm.md#9-releases)); CI holds no tokens.
-- **PyPI:** `pixelworld-pipeline`, with extras for heavy sources (`[lidar]`, `[cityjson]`), and city packs as their own distributions (`pixelworld-city-sf`). Both build with `uv build --all-packages` and are released by hand ([npm.md §9](npm.md#9-releases)); extras and a release job are later work.
+- **PyPI:** one distribution, `pixelworld-pipeline`, the city packs' sources included (D-110); extras for heavy sources (`[lidar]`, `[cityjson]`) may come. It builds with `uv build` and is released by hand ([npm.md §9](npm.md#9-releases)); extras and a release job are later work.
 - **The world format:** versioned on its own. The manifest carries the format version; readers accept older minor versions; conformance tests run both codecs over the same files.
 - **Prebuilt worlds:** the San Francisco and Southwest packages as data releases (ODbL), with their attribution manifests.
 - **Docs:**
@@ -156,7 +155,7 @@ Baking needs WebGL2. Headless export runs the same baker in headless Chromium, a
    - **Done (D-075):** the schema (versioned, exported for editors), validation with paths and "did you mean", generator names checked when a view starts, `extends`.
    - **Not yet:** packs as data packages.
 7. **Pipeline plugins:** source and facts adapters behind entry points. DataSF moves out as a plugin. A Python API (`pixelworld.build(spec)`) sits beside the CLI.
-   - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as the city pack `pixelworld-city-sf`, and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
+   - **Done:** the registry, facts sources, terrain and land-cover sources, DataSF as a city pack (merged back into the pipeline in D-110), and `pixelworld_pipeline.build(spec)` ([plugins.md](plugins.md)).
    - **Not yet:** Overture, canopy, lidar and transit as adapters; 3D city models; stage hooks.
 8. **Builds and releases:** package builds, `exports`, changesets, and CI release jobs for npm and PyPI.
    - **Done for npm (§3.5):** the `pixelworld` package and the city packs, their builds, `exports`, changesets, a CI job that builds, packs and checks them on every push, and a release workflow that publishes them through npm trusted publishing (D-105).

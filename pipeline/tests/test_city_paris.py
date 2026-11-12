@@ -14,10 +14,9 @@ from rasterio.transform import from_origin
 from rasterio.warp import Resampling
 from rasterio.warp import transform as transform_points
 
-from pixelworld_city_paris import apur, ign
 from pixelworld_pipeline import facts, plugins
 from pixelworld_pipeline.region import Region
-from pixelworld_pipeline.sources import http, rasters
+from pixelworld_pipeline.sources import apur, http, ign, rasters
 
 REGION = Region.from_dict(
     {
@@ -227,10 +226,10 @@ def test_ign_refuses_what_isnt_a_geotiff(tmp_path, monkeypatch):
         ign.LIDAR_HD_MNT.fetch((2.33, 48.85, 2.34, 48.86), 0.5)
 
 
-def test_the_pack_registers_its_plugins():
-    assert plugins.load(plugins.FACTS, "apur") is apur.ApurFacts
-    assert plugins.available(plugins.FACTS)["apur"].origin == "pixelworld-city-paris"
-    assert facts.attribution({"facts": "apur"}) == apur.ATTRIBUTION
+def test_the_sources_are_built_in():
+    assert plugins.load_source("facts", "apur") is apur.ApurFacts
+    assert plugins.available()["apur"].origin == "builtin"
+    assert plugins.attribution({"facts": {"kind": "apur"}}, "facts") == apur.ATTRIBUTION
     assert any("ODbL" in a["license"] for a in apur.ATTRIBUTION)
     assert any("Licence Ouverte" in a["license"] for a in apur.ATTRIBUTION)
     for name, src in (("ign-rgealti", ign.RGE_ALTI), ("ign-lidar-hd-mnt", ign.LIDAR_HD_MNT)):

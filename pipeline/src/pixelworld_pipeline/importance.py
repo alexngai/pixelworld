@@ -13,6 +13,9 @@ log2(sitelinks / minSitelinks) + 1. Magnification rises with the summed
 weight up to maxMagnification, reached at the weight of one place with
 `reference` sitelinks; it enters the warp as an extra scale term (the finest
 of focus areas, importance and background wins).
+
+Wikidata is the built-in source of role `importance` (`wikidata`, D-110);
+`sources.importance` names another.
 """
 
 from __future__ import annotations
@@ -28,6 +31,7 @@ from typing import Any
 
 import numpy as np
 
+from . import plugins
 from .region import Region
 from .sources.http import SSL_CONTEXT, USER_AGENT
 
@@ -98,13 +102,39 @@ def fetch(region: Region, min_links: int = 20) -> list[dict[str, Any]]:
     return places
 
 
+class ImportanceSource(plugins.Source):
+    """The contract of role `importance`: famous places, for magnifying a
+    warped world around them."""
+
+    role = "importance"
+    # what the snapshot says it holds
+    description = ""
+
+    def places(self, region: Region, min_links: int) -> list[dict[str, Any]]:
+        """Places in the region's bounds: {id, label, lon, lat, sitelinks}, where
+        `sitelinks` (at least `min_links`) scores fame as Wikipedia's article
+        count in any language does, most famous first."""
+        raise NotImplementedError
+
+
+class Wikidata(ImportanceSource):
+    description = "Wikidata (CC0), items with coordinates and sitelinks"
+
+    def places(self, region, min_links):
+        return fetch(region, min_links)
+
+
+WIKIDATA = Wikidata()
+
+
 def write_snapshot(region_path: Path, min_links: int = 20) -> dict[str, Any]:
     region = Region.load(region_path)
+    source = plugins.source(region, "importance")
     snap = {
-        "source": "Wikidata (CC0), items with coordinates and sitelinks",
+        "source": source.description or source.summary(),
         "queried": date.today().isoformat(),
         "minSitelinks": min_links,
-        "places": fetch(region, min_links),
+        "places": source.places(region, min_links),
     }
     snapshot_path(region_path).write_text(json.dumps(snap, indent=1) + "\n")
     return snap

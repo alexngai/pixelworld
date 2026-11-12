@@ -12,7 +12,7 @@ without rebuilding its chunks (`pixelworld routes <region.yaml>`):
   stops at the water (D-056). Each bridge landmark's deck gets a route along
   its line, at the deck's height, joining the road cells at its two ends; a
   road along a deck over land takes the deck's height too.
-- **Rail** comes from Overture (sources/transit.py). Street-running lines
+- **Rail** comes from the features source (Overture's: sources/transit.py). Street-running lines
   (cable cars, streetcars, light rail on the street) are matched onto the
   drawn road graph; other lines (trains) are laid in octilinear runs like
   roads, but not drawn.
@@ -982,16 +982,16 @@ def refresh_routes(
     """Routes for a built package, without rebuilding it: the region's rail
     and ferry lines (Overture, cached) and the package's own roads. `spec` is
     the resolved spec, when it isn't read from `region_path`."""
+    from . import plugins
     from .landmarks import expand
     from .region import Region, load_region
-    from .sources import transit
 
     if spec is None:
         region, spec, _ = load_region(Path(region_path))
     else:
         region = Region.from_dict(expand(spec, Path(region_path)))
     rules = spec.get("routes") or {}
-    rows = transit.segments(region.sources["overture"]["release"], region.lonlat_envelope())
+    rows = plugins.source(region, "features").transit(region.lonlat_envelope())
     doc, report = make_routes(out_dir, rows, rules)
     report["manifest"] = write_routes(out_dir, doc)
     return report

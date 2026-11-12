@@ -83,7 +83,6 @@ objects:
   # street and the assessor's roll (year built, storeys, use, neighbourhood,
   # DataSF). First match wins; anything unmatched keeps its generic group.
   typology:
-    facts: datasf
     rules:
       # pier sheds along the Embarcadero
       - { group: building.pier, onWater: true }
@@ -162,8 +161,8 @@ start: { lon: -122.4330, lat: 37.7765 } # Alamo Square
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: datasf }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
   rivers:

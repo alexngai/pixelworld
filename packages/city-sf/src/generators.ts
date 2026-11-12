@@ -3,7 +3,7 @@ import { CHINATOWN_GENERATORS } from "./chinatown";
 import { FACADE_GENERATORS } from "./facades";
 import { TOWER_GENERATORS } from "./towers";
 
-/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is pixelworld-city-sf). */
+/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is the pipeline's `datasf` facts source). */
 export const PLUGIN_NAME = "@pixelworlds/city-sf";
 
 /**

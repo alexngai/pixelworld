@@ -118,6 +118,7 @@ Status values:
 | D-107 | The global path's first pieces: Copernicus GLO-30 terrain with a ground filter, and facts from neighbourhood boxes | Accepted (M5) |
 | D-108 | Hong Kong's look: a `hongkong` style pack and the `@pixelworlds/city-hongkong` generator plugin | Accepted (M5) |
 | D-109 | Kowloon's walking level, on open data alone | Accepted (M5) |
+| D-110 | Every data source selected by role in the spec; the Python city packs merged into the pipeline | Accepted |
 
 ---
 
@@ -1425,3 +1426,20 @@ The point is more room for visual interest; both halves are wanted.
 - **Looked at:** Yau Ma Tei's and Jordan's pastel tong lau under neon; Mong Kok's towers along Nathan Road, and in the game the tower in front of the car seen through to the signs (D-079); the Cultural Centre's pink curved hall on the waterfront; the ICC over West Kowloon's roads.
 - **Rejected alternatives:** signs on one side only (`along`): Overture's segments run either way, so half the arms would point into the street. Signs on every road in the box: West Kowloon's expressways and the park roads would carry them.
 - **Later:** the driving and flying levels and Hong Kong Island (the Mid-Levels need a better ground than D-107's); a blind test; towers on podiums, which open data draws as one block (27% of footprints, docs/cities.md); double-decker buses and trams; LandsD's data if the grant comes.
+
+### D-110: Every data source selected by role in the spec; the Python city packs merged into the pipeline (accepted)
+- **Why:** the owner asked for one PyPI package, and for data sources a client can select or add rather than ones hard-wired into the pipeline. The four Python city packs (D-068, D-080, D-084, D-089) had the same dependencies as the pipeline, so splitting them saved nothing to install and added four releases. And only terrain, land cover and facts were chosen by name: Overture (roads, paths, rails, rivers, water, land use, barriers, buildings, transit), the canopy map, USGS lidar and Wikidata were imported directly, Overture's release read at ten places.
+- **What:**
+  - **Roles:** every source has one: `terrain`, `landcover`, `features`, `facts`, `canopy`, `heights`, `importance`. Each role's contract is a base class where it is consumed: `RasterSource`, `FeatureSource` (sources/features.py, new), `FactsSource`, `CanopySource`, `HeightSource`, `ImportanceSource`, all on `plugins.Source` (`role`, `attribution`, `options_schema`, `summary`).
+  - **The spec:** `sources.<key>: { kind, …options }` for each role: `dem`, `landcover`, `features`, `facts`, `canopy`, `heights`, `importance`. `canopy` (`meta-chm`), `heights` (`usgs-3dep-lidar`) and `importance` (`wikidata`) have defaults. Keys moved: `sources.overture.release` to `sources.features: { kind: overture, release }`; `objects.typology.facts` to `sources.facts` (the older form, options beside a bare name, is gone); `objects.buildings.lidar.project` to `sources.heights`. The world specs are migrated.
+  - **Opening:** a name stands for an instance (used as it is, no options) or a class, opened as `cls(region, options)`. Options are the block without `kind` and the pipeline's own keys (`overview`, `resampling`). A source's `options_schema` lets `pixelworld check` check them before anything is fetched; an instance given options is an error there too.
+  - **The registry:** one entry point group, `pixelworld.sources` (`pixelworld.facts` is gone); a name used for the wrong role is an error that lists the names of the right one. `pixelworld plugins` lists sources by role.
+  - **The city packs:** `datasf`, `pluto`, `apur`, `ign-rgealti`, `ign-lidar-hd-mnt`, `plateau` and `gsi-dem` are built in (`pipeline/src/pixelworld_pipeline/sources/`); `pipeline/plugins/` and the uv workspace are gone. PyPI has one distribution, `pixelworld-pipeline`. The npm city packs are unchanged: a page downloads only its city's generators.
+  - **Attribution:** every source the build uses, now including `micro.dem`'s and the canopy map's where only street trees or `ground.lawn.wooded` read it.
+  - **Feature rows:** the contract is Overture's schema (fields and vocabularies), so the build's consumers are unchanged; another source maps its classes to Overture's words. The row helpers (`path_class`, `rail_open_parts`, `rail_matches`) moved to sources/features.py.
+- **Neutral:** cache keys hold only a source's kind until it has options, so every cache still hits. Nine worlds rebuilt from the same cache (Jerome; San Francisco's walking and flying levels; the walking levels of Paris, Kyoto, New York, Tokyo, Kowloon and the Southwest) have every chunk, object, route and attribution file byte for byte as before; the manifest differs only in the spec's digest, `generator.params.features` (was `overtureRelease`) and so `packageHash`.
+- **Rejected alternatives:**
+  - **One `pixelworld-cities` distribution:** keeps a split that buys nothing to install.
+  - **Keeping the old keys beside `kind:`:** two styles of options; nothing is published yet to stay compatible with.
+  - **A neutral feature schema of our own:** every consumer would change, for a mapping Overture already is (it is built from OpenStreetMap's).
+- **Later:** stage hooks (`pixelworld.stages`); land cover in schemes other than ESA WorldCover's (a source maps to its codes today); one cache helper for every source (some import `CACHE_ROOT` by value, and canopy, lidar and Wikidata fetch without `http.get`'s retries).

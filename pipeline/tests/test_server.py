@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import yaml
 
-from pixelworld_pipeline import server
+from pixelworld_pipeline import plugins, server
 from pixelworld_pipeline.sources import overture, rasters
 
 REGION = """
@@ -23,7 +23,7 @@ start: { lon: -115.17, lat: 36.11 }
 sources:
   dem: { kind: usgs-3dep-1arcsec }
   landcover: { kind: esa-worldcover-2021 }
-  overture: { release: 2026-10-21.0 }
+  features: { kind: overture, release: 2026-10-21.0 }
   roads: { classes: [primary] }
 warp: warp.yaml
 """
@@ -48,12 +48,12 @@ WARP = {
 def editor(tmp_path, monkeypatch):
     def fake_sample(region, kind, x, y, spacing):
         x = np.asarray(x, dtype=float).ravel()
-        if kind.startswith("usgs"):
+        if plugins.split_ref(kind)[0].startswith("usgs"):
             return 600 + (x - x.min()) * 0.01
         return np.full(x.shape, 60, dtype=np.uint8)
 
     monkeypatch.setattr(rasters, "sample_points", fake_sample)
-    monkeypatch.setattr(overture, "roads", lambda release, bbox, classes: [])
+    monkeypatch.setattr(overture, "roads", lambda release, bbox, classes, *a, **k: [])
     (tmp_path / "region.yaml").write_text(REGION)
     (tmp_path / "warp.yaml").write_text(yaml.safe_dump(WARP))
     return server.Editor(tmp_path / "region.yaml", tmp_path / "out")

@@ -202,17 +202,15 @@ The npm packages are `pixelworld` and the five city packs, `@pixelworlds/city-sf
 
 **By hand, if CI can't** (an outage): as step 3, from a clean `main` after merging the version pull request, then tag each package (`git tag -a <name>@<version>`) and `git push --follow-tags`.
 
-**The Python distributions** (`pixelworld-pipeline` and the city pack `pixelworld-city-sf`) are released by hand too. Bump the versions, build, check, then upload the pipeline first, since the city pack depends on it:
+**The Python distribution** (`pixelworld-pipeline`, the only one since D-110) is released by hand too. Bump the version, build, check, upload:
 
 ```sh
 cd pipeline
-uv version --bump minor                                   # pixelworld-pipeline
-uv version --bump minor --package pixelworld-city-sf
-uv build --all-packages --out-dir dist                    # sdists and wheels of both
+uv version --bump minor
+uv build --out-dir dist                    # the sdist and the wheel
 uv run --no-project --isolated --with dist/pixelworld_pipeline-*.whl \
-  --with dist/pixelworld_city_sf-*.whl pixelworld plugins   # the wheels alone: lists datasf
-uv publish dist/pixelworld_pipeline-*                     # token from UV_PUBLISH_TOKEN or a prompt
-uv publish dist/pixelworld_city_sf-*
+  pixelworld plugins                       # the wheel alone: lists every built-in source by role
+uv publish dist/pixelworld_pipeline-*      # token from UV_PUBLISH_TOKEN or a prompt
 ```
 
 Extras (`[lidar]`, `[cityjson]`, library.md §3.5) and a PyPI release job are later work.

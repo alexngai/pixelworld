@@ -1,89 +1,97 @@
 # Writing plugins
 
-The pipeline and the generators keep region-specific code out of their own packages (decision D4 in [library.md](library.md)). A city's building records, a country's elevation model or a national land-cover map comes in as a **pipeline plugin**: a Python package that registers what it provides under a name, which a region spec then uses. A city's own building types come in as a **generator plugin**: a TypeScript package that registers generators by name, which a style pack then uses (§9). San Francisco's DataSF facts and its facades, towers and Chinatown are the first ones, in its **city pack** (§6), the template for other cities: the Python distribution `pixelworld-city-sf` and the npm package `@pixelworlds/city-sf`.
+The pipeline and the generators keep region-specific code out of their core (decision D4 in [library.md](library.md)). Everything the pipeline reads from outside comes from a **source**: elevation, land cover, the vector map, a city's building records, tree canopy, measured building heights and place fame. Each source has a **role**, and a region spec picks one per role by name, with that source's options (D-110). The pipeline ships a source for every role, and a Python package can add more, which any spec can then select. A city's own building types come in as a **generator plugin**: a TypeScript package that registers generators by name, which a style pack then uses (§9). San Francisco's facades, towers and Chinatown are the first, in the npm package `@pixelworlds/city-sf`.
 
 This guide covers:
-1. how a region spec names plugins;
+1. how a region spec selects sources;
 2. the registry, and its errors;
 3. facts sources;
-4. source adapters (terrain and land cover);
+4. the other roles: terrain and land cover, features, canopy, heights and importance;
 5. stage hooks (reserved);
-6. the city pack layout;
-7. the rules every plugin keeps;
+6. adding a place's sources;
+7. the rules every source keeps;
 8. the Python API;
 9. generator plugins (TypeScript), with a quickstart for a city pack of your own (§9.6) and the viewer's list of city packs (§9.7).
 
-## 1. How a region spec names plugins
+## 1. How a region spec selects sources
 
-| What | Spec field | Built in | From a plugin |
-|---|---|---|---|
-| Elevation | `sources.dem.kind` (and `micro.dem.kind`, if micro-terrain reads another) | `usgs-3dep-1arcsec`, `usgs-3dep-13arcsec`; anywhere, `copernicus-glo30` and `copernicus-glo30-ground` (D-107) | a `terrain` source adapter |
-| Land cover | `sources.landcover.kind` | `esa-worldcover-2021` | a `landcover` source adapter |
-| Building facts | `objects.typology.facts` | `areas`: facts written in the spec, by neighbourhood box (D-107) | a facts source (`datasf` from `pixelworld-city-sf`) |
+Each role has a key under `sources:`. Its block names the source (`kind`) and holds the source's options beside it:
 
 ```yaml
 sources:
-  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }          # the pipeline's keys: overview, resampling
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-objects:
-  typology:
-    facts: datasf                                         # a name
-    # facts: { plugin: datasf, rollYear: "2025", classCodes: true }   # a name and its options
-    rules: [...]
+  features: { kind: overture, release: 2026-10-21.0 }      # release: the overture source's option
+  facts: { kind: datasf, rollYear: "2025" }
+  # canopy, heights and importance have defaults:
+  # canopy: { kind: meta-chm }
+  # heights: { kind: usgs-3dep-lidar, project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018 }
+  # importance: { kind: wikidata }
 ```
 
-A facts source takes options. Write them in the mapping form beside `plugin:`. The older form, options beside a bare name in the typology section (`rollYear:` next to `facts: datasf`), still works.
+| Role | Spec key | Used by | Built in |
+|---|---|---|---|
+| `terrain` | `sources.dem` (and `micro.dem`, if micro-terrain reads another) | every build | `usgs-3dep-1arcsec`, `usgs-3dep-13arcsec` (United States); `copernicus-glo30`, `copernicus-glo30-ground` (worldwide, D-107); `ign-rgealti`, `ign-lidar-hd-mnt` (France, D-084); `gsi-dem` (Japan, D-089) |
+| `landcover` | `sources.landcover` | every build | `esa-worldcover-2021` |
+| `features` | `sources.features` | every build: roads, paths, rivers, rails, water, land use, barriers, buildings, transit | `overture` (option `release`, required) |
+| `facts` | `sources.facts` | `objects.typology` | `datasf` (San Francisco), `pluto` (New York), `apur` (Paris), `plateau` (Japan), `areas` (facts written in the spec, by neighbourhood box, D-107) |
+| `canopy` | `sources.canopy` (default `meta-chm`) | `canopy:` rules, `ground.lawn.wooded` | `meta-chm` |
+| `heights` | `sources.heights` (default `usgs-3dep-lidar`) | `objects.buildings.lidar` | `usgs-3dep-lidar` (option `project`, required) |
+| `importance` | `sources.importance` (default `wikidata`) | `warp.importance` (`pixelworld importance`) | `wikidata` |
+
+- **Options:** every key of the block but `kind` and the pipeline's own (`overview`, `resampling`) goes to the source. A source that declares its options has them checked by `pixelworld check` before anything is fetched; the others check them when opened.
+- **A role the spec doesn't use** isn't opened: a spec without `objects.typology` reads no facts, whatever `sources.facts` says.
 
 ## 2. The registry
 
 `pixelworld_pipeline.plugins` looks names up in three places, and the first that has the name wins:
-1. **Registered in this process** with `plugins.register(group, name, obj)`, or for a `with` block with `plugins.registered(...)`. Tests and scripts use these.
-2. **Entry points** of installed packages, in one group per kind of plugin:
+1. **Registered in this process** with `plugins.register(plugins.SOURCES, name, obj)`, or for a `with` block with `plugins.registered(...)`. Tests, scripts and notebooks use these.
+2. **Entry points** of installed packages, in the group `pixelworld.sources`:
 
-| Entry point group | What | The entry point names |
-|---|---|---|
-| `pixelworld.facts` | per-building facts sources | a factory: `factory(region, options)` returns a facts source (usually a `FactsSource` subclass) |
-| `pixelworld.sources` | source adapters: `terrain` and `landcover` | a `RasterSource` instance, or a class the pipeline instantiates without arguments |
-| `pixelworld.stages` | build hooks | reserved (§5) |
+   ```toml
+   [project.entry-points."pixelworld.sources"]
+   geojson-lots = "pixelworld_facts_geojson:GeoJSONLots"
+   ```
 
-3. **Built in:** the USGS 3DEP and ESA WorldCover adapters.
+3. **Built in** (`plugins.BUILTIN`): the sources in §1's table.
 
-An installed entry point can therefore replace a built-in of the same name. Two installed packages that offer the same name are an error.
+A name stands for a class or an instance. The pipeline opens a class as `cls(region, options)` (once per use), and uses an instance as it is (it takes no options). Either way it has a `role` (§4 lists the contracts); a name used for the wrong role is an error. An installed entry point can replace a built-in of the same name. Two installed packages that offer the same name are an error.
 
-**Checking early.** A build loads every plugin its spec names before it fetches anything, so a missing one fails in a second rather than minutes in. `pixelworld plugins` lists what is installed; give it a spec to check that spec's plugins too:
+**Checking early.** A build loads every source its spec names before it fetches anything, so a missing one fails in a second rather than minutes in. `pixelworld plugins` lists the sources by role; give it a spec to check that spec's too:
 
 ```
 $ uv run pixelworld plugins ../worlds/sf/walk.yaml
-pixelworld.facts (facts sources):
-  datasf                   pixelworld-city-sf   pixelworld_city_sf.datasf:DataSFFacts
-pixelworld.sources (source adapters):
-  esa-worldcover-2021      builtin              pixelworld_pipeline.sources.rasters:ESA_WORLDCOVER_2021
-  usgs-3dep-13arcsec       builtin              pixelworld_pipeline.sources.rasters:USGS_3DEP_13ARCSEC
-  usgs-3dep-1arcsec        builtin              pixelworld_pipeline.sources.rasters:USGS_3DEP_1ARCSEC
-pixelworld.stages (stage hooks):
-  (none)
-../worlds/sf/walk.yaml: every plugin it names is installed (usgs-3dep-13arcsec, esa-worldcover-2021, datasf)
+terrain (sources.dem):
+  copernicus-glo30         builtin  pixelworld_pipeline.sources.rasters:COPERNICUS_GLO30
+  …
+facts (sources.facts):
+  apur                     builtin  pixelworld_pipeline.sources.apur:ApurFacts
+  …
+canopy (sources.canopy, default meta-chm):
+  meta-chm                 builtin  pixelworld_pipeline.sources.canopy:META_CHM
+…
+../worlds/sf/walk.yaml: every source it names is installed (usgs-3dep-13arcsec, esa-worldcover-2021, overture, datasf)
 ```
 
 **Errors** are `plugins.PluginError`s. The CLI prints them without a traceback and exits with 2.
 
 | Case | Message |
 |---|---|
-| A name nobody provides | `no facts source named 'pluto' (named by objects.typology.facts). Installed facts sources: datasf. Install a package that provides it (entry point group 'pixelworld.facts'), or register one with pixelworld_pipeline.plugins.register(). See docs/plugins.md.` |
-| A name published from this repository | `no facts source named 'datasf' (…). Installed facts sources: none. 'datasf' comes with the pixelworld-city-sf package: install it (pip install pixelworld-city-sf; in this repository, uv sync in pipeline/ installs it). …` |
-| A source of the other role | `source 'esa-worldcover-2021' (named by sources.dem.kind) is a landcover source, not a terrain source` |
-| A missing terrain source | `no terrain source named 'ahn-dtm-05' (named by sources.dem.kind). Installed terrain sources: usgs-3dep-13arcsec, usgs-3dep-1arcsec. …` |
-| A plugin that fails to import | `facts source 'bag' (from pixelworld-city-nl) failed to import: …` |
-| One name, two packages | `facts source 'bag' is provided by both pixelworld-city-a (…) and pixelworld-city-b (…); uninstall one of them` |
+| A name nobody provides | `no facts source named 'cadastre' (named by sources.facts). Facts sources: apur, areas, datasf, plateau, pluto. Install a package that provides it (entry point group 'pixelworld.sources'), or register one with pixelworld_pipeline.plugins.register(). See docs/plugins.md.` |
+| A source of another role | `source 'esa-worldcover-2021' (named by sources.dem) is a landcover source, not a terrain source` |
+| Options for a source that takes none | `source 'usgs-3dep-1arcsec' (named by sources.dem) takes no options, got tileset` |
+| A source that fails to import | `source 'bag' (from pixelworld-city-nl) failed to import: …` |
+| One name, two packages | `source 'bag' is provided by both pixelworld-city-a (…) and pixelworld-city-b (…); uninstall one of them` |
 
 ## 3. Facts sources
 
-A facts source gives each building facts from public records, for the building typology (D-055; `typology.py`). The pipeline asks for them at each building's projected centroid. A building drawn in parts shares the facts of whichever part stands on a record.
+A facts source (role `facts`) gives each building facts from public records, for the building typology (D-055; `typology.py`). The pipeline asks for them at each building's projected centroid. A building drawn in parts shares the facts of whichever part stands on a record.
 
-**Interface** (`pixelworld_pipeline.facts.FactsSource`; any object with `at` works):
-- `factory(region, options)`: the entry point's target, called once per build. `region` is the `Region` (its CRS is `region.crs`, a transverse Mercator in metres), and `options` the spec's options. Fetch and index the data here.
+**Contract** (`pixelworld_pipeline.facts.FactsSource`; any class with `role = "facts"` and `at` works):
+- `cls(region, options)`: called once per build. `region` is the `Region` (its CRS is `region.crs`, a transverse Mercator in metres), and `options` the spec's options. Fetch and index the data here.
 - `at(xs, ys) -> list[dict | None]`: the facts at each projected point, or None where the source has no record.
-- `attribution`, a class attribute: the manifest entry `{name, license, url}` (or a list of them). The build reads it from the class without building a source.
+- `attribution`, a class attribute: the manifest entry `{name, license, url}` (or a list of them). The build reads it from the class without opening the source.
+- `options_schema`, a class attribute: the options it takes, as `pixelworld_pipeline.schema.Key`s by name, for `pixelworld check` (optional).
 - `summary() -> str`: what was read (a dataset and its vintage), for the build log.
 
 **The facts dict** (every key optional; other keys are kept and ignored):
@@ -98,15 +106,15 @@ A facts source gives each building facts from public records, for the building t
 | `hood` | str | the neighbourhood | `hoods:` rules |
 | `roof` | str | the roof shape in Overture's words (`flat`, `gabled`, `hipped`, `mansard`, …) | `roofs:` rules |
 | `material` | str | the main facade material | `materials:` rules |
-| `height` | float | the building's height in metres | buildings Overture gives no height or floors take it, and become towers at `towerMeters` (D-084) |
+| `height` | float | the building's height in metres | buildings the features source gives no height or floors take it, and become towers at `towerMeters` (D-084) |
 
 **Rules that read them:**
 - `classes: [A4, "C*"]` matches a class code exactly, or by a prefix ending in `*`.
-- `roofs: [mansard]` matches the facts' roof shape, or, where the facts have none, Overture's (`roof_shape`, every value it records, not only the shapes the generator draws).
+- `roofs: [mansard]` matches the facts' roof shape, or, where the facts have none, the features source's (`roof_shape`, every value it records, not only the shapes the generator draws).
 
 In most cities the iconic type is in the class code rather than in year plus use (see [second-region.md](second-region.md) §2), so map the source's native class to `class` unchanged and let the spec's rules name codes.
 
-**A minimal facts source.** A whole plugin: a package with one module and one entry point. This one reads a GeoJSON file of lots whose properties already use the keys above:
+**A minimal facts source.** A whole package: one module and one entry point. This one reads a GeoJSON file of lots whose properties already use the keys above:
 
 ```toml
 # pyproject.toml
@@ -115,7 +123,7 @@ name = "pixelworld-facts-geojson"
 version = "0.1.0"
 dependencies = ["pixelworld-pipeline", "shapely>=2.2", "rasterio>=1.4"]
 
-[project.entry-points."pixelworld.facts"]
+[project.entry-points."pixelworld.sources"]
 geojson-lots = "pixelworld_facts_geojson:GeoJSONLots"
 ```
 
@@ -126,6 +134,7 @@ from pathlib import Path
 
 import shapely
 from pixelworld_pipeline.facts import FACT_KEYS, FactsSource
+from pixelworld_pipeline.schema import Key, Str
 from rasterio.warp import transform_geom
 
 
@@ -133,6 +142,7 @@ class GeoJSONLots(FactsSource):
     """Lots from a GeoJSON file (lon/lat) whose properties are facts."""
 
     attribution = {"name": "My city's lots", "license": "CC0 1.0", "url": "https://example.org"}
+    options_schema = {"path": Key(Str(), "The GeoJSON file.", required=True)}
 
     def __init__(self, region, options=None):
         super().__init__(region, options)
@@ -159,16 +169,21 @@ class GeoJSONLots(FactsSource):
 
 ```yaml
 # region.yaml
+sources:
+  facts: { kind: geojson-lots, path: data/lots.geojson }
 objects:
   typology:
-    facts: { plugin: geojson-lots, path: data/lots.geojson }
     rules:
       - { group: building.rowhouse.brownstone, classes: [A4, B1], year: [1840, 1900] }
 ```
 
-## 4. Source adapters: terrain and land cover
+## 4. The other roles
 
-A source adapter is a `RasterSource` (`pixelworld_pipeline.sources.rasters`). The pipeline does the rest:
+Each role's contract is a base class in the module that consumes it. Subclass it, set `attribution`, and implement its methods.
+
+### 4.1 Terrain and land cover
+
+A raster source is a `RasterSource` (`pixelworld_pipeline.sources.rasters`) of role `terrain` or `landcover`. The pipeline does the rest:
 - reprojecting onto the region's grid, cell corners and micro-corners;
 - resampling (averaged for elevation, the mode for land cover);
 - for warped worlds, the pyramid of levels in fixed blocks;
@@ -188,97 +203,82 @@ A source adapter is a `RasterSource` (`pixelworld_pipeline.sources.rasters`). Th
 - `tiles(bounds) -> list[str]`: the GeoTIFFs covering a lon/lat box (west, south, east, north), as URLs (cloud-optimized GeoTIFFs are read over HTTP range requests, through GDAL's `/vsicurl/`) or local paths. Tiles that don't exist are skipped. The file's own CRS is used, so a national grid (EPSG:28992, Lambert-93) needs nothing special.
 - `read_into(dst, transform, crs, bounds, overview, resampling, nodata) -> list[str]`: for anything that isn't a list of GeoTIFFs (a WCS, a mosaic, files that must be downloaded and unzipped first). It fills `dst` in place and returns what it couldn't read.
 
-USGS 3DEP is the first terrain adapter (`rasters.USGS3DEP`); it implements `tiles`.
+USGS 3DEP and Copernicus GLO-30 implement `tiles` (`sources/rasters.py`). IGN's (`sources/ign.py`, D-084) and GSI's (`sources/gsi.py`, D-089) override `read_into`: the Géoplateforme's WMS-Raster resamples to any resolution, so IGN's asks for tiles at `native_m × overview` on a fixed Lambert-93 grid; GSI serves PNG tiles on the Web Mercator grid, so GSI's picks the zoom just finer than `native_m × overview`, takes each tile from the finest of three DEMs that has it, decodes, mosaics and reprojects them.
 
-**A non-US terrain source** is a plugin like any other. The first is France's: `ign-rgealti` and `ign-lidar-hd-mnt` in Paris's city pack (`pipeline/plugins/pixelworld-city-paris/src/pixelworld_city_paris/ign.py`, D-084). They override `read_into`: the Géoplateforme's WMS-Raster resamples to any resolution, so the adapter asks for tiles at `native_m × overview` on a fixed Lambert-93 grid, caches them, and reprojects them itself. Japan's is the second: `gsi-dem` in Japan's city pack (`pipeline/plugins/pixelworld-city-jp/src/pixelworld_city_jp/gsi.py`, D-089). It also overrides `read_into`: GSI serves anonymous PNG tiles on the Web Mercator grid, so the adapter picks the zoom whose pixels are just finer than `native_m × overview`, takes each tile from the finest of three DEMs that has it (1 m, 5 m, 10 m), decodes, mosaics, caches and reprojects them. Other candidates need their licence confirmed first, as [data-sources.md](data-sources.md) requires:
-- the Dutch **AHN** 0.5 m DTM (CC0; PDOK's ATOM feed or WCS);
-- **Copernicus GLO-30** as a global fallback (a surface model, not bare earth).
-
-A sketch for Copernicus GLO-30's public cloud-optimized tiles. Check the tile naming and the licence's attribution text before you use it:
+**A source of your own files** takes their paths as an option:
 
 ```python
-import math
-
+from pixelworld_pipeline.schema import Key, ListOf, Str
 from pixelworld_pipeline.sources.rasters import RasterSource
 
 
-class CopernicusGLO30(RasterSource):
+class LocalDTM(RasterSource):
+    """A national DTM downloaded as GeoTIFFs (the Dutch AHN, say)."""
+
     role = "terrain"
-    native_m = 30.0
-    attribution = {"name": "Copernicus DEM GLO-30 (…as the licence requires…)", "license": "…", "url": "…"}
+    native_m = 0.5
+    attribution = {"name": "AHN", "license": "CC0 1.0", "url": "https://www.ahn.nl"}
+    options_schema = {"files": Key(ListOf(Str()), "The GeoTIFFs.", required=True)}
 
     def tiles(self, bounds):
-        w, s, e, n = bounds
-        out = []
-        for lat in range(math.floor(s), math.ceil(n)):
-            for lon in range(math.floor(w), math.ceil(e)):
-                ns = f"N{lat:02d}" if lat >= 0 else f"S{-lat:02d}"
-                ew = f"E{lon:03d}" if lon >= 0 else f"W{-lon:03d}"
-                name = f"Copernicus_DSM_COG_10_{ns}_00_{ew}_00_DEM"
-                out.append(f"https://copernicus-dem-30m.s3.amazonaws.com/{name}/{name}.tif")
-        return out
-
-
-COPERNICUS_GLO30 = CopernicusGLO30()
-```
-
-```toml
-[project.entry-points."pixelworld.sources"]
-copernicus-glo30 = "pixelworld_city_eu.terrain:COPERNICUS_GLO30"
+        return list(self.options["files"])
 ```
 
 ```yaml
 sources:
-  dem: { kind: copernicus-glo30, overview: 1 }
+  dem: { kind: local-dtm, overview: 4, files: [data/ahn/M_25GN1.tif, data/ahn/M_25GN2.tif] }
 ```
 
-**Sources served as whole files to download** rather than cloud-optimized GeoTIFFs (as AHN's tiles may be): download what covers the box into `cache_dir("<name>")` inside `tiles`, and return the local paths.
+**Sources served as whole files to download** rather than cloud-optimized GeoTIFFs: download what covers the box into `cache_dir("<name>")` inside `tiles`, and return the local paths.
+
+### 4.2 Features
+
+The vector map (`pixelworld_pipeline.sources.features.FeatureSource`, role `features`): roads, paths, rails, rivers, water areas, land use, natural land, barriers, buildings and their parts, and transit lines. Each method takes a lon/lat box and returns rows: dicts with an `id` (stable and unique), a `geometry` in WKT (lon/lat), and the fields the contract lists per method, sorted by id. The fields and their vocabularies are Overture Maps' schema: road classes (`primary`, `residential`, …), path classes, water subtypes, land-use classes, building heights and floors. The built-in `overture` source reads them from Overture's releases. A source for other data (OpenStreetMap directly, a city's own centre lines) maps its classes to Overture's words; a field it can't fill is left out.
+
+| Method | Rows |
+|---|---|
+| `roads(bbox, classes, exclude_subclasses, lanes)`, `road_subclasses(bbox, subclasses, lanes)` | road segments: class, subclass, connectors (where segments join); with `lanes`, names, access restrictions and width rules |
+| `paths(bbox, classes)` | footways and cycleways (`features.path_class` gives a row's drawn class) |
+| `streets(bbox, classes)` | segments with their names, for rules that pick streets by name |
+| `rails(bbox, classes)` | rail segments: class, names, rail flags (tunnels and bridges along them) |
+| `rivers(bbox, subtypes)`, `water_areas(bbox, classes)` | water lines; water polygons |
+| `land_use(bbox, classes)`, `land(bbox, classes)` | land-use polygons (parks, cemeteries); natural land (forest, sand) |
+| `barriers(bbox, classes)` | barrier lines (retaining walls) |
+| `buildings(bbox)`, `building_parts(bbox)` | footprints with height, floors, class, names and roof and facade hints; their parts |
+| `transit(bbox)` | rail and ferry lines with the routes they carry, for ambient traffic |
+
+A method a source doesn't implement raises `NotImplementedError`, so a spec that needs it fails with the source's name. `attribution` covers the map; `buildings_attribution` is added when a world places buildings.
+
+### 4.3 Canopy, heights and importance
+
+| Role | Contract | Method |
+|---|---|---|
+| `canopy` | `sources/canopy.py` `CanopySource` | `grid(box)`: an object whose `sample(xs, ys, crs)` gives tree heights in metres at projected points, 0 where there are none |
+| `heights` | `sources/lidar.py` `HeightSource` | `height_grid(box, crs, res, max_depth) -> HeightGrid | None`: heights of buildings above the ground on a `res`-metre grid in the region's CRS, None where there is no data |
+| `importance` | `importance.py` `ImportanceSource` | `places(region, min_links)`: `{id, label, lon, lat, sitelinks}` for famous places in the region, `sitelinks` scoring fame as Wikipedia's article count does |
 
 ## 5. Stage hooks
 
-The group `pixelworld.stages` is reserved for build hooks: code a plugin runs at named points of a build, for example after objects are placed. Nothing loads it yet. If you need a hook, propose its points and what a hook may change. Changes must stay deterministic.
+The group `pixelworld.stages` is reserved for build hooks: code a package runs at named points of a build, for example after objects are placed. Nothing loads it yet. If you need a hook, propose its points and what a hook may change. Changes must stay deterministic.
 
-## 6. The city pack layout
+## 6. Adding a place's sources
 
-A **city pack** is a package of everything one place needs beyond the shared pipeline. `pipeline/plugins/pixelworld-city-sf/` is the template:
+**In this repository,** a place's sources are modules of the pipeline (`pipeline/src/pixelworld_pipeline/sources/`), registered in `plugins.BUILTIN`, with offline tests in `pipeline/tests/` (`test_city_sf.py` and the others). The city packs' Python halves were separate distributions until D-110; they share the pipeline's dependencies, so they ship with it. A place's browser half is still a package of its own (§9): its generators are what a page downloads.
 
-```
-pipeline/plugins/pixelworld-city-sf/
-├── pyproject.toml              distribution pixelworld-city-sf: dependencies and entry points
-├── README.md                   what it provides, its options, its data and licences
-├── src/pixelworld_city_sf/
-│   ├── __init__.py
-│   └── datasf.py               DataSF: Socrata paging and caching, lot aggregation,
-│                               ParcelFacts (lookups by point), DataSFFacts (the plugin)
-└── tests/
-    └── test_city_sf.py         offline (fetchers monkeypatched), plus the entry point
-```
+**Outside this repository,** a source is an ordinary package that depends on `pixelworld-pipeline` and declares an entry point in `pixelworld.sources` (§3's example). `pip install` it next to the pipeline and every spec can select it.
 
-```toml
-[project]
-name = "pixelworld-city-sf"
-dependencies = ["numpy>=2.0", "pixelworld-pipeline", "rasterio>=1.4", "shapely>=2.2.0"]
+**Names:** name a source after its data (`datasf`, `pluto`, `bag`, `ahn-dtm-05`), not the city, since one dataset can serve a whole country. A package of several is named `pixelworld-<place>` or after its data.
 
-[project.entry-points."pixelworld.facts"]
-datasf = "pixelworld_city_sf.datasf:DataSFFacts"
-```
-
-**Conventions:**
-- **Names:** the distribution `pixelworld-city-<place>` and the module `pixelworld_city_<place>`. Name plugins after their data (`datasf`, `pluto`, `bag`, `ahn-dtm-05`), not the city, since one dataset can serve a whole country.
-- **Contents:** a pack can hold several plugins: facts sources, terrain and land-cover adapters, and later 3D city model readers. Its browser half is a TypeScript package of the same name with the city's generators (§9): San Francisco's is `packages/city-sf`. Its style pack (`worlds/_styles/bay-area`) is still with the others, and names the plugin it needs.
-- **In this repository:** a pack lives in `pipeline/plugins/` and is a member of the pipeline's uv workspace (`[tool.uv.workspace] members = ["plugins/*"]`). If a committed world needs it, add it to the pipeline's `plugins` dependency group, which `uv sync` installs by default. Its tests run with the pipeline's (`uv run pytest`), and `uv build --package pixelworld-city-<place>` builds its wheel.
-- **Outside this repository:** a pack is an ordinary package that depends on `pixelworld-pipeline`. `pip install` it next to the pipeline and the registry finds it.
-
-## 7. Rules for every plugin
+## 7. Rules for every source
 
 - **Deterministic:** the same spec and cached inputs must give the same package, byte for byte.
-  - Pin what can change: a roll year, a dataset release, a tile index.
+  - Pin what can change: a roll year, a dataset release, a tile index. Take it as an option, so the spec pins it.
   - Make every choice by a stable order (sort keys; break ties the same way every time).
 - **Cache downloads** under `pixelworld_pipeline.sources.http.cache_dir("<name>")`. That is `$PIXELWORLD_CACHE/<name>/` if set, else `pipeline/.cache/<name>/` in a checkout of this repository, else `~/.cache/pixelworld/<name>/` for an installed pipeline. Every checkout and worktree that links the cache then shares them. Name cache files by what they hold (dataset, vintage, columns), and change the name when the query changes, so an old file is never read for a new query.
 - **Fetch politely:** use `pixelworld_pipeline.sources.http.get` (the project's User-Agent, retries with backoff).
-- **Licences:** only openly licensed data, checked when integrated and recorded in [data-sources.md](data-sources.md). Credit it in `attribution`, which goes into every world that uses the plugin.
+- **Licences:** only openly licensed data, checked when integrated and recorded in [data-sources.md](data-sources.md). Credit it in `attribution`, which goes into every world that uses the source.
 - **No network in tests:** monkeypatch the fetchers, as `test_city_sf.py` does.
-- **Don't write into the package.** Plugins return data; the pipeline writes the world package.
+- **Don't write into the package.** Sources return data; the pipeline writes the world package.
 
 ## 8. The Python API
 
@@ -286,15 +286,21 @@ Builds can be driven from Python as well as from the CLI:
 
 ```python
 import pixelworld_pipeline
+from pixelworld_pipeline import plugins
 
 report = pixelworld_pipeline.build("worlds/sf/walk.yaml", out_dir="out/sf-walk")
 report = pixelworld_pipeline.build(spec_dict, base_dir="worlds/sf", routes=False)
 assert report["roads"]["ok"]
+
+# a source of your own, for this process only
+with plugins.registered(plugins.SOURCES, "geojson-lots", GeoJSONLots):
+    pixelworld_pipeline.build(spec_dict | {"sources": {**spec_dict["sources"], "facts": {"kind": "geojson-lots", "path": "lots.geojson"}}})
 ```
 
 - `spec`: a path, or a dict as its YAML would load. A dict's `extends:`, `warp:` file, landmark registry and `importance.json` are found from `base_dir`.
 - `out_dir`: `fixtures/<id>` of the checkout by default.
-- Returns the build report. Raises `RegionError` for a bad spec and `PluginError` for a missing plugin.
+- Returns the build report. Raises `RegionError` for a bad spec and `PluginError` for a missing source.
+- `plugins.source(region, role)` opens the source a region selects for a role, for scripts that want the data without a build.
 
 The module of the build stages is still `pixelworld_pipeline.build`: `from pixelworld_pipeline.build import ...` reaches it. The package attribute `pixelworld_pipeline.build` is the API function.
 
@@ -394,7 +400,7 @@ The quickstart (§9.6) writes each of these files for a new pack, outside this r
 - **Deterministic:** a generator draws the same model for the same context, in every realm. Use `ctx.rand` (seeded), never `Math.random` or the clock. Baked tiles are cached by package, style, bake code and plugin: its name, `version` and code, the source of the generators it registers and the text of its module and what that imports by URL (D-072), so an edit shows after a reload, in a dev server too. A generator that throws is drawn as a missing-model marker and reported once, with the group, seed and footprint to reproduce it.
 - **Generic depictions:** no names, lettering or logos (D-051), and the style guide's building rules (inside the footprint, no overhangs, glass only on the skin), as the built-ins keep. San Francisco's tests (`packages/city-sf/test`) check them over many footprints and seeds.
 - **Colours come from the style:** a generator asks for ramps by role (`ctx.ramp("wall")`, or `ctx.ramps("wall")` for the `wall.*` variants) and the style pack maps roles to its ramps.
-- **Names:** generators are named for what they draw (`rowhouse`, `brownstone`), the plugin for its npm package (`@pixelworlds/city-sf`; the pipeline half keeps its Python name, `pixelworld-city-sf`).
+- **Names:** generators are named for what they draw (`rowhouse`, `brownstone`), the plugin for its npm package (`@pixelworlds/city-sf`; the pipeline's sources for the place are named after their data, `datasf`).
 
 ### 9.5 Shipping one
 

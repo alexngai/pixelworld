@@ -1,5 +1,6 @@
-"""The plugin registry: entry points, in-process registration, built-ins,
-missing-plugin errors, and the raster and facts seams it serves."""
+"""The source registry (D-110): entry points, in-process registration,
+built-ins, roles and options, missing-source errors, and the raster and facts
+seams it serves."""
 
 from dataclasses import dataclass, field
 
@@ -68,25 +69,33 @@ class Terrain(rasters.RasterSource):
 # ---- the registry ---------------------------------------------------------------------------
 
 
+class Cadastre(facts.FactsSource):
+    def at(self, xs, ys):
+        return [None for _ in xs]
+
+
 def test_built_in_sources_resolve_and_are_listed():
-    found = plugins.available(plugins.SOURCES)
-    for kind in ("usgs-3dep-1arcsec", "usgs-3dep-13arcsec", "esa-worldcover-2021"):
+    found = plugins.available()
+    for kind in ("usgs-3dep-1arcsec", "esa-worldcover-2021", "overture", "datasf", "meta-chm"):
         assert found[kind].origin == "builtin"
     dem = plugins.load(plugins.SOURCES, "usgs-3dep-13arcsec")
     assert dem is rasters.USGS_3DEP_13ARCSEC and dem.role == "terrain" and dem.native_m == 10.0
     assert rasters.source("esa-worldcover-2021", "landcover").role == "landcover"
-    assert set(plugins.GROUPS) == {"pixelworld.facts", "pixelworld.sources", "pixelworld.stages"}
+    assert set(plugins.GROUPS) == {"pixelworld.sources", "pixelworld.stages"}
+    # every built-in has a role the pipeline knows, and every role a built-in
+    roles = {plugins.role_of(name) for name in plugins.BUILTIN[plugins.SOURCES]}
+    assert roles == set(plugins.ROLES)
 
 
 def test_entry_points_resolve_and_registration_wins(monkeypatch):
     first, second = object(), object()
-    installed(monkeypatch, plugins.FACTS, FakeEntryPoint("pluto", "city_nyc.pluto:Pluto", first))
-    assert plugins.load(plugins.FACTS, "pluto") is first
-    assert plugins.available(plugins.FACTS)["pluto"].origin == "pixelworld-city-test"
-    with plugins.registered(plugins.FACTS, "pluto", second):
-        assert plugins.load(plugins.FACTS, "pluto") is second
-        assert plugins.available(plugins.FACTS)["pluto"].origin == "registered"
-    assert plugins.load(plugins.FACTS, "pluto") is first  # restored
+    installed(monkeypatch, plugins.SOURCES, FakeEntryPoint("bag", "city_nl.bag:BAG", first))
+    assert plugins.load(plugins.SOURCES, "bag") is first
+    assert plugins.available()["bag"].origin == "pixelworld-city-test"
+    with plugins.registered(plugins.SOURCES, "bag", second):
+        assert plugins.load(plugins.SOURCES, "bag") is second
+        assert plugins.available()["bag"].origin == "registered"
+    assert plugins.load(plugins.SOURCES, "bag") is first  # restored
     # an entry point can stand in for a built-in, and register() for both
     other = Terrain()
     installed(monkeypatch, plugins.SOURCES, FakeEntryPoint("usgs-3dep-1arcsec", "x:y", other))
@@ -108,21 +117,15 @@ def test_register_and_unregister():
         plugins.register("pixelworld.nope", "x", obj)
 
 
-def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
-    installed(monkeypatch, plugins.FACTS, FakeEntryPoint("bag", "city_nl.bag:BAG", object()))
+def test_a_missing_source_lists_the_ones_of_its_role(monkeypatch):
+    installed(monkeypatch, plugins.SOURCES, FakeEntryPoint("bag", "city_nl.bag:BAG", Cadastre))
     with pytest.raises(plugins.PluginNotFoundError) as e:
-        plugins.load(plugins.FACTS, "cadastre", where="objects.typology.facts")
+        plugins.load_source("facts", "cadastre", where="sources.facts")
     msg = str(e.value)
-    assert "no facts source named 'cadastre' (named by objects.typology.facts)" in msg
-    assert "Installed facts sources: areas, bag." in msg
-    assert "entry point group 'pixelworld.facts'" in msg and "docs/plugins.md" in msg
-    assert e.value.available == ["areas", "bag"]
-    # names published from this repository say which package to install
-    installed(monkeypatch, plugins.FACTS)
-    with pytest.raises(plugins.PluginNotFoundError) as e:
-        plugins.load(plugins.FACTS, "datasf")
-    assert "Installed facts sources: areas." in str(e.value)
-    assert "pip install pixelworld-city-sf" in str(e.value)
+    assert "no facts source named 'cadastre' (named by sources.facts)" in msg
+    assert "Facts sources: apur, areas, bag, datasf, plateau, pluto." in msg
+    assert "entry point group 'pixelworld.sources'" in msg and "docs/plugins.md" in msg
+    assert e.value.available == ["apur", "areas", "bag", "datasf", "plateau", "pluto"]
 
 
 def test_a_missing_terrain_source_lists_terrain_sources_only():
@@ -144,33 +147,60 @@ def test_a_missing_terrain_source_lists_terrain_sources_only():
 
 
 def test_broken_and_ambiguous_plugins_say_where_they_come_from(monkeypatch):
-    installed(monkeypatch, plugins.FACTS, FakeEntryPoint("bag", "city_nl.bag:BAG"))
+    installed(monkeypatch, plugins.SOURCES, FakeEntryPoint("bag", "city_nl.bag:BAG"))
     with pytest.raises(plugins.PluginError, match=r"'bag' \(from pixelworld-city-test\) failed"):
-        plugins.load(plugins.FACTS, "bag")
+        plugins.load(plugins.SOURCES, "bag")
     installed(
         monkeypatch,
-        plugins.FACTS,
+        plugins.SOURCES,
         FakeEntryPoint("bag", "a:BAG", object(), FakeDist("pixelworld-city-a")),
         FakeEntryPoint("bag", "b:BAG", object(), FakeDist("pixelworld-city-b")),
     )
     with pytest.raises(plugins.PluginError, match="provided by both pixelworld-city-a"):
-        plugins.load(plugins.FACTS, "bag")
+        plugins.load(plugins.SOURCES, "bag")
 
 
-def test_check_finds_a_missing_plugin_before_a_build(monkeypatch):
-    installed(monkeypatch, plugins.FACTS)
-    spec = SPEC | {"objects": {"typology": {"facts": "datasf", "rules": []}}}
+def test_check_finds_a_missing_source_before_a_build():
+    spec = SPEC | {"sources": {**SPEC["sources"], "facts": {"kind": "cadastre", "year": 2026}}}
     assert plugins.spec_plugins(spec) == [
-        (plugins.SOURCES, "usgs-3dep-1arcsec", "sources.dem.kind"),
-        (plugins.SOURCES, "esa-worldcover-2021", "sources.landcover.kind"),
-        (plugins.FACTS, "datasf", "objects.typology.facts"),
+        ("terrain", "usgs-3dep-1arcsec", "sources.dem.kind"),
+        ("landcover", "esa-worldcover-2021", "sources.landcover.kind"),
+        ("facts", "cadastre", "sources.facts.kind"),
     ]
-    with pytest.raises(plugins.PluginNotFoundError, match="pixelworld-city-sf"):
+    with pytest.raises(plugins.PluginNotFoundError, match="no facts source named 'cadastre'"):
         plugins.check(Region.from_dict(spec))
-    with plugins.registered(plugins.FACTS, "datasf", object()):
+    with plugins.registered(plugins.SOURCES, "cadastre", Cadastre):
         plugins.check(Region.from_dict(spec))
+    with plugins.registered(plugins.SOURCES, "cadastre", Terrain()):
+        with pytest.raises(plugins.PluginError, match="is a terrain source, not a facts source"):
+            plugins.check(Region.from_dict(spec))
     with pytest.raises(plugins.PluginNotFoundError, match="no terrain source named 'ahn'"):
         plugins.check(Region.from_dict(SPEC | {"micro": {"k": 4, "dem": {"kind": "ahn"}}}))
+
+
+def test_a_source_is_opened_with_its_options():
+    region = Region.from_dict(SPEC)
+    # the pipeline's own keys aren't options
+    assert plugins.split_ref({"kind": "x", "overview": 4, "resampling": "bilinear", "a": 1}) == (
+        "x",
+        {"a": 1},
+    )
+    assert plugins.split_ref("x") == ("x", {})
+    with pytest.raises(plugins.PluginError, match="needs a `kind:`"):
+        plugins.split_ref({"year": 2026}, "sources.facts")
+    # a class is opened with the region and the options; an instance takes none
+    got = plugins.open_source(
+        "facts", {"kind": "areas", "areas": [{"hood": "a", "bounds": [0, 0, 1, 1]}]}, region
+    )
+    assert got.region is region and got.options["areas"][0]["hood"] == "a"
+    with pytest.raises(plugins.PluginError, match="takes no options, got overview2"):
+        plugins.open_source("terrain", {"kind": "usgs-3dep-1arcsec", "overview2": 4}, region)
+    # the role's default, when the spec names none
+    assert plugins.source(region, "canopy").role == "canopy"
+    with pytest.raises(plugins.PluginError, match="sources.features isn't set"):
+        plugins.source(region, "features")
+    with pytest.raises(Exception, match="needs `release:`"):
+        plugins.open_source("features", {"kind": "overture"}, region)
 
 
 # ---- terrain sources ------------------------------------------------------------------------
@@ -227,22 +257,6 @@ def test_a_terrain_source_of_local_geotiff_tiles(monkeypatch, tmp_path):
 # ---- facts sources --------------------------------------------------------------------------
 
 
-def test_facts_refs_name_a_plugin_with_options():
-    assert facts.facts_ref({}) is None
-    assert facts.facts_ref({"facts": None, "rules": []}) is None
-    assert facts.facts_ref({"facts": "datasf", "rules": []}) == ("datasf", {})
-    # the older form: options beside the name
-    assert facts.facts_ref({"facts": "datasf", "rollYear": 2024}) == ("datasf", {"rollYear": 2024})
-    assert facts.facts_ref({"facts": {"plugin": "datasf", "classCodes": True}}) == (
-        "datasf",
-        {"classCodes": True},
-    )
-    with pytest.raises(facts.FactsSpecError, match="needs a plugin name"):
-        facts.facts_ref({"facts": {"rollYear": 2024}})
-    with pytest.raises(facts.FactsSpecError):
-        facts.facts_ref({"facts": ["datasf"]})
-
-
 class Records(facts.FactsSource):
     """West of x = 0 a 1890s brownstone row (class A4, flat roofs); east, tenements (C7)."""
 
@@ -264,7 +278,6 @@ class Records(facts.FactsSource):
 
 
 def test_a_registered_facts_source_types_buildings(capsys):
-    region = Region.from_dict(SPEC)
     found = []
     for k, cx in enumerate((-2.0, 2.0)):
         fp = [[cx, 1.0], [cx + 0.3, 1.0], [cx + 0.3, 1.8], [cx, 1.8]]
@@ -280,17 +293,19 @@ def test_a_registered_facts_source_types_buildings(capsys):
                 "_roof": "flat",
             }
         )
+    region = Region.from_dict(
+        SPEC | {"sources": {**SPEC["sources"], "facts": {"kind": "records", "vintage": 2026}}}
+    )
     spec = {
-        "facts": {"plugin": "records", "vintage": 2026},
         "rules": [
             {"group": "building.rowhouse.brownstone", "classes": ["A4"], "roofs": ["flat"]},
             {"group": "building.tenement", "classes": ["C*"], "year": [1880, 1930]},
         ],
     }
     Records.built.clear()
-    with plugins.registered(plugins.FACTS, "records", Records):
+    with plugins.registered(plugins.SOURCES, "records", Records):
         objects.type_buildings(region, found, spec, None, None)
-        assert facts.attribution(spec) == [Records.attribution]
+        assert plugins.attribution(region, "facts") == [Records.attribution]
     assert Records.built == [{"vintage": 2026}]
     assert [b["g"] for b in found] == ["building.rowhouse.brownstone", "building.tenement"]
     assert all(b["yr"] == 1890 and b["fl"] == 4 for b in found)
@@ -305,7 +320,7 @@ class Heights(facts.FactsSource):
 def test_facts_heights_fill_only_buildings_without_one(capsys):
     """D-084: a facts `height` replaces only a default height (`_hdef`), and a
     building it lifts to the tower height becomes a tower."""
-    region = Region.from_dict(SPEC)
+    region = Region.from_dict(SPEC | {"sources": {**SPEC["sources"], "facts": "heights"}})
     found = []
     for k, (cx, hdef) in enumerate(((-2.0, True), (-1.0, False), (2.0, True))):
         fp = [[cx, 1.0], [cx + 0.3, 1.0], [cx + 0.3, 1.8], [cx, 1.8]]
@@ -314,8 +329,8 @@ def test_facts_heights_fill_only_buildings_without_one(capsys):
         if hdef:
             b["_hdef"] = True
         found.append(b)
-    with plugins.registered(plugins.FACTS, "heights", Heights):
-        objects.type_buildings(region, found, {"facts": "heights", "rules": []}, None, None, 45.0)
+    with plugins.registered(plugins.SOURCES, "heights", Heights):
+        objects.type_buildings(region, found, {"rules": []}, None, None, 45.0)
     assert [b["hm"] for b in found] == [24.0, 6.0, 60.0]
     assert [b["g"] for b in found] == ["building.residential"] * 2 + ["building.tower"]
     assert not any("_hdef" in b for b in found)
@@ -323,7 +338,10 @@ def test_facts_heights_fill_only_buildings_without_one(capsys):
 
 
 class Roofs:
-    """A facts source whose buildings all have gabled roofs."""
+    """A facts source whose buildings all have gabled roofs: any class with the
+    role and `at` will do."""
+
+    role = "facts"
 
     def __init__(self, region, options=None):
         pass
@@ -335,7 +353,7 @@ class Roofs:
 def test_roof_hints_take_the_facts_roof_where_overture_has_none():
     """D-100: with `roofHints`, a building without Overture's roof shape takes the
     facts' as its generator's hint (`rs`); one with Overture's keeps it; off by default."""
-    region = Region.from_dict(SPEC)
+    region = Region.from_dict(SPEC | {"sources": {**SPEC["sources"], "facts": "roofs"}})
     for hints, want in ((True, ["gabled", "flat"]), (False, [None, "flat"])):
         found = []
         for k, rs in enumerate((None, "flat")):
@@ -345,8 +363,8 @@ def test_roof_hints_take_the_facts_roof_where_overture_has_none():
             if rs:
                 b["rs"] = rs
             found.append(b)
-        spec = {"facts": "roofs", "rules": [], "roofHints": hints}
-        with plugins.registered(plugins.FACTS, "roofs", Roofs):
+        spec = {"rules": [], "roofHints": hints}
+        with plugins.registered(plugins.SOURCES, "roofs", Roofs):
             objects.type_buildings(region, found, spec, None, None, 45.0)
         assert [b.get("rs") for b in found] == want
 
@@ -398,7 +416,10 @@ def test_grounds_rules_match_buildings_standing_in_a_land_use_area(monkeypatch):
         return [{"id": "g", "class": "religious", "geometry": area}]
 
     monkeypatch.setattr(overture, "land_use", land_use)
-    spec = {**SPEC, "sources": {**SPEC["sources"], "overture": {"release": "r"}}}
+    spec = {
+        **SPEC,
+        "sources": {**SPEC["sources"], "features": {"kind": "overture", "release": "2026-10-21.0"}},
+    }
     region = Region.from_dict(spec)
     place = objects.Placement(region, np.zeros((1, 1), dtype=bool))
     found = []

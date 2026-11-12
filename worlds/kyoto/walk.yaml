@@ -68,7 +68,6 @@ objects:
   # read 1989), so temples are typed by class and roof, never by year.
   # First match wins.
   typology:
-    facts: { plugin: plateau, year: 2025 }
     # PLATEAU's LoD2 roof shape draws the roof where Overture gives none (D-100)
     roofHints: true
     rules:
@@ -121,8 +120,8 @@ sources:
   # GSI's elevation tiles (D-089): DEM1A's lidar at 1 m, read at 4 m
   dem: { kind: gsi-dem, overview: 4 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: plateau, year: 2025 }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
     excludeSubclasses: [parking_aisle, driveway]

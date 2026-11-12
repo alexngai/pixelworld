@@ -7,6 +7,7 @@ import shapely
 from pixelworld_pipeline import ground, micro
 from pixelworld_pipeline.build import SURFACES, S
 from pixelworld_pipeline.region import Region
+from pixelworld_pipeline.sources import overture
 from pixelworld_pipeline.world_format import NO_WATER
 
 NAMES = SURFACES | ground.SURFACES
@@ -17,7 +18,7 @@ SPEC = {
     "metersPerCell": 20,
     "style": "s",
     "start": {"lon": -122.445, "lat": 37.765},
-    "sources": {"overture": {"release": "r"}},
+    "sources": {"features": {"kind": "overture", "release": "2026-10-21.0"}},
 }
 
 
@@ -75,8 +76,8 @@ def test_lawn_rule_reads_land_use_where_cells_are_drawn(monkeypatch):
     park = shapely.box(w, s, w + (e - w) / 2, n)  # the west half
     scrub = shapely.box(w, s, w + (e - w) / 4, s + (n - s) / 4)
     rows = {"land_use": [{"geometry": park.wkt}], "land": [{"geometry": scrub.wkt}]}
-    monkeypatch.setattr(ground.overture, "land_use", lambda rel, box, cls: rows["land_use"])
-    monkeypatch.setattr(ground.overture, "land", lambda rel, box, cls: rows["land"])
+    monkeypatch.setattr(overture, "land_use", lambda rel, box, cls: rows["land_use"])
+    monkeypatch.setattr(overture, "land", lambda rel, box, cls: rows["land"])
     surface = np.full((cy, cx), S["grass"], dtype=np.uint8)
     corner_m = np.zeros((cy + 1, cx + 1))
     rule = {"landUse": ["park"], "over": ["grass"], "keep": ["scrub"]}
@@ -195,7 +196,7 @@ def test_a_lawn_leaves_a_parks_courts_paved(monkeypatch):
     def land_use(rel, box, cls):
         return [{"geometry": (court if cls == ["pedestrian"] else park).wkt}]
 
-    monkeypatch.setattr(ground.overture, "land_use", land_use)
+    monkeypatch.setattr(overture, "land_use", land_use)
     surface = np.full((cy, cx), S["grass"], dtype=np.uint8)
     corner_m = np.zeros((cy + 1, cx + 1))
     rule = {"landUse": ["park"], "over": ["grass"]}
@@ -216,8 +217,36 @@ def test_water_areas_are_the_cells_whose_centres_they_cover(monkeypatch):
         asked.append(cls)
         return [{"geometry": pond.wkt}]
 
-    monkeypatch.setattr(ground.overture, "water_areas", water_areas)
+    monkeypatch.setattr(overture, "water_areas", water_areas)
     out = ground.water_area_cells(region, (cy, cx), ["pond", "moat"])
     assert asked == [["pond", "moat"]]
     assert out[cy - 2, 2] and not out[2, cx - 2]
     assert abs(out.mean() - 0.25) < 0.05
+
+
+def test_a_features_source_of_ones_own_is_selected_by_name():
+    """D-110: the vector map comes from whichever features source the spec names."""
+    from dataclasses import replace
+
+    from pixelworld_pipeline import plugins
+    from pixelworld_pipeline.sources.features import FeatureSource
+
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    w, s, e, n = region.bounds
+    pond = shapely.box(w, s, w + (e - w) / 2, s + (n - s) / 2)
+
+    class CityPonds(FeatureSource):
+        attribution = {"name": "City ponds", "license": "CC0", "url": "https://example.org"}
+
+        def water_areas(self, bbox, classes):
+            return [{"id": "p1", "geometry": pond.wkt}] if self.options["ponds"] else []
+
+    mine = replace(region, sources={**region.sources, "features": {"kind": "ponds", "ponds": 1}})
+    with plugins.registered(plugins.SOURCES, "ponds", CityPonds):
+        out = ground.water_area_cells(mine, (cy, cx), ["pond"])
+        assert abs(out.mean() - 0.25) < 0.05
+        src = plugins.source(mine, "features")
+        assert plugins.entries(src.attribution)[0]["name"] == "City ponds"
+        with pytest.raises(NotImplementedError, match="CityPonds gives no roads"):
+            src.roads(region.bounds, ["primary"])

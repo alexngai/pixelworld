@@ -280,7 +280,7 @@ class WarpedLayout:
                 ]
                 / k
             )
-        elev = rasters.sample_points(self.region, spec["kind"], px, py, spacing)
+        elev = rasters.sample_points(self.region, spec, px, py, spacing)
         return elev.reshape(sx.shape)
 
     def cell_landcover(self, sub: int = 3, water_votes: int = 3, band: int = 64) -> np.ndarray:
@@ -294,7 +294,7 @@ class WarpedLayout:
         250 m cells) fell between cell centres and split the lake in two.
         """
         cx, cy = self.cells
-        kind = self.region.sources["landcover"]["kind"]
+        kind = self.region.sources["landcover"]
         off = (np.arange(sub) + 0.5) / sub
         ox, oy = (a.ravel() for a in np.meshgrid(off, off))
         centre = (sub * sub) // 2
@@ -364,7 +364,7 @@ class WarpedLayout:
             ones = np.ones_like(elev)
             return elev, elev, ones
         sigma = float(v.get("referenceSigmaKm", 6.0)) * 1000
-        kind = self.region.sources["dem"]["kind"]
+        kind = self.region.sources["dem"]
         ref_grid = rasters.smoothed_dem(self.region, kind, sigma)
         sx, sy = self.corner_source(k)
         px, py = self.source_to_projected(sx, sy)
@@ -380,7 +380,7 @@ class WarpedLayout:
         v = self.spec.vertical
         if not v:
             return metres
-        kind = self.region.sources["dem"]["kind"]
+        kind = self.region.sources["dem"]
         sigma = float(v.get("referenceSigmaKm", 6.0)) * 1000
         ref = float(
             rasters.sample_grid(

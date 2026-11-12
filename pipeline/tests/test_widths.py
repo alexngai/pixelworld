@@ -13,7 +13,7 @@ from pixelworld_pipeline.build import (
     half_width_cells,
     paved_band,
 )
-from pixelworld_pipeline.sources import overture
+from pixelworld_pipeline.sources import features
 from pixelworld_pipeline.world_format import Chunk, decode_chunk, encode_chunk
 
 
@@ -32,10 +32,10 @@ def test_class_ids_follow_priority_and_keep_the_classic_numbers():
 
 
 def test_footway_subclasses_are_their_own_path_classes():
-    assert overture.path_class({"class": "footway", "subclass": "sidewalk"}) == "sidewalk"
-    assert overture.path_class({"class": "footway", "subclass": "crosswalk"}) == "crosswalk"
-    assert overture.path_class({"class": "footway", "subclass": None}) == "footway"
-    assert overture.path_class({"class": "steps"}) == "steps"
+    assert features.path_class({"class": "footway", "subclass": "sidewalk"}) == "sidewalk"
+    assert features.path_class({"class": "footway", "subclass": "crosswalk"}) == "crosswalk"
+    assert features.path_class({"class": "footway", "subclass": None}) == "footway"
+    assert features.path_class({"class": "steps"}) == "steps"
 
 
 def test_half_widths_come_from_metres_at_the_local_scale_with_a_floor():
