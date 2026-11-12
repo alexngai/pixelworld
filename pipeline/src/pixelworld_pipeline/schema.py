@@ -1009,6 +1009,10 @@ TYPOLOGY_RULE = Map(
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),
+        "maxFill": Key(
+            Num(0, 1),
+            "Most share of its smallest enclosing rectangle the footprint fills (a ring, a C).",
+        ),
         "minParty": Key(Num(0, 1), "Least share of outline shared with neighbours."),
         "maxParty": Key(Num(0, 1), "Most share of outline shared with neighbours."),
         "floors": Key(num_range("[min, max]"), "Storeys."),
@@ -1102,6 +1106,11 @@ ROW_RULE_KEYS = {
         Str(),
         "With `along`: the group placed where the road runs diagonally, for a model drawn "
         "along x = y.",
+    ),
+    "slants": Key(
+        ListOf(Str()),
+        "With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for "
+        "models drawn along (2, −1) and (1, −2).",
     ),
     "canopy": Key(
         Num(0, unit="m"),
@@ -1205,6 +1214,24 @@ OBJECTS = Map(
         "streetTrees": Key(ListOf(STREET_TREE_RULE), "Rows of trees along roads."),
         "streetProps": Key(
             ListOf(STREET_PROP_RULE), "Street lights and signals: rows, or at junctions."
+        ),
+        "walls": Key(
+            ListOf(
+                Map(
+                    {
+                        "group": Key(Str(), "The group of a wall's segment.", required=True),
+                        "classes": Key(
+                            ListOf(Str(), min_items=1),
+                            "Overture barrier classes (`retaining_wall`, `wall` …).",
+                            required=True,
+                        ),
+                        "spacing": Key(Num(0, unit="m"), "Segment length.", required=True),
+                        "diagonal": Key(Str(), "The group on diagonal lines."),
+                        "slants": Key(ListOf(Str()), "The groups on the 2:1 lines."),
+                    }
+                )
+            ),
+            "Walls along Overture's barrier lines, in segments turned with them (D-098).",
         ),
         "landmarks": Key(
             ListOf(

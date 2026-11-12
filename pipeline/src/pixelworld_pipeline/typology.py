@@ -29,7 +29,8 @@ class of the building, OSM's `building=*`: temple, shrine, house …, exactly; i
 parts share it) · grounds (Overture's land-use classes the building's centroid
 stands in: religious, cemetery …) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
-minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
+minDepth (metres) · maxFill (the footprint's share of its smallest enclosing
+rectangle: low for a ring or a C) · minParty / maxParty (share of the outline) · floors [min,
 max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
 rule may replace; default: the generic building groups).
 
@@ -128,6 +129,8 @@ def features(
         lengths = [float(np.hypot(*(b - a))) * m for a, b in sides]
         f["width"] = min(lengths)
         f["depth"] = max(lengths)
+        # the footprint's share of its smallest enclosing rectangle: low for a ring or a C (D-098)
+        f["fill"] = float(poly.area) / max(float(rect.area), 1e-9)
         # shared walls
         shared = 0.0
         near = tree.query(poly.buffer(tol)) if tree is not None else []
@@ -270,6 +273,7 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         ("maxParty", "party", -1),
         ("minHeight", "height", 1),
         ("maxHeight", "height", -1),
+        ("maxFill", "fill", -1),
     ):
         if key in rule:
             v = f.get(feat)

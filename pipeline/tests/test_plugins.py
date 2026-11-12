@@ -414,6 +414,26 @@ def test_grounds_rules_match_buildings_standing_in_a_land_use_area(monkeypatch):
     assert asked == [["religious"]]  # no rule names grounds: nothing fetched
 
 
+def test_max_fill_finds_a_ring_or_a_c_shaped_footprint():
+    """D-098: `fill` is the footprint's share of its smallest enclosing rectangle."""
+    from pixelworld_pipeline import typology
+
+    block = [[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]]
+    c_shape = [[0, 0], [4, 0], [4, 0.4], [0.4, 0.4], [0.4, 3.6], [4, 3.6], [4, 4], [0, 4]]
+    found = []
+    for k, fp in enumerate((block, c_shape)):
+        b = {"g": "building.commercial", "x": 2.0, "y": 2.0, "fp": fp, "hm": 6.0}
+        b.update({"_grp": f"b{k}"})
+        found.append(b)
+    feats = typology.features(found, None, None, 10.0, None)
+    assert feats[0]["fill"] > 0.99 and feats[1]["fill"] < 0.35
+    rule = {"group": "building.corridor", "maxFill": 0.5}
+    assert [typology.matches(rule, b["g"], f) for b, f in zip(found, feats, strict=True)] == [
+        False,
+        True,
+    ]
+
+
 def test_courtyards_are_kept_as_holes_and_move_with_the_footprint():
     """D-088: with `courtyards`, a footprint's holes go out as `fh` rings,
     turned with it when snapped, scaled with it when depicted, and stored

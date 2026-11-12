@@ -608,6 +608,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `vegetation` | [list of mappings](#spec-objects-vegetation) | — | Trees and shrubs scattered by land cover. |
 | `streetTrees` | [list of mappings](#spec-objects-streettrees) | — | Rows of trees along roads. |
 | `streetProps` | [list of mappings](#spec-objects-streetprops) | — | Street lights and signals: rows, or at junctions. |
+| `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-098). |
 | `landmarks` | list of ids or mappings | — | Landmarks: registry ids (`worlds/_landmarks/`), `{ id, …overrides }`, or inline mappings. |
 | `landmarkDepiction` | string | `generic` | Which registry depiction to draw. |
 | `depiction` | [mapping](#spec-objects-depiction) | — | How big things are drawn at this scale level. |
@@ -689,6 +690,7 @@ Other keys here are plugin options.
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
+| `maxFill` | number, in [0, 1] | — | Most share of its smallest enclosing rectangle the footprint fills (a ring, a C). |
 | `minParty` | number, in [0, 1] | — | Least share of outline shared with neighbours. |
 | `maxParty` | number, in [0, 1] | — | Most share of outline shared with neighbours. |
 | `floors` | [min, max] | — | Storeys. |
@@ -724,6 +726,7 @@ Other keys here are plugin options.
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
 | `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
 | `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
@@ -744,11 +747,23 @@ Other keys here are plugin options.
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
 | `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
 | `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
 | `density` | number, in [0, 1] | 1 | With `canopy`: share of spots kept. |
 | `at` | one of `junctions` | — | Two per junction of 3+ roads, on opposite corners. |
+
+<a id="spec-objects-walls"></a>
+#### `objects.walls[]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `group` | string | **required** | The group of a wall's segment. |
+| `classes` | list of strings | **required** | Overture barrier classes (`retaining_wall`, `wall` …). |
+| `spacing` | number, ≥ 0 (m) | **required** | Segment length. |
+| `diagonal` | string | — | The group on diagonal lines. |
+| `slants` | list of strings | — | The groups on the 2:1 lines. |
 
 <a id="spec-objects-landmarks"></a>
 #### `objects.landmarks[]`

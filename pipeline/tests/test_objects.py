@@ -3,6 +3,7 @@
 import gzip
 import hashlib
 import json
+import math
 
 import numpy as np
 import pytest
@@ -553,3 +554,54 @@ def test_props_along_a_diagonal_street_take_their_diagonal_group():
     diag = [i for i in out if i["g"] == "prop.pole.diagonal"]
     assert diag and {i["r"] for i in diag} == {0, 1}
     assert all(i["g"] == "prop.pole" for i in objects.street_trees(p, rule, rows, _none, "t"))
+
+
+def test_along_turns_pick_the_group_drawn_nearest_the_lines_direction():
+    """D-098: straight, diagonal and the two 2:1 groups, each with the quarter
+    turn for the direction at right angles; a missing group falls back."""
+    rule = {"group": "g", "diagonal": "d", "slants": ["s1", "s2"]}
+    cases = {
+        0: ("g", 1),
+        90: ("g", 0),
+        45: ("d", 1),
+        135: ("d", 0),
+        26.57: ("s1", 0),
+        116.57: ("s1", 1),
+        63.43: ("s2", 0),
+        153.43: ("s2", 1),
+    }
+    for deg, want in cases.items():
+        a = math.radians(deg)
+        assert objects.along_turn(math.cos(a), math.sin(a), rule) == want, deg
+        # the same line run the other way
+        assert objects.along_turn(-math.cos(a), -math.sin(a), rule) == want, deg
+    # without slants, a 2:1 line takes the nearest diagonal; without either, the straight group
+    a = math.radians(26.57)
+    assert objects.along_turn(math.cos(a), math.sin(a), {"group": "g", "diagonal": "d"}) == ("d", 1)
+    assert objects.along_turn(math.cos(a), math.sin(a), {"group": "g"}) == ("g", 1)
+
+
+def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
+    """D-098: `objects.walls` puts one segment every `spacing` on Overture's barrier
+    lines of the given classes, turned with each line, over water's edge too."""
+    from pixelworld_pipeline.sources import overture
+
+    asked = []
+    line = "LINESTRING (-115.199 36.005, -115.191 36.005)"
+
+    def barriers(release, bbox, classes):
+        asked.append(classes)
+        return [{"id": "w", "class": "retaining_wall", "geometry": line}]
+
+    monkeypatch.setattr(overture, "barriers", barriers)
+    spec = {**SPEC, "sources": {**SPEC["sources"], "overture": {"release": "r"}}}
+    spec["objects"] = {
+        "walls": [{"group": "wall.stone", "classes": ["retaining_wall"], "spacing": 50}]
+    }
+    region = Region.from_dict(spec)
+    cx, cy = region.cells
+    blocked = np.ones((cy, cx), dtype=bool)  # all water: walls stand anyway
+    out, _ = objects.place(region, blocked, [])
+    walls = [i for i in out if i["g"] == "wall.stone"]
+    assert asked == [["retaining_wall"]]
+    assert len(walls) >= 10 and {i["r"] for i in walls} == {1}  # an east-west line

@@ -510,6 +510,33 @@ def _in_footprints(instances: list[dict]):
     return fn
 
 
+# the 16 directions modulo a half turn, in degrees from east (projected, y north)
+_ALONG_ANGLES = (0.0, 26.57, 45.0, 63.43, 90.0, 116.57, 135.0, 153.43)
+
+
+def along_turn(tx: float, ty: float, rule: dict[str, Any]) -> tuple[str, int]:
+    """The group and quarter turns of a prop drawn along a line running
+    (tx, ty) (projected, y north), for `along` (D-096, D-098). Its `group`
+    is a model drawn along y (north-south), `diagonal` one drawn along
+    x = y in cells (south-east), `slants` two drawn along (2, −1) and
+    (1, −2) in cells (26.6° and 63.4° from east): each covers its
+    direction and, turned a quarter, the one at right angles. A direction
+    without its group takes the nearest one there is."""
+    a = math.degrees(math.atan2(ty, tx)) % 180.0
+    near = min(_ALONG_ANGLES, key=lambda d: min(abs(a - d), 180.0 - abs(a - d)))
+    slants = list(rule.get("slants") or [])
+    diagonal = rule.get("diagonal")
+    if near in (26.57, 116.57) and slants:
+        return slants[0], 0 if near == 26.57 else 1
+    if near in (63.43, 153.43) and len(slants) > 1:
+        return slants[1], 0 if near == 63.43 else 1
+    if near in (45.0, 135.0) or (near not in (0.0, 90.0) and diagonal):
+        if diagonal:
+            # the nearest diagonal: 135 (south-east in cells) as drawn, 45 turned
+            return diagonal, 0 if (near - 90.0) % 180.0 < 90.0 else 1
+    return rule["group"], 0 if abs(ty) >= abs(tx) else 1
+
+
 def street_trees(
     p: Placement, rule: dict[str, Any], road_rows: list[dict], occupied, tag: str = ""
 ) -> list[dict]:
@@ -521,8 +548,8 @@ def street_trees(
     lanterns strung across it. With `along`, one row on the road's left
     side, turned the same way so a model drawn along y runs with its road:
     utility poles whose wires reach to the next (D-096); with `diagonal`, that
-    group stands where the road runs within 22.5° of a diagonal, for a model
-    drawn along x = y (D-097). `bounds` ([w, s, e,
+    group stands where the road runs nearest a diagonal, and with `slants`
+    two more at the 2:1 directions (see along_turn; D-097, D-098). `bounds` ([w, s, e,
     n], lon/lat) keeps a rule to one stretch of its roads.
     """
     classes = set(rule["roads"])
@@ -530,7 +557,6 @@ def street_trees(
     offset = float(rule.get("offset", 12))
     across = bool(rule.get("across"))
     along = bool(rule.get("along"))
-    diagonal = rule.get("diagonal") if along else None
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
     rng = np.random.default_rng(_seed(p.region, f"street|{tag}|{rule['group']}"))
     xs: list[float] = []
@@ -574,21 +600,17 @@ def street_trees(
                     xs.append(c.x - side * ty / norm * offset)
                     ys.append(c.y + side * tx / norm * offset)
                     if along:
-                        # within 22.5° of a diagonal: the `diagonal` group, drawn along x = y
-                        # (south-east in cells, where y grows south), a quarter turn for the other
-                        a = math.degrees(math.atan2(ty, tx)) % 90.0
-                        if diagonal and 22.5 <= a < 67.5:
-                            groups.append(diagonal)
-                            turns.append(0 if tx * ty < 0 else 1)
-                        else:
-                            groups.append(rule["group"])
-                            turns.append(0 if abs(ty) >= abs(tx) else 1)
+                        g, r = along_turn(tx, ty, rule)
+                        groups.append(g)
+                        turns.append(r)
     if not xs:
         return []
     ax, ay = np.asarray(xs), np.asarray(ys)
     cx, cy = p.to_cells(ax, ay)
-    # over the road, only the world's edge, buildings and landmarks keep props off
-    ok = (p.inside(cx, cy) if across else p.free(cx, cy)) & ~occupied(ax, ay)
+    # over the road (or on a wall's line), only the world's edge, buildings and
+    # landmarks keep props off
+    over = across or bool(rule.get("_over"))
+    ok = (p.inside(cx, cy) if over else p.free(cx, cy)) & ~occupied(ax, ay)
     if codes is not None:
         ok &= np.isin(p.landcover_at(ax, ay), list(codes))
     if "bounds" in rule:
@@ -1696,6 +1718,17 @@ def place(
             instances += junction_props(p, rule, road_rows, occupied, f"j{i}")
         else:
             instances += street_trees(p, rule, road_rows, occupied, f"p{i}")
+    # walls along Overture's barrier lines (D-098): segments one `spacing` apart on
+    # the line, turned with it; over water's edge and cliffs too, off buildings
+    for i, rule in enumerate(spec.get("walls") or []):
+        rows = overture.barriers(
+            region.sources["overture"]["release"], region.lonlat_envelope(), list(rule["classes"])
+        )
+        line_rule = {**rule, "roads": list(rule["classes"]), "along": True, "offset": 0.0}
+        line_rule["_over"] = True
+        walls = street_trees(p, line_rule, rows, occupied, f"w{i}")
+        progress.log(f"walls: {len(walls)} {rule['group']} on {len(rows)} {rule['classes']} lines")
+        instances += walls
     for k, lm in enumerate(landmarks):
         lx, ly, _ = clear_zones[k]
         cx, cy = p.to_cells(np.array([lx]), np.array([ly]), shift="line" not in lm)
