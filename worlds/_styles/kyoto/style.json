@@ -491,8 +491,8 @@
       "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
       "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2, "wx": 1, "wy": -2 }
     },
-    "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 5 } },
-    "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 6 } },
+    "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 12, "lines": 1, "reach": 5 } },
+    "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 16, "lines": 1, "reach": 3 } },
     "wall.stone": {
       "generator": "stoneWall",
       "ramps": { "stone": "stone", "cap": "kawara-light" },
