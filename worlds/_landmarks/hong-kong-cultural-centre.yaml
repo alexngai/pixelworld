@@ -7,7 +7,7 @@ anchor: { lon: 114.170339, lat: 22.293814 }
 height: 50          # depicted: the curved roofs' crest (Overture has no height for it)
 footprint: true
 clear: 0
-replaces: [d76e1ed5-4bc8-48ba-bfec-6e9b4c9d4fc2]
+replaces: [d76e1ed5-d839-426b-a51e-d83c7bb2f4c9]
 depictions:
   # windowless walls of pink tile under a roof that sweeps up from the
   # harbour side to its crest at the back in a concave curve; no name

@@ -1,0 +1,133 @@
+# Hong Kong, walking level (D-109): Kowloon from Tsim Sha Tsui's waterfront
+# to Prince Edward at 10 m per cell, on open data only (D-107). Nathan Road
+# runs up the middle under its neon signs; either side, Jordan, Yau Ma Tei
+# and Mong Kok's grids of tong lau and composite buildings; West Kowloon's
+# reclaimed land with the ICC on the left; the Clock Tower, the Cultural
+# Centre and the Star Ferry at the bottom, on Victoria Harbour.
+# Hong Kong's own building and terrain data (LandsD) can't be adapted under
+# its terms (docs/cities.md), so heights come from OSM's floors where it has
+# them and from each neighbourhood's typical height where it doesn't, and the
+# ground from Copernicus GLO-30 with its buildings filtered off. Measured
+# against LandsD's data, that is about 2 floors off and the ground about 8 m
+# off on these flat streets (docs/cities.md).
+# Build: cd pipeline && uv run pixelworld build ../worlds/hongkong/walk.yaml
+id: hongkong-walk
+name: Hong Kong (walking)
+level: walk
+levels:
+  - { name: walk, world: hongkong-walk, label: "Walking Kowloon: Tsim Sha Tsui to Mong Kok" }
+bounds: [114.156, 22.290, 114.178, 22.330] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+# Kowloon's streets are flat reclaimed land and low hills (King's Park, 60 m)
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Kowloon's grids run about 15° off north (Nathan Road, the Mong Kok grid)
+# and 2:1 in places: streets within 6° of one of the 16 directions snap to it,
+# the rest are drawn along their own centre lines (D-082)
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  centrelines: true
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    # 25 storeys and up: below it, rules sort walk-ups, tong lau and composite buildings
+    towerMeters: 80
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055) with no records to read (D-107): each
+  # neighbourhood names its buildings' hood, and gives the ones OSM has no
+  # floors for its typical height (the median of OSM's floors on footprints under 300 m² there,
+  # measured 2026-11-11: open data only). First match wins.
+  typology:
+    facts:
+      plugin: areas
+      areas:
+        - { hood: Tsim Sha Tsui, bounds: [114.167, 22.290, 114.178, 22.303], floors: 9 }
+        - { hood: Jordan, bounds: [114.166, 22.303, 114.174, 22.309], floors: 6 }
+        - { hood: Yau Ma Tei, bounds: [114.166, 22.309, 114.174, 22.316], floors: 6 }
+        - { hood: Mong Kok, bounds: [114.164, 22.316, 114.175, 22.326], floors: 8 }
+        - { hood: Tai Kok Tsui, bounds: [114.156, 22.316, 114.164, 22.326], floors: 6 }
+        - { hood: Prince Edward, bounds: [114.156, 22.326, 114.178, 22.330], floors: 7 }
+        - { hood: King's Park, bounds: [114.174, 22.303, 114.178, 22.316], floors: 8 }
+        - { hood: West Kowloon, bounds: [114.156, 22.290, 114.166, 22.316], floors: 4 }
+    rules:
+      # towers of 25 storeys and up: flats where OSM says so, and in the old
+      # districts every narrow one (the pencil towers); glass elsewhere
+      - { group: building.tower.residential, from: [building.tower], kinds: [apartments, residential, house, dormitory] }
+      - { group: building.tower.residential, from: [building.tower], hoods: [Jordan, Yau Ma Tei, Mong Kok, Tai Kok Tsui, Prince Edward, King's Park], maxWidth: 35 }
+      # malls and podiums: wide and low
+      - { group: building.podium, floors: [1, 7], minWidth: 40 }
+      # the composite buildings of the 1960s–80s: 10–24 storeys on a narrow lot
+      - { group: building.composite, floors: [10, 24], maxWidth: 35 }
+      # tong lau: 3–9 storeys on a narrow lot, in the old districts, and in
+      # Tsim Sha Tsui's back streets
+      - { group: building.tonglau, floors: [3, 9], maxWidth: 18, hoods: [Jordan, Yau Ma Tei, Mong Kok, Tai Kok Tsui, Prince Edward, Tsim Sha Tsui] }
+      - { group: building.civic, kinds: [school, college, university, hospital, government, civic, public, religious, church, temple, fire_station, police] }
+  vegetation:
+    # Kowloon Park's and King's Park's trees where the canopy map shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    - { group: tree.street, roads: [primary, secondary, tertiary], canopy: 3, spacing: 10, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # neon signs hung across the streets from the buildings either side
+    # (D-108): Nathan Road's span 30 m, the old districts' streets 17.5 m
+    - { group: prop.neon.wide, roads: [primary, secondary], name: Nathan Road, across: true, spacing: 12 }
+    - group: prop.neon
+      roads: [secondary, tertiary, residential, unclassified]
+      notName: Nathan Road
+      across: true
+      spacing: 12
+      bounds: [114.1640, 22.2940, 114.1760, 22.3300]
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [international-commerce-centre, tsim-sha-tsui-clock-tower, hong-kong-cultural-centre, the-peninsula]
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: hongkong
+start: { lon: 114.1717, lat: 22.3190 } # Nathan Road at Argyle Street, Mong Kok
+
+sources:
+  # Copernicus GLO-30 with buildings filtered off (D-107)
+  dem: { kind: copernicus-glo30-ground, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  overture:
+    release: 2026-10-21.0
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river]
+  # the East Rail line's tracks at Mong Kok East where they run in the open
+  rails:
+    - { draw: train, rail: [standard_gauge, narrow_gauge, subway, light_rail], bundle: 20 }
+
+geology: null

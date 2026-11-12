@@ -1106,6 +1106,7 @@ ROW_RULE_KEYS = {
         Num(0, unit="m"), "Distance from the road's centre line.", "12 (0 with `canopy`)"
     ),
     "name": Key(Str(), "Only roads whose name contains this."),
+    "notName": Key(Str(), "Not on roads whose name contains this (D-109)."),
     "bounds": Key(BBOX, "Only within this box."),
     "landcover": Key(ListOf(Str(landcover_classes)), "Only on these land-cover classes."),
     "across": Key(Bool(), "Over the road, turned across it (strung lanterns)."),

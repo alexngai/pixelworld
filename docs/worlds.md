@@ -724,6 +724,7 @@ Other keys here are plugin options.
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
+| `notName` | string | — | Not on roads whose name contains this (D-109). |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
@@ -745,6 +746,7 @@ Other keys here are plugin options.
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
+| `notName` | string | — | Not on roads whose name contains this (D-109). |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |

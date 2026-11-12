@@ -255,6 +255,29 @@ Sources and licenses:
 - Building records: MLIT's PLATEAU 3D city models, 2025 (出典：国土交通省 PLATEAUウェブサイト; processed). PDL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## hongkong-walk
+
+Kowloon's walking level (D-109), built from [`worlds/hongkong/walk.yaml`](../worlds/hongkong/walk.yaml) on the `hongkong` style pack (D-108): Tsim Sha Tsui's waterfront to Prince Edward, West Kowloon and the ICC to King's Park, at 10 m per cell (228 × 444 cells), on open data alone (D-107): Hong Kong's own building and terrain data can't be adapted under its terms (docs/cities.md). Heights are true (`heightStretch` 1.0); roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
+
+- **Terrain:** Copernicus GLO-30 with buildings and trees filtered off (the `copernicus-glo30-ground` terrain source, D-107): 18 drawn steps from the harbour to King's Park. Measured against the Lands Department's 5 m DTM, an RMSE of 6.4 m over the pilot's land.
+- **Buildings:** 7,104 from Overture footprints (OpenStreetMap). OSM gives floors on about half; the rest take their neighbourhood's typical height from the spec (the `areas` facts source, D-107: 3,328 buildings).
+- **Types** (by floors, footprint width, OSM's class and neighbourhood): tong lau (3,726), composite buildings (985), residential towers (299), podiums and malls (65), civic buildings (105), glass towers (61) and hotels (7); 857 commercial and 995 residential keep the defaults.
+- **Also:** neon signs hung across the streets from both sides (597 on Nathan Road, 5,075 in the old districts' streets), 7,789 canopy trees and 706 street trees, 2,164 street lights and 292 signals, 418 rail cells, 3,961 traffic routes (21 for ferries).
+- **Landmarks (generic depictions, D-108):** the International Commerce Centre, the Tsim Sha Tsui clock tower, the Cultural Centre and the Peninsula.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 1.2 MB. Built in about 50 s with the download cache (110 s on a first build).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/hongkong/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: Copernicus DEM GLO-30, produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Copernicus DEM licence.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

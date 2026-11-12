@@ -17,9 +17,9 @@ This guide covers:
 
 | What | Spec field | Built in | From a plugin |
 |---|---|---|---|
-| Elevation | `sources.dem.kind` (and `micro.dem.kind`, if micro-terrain reads another) | `usgs-3dep-1arcsec`, `usgs-3dep-13arcsec` | a `terrain` source adapter |
+| Elevation | `sources.dem.kind` (and `micro.dem.kind`, if micro-terrain reads another) | `usgs-3dep-1arcsec`, `usgs-3dep-13arcsec`; anywhere, `copernicus-glo30` and `copernicus-glo30-ground` (D-107) | a `terrain` source adapter |
 | Land cover | `sources.landcover.kind` | `esa-worldcover-2021` | a `landcover` source adapter |
-| Building facts | `objects.typology.facts` | none | a facts source (`datasf` from `pixelworld-city-sf`) |
+| Building facts | `objects.typology.facts` | `areas`: facts written in the spec, by neighbourhood box (D-107) | a facts source (`datasf` from `pixelworld-city-sf`) |
 
 ```yaml
 sources:

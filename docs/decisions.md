@@ -114,7 +114,9 @@ Status values:
 | D-103 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
 | D-104 | Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets | Accepted (M5) |
 | D-105 | Releases from CI through npm trusted publishing, and every city pack published | Accepted |
+| D-107 | The global path's first pieces: Copernicus GLO-30 terrain with a ground filter, and facts from neighbourhood boxes | Accepted (M5) |
 | D-108 | Hong Kong's look: a `hongkong` style pack and the `@pixelworlds/city-hongkong` generator plugin | Accepted (M5) |
+| D-109 | Kowloon's walking level, on open data alone | Accepted (M5) |
 
 ---
 
@@ -1364,6 +1366,19 @@ The point is more room for visual interest; both halves are wanted.
   - **Staged publishing:** changesets doesn't support it yet; merging the version pull request is the human step.
 - **Later:** consumer examples for the other city packs (`tools/consumers.mjs` covers San Francisco's); provenance, which npm adds only from a public repository.
 
+### D-107: The global path's first pieces: Copernicus GLO-30 terrain with a ground filter, and facts from neighbourhood boxes (accepted, M5)
+- **Why:** the owner asked for a Kowloon pilot on open data while the Lands Department is asked for a grant (docs/cities.md, Hong Kong). Hong Kong's own buildings and DTM can't be adapted under their terms, so the pilot needs what docs/cities.md lists for the global path: a terrain source that works anywhere, and typology without a records dataset.
+- **What was measured first** (2026-11-11, Sheung Wan to Sham Shui Po, against LandsD's Building layer and 5 m DTM, used only as the reference and kept out of the repo): open footprints cover 80% of LandsD's building area; OSM floors are within 3 floors on 60% of the buildings that have them; buildings without them are guesses, and the pipeline's 6–8 m default draws 20–40 m tong lau at 0.38× their height; raw GLO-30 has an RMSE of 12.8 m on streets and reads flat streets 3.8 m high. The numbers are in docs/cities.md.
+- **What:**
+  - **`copernicus-glo30`**, a built-in terrain source: Copernicus DEM GLO-30's 1°×1° COGs on AWS (anonymous), overviews to 8×. Attribution as its licence asks for adapted data, with the no-liability sentence it says to pass on.
+  - **`copernicus-glo30-ground`**: the same with buildings and trees taken off by a grey opening over a 210 m window on GLO-30's own 1″ grid (water and gaps left alone, so the shore isn't pulled down), then a 3×3 mean, before it's warped onto the region. Over the Kowloon pilot, on all land cells against LandsD's DTM: an RMSE of 6.4 m instead of 9.4 m, a median of +0.4 m instead of +3.6 m, and 8% of cells off by more than 10 m instead of 24%. On slopes over 15° it is no better than raw (15.4 against 13.4 m): for flat dense cities, not hillsides.
+  - **The `areas` facts source**, built in: facts written in the spec, by neighbourhood box (`objects.typology.facts: { plugin: areas, areas: [{ hood, bounds, floors, use }] }`; first match wins). A building in an area gets its `hood` (for `hoods:` rules) and, where Overture gives no height or floors, the area's typical height (`floors` × 3.2 m) through the facts' `height` (D-084). Kowloon's floors are the median of OSM's floors on footprints under 300 m² in each area. Against LandsD, a box default is within 3 floors on 61% of the buildings OSM has no floors for.
+- **Rejected alternatives:**
+  - **3D-GloBFP heights** (CC BY 4.0, a height per footprint): it pulls heights toward the middle (low buildings 1.4×, 40–100 m blocks 0.75×, towers 0.46×), and calibrated against OSM's floors it was no better than a box default. Not wired in.
+  - **FABDEM** (bare-earth GLO-30): CC BY-NC-SA. **A wider window** (330 m): better on flat streets (7.0 m) but worse on slopes (19.4 m).
+  - **A spec option for the window** instead of a second kind: one window has been measured; a second city can add one.
+- **Later:** a ground filter that reads the roads (the lowest GLO-30 along each street) for hillside cities; the window's effect at coarser levels (at 4× overview it shrinks to 3 pixels; at 8× it's off).
+
 ### D-108: Hong Kong's look: a `hongkong` style pack and the `@pixelworlds/city-hongkong` generator plugin (accepted, M5)
 - **Why:** Kowloon's walking level (Mong Kok, Yau Ma Tei, Jordan, Tsim Sha Tsui and West Kowloon at 10 m, built from open data alone) reads by a fabric no pack draws: rows of tong lau whose fronts are balconies of laundry and air conditioners over shops under signboards, slender composite buildings gridded with small windows, pencil towers of bay windows, and the neon signs that hang out over Nathan Road and the side streets from both sides. Tokyo's zakkyo stands its sign boards in front of its own wall; no pack hangs a sign over the street.
 - **What:**
@@ -1383,3 +1398,16 @@ The point is more room for visual interest; both halves are wanted.
   - **A generator of ICC's own:** `obeliskTower` already reads as its tapering glass shaft; only its top's rounded corners differ.
   - **Double-decker buses and minibuses:** core's `bus` is one deck at the size the traffic simulation gives it; the pack colours it.
 - **Later:** double-deckers and green minibuses as vehicle types; ICC's square top and its light show; tall vertical signs on the tong lau themselves; the Cultural Centre's height and roof from survey data; signs on diagonal streets turn by quarter turns only.
+
+### D-109: Kowloon's walking level, on open data alone (accepted, M5)
+- **Why:** the owner chose a Kowloon pilot on open data (D-107) while the Lands Department is asked for a grant; Hong Kong is the densest high-rise city on its candidate list, and docs/cities.md measured what open data loses there.
+- **What:** `worlds/hongkong/walk.yaml` (`hongkong-walk`): Kowloon from Tsim Sha Tsui's waterfront to Prince Edward, West Kowloon and the ICC to King's Park, at 10 m per cell (228 × 444 cells), on the `hongkong` pack (D-108).
+  - **Terrain:** `copernicus-glo30-ground` (D-107): 18 drawn steps, the harbour below.
+  - **Heights:** OSM's floors where it has them; elsewhere the `areas` facts source gives each of eight neighbourhoods its typical height, the median of OSM's floors on footprints under 300 m² there (Jordan 5 storeys, Yau Ma Tei 6, Mong Kok 8, Tsim Sha Tsui 9; 3,328 buildings).
+  - **Types**, by floors, footprint width, OSM's class and neighbourhood (`hoods:`), with `towerMeters` at 80 so the rules sort everything below 25 storeys: 3,726 tong lau (3–9 storeys up to 18 m wide in the old districts and Tsim Sha Tsui's back streets), 985 composite buildings (10–24 storeys up to 35 m wide), 299 residential towers (flats by OSM's class, or narrow ones in the old districts), 65 podiums and malls (up to 7 storeys, 40 m wide or more), 105 civic buildings; 61 glass towers and 7 hotels; 857 commercial and 995 residential keep the defaults.
+  - **Neon:** signs hung across the streets from both sides (`across`, D-108): Nathan Road's 30 m span every 12 m (597), and the old districts' secondary, tertiary and residential streets, every 12 m within a box (5,075). A new street-row key, **`notName`**, keeps the narrower row off Nathan Road where it is tagged secondary.
+  - **Landmarks (generic depictions):** the ICC, the Tsim Sha Tsui clock tower, the Cultural Centre and the Peninsula, each on its Overture footprint.
+- **Measured** (build of 2026-11-11): 7,104 buildings, 23,730 objects; road report clean; 1.2 MB; built in 49 s from the download cache (110 s on a first build). Against LandsD's data (docs/cities.md), heights are about 2 floors off and the ground about 6 m (RMSE over the pilot's land).
+- **Looked at:** Yau Ma Tei's and Jordan's pastel tong lau under neon; Mong Kok's towers along Nathan Road, and in the game the tower in front of the car seen through to the signs (D-079); the Cultural Centre's pink curved hall on the waterfront; the ICC over West Kowloon's roads.
+- **Rejected alternatives:** signs on one side only (`along`): Overture's segments run either way, so half the arms would point into the street. Signs on every road in the box: West Kowloon's expressways and the park roads would carry them.
+- **Later:** the driving and flying levels and Hong Kong Island (the Mid-Levels need a better ground than D-107's); a blind test; towers on podiums, which open data draws as one block (27% of footprints, docs/cities.md); double-decker buses and trams; LandsD's data if the grant comes.
