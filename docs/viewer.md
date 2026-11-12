@@ -24,7 +24,7 @@ The layer panel (top right, with the HUD) switches layers and their sublayers: t
 
 ## 2. URL parameters
 
-Every parameter is optional. The e2e tests open views with `hud=0&cache=0&w=640&h=360&traffic=0&fog=0` plus a place, so a scene is fixed and fresh.
+Every parameter is optional. The e2e tests open views with `hud=0&cache=0&ground=0&w=640&h=360&traffic=0&fog=0` plus a place, so a scene is fixed and fresh, and each tile is baked once.
 
 **The world and the place**
 
@@ -51,6 +51,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&w=640&
 | `marker=0` | shown | Don't draw the rover (clean screenshots) |
 | `hud=0` | shown | Hide the HUD, help line, attribution and layer panel |
 | `cache=0` | on | Skip the IndexedDB tile cache: every tile is baked fresh by the code as it is now. Not needed after code edits: the cache key follows the code that bakes tiles (D-072) ([CONTRIBUTING.md §6](../CONTRIBUTING.md#6-the-tile-cache)) |
+| `ground=0` | on | No ground-only bake before a tile's own: the view is blank where its tiles are baking, but each tile is baked once. Faster to `ready()` with one bake worker; the final view is the same |
 | `startTiles=0` | on | Skip the world's start tiles (`start-tiles.bin`, built by `tools/prebake.mjs`): the first view is baked too |
 
 **Traffic** (D-060; worlds whose package has routes)

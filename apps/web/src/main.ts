@@ -177,6 +177,7 @@ async function main() {
     style: params.has("style") ? await stylePack(params.get("style")!) : stylePack,
     size,
     cache: params.get("cache") !== "0",
+    groundFirst: params.get("ground") !== "0", // ground=0: no ground-only bake before a tile's own
     startTiles: params.get("startTiles") !== "0", // the world's start-tiles.bin, where prebake.mjs built one
     objects: params.get("objects") !== "0",
     scatter: params.get("scatter") !== "0",

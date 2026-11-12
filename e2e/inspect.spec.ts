@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
-  await page.goto(`/?hud=0&cache=0&traffic=0&fog=0&w=${width}&h=${height}&${query}`);
+  await page.goto(`/?hud=0&cache=0&ground=0&traffic=0&fog=0&w=${width}&h=${height}&${query}`);
   await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => window.__pixelworld!.ready());
 }
