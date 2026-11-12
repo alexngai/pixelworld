@@ -143,7 +143,7 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
-uniform highp usampler2D uFieldSegs; // (12·W) × H (D-082): per cell 6 (PIECES) road then 6 path centre-line pieces, x0 y0 x1 y1 in 1/255 cell
+uniform highp usampler2D uFieldSegs; // (18·W) × H: per cell 6 road, 6 path, 6 rail pieces (D-082, D-097)
 uniform int uHasSegs;
 #endif
 
@@ -239,9 +239,8 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
-// Centre lines (D-082): a cell's pieces of road (slot 0) or path (slot 6)
-// centre line, used slots first. A cell without them draws its connections.
-uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 12 + slot, c.y), 0); }
+// Centre lines (D-082): road (slot 0), path (6) or rail (12, D-097) pieces.
+uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 18 + slot, c.y), 0); }
 bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
 
 // The nearest point q (cell-local) on a cell's pieces, its distance, and that piece's direction.
@@ -309,6 +308,45 @@ float railDistance(vec2 local, ivec2 c, int mask) {
 float railsDecal(inout int ramp, inout int pattern) {
   if (uRailRamp < 0) return 0.0;
   ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
+  // in cells: rails about a pixel wide at the native scale
+  const float GAUGE = 0.08;  // a rail's centre from its track's
+  const float RAIL = 0.035;  // a rail's half-width
+  // rail corridors (D-097): tracks side by side across the nearest piece; square ends
+  bool inSlice = own.x >= 0 && own.y >= 0 && own.x < uSliceSize.x && own.y < uSliceSize.y;
+  if (inSlice && uHasSegs == 1 && (texelFetch(uFieldRails, own, 0).r & 0x800) != 0) {
+    const float TRACKS = 0.36;  // roads.RAIL_TRACK_SPACING
+    float bestC = 9.0;
+    int kindC = 0;
+    int tracks = 1;
+    for (int dy = -2; dy <= 2; dy++) {
+      for (int dx = -2; dx <= 2; dx++) {
+        ivec2 c = own + ivec2(dx, dy);
+        if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y || !hasPieces(c, 12)) continue;
+        int r = texelFetch(uFieldRails, c, 0).r;
+        vec2 local = vGrid - vec2(uSliceOrigin + c);
+        for (int s = 0; s < 6; s++) {
+          uvec4 p = piece(c, 12 + s);
+          if (p == uvec4(0u)) break;
+          vec2 a = vec2(p.xy) / 255.0;
+          vec2 ab = vec2(p.zw) / 255.0 - a;
+          float len = length(ab);
+          float along = dot(local - a, ab) / max(len, 1e-4);
+          if (along < -0.03 || along > len + 0.03) continue;
+          float d = length(local - a - ab * clamp(along / max(len, 1e-4), 0.0, 1.0));
+          if (d < bestC) { bestC = d; kindC = (r >> 12) & 15; tracks = ((r >> 8) & 7) + 1; }
+        }
+      }
+    }
+    if (kindC != 0) {
+      float hw = float(tracks - 1) * 0.5 * TRACKS;
+      for (int i = 0; i < 8; i++) {
+        if (i >= tracks) break;
+        float o = abs(float(i) * TRACKS - hw);
+        if (abs(bestC - abs(o - GAUGE)) < RAIL || abs(bestC - (o + GAUGE)) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
+      }
+      if (kindC == 3 && bestC < hw + GAUGE + 0.08) { ramp = uRailRamp; pattern = 0; return -2.0; }  // ballast
+    }
+  }
   float best = 9.0;
   int kind = 0;
   for (int dy = -1; dy <= 1; dy++) {
@@ -324,9 +362,6 @@ float railsDecal(inout int ramp, inout int pattern) {
       if (d < best) { best = d; kind = (r >> 12) & 15; }
     }
   }
-  // in cells: rails about a pixel wide at the native scale
-  const float GAUGE = 0.08;  // a rail's centre from its track's
-  const float RAIL = 0.035;  // a rail's half-width
   if (kind == 0) return 0.0;
   if (abs(best - GAUGE) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
   if (kind == 2 && best < 0.03) { ramp = uAsphaltRamp; pattern = 0; return -2.0; }  // the cable's slot
@@ -881,11 +916,13 @@ void main() {
   const ivec2 N4[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
   int ramp = g.r - 1;
   int level = g.g;
+  // one-pixel lines (D-098): no cleanup, darkest shade
+  bool thin = (g.a >> 1) == 6;  // FACE_LINE (packages/generators; 5 is FACE_WATER)
 
   // Cleanup: a pixel whose four neighbours all agree with each other but not
   // with it is noise; adopt the neighbours' ramp and shade.
   ivec4 n0 = G(p + N4[0]);
-  bool agree = n0.r != 0;
+  bool agree = n0.r != 0 && !thin;
   for (int i = 1; i < 4; i++) {
     ivec4 ni = G(p + N4[i]);
     agree = agree && ni.r == n0.r && ni.g == n0.g;
@@ -905,7 +942,7 @@ void main() {
   float bayer = (BAYER[(a.y & 3) * 4 + (a.x & 3)] + 0.5) / 16.0;
   float aoDark = float(g.b) / 127.5;
   int shade = clamp(level - int(floor(aoDark + bayer)), 1, uShades - 1);
-  if (outline) shade = 0;
+  if (outline || thin) shade = 0;
 
   int index = 1 + ramp * uShades + shade;
   float local16 = clamp(floor((d - uDepthBase) * 256.0 + 0.5), 0.0, 65535.0);

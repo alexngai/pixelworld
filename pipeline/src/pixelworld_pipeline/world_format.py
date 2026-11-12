@@ -78,6 +78,9 @@ LAYERS = (
     # in 1/255 cell; drawn instead of the connection bits where a cell has them
     *((f"road_seg{k}", f"RSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
     *((f"path_seg{k}", f"PSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
+    # rail corridors (D-097): the same for rail corridors' centre lines; their
+    # track counts are in the RAIL layer's bits 8-10
+    *((f"rail_seg{k}", f"TSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -158,6 +161,12 @@ class Chunk:
     path_seg3: np.ndarray = field(default=None)
     path_seg4: np.ndarray = field(default=None)
     path_seg5: np.ndarray = field(default=None)
+    rail_seg0: np.ndarray = field(default=None)
+    rail_seg1: np.ndarray = field(default=None)
+    rail_seg2: np.ndarray = field(default=None)
+    rail_seg3: np.ndarray = field(default=None)
+    rail_seg4: np.ndarray = field(default=None)
+    rail_seg5: np.ndarray = field(default=None)
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -419,6 +428,7 @@ def write_package(
     lane: np.ndarray | None = None,
     road_pieces: np.ndarray | None = None,
     path_pieces: np.ndarray | None = None,
+    rail_pieces: np.ndarray | None = None,
     path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
@@ -472,6 +482,10 @@ def write_package(
         },
         **{
             f"path_seg{k}": None if path_pieces is None else path_pieces[..., k]
+            for k in range(PIECES)
+        },
+        **{
+            f"rail_seg{k}": None if rail_pieces is None else rail_pieces[..., k]
             for k in range(PIECES)
         },
     }

@@ -76,6 +76,8 @@ interface UploadedMesh {
   count: number;
   /** Instance count for instanced batches; 0 for plain meshes. */
   instances: number;
+  /** One-pixel lines (MeshData.primitive "lines", D-098), instanced or not: drawn as GL lines, and casting no shadow. */
+  lines: boolean;
   /** The mesh's texels (MeshData.texels), or null. */
   texels: WebGLTexture | null;
 }
@@ -210,7 +212,7 @@ export class Baker {
     }
     gl.bindVertexArray(null);
     const texels = mesh.texels?.length ? this.texelTexture(mesh.texels) : null;
-    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0, texels };
+    return { vao, buffers, count: mesh.vertexCount, instances: batch ? batch.offsets.length / 3 : 0, lines: mesh.primitive === "lines", texels };
   }
 
   /** Texels as an R8UI texture TEXEL_ROW wide, row after row. */
@@ -270,7 +272,7 @@ export class Baker {
     const ways = createTexture(gl, f.width, f.height, gl.RGBA16I, gl.RGBA_INTEGER, gl.SHORT, f.ways);
     const rails = createTexture(gl, f.width, f.height, gl.R16I, gl.RED_INTEGER, gl.SHORT, f.rails);
     const segs = f.segs
-      ? createTexture(gl, f.width * 2 * PIECES, f.height, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, f.segs)
+      ? createTexture(gl, f.width * 3 * PIECES, f.height, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, f.segs)
       : createTexture(gl, 1, 1, gl.RGBA8UI, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(4));
     // per micro-corner prepasses: AO, and natural ground's shape (D-095)
     gl.disable(gl.DEPTH_TEST);
@@ -394,8 +396,8 @@ export class Baker {
         gl.activeTexture(gl.TEXTURE0);
       }
       gl.bindVertexArray(d.vao);
-      if (d.instances) gl.drawArraysInstanced(gl.TRIANGLES, 0, d.count, d.instances);
-      else gl.drawArrays(gl.TRIANGLES, 0, d.count);
+      if (d.instances) gl.drawArraysInstanced(d.lines ? gl.LINES : gl.TRIANGLES, 0, d.count, d.instances);
+      else gl.drawArrays(d.lines ? gl.LINES : gl.TRIANGLES, 0, d.count);
     }
   }
 
@@ -466,7 +468,7 @@ export class Baker {
         gl.uniform2fv(u.loc("uLightDepth"), lb.depth);
       }
       gl.useProgram(this.shadow.prog);
-      this.drawScene(draws);
+      this.drawScene(draws.filter((d) => !d.lines));
       if (fields.length) {
         gl.useProgram(this.fieldShadow.prog);
         this.drawFields(this.fieldShadow.u, fields, rotation);

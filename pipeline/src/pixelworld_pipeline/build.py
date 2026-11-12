@@ -575,7 +575,12 @@ def swing_kept(
 
 
 def rail_lines(
-    layout, rows: list[dict], rules: list[dict[str, Any]], shift=None, simplify: float = 0.75
+    layout,
+    rows: list[dict],
+    rules: list[dict[str, Any]],
+    shift=None,
+    simplify: float = 0.75,
+    bundle_of: dict[str, float] | None = None,
 ) -> list:
     """Rail segments as lines in cells (`sources.rails`, M3.5), each with the
     kind its first matching rule draws (`draw`: street, cable or train; rules
@@ -583,7 +588,8 @@ def rail_lines(
     straightened roads' `shift`, they move with their streets: a vertex every
     half cell, so a track bends where its street was straightened, then
     simplified again (`simplify` cells) so it's drawn in long runs rather
-    than wobbling from row to row."""
+    than wobbling from row to row. `bundle_of`, if given, gets each line
+    whose rule bundles its tracks (D-097): its id → the rule's `bundle` metres."""
     out = []
     claimed: set[str] = set()
     for rule in rules:
@@ -609,6 +615,8 @@ def rail_lines(
                 parts.append((c[:, 0], c[:, 1]))
             if parts:
                 out.append((row["id"], kind, parts))
+                if bundle_of is not None and rule.get("bundle"):
+                    bundle_of[row["id"]] = float(rule["bundle"])
     return out
 
 
@@ -888,17 +896,40 @@ def build(
     on_road = (road_layer.mask & road_stage.CONNECT_MASK) != 0
     # rails in the street (M3.5): street tracks along their roads' centre lines
     rail = None
+    rail_pieces = None
     rail_rules = region.sources.get("rails") or []
     if rail_rules:
         classes = sorted({c for rule in rail_rules for c in rule.get("rail") or []})
         rail_rows = overture.rails(release, bbox, classes)
+        bundle_of: dict[str, float] = {}
+        lines = rail_lines(layout, rail_rows, rail_rules, road_shift, bundle_of=bundle_of)
         rail = road_stage.rail_layer(
-            rail_lines(layout, rail_rows, rail_rules, road_shift),
+            [ln for ln in lines if ln[0] not in bundle_of],
             (cy, cx),
             deviation=deviation,
             on_road=on_road,
         )
         progress.log(f"rails: {int((rail != 0).sum())} cells from {len(rail_rows)} segments")
+        if bundle_of:
+            # rail corridors (D-097): a rule's parallel tracks as one corridor each,
+            # drawn along its centre line with its track count
+            corridors = []
+            for kind, reach in sorted(
+                {(ln[1], bundle_of[ln[0]]) for ln in lines if ln[0] in bundle_of}
+            ):
+                mine = [ln for ln in lines if ln[1] == kind and bundle_of.get(ln[0]) == reach]
+                corridors += road_stage.bundle_tracks(mine, reach / region.meters_per_cell)
+            rail_pieces, corridor_bits, dropped = road_stage.rail_pieces(corridors, (cy, cx))
+            held = corridor_bits & ~np.uint16(road_stage.RAIL_NEAR) != 0
+            rail = (rail & np.uint16(0x00FF)) | np.where(
+                corridor_bits != 0,
+                corridor_bits | (rail & np.uint16(0xF000)),
+                rail & np.uint16(0xFF00),
+            ).astype(np.uint16)
+            progress.log(
+                f"rail corridors: {len(bundle_of)} tracks as {len(corridors)} corridors, "
+                f"{int(held.sum())} cells, {dropped} with more than {road_stage.PIECES} pieces"
+            )
 
     # gridify
     base, shape = gridify_heights(q.astype(np.float64), steep="flat", max_offset=region.max_slope)
@@ -1133,6 +1164,7 @@ def build(
         rail=rail,
         lane=road_layer.lanes,
         road_pieces=road_layer.pieces,
+        rail_pieces=rail_pieces,
         path_pieces=None if path_layer is None else path_layer.pieces,
         path_classes=path_ids or None,
         geology=geology,

@@ -15,6 +15,7 @@
     "@pixelworlds/city-sf": "workspace:*",
     "@pixelworlds/city-nyc": "workspace:*",
     "@pixelworlds/city-paris": "workspace:*",
+    "@pixelworlds/city-tokyo": "workspace:*",
     "@pixelworlds/style": "workspace:*"
   }
 }

@@ -29,7 +29,7 @@ export class BakeHost {
   /** Models that failed to generate in a cached scene (D-072). */
   private readonly sceneFailures = new WeakMap<BakeScene, ModelFailure[]>();
   /** A cached scene's placed-objects mesh, left out of its bare variant. */
-  private readonly sceneObjects = new WeakMap<BakeScene, MeshData>();
+  private readonly sceneObjects = new WeakMap<BakeScene, MeshData[]>();
   private static readonly MESH_CACHE = 6;
 
   constructor(
@@ -71,7 +71,7 @@ export class BakeHost {
             heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0),
             texels: true,
           });
-          const scene = { meshes: [built.merged], batches: built.batches };
+          const scene = { meshes: [built.merged, built.lines], batches: built.batches };
           const meshMs = performance.now() - t0;
           const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
           this.baker.releaseScene(scene);
@@ -121,9 +121,9 @@ export class BakeHost {
       }
       if (init.objects && !msg.ground) {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
-        scene.meshes.push(objects.merged);
+        scene.meshes.push(objects.merged, objects.lines);
         scene.batches.push(...objects.batches);
-        this.sceneObjects.set(scene, objects.merged);
+        this.sceneObjects.set(scene, [objects.merged, objects.lines]);
         if (objects.failures.length) this.sceneFailures.set(scene, objects.failures);
       }
       const s = init.renderScale ?? 1;
@@ -146,7 +146,7 @@ export class BakeHost {
     const meshMs = performance.now() - t0;
     // ponytail: a bare variant whose scene left the cache meshes the tile again; bake both together if that shows
     const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
-    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set([objects]) } : {}) });
+    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set(objects) } : {}) });
     // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there)
     if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) applyHeroPaint(res.image, msg.rotation, init.heroes);
     const vertices =

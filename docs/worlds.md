@@ -332,6 +332,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `names` | list of strings | — | Only lines whose name contains one of these. |
 | `unnamed` | true/false | — | Only lines without a name. |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only lines wholly inside this box. |
+| `bundle` | number, > 0 (m) | — | Parallel tracks within this distance are drawn as one corridor along its centre line, with its track count (D-097; micro-terrain worlds). |
 
 <a id="spec-smoothing"></a>
 #### `smoothing`
@@ -677,6 +678,7 @@ Other keys here are plugin options.
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
+| `maxDepth` | number, ≥ 0 (m) | — | Deepest (the footprint's long side). |
 | `minParty` | number, in [0, 1] | — | Least share of outline shared with neighbours. |
 | `maxParty` | number, in [0, 1] | — | Most share of outline shared with neighbours. |
 | `floors` | [min, max] | — | Storeys. |
@@ -684,6 +686,7 @@ Other keys here are plugin options.
 | `maxHeight` | number, ≥ 0 (m) | — | Tallest. |
 | `onWater` | true/false | — | Stands over water. |
 | `corner` | true/false | — | On a corner lot. |
+| `bounds` | a box or a list of boxes | — | Only buildings whose centroid is in this box (or these boxes): a neighbourhood. |
 
 <a id="spec-objects-vegetation"></a>
 #### `objects.vegetation[]`
@@ -733,6 +736,7 @@ Other keys here are plugin options.
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
 | `density` | number, in [0, 1] | 1 | With `canopy`: share of spots kept. |
 | `at` | one of `junctions` | — | Two per junction of 3+ roads, on opposite corners. |
+| `wires` | string | — | Strung props (D-098): one row on each street's left at `offset` (default 3 m), joined through junctions where the street runs on straight, and a span of this group from each prop to the next. |
 
 <a id="spec-objects-landmarks"></a>
 #### `objects.landmarks[]`

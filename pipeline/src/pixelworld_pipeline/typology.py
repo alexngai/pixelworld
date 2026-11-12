@@ -26,9 +26,11 @@ commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
 facts' class codes: exact, or a prefix ending in `*`) · names (Overture's
 primary name of the building, exactly; its parts share it) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
-minDepth (metres) · minParty / maxParty (share of the outline) · floors [min,
-max] · minHeight / maxHeight (metres) · onWater · corner · from (groups the
-rule may replace; default: the generic building groups).
+minDepth / maxDepth (metres) · minParty / maxParty (share of the outline) ·
+floors [min, max] · minHeight / maxHeight (metres) · onWater · corner · bounds
+(a lon/lat box or a list of them, holding the building's centroid: a
+neighbourhood where the facts have none) · from (groups the rule may replace;
+default: the generic building groups).
 
 Buildings drawn in parts (Overture's parts, lidar's tower parts) share their
 building's facts, and each part has its own height and storeys but no
@@ -257,6 +259,7 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         ("minWidth", "width", 1),
         ("maxWidth", "width", -1),
         ("minDepth", "depth", 1),
+        ("maxDepth", "depth", -1),
         ("minParty", "party", 1),
         ("maxParty", "party", -1),
         ("minHeight", "height", 1),
@@ -274,6 +277,12 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         return False
     if "corner" in rule and bool(f.get("corner")) != bool(rule["corner"]):
         return False
+    if "bounds" in rule:
+        ll = f.get("lonlat")
+        b = rule["bounds"]
+        boxes = b if isinstance(b[0], (list, tuple)) else [b]
+        if ll is None or not any(w <= ll[0] <= e and s <= ll[1] <= n for w, s, e, n in boxes):
+            return False
     return True
 
 
