@@ -1,4 +1,5 @@
 import { BAKE_CODE } from "@pixelworlds/bake";
+import { resolveAsset } from "@pixelworlds/generators";
 import {
   ChunkStore,
   INCOMPLETE_PACKAGE,
@@ -31,7 +32,9 @@ import {
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
-import type { StyleSource, TileStore, WorldInfo, WorldViewOptions } from "./types";
+import { landmarkPlan, ObjectIndex } from "./objects";
+import { createQuery, type PickView } from "./queries";
+import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -102,11 +105,11 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
   return pack;
 }
 
-export async function loadWorld(opts: WorldViewOptions): Promise<LoadedWorld> {
+export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects">): Promise<LoadedWorld> {
   const url = opts.worldUrl;
   const manifest = await loadManifest(url);
   const store = new ChunkStore(manifest, url);
-  const base = new URL(url, location.href);
+  const base = new URL(url, globalThis.location?.href); // openWorld outside a browser passes an absolute URL
   // Lon/lat of cell corners: places between scale levels (D-046), fog areas, queries.
   const geo = await GeoGrid.load(manifest, base).catch((e: unknown) => {
     console.warn("geo grid:", e);
@@ -164,6 +167,53 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
     objectCount: w.objects?.instances.length ?? 0,
     level: w.manifest.level ?? null,
   };
+}
+
+/** A loaded world's queries: a view's (`view` places its picks) or `openWorld`'s (none: `pick` throws). */
+export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): WorldQuery {
+  const { manifest } = w;
+  const heightStretch = manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1;
+  // placed objects for occupancy queries: the ones the style draws, as the bake does
+  const assets = w.style.assets;
+  const objects =
+    w.objects && assets
+      ? new ObjectIndex(
+          w.objects.instances,
+          { cellsX: manifest.cellsX, cellsY: manifest.cellsY, metersPerCell: manifest.scale.metersPerCell, heightStretch },
+          (group) => resolveAsset(assets, group) !== null,
+          (x, y) => query.heightAt(x, y),
+          (inst) =>
+            landmarkPlan(inst, {
+              catalog: assets,
+              rampIds: w.palette.rampIds,
+              renderScale: w.renderScale,
+              metersPerCell: manifest.scale.metersPerCell,
+              heightStretch,
+            }),
+        )
+      : null;
+  const noView = (): PickView => {
+    throw new Error("pick needs a world view: openWorld's queries have no screen");
+  };
+  const query = createQuery(w.store, w, w.geo, view ?? noView, objects);
+  return query;
+}
+
+/**
+ * A world package's queries without a view, canvas or GPU (D-111): what a
+ * game server, a bot or a worker reads to agree with the players' views on
+ * heights, surfaces, roads and occupancy. Nothing streams by itself: `ensure`
+ * the area first, as a controller does.
+ */
+export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
+  let worldUrl: string;
+  try {
+    worldUrl = new URL(opts.worldUrl, opts.base ?? globalThis.location?.href).href;
+  } catch {
+    throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
+  }
+  const w = await loadWorld({ ...opts, worldUrl });
+  return { world: worldInfo(w), query: worldQuery(w, null) };
 }
 
 /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */

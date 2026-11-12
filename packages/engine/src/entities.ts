@@ -78,6 +78,7 @@ class EntityImpl implements Entity {
   private _reveal: EntityReveal | null;
   readonly headings: number;
   readonly lift: number;
+  readonly wait: boolean;
 
   constructor(
     readonly id: number,
@@ -98,6 +99,7 @@ class EntityImpl implements Entity {
     this._reveal = withRevealDefaults(spec.reveal);
     this.headings = Math.max(1, Math.round(spec.headings ?? DEFAULT_HEADINGS));
     this.lift = spec.lift ?? 0;
+    this.wait = spec.wait ?? true;
   }
 
   get x(): number {
@@ -200,6 +202,7 @@ export class Entities implements EntityList {
   /** Posed sprites by key: the last frame each was asked for or drawn. */
   private readonly posedUse = new Map<string, number>();
   private frame = 0;
+  private unwaited = 0;
 
   constructor(private readonly deps: EntityDeps) {}
 
@@ -254,7 +257,10 @@ export class Entities implements EntityList {
       if (this.sprites.has(key)) continue;
       this.sprites.set(key, null);
       const boxes = turnBoxes(this.boxes.get(e.key)!, k, e.headings, { pitch, roll });
+      const waited = e.wait;
+      if (!waited) this.unwaited++;
       void this.deps.bake(rotation, boxes).then((img) => {
+        if (!waited) this.unwaited--;
         if (!this.sprites.has(key)) {
           if (img) this.deps.release(img); // the model went away meanwhile
           return;
@@ -287,7 +293,7 @@ export class Entities implements EntityList {
       let sprite = this.sprites.get(key);
       if (sprite === false || !isDrawn(e.x, e.y)) continue;
       if (!sprite) {
-        complete = false;
+        if (e.wait) complete = false;
         // the last pose, in this rotation (another rotation's would face the wrong way)
         if (!e.shown || e.shownRotation !== rotation) continue;
         sprite = e.shown;
@@ -312,6 +318,11 @@ export class Entities implements EntityList {
       this.sprites.delete(key); // one still baking is let go when it arrives
       this.posedUse.delete(key);
     }
+  }
+
+  /** Sprite bakes under way for entities that don't wait (`wait: false`): the view's `ready()` leaves them out. */
+  get unwaitedBakes(): number {
+    return this.unwaited;
   }
 
   /** Sprites baked or baking. */

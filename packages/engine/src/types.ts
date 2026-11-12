@@ -43,6 +43,29 @@ export interface CameraOptions {
   zoom?: number | "auto";
 }
 
+/**
+ * A world without a view (`openWorld`, D-111): for a game server, a bot or a
+ * worker that must agree with the players' views on heights and occupancy.
+ */
+export interface OpenWorldOptions {
+  /** Base URL of a world package; outside a browser, absolute or with `base` (Node's fetch can't read `file:` URLs). */
+  worldUrl: string;
+  /** What a relative `worldUrl` is relative to (default the page's location). */
+  base?: string | URL;
+  /** The style pack (JSON), or a resolver for the id in the world's manifest: it says which objects stand (as a view draws them) and road widths. */
+  style: StyleSource;
+  /** Render units per cell; default the world's (`manifest.render.scale`), as a view's. */
+  renderScale?: number;
+  /** Load the placed objects, for `objectsAt` and `landmarks` (default true). */
+  objects?: boolean;
+}
+
+/** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */
+export interface OpenedWorld {
+  readonly world: WorldInfo;
+  readonly query: WorldQuery;
+}
+
 export interface WorldViewOptions {
   /** The canvas to draw into (WebGL2). */
   canvas: HTMLCanvasElement;
@@ -482,6 +505,13 @@ export interface EntitySpec {
    */
   reveal?: { margin?: number; density?: number };
   visible?: boolean;
+  /**
+   * Whether the view's `ready()`, and a view replacing another, wait for its
+   * sprite (default true). False for what comes, goes and turns all the time,
+   * such as other players and effects (D-111): their pose bakes then never
+   * hold the view up, and each shows once its first sprite is baked.
+   */
+  wait?: boolean;
 }
 
 /** An entity's `reveal`, with its defaults. */

@@ -290,3 +290,22 @@ describe("the tile grid", () => {
     expect(tiles.length).toBeLessThan(100);
   });
 });
+
+describe("entities that don't wait (D-111)", () => {
+  it("leave the frame complete while their sprites bake, and count those bakes apart", async () => {
+    const t = entities();
+    t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6, wait: false });
+    t.list.request(0);
+    expect(t.list.unwaitedBakes).toBe(1);
+    expect(t.list.draws(0, proj)).toEqual({ list: [], complete: true }); // not drawn yet, but nothing to wait for
+    t.jobs[0]!.done(t.sprite(1));
+    await t.flush();
+    expect(t.list.unwaitedBakes).toBe(0);
+    expect(t.list.draws(0, proj).list.length).toBe(1);
+    // one that waits, beside it: the frame is incomplete until its sprite is baked
+    t.list.add({ model: { boxes: [{ ...BOX, ramp: 3 }] }, x: 7, y: 6 });
+    t.list.request(0);
+    expect(t.list.unwaitedBakes).toBe(0);
+    expect(t.list.draws(0, proj).complete).toBe(false);
+  });
+});

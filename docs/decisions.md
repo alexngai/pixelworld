@@ -119,6 +119,8 @@ Status values:
 | D-108 | Hong Kong's look: a `hongkong` style pack and the `@pixelworlds/city-hongkong` generator plugin | Accepted (M5) |
 | D-109 | Kowloon's walking level, on open data alone | Accepted (M5) |
 | D-110 | Every data source selected by role in the spec; the Python city packs merged into the pipeline | Accepted |
+| D-111 | Multiplayer-friendly without netcode in the engine: world queries without a view, and entities that don't wait | Accepted |
+| D-112 | `@pixelworlds/multiplayer`, relay-first, and the example game's dogfight over the Grand Canyon | Accepted |
 
 ---
 
@@ -1443,3 +1445,34 @@ The point is more room for visual interest; both halves are wanted.
   - **Keeping the old keys beside `kind:`:** two styles of options; nothing is published yet to stay compatible with.
   - **A neutral feature schema of our own:** every consumer would change, for a mapping Overture already is (it is built from OpenStreetMap's).
 - **Later:** stage hooks (`pixelworld.stages`); land cover in schemes other than ESA WorldCover's (a source maps to its codes today); one cache helper for every source (some import `CACHE_ROOT` by value, and canopy, lidar and Wikidata fetch without `http.get`'s retries).
+
+### D-111: Multiplayer-friendly without netcode in the engine: world queries without a view, and entities that don't wait (accepted)
+- **Why:** games on pixelworld should be able to go multiplayer, a dogfight over the Grand Canyon for one, but the engine draws one player's view and has no need of a network to do it. Each client draws its own view; other players are entities the game moves. What a game can't do on its own is give its server the same heights and occupancy its players' views read, or keep other players' constant pose changes from holding up `ready()`.
+- **What:**
+  - **`openWorld({ worldUrl, style, base?, renderScale?, objects? })`** (`@pixelworlds/engine`, `pixelworld/engine`): `{ world, query }`, the same `WorldInfo` and `WorldQuery` a view has, over the same package and style, with no canvas, GPU or page. `pick` throws. One function, `worldQuery`, builds the queries for both, so they can't drift apart. `loadWorld` no longer reads `location`, and resolves a relative URL only where there is a page; outside one, `worldUrl` is absolute or relative to `base`. Tested in Node on `southwest-fly` (the South Rim stands more than 500 m over Phantom Ranch; Hoover Dam occupies its cell).
+  - **`EntitySpec.wait`** (default true): false for other players and effects. Their sprites don't make a frame incomplete, and their bakes (`Entities.unwaitedBakes`) are left out of the pending sprites `ready()` waits for, so they hold up neither `ready()`, the start of game time, nor a view replacing another.
+- **Rejected alternatives:**
+  - **Netcode in the engine:** transport, rooms, prediction and smoothing are a game's, and the engine would carry them for every single-player page.
+  - **Lockstep on the deterministic controllers (D-015):** they are deterministic in one JavaScript engine, but `Math.sin`, `exp` and `atan2` may differ in their last bits between V8, SpiderMonkey and JavaScriptCore, so players on different browsers would drift apart. A server that owns the state, with each client predicting its own vehicle, tolerates that.
+  - **`wait: false` by default:** a single-player game's own vehicle should be drawn in the first complete frame, as the rover and the example game's car and plane are.
+- **Later:**
+  - **Sprite bakes go to the workers ahead of every tile** (`BakeService.pump`). Planes rolling and looping need new poses all the time (16 headings × pitch and roll in 10° steps, per rotation), and several of them could starve the terrain ahead of a fast camera. Measure it with a sample game first; then cap sprite jobs to some of the workers, or bake a pose sheet per model once.
+  - **Game time a game can set**, so fog, palette cycling and traffic agree with a server's clock.
+  - **Traffic around several foci**, one per player, for a server to run when a game collides with traffic; today each player's view has its own.
+  - **Edits as operations** a game can send, when building on the grid lands.
+  - **A `@pixelworlds/multiplayer` package** for the sample games (a dogfight, a race) and for consumers: optional, and never imported by the engine. Built: D-112.
+
+### D-112: `@pixelworlds/multiplayer`, relay-first, and the example game's dogfight over the Grand Canyon (accepted)
+- **Why:** sample games (a dogfight now, a race next) and consumers need the same plumbing: rooms, a way to send state, and other players drawn smoothly. Netcode stays out of the engine (D-111), so it is a package of its own. Relay-first, because the open question is whether dogfighting in an isometric view is fun, not cheating, and a relay needs no game code on the server.
+- **What:**
+  - **The package** (`packages/multiplayer`, private until released):
+    - `attachRelay(server, { path, maxPlayers, maxMessage, lag })` (`@pixelworlds/multiplayer/server`, Node, on `ws`): rooms by `?room=` on one path (`/relay`), ids from the relay, `welcome`, `join`, `leave`, `msg` (with `from`) and `full`. A message that isn't JSON is dropped; 16 KB at most; a heartbeat drops a dead connection within 10 s; an empty room goes. Other upgrades on the server (Vite's HMR) are left alone. `lag` holds every message back, to try smoothing under lag.
+    - `joinRoom(url, room)`: `id`, `peers`, `send`, `onMessage`, `onJoin`, `onLeave`, `onClose`. It rejects when no relay answers (browsers fire error then close on a refused connection; Node's WebSocket only error) or the room is full.
+    - `Smoothing`: poses stamped with the sender's clock, our clock less theirs taken at its smallest, drawn 0.1 s behind and in between; angles the short way round; a `jump` (a respawn) is not slid to. `RemotePlayers`: an entity per player with `wait: false`, moved each frame; `pose(id)` is where it was drawn, for aiming and hits.
+  - **The dogfight** (`apps/game/src/dogfight.ts`, `?dogfight=<room>&name=`): the flying level over the inner canyon. Each window sends its plane 20 times a second. Space fires 11 rounds a second; a round aims itself at a plane within 0.2 rad of the nose, since depth is hard to judge in an isometric view. The shooter judges hits against the planes as it draws them; the one hit takes the damage (10 of 100), and a crash within 6 s of a hit counts for the shooter. Respawns land within 8 cells of the start. The others have shadows, and tags with their name, health, distance and height over or under yours, which point from the canvas edge to planes out of view. `Game.stay` keeps the map and the plane. The relay runs on the game's dev and preview servers.
+  - **Checked:** Node tests of the relay (rooms kept apart, a full room, no relay, lag in order) and of the smoothing. Two headless Chromium players in one room each saw the other, the tag and the arrow; on the other's tail at 3 cells, one shot the other down in 1.3 s, and both boards agreed.
+- **Rejected alternatives:**
+  - **Vite's HMR channel as the transport:** no dependency, but it exists only on a dev server, and its API is for module updates.
+  - **WebSocket framing written on `node:http`:** about a hundred lines of protocol code to save one small dependency.
+  - **The server running the game first:** it needs the flight model on the server (it lives in the game) and prediction on the client. The shape for when cheating matters: a shared simulation stepped at a fixed rate, client prediction with corrections, and hits checked against where players were when the shot was fired.
+- **Later:** publishing the package (a changeset, the release workflow and npm's trusted publisher); a mode where the server runs the game (`openWorld` for its collisions, D-111); a race sample; sprite bake priority measured with several planes (D-111); a livery per player (the plane's seed doesn't change its colours much).

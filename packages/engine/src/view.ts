@@ -24,9 +24,7 @@ import { GameClock } from "./clock";
 import { Controllers } from "./controller";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
-import { ObjectIndex, landmarkPlan } from "./objects";
 import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
-import { createQuery } from "./queries";
 import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
   ControllerHost,
@@ -53,6 +51,7 @@ import {
   tileCacheKey,
   tileSlice,
   worldInfo,
+  worldQuery,
   type LoadedWorld,
 } from "./world";
 
@@ -222,40 +221,10 @@ class View implements WorldView {
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
-    // placed objects for occupancy queries: the ones the style draws, as the bake does
-    const assets = w.style.assets;
-    const objects =
-      w.objects && assets
-        ? new ObjectIndex(
-            w.objects.instances,
-            {
-              cellsX: manifest.cellsX,
-              cellsY: manifest.cellsY,
-              metersPerCell: manifest.scale.metersPerCell,
-              heightStretch: manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1,
-            },
-            (group) => resolveAsset(assets, group) !== null,
-            (x, y) => this.query.heightAt(x, y),
-            (inst) =>
-              landmarkPlan(inst, {
-                catalog: assets,
-                rampIds: w.palette.rampIds,
-                renderScale: this.rs,
-                metersPerCell: manifest.scale.metersPerCell,
-                heightStretch: manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1,
-              }),
-          )
-        : null;
-    this.query = createQuery(
-      store,
-      w,
-      w.geo,
-      () => {
-        const snap = this.cam.snapped();
-        return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
-      },
-      objects,
-    );
+    this.query = worldQuery(w, () => {
+      const snap = this.cam.snapped();
+      return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
+    });
     this.viewCamera = new ViewCameraImpl(this.cam, this.rs, invalidate, {
       ensure: (x, y) => store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1),
       heightAt: (x, y) => this.query.heightAt(x, y),
@@ -410,7 +379,7 @@ class View implements WorldView {
    * sprite asked for. Tiles baked ahead (prefetch, look-ahead) don't count.
    */
   private settled(): boolean {
-    if (this.service.spritesPending > 0) return false;
+    if (this.service.spritesPending - this.entityList.unwaitedBakes > 0) return false;
     for (const t of this.near) if (!this.gpu.has(tileKey(t.rotation, t.tx, t.ty))) return false;
     return true;
   }
