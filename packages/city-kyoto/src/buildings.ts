@@ -518,7 +518,7 @@ export const kura: Generator = (ctx) => {
  * Its wires are spans of their own (Tokyo's `wireSpan`: two power lines from
  * the insulators and a telecom cable from the pole, one-pixel lines at any
  * angle), placed with it by the street props' `wires`, which turn the pole
- * so x runs across the street (D-105). A prop.
+ * so x runs across the street (D-106). A prop.
  * params: height (16 voxels), transformers (share with a transformer; 0.3).
  * roles: pole, arm (pole if absent), transformer (arm if absent).
  */

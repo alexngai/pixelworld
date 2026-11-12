@@ -241,7 +241,7 @@ describe("Tokyo's wires (D-098)", () => {
     expect(stays).toBeLessThan(15);
   });
 
-  it("strings a pair from a crossarm's ends, apart along the cell axis nearer square to the span, and a cable lower down (D-105)", () => {
+  it("strings a pair from a crossarm's ends, apart along the cell axis nearer square to the span, and a cable lower down (D-106)", () => {
     for (const [a, b, axis] of [
       [[0.5, 0.5], [0.5, 3.5], 0], // north-south: the pair apart in x
       [[0.5, 0.5], [3.5, 1.2], 1], // nearer east-west: apart in y

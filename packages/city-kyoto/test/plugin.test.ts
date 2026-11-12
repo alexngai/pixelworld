@@ -37,7 +37,7 @@ describe("@pixelworlds/city-kyoto", () => {
     expect(got.sort()).toEqual(Object.keys(kyotoGenerators()).sort());
   });
 
-  it("with Tokyo's (its wire spans, D-105), covers every generator the kyoto pack names that core doesn't", async () => {
+  it("with Tokyo's (its wire spans, D-106), covers every generator the kyoto pack names that core doesn't", async () => {
     expect(kyoto.plugins).toEqual([PLUGIN_NAME, "@pixelworlds/city-tokyo"]);
     await register();
     await registerTokyo();

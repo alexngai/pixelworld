@@ -1,5 +1,8 @@
 import type { BakedImage } from "@pixelworlds/bake";
 
+/** A baked tile in the cache, gzip: about this much (measured across New York's, San Francisco's and Paris's levels). */
+const TILE_BYTES = 230 * 1024;
+
 /**
  * Persistent cache of baked tiles in IndexedDB. Pixels are stored gzip-
  * compressed (indexed color and mostly-empty diamonds compress well). Keys
@@ -16,9 +19,18 @@ export class TileCache {
     private readonly maxEntries: number,
   ) {}
 
-  static async open(name = "pixelworld-tiles", maxEntries = 600): Promise<TileCache | null> {
+  /**
+   * The cache in IndexedDB. Without `maxEntries`: as many tiles as fit a
+   * quarter of the storage the browser offers this origin (about 230 KB each,
+   * gzip), at most 2000 (about 450 MB) and at least 200.
+   */
+  static async open(name = "pixelworld-tiles", maxEntries?: number): Promise<TileCache | null> {
     if (typeof indexedDB === "undefined") return null;
     try {
+      if (maxEntries === undefined) {
+        const quota = (await globalThis.navigator?.storage?.estimate?.())?.quota;
+        maxEntries = quota ? Math.max(200, Math.min(2000, Math.floor(quota / 4 / TILE_BYTES))) : 600;
+      }
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const req = indexedDB.open(name, 1);
         req.onupgradeneeded = () => {

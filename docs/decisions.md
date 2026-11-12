@@ -113,7 +113,8 @@ Status values:
 | D-102 | Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces | Accepted (M5) |
 | D-103 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
 | D-104 | Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets | Accepted (M5) |
-| D-105 | Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group | Accepted (M5) |
+| D-105 | Releases from CI through npm trusted publishing, and every city pack published | Accepted |
+| D-106 | Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group | Accepted (M5) |
 
 ---
 
@@ -1352,7 +1353,18 @@ The point is more room for visual interest; both halves are wanted.
   - **Every barrier class:** plain walls (1,399 of them, 48 km) and fences would wall in every garden; retaining walls are the stone ones.
 - **Later:** the walking level's retaining walls (its voxel is smaller, so its wall groups would need their own span); the palace's few corridor blocks that fill more than half their rectangle; props turned by the 16 directions in the engine would make the four groups one.
 
-### D-105: Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group (accepted, M5)
+### D-105: Releases from CI through npm trusted publishing, and every city pack published (accepted)
+- **Why:** the owner asked to set up publishing for the open-source release. Publishing was by hand from a maintainer's machine (D-074), and npm is ending direct publishing with granular tokens (January 2027); trusted publishing (OIDC) needs no stored token at all.
+- **What:**
+  - **`.github/workflows/release.yml`**, changesets' trusted-publishing workflow: on main, pending changesets open or update the "Version packages" pull request (`pnpm release:version`: `changeset version`, then the version pins); merging it packs the packages whose versions aren't on npm, checks the tarballs (`pnpm package:check`), and publishes them with the npm CLI's OIDC exchange, with tags and GitHub releases. Only the publish job gets `id-token: write`.
+  - **All five city packs public:** `@pixelworlds/city-nyc`, `-paris`, `-kyoto` and `-tokyo` lose `private` and get a first-release changeset each. `tools/city-pack-check.mjs` checks any number of city pack tarballs (without arguments, it packs every `packages/city-*`); CI's package job packs and checks them all.
+  - **The first release of each package is by hand** (docs/npm.md §9): npm attaches a trusted publisher only to a package that exists.
+- **Rejected alternatives:**
+  - **An npm token in the repository's secrets:** a long-lived credential to leak, and granular tokens stop publishing directly in January 2027.
+  - **Staged publishing:** changesets doesn't support it yet; merging the version pull request is the human step.
+- **Later:** consumer examples for the other city packs (`tools/consumers.mjs` covers San Francisco's); provenance, which npm adds only from a public repository.
+
+### D-106: Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group (accepted, M5)
 - **Why:** Kyoto's poles drew their wires as voxels inside each pole's model (D-102), reaching half the spacing to each side to meet the next pole's. A prop turns by quarter turns, so the wires lined up only along the directions a model was drawn for: four pole groups (`prop.pole`, `.diagonal`, `.slant`, `.slant2`; D-103, D-104), still a little off on streets between those directions, and broken wherever a lane bent or the next pole stood nearer or further than one spacing. Tokyo's wire spans (D-098) are line objects from one pole to the next, drawn in one-pixel lines at any angle.
 - **What:**
   - **`wireSpan`** (`@pixelworlds/city-tokyo`) gains `across` and `cable`: with `across`, two lines in place of one, that many voxels to either side of the poles along the cell axis nearer square to the span (the axis a pole's crossarm lies on, the poles turning by quarter turns); with `cable`, one more over the poles at that height. At their defaults Tokyo's single wire is drawn as before.

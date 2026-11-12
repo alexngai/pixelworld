@@ -343,7 +343,7 @@ describe("Kyoto's landmarks", () => {
     expect(reach(H * 0.3, H * 0.6)).toBeGreaterThan(reach(H * 0.75, H));
   });
 
-  it("draw a concrete pole with its crossarm across x and no wires of its own: they are spans meeting its insulators (D-105)", () => {
+  it("draw a concrete pole with its crossarm across x and no wires of its own: they are spans meeting its insulators (D-106)", () => {
     const m = generateModel(style.assets, rampIds, "prop.pole", { seed: 2 });
     expect([m.sx, m.sy, m.sz]).toEqual([5, 1, 16]);
     expect(m.lines).toHaveLength(0);

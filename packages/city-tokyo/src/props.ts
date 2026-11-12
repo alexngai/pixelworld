@@ -76,7 +76,7 @@ export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
  * short straight pieces. The pipeline places it with the poles
  * (`streetProps` with `wires`). A prop, not a building: it hangs over the
  * street. With `across`, two lines instead, from the ends of a crossarm
- * `across` voxels to each side of the poles (D-105).
+ * `across` voxels to each side of the poles (D-106).
  * params: height (voxels over the ground at each end; 25, a voxel over
  * `utilityPoles`' crossarm at its default height), sag (2), across (0: one
  * line, over the poles; else a pair, that many voxels to either side along

@@ -106,7 +106,7 @@ objects:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
     # concrete utility poles along one side of the lanes and side streets, at their
-    # edge (D-100), and their wires strung from pole to pole at the street's own angle (D-105)
+    # edge (D-100), and their wires strung from pole to pole at the street's own angle (D-106)
     - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, wires: prop.wire }
     - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, wires: prop.wire }
   # new ones go at the end: a landmark's seed is its place in the list
