@@ -104,6 +104,7 @@ Status values:
 | D-095 | Kyoto's driving and flying levels, and its blind test | Accepted (M5) |
 | D-096 | Kyoto's town less generic: Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces | Accepted (M5) |
 | D-097 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
+| D-098 | Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets | Accepted (M5) |
 
 ---
 
@@ -1181,3 +1182,18 @@ The point is more room for visual interest; both halves are wanted.
   - **River polygons as lakes:** a river is one body, and levelling one along its length would cut terraces into its valley; rivers stay lines.
   - **Props turned by eighths:** the engine turns instances by quarters; a second group drawn on the diagonal needs no engine change.
 - **Later:** the Imperial Palace's main corridors are mapped as one ring round each court, so no rule on width finds them (a building's holes, D-088's courtyards, could); wires on the 16 directions' 2:1 streets still run a little off; Nijō's stone walls show only where the terrain drops to the moats.
+
+### D-098: Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets (accepted, M5)
+- **Why:** the owner asked to finish D-097's Later list: the Imperial Palace's corridors, still low modern blocks; Nijō Castle's stone walls, which showed only where the terrain drops to the moats; and wires running off the 16 directions' 2:1 streets.
+- **What the data has:** the palace's corridors are not rings with holes but thin C-shaped polygons round each court, filling 4–42% of their smallest enclosing rectangle (one is 1,757 m² of a 44,368 m² rectangle). OSM maps 583 retaining walls (24 km) in the driving box, 51 of them (6.7 km) round Nijō Castle's moats: its ishigaki.
+- **What:**
+  - **`maxFill`**, a typology rule field (pipeline): the most of its smallest enclosing rectangle a footprint fills. Kyoto's driving level types low (to 12 m), long (25 m or more) buildings in a park that fill under half of it as the palace's corridors: 64 pieces of the Imperial Palace are now typed, 32 more than in D-097. Its outer earthen wall is one of them, and reads as a wall under a little roof.
+  - **`objects.walls`** (pipeline): segments of a wall one `spacing` apart along Overture's barrier lines of the given classes, turned with each line; they stand over water's edge and cliffs, which street props keep off, but not on buildings. Kyoto's driving level puts `stoneWall` (`wall.stone`: two voxels thick, three tall, a cap course) on the retaining walls every 12.5 m: 1,944 segments, on the 814 pieces of line the build reads, Nijō's moats lined with grey ramparts. The flying level turns them off.
+  - **`slants`** beside `diagonal` (pipeline): with `along`, two groups for the 2:1 directions (26.6° and 63.4° from east), each turned a quarter for the direction at right angles; `along_turn` picks the nearest of the 16 directions modulo a half turn, falling back to the nearest group there is. `utilityPole` and `stoneWall` draw their line along any of (0, 1), (1, 1), (2, −1), (1, −2) (`wx`, `wy`). On the walking level 1,054 poles are straight, 39 diagonal and 172 on 2:1 streets; the driving level's walls are 1,451 straight, 158 diagonal and 335 on 2:1 lines.
+- **Measured** (builds of 2026-11-11): road reports clean; the walking level 2.1 MB, the driving 7.5 MB, the flying 392 KB. Tests: `maxFill` on a block and a C, the walls' placement on barrier lines over water, `along_turn` for all eight directions both ways and its fallbacks, the wall segments and the 2:1 pole's cable.
+- **Looked at:** the Imperial Palace's halls joined by cypress-bark galleries round its paved courts; Nijō Castle's two moats lined with stone; wires along the Higashiyama lanes.
+- **Rejected alternatives:**
+  - **Courtyards (holes, D-088) for the corridors:** OSM doesn't map them as rings with holes.
+  - **Walls as line landmarks:** each is a hand-placed line in the registry; OSM's lines are already there.
+  - **Every barrier class:** plain walls (1,399 of them, 48 km) and fences would wall in every garden; retaining walls are the stone ones.
+- **Later:** the walking level's retaining walls (its voxel is smaller, so its wall groups would need their own span); the palace's few corridor blocks that fill more than half their rectangle; props turned by the 16 directions in the engine would make the four groups one.

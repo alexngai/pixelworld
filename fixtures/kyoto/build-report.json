@@ -1,5 +1,5 @@
 {
-  "packageHash": "e45a38ac29324d838cf92462ac5904509235a34ba96619be97c98843e0daf435",
+  "packageHash": "d51893665686ca6b9b118c4a53eb683a7a5482ab63d89675c2d95b5ea99d643a",
   "cells": [
     294,
     378
@@ -14,16 +14,16 @@
     "riverLines": 901
   },
   "objects": {
-    "building.commercial": 2778,
+    "building.commercial": 2765,
     "building.house": 1538,
     "building.house.gabled": 72608,
     "building.kura": 411,
     "building.machiya": 28162,
     "building.midrise": 38479,
     "building.palace": 33,
-    "building.palace.gosho": 40,
+    "building.palace.gosho": 64,
     "building.parking": 65,
-    "building.residential": 36546,
+    "building.residential": 36535,
     "building.shrine": 145,
     "building.temple": 1138,
     "building.tower": 71,
@@ -37,7 +37,11 @@
     "landmark.torii.great": 1,
     "landmark.tower.candle": 1,
     "tree": 42128,
-    "tree.street": 3224
+    "tree.street": 3224,
+    "wall.stone": 1451,
+    "wall.stone.diagonal": 158,
+    "wall.stone.slant": 127,
+    "wall.stone.slant2": 208
   },
   "roads": {
     "cells": 36563,

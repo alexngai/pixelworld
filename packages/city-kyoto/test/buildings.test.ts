@@ -365,6 +365,26 @@ describe("Kyoto's landmarks", () => {
     for (let z = 0; z < m.sz; z++) expect(m.get(c + c - 1, c - (c - 1), z)).toBe(0); // nothing along the other diagonal
   });
 
+  it("draw stone wall segments along each of the four directions, and the 2:1 streets' poles (D-098)", () => {
+    const along = (group: string, dx: number, dy: number) => {
+      const m = generateModel(style.assets, rampIds, group, { seed: 1 });
+      const c = Math.floor(m.sx / 2);
+      let on = 0;
+      for (let t = 1; t <= 3; t++) if (m.get(c + Math.round(t * dx), c + Math.round(t * dy), 0) || m.get(c + Math.round(t * dx), c + Math.round(t * dy), 1)) on++;
+      return on;
+    };
+    expect(along("wall.stone", 0, 1)).toBe(3);
+    expect(along("wall.stone.diagonal", 1, 1)).toBe(3);
+    expect(along("wall.stone.slant", 1, -0.5)).toBe(3);
+    expect(along("wall.stone.slant2", 0.5, -1)).toBe(3);
+    // the 2:1 pole's telecom cable runs along (2, −1)
+    const m = generateModel(style.assets, rampIds, "prop.pole.slant", { seed: 2 });
+    const c = Math.floor(m.sx / 2);
+    let cable = 0;
+    for (let t = 2; t < 10; t++) for (let z = 0; z < m.sz; z++) if (m.get(c + t, c + Math.round(-t / 2), z)) cable++;
+    expect(cable).toBeGreaterThanOrEqual(6);
+  });
+
   it("draw Kiyomizu-dera's hall on a stage of pillars over the slope", () => {
     const H = 74;
     const m = generateModel(style.assets, rampIds, "landmark.temple.stage", { seed: 1, heightVox: H });

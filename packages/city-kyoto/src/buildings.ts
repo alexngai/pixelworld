@@ -521,8 +521,9 @@ export const kura: Generator = (ctx) => {
  * the street props' `along`, turned to run with the road; D-096). A prop:
  * the wires hang in the air.
  * params: height (16 voxels), transformers (share with a transformer; 0.3),
- * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2),
- * diagonal (1: for a diagonal street, the wires along x = y; D-097).
+ * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2), wx,
+ * wy (the wires' direction in voxels: 0, 1 along y; 1, 1 a diagonal street;
+ * 2, −1 and 1, −2 the 2:1 streets; D-097, D-098).
  * roles: pole, arm (pole if absent), transformer (arm if absent), wire (arm if absent).
  */
 export const utilityPole: Generator = (ctx) => {
@@ -530,7 +531,9 @@ export const utilityPole: Generator = (ctx) => {
   const H = Math.max(6, Math.round(param("height", 16) * (0.9 + rand() * 0.2)));
   const span = Math.max(0, Math.round(param("span", 0)));
   const sag = Math.max(0, Math.round(param("sag", 2)));
-  if (param("diagonal", 0) >= 1) return diagonalPole(ctx, H, span, sag);
+  const wx = Math.round(param("wx", 0));
+  const wy = Math.round(param("wy", 1));
+  if (wx !== 0) return slantPole(ctx, H, span, sag, wx, wy);
   const c = span; // the pole's row
   const m = new VoxelModel(5, 2 * span + 1, H + 1);
   const pole = m.material(ctx.ramp("pole"));
@@ -553,30 +556,70 @@ export const utilityPole: Generator = (ctx) => {
   return m;
 };
 
-/** The pole on a diagonal street (D-097): its crossarm along x = −y, its wires along x = y. */
-function diagonalPole(ctx: GenContext, H: number, span: number, sag: number): VoxelModel {
-  const reach = Math.round(span / Math.SQRT2); // a diagonal voxel step is √2 voxels long
-  const c = reach + 2;
-  const size = 2 * c + 1;
-  const m = new VoxelModel(size, size, H + 1);
+/**
+ * Cells along a line through (c, c) in direction (wx, wy), `reach` steps each
+ * way along its longer axis (a diagonal or a 2:1 step is longer than a voxel):
+ * [x, y, t] with t the signed step.
+ */
+function lineCells(c: number, wx: number, wy: number, reach: number): [number, number, number][] {
+  const dom = Math.max(Math.abs(wx), Math.abs(wy));
+  const out: [number, number, number][] = [];
+  for (let t = -reach; t <= reach; t++) out.push([c + Math.round((t * wx) / dom), c + Math.round((t * wy) / dom), t]);
+  return out;
+}
+
+/** Steps along a line's longer axis for `voxels` of its length. */
+const stepsFor = (voxels: number, wx: number, wy: number) => Math.round((voxels * Math.max(Math.abs(wx), Math.abs(wy))) / Math.hypot(wx, wy));
+
+/** The pole on a diagonal or 2:1 street (D-097, D-098): its crossarm across (wx, wy), its wires along it. */
+function slantPole(ctx: GenContext, H: number, span: number, sag: number, wx: number, wy: number): VoxelModel {
+  const reach = stepsFor(span, wx, wy);
+  const c = reach + 3;
+  const m = new VoxelModel(2 * c + 1, 2 * c + 1, H + 1);
   const pole = m.material(ctx.ramp("pole"));
   const arm = optional(ctx, m, "arm", pole);
   const drum = optional(ctx, m, "transformer", arm);
   const wire = optional(ctx, m, "wire", arm);
   for (let z = 0; z < H; z++) m.set(c, c, z, pole);
-  for (let k = -2; k <= 2; k++) m.set(c + k, c - k, H - 2, arm);
-  m.set(c - 2, c + 2, H - 1, arm);
-  m.set(c + 2, c - 2, H - 1, arm);
-  if (ctx.rand() < ctx.param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(c + 1, c, z, drum);
-  for (let t = 1; t <= reach; t++) {
-    const drop = Math.round(sag * (1 - (1 - t / reach) ** 2));
-    for (const s of [-1, 1]) {
-      m.set(c - 2 + s * t, c + 2 + s * t, H - 1 - drop, wire);
-      m.set(c + 2 + s * t, c - 2 + s * t, H - 1 - drop, wire);
-      m.set(c + s * t, c + s * t, Math.max(1, H - 5 - drop), wire);
+  // the crossarm across the wires, an insulator at each end
+  const across = lineCells(c, -wy, wx, 2);
+  for (const [x, y] of across) m.set(x, y, H - 2, arm);
+  const ends = [across[0]!, across[across.length - 1]!];
+  for (const [x, y] of ends) m.set(x, y, H - 1, arm);
+  if (ctx.rand() < ctx.param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(across[3]![0], across[3]![1], z, drum);
+  // two power lines from the insulators and the telecom cable from the pole, sagging toward mid-span
+  for (const [ex, ey, from] of [[ends[0]![0], ends[0]![1], H - 1], [ends[1]![0], ends[1]![1], H - 1], [c, c, H - 5]] as const)
+    for (const [x, y, t] of lineCells(c, wx, wy, reach)) {
+      if (t === 0) continue;
+      const drop = Math.round(sag * (1 - (1 - Math.abs(t) / reach) ** 2));
+      m.set(x + ex - c, y + ey - c, Math.max(1, from - drop), wire);
     }
-  }
   return m;
 }
 
-export const BUILDING_GENERATORS: Record<string, Generator> = { machiya, midrise, kura, utilityPole };
+/**
+ * A stretch of stone wall (a castle's ishigaki, a retaining wall) along
+ * (wx, wy), `span` voxels to each side of its middle, two voxels thick, a cap
+ * course on top; placed with `objects.walls` along Overture's barrier lines,
+ * one segment every `spacing`, turned with the line (D-098). A prop.
+ * params: height (4 voxels), span (voxels each side; 4), wx, wy (the line's
+ * direction in voxels: 0, 1 along y; 1, 1 a diagonal; 2, −1 and 1, −2 the 2:1 lines).
+ * roles: stone, cap (stone if absent).
+ */
+export const stoneWall: Generator = (ctx) => {
+  const { param } = ctx;
+  const H = Math.max(1, Math.round(param("height", 4)));
+  const wx = Math.round(param("wx", 0));
+  const wy = Math.round(param("wy", 1));
+  const reach = Math.max(1, stepsFor(Math.max(1, param("span", 4)), wx, wy));
+  const c = reach + 2;
+  const m = new VoxelModel(2 * c + 1, 2 * c + 1, H);
+  const stone = m.material(ctx.ramp("stone"));
+  const cap = optional(ctx, m, "cap", stone);
+  const [ox, oy] = Math.abs(wx) >= Math.abs(wy) ? [0, 1] : [1, 0];
+  for (const [x, y] of lineCells(c, wx, wy, reach))
+    for (const k of [0, 1]) for (let z = 0; z < H; z++) m.set(x + k * ox, y + k * oy, z, z === H - 1 ? cap : stone);
+  return m;
+};
+
+export const BUILDING_GENERATORS: Record<string, Generator> = { machiya, midrise, kura, utilityPole, stoneWall };

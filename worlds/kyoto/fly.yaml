@@ -38,6 +38,7 @@ objects:
   typology: null
   vegetation: null
   streetTrees: null
+  walls: null
   landmarks:
     - kiyomizu-dera-hondo
     - yasaka-pagoda

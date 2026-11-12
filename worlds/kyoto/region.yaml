@@ -65,6 +65,8 @@ objects:
       # the Imperial Palace's covered corridors, unnamed: narrow, long and low inside
       # the Gyoen park (D-097)
       - { group: building.palace.gosho, grounds: [park], minWidth: 3, maxWidth: 7, minDepth: 25, maxHeight: 12 }
+      # and those mapped as one thin C round each court, filling little of their rectangle (D-098)
+      - { group: building.palace.gosho, grounds: [park], maxFill: 0.5, minDepth: 25, maxHeight: 12 }
       # Buddhist halls by their names, whatever OSM's class: it tags many of them
       # building=shrine (Kiyomizu-dera's and Tō-ji's main halls among them) (D-094)
       - { group: building.temple, names: [本堂, 金堂, 講堂, 食堂, 御影堂, 阿弥陀堂, 開山堂, 法堂, 仏殿, 観音堂, 釈迦堂, 不動堂, 大師堂, 地蔵堂, 薬師堂, 太子堂, 経蔵, 鐘楼, 山門, 三門, 方丈, 庫裏, 宝蔵] }
@@ -83,6 +85,9 @@ objects:
     - { group: tree, canopy: 3, spacing: 16, density: 0.9 }
   streetTrees:
     - { group: tree.street, roads: [tertiary, secondary, primary], canopy: 3, spacing: 16, kerb: 2, offset: 9 }
+  # stone walls along OSM's retaining walls: Nijō Castle's ishigaki round its moats (D-098)
+  walls:
+    - { group: wall.stone, classes: [retaining_wall], spacing: 12.5, diagonal: wall.stone.diagonal, slants: [wall.stone.slant, wall.stone.slant2] }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks:
     - kiyomizu-dera-hondo
