@@ -627,6 +627,71 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   float period = (uLanes.y + uLanes.z) * lw;
   if (fract(dot(vGrid, dir) / period) * (uLanes.y + uLanes.z) < uLanes.y && uLaneRamp >= 0) ramp = uLaneRamp;
 }
+
+// Ground surfaces per pixel (D-096). Each pixel takes the surface of the cell
+// a warped point lands in: two octaves of world-anchored value noise bend the
+// cells' borders into smooth, crinkled shapes, and a dither of screen pixels
+// either side softens them. Rock follows the ground's slope: where it's
+// steeper than the style's steep-rock slope (varied ±ROCK_VARY across the
+// ground, dithered over ROCK_SOFT) natural ground is bare rock; a cell the
+// pipeline called rock (a cliff's) stays rock down to ROCK_CLIFF of that slope
+// and shows the ground beside it where it's gentler. Water: without planes (packages before D-094) water cells keep
+// their exact cells; with them, ground above the plane takes the land beside it.
+uniform int uSteepDrop;          // micro-steps per micro-cell (= steps per cell) from which ground is bare rock (0 = off)
+uniform int uRockSurface;        // -1 = none
+uniform int uWaterSurface;
+uniform int uSnowSurface;
+uniform int uShores;             // the package's water is drawn as planes (D-094)
+const float WARP_BROAD = 0.45;   // cells: borders bent by up to this, over about 1.2 cells
+const float WARP_FINE = 0.15;    // cells: and crinkled by up to this, over about 0.3 cell
+const float WARP_DITHER = 0.1;   // cells: pixels dithered either side of a border
+const float ROCK_VARY = 0.3;
+const float ROCK_SOFT = 0.25;
+const float ROCK_CLIFF = 0.25;   // a cliff's cell (rock to the pipeline) stays rock down to this much of it
+
+int surfaceAt(ivec2 c) { return texelFetch(uFieldCells, clamp(c, ivec2(0), uSliceSize - 1), 0).x; }
+
+// The surface of the cell nearest q (slice cells) among c and its 8
+// neighbours that is neither a nor b; -1 if there's none.
+int nearestOther(vec2 q, ivec2 c, int a, int b) {
+  int best = -1;
+  float bd = 1e9;
+  for (int j = 0; j < 9; j++) {
+    ivec2 n = c + ivec2(j % 3 - 1, j / 3 - 1);
+    int s = surfaceAt(n);
+    if (s == a || s == b) continue;
+    vec2 d = q - (vec2(n) + 0.5);
+    if (dot(d, d) < bd) { bd = dot(d, d); best = s; }
+  }
+  return best;
+}
+
+int groundSurface(int own, ivec2 ap) {
+  vec2 g = vGrid;
+  vec2 broad = vec2(valueNoise(g * 0.8, 21), valueNoise(g * 0.8 + 17.0, 21)) - 0.5;
+  vec2 fine = vec2(valueNoise(g * 3.3, 22), valueNoise(g * 3.3 + 17.0, 22)) - 0.5;
+  vec2 dith = vec2(bayer4(ap), bayer4(ap + ivec2(1, 2))) - 0.5;
+  vec2 q = g - vec2(uSliceOrigin) + 2.0 * (broad * WARP_BROAD + fine * WARP_FINE + dith * WARP_DITHER);
+  ivec2 qc = ivec2(floor(q));
+  int s = surfaceAt(qc);
+  if (uShores == 0) {
+    if (own == uWaterSurface || s == uWaterSurface) s = own;
+  } else if (s == uWaterSurface) {
+    int land = nearestOther(q, qc, uWaterSurface, uWaterSurface);
+    if (land >= 0) s = land;
+  }
+  if (uSteepDrop <= 0 || uRockSurface < 0 || s == uWaterSurface || s == uSnowSurface) return s;
+  int p = int(uSurfaces[s].y + 0.5);
+  if (s != uRockSurface && p != PATTERN_TREES && p != PATTERN_SPECKLE) return s;  // fields, city blocks
+  float steep = float(uSteepDrop) * uStepWorld * (1.0 + ROCK_VARY * (2.0 * valueNoise(g * 1.3, 23) - 1.0));
+  if (s == uRockSurface) steep *= ROCK_CLIFF;
+  if (length(vShape.xy) / steep - 1.0 + (bayer4(ap) - 0.5) * ROCK_SOFT > 0.0) return uRockSurface;
+  if (s == uRockSurface) {
+    int soil = nearestOther(q, qc, uRockSurface, uWaterSurface);
+    if (soil >= 0) return soil;
+  }
+  return s;
+}
 #endif
 
 int strataRampAt(int set, float h, out float above) {
@@ -647,6 +712,9 @@ void main() {
   int mat = int(vMat.x + 0.5);
   int kind = int(vMat.y + 0.5);
   bool vertical = kind == 2 || kind == 3;
+#ifdef FIELD_WAYS
+  if (kind < 2 && mat < 99) mat = groundSurface(mat, ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin));
+#endif
   int geol = int(vGeol + 0.5);
   int strataSet = uProvinceSet[geol >> 2][geol & 3];
 
@@ -1128,10 +1196,7 @@ uniform vec3 uLightUp;
 uniform float uScale;
 uniform sampler2D uFieldAo;      // (k·W + 1) × (k·H + 1): AO at each corner's lowest and highest height
 uniform sampler2D uFieldShape;   // (k·W + 1) × (k·H + 1): FIELD_SHAPE_FS at each corner
-uniform int uSteepDrop;          // micro-steps; tops this far above a neighbour are bare rock (0 = off)
-uniform int uRockSurface;        // surface id drawn on steep tops (-1 = none)
 uniform int uWaterSurface;
-uniform int uSnowSurface;
 
 out vec3 vNormal;
 out vec3 vLight;
@@ -1182,31 +1247,7 @@ void main() {
   ivec2 cell = m / uK;
   ivec4 attr = texelFetch(uFieldCells, cell, 0);
   int surface = kind == FACE_WATER ? uWaterSurface : attr.x;
-  // Ragged land-cover borders: each micro-cell takes its surface from a point
-  // jittered by up to ±0.4 cell (hashed in world coordinates, so tiles agree).
-  // Water keeps its exact cells: its geometry is flat only there.
-  if (kind != FACE_WATER) {
-    ivec2 wm = uSliceOrigin * uK + m;
-    uint hx = uint(wm.x) * 0x8da6b343u ^ uint(wm.y) * 0xd8163841u;
-    hx ^= hx >> 16; hx *= 0x7feb352du; hx ^= hx >> 15; hx *= 0x846ca68bu; hx ^= hx >> 16;
-    vec2 jit = vec2(float(hx & 0xffffu), float(hx >> 16)) / 65536.0 - 0.5;
-    ivec2 jc = clamp(ivec2(floor((vec2(m) + 0.5) / float(uK) + jit * 0.8)), ivec2(0), uSliceSize - 1);
-    int js = texelFetch(uFieldCells, jc, 0).x;
-    if (surface != uWaterSurface && js != uWaterSurface) surface = js;
-  }
-  if (kind <= 1 && uSteepDrop > 0 && uRockSurface >= 0 && surface != uWaterSurface && surface != uSnowSurface) {
-    ivec4 h = cornersAt(m);
-    bool steep = false;
-    for (int e = 0; e < 4; e++) {
-      ivec2 nb = m + EDGE_NEIGHBOR[e];
-      if (!inSlice(nb)) continue;
-      ivec4 nh = cornersAt(nb);
-      ivec2 ec = EDGE_CORNERS[e];
-      ivec2 nc = EDGE_NB_CORNERS[e];
-      if (min(h[ec.x], h[ec.y]) - max(nh[nc.x], nh[nc.y]) >= uSteepDrop) steep = true;
-    }
-    if (steep) surface = uRockSurface;
-  }
+  // tops take their surface per pixel in the fragment shader (groundSurface, D-096)
 
   vec2 uv = uRot * pos.xy;
   float h = pos.z;

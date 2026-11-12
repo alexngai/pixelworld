@@ -210,8 +210,8 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 
 **Known issues:**
 - **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix. *Fixed (D-094):* water is a plane over micro-terrain shaped from the map's water polygons and river lines.
-- **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized.
-- **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds.
+- **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized. *Softened (D-096):* surfaces are chosen per pixel with warped, dithered borders, and rock follows the ground's slope.
+- **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds. *Partly (D-096):* the per-micro-cell rock test is gone and rock follows the smoothed slope; the walls of single micro-steps still show as dark strata marks.
 - **Road beds** are 0.3 cells to either side of the centre line, so in mountains they read as wide benches.
 - **Not combined yet:** render scale (the M1.5 experiment worlds) and micro-terrain don't work together.
 

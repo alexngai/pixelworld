@@ -1,13 +1,13 @@
 [
   {
-    "name": "pixelworld/engine: createWorldView, as an app bundles it (83.5 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground and one-pixel lines)",
+    "name": "pixelworld/engine: createWorldView, as an app bundles it (85.1 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground, ground surfaces per pixel and one-pixel lines)",
     "path": "dist/engine.js",
     "import": "{ createWorldView }",
     "gzip": true,
     "limit": "90 KB"
   },
   {
-    "name": "pixelworld/engine and pixelworld/traffic: a view with traffic (91.6 KB, as above)",
+    "name": "pixelworld/engine and pixelworld/traffic: a view with traffic (93.2 KB, as above)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js"
@@ -20,7 +20,7 @@
     "limit": "100 KB"
   },
   {
-    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines)",
+    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js",

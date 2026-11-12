@@ -118,8 +118,6 @@ export function meshVoxels(
   mb: MeshBuilder = new MeshBuilder(),
 ): MeshBuilder {
   const dims = [model.sx, model.sy, model.sz];
-  // flat strides into model.data along x, y, z: the sweeps below run over every voxel, so no get()
-  const strides = [1, model.sx, model.sx * model.sy];
   const data = model.data;
   const perColumn = cell === "column";
   const texels = mb.texels;
@@ -135,6 +133,76 @@ export function meshVoxels(
         const [cx, cy] = cellOf(x, y);
         colKey[y * model.sx + x] = (cx & 0xffff) | ((cy & 0x7fff) << 16);
       }
+  // Each column is solid from the ground up to `run` and empty from `top` up. Between two
+  // columns, below both their runs, no face can show; above a column's top there is nothing.
+  // So the sweeps visit each column's band from run to top, not the whole box (D-010 towers
+  // are mostly solid inside), and the greedy pass each row's span that holds faces.
+  const { sx, sy, sz } = model;
+  const layer = sx * sy;
+  const run = new Int32Array(layer);
+  const top = new Int32Array(layer);
+  {
+    // layer by layer, so the voxels are read in order
+    const alive = new Int32Array(layer);
+    let n = 0;
+    for (let c = 0; c < layer; c++) if (data[c]) alive[n++] = c;
+    for (let z = 0; n; z++) {
+      let m = 0;
+      for (let a = 0; a < n; a++) {
+        const c = alive[a]!;
+        run[c] = z + 1;
+        if (z + 1 < sz && data[(z + 1) * layer + c]) alive[m++] = c;
+      }
+      n = m;
+    }
+    let zt = sz; // above the highest layer with anything
+    for (; zt > 0; zt--) {
+      let any = false;
+      for (let k = (zt - 1) * layer, e = k + layer; k < e && !any; k++) any = data[k] !== 0;
+      if (any) break;
+    }
+    n = 0;
+    for (let c = 0; c < layer; c++) alive[n++] = c;
+    for (let z = zt - 1; z >= 0 && n; z--) {
+      let m = 0;
+      for (let a = 0, base = z * layer; a < n; a++) {
+        const c = alive[a]!;
+        if (data[base + c]) top[c] = z + 1;
+        else alive[m++] = c;
+      }
+      n = m;
+    }
+  }
+  // the voxels that may have a face up or down, by layer: a column's bottom, the top of its run, and its band above
+  let total = 0;
+  for (let c = 0; c < layer; c++) total += 2 + Math.max(0, top[c]! - run[c]!);
+  const atZ = new Int32Array(total);
+  const zOf = new Int32Array(total);
+  let nz = 0;
+  for (let c = 0; c < layer; c++) {
+    const r = run[c]!;
+    if (r > 0) {
+      atZ[nz] = c;
+      zOf[nz++] = 0;
+      if (r > 1) {
+        atZ[nz] = c;
+        zOf[nz++] = r - 1;
+      }
+    }
+    for (let z = r, k = r * layer + c; z < top[c]!; z++, k += layer)
+      if (data[k]) {
+        atZ[nz] = c;
+        zOf[nz++] = z;
+      }
+  }
+  const zStart = new Int32Array(sz + 1);
+  for (let a = 0; a < nz; a++) zStart[zOf[a]! + 1]!++;
+  for (let z = 0; z < sz; z++) zStart[z + 1]! += zStart[z]!;
+  const byZ = new Int32Array(nz);
+  {
+    const fill = zStart.slice(0, sz);
+    for (let a = 0; a < nz; a++) byZ[fill[zOf[a]!]!++] = atZ[a]!;
+  }
   // For each axis d and direction (−/+), sweep slices and merge face masks.
   for (let d = 0; d < 3; d++) {
     const u = (d + 1) % 3;
@@ -142,28 +210,52 @@ export function meshVoxels(
     const du = dims[u]!;
     const dv = dims[v]!;
     const nd = dims[d]!;
-    const [sd, su, sv] = [strides[d]!, strides[u]!, strides[v]!];
-    const column = strides[2]!; // voxels per layer: an index modulo it is the voxel's column
-    const mask = new Int32Array(du * dv);
+    const mask = new Int32Array(du * dv); // left all zero by the greedy pass after each slice
     const owner = new Int32Array(du * dv);
+    const lo = new Int32Array(dv); // per row: the span of i holding faces
+    const hi = new Int32Array(dv);
     for (const dir of [-1, 1] as const) {
       for (let slice = 0; slice < nd; slice++) {
-        mask.fill(0);
+        lo.fill(du);
+        hi.fill(0);
         // the neighbour across the face, when it is inside the model (outside is empty)
-        const across = slice + dir >= 0 && slice + dir < nd ? dir * sd : 0;
+        const inside = slice + dir >= 0 && slice + dir < nd;
         let faces = false;
-        for (let j = 0; j < dv; j++)
-          for (let i = 0, k = slice * sd + j * sv; i < du; i++, k += su) {
+        const put = (i: number, j: number, m: number, c: number) => {
+          const at = j * du + i;
+          mask[at] = m;
+          if (colKey) owner[at] = colKey[c]!;
+          if (i < lo[j]!) lo[j] = i;
+          if (i >= hi[j]!) hi[j] = i + 1;
+          faces = true;
+        };
+        if (d === 2) {
+          const across = dir * layer;
+          for (let a = zStart[slice]!, e = zStart[slice + 1]!; a < e; a++) {
+            const c = byZ[a]!;
+            const k = slice * layer + c;
             const m = data[k]!;
-            if (!m || (across && data[k + across])) continue;
-            mask[j * du + i] = m;
-            if (colKey) owner[j * du + i] = colKey[k % column]!;
-            faces = true;
+            if (!m || (inside && data[k + across])) continue;
+            put(c % sx, Math.floor(c / sx), m, c);
           }
+        } else {
+          // x slices (faces along y and z) or y slices (along z and x), column by column
+          const across = d === 0 ? dir : dir * sx;
+          for (let w = 0; w < (d === 0 ? sy : sx); w++) {
+            const c = d === 0 ? w * sx + slice : slice * sx + w;
+            const from = inside ? Math.min(run[c]!, run[c + across]!) : 0;
+            for (let z = from, k = from * layer + c; z < top[c]!; z++, k += layer) {
+              const m = data[k]!;
+              if (!m || (inside && data[k + across])) continue;
+              if (d === 0) put(w, z, m, c);
+              else put(z, w, m, c);
+            }
+          }
+        }
         if (!faces) continue;
         // greedy rectangles: of one material, or with texels of any
         for (let j = 0; j < dv; j++)
-          for (let i = 0; i < du; ) {
+          for (let i = lo[j]!; i < hi[j]!; ) {
             const m = mask[j * du + i]!;
             if (!m) {
               i++;

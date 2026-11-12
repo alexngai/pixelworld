@@ -46,6 +46,8 @@ export interface GameOptions {
   startTiles?: boolean;
   /** Bake workers (default the engine's: the cores less one, at most 4). */
   bakeWorkers?: number;
+  /** Show visible tiles' ground while they bake (default true). */
+  groundFirst?: boolean;
   /** A fixed canvas size (device px); default: follow the page. */
   size?: { width: number; height: number };
   zoom?: number | "auto";
@@ -215,6 +217,7 @@ export class Game {
       cache: opts.cache ?? true,
       ...(opts.startTiles === false ? { startTiles: false as const } : {}),
       ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
+      ...(opts.groundFirst === false ? { groundFirst: false } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
         : { rotation: opts.rotation ?? 0, zoom: opts.zoom ?? "auto" },

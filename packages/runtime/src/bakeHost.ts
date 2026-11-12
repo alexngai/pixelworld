@@ -102,7 +102,8 @@ export class BakeHost {
     const { slice } = msg;
     const key = `${msg.tx},${msg.ty}`;
     const t0 = performance.now();
-    let scene = this.meshCache.get(key);
+    // the ground alone is quick: no objects, and nothing kept (the whole tile's scene has them)
+    let scene = msg.ground ? undefined : this.meshCache.get(key);
     if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
       const world = { width: init.worldWidth, height: init.worldHeight };
@@ -118,7 +119,7 @@ export class BakeHost {
         );
         scene = { meshes: [terrain], batches: [] };
       }
-      if (init.objects) {
+      if (init.objects && !msg.ground) {
         const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
         scene.meshes.push(objects.merged, objects.lines);
         scene.batches.push(...objects.batches);
@@ -133,11 +134,13 @@ export class BakeHost {
           for (let i = 0; i < b.offsets.length; i++) b.offsets[i]! *= s;
         }
       }
-      this.meshCache.set(key, scene);
-      if (this.meshCache.size > (init.meshScenes ?? BakeHost.MESH_CACHE)) {
-        const oldest = this.meshCache.keys().next().value!;
-        this.baker.releaseScene(this.meshCache.get(oldest)!);
-        this.meshCache.delete(oldest);
+      if (!msg.ground) {
+        this.meshCache.set(key, scene);
+        if (this.meshCache.size > (init.meshScenes ?? BakeHost.MESH_CACHE)) {
+          const oldest = this.meshCache.keys().next().value!;
+          this.baker.releaseScene(this.meshCache.get(oldest)!);
+          this.meshCache.delete(oldest);
+        }
       }
     }
     const meshMs = performance.now() - t0;
@@ -145,12 +148,13 @@ export class BakeHost {
     const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
     const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set(objects) } : {}) });
     // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there)
-    if (res?.image && init.heroes?.length && !msg.bare) applyHeroPaint(res.image, msg.rotation, init.heroes);
+    if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) applyHeroPaint(res.image, msg.rotation, init.heroes);
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
       (scene.fields ?? []).reduce((n, f) => n + f.width * f.height * f.k * f.k * 18, 0);
     // every bake of the tile (each rotation) reports its failed models: such a tile isn't kept in the persistent cache
+    if (msg.ground) this.baker.releaseScene(scene);
     this.reply(msg.id, res, meshMs, vertices, this.sceneFailures.get(scene));
   }
 
