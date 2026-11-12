@@ -114,6 +114,7 @@ Status values:
 | D-103 | Ponds and moats from Overture's water areas, a park's courts left paved, wires on diagonal streets | Accepted (M5) |
 | D-104 | Walls from OSM's barrier lines, corridors by how little they fill, wires on the 2:1 streets | Accepted (M5) |
 | D-105 | Releases from CI through npm trusted publishing, and every city pack published | Accepted |
+| D-106 | Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group | Accepted (M5) |
 
 ---
 
@@ -1362,3 +1363,16 @@ The point is more room for visual interest; both halves are wanted.
   - **An npm token in the repository's secrets:** a long-lived credential to leak, and granular tokens stop publishing directly in January 2027.
   - **Staged publishing:** changesets doesn't support it yet; merging the version pull request is the human step.
 - **Later:** consumer examples for the other city packs (`tools/consumers.mjs` covers San Francisco's); provenance, which npm adds only from a public repository.
+
+### D-106: Kyoto's wires strung pole to pole in one-pixel lines at any angle, one pole group (accepted, M5)
+- **Why:** Kyoto's poles drew their wires as voxels inside each pole's model (D-102), reaching half the spacing to each side to meet the next pole's. A prop turns by quarter turns, so the wires lined up only along the directions a model was drawn for: four pole groups (`prop.pole`, `.diagonal`, `.slant`, `.slant2`; D-103, D-104), still a little off on streets between those directions, and broken wherever a lane bent or the next pole stood nearer or further than one spacing. Tokyo's wire spans (D-098) are line objects from one pole to the next, drawn in one-pixel lines at any angle.
+- **What:**
+  - **`wireSpan`** (`@pixelworlds/city-tokyo`) gains `across` and `cable`: with `across`, two lines in place of one, that many voxels to either side of the poles along the cell axis nearer square to the span (the axis a pole's crossarm lies on, the poles turning by quarter turns); with `cable`, one more over the poles at that height. At their defaults Tokyo's single wire is drawn as before.
+  - **`utilityPole`** (`@pixelworlds/city-kyoto`) is the pole alone: concrete, a steel crossarm across x with an insulator at each end, a transformer on some, 16 voxels tall on every pole (it was 16 ± 10%) so the spans meet its crossarm. Its `span`, `sag`, `wx` and `wy` and the diagonal and 2:1 models are gone.
+  - **The `kyoto` pack** names Tokyo's plugin too, as Tokyo's names San Francisco's, for `prop.wire`: `wireSpan` with the power lines 15.5 voxels up and 2 to either side (the insulators' middles), the telecom cable at 11.5 on the pole, sagging 2 voxels, in `timber-dark`. One pole group, `prop.pole`.
+  - **`kyoto-walk`:** the two pole rules take `wires: prop.wire` in place of `along`, `diagonal` and `slants`: a pole every 30 m along whole streets (`objects._strokes`, D-098), on the left 3 m off the lanes' centre lines and 5 m off the tertiary roads', and a span between each two. The pipeline's `along`, `diagonal` and `slants` stay for the driving level's stone walls.
+- **Measured** (build of 2026-11-11): 3,650 poles and 3,002 spans, where there were 1,265 poles (1,054 straight, 39 diagonal, 172 on 2:1 streets): `along` placed poles per Overture segment from half a spacing in, and Kyoto's lanes are cut into short segments at every junction, so most short blocks had none; along whole streets every 30 m of lane has one. 62,968 objects; the package grows from 2.1 to 2.2 MB; the build takes 69 s. The fixture was last built before the merge into `nyc-walk`, so the rebuild also brings in that merge's ground (D-094 to D-096); a rebuild of the previous spec gives the same chunks as this one. Looked at under the Yasaka Pagoda and on the Higashiyama lanes at zooms 2 and 3, Nakagyō, and Gion turned a quarter: three dark lines a pixel wide from crossarm to crossarm at each lane's own angle, sagging between the poles. Tests: the pole's model and its insulators where the pack's spans meet them; a span's pair and cable, apart along the axis nearer square to it, at three angles. The Yasaka golden is regenerated; every other golden is unchanged.
+- **Rejected alternatives:**
+  - **Props turned by the 16 directions in the engine** (D-104's Later): one pole group, but wires drawn in the pole's model still end half a spacing out, missing the next pole wherever the spacing isn't even or the lane bends.
+  - **A Kyoto copy of `wireSpan`:** the same generator in two packs; a pack naming another's plugin is how Tokyo's takes San Francisco's.
+  - **One line per span, as Tokyo's:** Kyoto's poles carry two power lines and a cable (D-102); one wire over the crossarm's middle reads as Tokyo's.

@@ -106,10 +106,9 @@ objects:
     - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
     - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
     # concrete utility poles along one side of the lanes and side streets, at their
-    # edge (D-100), turned with the road so their wires reach the next (D-102),
-    # along the diagonal on a diagonal street (D-103), and the 2:1 ones (D-104)
-    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, along: true, diagonal: prop.pole.diagonal, slants: [prop.pole.slant, prop.pole.slant2] }
-    - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, along: true, diagonal: prop.pole.diagonal, slants: [prop.pole.slant, prop.pole.slant2] }
+    # edge (D-100), and their wires strung from pole to pole at the street's own angle (D-106)
+    - { group: prop.pole, roads: [residential, unclassified, living_street], spacing: 30, offset: 3, wires: prop.wire }
+    - { group: prop.pole, roads: [tertiary], spacing: 30, offset: 5, wires: prop.wire }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks: [kiyomizu-dera-hondo, yasaka-pagoda, yasaka-shrine-west-gate, chion-in-sanmon, kyoto-tower, kiyomizu-dera-pagoda, jishu-jinja-torii, gion-torii-east, gion-torii-west]
   landmarkDepiction: generic

@@ -343,29 +343,21 @@ describe("Kyoto's landmarks", () => {
     expect(reach(H * 0.3, H * 0.6)).toBeGreaterThan(reach(H * 0.75, H));
   });
 
-  it("draw utility poles whose wires reach along y, sagging toward their ends (D-102)", () => {
+  it("draw a concrete pole with its crossarm across x and no wires of its own: they are spans meeting its insulators (D-106)", () => {
     const m = generateModel(style.assets, rampIds, "prop.pole", { seed: 2 });
-    const c = Math.floor(m.sy / 2);
-    expect(m.sy).toBeGreaterThan(40); // 24 voxels each side
-    const at = (y: number) => {
-      for (let z = m.sz - 1; z >= 0; z--) if (m.get(0, y, z)) return z;
-      return -1;
-    };
-    expect(at(c + 1)).toBeGreaterThan(at(m.sy - 1)); // lower at mid-span than by the pole
-    expect(at(0)).toBe(at(m.sy - 1));
+    expect([m.sx, m.sy, m.sz]).toEqual([5, 1, 16]);
+    expect(m.lines).toHaveLength(0);
+    expect(nameAt(m, 2, 0, 0)).toBe("concrete");
+    expect(nameAt(m, 0, 0, 15)).toBe("steel-grey");
+    expect(nameAt(m, 4, 0, 15)).toBe("steel-grey");
+    // the wire spans' power lines leave from the insulators' middles, the cable from the pole below them
+    const wire = style.assets["prop.wire"]!.params as Record<string, number>;
+    expect(wire.across).toBe(2);
+    expect(wire.height).toBe(15.5);
+    expect(wire.cable).toBeLessThan(14);
   });
 
-  it("draw a diagonal street's pole with its wires along x = y (D-103)", () => {
-    const m = generateModel(style.assets, rampIds, "prop.pole.diagonal", { seed: 2 });
-    expect(m.sx).toBe(m.sy);
-    const c = Math.floor(m.sx / 2);
-    let wires = 0;
-    for (let t = 3; t < c; t++) for (let z = 0; z < m.sz; z++) if (m.get(c + t, c + t, z) || m.get(c - t, c - t, z)) wires++;
-    expect(wires).toBeGreaterThan(c / 2); // the telecom cable at every step out to its reach
-    for (let z = 0; z < m.sz; z++) expect(m.get(c + c - 1, c - (c - 1), z)).toBe(0); // nothing along the other diagonal
-  });
-
-  it("draw stone wall segments along each of the four directions, and the 2:1 streets' poles (D-104)", () => {
+  it("draw stone wall segments along each of the four directions (D-104)", () => {
     const along = (group: string, dx: number, dy: number) => {
       const m = generateModel(style.assets, rampIds, group, { seed: 1 });
       const c = Math.floor(m.sx / 2);
@@ -377,12 +369,6 @@ describe("Kyoto's landmarks", () => {
     expect(along("wall.stone.diagonal", 1, 1)).toBe(3);
     expect(along("wall.stone.slant", 1, -0.5)).toBe(3);
     expect(along("wall.stone.slant2", 0.5, -1)).toBe(3);
-    // the 2:1 pole's telecom cable runs along (2, −1)
-    const m = generateModel(style.assets, rampIds, "prop.pole.slant", { seed: 2 });
-    const c = Math.floor(m.sx / 2);
-    let cable = 0;
-    for (let t = 2; t < 10; t++) for (let z = 0; z < m.sz; z++) if (m.get(c + t, c + Math.round(-t / 2), z)) cable++;
-    expect(cable).toBeGreaterThanOrEqual(6);
   });
 
   it("draw Kiyomizu-dera's hall on a stage of pillars over the slope", () => {

@@ -133,6 +133,9 @@ importers:
 
   packages/city-kyoto:
     devDependencies:
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../city-tokyo
       pixelworld:
         specifier: workspace:*
         version: link:../pixelworld

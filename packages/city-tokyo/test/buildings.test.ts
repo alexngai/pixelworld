@@ -178,7 +178,7 @@ describe("Tokyo's buildings", () => {
 
 describe("Tokyo's wires (D-098)", () => {
   /** A wire span's line object as the pipeline gives it: a band of half-width lw around a → b (cells), and its frame. */
-  function span(a: [number, number], b: [number, number], rise: [number, number] = [0, 0]) {
+  function span(a: [number, number], b: [number, number], rise: [number, number] = [0, 0], params: Record<string, number> = {}) {
     const voxel = 1 / 16;
     const lw = 0.06;
     const [ux, uy] = [b[0] - a[0], b[1] - a[1]];
@@ -191,7 +191,9 @@ describe("Tokyo's wires (D-098)", () => {
       [a[0] - nx, a[1] - ny],
     ];
     const { mask, x0, y0 } = footprintMask(fp, voxel);
-    const model = generateModel(style.assets, rampIds, "prop.wire", { seed: 1, mask, frame: { x0, y0, voxel, line: { a, b, half: lw, rise } } });
+    const spec = style.assets["prop.wire"]!;
+    const assets = { ...style.assets, "prop.wire": { ...spec, params: { ...spec.params, ...params } } };
+    const model = generateModel(assets, rampIds, "prop.wire", { seed: 1, mask, frame: { x0, y0, voxel, line: { a, b, half: lw, rise } } });
     // a line's point in world cells and voxels up
     const world = (p: [number, number, number]) => [x0 + p[0] * voxel, y0 + p[1] * voxel, p[2]];
     return { model, world };
@@ -237,6 +239,27 @@ describe("Tokyo's wires (D-098)", () => {
     }
     expect(stays).toBeGreaterThan(2);
     expect(stays).toBeLessThan(15);
+  });
+
+  it("strings a pair from a crossarm's ends, apart along the cell axis nearer square to the span, and a cable lower down (D-106)", () => {
+    for (const [a, b, axis] of [
+      [[0.5, 0.5], [0.5, 3.5], 0], // north-south: the pair apart in x
+      [[0.5, 0.5], [3.5, 1.2], 1], // nearer east-west: apart in y
+      [[0.5, 0.5], [2.6, 2.8], 0],
+    ] as [[number, number], [number, number], number][]) {
+      const { model, world } = span(a, b, [0, 0], { height: 15.5, across: 2, cable: 11.5 });
+      const n = model.lines.length / 3;
+      expect(Number.isInteger(n)).toBe(true);
+      const [p, q, c] = [0, n, 2 * n].map((k) => model.lines[k]!.a);
+      expect([p![2], q![2], c![2]]).toEqual([15.5, 15.5, 11.5]);
+      expect(q![axis]! - p![axis]!).toBeCloseTo(4, 6);
+      expect(q![1 - axis]).toBeCloseTo(p![1 - axis]!, 6);
+      // the cable leaves from the pole itself, between the pair
+      const at = world(c!);
+      expect(at[0]).toBeCloseTo(a[0], 6);
+      expect(at[1]).toBeCloseTo(a[1], 6);
+      expect(c![axis]).toBeCloseTo((p![axis]! + q![axis]!) / 2, 6);
+    }
   });
 
   it("climbs from a pole on low ground to one on higher ground", () => {

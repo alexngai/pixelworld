@@ -1,12 +1,12 @@
 {
-  "packageHash": "f3d9f6f704759103828083c5a5cae4f2e705638b4d7b9fb8d11f75ddb5025afa",
+  "packageHash": "16eed4f2e890742e6d49c5b978bb9dd6fe8c6f31743594b605f7b744ebd8254d",
   "cells": [
     338,
     300
   ],
   "chunks": 30,
   "heightRange": [
-    8,
+    7,
     89
   ],
   "inputs": {
@@ -33,12 +33,10 @@
     "landmark.temple.stage": 1,
     "landmark.torii": 3,
     "landmark.tower.candle": 1,
-    "prop.pole": 1054,
-    "prop.pole.diagonal": 39,
-    "prop.pole.slant": 19,
-    "prop.pole.slant2": 153,
+    "prop.pole": 3650,
     "prop.signal": 54,
     "prop.streetlight": 1142,
+    "prop.wire": 3002,
     "tree": 20861,
     "tree.street": 559
   },

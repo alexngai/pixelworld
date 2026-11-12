@@ -59,6 +59,7 @@
     "pixelworld": "workspace:^"
   },
   "devDependencies": {
+    "@pixelworlds/city-tokyo": "workspace:*",
     "pixelworld": "workspace:*",
     "tsup": "9.0.0"
   }

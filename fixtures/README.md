@@ -179,14 +179,14 @@ Sources and licenses:
 
 Kyoto's walking level (D-091, D-100), built from [`worlds/kyoto/walk.yaml`](../worlds/kyoto/walk.yaml) on the `kyoto` style pack (D-090): from Nakagyō's machiya streets east across the Kamo river to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto Tower, at 10 m per cell (338 × 300 cells). Heights are true (`heightStretch` 1.0) and the relief 1.5×. Its roads and paths are drawn along their own centre lines, snapped to 16 directions within 6° of one (D-082): the Heian grid snaps, the lanes up the Higashiyama slopes keep their angles. Its neighbours are the driving level (`kyoto`) and the flying level (`kyoto-fly`).
 
-- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 8 to 89 drawn steps, from the Kamo river up the Higashiyama hills.
+- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 7 to 89 drawn steps, from the Kamo river up the Higashiyama hills.
 - **Buildings:** 33,691 from Overture footprints; 31,420 have facts from PLATEAU's 2025 building models (the `plateau` facts source, D-089: structure, year, storeys, usage code, LoD2 roof shape), 29,493 that Overture gives no height take PLATEAU's, and 29,976 take PLATEAU's roof shape as their generator's hint (`roofHints`, D-100).
 - **Types:** mid-rises (10,923), wooden houses under gabled (7,924) and hipped (332) roofs, machiya (6,451), temple halls and pavilions (513, 180 buildings stand in temple and shrine grounds), kura (91) and shrine halls (57); the rest keep the defaults (6,888 houses, 427 low blocks, 17 car parks, 68 taller blocks).
 - **Centre lines:** 20,250 road cells and 17,581 path cells carry pieces; 8 and 34 have more than six, and drop their narrowest.
-- **Also:** 20,861 canopy trees and 559 street trees, 3,416 lawn cells, 199 cells of ponds from Overture's water areas (D-103), 1,265 utility poles strung with wires (one side of each lane, D-102; 39 on diagonal streets, D-103, and 172 on 2:1 streets, D-104), 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
+- **Also:** 20,861 canopy trees and 559 street trees, 3,416 lawn cells, 199 cells of ponds from Overture's water areas (D-103), 3,650 utility poles on one side of each lane (D-102) and 3,002 wire spans strung between them in one-pixel lines at any angle (D-106), 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
 - **Landmarks (generic depictions):** Kiyomizu-dera's main hall on its stage, its three-storey pagoda, the Yasaka Pagoda, Yasaka Shrine's west gate, Chion-in's Sanmon, Kyoto Tower, and three torii (Jishu Shrine's and two in Gion).
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
-- **Size:** 2.1 MB. Built in about 55 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
+- **Size:** 2.2 MB. Built in about 70 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
 
 ```sh
 cd pipeline

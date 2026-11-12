@@ -2,7 +2,7 @@
   "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
   "id": "kyoto",
   "name": "Kyoto",
-  "plugins": ["@pixelworlds/city-kyoto"],
+  "plugins": ["@pixelworlds/city-kyoto", "@pixelworlds/city-tokyo"],
   "shades": 6,
   "background": "#1b1c22",
   "silhouette": "#ffe36e",
@@ -473,24 +473,10 @@
     },
     "prop.pole": {
       "generator": "utilityPole",
-      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
-      "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2 }
+      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white" },
+      "params": { "height": 16, "transformers": 0.3 }
     },
-    "prop.pole.diagonal": {
-      "generator": "utilityPole",
-      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
-      "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2, "wx": 1, "wy": 1 }
-    },
-    "prop.pole.slant": {
-      "generator": "utilityPole",
-      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
-      "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2, "wx": 2, "wy": -1 }
-    },
-    "prop.pole.slant2": {
-      "generator": "utilityPole",
-      "ramps": { "pole": "concrete", "arm": "steel-grey", "transformer": "concrete-white", "wire": "timber-dark" },
-      "params": { "height": 16, "transformers": 0.3, "span": 24, "sag": 2, "wx": 1, "wy": -2 }
-    },
+    "prop.wire": { "generator": "wireSpan", "ramps": { "wire": "timber-dark" }, "params": { "height": 15.5, "across": 2, "cable": 11.5, "sag": 2 } },
     "prop.signal": { "generator": "trafficSignal", "ramps": { "pole": "concrete", "head": "steel-grey", "light": "marker" }, "params": { "height": 12, "lines": 1, "reach": 5 } },
     "prop.streetlight": { "generator": "streetLight", "ramps": { "pole": "steel-grey", "lamp": "lit" }, "params": { "height": 16, "lines": 1, "reach": 3 } },
     "wall.stone": {
