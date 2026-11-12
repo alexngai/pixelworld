@@ -828,7 +828,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 | Risk | Mitigation |
 |---|---|
 | Procedural bakes don't look hand-made | M0 is dedicated to the look; style reference sheet; cleanup passes; paint-over for hero assets |
-| Client baking too slow on phones | Measure in M0; prioritize visible tiles; smaller bake tiles; serve pre-baked tiles from the CDN for busy areas |
+| Client baking too slow on phones | Measure in M0; prioritize visible tiles; smaller bake tiles; serve pre-baked tiles from the CDN for busy areas (estimated and deferred: about 2.6 GB for eight levels in four rotations, [architecture.md](architecture.md) §8.1) |
 | GPU rasterization differs across devices | Compare palette indices with tolerance in tests; hero assets are baked offline only |
 | Warp distorts or folds | Shape-preserving solver, fold check, editor pins; v1 separable as a fallback |
 | Thin data outside the US / Europe / Japan | Prefer tier 1–2 regions first; procedural fallbacks for every layer |

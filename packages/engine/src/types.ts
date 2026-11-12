@@ -111,6 +111,12 @@ export interface WorldViewOptions {
    */
   groundFirst?: boolean;
   /**
+   * While nothing else waits, bake one tile at a time for later: the visible
+   * tiles in the other rotations, then those around the view (default true,
+   * where tiles are kept: they go to the cache, not the GPU).
+   */
+  idleBake?: boolean;
+  /**
    * Bake workers: each bakes a tile at a time, so the view fills that many
    * times faster where tiles take long. Default: the CPU's cores less one, at
    * most 4 (each holds its own copy of the world's objects).
@@ -264,6 +270,8 @@ export interface FrameEvent extends FrameClock {
   now: number;
   /** Whether the frame was drawn (the loop redraws only when something changed). */
   drawn: boolean;
+  /** Visible tiles not baked whole yet (their ground shows, or nothing). */
+  missingTiles: number;
 }
 
 /** A view's state for determinism: the camera, every layer's own state and the controller's. */
