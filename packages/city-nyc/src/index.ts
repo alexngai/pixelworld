@@ -9,7 +9,7 @@ import workerUrl from "./worker?worker&url";
 
 /**
  * @pixelworlds/city-nyc: New York's city pack (D-081). The pipeline half
- * (PLUTO and LPC facts) is the Python distribution pixelworld-city-nyc; this
+ * (PLUTO and LPC facts) is the pipeline's built-in `pluto` facts source; this
  * is the browser half, New York's generators. The new-york style pack names
  * it beside San Francisco's pack, whose `block` and towers it reuses, so a
  * view loads both (San Francisco's `cityPlugin` and this one):

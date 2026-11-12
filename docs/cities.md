@@ -21,7 +21,7 @@ Its rows say what that path would and wouldn't capture.
 **The layers a place needs** (the pipeline's contract, [second-region.md](second-region.md) §2):
 1. **Buildings:** footprints with heights, or a 3D city model (LoD1/LoD2). Overture covers footprints almost everywhere; what varies is heights and roofs.
 2. **Building facts:** year built or age class, floors, use, class or type, material or roof. These drive the typology rules (D-055) and are what make ordinary streets recognisable.
-3. **Elevation:** a DTM fine enough for the scale (1–10 m for walking levels). USGS 3DEP is built in; anywhere else needs a terrain plugin (`docs/plugins.md` §4) or Copernicus GLO-30.
+3. **Elevation:** a DTM fine enough for the scale (1–10 m for walking levels). USGS 3DEP is built in; elsewhere, IGN (France), GSI (Japan) and Copernicus GLO-30 are built in too, or a terrain source from an installed package (`docs/plugins.md` §4).
 4. **Trees, water, transit:** optional. Overture, WorldCover and the WRI/Meta canopy map cover them coarsely everywhere.
 5. **Access and licence:** anonymous download or API, and a licence that allows derived databases and redistribution (world packages are ODbL).
 
@@ -227,7 +227,7 @@ Measured in Overture 2026-10-21.0 over boxes of 1–2 km, the share of buildings
 **Not captured:** per-building age or style (typology comes from neighbourhood boxes in the spec), real heights and roof forms, facade colours (palettes come from the style pack), true ground under dense city or forest (GLO-30 is a surface model), and anything under about 30 m: Machu Picchu's terraces, Guanajuato's lanes, Valparaíso's stair streets, Sugarloaf's sheer faces (they become ramps).
 
 **What it would take**, built once for all these places:
-- **A Copernicus GLO-30 terrain plugin:** a sketch is in plugins.md §4. The DEM is on AWS as `copernicus-dem-30m`, anonymous (tiles checked for Santorini, Petra, Cappadocia and Marrakech).
+- **A Copernicus GLO-30 terrain source:** built in since D-107 (`copernicus-glo30`, `copernicus-glo30-ground`). The DEM is on AWS as `copernicus-dem-30m`, anonymous (tiles checked for Santorini, Petra, Cappadocia and Marrakech).
   - **Licence** (read directly): Article 4 grants "reproduction; distribution; adaptation, modification and combination with other data", worldwide and free of charge.
   - **Attribution:** derived products must say "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved", and pass on its no-liability sentence.
   - **Water mask:** it's a surface model, so Venice and dense old towns need flattening with the water mask.

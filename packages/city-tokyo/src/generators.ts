@@ -3,7 +3,7 @@ import { BUILDING_GENERATORS } from "./buildings";
 import { LANDMARK_GENERATORS } from "./landmarks";
 import { PROP_GENERATORS } from "./props";
 
-/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is pixelworld-city-jp). */
+/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is the pipeline's `plateau` facts and `gsi-dem` terrain sources). */
 export const PLUGIN_NAME = "@pixelworlds/city-tokyo";
 
 /**

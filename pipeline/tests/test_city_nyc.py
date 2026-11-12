@@ -9,10 +9,9 @@ import pytest
 import shapely
 from rasterio.warp import transform as transform_points
 
-from pixelworld_city_nyc import pluto
 from pixelworld_pipeline import facts, plugins
 from pixelworld_pipeline.region import Region
-from pixelworld_pipeline.sources import http
+from pixelworld_pipeline.sources import http, pluto
 
 REGION = Region.from_dict(
     {
@@ -178,10 +177,13 @@ def test_downloads_are_cached_by_name_with_a_box_query(tmp_path, monkeypatch):
     assert pluto.footprints(bounds, "26v2") == rows and len(urls) == 1
 
 
-def test_the_pack_registers_its_facts_source():
-    assert plugins.load(plugins.FACTS, "pluto") is pluto.PlutoFacts
-    assert plugins.available(plugins.FACTS)["pluto"].origin == "pixelworld-city-nyc"
-    assert facts.attribution({"facts": "pluto"}) == pluto.ATTRIBUTION
-    assert facts.attribution({"facts": {"plugin": "pluto", "version": "26v2"}}) == pluto.ATTRIBUTION
+def test_the_facts_source_is_built_in():
+    assert plugins.load_source("facts", "pluto") is pluto.PlutoFacts
+    assert plugins.available()["pluto"].origin == "builtin"
+    assert plugins.attribution({"facts": {"kind": "pluto"}}, "facts") == pluto.ATTRIBUTION
+    assert (
+        plugins.attribution({"facts": {"kind": "pluto", "version": "26v2"}}, "facts")
+        == pluto.ATTRIBUTION
+    )
     assert all("§23-502(d)" in a["license"] for a in pluto.ATTRIBUTION)
     assert issubclass(pluto.PlutoFacts, facts.FactsSource)

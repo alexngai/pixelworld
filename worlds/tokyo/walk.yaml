@@ -66,7 +66,6 @@ objects:
   # footprint's size, and neighbourhood boxes where those aren't enough
   # (D-093). PLATEAU's storeys count those above ground. First match wins.
   typology:
-    facts: { plugin: plateau, year: 2025 }
     rules:
       # the Meiji Shrine's halls in its forest: civic (422), low
       - { group: building.shrine, uses: [civic], floors: [1, 3], bounds: [139.6950, 35.6720, 139.7020, 35.6810] }
@@ -130,8 +129,8 @@ sources:
   # GSI's elevation tiles (D-089): DEM5A here, read at 4 m
   dem: { kind: gsi-dem, overview: 4 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: plateau, year: 2025 }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
     excludeSubclasses: [parking_aisle, driveway]

@@ -502,11 +502,48 @@ OVERVIEW_DOC = (
     "Read the source's overview this many times coarser than its full resolution "
     "(1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source."
 )
+SOURCE_OPTIONS = "the source's options"
+
+
+def source_options(role: str) -> Callable[[dict, KeyPath, Ctx], None]:
+    """A source block's rule: its options checked against the source's
+    `options_schema` (plugins.Source), when it declares one."""
+
+    def rule(v: dict, path: KeyPath, ctx: Ctx) -> None:
+        from . import plugins
+
+        kind = v.get("kind")
+        if not isinstance(kind, str) or not kind:
+            return
+        try:
+            obj = plugins.load_source(role, kind)
+        except plugins.PluginError:
+            return  # the plugin check reports it
+        opts = {k: x for k, x in v.items() if k not in plugins.PIPELINE_KEYS}
+        if not isinstance(obj, type):
+            for k in opts:
+                ctx.add((*path, k), f"the {kind} source takes no options")
+        elif obj.options_schema is not None:
+            Map(obj.options_schema, name=f"{kind} options").check(opts, path, ctx)
+
+    return rule
+
+
+def source_ref(role: str, doc: str, *, default: str | None = None) -> Map:
+    """A `sources.<key>` block: `kind`, the source, and its options beside it."""
+    return Map(
+        {"kind": Key(Str(), doc, f"`{default}`" if default else None, required=not default)},
+        options=SOURCE_OPTIONS,
+        rule=source_options(role),
+    )
+
+
 SOURCE = {
     "kind": Key(
         Str(),
         "The terrain source: `usgs-3dep-13arcsec` (10 m, United States), "
-        "`usgs-3dep-1arcsec` (30 m, United States), or a plugin's "
+        "`usgs-3dep-1arcsec` (30 m, United States), `copernicus-glo30` (30 m, worldwide), "
+        "`gsi-dem` (Japan), `ign-rgealti` (France), or an installed one "
         "(`pixelworld plugins` lists them).",
         required=True,
     ),
@@ -523,17 +560,22 @@ DEM = Map(
         )
     },
     name="mapping",
+    options=SOURCE_OPTIONS,
+    rule=source_options("terrain"),
 )
 LANDCOVER = Map(
     {
         "kind": Key(
             Str(),
-            "The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or a plugin's.",
+            "The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or an installed "
+            "one giving ESA WorldCover's class codes.",
             required=True,
         ),
         "overview": Key(OVERVIEW, OVERVIEW_DOC, "16"),
     },
     name="mapping",
+    options=SOURCE_OPTIONS,
+    rule=source_options("landcover"),
 )
 
 RAIL_RULE = Map(
@@ -564,22 +606,48 @@ SOURCES = Map(
     {
         "dem": Key(DEM, "Elevation: the terrain source.", required=True),
         "landcover": Key(LANDCOVER, "Land cover: surfaces, water and vegetation.", required=True),
-        "overture": Key(
-            Map(
-                {
-                    "release": Key(
-                        Str(
-                            pattern=r"\d{4}-\d{2}-\d{2}\.\d+",
-                            pattern_doc="an Overture release like 2026-10-21.0",
-                        ),
-                        "The Overture Maps release roads, rivers, buildings and land use "
-                        "come from, pinned so builds repeat (e.g. `2026-10-21.0`).",
-                        required=True,
-                    )
-                }
+        "features": Key(
+            source_ref(
+                "features",
+                "The map's roads, paths, rivers, rail, water, land use and buildings: `overture` "
+                "(with `release:`, an Overture Maps release like `2026-10-21.0`, pinned so builds "
+                "repeat), or an installed source.",
             ),
-            "Overture Maps: roads, paths, rivers, rail, buildings, land use.",
+            "The vector map (D-110).",
             required=True,
+        ),
+        "facts": Key(
+            source_ref(
+                "facts",
+                "Per-building facts (year built, storeys, use) for `objects.typology`: `datasf`, "
+                "`pluto`, `apur`, `plateau`, `areas`, or an installed source.",
+            ),
+            "Building facts (D-055).",
+        ),
+        "canopy": Key(
+            source_ref(
+                "canopy",
+                "Tree heights for `canopy:` rules: `meta-chm` (WRI and Meta, 1 m, worldwide).",
+                default="meta-chm",
+            ),
+            "Tree canopy heights.",
+        ),
+        "heights": Key(
+            source_ref(
+                "heights",
+                "Building heights for `objects.buildings.lidar`: `usgs-3dep-lidar` (with "
+                "`project:`, a USGS 3DEP EPT project).",
+                default="usgs-3dep-lidar",
+            ),
+            "Measured building heights (D-052).",
+        ),
+        "importance": Key(
+            source_ref(
+                "importance",
+                "Famous places for `warp.importance`: `wikidata`.",
+                default="wikidata",
+            ),
+            "Place fame, for warped layouts.",
         ),
         "roads": Key(
             Map(
@@ -923,11 +991,6 @@ YARD = Map(
 
 LIDAR = Map(
     {
-        "project": Key(
-            Str(),
-            "The USGS 3DEP lidar project (e.g. `USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018`).",
-            required=True,
-        ),
         "res": Key(Num(0, lo_open=True, unit="m"), "Height grid resolution.", "4"),
         "depth": Key(Num(0, integer=True), "Point-cloud octree depth read.", "6"),
         "towerGap": Key(Num(0, unit="m"), "Roofs this far above the median are tower parts.", "25"),
@@ -978,7 +1041,10 @@ BUILDINGS = Map(
             "Footprints in parks that are really trees are dropped (null keeps every one).",
             "on",
         ),
-        "lidar": Key(LIDAR, "Heights and tower parts from USGS 3DEP lidar."),
+        "lidar": Key(
+            LIDAR,
+            "Heights and tower parts from measured heights (`sources.heights`: USGS 3DEP lidar).",
+        ),
     }
 )
 
@@ -1034,22 +1100,6 @@ TYPOLOGY_RULE = Map(
 )
 TYPOLOGY = Map(
     {
-        "facts": Key(
-            OneOf(
-                (is_str, Str()),
-                (
-                    is_map,
-                    Map(
-                        {"plugin": Key(Str(), "The facts source plugin.", required=True)},
-                        options="plugin options",
-                    ),
-                ),
-                (lambda v: v is False, Bool()),
-                name="a plugin name, or { plugin, …options }",
-            ),
-            "A facts source plugin (year built, use, storeys) by name: `datasf`, or "
-            "`{ plugin: datasf, …options }`.",
-        ),
         "rules": Key(ListOf(TYPOLOGY_RULE), "Matched in order; the first match picks the group."),
         "roofHints": Key(
             Bool(),
@@ -1058,7 +1108,6 @@ TYPOLOGY = Map(
             "false",
         ),
     },
-    options="facts source options (the older form)",
 )
 
 
@@ -1442,7 +1491,9 @@ REGION = Map(
                                     "`sources.dem.overview`",
                                 ),
                                 "resampling": DEM.keys["resampling"],
-                            }
+                            },
+                            options=SOURCE_OPTIONS,
+                            rule=source_options("terrain"),
                         ),
                         "Overrides `sources.dem` for the micro-terrain (usually a finer overview).",
                     ),

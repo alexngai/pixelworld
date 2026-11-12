@@ -7,6 +7,7 @@ import yaml
 
 from pixelworld_pipeline import objects
 from pixelworld_pipeline.region import Region, RegionError
+from pixelworld_pipeline.sources import overture
 
 SPEC = {
     "id": "lm",
@@ -18,7 +19,7 @@ SPEC = {
     "sources": {
         "dem": {"kind": "usgs-3dep-1arcsec"},
         "landcover": {"kind": "esa-worldcover-2021"},
-        "overture": {"release": "2026-10-21.0"},
+        "features": {"kind": "overture", "release": "2026-10-21.0"},
         "roads": {"classes": ["primary"]},
     },
 }
@@ -420,8 +421,8 @@ def test_a_footprint_landmark_stands_on_the_building_it_replaces(registry, monke
     )
     wedge = "POLYGON ((-115.1955 36.0045, -115.1945 36.0045, -115.1955 36.0055, -115.1955 36.0045))"
     rows = [{"id": "w", "names": {"primary": "The Wedge"}, "geometry": wedge}]
-    monkeypatch.setattr(objects.overture, "buildings", lambda release, box: rows)
-    monkeypatch.setattr(objects.overture, "building_parts", lambda release, box: [])
+    monkeypatch.setattr(overture, "buildings", lambda release, box: rows)
+    monkeypatch.setattr(overture, "building_parts", lambda release, box: [])
     monkeypatch.setattr(objects, "park_polygons", lambda *a: [])
     r = _region(registry, {"landmarks": ["wedge"], "buildings": {"minArea": 10}})
     assert r.objects["landmarks"][0]["footprint"] is True

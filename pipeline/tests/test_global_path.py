@@ -1,6 +1,8 @@
 """The global-data path's first pieces (D-107): Copernicus GLO-30 terrain with
 a ground filter, and facts from the spec's neighbourhood boxes."""
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 from rasterio.warp import transform as transform_points
@@ -96,11 +98,10 @@ def test_area_facts_name_the_hood_and_give_a_height():
 
 def test_area_facts_are_a_built_in_facts_source():
     region = _region()
-    src = facts.open_facts(
-        region, {"facts": {"plugin": "areas", "areas": [{"hood": "x", "bounds": [0, 0, 1, 1]}]}}
-    )
+    areas = {"kind": "areas", "areas": [{"hood": "x", "bounds": [0, 0, 1, 1]}]}
+    src = facts.open_facts(replace(region, sources={**region.sources, "facts": areas}))
     assert isinstance(src, AreaFacts)
-    assert plugins.load(plugins.FACTS, "areas") is AreaFacts
+    assert plugins.load_source("facts", "areas") is AreaFacts
     with pytest.raises(FactsSpecError):
         AreaFacts(region, {})
     with pytest.raises(FactsSpecError):

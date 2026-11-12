@@ -3,14 +3,12 @@ assessor's secured property tax roll (year built, storeys, units, use) joined
 to parcel polygons, so every building in the city can be typed by its age and
 use (building typologies, D-055).
 
-The `datasf` facts source (DataSFFacts) is registered through the
-`pixelworld.facts` entry point. A region names it in its typology section:
+The `datasf` facts source (DataSFFacts) is built in. A region selects it:
 
-    objects:
-      typology:
-        facts: datasf
-        # or with options:
-        facts: { plugin: datasf, rollYear: "2025", classCodes: true }
+    sources:
+      facts: { kind: datasf }
+      # or with options:
+      facts: { kind: datasf, rollYear: "2025", classCodes: true }
 
 Options:
 - rollYear: the closed roll year (default: the latest one, asked of DataSF).
@@ -36,6 +34,7 @@ import shapely
 from rasterio.warp import transform as transform_points
 
 from pixelworld_pipeline.facts import FactsSource
+from pixelworld_pipeline.schema import AnyValue, Bool, Key
 from pixelworld_pipeline.sources.http import cache_dir, get
 
 BASE = "https://data.sf.gov/resource/"
@@ -217,6 +216,11 @@ OPTIONS = ("rollYear", "classCodes")
 
 class DataSFFacts(FactsSource):
     """The `datasf` facts source: San Francisco's secured roll, per map lot."""
+
+    options_schema = {
+        "rollYear": Key(AnyValue("a year"), "The closed roll year (default: the latest)."),
+        "classCodes": Key(Bool(), "Facts carry the property class code (for `classes:` rules)."),
+    }
 
     attribution = ATTRIBUTION
 

@@ -12,6 +12,7 @@ import shapely
 from pixelworld_pipeline import objects
 from pixelworld_pipeline.build import S, buffered_lines, classify, drop_sloped, drop_small
 from pixelworld_pipeline.region import Region, RegionError, load_spec
+from pixelworld_pipeline.sources import overture
 from pixelworld_pipeline.world_format import NO_WATER, write_package
 
 SPEC = {
@@ -261,8 +262,10 @@ def test_park_polygons_come_from_the_lawn_classes_or_the_rule_or_a_default(monke
             }
         ]
 
-    monkeypatch.setattr(objects.overture, "land_use", land_use)
-    region = Region.from_dict(SPEC | {"sources": {"overture": {"release": "r"}}})
+    monkeypatch.setattr(overture, "land_use", land_use)
+    region = Region.from_dict(
+        SPEC | {"sources": {"features": {"kind": "overture", "release": "2026-10-21.0"}}}
+    )
     boxes = [[-115.2, 36.0, -115.195, 36.005], [-115.195, 36.005, -115.19, 36.01]]
     parks = objects.park_polygons(region, {}, boxes)
     assert len(parks) == 2 and all(pk.area > 1000 for pk in parks)  # projected metres
@@ -270,7 +273,7 @@ def test_park_polygons_come_from_the_lawn_classes_or_the_rule_or_a_default(monke
     lawn = Region.from_dict(
         SPEC
         | {
-            "sources": {"overture": {"release": "r"}},
+            "sources": {"features": {"kind": "overture", "release": "2026-10-21.0"}},
             "ground": {"lawn": {"landUse": ["park", "golf_course"]}},
         }
     )
@@ -661,7 +664,10 @@ def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
         return [{"id": "w", "class": "retaining_wall", "geometry": line}]
 
     monkeypatch.setattr(overture, "barriers", barriers)
-    spec = {**SPEC, "sources": {**SPEC["sources"], "overture": {"release": "r"}}}
+    spec = {
+        **SPEC,
+        "sources": {**SPEC["sources"], "features": {"kind": "overture", "release": "2026-10-21.0"}},
+    }
     spec["objects"] = {
         "walls": [{"group": "wall.stone", "classes": ["retaining_wall"], "spacing": 50}]
     }
@@ -675,7 +681,15 @@ def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
 
 
 def test_street_rows_keep_to_a_name_or_keep_off_one(monkeypatch):
-    region = Region.from_dict(SPEC | {"sources": {**SPEC["sources"], "overture": {"release": "x"}}})
+    region = Region.from_dict(
+        SPEC
+        | {
+            "sources": {
+                **SPEC["sources"],
+                "features": {"kind": "overture", "release": "2026-10-21.0"},
+            }
+        }
+    )
     cx, cy = region.cells
     p = objects.Placement(region, np.ones((cy, cx), dtype=bool))
     rows = [
@@ -685,7 +699,7 @@ def test_street_rows_keep_to_a_name_or_keep_off_one(monkeypatch):
          "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)"},
     ]  # fmt: skip
     # names come from their own query of the road layer
-    monkeypatch.setattr(objects.overture, "query", lambda *a, **k: rows)
+    monkeypatch.setattr(overture, "query", lambda *a, **k: rows)
     rule = {"group": "prop.neon", "roads": ["secondary"], "across": True, "spacing": 40}
     every = objects.street_trees(p, rule, rows, _none, "t")
     on = objects.street_trees(p, rule | {"name": "nathan"}, rows, _none, "t")

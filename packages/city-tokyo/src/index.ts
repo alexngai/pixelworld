@@ -9,8 +9,8 @@ import workerUrl from "./worker?worker&url";
 
 /**
  * @pixelworlds/city-tokyo: Tokyo's city pack (D-092). The pipeline half
- * (PLATEAU's facts and GSI's elevation tiles) is the Python distribution
- * pixelworld-city-jp; this is the browser half, Tokyo's generators. The
+ * (PLATEAU's facts and GSI's elevation tiles) is the pipeline's built-in
+ * `plateau` facts and `gsi-dem` terrain sources; this is the browser half, Tokyo's generators. The
  * tokyo style pack names it beside San Francisco's pack, whose `block` and
  * towers it reuses, so a view loads both:
  *

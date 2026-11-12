@@ -17,7 +17,6 @@ from typing import Any
 import numpy as np
 import shapely
 
-from . import facts as facts_sources
 from . import ground as ground_stage
 from . import importance as importance_stage
 from . import lanes as lane_stage
@@ -37,7 +36,7 @@ from .gridify import (
 )
 from .layout import UniformLayout, WarpedLayout, WarpSpec
 from .region import Region
-from .sources import overture, rasters
+from .sources import features
 from .world_format import NO_WATER, write_package
 
 SURFACES = {
@@ -327,27 +326,6 @@ def half_width_cells(
 CLIFF_DROP_METERS = 80.0
 FOREST_ABOVE_METERS = 2300.0
 
-# Attribution of the built-in vector and lidar sources; raster sources (terrain,
-# land cover) and facts sources carry their own (`attribution` on the plugin).
-ATTRIBUTION = {
-    "usgs-3dep-lidar": {
-        "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
-        "license": "Public domain",
-        "url": "https://www.usgs.gov/3d-elevation-program",
-    },
-    "overture": {
-        "name": "© OpenStreetMap contributors, Overture Maps Foundation "
-        "(transportation and base themes)",
-        "license": "ODbL 1.0",
-        "url": "https://overturemaps.org",
-    },
-    "overture-buildings": {
-        "name": "Overture Maps Foundation buildings theme: © OpenStreetMap contributors, "
-        "Esri Community Maps contributors, Microsoft, Google Open Buildings",
-        "license": "ODbL 1.0",
-        "url": "https://docs.overturemaps.org/attribution/",
-    },
-}
 # Objects avoid cells steeper than this (rise over run), whatever the cell size.
 OBJECT_MAX_SLOPE = 0.6
 
@@ -584,7 +562,7 @@ def rail_lines(
 ) -> list:
     """Rail segments as lines in cells (`sources.rails`, M3.5), each with the
     kind its first matching rule draws (`draw`: street, cable or train; rules
-    match as overture.rail_matches), out of their tunnels. With the
+    match as features.rail_matches), out of their tunnels. With the
     straightened roads' `shift`, they move with their streets: a vertex every
     half cell, so a track bends where its street was straightened, then
     simplified again (`simplify` cells) so it's drawn in long runs rather
@@ -595,11 +573,11 @@ def rail_lines(
     for rule in rules:
         kind = road_stage.RAIL_KINDS[rule["draw"]]
         for row in rows:
-            if row["id"] in claimed or not overture.rail_matches(rule, row):
+            if row["id"] in claimed or not features.rail_matches(rule, row):
                 continue
             claimed.add(row["id"])
             parts = []
-            for part in overture.rail_open_parts(row):
+            for part in features.rail_open_parts(row):
                 coords = np.asarray(part.coords)
                 xs, ys = layout.lonlat_to_cell(coords[:, 0], coords[:, 1])
                 c = np.asarray(
@@ -722,8 +700,8 @@ def build(
     if layout.warped and layout.spec.vertical:
         dem, ref, rel = layout.relief(dem)
     landcover = layout.cell_landcover()
-    progress.stage("ways", "roads, paths and rivers from Overture")
-    release = region.sources["overture"]["release"]
+    feats = plugins.source(region, "features")
+    progress.stage("ways", f"roads, paths and rivers from {feats.summary()}")
     bbox = region.lonlat_envelope()
     road_spec = region.sources["roads"]
     snap = region.snap or {}
@@ -736,8 +714,7 @@ def build(
     # lanes and medians (M3.5) need names and one-way restrictions; so do width rules
     lane_spec = (widths or {}).get("lanes")
     way_rules = list((widths or {}).get("ways") or [])
-    road_rows = overture.roads(
-        release,
+    road_rows = feats.roads(
         bbox,
         road_spec["classes"],
         road_spec.get("excludeSubclasses"),
@@ -746,8 +723,8 @@ def build(
     if road_spec.get("joinIslands"):
         # service roads that only connect through left-out subclasses (parking
         # aisles) join the network through as few of those as they need (M3.5)
-        extra = overture.road_subclasses(
-            release, bbox, road_spec["joinIslands"], lanes=bool(lane_spec or way_rules)
+        extra = feats.road_subclasses(
+            bbox, road_spec["joinIslands"], lanes=bool(lane_spec or way_rules)
         )
         extra = [r for r in extra if r["class"] in road_spec["classes"]]
         joined = road_stage.joining_segments(road_rows, extra)
@@ -757,10 +734,10 @@ def build(
     path_rows: list[dict] = []
     if region.sources.get("paths"):
         path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
-        path_rows = overture.paths(release, bbox, region.sources["paths"]["classes"])
+        path_rows = feats.paths(bbox, region.sources["paths"]["classes"])
     path_id = {c: i for i, c in path_ids.items()}
     rivers = region.sources.get("rivers") or {}
-    river_rows = overture.rivers(release, bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
+    river_rows = feats.rivers(bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
 
     # heights in steps on the shared corner field
     progress.stage("grid", "water, roads and cells")
@@ -816,7 +793,7 @@ def build(
         layout, road_rows, lambda r: road_id[keep.get(r["id"], {}).get("class", r["class"])]
     )
     road_lines_mapped = road_lines
-    path_lines = _lines_in_cells(layout, path_rows, lambda r: path_id[overture.path_class(r)])
+    path_lines = _lines_in_cells(layout, path_rows, lambda r: path_id[features.path_class(r)])
     road_shift = None
     deviation = None
     gardens: list[tuple[np.ndarray, np.ndarray, float, str]] = []
@@ -855,7 +832,7 @@ def build(
         rw = ROAD_WIDTH_M | {k: float(v) for k, v in (widths.get("roads") or {}).items()}
         pw = PATH_WIDTH_M | {k: float(v) for k, v in (widths.get("paths") or {}).items()}
         road_w, lane_counts = way_widths(road_rows, rw, way_rules)
-        path_w = {r["id"]: pw[overture.path_class(r)] for r in path_rows}
+        path_w = {r["id"]: pw[features.path_class(r)] for r in path_rows}
         # a kept road may be drawn narrower than its class (a crooked street's one lane)
         for seg_id in road_w.keys() & keep.keys():
             if "width" in keep[seg_id]:
@@ -910,7 +887,7 @@ def build(
     rail_rules = region.sources.get("rails") or []
     if rail_rules:
         classes = sorted({c for rule in rail_rules for c in rule.get("rail") or []})
-        rail_rows = overture.rails(release, bbox, classes)
+        rail_rows = feats.rails(bbox, classes)
         bundle_of: dict[str, float] = {}
         lines = rail_lines(layout, rail_rows, rail_rules, road_shift, bundle_of=bundle_of)
         rail = road_stage.rail_layer(
@@ -1025,9 +1002,7 @@ def build(
             path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
         # shorelines (D-094): the map's water polygons and river lines shape the
         # ground under the water planes, at micro-cell resolution
-        areas = _areas_in_cells(
-            layout, overture.water_areas(release, bbox, WATER_AREA_CLASSES), bbox
-        )
+        areas = _areas_in_cells(layout, feats.water_areas(bbox, WATER_AREA_CLASSES), bbox)
         river_hw = (
             terrain.get("riverWidthMeters", region.meters_per_cell) / 2 / region.meters_per_cell
         )
@@ -1119,21 +1094,25 @@ def build(
         surface[yard] = surface_id["yard"]
         progress.log(f"ground: {int(yard.sum())} yard cells")
     attribution = [
-        rasters.source(region.sources["dem"]["kind"], "terrain").attribution,
-        rasters.source(region.sources["landcover"]["kind"], "landcover").attribution,
-        ATTRIBUTION["overture"],
+        *plugins.attribution(region, "terrain"),
+        *plugins.attribution(region, "landcover"),
+        *plugins.entries(feats.attribution),
     ]
-    if region.objects and region.objects.get("buildings") is not None:
-        attribution.append(ATTRIBUTION["overture-buildings"])
-        if region.objects["buildings"].get("lidar"):
-            attribution.append(ATTRIBUTION["usgs-3dep-lidar"])
-    if region.objects:
-        # the facts source plugin's own entry (DataSF's, for San Francisco)
-        attribution += facts_sources.attribution(region.objects.get("typology"))
-    if region.objects and any("canopy" in r for r in (region.objects.get("vegetation") or [])):
-        from .sources.canopy import ATTRIBUTION as CANOPY_ATTRIBUTION
-
-        attribution.append(CANOPY_ATTRIBUTION)
+    micro_kind = ((region.micro or {}).get("dem") or {}).get("kind")  # else sources.dem's
+    if micro_kind:
+        got = plugins.load_source("terrain", micro_kind, where="micro.dem").attribution
+        attribution += [a for a in plugins.entries(got) if a not in attribution]
+    objects = region.objects or {}
+    if objects.get("buildings") is not None:
+        attribution += plugins.entries(feats.buildings_attribution)
+        if objects["buildings"].get("lidar") is not None:
+            attribution += plugins.attribution(region, "heights")
+    if objects.get("typology"):
+        attribution += plugins.attribution(region, "facts")
+    canopy_rules = [*(objects.get("vegetation") or []), *(objects.get("streetTrees") or [])]
+    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded")
+    if any("canopy" in r for r in canopy_rules) or wooded:
+        attribution += plugins.attribution(region, "canopy")
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None
@@ -1201,7 +1180,7 @@ def build(
             "version": "1",
             "params": {
                 "region": region.digest(),
-                "overtureRelease": release,
+                "features": region.sources["features"],
                 "maxSlope": region.max_slope,
                 "bilateral": [region.bilateral_cells, region.bilateral_meters],
                 **({"warp": layout.spec.digest()} if layout.warped else {}),

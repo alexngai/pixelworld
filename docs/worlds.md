@@ -30,7 +30,7 @@ Contents:
   - `overturemaps-us-west-2.s3.amazonaws.com`: Overture Maps roads, rivers, buildings and land use
   - `dataforgood-fb-data.s3.amazonaws.com` (canopy trees) and `usgs-lidar-public.s3.amazonaws.com` (lidar heights), only for specs that ask for them
 - **The download cache:** downloads are cached in `pipeline/.cache/`, so a rebuild reads nothing again. Set `PIXELWORLD_CACHE=/some/dir` to keep the cache elsewhere, or to share one between checkouts and worktrees. A town needs a few megabytes; the whole Southwest about a gigabyte.
-- **Coverage:** the built-in elevation sources are the USGS's, so they cover the United States. ESA WorldCover and Overture Maps are worldwide. Anywhere else needs a terrain source plugin ([plugins.md](plugins.md) §4).
+- **Coverage:** the built-in elevation sources are the USGS's, so they cover the United States. ESA WorldCover and Overture Maps are worldwide. Elsewhere the built-in `copernicus-glo30` (worldwide), `ign-rgealti` (France) and `gsi-dem` (Japan) cover terrain, or a terrain source from an installed package ([plugins.md](plugins.md) §4).
 
 ## 2. Pick a place and a scale
 
@@ -63,14 +63,14 @@ start: { lon: -112.1138, lat: 34.7489 }
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture: { release: 2026-10-21.0 }
+  features: { kind: overture, release: 2026-10-21.0 }
   roads: { classes: [primary, secondary, tertiary, residential] }
 ```
 
 That gives terrain, land cover, water and roads. [`worlds/jerome/region.yaml`](../worlds/jerome/region.yaml) adds what makes it Jerome: steeper slopes (`maxSlope: 3`), more road classes and streams, grid-snapped streets at 1.5× their width, micro-terrain, buildings and pinyon-juniper woodland. §7 explains each.
 
 - **Style packs:** `desert-southwest` (the Southwest's: red rock, desert, adobe) and `bay-area` (San Francisco's). A style pack decides what every surface and object looks like; the spec only names semantic groups.
-- **The Overture release** is pinned so builds repeat. Releases are named like `2026-10-21.0`, the one this repository's worlds use.
+- **The Overture release** (`sources.features`) is pinned so builds repeat. Releases are named like `2026-10-21.0`, the one this repository's worlds use.
 - **Scale levels** (`level:`, `levels:`) are optional. A world with one level needs neither.
 
 ## 4. Check it
@@ -94,7 +94,7 @@ jerome-typos.yaml:26: sources.roads.classes[5]: unknown value 'residental'; did 
 jerome-typos.yaml: 4 problems
 ```
 
-It also checks types and ranges, required keys, a start outside the bounds, landmark ids, and that the plugins the spec names are installed. `pixelworld build` runs the same checks first, so a bad spec never starts a build, and exits with 2.
+It also checks types and ranges, required keys, a start outside the bounds, landmark ids, and that the sources the spec names exist. `pixelworld build` runs the same checks first, so a bad spec never starts a build, and exits with 2.
 
 ## 5. Build it
 
@@ -178,7 +178,7 @@ Each of these is a section of the spec; the reference (§10) lists their keys.
 - **Vegetation** (`objects.vegetation`): trees and shrubs scattered by ESA WorldCover class (`tree`, `shrub`, `grass`, `bare`, …) at a spacing and density, or from the canopy height map (`canopy: 3`, trees 3 m and taller) where it has data.
 - **Street furniture** (`objects.streetTrees`, `objects.streetProps`): rows along roads of given classes, or at junctions.
 - **Landmarks** (`objects.landmarks`): ids from the registry, [`worlds/_landmarks/`](../worlds/_landmarks/README.md), or inline `{ group, lon, lat, hm }`.
-- **Building types** (`objects.typology`): rules that retype buildings by shape, street and public records, as San Francisco's rowhouses are. Records come from a facts source plugin ([plugins.md](plugins.md) §3).
+- **Building types** (`objects.typology`): rules that retype buildings by shape, street and public records, as San Francisco's rowhouses are. Records come from a facts source (`sources.facts`; [plugins.md](plugins.md) §3).
 - **Ground** (`ground:`): park lawns and yards from land use.
 - **Traffic** (`routes:`): every build writes ambient traffic routes along its roads, and along Overture's rail and ferry lines. `--no-routes` skips them; `pixelworld routes` adds them later without a rebuild.
 
@@ -205,8 +205,8 @@ Each of these is a section of the spec; the reference (§10) lists their keys.
 |---|---|
 | `…: unknown key; did you mean …?` (exit 2) | A typo: fix the spelling. An unknown key is an error, never silently ignored. |
 | `no style pack 'x'` (exit 2) | Use one of the packs listed. A pack of your own goes in a `_styles/<name>/style.json` beside (or above) the spec. |
-| `no terrain source named 'x'` (exit 2) | Use `usgs-3dep-13arcsec` or `usgs-3dep-1arcsec`, or install the plugin that provides it (`pixelworld plugins` lists what's installed). |
-| `sources.overture.release: Overture has no release 'x'` (exit 2) | Use a release that exists, such as `2026-10-21.0`. |
+| `no terrain source named 'x'` (exit 2) | Use `usgs-3dep-13arcsec` or `usgs-3dep-1arcsec`, or install a package that provides it (`pixelworld plugins` lists the sources by role). |
+| `sources.features.release: Overture has no release 'x'` (exit 2) | Use a release that exists, such as `2026-10-21.0`. |
 | `a download failed` (exit 3) | Check the network or proxy (the hosts in §1) and build again; what was already downloaded is cached. |
 | `the build failed in the … stage` with a traceback (exit 3) | A bug: report it with the traceback. If the stage was `routes`, `--no-routes` builds the world without traffic. |
 | `the road report found problems` (exit 1) | The package is written. Roads that don't join up are usually fixed by `snap:` (as in Jerome), or by finer cells. |
@@ -269,7 +269,11 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 |---|---|---|---|
 | `dem` | [mapping](#spec-sources-dem) | **required** | Elevation: the terrain source. |
 | `landcover` | [mapping](#spec-sources-landcover) | **required** | Land cover: surfaces, water and vegetation. |
-| `overture` | [mapping](#spec-sources-overture) | **required** | Overture Maps: roads, paths, rivers, rail, buildings, land use. |
+| `features` | [mapping](#spec-sources-features) | **required** | The vector map (D-110). |
+| `facts` | [mapping](#spec-sources-facts) | — | Building facts (D-055). |
+| `canopy` | [mapping](#spec-sources-canopy) | — | Tree canopy heights. |
+| `heights` | [mapping](#spec-sources-heights) | — | Measured building heights (D-052). |
+| `importance` | [mapping](#spec-sources-importance) | — | Place fame, for warped layouts. |
 | `roads` | [mapping](#spec-sources-roads) | **required** | The road network. |
 | `rivers` | [mapping](#spec-sources-rivers) | `{ subtypes: [river] }` | River lines. |
 | `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-103): a garden's pond, a castle's moat. Each is levelled as a lake. |
@@ -279,26 +283,68 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 <a id="spec-sources-dem"></a>
 #### `sources.dem`
 
+Other keys here are the source's options.
+
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `kind` | string | **required** | The terrain source: `usgs-3dep-13arcsec` (10 m, United States), `usgs-3dep-1arcsec` (30 m, United States), or a plugin's (`pixelworld plugins` lists them). |
+| `kind` | string | **required** | The terrain source: `usgs-3dep-13arcsec` (10 m, United States), `usgs-3dep-1arcsec` (30 m, United States), `copernicus-glo30` (30 m, worldwide), `gsi-dem` (Japan), `ign-rgealti` (France), or an installed one (`pixelworld plugins` lists them). |
 | `overview` | 1, 2, 4, 8, … | 4 | Read the source's overview this many times coarser than its full resolution (1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source. |
 | `resampling` | one of `average`, `bilinear`, `cubic`, `nearest`, `mode`, `min`, `max`, `med` | `average` | How source pixels become cell corners: `average` when cells are coarser than the source, `bilinear` when they're finer. |
 
 <a id="spec-sources-landcover"></a>
 #### `sources.landcover`
 
+Other keys here are the source's options.
+
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `kind` | string | **required** | The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or a plugin's. |
+| `kind` | string | **required** | The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or an installed one giving ESA WorldCover's class codes. |
 | `overview` | 1, 2, 4, 8, … | 16 | Read the source's overview this many times coarser than its full resolution (1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source. |
 
-<a id="spec-sources-overture"></a>
-#### `sources.overture`
+<a id="spec-sources-features"></a>
+#### `sources.features`
+
+Other keys here are the source's options.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `release` | string | **required** | The Overture Maps release roads, rivers, buildings and land use come from, pinned so builds repeat (e.g. `2026-10-21.0`). |
+| `kind` | string | **required** | The map's roads, paths, rivers, rail, water, land use and buildings: `overture` (with `release:`, an Overture Maps release like `2026-10-21.0`, pinned so builds repeat), or an installed source. |
+
+<a id="spec-sources-facts"></a>
+#### `sources.facts`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | **required** | Per-building facts (year built, storeys, use) for `objects.typology`: `datasf`, `pluto`, `apur`, `plateau`, `areas`, or an installed source. |
+
+<a id="spec-sources-canopy"></a>
+#### `sources.canopy`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `meta-chm` | Tree heights for `canopy:` rules: `meta-chm` (WRI and Meta, 1 m, worldwide). |
+
+<a id="spec-sources-heights"></a>
+#### `sources.heights`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `usgs-3dep-lidar` | Building heights for `objects.buildings.lidar`: `usgs-3dep-lidar` (with `project:`, a USGS 3DEP EPT project). |
+
+<a id="spec-sources-importance"></a>
+#### `sources.importance`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `wikidata` | Famous places for `warp.importance`: `wikidata`. |
 
 <a id="spec-sources-roads"></a>
 #### `sources.roads`
@@ -387,6 +433,8 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 
 <a id="spec-micro-dem"></a>
 #### `micro.dem`
+
+Other keys here are the source's options.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
@@ -629,7 +677,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `simplifyMeters` | number, ≥ 0 (m) | 2 | Footprint simplification. |
 | `courtyards` | true/false | false | Keep footprints' courtyards (their holes, as `fh`) instead of filling them. |
 | `implausible` | [mapping](#spec-objects-buildings-implausible) | on | Footprints in parks that are really trees are dropped (null keeps every one). |
-| `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from USGS 3DEP lidar. |
+| `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from measured heights (`sources.heights`: USGS 3DEP lidar). |
 
 <a id="spec-objects-buildings-implausible"></a>
 #### `objects.buildings.implausible`
@@ -646,7 +694,6 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `project` | string | **required** | The USGS 3DEP lidar project (e.g. `USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018`). |
 | `res` | number, > 0 (m) | 4 | Height grid resolution. |
 | `depth` | integer, ≥ 0 | 6 | Point-cloud octree depth read. |
 | `towerGap` | number, ≥ 0 (m) | 25 | Roofs this far above the median are tower parts. |
@@ -655,22 +702,10 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 <a id="spec-objects-typology"></a>
 #### `objects.typology`
 
-Other keys here are facts source options (the older form).
-
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `facts` | [a plugin name, or { plugin, …options }](#spec-objects-typology-facts) | — | A facts source plugin (year built, use, storeys) by name: `datasf`, or `{ plugin: datasf, …options }`. |
 | `rules` | [list of mappings](#spec-objects-typology-rules) | — | Matched in order; the first match picks the group. |
 | `roofHints` | true/false | false | The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof hint where Overture gives none. |
-
-<a id="spec-objects-typology-facts"></a>
-#### `objects.typology.facts`
-
-Other keys here are plugin options.
-
-| Key | Type | Default | Meaning |
-|---|---|---|---|
-| `plugin` | string | **required** | The facts source plugin. |
 
 <a id="spec-objects-typology-rules"></a>
 #### `objects.typology.rules[]`

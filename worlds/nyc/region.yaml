@@ -76,7 +76,6 @@ objects:
   # First match wins. Over the rivers in New Jersey there are no facts, and
   # buildings keep their generic groups.
   typology:
-    facts: pluto
     rules:
       - { group: building.pier, onWater: true }
       # brownstone and brick rows: one- and two-family houses (A, B) and
@@ -169,8 +168,8 @@ start: { lon: -73.9855, lat: 40.7580 } # Times Square
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: pluto }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
   rivers:

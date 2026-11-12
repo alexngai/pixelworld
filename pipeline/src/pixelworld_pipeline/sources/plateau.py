@@ -3,14 +3,12 @@ Ministry of Land, Infrastructure, Transport and Tourism (MLIT), one CityGML
 file of buildings per 1 km mesh, read per building into a footprint, its
 measured height, storeys, year built, use, structure and roof shape.
 
-The `plateau` facts source (PlateauFacts) is registered through the
-`pixelworld.facts` entry point. A region names it in its typology section:
+The `plateau` facts source (PlateauFacts) is built in. A region selects it:
 
-    objects:
-      typology:
-        facts: plateau
-        # or pinned to the PLATEAU release its extracts were cached from:
-        facts: { plugin: plateau, year: 2025 }
+    sources:
+      facts: { kind: plateau }
+      # or pinned to the PLATEAU release its extracts were cached from:
+      facts: { kind: plateau, year: 2025 }
 
 Options:
 - year: the PLATEAU release (the year the city's models were published).
@@ -58,6 +56,7 @@ from rasterio.warp import transform as transform_points
 
 from pixelworld_pipeline import progress
 from pixelworld_pipeline.facts import FactsSource
+from pixelworld_pipeline.schema import Bool, Key, Num
 from pixelworld_pipeline.sources.http import cache_dir, get
 
 CATALOG = "https://api.plateau.reearth.io/datacatalog/citygml/m:"
@@ -568,6 +567,11 @@ OPTIONS = ("year", "keepGml")
 
 class PlateauFacts(FactsSource):
     """The `plateau` facts source: PLATEAU's building models of a Japanese city."""
+
+    options_schema = {
+        "year": Key(Num(2020, integer=True), "The PLATEAU release (the year it was published)."),
+        "keepGml": Key(Bool(), "Keep the CityGML extracts after reading them."),
+    }
 
     attribution = ATTRIBUTION
 

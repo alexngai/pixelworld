@@ -25,7 +25,7 @@ start: { lon: -112.1138, lat: 34.7489 }
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture: { release: 2026-10-21.0 }
+  features: { kind: overture, release: 2026-10-21.0 }
   roads: { classes: [primary, residential] }
   rivers: { subtypes: [river, stream] }
 objects:
@@ -152,8 +152,8 @@ CASES = [
     (
         "a date where text belongs (YAML reads 2026-10-21 as a date)",
         edit("release: 2026-10-21.0", "release: 2026-10-21"),
-        "sources.overture.release",
-        "overture:",
+        "sources.features.release",
+        "features:",
         "YAML read 2026-10-21 as a date; quote it",
     ),
     (
@@ -247,12 +247,26 @@ def test_unknown_landmarks_are_suggested_from_the_registry(tmp_path):
     assert issue.path == ("objects", "landmarks", 0) and "did you mean 'dam'?" in issue.message
 
 
-def test_plugin_options_are_kept_but_typos_beside_them_are_not(tmp_path):
-    ok = GOOD + "  typology:\n    facts: { plugin: datasf, rollYear: '2025' }\n    rules: []\n"
-    assert [i for i in schema.validate(yaml.safe_load(ok)) if i.level == "error"] == []
-    legacy = GOOD + "  typology:\n    facts: datasf\n    rollYear: '2025'\n    rules: []\n"
-    assert [i for i in schema.validate(yaml.safe_load(legacy)) if i.level == "error"] == []
-    typo = GOOD + "  typology:\n    facts: datasf\n    rulse: []\n"
+def test_source_options_are_kept_and_checked_where_the_source_declares_them(tmp_path):
+    def errors(text):
+        return [i for i in schema.validate(yaml.safe_load(text)) if i.level == "error"]
+
+    facts = "  facts: { kind: datasf, rollYear: '2025', classCodes: true }\n"
+    assert errors(GOOD.replace("  roads:", facts + "  roads:")) == []
+    # a source's options are checked against what it declares
+    (issue,) = errors(
+        GOOD.replace("  roads:", "  facts: { kind: datasf, rolYear: 2025 }\n  roads:")
+    )
+    assert (
+        issue.path == ("sources", "facts", "rolYear")
+        and "did you mean 'rollYear'?" in issue.message
+    )
+    (issue,) = errors(GOOD.replace("release: 2026-10-21.0 ", ""))
+    assert issue.path == ("sources", "features", "release") and "missing" in issue.message
+    # the pipeline's own keys aren't options, and a source that takes none says so
+    (issue,) = errors(GOOD.replace("overview: 1 }", "overview: 1, tileset: hires }", 1))
+    assert issue.path == ("sources", "dem", "tileset") and "takes no options" in issue.message
+    typo = GOOD + "  typology:\n    rulse: []\n"
     (issue,) = schema.validate(yaml.safe_load(typo))
     assert "did you mean 'rules'?" in issue.message
 

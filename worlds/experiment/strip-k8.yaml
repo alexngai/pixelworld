@@ -16,7 +16,7 @@ start: { lon: -115.1720, lat: 36.1125 }
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture: { release: 2026-10-21.0 }
+  features: { kind: overture, release: 2026-10-21.0 }
   roads: { classes: [motorway, trunk, primary, secondary] }
   rivers: { subtypes: [river] }
 

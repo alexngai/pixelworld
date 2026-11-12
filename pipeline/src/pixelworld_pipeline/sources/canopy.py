@@ -4,6 +4,9 @@ heights for placing trees where they really stand (M3).
 The global map is a set of cloud-optimized GeoTIFFs in EPSG:3857, one per
 quadkey tile, listed in tiles.geojson. Windows are read over HTTPS (GDAL's
 /vsicurl/) and cached per region box under .cache/canopy.
+
+It is the built-in source of role `canopy` (`meta-chm`, D-110): rules with
+`canopy: <metres>` read tree heights from whichever `sources.canopy` names.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ import json
 import numpy as np
 from rasterio.warp import transform as transform_points
 
+from ..plugins import Source
 from .http import CACHE_ROOT, SSL_CONTEXT
 
 BASE = "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/"
@@ -96,3 +100,24 @@ class CanopyGrid:
             ok = (c >= 0) & (c < cols) & (r >= 0) & (r < rows)
             out[ok] = np.maximum(out[ok], h[r[ok], c[ok]])
         return out
+
+
+class CanopySource(Source):
+    """The contract of role `canopy`: tree heights in metres."""
+
+    role = "canopy"
+
+    def grid(self, box: tuple[float, float, float, float]):
+        """Tree heights over a lon/lat box: an object whose `sample(xs, ys, crs)`
+        gives the height (m) at projected points of `crs`, 0 where there are none."""
+        raise NotImplementedError
+
+
+class MetaCanopy(CanopySource):
+    attribution = ATTRIBUTION
+
+    def grid(self, box):
+        return CanopyGrid(box)
+
+
+META_CHM = MetaCanopy()

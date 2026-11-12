@@ -1,7 +1,7 @@
 import type { Generator } from "pixelworld/generators";
 import { BUILDING_GENERATORS } from "./buildings";
 
-/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is pixelworld-city-nyc). */
+/** The plugin's name: the npm package's, and what style packs name in `plugins` (the Python half is the pipeline's `pluto` facts source). */
 export const PLUGIN_NAME = "@pixelworlds/city-nyc";
 
 /**

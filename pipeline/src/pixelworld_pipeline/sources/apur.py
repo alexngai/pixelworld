@@ -3,14 +3,12 @@ bâtie Paris": construction period, median height, roof form, urban fabric)
 joined to IGN's BD TOPO buildings (storeys, dwellings, use), with APUR's
 quartier as the neighbourhood.
 
-The `apur` facts source (ApurFacts) is registered through the
-`pixelworld.facts` entry point. A region names it in its typology section:
+The `apur` facts source (ApurFacts) is built in. A region selects it:
 
-    objects:
-      typology:
-        facts: apur
-        # or pinned to the downloads it cached:
-        facts: { plugin: apur, version: "2026-07-30" }
+    sources:
+      facts: { kind: apur }
+      # or pinned to the downloads it cached:
+      facts: { kind: apur, version: "2026-07-30" }
 
 Options:
 - version: the tag the downloads are cached under (default: the date APUR
@@ -41,6 +39,7 @@ import shapely
 from rasterio.warp import transform as transform_points
 
 from pixelworld_pipeline.facts import FactsSource
+from pixelworld_pipeline.schema import Key, Str
 from pixelworld_pipeline.sources.http import cache_dir, get
 
 APUR = "https://carto2.apur.org/apur/rest/services/OPENDATA/"
@@ -306,6 +305,10 @@ OPTIONS = ("version",)
 
 class ApurFacts(FactsSource):
     """The `apur` facts source: APUR's footprints of Paris with IGN's BD TOPO buildings."""
+
+    options_schema = {
+        "version": Key(Str(), "The APUR download date the cache is named by (`2026-07-30`)."),
+    }
 
     attribution = ATTRIBUTION
 

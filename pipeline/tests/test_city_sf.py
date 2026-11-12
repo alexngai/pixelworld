@@ -11,11 +11,9 @@ import pytest
 import shapely
 from rasterio.warp import transform as transform_points
 
-import pixelworld_city_sf
-from pixelworld_city_sf import datasf
 from pixelworld_pipeline import facts, plugins
 from pixelworld_pipeline.region import Region
-from pixelworld_pipeline.sources import http
+from pixelworld_pipeline.sources import datasf, http
 
 REGION = Region.from_dict(
     {
@@ -131,11 +129,11 @@ def test_downloads_are_cached_in_the_shared_cache(tmp_path, monkeypatch):
     assert datasf._soql(datasf.ASSESSOR, {}, "test-rows") == rows and len(urls) == 1
 
 
-def test_the_pack_registers_its_facts_source():
-    assert plugins.load(plugins.FACTS, "datasf") is datasf.DataSFFacts
-    assert plugins.available(plugins.FACTS)["datasf"].origin == "pixelworld-city-sf"
-    assert facts.attribution({"facts": "datasf"}) == [datasf.ATTRIBUTION]
-    assert facts.attribution({"facts": {"plugin": "datasf", "classCodes": True}}) == [
-        pixelworld_city_sf.ATTRIBUTION
+def test_the_facts_source_is_built_in():
+    assert plugins.load_source("facts", "datasf") is datasf.DataSFFacts
+    assert plugins.available()["datasf"].origin == "builtin"
+    assert plugins.attribution({"facts": {"kind": "datasf"}}, "facts") == [datasf.ATTRIBUTION]
+    assert plugins.attribution({"facts": {"kind": "datasf", "classCodes": True}}, "facts") == [
+        datasf.ATTRIBUTION
     ]
     assert issubclass(datasf.DataSFFacts, facts.FactsSource)

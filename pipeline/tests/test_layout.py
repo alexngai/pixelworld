@@ -5,7 +5,7 @@ import pytest
 import shapely
 from scipy import ndimage
 
-from pixelworld_pipeline import importance, objects
+from pixelworld_pipeline import importance, objects, plugins
 from pixelworld_pipeline.layout import UniformLayout, WarpedLayout, WarpSpec
 from pixelworld_pipeline.region import Region
 from pixelworld_pipeline.sources import rasters
@@ -48,7 +48,7 @@ def no_network(monkeypatch):
     def fake_sample(region, kind, x, y, spacing):
         x = np.asarray(x, dtype=float).ravel()
         y = np.asarray(y, dtype=float).ravel()
-        if kind.startswith("usgs"):
+        if plugins.split_ref(kind)[0].startswith("usgs"):
             return 600 + (x - x.min()) * 0.01 + 50 * np.sin(y / 3000.0)
         return np.full(x.shape, 50, dtype=np.uint8)
 

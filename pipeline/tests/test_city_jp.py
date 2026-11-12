@@ -18,10 +18,9 @@ from rasterio.transform import from_origin
 from rasterio.warp import Resampling
 from rasterio.warp import transform as transform_points
 
-from pixelworld_city_jp import gsi, plateau
 from pixelworld_pipeline import facts, plugins
 from pixelworld_pipeline.region import Region
-from pixelworld_pipeline.sources import http, rasters
+from pixelworld_pipeline.sources import gsi, http, plateau, rasters
 
 LAT0, LON0 = 35.0040, 135.7560  # in mesh 52354600 (Shijō-Karasuma)
 KX = 111_320.0 * math.cos(math.radians(LAT0))
@@ -567,16 +566,16 @@ def test_where_no_dem_has_a_tile_it_says_so(tmp_path, monkeypatch):
         gsi.tile("dem1a_png", 17, 1, 2)
 
 
-def test_the_pack_registers_its_plugins_with_attribution():
-    assert plugins.load(plugins.FACTS, "plateau") is plateau.PlateauFacts
-    assert plugins.available(plugins.FACTS)["plateau"].origin == "pixelworld-city-jp"
+def test_japans_sources_are_built_in_with_attribution():
+    assert plugins.load_source("facts", "plateau") is plateau.PlateauFacts
+    assert plugins.available()["plateau"].origin == "builtin"
     assert issubclass(plateau.PlateauFacts, facts.FactsSource)
-    assert facts.attribution({"facts": "plateau"}) == plateau.ATTRIBUTION
+    assert plugins.attribution({"facts": {"kind": "plateau"}}, "facts") == plateau.ATTRIBUTION
     (a,) = plateau.ATTRIBUTION
     assert "出典：国土交通省 PLATEAUウェブサイト" in a["name"] and "加工して作成" in a["name"]
     assert "PDL 1.0" in a["license"] and "CC BY 4.0" in a["license"]
     assert rasters.source("gsi-dem", "terrain") is gsi.GSI_DEM
-    assert plugins.available(plugins.SOURCES)["gsi-dem"].origin == "pixelworld-city-jp"
+    assert plugins.available()["gsi-dem"].origin == "builtin"
     g = gsi.GSI_DEM.attribution
     assert "出典：国土地理院ウェブサイト" in g["name"] and "を加工して作成" in g["name"]
     assert "PDL 1.0" in g["license"]

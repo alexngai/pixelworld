@@ -53,7 +53,6 @@ objects:
     houseMaxArea: 350
   # the walking level's typology (D-091, D-100); see walk.yaml for the reasons
   typology:
-    facts: { plugin: plateau, year: 2025 }
     roofHints: true
     rules:
       # Nijō Castle's two palaces and gates, and the Imperial Palace's halls and
@@ -108,8 +107,8 @@ start: { lon: 135.7593, lat: 34.9880 } # Karasuma-dōri by Kyoto Tower
 sources:
   dem: { kind: gsi-dem, overview: 4 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture:
-    release: 2026-10-21.0
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: plateau, year: 2025 }
   roads:
     classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
   rivers:
