@@ -357,6 +357,7 @@ export class Baker {
       gl.activeTexture(gl.TEXTURE0 + SHAPE_UNIT);
       gl.bindTexture(gl.TEXTURE_2D, up.shape);
       gl.uniform1i(u.loc("uFieldShape"), SHAPE_UNIT);
+      gl.uniform1i(u.loc("uShores"), f.shores ? 1 : 0);
       gl.bindVertexArray(this.emptyVao);
       gl.uniform1i(u.loc("uWallList"), 4);
       // tops: every micro-cell

@@ -100,6 +100,7 @@ Status values:
 | D-089 | Japan's city pack: PLATEAU's building models as facts, roof shapes from LoD2, and GSI's elevation tiles | Accepted (M5) |
 | D-094 | Water as a plane over a shaped shore: shorelines from the map's water polygons at micro-cell resolution | Accepted (M5) |
 | D-095 | Natural ground lit by its slope, with dithered light, hollows, ridges and patches | Accepted (M5) |
+| D-096 | Ground surfaces per pixel, with warped, dithered borders, and rock where the ground is steep | Accepted (M5) |
 
 ---
 
@@ -1098,4 +1099,16 @@ The point is more room for visual interest; both halves are wanted.
   - **`light: "slope"` on natural surfaces in the style packs:** it also turns their risers into the surface's own colour, where cliffs should show rock.
   - **Second ramps per surface (dry grass, pale sand):** new style tables for what a shade shift already reads as.
   - **Style knobs for the constants:** every pack takes the same values for now; add them when one needs others.
+
+### D-096: Ground surfaces per pixel, with warped, dithered borders, and rock where the ground is steep (accepted, M5)
+- **Why:** land cover is per cell, and each micro-cell took one surface from a point jittered up to 0.4 cell, so borders came out as micro-cell staircases around cell-sized blocks. Rock was worse: the pipeline makes it from a cell-level cliff test (an edge dropping 80 m), so whole cells of canyon wall turned rock (100 m blocks at Hoover Dam), and a per-micro-cell steep test scattered dark micro-diamonds.
+- **What** (`groundSurface` in `GBUFFER_FS`, micro-terrain tops):
+  - **Borders:** each pixel takes the surface of the cell a warped point lands in: world-anchored value noise bends borders by up to 0.45 cell over about 1.2 cells and crinkles them by up to 0.15 over about 0.3, and a 4×4 ordered dither of up to 0.1 cell softens them. Fields and city blocks are warped too; roads, paths and rails draw over them as before.
+  - **Rock:** natural ground (trees or speckle) is bare rock where the ground's slope over about a cell (D-095's prepass) is steeper than the style's steep-rock slope, varied ±30% by noise and dithered over a quarter of it. A cell the pipeline called rock stays rock down to a quarter of that slope and shows the ground beside it (the nearest cell that isn't rock or water) where gentler. Snow and water never turn to rock. The per-micro-cell steep test is gone.
+  - **Water:** packages without planes (before D-094) keep water cells exact, as before; with planes, ground above the plane inside a water cell takes the land beside it rather than the water's colour.
+  - **Style:** the desert ranges gain a brown band (`redwall`) from 450 m, so the Black Canyon's walls run from basalt at the water to brown above.
+- **Measured** (`tools/bench.mjs`, software rendering, median tile bake): Grand Canyon Village 891 ms against 802 ms before (within the run-to-run noise of about ±20%).
+- **Rejected alternatives:**
+  - **Land cover per micro-cell from the pipeline:** a new chunk layer K² times the cells', for borders that would still be micro-cell staircases.
+  - **Rock from the pipeline's cell class alone, or from slope alone:** the first is the blocks; the second loses the walls the cell test finds and the ring's slope averages away (terraced cliffs).
 

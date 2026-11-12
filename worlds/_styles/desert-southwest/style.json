@@ -73,6 +73,7 @@
       { "name": "Grey limestone", "aboveMeters": 1700, "ramp": "limestone" },
       { "name": "Red sandstone", "aboveMeters": 1300, "ramp": "supai" },
       { "name": "Ochre volcanics", "aboveMeters": 800, "ramp": "ochre" },
+      { "name": "Brown andesite", "aboveMeters": 450, "ramp": "redwall" },
       { "name": "Basalt", "aboveMeters": -100000, "ramp": "basalt" }
     ]
   },
