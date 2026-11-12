@@ -1,0 +1,12 @@
+name: Empire State Building
+wikidata: Q9188
+# Wikidata's coordinate, on Fifth Avenue at 34th Street. Its image (the
+# silhouette and the lit top) is used as a trademark by its owners
+# (data-sources.md §7): the generic depiction is any setback tower of its
+# height, with no mast, antenna or lighting scheme of its own.
+anchor: { lon: -73.98556, lat: 40.74833 }
+height: 381          # to the top of its mast (CTBUH); Wikidata's 453 m and 1,500 ft count the antenna
+clear: 30
+replaces: [Empire State Building]
+depictions:
+  generic: { group: landmark.tower.deco.setback }   # a limestone setback tower with a stepped crown; no name

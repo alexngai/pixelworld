@@ -1,0 +1,14 @@
+name: Shibuya 109
+wikidata: Q685328
+# Wikidata's coordinate: the cylinder on the corner where Dōgenzaka and
+# Bunkamura-dōri fork, a round footprint of its own in Overture (12 m
+# across). The block behind it stays an ordinary building (PLATEAU: 33.6 m,
+# 8 storeys).
+anchor: { lon: 139.699011, lat: 35.659544 }
+height: 38           # depicted: the block's 33.6 m and the sign tower over it
+footprint: true
+replaces: [93276945-cae0-4598-a056-fb9d11aa9430]
+depictions:
+  # a round tower of silver bands, a blank fin on top where the sign
+  # stands; no lettering
+  generic: { group: landmark.tower.cylinder }

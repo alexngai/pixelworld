@@ -17,6 +17,11 @@
     "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/style": "workspace:*",
     "@pixelworlds/world-format": "workspace:*",
-    "@pixelworlds/city-sf": "workspace:*"
+    "@pixelworlds/city-sf": "workspace:*",
+    "@pixelworlds/city-hongkong": "workspace:*",
+    "@pixelworlds/city-kyoto": "workspace:*",
+    "@pixelworlds/city-nyc": "workspace:*",
+    "@pixelworlds/city-paris": "workspace:*",
+    "@pixelworlds/city-tokyo": "workspace:*"
   }
 }

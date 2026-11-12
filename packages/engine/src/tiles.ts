@@ -1,5 +1,5 @@
 import type { Rotation } from "@pixelworlds/grid";
-import { cellsScreenRect, type TileRequest } from "@pixelworlds/runtime";
+import { cellsScreenRect, tileKey, type TileRequest } from "@pixelworlds/runtime";
 
 const PREFETCH_PX = 96; // bake tiles this far outside the view
 
@@ -27,6 +27,10 @@ export class TileGrid {
   readonly tilesX: number;
   readonly tilesY: number;
   private readonly heights: [number, number][] = [];
+  /** Per tile, the highest top (steps) of the objects standing on it (`addObject`); -Infinity for none. */
+  private readonly tops: Float32Array;
+  /** The highest object top in the world (steps), or -Infinity. */
+  maxTop = -Infinity;
 
   constructor(
     private readonly cellsX: number,
@@ -47,6 +51,27 @@ export class TileGrid {
         const [lo, hi] = heightRangeFor(x0, y0, x0 + tileSize, y0 + tileSize);
         const edge = tx === 0 || ty === 0 || tx === this.tilesX - 1 || ty === this.tilesY - 1;
         this.heights.push([edge ? floor : lo, hi]);
+      }
+    this.tops = new Float32Array(this.tilesX * this.tilesY).fill(-Infinity);
+  }
+
+  /**
+   * An object over the cells [x0, x1] × [y0, y1]: its top is `abs` steps, or
+   * `rise` steps above the highest ground of each tile it covers. A tower
+   * taller than the default allowance still counts its tile as in view.
+   */
+  addObject(x0: number, y0: number, x1: number, y1: number, rise: number, abs?: number): void {
+    const ts = this.tileSize;
+    const tx0 = Math.max(0, Math.floor(x0 / ts));
+    const ty0 = Math.max(0, Math.floor(y0 / ts));
+    const tx1 = Math.min(this.tilesX - 1, Math.floor(x1 / ts));
+    const ty1 = Math.min(this.tilesY - 1, Math.floor(y1 / ts));
+    for (let ty = ty0; ty <= ty1; ty++)
+      for (let tx = tx0; tx <= tx1; tx++) {
+        const i = ty * this.tilesX + tx;
+        const top = abs ?? this.heights[i]![1] + rise;
+        if (top > this.tops[i]!) this.tops[i] = top;
+        if (top > this.maxTop) this.maxTop = top;
       }
   }
 
@@ -93,14 +118,16 @@ export class TileGrid {
     const list: TileInView[] = [];
     for (let ty = 0; ty < this.tilesY; ty++)
       for (let tx = 0; tx < this.tilesX; tx++) {
-        const [lo, hi] = this.heights[ty * this.tilesX + tx]!;
+        const i = ty * this.tilesX + tx;
+        const [lo, hi] = this.heights[i]!;
         const rect = cellsScreenRect(
           tx * ts * RS,
           ty * ts * RS,
           Math.min(this.cellsX, (tx + 1) * ts) * RS,
           Math.min(this.cellsY, (ty + 1) * ts) * RS,
           lo * RS,
-          hi * RS + (this.objects ? 12 : 0), // tall objects rise up to ~96 px above the terrain
+          // objects rise ~96 px above the terrain, or to the top of the tallest one added
+          Math.max(hi * RS + (this.objects ? 12 : 0), this.tops[i]! * RS),
           r,
         );
         const near =
@@ -258,20 +285,29 @@ export class Prefetches {
 }
 
 /**
- * The order to bake tiles in: the visible ones, then those ahead of the
- * camera's motion, then those asked for, then the rest around the view;
- * each once.
+ * The order to bake tiles in: the ground of visible tiles not drawn yet (quick,
+ * so the view is never blank), the visible ones, then the bare ones a reveal
+ * needs, then those ahead of the camera's motion, then those asked for, then
+ * the rest around the view; each once.
  */
-export function bakeOrder(near: readonly TileInView[], ahead: readonly TileRequest[], asked: readonly TileRequest[]): TileRequest[] {
+export function bakeOrder(
+  near: readonly TileInView[],
+  ahead: readonly TileRequest[],
+  asked: readonly TileRequest[],
+  bare: readonly TileRequest[] = [],
+  ground: readonly TileRequest[] = [],
+): TileRequest[] {
   const seen = new Set<string>();
   const out: TileRequest[] = [];
   const push = (t: TileRequest) => {
-    const k = `${t.rotation}:${t.tx},${t.ty}`;
+    const k = tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
     if (seen.has(k)) return;
     seen.add(k);
     out.push(t);
   };
+  for (const t of ground) push(t);
   for (const t of near) if (t.visible) push(t);
+  for (const t of bare) push(t);
   for (const t of ahead) push(t);
   for (const t of asked) push(t);
   for (const t of near) push(t);

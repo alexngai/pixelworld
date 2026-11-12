@@ -1,0 +1,89 @@
+{
+  "packageHash": "8bc2cd1fc767bc276a7d7f89eb19ca6b0a69e63942e9825787815062afa1161b",
+  "cells": [
+    634,
+    1134
+  ],
+  "chunks": 180,
+  "heightRange": [
+    -9,
+    25
+  ],
+  "inputs": {
+    "roadSegments": 19997,
+    "riverLines": 26
+  },
+  "objects": {
+    "building.apartment.prewar": 3364,
+    "building.brownstone": 8250,
+    "building.commercial": 7599,
+    "building.commercial.historic": 7219,
+    "building.house": 805,
+    "building.industrial": 1032,
+    "building.loft.castiron": 297,
+    "building.parking": 73,
+    "building.pier": 30,
+    "building.residential": 16460,
+    "building.tenement": 13623,
+    "building.tower": 284,
+    "building.tower.deco": 3261,
+    "building.tower.glass": 1678,
+    "building.tower.hotel": 4,
+    "building.tower.postmodern": 988,
+    "building.tower.slab": 2403,
+    "landmark.block.wedge": 1,
+    "landmark.bridge.cantilever": 10,
+    "landmark.bridge.suspension": 17,
+    "landmark.bridge.suspension.steel": 8,
+    "landmark.hall.terminal": 1,
+    "landmark.tower.deco.setback": 1,
+    "landmark.tower.deco.steel": 1,
+    "landmark.tower.gothic": 1,
+    "landmark.tower.obelisk.diagonal": 1,
+    "prop.signal": 438,
+    "prop.streetlight": 12366,
+    "tree": 62094,
+    "tree.street": 14764
+  },
+  "roads": {
+    "cells": 90448,
+    "edges": 95104,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 29,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 45497,
+    "cells": 260031
+  },
+  "rails": {
+    "street": 0,
+    "cable": 0,
+    "train": 2880
+  },
+  "lanes": {
+    "counted": 152552,
+    "oneway": 118032,
+    "divided": 23065
+  },
+  "surfaces": {
+    "woodland": 56659,
+    "scrub": 292,
+    "water": 181948,
+    "desert": 3127,
+    "grass": 1413,
+    "farmland": 172,
+    "urban": 380349,
+    "lawn": 45603,
+    "yard": 49393
+  },
+  "routes": {
+    "ferry": 82,
+    "lightrail": 4,
+    "road": 12858,
+    "train": 129
+  }
+}

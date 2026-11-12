@@ -1,0 +1,13 @@
+name: Eiffel Tower
+wikidata: Q243
+# Wikidata's point, under the tower's centre on the Champ de Mars
+anchor: { lon: 2.294479, lat: 48.858296 }
+height: 330         # to the top of its antennas
+# its four legs stand on a 125 m square
+clear: 70
+replaces: [Tour Eiffel]
+depictions:
+  # a lattice tower on four arched piers with its three platforms, unlit:
+  # its night lighting is a protected work in France (docs/data-sources.md
+  # §7); no name
+  generic: { group: landmark.tower.lattice }

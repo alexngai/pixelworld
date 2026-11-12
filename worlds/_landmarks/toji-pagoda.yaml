@@ -1,0 +1,9 @@
+name: Tō-ji Five-storied Pagoda
+wikidata: Q107020572
+# Wikidata's coordinates, in Tō-ji's grounds south-west of Kyoto Station
+anchor: { lon: 135.7487, lat: 34.97987 }
+height: 55          # Wikidata's height, to the finial's top
+clear: 8
+depictions:
+  # a five-storey pagoda with its finial; no name
+  generic: { group: landmark.pagoda }

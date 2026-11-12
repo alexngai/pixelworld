@@ -1,5 +1,8 @@
 import type { BakedImage } from "@pixelworlds/bake";
 
+/** A baked tile in the cache, gzip: about this much (measured across New York's, San Francisco's and Paris's levels). */
+const TILE_BYTES = 230 * 1024;
+
 /**
  * Persistent cache of baked tiles in IndexedDB. Pixels are stored gzip-
  * compressed (indexed color and mostly-empty diamonds compress well). Keys
@@ -16,9 +19,18 @@ export class TileCache {
     private readonly maxEntries: number,
   ) {}
 
-  static async open(name = "pixelworld-tiles", maxEntries = 600): Promise<TileCache | null> {
+  /**
+   * The cache in IndexedDB. Without `maxEntries`: as many tiles as fit a
+   * quarter of the storage the browser offers this origin (about 230 KB each,
+   * gzip), at most 2000 (about 450 MB) and at least 200.
+   */
+  static async open(name = "pixelworld-tiles", maxEntries?: number): Promise<TileCache | null> {
     if (typeof indexedDB === "undefined") return null;
     try {
+      if (maxEntries === undefined) {
+        const quota = (await globalThis.navigator?.storage?.estimate?.())?.quota;
+        maxEntries = quota ? Math.max(200, Math.min(2000, Math.floor(quota / 4 / TILE_BYTES))) : 600;
+      }
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const req = indexedDB.open(name, 1);
         req.onupgradeneeded = () => {
@@ -90,6 +102,61 @@ export class TileCache {
       req.onerror = () => reject(req.error);
     });
   }
+}
+
+/**
+ * A world's start tiles (tools/prebake.mjs): the tiles of its first view,
+ * baked ahead, read before baking so a first visit shows them at once. Keyed
+ * as the tile cache is (package, style, bake code, plugins), so after a change
+ * to any of them its tiles no longer match and are baked as before. The file:
+ * "PXST", the header's length (u32, little-endian), the header (JSON: each
+ * tile's key, placement and the span of its gzip pixels), then the pixels.
+ */
+export class StartTiles {
+  private constructor(
+    private readonly tiles: Map<string, StartTile>,
+    private readonly data: Uint8Array,
+  ) {}
+
+  /** The pack at `url`, or null without one (a dev server answers a missing file with its index.html). */
+  static async load(url: string | URL): Promise<StartTiles | null> {
+    try {
+      const res = await fetch(url);
+      return res.ok ? StartTiles.parse(new Uint8Array(await res.arrayBuffer())) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static parse(file: Uint8Array): StartTiles | null {
+    if (file.length < 8 || new TextDecoder().decode(file.subarray(0, 4)) !== "PXST") return null;
+    const n = new DataView(file.buffer, file.byteOffset).getUint32(4, true);
+    const head = JSON.parse(new TextDecoder().decode(file.subarray(8, 8 + n))) as { tiles: StartTile[] };
+    return new StartTiles(new Map(head.tiles.map((t) => [t.key, t])), file.subarray(8 + n));
+  }
+
+  get size(): number {
+    return this.tiles.size;
+  }
+
+  async get(key: string): Promise<BakedImage | null> {
+    const t = this.tiles.get(key);
+    if (!t) return null;
+    const pixels = new Uint8Array(await gunzip(this.data.slice(t.offset, t.offset + t.length).buffer));
+    return { left: t.left, top: t.top, width: t.width, height: t.height, depthBase: t.depthBase, pixels };
+  }
+}
+
+interface StartTile {
+  key: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  depthBase: number;
+  /** Its gzip pixels in the data after the header. */
+  offset: number;
+  length: number;
 }
 
 interface StoredTile {

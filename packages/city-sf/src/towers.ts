@@ -206,27 +206,70 @@ interface TowerSpec {
   parapet?: (s: Skin) => number[];
 }
 
-/** Fill a tower's massing, then dress its skin and terraces. */
+/**
+ * Fill a tower's massing, then dress its skin and terraces. Setbacks never
+ * shrink upward, so the massing is a height map: each column stands solid from
+ * the ground to its top or the first height whose setback reaches its depth.
+ * Only the skin, where a neighbouring column is shorter, is visited voxel by
+ * voxel; the fill is written a layer at a time.
+ */
 function drawTower(m: VoxelModel, t: TowerSpec): void {
   const { sx, sy, on } = t.mask;
+  const layer = sx * sy;
   const inM = (x: number, y: number) => x >= 0 && y >= 0 && x < sx && y < sy && on[y * sx + x] === 1;
-  const kept = (x: number, y: number, z: number) => inM(x, y) && z < t.top(x, y) && t.depth[y * sx + x]! > t.inset(z);
+  const tops = new Int32Array(layer);
+  let hMax = 0;
+  for (let i = 0; i < layer; i++)
+    if (on[i] === 1) {
+      tops[i] = t.top(i % sx, Math.floor(i / sx));
+      hMax = Math.max(hMax, tops[i]!);
+    }
+  const insets = new Float64Array(hMax + 1);
+  for (let z = 0; z <= hMax; z++) {
+    insets[z] = t.inset(z);
+    if (z && insets[z]! < insets[z - 1]!) throw new Error(`a tower's setback shrinks at height ${z}: inset() must never decrease upward`);
+  }
+  // each column's height: the first z whose setback reaches its depth, below its top
+  const hf = new Int32Array(layer);
+  for (let i = 0; i < layer; i++) {
+    if (on[i] !== 1) continue;
+    const d = t.depth[i]!;
+    let lo = 0;
+    let hi = tops[i]!;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (d > insets[mid]!) lo = mid + 1;
+      else hi = mid;
+    }
+    hf[i] = lo;
+  }
+  const kept = (x: number, y: number, z: number) => x >= 0 && y >= 0 && x < sx && y < sy && z < hf[y * sx + x]!;
   const terraces: { s: Skin; stack: number[] }[] = [];
   const recesses = new Map<number, [number, number]>(); // an open skin voxel → the column behind it
+  const open: number[] = []; // voxels of the massing left empty: closed again under solid ones
   // the massing and its roofs
-  for (let y = 0; y < sy; y++)
-    for (let x = 0; x < sx; x++) {
-      if (!inM(x, y)) continue;
-      const H = t.top(x, y);
-      for (let z = 0; z < H; z++) if (kept(x, y, z)) m.set(x, y, z, t.interior(z, !kept(x, y, z + 1)));
+  const wall = new Int32Array(hMax);
+  const roof = new Int32Array(hMax);
+  for (let z = 0; z < hMax; z++) {
+    wall[z] = t.interior(z, false);
+    roof[z] = t.interior(z, true);
+  }
+  for (let z = 0, zs = Math.min(hMax, m.sz); z < zs; z++)
+    for (let i = 0, k = z * layer; i < layer; i++, k++) {
+      const h = hf[i]!;
+      if (z >= h) continue;
+      const v = z === h - 1 ? roof[z]! : wall[z]!;
+      m.data[k] = v;
+      if (!v) open.push(k);
     }
   // the skin: faces, recesses and terrace parapets
+  const height = (x: number, y: number) => (x >= 0 && y >= 0 && x < sx && y < sy ? hf[y * sx + x]! : 0);
   for (let y = 0; y < sy; y++)
     for (let x = 0; x < sx; x++) {
-      if (!inM(x, y)) continue;
-      const H = t.top(x, y);
-      for (let z = 0; z < H; z++) {
-        if (!kept(x, y, z)) continue;
+      const h = hf[y * sx + x]!;
+      // below its shortest neighbour a column is walled in on every side: no skin there
+      const from = Math.min(height(x - 1, y), height(x + 1, y), height(x, y - 1), height(x, y + 1), h);
+      for (let z = from; z < h; z++) {
         const ox0 = !kept(x - 1, y, z);
         const ox1 = !kept(x + 1, y, z);
         const oy0 = !kept(x, y - 1, z);
@@ -244,25 +287,31 @@ function drawTower(m: VoxelModel, t: TowerSpec): void {
         const iy = y - ny;
         // a recess needs a column behind it that stays inside the walls at this height
         const deep =
-          f.recess !== undefined && !s.corner && !s.diagonal && inM(ix, iy) && t.depth[iy * sx + ix]! > t.inset(z) + 1 && z < t.top(ix, iy);
+          f.recess !== undefined && !s.corner && !s.diagonal && inM(ix, iy) && t.depth[iy * sx + ix]! > insets[z]! + 1 && z < tops[iy * sx + ix]!;
+        const at = (z * sy + y) * sx + x;
         if (deep) {
           m.set(x, y, z, 0);
           m.set(ix, iy, z, f.recess!);
-          recesses.set((z * sy + y) * sx + x, [ix, iy]);
-        } else m.set(x, y, z, f.mat);
+          recesses.set(at, [ix, iy]);
+          open.push(at);
+          if (!f.recess) open.push((z * sy + iy) * sx + ix);
+        } else {
+          m.set(x, y, z, f.mat);
+          if (!f.mat) open.push(at);
+        }
         if (s.last && t.parapet) terraces.push({ s, stack: t.parapet(s) });
       }
     }
-  // no overhangs: an open recess under a solid voxel is closed again (top down, so runs close
-  // whole), and what was set behind it goes back to the inside
-  for (let z = m.sz - 2; z >= 0; z--)
-    for (let y = 0; y < sy; y++)
-      for (let x = 0; x < sx; x++)
-        if (!m.get(x, y, z) && m.get(x, y, z + 1) && kept(x, y, z)) {
-          m.set(x, y, z, m.get(x, y, z + 1));
-          const behind = recesses.get((z * sy + y) * sx + x);
-          if (behind) m.set(behind[0], behind[1], z, t.interior(z, false));
-        }
+  // no overhangs: an open voxel under a solid one is closed again (top down, so runs close
+  // whole), and what was set behind a recess goes back to the inside
+  open.sort((a, b) => Math.floor(b / layer) - Math.floor(a / layer) || a - b);
+  for (const k of open) {
+    const z = Math.floor(k / layer);
+    if (z > m.sz - 2 || m.data[k] || !m.data[k + layer]) continue;
+    m.data[k] = m.data[k + layer]!;
+    const behind = recesses.get(k);
+    if (behind) m.set(behind[0], behind[1], z, t.interior(z, false));
+  }
   for (const { s, stack } of terraces) {
     if (!m.get(s.x, s.y, s.z)) continue; // parapets stand on piers, not on open bays
     stack.forEach((mat, k) => {
@@ -321,7 +370,8 @@ const insetFrom = (steps: [number, number][]) => (z: number) => steps.reduce((a,
  * A 1920s tower: piers between recessed bays, setbacks, a crown.
  * params: piers (voxels from pier to pier: 2 or 3; 0 picks by seed),
  * setbacks (0–2; default 2), crown (0 stepped, 1 pinnacled, 2 lantern; -1 by
- * seed), width and depth (a point landmark's plan over its height).
+ * seed), width and depth (a point landmark's plan over its height), spire
+ * (the finial's height over the tower's; 0.05).
  * roles: wall, spandrel (behind the windows), trim (crown ornament and
  * finials), cap (a lantern's roof), roof, window, lit.
  */
@@ -330,7 +380,8 @@ const decoTower: Generator = (ctx) => {
   const H = Math.max(8, Math.round(heightVox ?? param("height", 60)));
   const mask = ctx.mask ?? boxMask(H, param("width", 0.32), param("depth", 0.28));
   const { depth, maxDepth: half } = footprintDepth(mask);
-  const m = new VoxelModel(mask.sx, mask.sy, H + Math.max(8, Math.round(H * 0.12)));
+  const finial = Math.max(2, Math.round(H * param("spire", 0.05)));
+  const m = new VoxelModel(mask.sx, mask.sy, H + Math.max(8, Math.round(H * 0.12), finial + 2));
   const p = materials(ctx, m);
   const fh = storey(H, hints?.floors);
   const P = param("piers", 0) >= 2 ? Math.round(param("piers", 0)) : rand() < 0.6 ? 2 : 3;
@@ -396,7 +447,7 @@ const decoTower: Generator = (ctx) => {
     },
   });
   // a finial or a flagpole on top
-  if (H >= 20) spire(m, Math.max(2, Math.round(H * 0.05)), p.trim);
+  if (H >= 20) spire(m, finial, p.trim);
   return m;
 };
 

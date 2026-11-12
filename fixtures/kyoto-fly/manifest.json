@@ -1,0 +1,256 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "kyoto-fly",
+  "name": "Kyoto basin (flying)",
+  "chunkSize": 64,
+  "cellsX": 184,
+  "cellsY": 222,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "8f6c550f3014fb2482958e29422671b864a0037bb3c1ecbb676ffc257035cedb",
+      "heightRange": [
+        4,
+        34
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "fc4d60c7b5dec3d87b1479e06181b381115300b4ce978f6448d3c85559fbe5dd",
+      "heightRange": [
+        3,
+        26
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "f3015a6806e37f7d09bc13fb61c853d7dd9746d800473ba19ff2470cf3c95b89",
+      "heightRange": [
+        3,
+        42
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "1937906e12d0d768a766ec844c021aec77eb96649a4de481bb992cc1a7ff0e64",
+      "heightRange": [
+        1,
+        22
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "7e1331cafaa451d03a334d7d378ea19959122f46f7f09502bb15a704ad143d54",
+      "heightRange": [
+        1,
+        12
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "e8fd02795ee164f3ad46364854cbf0d569c463495a4e74fb9dcfb93cc82ca619",
+      "heightRange": [
+        2,
+        23
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "1fd868dda1d3d38627fb3e8ac285cc3bf48689d282e803840bd77883bbcb2741",
+      "heightRange": [
+        0,
+        22
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "69a00100c19fb12b3f519d0124270ff80aacb821b8ddc4eec7819e22032f629a",
+      "heightRange": [
+        0,
+        12
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "e35cc12aecd411280b5346affb58730913cfd6b2b57f52263649a5b7d299bf16",
+      "heightRange": [
+        0,
+        28
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "1756c7b0088a0ee5e243440b62afb0f5e044fbd33d6ca6555ccc52a3cb7090d7",
+      "heightRange": [
+        0,
+        19
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "c92eaecf1c0e77bf7db095b4f01633c10a13865469e2308a47ac7174a5b5e819",
+      "heightRange": [
+        0,
+        2
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "a0263d6e203c7a095c08d4a0d064469170918c8314bf6ed8597035fb323daef0",
+      "heightRange": [
+        0,
+        19
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 100.0,
+    "metersPerStep": 20.412415,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 2.0
+  },
+  "heightRange": [
+    0,
+    42
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "kyoto",
+  "attribution": [
+    {
+      "name": "\u51fa\u5178\uff1a\u56fd\u571f\u5730\u7406\u9662\u30a6\u30a7\u30d6\u30b5\u30a4\u30c8 (\u5730\u7406\u9662\u30bf\u30a4\u30eb \u6a19\u9ad8\u30bf\u30a4\u30eb: DEM1A, DEM5A, DEM10B). \u5730\u7406\u9662\u30bf\u30a4\u30eb\uff08\u6a19\u9ad8\u30bf\u30a4\u30eb\uff08\u57fa\u76e4\u5730\u56f3\u60c5\u5831\u6570\u5024\u6a19\u9ad8\u30e2\u30c7\u30eb\uff09\uff09\u3092\u52a0\u5de5\u3057\u3066\u4f5c\u6210 (processed: mosaicked, resampled onto the world's grid and gaps filled; not GSI's data as published)",
+      "license": "Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    }
+  ],
+  "roadClasses": {
+    "1": "primary",
+    "2": "trunk",
+    "3": "motorway"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 100,
+    "y": 124
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=35 +lon_0=135.75 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      135.65,
+      34.9,
+      135.85,
+      35.1
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "a82d9aa49ac27464",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "b36bb95c183663f0534aaf0d6186661ebab8e43d8c84a6d84ebf75c213fcb4c6",
+    "count": 7
+  },
+  "depiction": {
+    "heightStretch": 2.0,
+    "scatter": 0.6,
+    "vehicleScale": 4.0
+  },
+  "level": "fly",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "kyoto-fly",
+      "label": "Flying over the Kyoto basin"
+    },
+    {
+      "name": "drive",
+      "world": "kyoto",
+      "label": "Driving central Kyoto"
+    },
+    {
+      "name": "walk",
+      "world": "kyoto-walk",
+      "label": "Walking Gion and Higashiyama"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      13,
+      15
+    ],
+    "sha256": "23b20939d24e2636cddfd9a13fe7ac0e791edbb1f3d0e3be9f4b8ffbd2347bae"
+  },
+  "packageHash": "382e22d504e314599a69c70d3d07f3978088b850c00be8cdad2bfcfcbf5638cf",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "a5625f4cee9f3d8cf8ee23bd11a45775f22541dd7c213436ca32b64832134f16",
+    "version": 1,
+    "count": 794
+  }
+}

@@ -46,7 +46,7 @@ objects:
     towerMeters: 45
     podiumMeters: 18
     houseMaxArea: 350
-    lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018, res: 4, depth: 6 }
+    lidar: { res: 4, depth: 6 }
   vegetation:
     # trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
     - { group: tree, canopy: 3, spacing: 9, density: 0.9 }

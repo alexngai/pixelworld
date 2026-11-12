@@ -95,6 +95,34 @@
       #help code {
         color: #7fd0c8;
       }
+      #modes {
+        position: fixed;
+        left: 8px;
+        bottom: 12px;
+        display: flex;
+        gap: 4px;
+      }
+      #modes button {
+        font: inherit;
+        color: inherit;
+        background: rgba(20, 19, 32, 0.8);
+        border: 1px solid #3b3a4c;
+        border-radius: 4px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      #modes span {
+        align-self: center;
+        margin: 0 2px 0 8px;
+        color: #c6c2c2;
+      }
+      #modes button:hover {
+        border-color: #7fd0c8;
+      }
+      #modes button.on {
+        color: #ffe36e;
+        border-color: #ffe36e;
+      }
       .hidden {
         display: none !important;
       }

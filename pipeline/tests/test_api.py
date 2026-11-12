@@ -22,7 +22,7 @@ SPEC = {
     "sources": {
         "dem": {"kind": "usgs-3dep-1arcsec"},
         "landcover": {"kind": "esa-worldcover-2021"},
-        "overture": {"release": "2026-10-21.0"},
+        "features": {"kind": "overture", "release": "2026-10-21.0"},
         "roads": {"classes": ["primary"]},
     },
 }
@@ -173,16 +173,18 @@ def test_a_rebuild_replaces_the_old_package_files_and_keeps_others(tmp_path, rec
     assert (out / "notes.txt").read_text() == "mine"
 
 
-def test_a_missing_facts_plugin_fails_before_anything_is_fetched(tmp_path, monkeypatch):
+def test_a_missing_facts_source_fails_before_anything_is_fetched(tmp_path, monkeypatch):
     stage = importlib.import_module("pixelworld_pipeline.build")  # the module, not the API
 
     def no_fetch(*args, **kwargs):
         raise AssertionError("the build went on to fetch data")
 
     monkeypatch.setattr(stage, "make_layout", no_fetch)
-    monkeypatch.setattr(plugins, "_entry_points", lambda group: ())
-    spec = SPEC | {"objects": {"typology": {"facts": "datasf", "rules": []}}}
-    with pytest.raises(plugins.PluginNotFoundError, match="pip install pixelworld-city-sf"):
+    spec = SPEC | {
+        "sources": {**SPEC["sources"], "facts": {"kind": "cadastre"}},
+        "objects": {"typology": {"rules": []}},
+    }
+    with pytest.raises(plugins.PluginNotFoundError, match="no facts source named 'cadastre'"):
         pixelworld_pipeline.build(spec, tmp_path / "out", base_dir=tmp_path)
     # the CLI says the same, without a traceback
     path = tmp_path / "sf.yaml"
@@ -276,14 +278,16 @@ def test_the_plugins_command_lists_and_checks(tmp_path, capsys, monkeypatch):
     path.write_text(yaml.safe_dump(SPEC))
     assert cli.main(["plugins", str(path)]) == 0
     out = capsys.readouterr().out
-    assert "usgs-3dep-13arcsec" in out and "builtin" in out and "pixelworld.facts" in out
-    assert "every plugin it names is installed" in out
+    assert "usgs-3dep-13arcsec" in out and "builtin" in out and "facts (sources.facts):" in out
+    assert "canopy (sources.canopy, default meta-chm):" in out
+    assert "every source it names is installed" in out
 
     # columns never run together, however long a plugin's distribution name is
     long = plugins.Plugin(
-        plugins.FACTS, "mining-town", "pixelworld-facts-mining-town", "pkg.module:Factory"
+        plugins.SOURCES, "mining-town", "pixelworld-facts-mining-town", "pkg.module:Factory"
     )
     monkeypatch.setattr(plugins, "available", lambda group: {"mining-town": long})
+    monkeypatch.setattr(plugins, "role_of", lambda name: "facts")
     assert cli.main(["plugins"]) == 0
     out = capsys.readouterr().out
     row = next(ln for ln in out.splitlines() if "mining-town" in ln)
@@ -298,7 +302,8 @@ def test_check_reports_every_problem_without_building(tmp_path, capsys):
         "id: bad\nname: Bad\nbounds: [-115.2, 36.0, -115.0, 36.2]\nmetersPerCell: 100\n"
         "verticalExageration: 2\nstyle: desert-southwest\nstart: {lon: -115.1, lat: 36.1}\n"
         "sources:\n  dem: {kind: usgs-3dep-1arcsec}\n  landcover: {kind: esa-worldcover-2021}\n"
-        "  overture: {release: 2026-10-21.0}\n  roads: {classes: [primary, residental]}\n"
+        "  features: { kind: overture, release: 2026-10-21.0 }\n"
+        "  roads: {classes: [primary, residental]}\n"
     )
     assert cli.main(["check", str(good), str(bad)]) == cli.INVALID
     out, err = capsys.readouterr()

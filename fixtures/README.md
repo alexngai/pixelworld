@@ -118,6 +118,166 @@ Sources and licenses:
 - Tree canopy (driving and walking levels): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 - Rail and ferry lines (rails and traffic routes), parks and natural land (lawns): Overture Maps transportation and base themes. ODbL 1.0.
 
+## nyc, nyc-walk
+
+New York at two scale levels (D-078, D-083), built from [`worlds/nyc/`](../worlds/nyc/) on the `new-york` style pack. The walking level `extends:` the driving level's spec, which holds what both share (style, sources, typology, ground); each lists the other in `levels`, so the viewer and the game switch between them. Buildings are typed from NYC Open Data (the `pluto` facts source, D-080: footprints, PLUTO lots, LPC records, NTAs) and drawn by the `city-nyc` generators (D-081). Heights are true (`heightStretch` 1.0). Setback towers keep the upper tiers Overture stacks on their lower ones (`objects.buildings.tiers`). Roads and paths are drawn along their own centre lines, snapped to 16 directions where they run near one (D-082).
+
+- **nyc (driving):** Manhattan at 25 m per cell, from the Battery to Inwood, with what the box takes in across the rivers: Brooklyn from the Heights to Greenpoint and Bushwick, Long Island City and Astoria, the South Bronx along the Harlem River, and Jersey City, Hoboken and the Palisades to Fort Lee.
+  - **Buildings:** 185,581 from Overture footprints and heights; 129,188 have facts (New Jersey has none and keeps the generic groups).
+  - **Types:** tenements (26,185), brownstones (16,981), houses (16,526), historic commercial blocks (14,378), prewar apartment blocks (5,497), warehouses (4,145), cast-iron lofts (301), pier sheds (65), and towers by era: deco (2,871), slabs (2,442), postmodern (901) and glass (1,640), with 354 left to a kind by seed.
+  - **Also:** 64,837 canopy trees and 31,534 sidewalk trees (one every 16 m), 23,971 lawn and 26,771 yard cells, 8,287 rail cells (the elevated lines, Metro-North's viaduct), 120,442 road cells with centre-line pieces, 25,808 traffic routes.
+  - **Landmarks (generic depictions):** One World Trade Center, the Woolworth Building, the Empire State Building, the Chrysler Building, the Flatiron Building and Grand Central Terminal (the last two on their own footprints), and the Brooklyn, Manhattan, Williamsburg, Queensboro and George Washington Bridges (in pieces, D-056).
+  - **Size:** 10 MB, of which `objects.json.gz` is 8.3 MB. Built in 477 s with the download cache (431 s the first time, downloads included, by the pipeline's clock).
+- **nyc-walk:** Manhattan at 10 m per cell from the Battery to 86th Street (Lower Manhattan, Midtown, and the Upper West and East Sides' south halves across Central Park), with Brooklyn Heights, DUMBO, Williamsburg, Greenpoint, Long Island City and Astoria's south end across the East River.
+  - **Buildings:** 67,370; 60,549 have facts.
+  - **Types:** tenements (13,623), brownstones (8,250), historic commercial blocks (7,219), prewar apartment blocks (3,364), warehouses (1,032), houses (805), cast-iron lofts (297), pier sheds (30), and towers by era: deco (3,261), slabs (2,403), postmodern (988) and glass (1,678), with 288 left to a kind by seed.
+  - **Centre lines:** 124,169 road cells and 218,684 path cells carry pieces; 33 and 641 have more than six, and drop their narrowest.
+  - **Also:** 62,094 canopy trees and 14,764 sidewalk trees, 45,606 lawn and 49,393 yard cells, 12,366 street lights and 438 signals, 2,880 rail cells, 13,073 traffic routes.
+  - **Landmarks:** the driving level's, but for the George Washington Bridge.
+  - **Size:** 7.4 MB, of which `objects.json.gz` is 4.1 MB and the chunks 3.0 MB. Built in 511 s, the first fetch of its NYC Open Data included.
+- **Road reports:** clean on both levels (no discontinuous or steep edges, no disconnected junctions).
+
+```sh
+cd pipeline
+for f in region walk; do uv run pixelworld build ../worlds/nyc/$f.yaml; done
+```
+
+Sources and licenses:
+- Elevation: USGS 3DEP 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: NYC Open Data (BUILDING footprints, PLUTO, the LPC building database, 2020 NTAs). No restrictions on use (NYC Admin Code §23-502(d)); source, version and modifications named in the manifest.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## paris-walk
+
+Paris's walking level (D-078, D-086), built from [`worlds/paris/walk.yaml`](../worlds/paris/walk.yaml) on the `paris` style pack: from the Eiffel Tower and the Trocadéro east to the Île de la Cité and the Marais at 10 m per cell (610 × 324 cells), with the Seine, the Champs-Élysées and the Étoile, the Louvre, the Opéra and the grands boulevards. Heights are true (`heightStretch` 1.0). Its roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082): Paris's avenues run at every angle.
+
+- **Terrain:** IGN's RGE ALTI 1 m DTM read at 4 m (the `ign-rgealti` terrain source, D-084): 9 to 25 drawn steps, from the Seine's quays to the Chaillot hill.
+- **Buildings:** 24,136 from Overture footprints; 19,125 have facts from APUR and IGN (the `apur` facts source, D-084: APUR's footprints, periods and fabric classes, BD TOPO's storeys and use, APUR's quartiers), and 5,144 of those that Overture gives no height take APUR's.
+- **Types:** Haussmann blocks (5,783), faubourg houses (2,475), post-war blocks (1,412), civic stone buildings (452), HBM blocks (388), palaces by name (33 pieces: the Louvre and the Hôtel des Invalides, D-088) and warehouses (12); the rest keep the stone default (`haussmann`: 9,820 residential, 3,711 commercial), and 28 towers.
+- **Courtyards:** kept open (`courtyards: true`, D-088): 2,791 buildings carry theirs.
+- **Centre lines:** 45,185 road cells and 82,732 path cells carry pieces; 14 and 990 have more than six, and drop their narrowest.
+- **Also:** 16,347 canopy trees and 7,776 street trees, 13,096 lawn cells, 3,554 street lights and 296 signals, 327 rail cells, 5,856 traffic routes.
+- **Landmarks (generic depictions, drawn on their own proportions, D-087, D-088):** the Eiffel Tower (unlit), Notre-Dame, the Arc de Triomphe, the Palais Garnier, the Pont Alexandre III, the Dôme des Invalides, the Grand Palais and the Pont Neuf's two arms.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 2.9 MB. Built in about 70 s with the download cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/paris/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: IGN RGE ALTI®. Licence Ouverte / Open Licence 2.0 (Etalab).
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: Apur, Emprise bâtie Paris and Quartier de Paris (ODbL 1.0); IGN, BD TOPO® (Licence Ouverte 2.0).
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## kyoto-walk
+
+Kyoto's walking level (D-091, D-100), built from [`worlds/kyoto/walk.yaml`](../worlds/kyoto/walk.yaml) on the `kyoto` style pack (D-090): from Nakagyō's machiya streets east across the Kamo river to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto Tower, at 10 m per cell (338 × 300 cells). Heights are true (`heightStretch` 1.0) and the relief 1.5×. Its roads and paths are drawn along their own centre lines, snapped to 16 directions within 6° of one (D-082): the Heian grid snaps, the lanes up the Higashiyama slopes keep their angles. Its neighbours are the driving level (`kyoto`) and the flying level (`kyoto-fly`).
+
+- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 7 to 89 drawn steps, from the Kamo river up the Higashiyama hills.
+- **Buildings:** 33,691 from Overture footprints; 31,420 have facts from PLATEAU's 2025 building models (the `plateau` facts source, D-089: structure, year, storeys, usage code, LoD2 roof shape), 29,493 that Overture gives no height take PLATEAU's, and 29,976 take PLATEAU's roof shape as their generator's hint (`roofHints`, D-100).
+- **Types:** mid-rises (10,923), wooden houses under gabled (7,924) and hipped (332) roofs, machiya (6,451), temple halls and pavilions (513, 180 buildings stand in temple and shrine grounds), kura (91) and shrine halls (57); the rest keep the defaults (6,888 houses, 427 low blocks, 17 car parks, 68 taller blocks).
+- **Centre lines:** 20,250 road cells and 17,581 path cells carry pieces; 8 and 34 have more than six, and drop their narrowest.
+- **Also:** 20,861 canopy trees and 559 street trees, 3,416 lawn cells, 199 cells of ponds from Overture's water areas (D-103), 3,650 utility poles on one side of each lane (D-102) and 3,002 wire spans strung between them in one-pixel lines at any angle (D-106), 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
+- **Landmarks (generic depictions):** Kiyomizu-dera's main hall on its stage, its three-storey pagoda, the Yasaka Pagoda, Yasaka Shrine's west gate, Chion-in's Sanmon, Kyoto Tower, and three torii (Jishu Shrine's and two in Gion).
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 2.2 MB. Built in about 70 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: 出典：国土地理院ウェブサイト (地理院タイル 標高タイル), processed. Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks, land use and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: 出典：国土交通省 PLATEAUウェブサイト (3D city models of Kyoto, 2025), processed. PDL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## kyoto
+
+Kyoto's driving level (D-101), built from [`worlds/kyoto/region.yaml`](../worlds/kyoto/region.yaml): the city centre at 25 m per cell (294 × 378 cells), from Kinkaku-ji's hills in the north-west to Tō-ji and Fushimi Inari's gate in the south and Ginkaku-ji in the east, with Nijō Castle, the Imperial Palace, the Kamo river and Heian Shrine's great torii. Heights 1.5×, relief 1.5×; the walking level's typology (D-091, D-100).
+
+- **Buildings:** 182,019 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
+- **Types:** wooden houses under gabled (72,608) and hipped (1,538) roofs, mid-rises (38,479), machiya (28,162), temple halls and pavilions (1,138; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (145), Nijō Castle's palace halls and gates (33) and the Imperial Palace's halls, gates and corridors (64 pieces), by name and shape (D-102, D-103, D-104); the defaults 36,535 houses, 2,765 low blocks, 76 taller blocks, 65 car parks.
+- **Walls:** 1,944 stretches of stone wall along OSM's retaining walls (814 pieces of line), Nijō Castle's ishigaki round its moats among them (D-104).
+- **Also:** 42,128 canopy trees and 3,224 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,329 traffic routes.
+- **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m), Heian Shrine's great torii (24.4 m) and Kinkaku-ji's Golden Pavilion (D-102).
+- **Road report:** clean (29 components).
+- **Size:** 7.5 MB. Built in about 170 s with the download cache (about 380 s the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/region.yaml
+```
+
+Sources and licenses: as `kyoto-walk`.
+
+## kyoto-fly
+
+Kyoto's flying level (D-101), built from [`worlds/kyoto/fly.yaml`](../worlds/kyoto/fly.yaml) (it extends `region.yaml`): the whole basin at 100 m per cell (184 × 222 cells), from Arashiyama to the slopes of Hiei and from the Kitayama hills south past Fushimi. Relief 2×. Only its landmarks are drawn, three times their size: Kyoto Tower, Tō-ji's and the Yasaka pagodas, Kiyomizu-dera's hall, Chion-in's Sanmon, Heian Shrine's great torii and Kinkaku-ji. GSI's tiles are read at 16 m. Rivers only, no canals: Overture's canals are mostly field and street-side channels, a whole cell wide here. 0 to 42 drawn steps. 392 KB, built in about 15 s with the cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/fly.yaml
+```
+
+Sources and licenses: as `kyoto-walk`, without the building records and tree canopy.
+
+## tokyo-walk
+
+Tokyo's walking level (D-093), built from [`worlds/tokyo/walk.yaml`](../worlds/tokyo/walk.yaml) on the `tokyo` style pack: Shibuya to Shinjuku at 10 m per cell (228 × 478 cells), with the scramble crossing and Dōgenzaka, Harajuku, Takeshita Street and Omotesandō, Yoyogi Park and the Meiji Shrine's forest, west Shinjuku's skyscrapers and the station's east side, and the residential streets of Yoyogi, Sendagaya and Tomigaya between them. Heights are true (`heightStretch` 1.0). Roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
+
+- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 3 to 17 drawn steps, from Shibuya's valley to the Shinjuku plateau.
+- **Buildings:** 18,875 from Overture footprints; 17,638 have facts from PLATEAU 2025 (the `plateau` facts source, D-089: use, storeys, measured height; 28 meshes of five wards), and 14,080 that Overture gives no height take PLATEAU's.
+- **Types** (no year in Tokyo's models: by use, storeys, footprint size and neighbourhood boxes, D-093): houses (6,965), zakkyo (4,081 under signs, 2,049 quieter), mansions (2,238), shop houses (967), civic blocks (697), offices (532), warehouses (109), towers (136 in west Shinjuku, 260 elsewhere), the Meiji Shrine's halls (37); 433 commercial and 369 residential keep the defaults.
+- **Centre lines:** 30,990 road cells and 23,374 path cells carry pieces; 14 and 180 have more than six, and drop their narrowest.
+- **Also:** 17,758 canopy trees and 341 street trees, 7,240 lawn cells, 3,781 utility poles with 2,893 wire spans strung between them (D-098), 2,072 street lights and 121 signals, 1,560 rail corridor cells (255 mapped tracks of the Yamanote, Chūō, Saikyō, Odakyū and Keiō lines where they surface, drawn as 173 corridors, D-097), 5,372 traffic routes (51 for trains).
+- **Landmarks (generic depictions, D-092):** the Tokyo Metropolitan Government Building's twin towers, the NTT Docomo Yoyogi Building, Shibuya 109's cylinder and the Meiji Shrine's great torii.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 1.9 MB. Built in about 55 s with the download cache (270 s on a first build, fetching Overture and 16 more PLATEAU meshes).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/tokyo/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: GSI's elevation tiles (出典：国土地理院ウェブサイト; 地理院タイル（標高タイル）を加工して作成). PDL 1.0, compatible with CC BY 4.0.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: MLIT's PLATEAU 3D city models, 2025 (出典：国土交通省 PLATEAUウェブサイト; processed). PDL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## hongkong-walk
+
+Kowloon's walking level (D-109), built from [`worlds/hongkong/walk.yaml`](../worlds/hongkong/walk.yaml) on the `hongkong` style pack (D-108): Tsim Sha Tsui's waterfront to Prince Edward, West Kowloon and the ICC to King's Park, at 10 m per cell (228 × 444 cells), on open data alone (D-107): Hong Kong's own building and terrain data can't be adapted under its terms (docs/cities.md). Heights are true (`heightStretch` 1.0); roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
+
+- **Terrain:** Copernicus GLO-30 with buildings and trees filtered off (the `copernicus-glo30-ground` terrain source, D-107): 18 drawn steps from the harbour to King's Park. Measured against the Lands Department's 5 m DTM, an RMSE of 6.4 m over the pilot's land.
+- **Buildings:** 7,104 from Overture footprints (OpenStreetMap). OSM gives floors on about half; the rest take their neighbourhood's typical height from the spec (the `areas` facts source, D-107: 3,328 buildings).
+- **Types** (by floors, footprint width, OSM's class and neighbourhood): tong lau (3,726), composite buildings (985), residential towers (299), podiums and malls (65), civic buildings (105), glass towers (61) and hotels (7); 857 commercial and 995 residential keep the defaults.
+- **Also:** neon signs hung across the streets from both sides (597 on Nathan Road, 5,075 in the old districts' streets), 7,789 canopy trees and 706 street trees, 2,164 street lights and 292 signals, 418 rail cells, 3,961 traffic routes (21 for ferries).
+- **Landmarks (generic depictions, D-108):** the International Commerce Centre, the Tsim Sha Tsui clock tower, the Cultural Centre and the Peninsula.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 1.2 MB. Built in about 50 s with the download cache (110 s on a first build).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/hongkong/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: Copernicus DEM GLO-30, produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Copernicus DEM licence.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

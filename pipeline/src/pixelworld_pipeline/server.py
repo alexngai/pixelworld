@@ -39,9 +39,10 @@ import yaml
 from rasterio.warp import transform as transform_points
 
 from . import importance as importance_stage
+from . import plugins
 from .layout import WarpedLayout, WarpSpec
 from .region import Region
-from .sources import overture, rasters
+from .sources import rasters
 
 PREVIEW_MESH_KM = 4.0  # the editor solves on a mesh at most this coarse (the Southwest's)
 LATTICE_KM = 10.0  # forward-map lattice spacing, at most
@@ -195,8 +196,8 @@ class Editor:
         r = self.source_px_m
         gx, gy = np.meshgrid((np.arange(w) + 0.5) * r, (np.arange(h) + 0.5) * r)
         px, py = gx + self.x0, self.y1 - gy
-        dem_kind = self.region.sources["dem"]["kind"]
-        lc_kind = self.region.sources["landcover"]["kind"]
+        dem_kind = self.region.sources["dem"]
+        lc_kind = self.region.sources["landcover"]
         elev = rasters.sample_points(self.region, dem_kind, px, py, np.full(px.size, r)).reshape(
             h, w
         )
@@ -217,9 +218,8 @@ class Editor:
             has |= m
         rgb = np.where(has[..., None], 0.5 * base + 0.5 * tint, base) * shade[..., None]
         # roads on top
-        release = self.region.sources["overture"]["release"]
-        rows = overture.roads(
-            release, self.region.lonlat_envelope(), self.region.sources["roads"]["classes"]
+        rows = plugins.source(self.region, "features").roads(
+            self.region.lonlat_envelope(), self.region.sources["roads"]["classes"]
         )
         for row in rows:
             geom = shapely.segmentize(shapely.from_wkt(row["geometry"]), 0.002)

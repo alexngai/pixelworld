@@ -1,0 +1,476 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "tokyo-walk",
+  "name": "Tokyo (walking)",
+  "chunkSize": 64,
+  "cellsX": 228,
+  "cellsY": 478,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "e1068c897725ee5088d7d8e40697784cc432103f655c7810af2b622ee75cb0a9",
+      "heightRange": [
+        6,
+        16
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "0b2f838c998b55bb36da345aed030f4c39f2b9a70e490d9207a6575b53eaa57c",
+      "heightRange": [
+        10,
+        16
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "07f184783d27b30748207bab699cdd67a36f833ca9ae5df271ff4fd96bec6ee9",
+      "heightRange": [
+        8,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "d13ef5b9ca8db9fafea446ed0e89000fdd5347b79f2ddfd1335fe216c754c833",
+      "heightRange": [
+        8,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "9e35ba8e033f0a223bceac002e16e8c1baa7b02e6f183850d5a855089f189b70",
+      "heightRange": [
+        9,
+        17
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "6d7db11db20f9c922e6ac3558d352d521b117f8dfad1c91490928b5b0d47d4c6",
+      "heightRange": [
+        11,
+        16
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "0f07a30eb9b9fd4574aabe384baebddf28302010452f4babc1a116adf6807064",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "4119177875002c68385a48b57aea63dbb267948f3c903961b9d613485ace1b33",
+      "heightRange": [
+        10,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "e5be68474d248251cfbdb64a3d8c8ad73b4b9b199ad14426076779bfdec8bcda",
+      "heightRange": [
+        10,
+        17
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "7e84e782e8d023423ba26706d7601f7927c3008d3df420e7cf4dbc37be8626b7",
+      "heightRange": [
+        10,
+        15
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "7b70688e4b1d05c53da387e68afa80aecb17a382a2a40c1ee4428ae6943a4428",
+      "heightRange": [
+        10,
+        15
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "d733d2bf68c0fe7c3c001c8c7db9ad87503a03560ef3472de2cfb7e14516b1f7",
+      "heightRange": [
+        9,
+        13
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "2c96c3a447dddde05105a4ed3da822cfbdf3f08e78e0f1051f5e23e10b1c86d9",
+      "heightRange": [
+        9,
+        16
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "fa3a049554950859b8bb75e7dd2b0c553940951e8e9932c8e258afcff4336644",
+      "heightRange": [
+        10,
+        15
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "fa204099227baa2087a34e4bf3de8ad8a41ba2286c405e9d996d924d541c4561",
+      "heightRange": [
+        8,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "5f8230c158c57eac0928a3a11b2e37efd499144ff218f8098613a10cb4897bb0",
+      "heightRange": [
+        8,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "6ae6bba7d0d46e8c3180bcce33b66fca9ea7b342221be50154b117c5e9c6cf9c",
+      "heightRange": [
+        7,
+        15
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "1f83694b6528ca8ec5cefc17010abc4cca09da9d0835cfc67ca9be4b83c1c4d1",
+      "heightRange": [
+        9,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "cba94ddd9c5002f3a9dfb697f1362518eeacab0c348831347fe3fd24b54ef958",
+      "heightRange": [
+        6,
+        13
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "c086de85dc14dac8310ef1c5da50644f5c295a4f425bc1c5c82d023dd10dc9bc",
+      "heightRange": [
+        6,
+        13
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "83f7d808fe8303287100ee0ca84e512b9109cdb9da19e9e3db6d1bc5dddbab31",
+      "heightRange": [
+        6,
+        14
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "d23ccbf96deb0ba1da9516de465d4d05e7a4f651efd1641f816bb63c3a6ec397",
+      "heightRange": [
+        6,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "d39b25687e15049ae919a85b28cae263b376eb20bb1821373532373725346c51",
+      "heightRange": [
+        5,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "139bfcf5c3cefa7d64b390d4ec0e74c4901bf1e6154ff44a5c1e0e5181938a0c",
+      "heightRange": [
+        8,
+        13
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "e2c14ccbd2d91021033bf2bcda1562726a340ff1273f926d3de92b774468a4b9",
+      "heightRange": [
+        7,
+        14
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "03e9985f673a53fb71099ff8d9866db6fc6f4b16c981013377e5c44adcd7c0a1",
+      "heightRange": [
+        5,
+        13
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "f59371261d1687706110461411786ac4c734cf241160449474c6cf689ad93220",
+      "heightRange": [
+        4,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "path": "chunks/3_6.pxwc.gz",
+      "sha256": "7fe893b01345cd64c0897f44e643d416b9d11f210b1827203d6e322a6cc0f880",
+      "heightRange": [
+        9,
+        13
+      ]
+    },
+    {
+      "x": 0,
+      "y": 7,
+      "path": "chunks/0_7.pxwc.gz",
+      "sha256": "db0f2e10e229185837cd7e9db6e8155f056a04fca2e8ca47656b6dd4118cb0e8",
+      "heightRange": [
+        7,
+        14
+      ]
+    },
+    {
+      "x": 1,
+      "y": 7,
+      "path": "chunks/1_7.pxwc.gz",
+      "sha256": "39c335b17c929e9f7828af6c6e5e0b192bbbaa41a775a19ddcc1bab8eb5f4f81",
+      "heightRange": [
+        4,
+        14
+      ]
+    },
+    {
+      "x": 2,
+      "y": 7,
+      "path": "chunks/2_7.pxwc.gz",
+      "sha256": "4b836194df4525ab751bd72a3ef215c5cfbe4d7cd693939f801ed122506bbe9e",
+      "heightRange": [
+        3,
+        12
+      ]
+    },
+    {
+      "x": 3,
+      "y": 7,
+      "path": "chunks/3_7.pxwc.gz",
+      "sha256": "53bedef99d16a79ffee4109d33379ca9097528c3234330b00a225200bed622ee",
+      "heightRange": [
+        6,
+        12
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 2.721655,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.5
+  },
+  "heightRange": [
+    3,
+    17
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "tokyo",
+  "attribution": [
+    {
+      "name": "\u51fa\u5178\uff1a\u56fd\u571f\u5730\u7406\u9662\u30a6\u30a7\u30d6\u30b5\u30a4\u30c8 (\u5730\u7406\u9662\u30bf\u30a4\u30eb \u6a19\u9ad8\u30bf\u30a4\u30eb: DEM1A, DEM5A, DEM10B). \u5730\u7406\u9662\u30bf\u30a4\u30eb\uff08\u6a19\u9ad8\u30bf\u30a4\u30eb\uff08\u57fa\u76e4\u5730\u56f3\u60c5\u5831\u6570\u5024\u6a19\u9ad8\u30e2\u30c7\u30eb\uff09\uff09\u3092\u52a0\u5de5\u3057\u3066\u4f5c\u6210 (processed: mosaicked, resampled onto the world's grid and gaps filled; not GSI's data as published)",
+      "license": "Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "\u51fa\u5178\uff1a\u56fd\u571f\u4ea4\u901a\u7701 PLATEAU\u30a6\u30a7\u30d6\u30b5\u30a4\u30c8 (3D city models, building models, CityGML; the cities, release and spec as fetched, see the build log; copyright: each municipality). Processed: footprints, heights, storeys, years, uses, structures and roof shapes extracted per building (PLATEAU\u306e3D\u90fd\u5e02\u30e2\u30c7\u30eb\u3092\u52a0\u5de5\u3057\u3066\u4f5c\u6210)",
+      "license": "Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0",
+      "url": "https://www.mlit.go.jp/plateau/site-policy/"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 118,
+    "y": 427
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=35.6765 +lon_0=139.7 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      139.6875,
+      35.655,
+      139.7125,
+      35.698
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "941ea29048857e51",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 2,
+    "shores": true
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "35498ed5cd15f7fedc1367b027335e5bb63f1043484df73b0ee0d1dc05ca3809",
+    "count": 45845
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "walk",
+      "world": "tokyo-walk",
+      "label": "Walking Shibuya to Shinjuku"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      16,
+      31
+    ],
+    "sha256": "e727fc04062c04399658e032db8b2b56f925b34d20e4d90701eb8ab94cd5ac63"
+  },
+  "packageHash": "f6ed9b99db912a22f0962661f82462956241734cb38a1f2286e89fa3c7abbc56",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "1d415022c25c8e3caea9561efd46ad36ab4bd2db3cff35bb86b7934e75737875",
+    "version": 1,
+    "count": 5372
+  }
+}

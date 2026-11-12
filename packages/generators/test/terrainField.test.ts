@@ -16,6 +16,18 @@ function stepGrid(): TerrainGrid {
 }
 
 describe("terrain fields", () => {
+  it("bounds a water plane's level only where the package shapes its shores (D-094)", () => {
+    const g = stepGrid();
+    g.water.set([9, -32768]); // west cell under water at 9 steps, above all its ground
+    const tops = (shores: boolean) => {
+      let top = -Infinity;
+      forEachFieldPoint(buildTerrainField(g, { world: { width: 2, height: 1 }, shores }), (_x, _y, h) => (top = Math.max(top, h)));
+      return top;
+    };
+    expect(tops(true)).toBe(9);
+    expect(tops(false)).toBe(3); // the highest ground: 6 micro-steps at k=2
+  });
+
   it("derives micro-cell corners and packs cell attributes", () => {
     const f = buildTerrainField(stepGrid(), { offset: [10, 20], world: { width: 100, height: 100 }, floor: -2 });
     expect([f.k, f.width, f.height, f.origin]).toEqual([2, 2, 1, [10, 20]]);

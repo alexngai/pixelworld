@@ -1,4 +1,7 @@
-import { LANE_DIVIDED, NO_WATER, TerrainGrid } from "@pixelworlds/grid";
+import { LANE_DIVIDED, NO_WATER, PIECES, TerrainGrid } from "@pixelworlds/grid";
+
+/** Texels per cell in TerrainField.segs: road, path and rail pieces (D-082, D-097). */
+export const SEG_SLOTS = 3 * PIECES;
 
 /** The most cells the decal looks out for a median's two carriageways (M3.5). */
 export const MEDIAN_REACH = 3;
@@ -45,13 +48,27 @@ export interface TerrainField {
   wayReach: number;
   /**
    * Per cell (M3.5): rails drawn in the street, connections in bits 0-7 and
-   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN).
+   * what is drawn in bits 12-15 (RAIL_STREET, RAIL_CABLE, RAIL_TRAIN); a rail
+   * corridor's track count less one in bits 8-10 and RAIL_NEAR (D-097).
    */
   rails: Int16Array;
+  /**
+   * Centre lines (D-082): per cell SEG_SLOTS RGBA8 texels, its road pieces,
+   * then its path pieces, then its rail corridors' (D-097) (x0, y0, x1, y1 in
+   * 1/255 cell; empty slots last and zero), as a (SEG_SLOTS·width) × height
+   * texture; null when the grid has none.
+   */
+  segs: Uint8Array | null;
   /** Height (steps) that world-edge skirts reach down to. */
   floor: number;
   /** World size in cells: skirts are drawn only at real world edges. */
   world: { width: number; height: number };
+  /**
+   * Water is drawn as planes at its levels over shaped shores (D-094):
+   * packages whose manifest says micro.shores. Without it, water cells are
+   * flat at their level and drawn as their tops.
+   */
+  shores: boolean;
   /**
    * Per edge (0 N, 1 E, 2 S, 3 W): the micro-cells (row-major index) that
    * have a wall on that edge, i.e. stand above their neighbour there or sit at
@@ -83,6 +100,8 @@ export interface TerrainFieldOptions {
   offset?: [number, number];
   world?: { width: number; height: number };
   floor?: number;
+  /** TerrainField.shores (default false). */
+  shores?: boolean;
 }
 
 const DIRS8 = [
@@ -197,6 +216,17 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
   }
   const rails = new Int16Array(n);
   for (let i = 0; i < n; i++) rails[i] = grid.rail[i]! & 0x7fff;
+  let segs: Uint8Array | null = null;
+  if (grid.roadSeg.some((v) => v !== 0) || grid.pathSeg.some((v) => v !== 0) || grid.railSeg.some((v) => v !== 0)) {
+    const words = new Uint32Array(n * SEG_SLOTS); // little-endian: the bytes are x0, y0, x1, y1
+    for (let i = 0; i < n; i++)
+      for (let k = 0; k < PIECES; k++) {
+        words[i * SEG_SLOTS + k] = grid.roadSeg[i * PIECES + k]!;
+        words[i * SEG_SLOTS + PIECES + k] = grid.pathSeg[i * PIECES + k]!;
+        words[i * SEG_SLOTS + 2 * PIECES + k] = grid.railSeg[i * PIECES + k]!;
+      }
+    segs = new Uint8Array(words.buffer);
+  }
   for (let i = 0; i < n; i++) {
     cells[i * 4] = grid.surface[i]!;
     cells[i * 4 + 1] = grid.road[i]! & 0x0fff; // connections and corner crossings fit in 12 bits
@@ -214,15 +244,18 @@ export function buildTerrainField(grid: TerrainGrid, options: TerrainFieldOption
     ways,
     wayReach: widest > 0 ? Math.ceil(widest / 32) : 0,
     rails,
+    segs,
     floor: options.floor ?? grid.heightRange()[0] - 2,
     world,
+    shores: options.shores ?? false,
     walls: lists.map((l) => Int32Array.from(l)) as TerrainField["walls"],
   };
 }
 
 /**
  * Visit the points that bound a field: every micro-cell's four drawn corners,
- * plus skirt bottoms at world edges. fn receives (x, y, h steps, cellX, cellY).
+ * skirt bottoms at world edges, and the corners of water cells at their level
+ * (the water plane, D-094). fn receives (x, y, h steps, cellX, cellY).
  */
 export function forEachFieldPoint(
   f: TerrainField,
@@ -246,4 +279,12 @@ export function forEachFieldPoint(
         for (let c = 0; c < 4; c++) fn(ox + (mx + OFF[c * 2]!) / k, oy + (my + OFF[c * 2 + 1]!) / k, f.floor, cx, cy);
     }
   }
+  // the planes over a water cell's neighbours stand at a water cell's level too
+  if (!f.shores) return;
+  for (let y = 0; y < f.height; y++)
+    for (let x = 0; x < f.width; x++) {
+      const level = f.cells[(y * f.width + x) * 4 + 3]!;
+      if (level === NO_WATER) continue;
+      for (let c = 0; c < 4; c++) fn(ox + x + OFF[c * 2]!, oy + y + OFF[c * 2 + 1]!, level, ox + x, oy + y);
+    }
 }

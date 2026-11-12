@@ -335,7 +335,7 @@ export class TrafficLayer implements Layer {
         complete = false;
         continue;
       }
-      list.push({ sprite, sx: Math.round(s.sx), sy: Math.round(s.sy), depth: s.depth, silhouette: false });
+      list.push({ sprite, sx: s.sx, sy: s.sy, depth: s.depth, silhouette: false }); // between art pixels: traffic glides
     }
     this.drawMs = performance.now() - t0;
     return { list, complete: complete && this.pending === 0 };

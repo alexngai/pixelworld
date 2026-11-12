@@ -1,0 +1,16 @@
+name: Kiyomizu-dera Main Hall
+wikidata: Q107020576
+# Wikidata's coordinates: the hall, on the edge of the Otowa valley; its stage
+# runs out south over the slope on a lattice of pillars
+anchor: { lon: 135.7849, lat: 34.99482 }
+height: 30          # depicted: the ridge above the stage's foot (the stage is about 13 m up; PLATEAU
+                    # measures the hall at 22.1 m over its own lowest ground, the stage at 9.6 m)
+base: 102           # the slope under the stage's south edge (GSI's DEM5A); the hall stands at 115 m
+clear: 18
+replaces:
+  - 2ad406f3-b1c6-4cfb-938f-cc1d7c18baef   # Overture's 本堂, the hall
+  - 24813118-7fea-4516-b7e4-6583412dbbdc   # Overture's 舞台, the stage
+depictions:
+  # a hall under a cypress-bark hip-and-gable roof on a terrace, its stage of
+  # boards on pillars and tie beams between two small roofed wings; no name
+  generic: { group: landmark.temple.stage }

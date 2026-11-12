@@ -7,6 +7,7 @@ import yaml
 
 from pixelworld_pipeline import objects
 from pixelworld_pipeline.region import Region, RegionError
+from pixelworld_pipeline.sources import overture
 
 SPEC = {
     "id": "lm",
@@ -18,7 +19,7 @@ SPEC = {
     "sources": {
         "dem": {"kind": "usgs-3dep-1arcsec"},
         "landcover": {"kind": "esa-worldcover-2021"},
-        "overture": {"release": "2026-10-21.0"},
+        "features": {"kind": "overture", "release": "2026-10-21.0"},
         "roads": {"classes": ["primary"]},
     },
 }
@@ -277,6 +278,23 @@ def test_bridges_turn_to_the_grid_with_their_road_and_keep_their_foot(registry):
             assert bridge["z0"] == 0.0 and bridge["top"] == 6.0
 
 
+def test_an_anchored_landmark_stands_on_its_base_when_it_has_one(registry):
+    """D-091: `base` puts an anchored landmark's foot at that height (Kiyomizu-dera's
+    stage, down the slope from its hall); without it, it stands on the ground."""
+    for base, want in ((102, 10.2), (None, None)):
+        raw = {"anchor": {"lon": -115.195, "lat": 36.005}, "height": 30}
+        raw["depictions"] = {"generic": {"group": "landmark.temple.stage"}}
+        if base is not None:
+            raw["base"] = base
+        (registry / "_landmarks" / "hall.yaml").write_text(yaml.safe_dump(raw))
+        path = registry / "r" / "region.yaml"
+        path.write_text(yaml.safe_dump(SPEC | {"objects": {"landmarks": ["hall"]}}))
+        r = Region.load(path)
+        blocked = np.zeros(r.cells[::-1], dtype=bool)
+        out, _ = objects.place(r, blocked, [], heights=lambda x, y, m: m / 10.0)
+        assert out[0].get("z0") == want
+
+
 def test_snapped_bridges_lie_on_the_road_they_carry(registry):
     (registry / "_landmarks" / "span.yaml").write_text(
         yaml.safe_dump(
@@ -367,9 +385,11 @@ def test_micro_terrain_under_a_bridge_deck_is_flat_water():
     assert k2 == k and mc2.dtype == np.int16
     assert (water[under] == 0).all() and (surface[under] == S["water"]).all()
     assert not road.mask[under].any() and not hw[under].any()
-    # flat at the water level, like every other water cell
-    assert (mc2[4 * k : 5 * k + 1, 2 * k : 8 * k + 1] == 0).all()
-    assert (mc2[: 4 * k + 1] == 0).all() and (mc2[5 * k :] == 0).all()
+    # flat a micro-step under the water level, under the plane the client draws
+    assert (mc2[4 * k : 5 * k + 1, 2 * k : 8 * k + 1] == -1).all()
+    # the sea's bed under its level, untouched by the deck's water
+    assert (mc2[: 4 * k] < 0).all() and (mc2[5 * k + 1 :] < 0).all()
+    assert (mc2[: 4 * k] == mc[: 4 * k]).all()
     # the road on either shore keeps its bed (the edges it shares with water are water's)
     for x0, x1 in ((0, 2), (8, 10)):
         bed = (slice(4 * k + 1, 5 * k), slice(x0 * k + 1, x1 * k - 1))
@@ -385,3 +405,32 @@ def test_a_level_can_switch_object_sections_off_with_null(registry):
     blocked = np.zeros(r.cells[::-1], dtype=bool)
     out, counts = objects.place(r, blocked, [])
     assert out == [] and counts == {}
+
+
+def test_a_footprint_landmark_stands_on_the_building_it_replaces(registry, monkeypatch):
+    (registry / "_landmarks" / "wedge.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "anchor": {"lon": -115.195, "lat": 36.005},
+                "height": 90,
+                "replaces": ["The Wedge"],
+                "footprint": True,
+                "depictions": {"generic": {"group": "landmark.block"}},
+            }
+        )
+    )
+    wedge = "POLYGON ((-115.1955 36.0045, -115.1945 36.0045, -115.1955 36.0055, -115.1955 36.0045))"
+    rows = [{"id": "w", "names": {"primary": "The Wedge"}, "geometry": wedge}]
+    monkeypatch.setattr(overture, "buildings", lambda release, box: rows)
+    monkeypatch.setattr(overture, "building_parts", lambda release, box: [])
+    monkeypatch.setattr(objects, "park_polygons", lambda *a: [])
+    r = _region(registry, {"landmarks": ["wedge"], "buildings": {"minArea": 10}})
+    assert r.objects["landmarks"][0]["footprint"] is True
+    blocked = np.zeros(r.cells[::-1], dtype=bool)
+    out, counts = objects.place(r, blocked, [])
+    assert counts == {"landmark.block": 1}  # the building itself is replaced
+    (lm,) = out
+    fp = np.asarray(lm["fp"])
+    assert len(fp) == 3 and lm["hm"] == 90  # its triangle, at its own height
+    assert lm["x"] == pytest.approx(fp[:, 0].mean(), abs=0.01)
+    assert lm["y"] == pytest.approx(fp[:, 1].mean(), abs=0.01)

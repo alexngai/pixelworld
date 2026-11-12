@@ -502,11 +502,48 @@ OVERVIEW_DOC = (
     "Read the source's overview this many times coarser than its full resolution "
     "(1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source."
 )
+SOURCE_OPTIONS = "the source's options"
+
+
+def source_options(role: str) -> Callable[[dict, KeyPath, Ctx], None]:
+    """A source block's rule: its options checked against the source's
+    `options_schema` (plugins.Source), when it declares one."""
+
+    def rule(v: dict, path: KeyPath, ctx: Ctx) -> None:
+        from . import plugins
+
+        kind = v.get("kind")
+        if not isinstance(kind, str) or not kind:
+            return
+        try:
+            obj = plugins.load_source(role, kind)
+        except plugins.PluginError:
+            return  # the plugin check reports it
+        opts = {k: x for k, x in v.items() if k not in plugins.PIPELINE_KEYS}
+        if not isinstance(obj, type):
+            for k in opts:
+                ctx.add((*path, k), f"the {kind} source takes no options")
+        elif obj.options_schema is not None:
+            Map(obj.options_schema, name=f"{kind} options").check(opts, path, ctx)
+
+    return rule
+
+
+def source_ref(role: str, doc: str, *, default: str | None = None) -> Map:
+    """A `sources.<key>` block: `kind`, the source, and its options beside it."""
+    return Map(
+        {"kind": Key(Str(), doc, f"`{default}`" if default else None, required=not default)},
+        options=SOURCE_OPTIONS,
+        rule=source_options(role),
+    )
+
+
 SOURCE = {
     "kind": Key(
         Str(),
         "The terrain source: `usgs-3dep-13arcsec` (10 m, United States), "
-        "`usgs-3dep-1arcsec` (30 m, United States), or a plugin's "
+        "`usgs-3dep-1arcsec` (30 m, United States), `copernicus-glo30` (30 m, worldwide), "
+        "`gsi-dem` (Japan), `ign-rgealti` (France), or an installed one "
         "(`pixelworld plugins` lists them).",
         required=True,
     ),
@@ -523,17 +560,22 @@ DEM = Map(
         )
     },
     name="mapping",
+    options=SOURCE_OPTIONS,
+    rule=source_options("terrain"),
 )
 LANDCOVER = Map(
     {
         "kind": Key(
             Str(),
-            "The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or a plugin's.",
+            "The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or an installed "
+            "one giving ESA WorldCover's class codes.",
             required=True,
         ),
         "overview": Key(OVERVIEW, OVERVIEW_DOC, "16"),
     },
     name="mapping",
+    options=SOURCE_OPTIONS,
+    rule=source_options("landcover"),
 )
 
 RAIL_RULE = Map(
@@ -552,6 +594,11 @@ RAIL_RULE = Map(
         "names": Key(ListOf(Str()), "Only lines whose name contains one of these."),
         "unnamed": Key(Bool(), "Only lines without a name."),
         "bounds": Key(BBOX, "Only lines wholly inside this box."),
+        "bundle": Key(
+            Num(0, lo_open=True, unit="m"),
+            "Parallel tracks within this distance are drawn as one corridor along its centre "
+            "line, with its track count (D-097; micro-terrain worlds).",
+        ),
     }
 )
 
@@ -559,22 +606,48 @@ SOURCES = Map(
     {
         "dem": Key(DEM, "Elevation: the terrain source.", required=True),
         "landcover": Key(LANDCOVER, "Land cover: surfaces, water and vegetation.", required=True),
-        "overture": Key(
-            Map(
-                {
-                    "release": Key(
-                        Str(
-                            pattern=r"\d{4}-\d{2}-\d{2}\.\d+",
-                            pattern_doc="an Overture release like 2026-10-21.0",
-                        ),
-                        "The Overture Maps release roads, rivers, buildings and land use "
-                        "come from, pinned so builds repeat (e.g. `2026-10-21.0`).",
-                        required=True,
-                    )
-                }
+        "features": Key(
+            source_ref(
+                "features",
+                "The map's roads, paths, rivers, rail, water, land use and buildings: `overture` "
+                "(with `release:`, an Overture Maps release like `2026-10-21.0`, pinned so builds "
+                "repeat), or an installed source.",
             ),
-            "Overture Maps: roads, paths, rivers, rail, buildings, land use.",
+            "The vector map (D-110).",
             required=True,
+        ),
+        "facts": Key(
+            source_ref(
+                "facts",
+                "Per-building facts (year built, storeys, use) for `objects.typology`: `datasf`, "
+                "`pluto`, `apur`, `plateau`, `areas`, or an installed source.",
+            ),
+            "Building facts (D-055).",
+        ),
+        "canopy": Key(
+            source_ref(
+                "canopy",
+                "Tree heights for `canopy:` rules: `meta-chm` (WRI and Meta, 1 m, worldwide).",
+                default="meta-chm",
+            ),
+            "Tree canopy heights.",
+        ),
+        "heights": Key(
+            source_ref(
+                "heights",
+                "Building heights for `objects.buildings.lidar`: `usgs-3dep-lidar` (with "
+                "`project:`, a USGS 3DEP EPT project).",
+                default="usgs-3dep-lidar",
+            ),
+            "Measured building heights (D-052).",
+        ),
+        "importance": Key(
+            source_ref(
+                "importance",
+                "Famous places for `warp.importance`: `wikidata`.",
+                default="wikidata",
+            ),
+            "Place fame, for warped layouts.",
         ),
         "roads": Key(
             Map(
@@ -611,6 +684,19 @@ SOURCES = Map(
             ),
             "River lines.",
             "`{ subtypes: [river] }`",
+        ),
+        "lakes": Key(
+            Map(
+                {
+                    "classes": Key(
+                        ListOf(AnyValue("string"), min_items=1),
+                        "Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …).",
+                        required=True,
+                    )
+                }
+            ),
+            "Overture's water areas drawn as still water beside land cover's (D-103): a "
+            "garden's pond, a castle's moat. Each is levelled as a lake.",
         ),
         "paths": Key(
             Map(
@@ -757,6 +843,14 @@ SNAP = Map(
                         "1",
                     ),
                     "maxShift": Key(Num(0), "No junction moves further than this (cells).", "2"),
+                    "directions": Key(
+                        OneOf(
+                            (lambda v: v in (8, 16) and not isinstance(v, bool), AnyValue()),
+                            name="8 or 16",
+                        ),
+                        "Snap to the 8 grid directions, or 16 with the 2:1 ones (D-082).",
+                        "8",
+                    ),
                     "keep": Key(ListOf(KEEP_RULE), "Streets left as mapped (a crooked street)."),
                 }
             ),
@@ -803,6 +897,12 @@ WIDTHS = Map(
     {
         "scale": Key(Num(0, lo_open=True), "Ways are drawn this many times their real width.", "1"),
         "minCells": Key(Num(0), "…never narrower than this (cells).", "0.1"),
+        "centrelines": Key(
+            Bool(),
+            "Draw ways along their own centre lines rather than their cells' connections "
+            "(any angle, curves; D-082).",
+            "false",
+        ),
         "roads": Key(
             MapOf(Str(road_classes), Num(0, lo_open=True), "mapping of road class → metres"),
             "Real width per road class (defaults: motorway 16, trunk and primary 14, "
@@ -841,6 +941,10 @@ LAWN = Map(
         ),
         "over": Key(ListOf(Str(surface_names)), "Surfaces a lawn replaces.", "`[grass]`"),
         "keep": Key(ListOf(Str()), "Natural land (Overture base `land` classes) left as it is."),
+        "paved": Key(
+            ListOf(Str()),
+            "Land-use classes inside a park left as they are (`pedestrian`: courts and plazas).",
+        ),
         "maxSlope": Key(Num(0), "A park steeper than this (rise over run) stays wild.", "0.2"),
         "slopeMeters": Key(Num(0), "Slopes are measured over about this distance.", "50"),
         "wooded": Key(
@@ -887,35 +991,42 @@ YARD = Map(
 
 LIDAR = Map(
     {
-        "project": Key(
-            Str(),
-            "The USGS 3DEP lidar project (e.g. `USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018`).",
-            required=True,
-        ),
         "res": Key(Num(0, lo_open=True, unit="m"), "Height grid resolution.", "4"),
         "depth": Key(Num(0, integer=True), "Point-cloud octree depth read.", "6"),
         "towerGap": Key(Num(0, unit="m"), "Roofs this far above the median are tower parts.", "25"),
         "minTowerArea": Key(Num(0, unit="m²"), "Smallest tower part.", "600"),
     }
 )
+BOXES = OneOf(
+    (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
+    (lambda v: True, BBOX),
+    name="a box or a list of boxes",
+)
 BUILDINGS = Map(
     {
         "bounds": Key(
-            OneOf(
-                (lambda v: isinstance(v, list) and v and isinstance(v[0], list), ListOf(BBOX)),
-                (lambda v: True, BBOX),
-                name="a box or a list of boxes",
-            ),
+            BOXES,
             "Only buildings in this box (or these boxes).",
             "the whole region",
         ),
         "minArea": Key(Num(0, unit="m²"), "Smaller footprints are left out.", "30"),
         "towerMeters": Key(Num(0, unit="m"), "Buildings this tall are towers.", "45"),
         "podiumMeters": Key(Num(0, unit="m"), "A tower's podium height.", "15"),
+        "tiers": Key(
+            Bool(),
+            "Parts standing on others (setback tiers) are drawn from the ground where they "
+            "stand over their building, not dropped.",
+            "off",
+        ),
         "houseMaxArea": Key(
             Num(0, unit="m²"), "Residential footprints up to this size are houses (0: none).", "0"
         ),
         "simplifyMeters": Key(Num(0, unit="m"), "Footprint simplification.", "2"),
+        "courtyards": Key(
+            Bool(),
+            "Keep footprints' courtyards (their holes, as `fh`) instead of filling them.",
+            "false",
+        ),
         "implausible": Key(
             Map(
                 {
@@ -930,7 +1041,10 @@ BUILDINGS = Map(
             "Footprints in parks that are really trees are dropped (null keeps every one).",
             "on",
         ),
-        "lidar": Key(LIDAR, "Heights and tower parts from USGS 3DEP lidar."),
+        "lidar": Key(
+            LIDAR,
+            "Heights and tower parts from measured heights (`sources.heights`: USGS 3DEP lidar).",
+        ),
     }
 )
 
@@ -947,9 +1061,31 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")), "Class codes: exact, or a prefix ending in `*`."
         ),
         "roofs": Key(ListOf(AnyValue("string")), "Roof shapes."),
+        "materials": Key(
+            ListOf(AnyValue("string")), "Facade materials (from the facts source; any case)."
+        ),
+        "names": Key(
+            ListOf(AnyValue("string")),
+            "Overture names (a building's primary name; its parts share it), exactly.",
+        ),
+        "grounds": Key(
+            ListOf(AnyValue("string")),
+            "Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) "
+            "the building's centroid stands in.",
+        ),
+        "kinds": Key(
+            ListOf(AnyValue("string")),
+            "Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts "
+            "share it), exactly.",
+        ),
         "minWidth": Key(Num(0, unit="m"), "Narrowest."),
         "maxWidth": Key(Num(0, unit="m"), "Widest."),
         "minDepth": Key(Num(0, unit="m"), "Shallowest."),
+        "maxDepth": Key(Num(0, unit="m"), "Deepest (the footprint's long side)."),
+        "maxFill": Key(
+            Num(0, 1),
+            "Most share of its smallest enclosing rectangle the footprint fills (a ring, a C).",
+        ),
         "minParty": Key(Num(0, 1), "Least share of outline shared with neighbours."),
         "maxParty": Key(Num(0, 1), "Most share of outline shared with neighbours."),
         "floors": Key(num_range("[min, max]"), "Storeys."),
@@ -957,29 +1093,21 @@ TYPOLOGY_RULE = Map(
         "maxHeight": Key(Num(0, unit="m"), "Tallest."),
         "onWater": Key(Bool(), "Stands over water."),
         "corner": Key(Bool(), "On a corner lot."),
+        "bounds": Key(
+            BOXES, "Only buildings whose centroid is in this box (or these boxes): a neighbourhood."
+        ),
     }
 )
 TYPOLOGY = Map(
     {
-        "facts": Key(
-            OneOf(
-                (is_str, Str()),
-                (
-                    is_map,
-                    Map(
-                        {"plugin": Key(Str(), "The facts source plugin.", required=True)},
-                        options="plugin options",
-                    ),
-                ),
-                (lambda v: v is False, Bool()),
-                name="a plugin name, or { plugin, …options }",
-            ),
-            "A facts source plugin (year built, use, storeys) by name: `datasf`, or "
-            "`{ plugin: datasf, …options }`.",
-        ),
         "rules": Key(ListOf(TYPOLOGY_RULE), "Matched in order; the first match picks the group."),
+        "roofHints": Key(
+            Bool(),
+            "The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof "
+            "hint where Overture gives none.",
+            "false",
+        ),
     },
-    options="facts source options (the older form)",
 )
 
 
@@ -1027,9 +1155,23 @@ ROW_RULE_KEYS = {
         Num(0, unit="m"), "Distance from the road's centre line.", "12 (0 with `canopy`)"
     ),
     "name": Key(Str(), "Only roads whose name contains this."),
+    "notName": Key(Str(), "Not on roads whose name contains this (D-109)."),
     "bounds": Key(BBOX, "Only within this box."),
     "landcover": Key(ListOf(Str(landcover_classes)), "Only on these land-cover classes."),
     "across": Key(Bool(), "Over the road, turned across it (strung lanterns)."),
+    "along": Key(
+        Bool(), "On one side only, turned to run with the road (utility poles and their wires)."
+    ),
+    "diagonal": Key(
+        Str(),
+        "With `along`: the group placed where the road runs diagonally, for a model drawn "
+        "along x = y.",
+    ),
+    "slants": Key(
+        ListOf(Str()),
+        "With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for "
+        "models drawn along (2, −1) and (1, −2).",
+    ),
     "canopy": Key(
         Num(0, unit="m"),
         "On the verge past the drawn asphalt, where the canopy map has trees this tall.",
@@ -1041,7 +1183,15 @@ ROW_RULE_KEYS = {
 STREET_TREE_RULE = Map(dict(ROW_RULE_KEYS), rule=_row_rule)
 STREET_PROP_RULE = Map(
     ROW_RULE_KEYS
-    | {"at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners.")},
+    | {
+        "at": Key(Str(["junctions"]), "Two per junction of 3+ roads, on opposite corners."),
+        "wires": Key(
+            Str(),
+            "Strung props (D-098): one row on each street's left at `offset` (default 3 m), "
+            "joined through junctions where the street runs on straight, and a span of "
+            "this group from each prop to the next.",
+        ),
+    },
     rule=_row_rule,
 )
 LANDMARK_PART = Map(
@@ -1079,6 +1229,9 @@ LANDMARK = Map(
             Num(0, lo_open=True), "Drawn this many times its size.", "`depiction.landmarks.scale`"
         ),
         "replaces": Key(ListOf(Str()), "Overture building names or ids it stands in for."),
+        "footprint": Key(
+            Bool(), "Drawn on the footprint of the building it replaces, not on a box.", "off"
+        ),
         "parts": Key(ListOf(LANDMARK_PART), "Sub-objects along a line landmark."),
         "hero": Key(Bool(), "Baked offline and painted over."),
     },
@@ -1129,6 +1282,24 @@ OBJECTS = Map(
         "streetTrees": Key(ListOf(STREET_TREE_RULE), "Rows of trees along roads."),
         "streetProps": Key(
             ListOf(STREET_PROP_RULE), "Street lights and signals: rows, or at junctions."
+        ),
+        "walls": Key(
+            ListOf(
+                Map(
+                    {
+                        "group": Key(Str(), "The group of a wall's segment.", required=True),
+                        "classes": Key(
+                            ListOf(Str(), min_items=1),
+                            "Overture barrier classes (`retaining_wall`, `wall` …).",
+                            required=True,
+                        ),
+                        "spacing": Key(Num(0, unit="m"), "Segment length.", required=True),
+                        "diagonal": Key(Str(), "The group on diagonal lines."),
+                        "slants": Key(ListOf(Str()), "The groups on the 2:1 lines."),
+                    }
+                )
+            ),
+            "Walls along Overture's barrier lines, in segments turned with them (D-104).",
         ),
         "landmarks": Key(
             ListOf(
@@ -1320,7 +1491,9 @@ REGION = Map(
                                     "`sources.dem.overview`",
                                 ),
                                 "resampling": DEM.keys["resampling"],
-                            }
+                            },
+                            options=SOURCE_OPTIONS,
+                            rule=source_options("terrain"),
                         ),
                         "Overrides `sources.dem` for the micro-terrain (usually a finer overview).",
                     ),

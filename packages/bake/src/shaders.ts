@@ -9,6 +9,8 @@ layout(location = 4) in vec2 aRoad;    // road mask, road class (top faces)
 layout(location = 5) in float aGeol;   // geology province id
 layout(location = 6) in vec3 aInstOffset; // instanced objects: position offset (0 otherwise)
 layout(location = 7) in vec2 aInstCell;   // instanced objects: owning cell (0 otherwise)
+layout(location = 8) in vec2 aFaceUv;     // faces drawn from texels: place on the face, in texels
+layout(location = 9) in vec4 aFaceRef;    // and the face's texels: offset / 4096, offset % 4096, width, height
 `;
 
 export const SHADOW_VS = /* glsl */ `#version 300 es
@@ -62,6 +64,8 @@ flat out vec2 vMat;
 flat out vec2 vCell;
 flat out vec2 vRoad;
 flat out float vGeol;
+out vec2 vFaceUv;
+flat out vec4 vFaceRef;
 
 void main() {
   vec3 pos = aPos + aInstOffset;
@@ -85,6 +89,8 @@ void main() {
   vCell = aCell + aInstCell;
   vRoad = aRoad;
   vGeol = aGeol;
+  vFaceUv = aFaceUv;
+  vFaceRef = aFaceRef;
 }
 `;
 
@@ -102,6 +108,14 @@ flat in vec2 vMat;
 flat in vec2 vCell;
 flat in vec2 vRoad;
 flat in float vGeol;
+#ifdef FIELD_WAYS
+in vec3 vShape;
+#endif
+#ifndef FIELD_WAYS
+in vec2 vFaceUv;
+flat in vec4 vFaceRef;
+uniform highp usampler2D uFaceTexels;  // a ramp per voxel face of the faces drawn from texels (material 99)
+#endif
 
 uniform vec2 uOrigin;
 uniform vec3 uSun;
@@ -129,6 +143,8 @@ uniform int uWayReach;           // cells a road or path can reach beyond its ow
 uniform vec4 uPaths[16];         // per path class: ramp (-1 = unstyled), stripes
 uniform vec4 uLanes;             // narrowest lane (px; -1 = no lanes or medians), dash, gap, median strip (lane widths)
 uniform int uLaneRamp;           // lane lines and median kerbs
+uniform highp usampler2D uFieldSegs; // (18·W) × H: per cell 6 road, 6 path, 6 rail pieces (D-082, D-097)
+uniform int uHasSegs;
 #endif
 
 out vec4 oG;
@@ -138,6 +154,16 @@ const int PATTERN_SPECKLE = 2;
 const int PATTERN_SPARKLE = 3;
 const int PATTERN_FIELDS = 4;
 const int PATTERN_BLOCKS = 5;
+const int FACE_WATER = 5;  // a field's water plane (packages/generators FACE_WATER; 4 is FACE_OBJECT)
+// Natural ground's shading (D-095): hollows and ridges from RELIEF_FROM steps
+// below or above their surroundings, fully a shade darker or lighter
+// RELIEF_SPAN further; patches PATCH_CELLS (render cells) across.
+const float RELIEF_FROM = 0.2;
+const float RELIEF_SPAN = 0.5;
+const float PATCH_CELLS = 2.5;
+const float PATCH_DARK = 0.33;
+const float PATCH_LIGHT = 0.68;
+const float PATCH_RIM = 0.05;
 
 uint hash3(uint x, uint y, uint z) {
   uint h = x * 0x8da6b343u ^ y * 0xd8163841u ^ z * 0xcb1ab31fu;
@@ -146,6 +172,17 @@ uint hash3(uint x, uint y, uint z) {
 }
 float rnd(int x, int y, int salt) {
   return float(hash3(uint(x), uint(y), uint(salt)) & 0xffffffu) / 16777216.0;
+}
+// 4×4 ordered dither thresholds in [0, 1), by screen pixel (as the composite's AO)
+const float BAYER4[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+float bayer4(ivec2 a) { return (BAYER4[(a.y & 3) * 4 + (a.x & 3)] + 0.5) / 16.0; }
+// Smooth value noise on a unit lattice, world-anchored.
+float valueNoise(vec2 p, int salt) {
+  ivec2 i = ivec2(floor(p));
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(rnd(i.x, i.y, salt), rnd(i.x + 1, i.y, salt), f.x),
+             mix(rnd(i.x, i.y + 1, salt), rnd(i.x + 1, i.y + 1, salt), f.x), f.y);
 }
 
 float segDist(vec2 p, vec2 a, vec2 b) {
@@ -202,6 +239,38 @@ float wayNearest(vec2 local, int mask, out vec2 q, out vec2 dir) {
 }
 
 #ifdef FIELD_WAYS
+// Centre lines (D-082): road (slot 0), path (6) or rail (12, D-097) pieces.
+uvec4 piece(ivec2 c, int slot) { return texelFetch(uFieldSegs, ivec2(c.x * 18 + slot, c.y), 0); }
+bool hasPieces(ivec2 c, int slot) { return uHasSegs == 1 && piece(c, slot) != uvec4(0u); }
+
+// The nearest point q (cell-local) on a cell's pieces, its distance, and that piece's direction.
+float piecesNearest(ivec2 c, int slot, vec2 local, out vec2 q, out vec2 dir) {
+  float d = 1e9;
+  q = vec2(0.5);
+  dir = vec2(1.0, 0.0);
+  for (int i = 0; i < 6; i++) {
+    uvec4 s = piece(c, slot + i);
+    if (s == uvec4(0u)) break;
+    vec2 a = vec2(s.xy) / 255.0;
+    vec2 ab = vec2(s.zw) / 255.0 - a;
+    float t = clamp(dot(local - a, ab) / max(dot(ab, ab), 1e-9), 0.0, 1.0);
+    vec2 p = a + ab * t;
+    float di = length(local - p);
+    if (di < d) { d = di; q = p; dir = normalize(ab); }
+  }
+  return d;
+}
+
+// A stretch of one way, not a junction: one piece, or two joined end to end
+// (a bend). Lanes and medians are drawn on these only, as on degree-2 cells.
+bool piecesSimple(ivec2 c, int slot) {
+  uvec4 a = piece(c, slot);
+  uvec4 b = piece(c, slot + 1);
+  if (b == uvec4(0u)) return true;
+  if (piece(c, slot + 2) != uvec4(0u)) return false;
+  return a.zw == b.xy || a.xy == b.zw || a.xy == b.xy || a.zw == b.zw;
+}
+
 uniform mat2 uRot;
 uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
 uniform int uRailRamp;           // -1: the style draws no rails
@@ -239,6 +308,45 @@ float railDistance(vec2 local, ivec2 c, int mask) {
 float railsDecal(inout int ramp, inout int pattern) {
   if (uRailRamp < 0) return 0.0;
   ivec2 own = ivec2(floor(vCell + 0.5)) - uSliceOrigin;
+  // in cells: rails about a pixel wide at the native scale
+  const float GAUGE = 0.08;  // a rail's centre from its track's
+  const float RAIL = 0.035;  // a rail's half-width
+  // rail corridors (D-097): tracks side by side across the nearest piece; square ends
+  bool inSlice = own.x >= 0 && own.y >= 0 && own.x < uSliceSize.x && own.y < uSliceSize.y;
+  if (inSlice && uHasSegs == 1 && (texelFetch(uFieldRails, own, 0).r & 0x800) != 0) {
+    const float TRACKS = 0.36;  // roads.RAIL_TRACK_SPACING
+    float bestC = 9.0;
+    int kindC = 0;
+    int tracks = 1;
+    for (int dy = -2; dy <= 2; dy++) {
+      for (int dx = -2; dx <= 2; dx++) {
+        ivec2 c = own + ivec2(dx, dy);
+        if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y || !hasPieces(c, 12)) continue;
+        int r = texelFetch(uFieldRails, c, 0).r;
+        vec2 local = vGrid - vec2(uSliceOrigin + c);
+        for (int s = 0; s < 6; s++) {
+          uvec4 p = piece(c, 12 + s);
+          if (p == uvec4(0u)) break;
+          vec2 a = vec2(p.xy) / 255.0;
+          vec2 ab = vec2(p.zw) / 255.0 - a;
+          float len = length(ab);
+          float along = dot(local - a, ab) / max(len, 1e-4);
+          if (along < -0.03 || along > len + 0.03) continue;
+          float d = length(local - a - ab * clamp(along / max(len, 1e-4), 0.0, 1.0));
+          if (d < bestC) { bestC = d; kindC = (r >> 12) & 15; tracks = ((r >> 8) & 7) + 1; }
+        }
+      }
+    }
+    if (kindC != 0) {
+      float hw = float(tracks - 1) * 0.5 * TRACKS;
+      for (int i = 0; i < 8; i++) {
+        if (i >= tracks) break;
+        float o = abs(float(i) * TRACKS - hw);
+        if (abs(bestC - abs(o - GAUGE)) < RAIL || abs(bestC - (o + GAUGE)) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
+      }
+      if (kindC == 3 && bestC < hw + GAUGE + 0.08) { ramp = uRailRamp; pattern = 0; return -2.0; }  // ballast
+    }
+  }
   float best = 9.0;
   int kind = 0;
   for (int dy = -1; dy <= 1; dy++) {
@@ -254,9 +362,6 @@ float railsDecal(inout int ramp, inout int pattern) {
       if (d < best) { best = d; kind = (r >> 12) & 15; }
     }
   }
-  // in cells: rails about a pixel wide at the native scale
-  const float GAUGE = 0.08;  // a rail's centre from its track's
-  const float RAIL = 0.035;  // a rail's half-width
   if (kind == 0) return 0.0;
   if (abs(best - GAUGE) < RAIL) { ramp = uRailRamp; pattern = 0; return 0.0; }
   if (kind == 2 && best < 0.03) { ramp = uAsphaltRamp; pattern = 0; return -2.0; }  // the cable's slot
@@ -329,31 +434,7 @@ vec2 wayGrade(ivec2 c, int mask, bool path) {
   return inverse(a) * b;
 }
 
-// Height (micro-steps) of the drawn micro-terrain at micro-coordinates p,
-// clamped to the slice (its margin keeps every owned pixel's ring inside).
-float microHeightAt(vec2 p) {
-  vec2 q = clamp(p, vec2(0.0), vec2(microSize()));
-  ivec2 m = clamp(ivec2(floor(q)), ivec2(0), microSize() - 1);
-  return topHeight(cornersAt(m), clamp(q - vec2(m), 0.0, 1.0));
-}
-
-// The ground's slope around a point in world cells (micro-steps per cell, x
-// and y): a plane fitted to the drawn heights on a 3×3 ring SLOPE_CELLS apart,
-// so a slope drawn as flats and risers (heights are whole micro-steps) reads
-// as one slope, as pavement does with its way's grade.
-const float SLOPE_CELLS = 1.0;
-vec2 smoothGrade(vec2 grid) {
-  vec2 p = (grid - vec2(uSliceOrigin)) * float(uK);
-  float r = SLOPE_CELLS * float(uK);
-  vec2 g = vec2(0.0);
-  for (int j = -1; j <= 1; j++) {
-    for (int i = -1; i <= 1; i++) {
-      if (i == 0 && j == 0) continue;
-      g += vec2(float(i), float(j)) * microHeightAt(p + vec2(float(i), float(j)) * r);
-    }
-  }
-  return g / (6.0 * SLOPE_CELLS);  // least squares: Σ i² = 6 per axis over the ring
-}
+vec2 smoothGrade(vec2 grid) { return groundShape(grid).xy; }
 
 // Real widths (D-050): a road or path can be wider than its cells, so look at
 // the cells within reach and take the nearest way (relative to its half-width)
@@ -383,6 +464,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   int roadMask = 0;
   int roadLane = 0;
   float roadHw = 0.0;
+  bool roadSimple = false;
   float pathBest = 2.0;
   int pathCls = 0;
   ivec2 pathCell = ivec2(0);
@@ -409,28 +491,34 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       ivec2 c = own + ivec2(dx, dy);
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
-      if (w.x == 0 && (w.z & 0x0fff) == 0) continue;
+      bool rp = hasPieces(c, 0);
+      bool pp = hasPieces(c, 6);
+      if (w.x == 0 && (w.z & 0x0fff) == 0 && !rp && !pp) continue;
       vec2 local = vGrid - vec2(uSliceOrigin + c);
       // a way's strips stay inside its cell: skip cells further than its half-width
       float gap = length(max(max(-local, local - 1.0), 0.0));
-      if (w.x != 0) {
+      if (w.x != 0 || rp) {
         int cls = w.y & 255;
         int mask = w.x & 255;
         int lane = (w.x >> 8) & 255;
+        bool simple = rp ? piecesSimple(c, 0) : degree8(mask) == 2;
         // never narrower than the style's width for the class: coarse maps keep
         // their road hierarchy, fine ones grow roads to their real width
         float hw = max(float(w.y >> 8) / 32.0, uRoads[cls].x);
         if (gap <= hw) {
           // centre-to-neighbour strips only: crossing flags would extend past the cell
-          float d = roadDistance(local, mask);
+          vec2 pq;
+          vec2 pdir;
+          float d = rp ? piecesNearest(c, 0, local, pq, pdir) : roadDistance(local, mask);
           if (d <= hw && d / hw < roadBest) {
             roadBest = d / hw; roadD = d; roadCls = cls; roadCell = c; roadMask = mask; roadLane = lane; roadHw = hw;
+            roadSimple = simple;
           }
         }
-        if (medians && (lane & 32) != 0 && degree8(mask) == 2) {
+        if (medians && (lane & 32) != 0 && simple) {
           vec2 q;
           vec2 dir;
-          float d = wayNearest(local, mask, q, dir);
+          float d = rp ? piecesNearest(c, 0, local, q, dir) : wayNearest(local, mask, q, dir);
           vec2 v = q - local;
           if (d < mdA) {
             if (mdA < 1e8 && dot(v, mvA) < -0.5 * d * mdA) { mdB = mdA; mvB = mvA; mhB = mhA; mnB = mnA; }
@@ -441,10 +529,12 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
           }
         }
       }
-      if ((w.z & 0x0fff) != 0) {
+      if ((w.z & 0x0fff) != 0 || pp) {
         float hw = float(w.w >> 8) / 32.0;
         if (hw > 0.0 && gap <= hw) {
-          float d = roadDistance(local, w.z & 255);
+          vec2 pq;
+          vec2 pdir;
+          float d = pp ? piecesNearest(c, 6, local, pq, pdir) : roadDistance(local, w.z & 255);
           if (d <= hw && d / hw < pathBest) { pathBest = d / hw; pathCls = w.w & 255; pathCell = c; pathMask = w.z & 255; }
         }
       }
@@ -453,7 +543,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   // a median: 1 its kerb, 2 a paved strip, 3 the ground between carriageways;
   // never over a cross street or a junction
   int median = 0;
-  bool onCarriageway = roadCls == 0 || ((roadLane & 32) != 0 && degree8(roadMask) == 2);
+  bool onCarriageway = roadCls == 0 || ((roadLane & 32) != 0 && roadSimple);
   if (mdB < 1e8 && onCarriageway) {
     // a strip carved where they meet is uLanes.w lanes across; without lane
     // counts nothing is carved, and only the ground between them is kerbed
@@ -501,7 +591,7 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
     if (rc.y > 0.5 && roadD * uScale < 0.022) ramp = uMarkingRamp;
     return;
   }
-  if (rc.w < 0.5 || lanes < 2 || degree8(roadMask) != 2) return;
+  if (rc.w < 0.5 || lanes < 2 || !roadSimple) return;
   // as many lanes as are at least uLanes.x pixels across (a cell is about 16 px
   // across a way), an even number on a two-way road; none below two
   bool oneway = (roadLane & 16) != 0;
@@ -519,9 +609,13 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
       if (c.x < 0 || c.y < 0 || c.x >= uSliceSize.x || c.y >= uSliceSize.y) continue;
       ivec4 w = texelFetch(uFieldWays, c, 0);
       int m = w.x & 255;
-      if (m == 0 || ((w.x >> 8) & 255) != roadLane || (w.y & 255) != roadCls || degree8(m) > 2) continue;
+      bool cp = hasPieces(c, 0);
+      if ((m == 0 && !cp) || ((w.x >> 8) & 255) != roadLane || (w.y & 255) != roadCls) continue;
+      if (cp ? !piecesSimple(c, 0) : degree8(m) > 2) continue;
       vec2 dd;
-      float d = bentWayDistance(vGrid - vec2(uSliceOrigin + c), c, m, dd);
+      vec2 dq;
+      float d = cp ? piecesNearest(c, 0, vGrid - vec2(uSliceOrigin + c), dq, dd)
+        : bentWayDistance(vGrid - vec2(uSliceOrigin + c), c, m, dd);
       if (d < bd) { bd = d; dir = dd; }
     }
   }
@@ -532,6 +626,71 @@ void waysDecal(inout int ramp, inout int pattern, int kind, out bool paved, out 
   // dashes along the road, anchored to the world
   float period = (uLanes.y + uLanes.z) * lw;
   if (fract(dot(vGrid, dir) / period) * (uLanes.y + uLanes.z) < uLanes.y && uLaneRamp >= 0) ramp = uLaneRamp;
+}
+
+// Ground surfaces per pixel (D-096). Each pixel takes the surface of the cell
+// a warped point lands in: two octaves of world-anchored value noise bend the
+// cells' borders into smooth, crinkled shapes, and a dither of screen pixels
+// either side softens them. Rock follows the ground's slope: where it's
+// steeper than the style's steep-rock slope (varied ±ROCK_VARY across the
+// ground, dithered over ROCK_SOFT) natural ground is bare rock; a cell the
+// pipeline called rock (a cliff's) stays rock down to ROCK_CLIFF of that slope
+// and shows the ground beside it where it's gentler. Water: without planes (packages before D-094) water cells keep
+// their exact cells; with them, ground above the plane takes the land beside it.
+uniform int uSteepDrop;          // micro-steps per micro-cell (= steps per cell) from which ground is bare rock (0 = off)
+uniform int uRockSurface;        // -1 = none
+uniform int uWaterSurface;
+uniform int uSnowSurface;
+uniform int uShores;             // the package's water is drawn as planes (D-094)
+const float WARP_BROAD = 0.45;   // cells: borders bent by up to this, over about 1.2 cells
+const float WARP_FINE = 0.15;    // cells: and crinkled by up to this, over about 0.3 cell
+const float WARP_DITHER = 0.1;   // cells: pixels dithered either side of a border
+const float ROCK_VARY = 0.3;
+const float ROCK_SOFT = 0.25;
+const float ROCK_CLIFF = 0.25;   // a cliff's cell (rock to the pipeline) stays rock down to this much of it
+
+int surfaceAt(ivec2 c) { return texelFetch(uFieldCells, clamp(c, ivec2(0), uSliceSize - 1), 0).x; }
+
+// The surface of the cell nearest q (slice cells) among c and its 8
+// neighbours that is neither a nor b; -1 if there's none.
+int nearestOther(vec2 q, ivec2 c, int a, int b) {
+  int best = -1;
+  float bd = 1e9;
+  for (int j = 0; j < 9; j++) {
+    ivec2 n = c + ivec2(j % 3 - 1, j / 3 - 1);
+    int s = surfaceAt(n);
+    if (s == a || s == b) continue;
+    vec2 d = q - (vec2(n) + 0.5);
+    if (dot(d, d) < bd) { bd = dot(d, d); best = s; }
+  }
+  return best;
+}
+
+int groundSurface(int own, ivec2 ap) {
+  vec2 g = vGrid;
+  vec2 broad = vec2(valueNoise(g * 0.8, 21), valueNoise(g * 0.8 + 17.0, 21)) - 0.5;
+  vec2 fine = vec2(valueNoise(g * 3.3, 22), valueNoise(g * 3.3 + 17.0, 22)) - 0.5;
+  vec2 dith = vec2(bayer4(ap), bayer4(ap + ivec2(1, 2))) - 0.5;
+  vec2 q = g - vec2(uSliceOrigin) + 2.0 * (broad * WARP_BROAD + fine * WARP_FINE + dith * WARP_DITHER);
+  ivec2 qc = ivec2(floor(q));
+  int s = surfaceAt(qc);
+  if (uShores == 0) {
+    if (own == uWaterSurface || s == uWaterSurface) s = own;
+  } else if (s == uWaterSurface) {
+    int land = nearestOther(q, qc, uWaterSurface, uWaterSurface);
+    if (land >= 0) s = land;
+  }
+  if (uSteepDrop <= 0 || uRockSurface < 0 || s == uWaterSurface || s == uSnowSurface) return s;
+  int p = int(uSurfaces[s].y + 0.5);
+  if (s != uRockSurface && p != PATTERN_TREES && p != PATTERN_SPECKLE) return s;  // fields, city blocks
+  float steep = float(uSteepDrop) * uStepWorld * (1.0 + ROCK_VARY * (2.0 * valueNoise(g * 1.3, 23) - 1.0));
+  if (s == uRockSurface) steep *= ROCK_CLIFF;
+  if (length(vShape.xy) / steep - 1.0 + (bayer4(ap) - 0.5) * ROCK_SOFT > 0.0) return uRockSurface;
+  if (s == uRockSurface) {
+    int soil = nearestOther(q, qc, uRockSurface, uWaterSurface);
+    if (soil >= 0) return soil;
+  }
+  return s;
 }
 #endif
 
@@ -553,6 +712,9 @@ void main() {
   int mat = int(vMat.x + 0.5);
   int kind = int(vMat.y + 0.5);
   bool vertical = kind == 2 || kind == 3;
+#ifdef FIELD_WAYS
+  if (kind < 2 && mat < 99) mat = groundSurface(mat, ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin));
+#endif
   int geol = int(vGeol + 0.5);
   int strataSet = uProvinceSet[geol >> 2][geol & 3];
 
@@ -561,6 +723,14 @@ void main() {
   float density;
   if (mat >= 100) {
     ramp = mat - 100; pattern = 0; density = 0.0;
+#ifndef FIELD_WAYS
+  } else if (mat == 99) {
+    // voxel faces of several colours merged into one rectangle: the colour of the one here
+    ivec2 l = clamp(ivec2(floor(vFaceUv)), ivec2(0), ivec2(vFaceRef.zw + 0.5) - 1);
+    int t = int(vFaceRef.x + 0.5) * 4096 + int(vFaceRef.y + 0.5) + l.y * int(vFaceRef.z + 0.5) + l.x;
+    int tw = textureSize(uFaceTexels, 0).x;
+    ramp = int(texelFetch(uFaceTexels, ivec2(t % tw, t / tw), 0).r); pattern = 0; density = 0.0;
+#endif
   } else {
     vec4 surf = uSurfaces[mat];
     ramp = int(surf.x); pattern = int(surf.y + 0.5); density = surf.z;
@@ -575,6 +745,8 @@ void main() {
   vec3 n = normalize(vNormal);
   bool riser = false;
   float railShade = 0.0;
+  bool natural = false;
+  float hollow = 0.0;
 #ifdef FIELD_WAYS
   bool paved = false;
   if (uWayReach > 0) {
@@ -585,20 +757,20 @@ void main() {
     // rather than pale strata.
     vec3 gradeN;
     float wayShade = 0.0;
-    if (kind != 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN, wayShade);
+    if (kind < 3 && mat < 100) waysDecal(ramp, pattern, kind, paved, gradeN, wayShade);
     railShade += wayShade;
     if (paved) {
       n = gradeN;
       riser = vertical;
     }
-    if (!vertical && mat < 100) railShade += railsDecal(ramp, pattern);
+    if (!vertical && kind != FACE_WATER && mat < 100) railShade += railsDecal(ramp, pattern);
   }
   // Surfaces the style lights by slope (lawns, smoothed in the micro-terrain):
   // lit by the ground's slope over about a cell rather than by each micro-tile,
   // so a sloped lawn drawn in height steps reads as one slope, not stripes. Its
   // risers take its own colour a shade darker, as pavement's do. Other
   // surfaces keep their terraces.
-  if (!paved && kind != 3 && mat < 100 && uSurfaces[mat].w > 0.5) {
+  if (!paved && kind < 3 && mat < 100 && uSurfaces[mat].w > 0.5) {
     vec2 g = smoothGrade(vGrid) * uStepWorld / float(uK);
     vec3 sn = normalize(vec3(-g, 1.0));
     n = vec3(uRot * sn.xy, sn.z);
@@ -608,6 +780,20 @@ void main() {
       pattern = 0;
       riser = true;
     }
+  }
+  // Natural ground (D-095): the tops of surfaces drawn with trees or speckle
+  // (woods, scrub, grass, sand, desert, rock) are lit by the ground's slope
+  // over about a cell too, so a hillside reads as one slope rather than as
+  // facets of micro-tiles, with its shade steps dithered (below); hollows
+  // darken them and ridges lighten them, so landforms read. Their walls keep
+  // their strata.
+  int surfacePattern = mat < 100 ? int(uSurfaces[mat].y + 0.5) : 0;
+  natural = !paved && kind < 2 && mat < 100 &&
+    (surfacePattern == PATTERN_TREES || surfacePattern == PATTERN_SPECKLE);
+  if (natural) {
+    hollow = vShape.z;  // steps
+    vec3 sn = normalize(vec3(-vShape.xy, 1.0));
+    n = vec3(uRot * sn.xy, sn.z);
   }
 #endif
   if (!realWidths && roadMask != 0 && !vertical && mat < 100) {
@@ -633,9 +819,11 @@ void main() {
   }
   float level = 4.0 + (ndl - uLightLevels.x) / uLightLevels.y;
   if (shadowed) level -= uLightLevels.z;
-  level = floor(level + 0.5);
-
   ivec2 ap = ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin);
+  float dither = bayer4(ap);
+  // natural ground's smooth light falls in dithered steps; elsewhere the nearest shade
+  level = floor(level + (natural ? dither : 0.5));
+
   int col = int(floor(float(ap.x) * 0.5));
   int row = ap.y;
   if (pattern == PATTERN_TREES && !vertical) {
@@ -659,6 +847,20 @@ void main() {
     else if (rnd(block.x * 7 + col, block.y * 5 + row, 5) < density) level += 1.0;
   }
   level += railShade;
+  if (natural) {
+    // hollows a shade darker, ridges a shade lighter, dithered in between
+    if (clamp((hollow - RELIEF_FROM) / RELIEF_SPAN, 0.0, 1.0) > dither) level -= 1.0;
+    else if (clamp((-hollow - RELIEF_FROM) / RELIEF_SPAN, 0.0, 1.0) > dither) level += 1.0;
+    // broad patches of a shade darker or lighter, with dithered rims (not on strata)
+    if (ramp >= 0 && int(uSurfaces[mat].x) >= 0) {
+      float pn = 0.65 * valueNoise(vGrid / PATCH_CELLS, 11) + 0.35 * valueNoise(vGrid / (0.4 * PATCH_CELLS), 12);
+      if (clamp((PATCH_DARK - pn) / PATCH_RIM, 0.0, 1.0) > dither) level -= 1.0;
+      else if (clamp((pn - PATCH_LIGHT) / PATCH_RIM, 0.0, 1.0) > dither) level += 1.0;
+    }
+  }
+  // Shallows (D-094): water over ground within a micro-step of its level is a
+  // shade lighter, and dithered half-and-half down to two micro-steps.
+  if (kind == FACE_WATER && (vH < 1.0 || (vH < 2.0 && ((col + row) & 1) == 0))) level += 1.0;
   if (riser) level -= 1.0;  // a riser on pavement: the pavement's own colour, a shade darker
   else if (vertical && aboveBand < 0.14) level -= 1.0;  // strata bedding line
   level = clamp(level, 1.0, 5.0);
@@ -714,11 +916,13 @@ void main() {
   const ivec2 N4[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
   int ramp = g.r - 1;
   int level = g.g;
+  // one-pixel lines (D-098): no cleanup, darkest shade
+  bool thin = (g.a >> 1) == 6;  // FACE_LINE (packages/generators; 5 is FACE_WATER)
 
   // Cleanup: a pixel whose four neighbours all agree with each other but not
   // with it is noise; adopt the neighbours' ramp and shade.
   ivec4 n0 = G(p + N4[0]);
-  bool agree = n0.r != 0;
+  bool agree = n0.r != 0 && !thin;
   for (int i = 1; i < 4; i++) {
     ivec4 ni = G(p + N4[i]);
     agree = agree && ni.r == n0.r && ni.g == n0.g;
@@ -738,7 +942,7 @@ void main() {
   float bayer = (BAYER[(a.y & 3) * 4 + (a.x & 3)] + 0.5) / 16.0;
   float aoDark = float(g.b) / 127.5;
   int shade = clamp(level - int(floor(aoDark + bayer)), 1, uShades - 1);
-  if (outline) shade = 0;
+  if (outline || thin) shade = 0;
 
   int index = 1 + ramp * uShades + shade;
   float local16 = clamp(floor((d - uDepthBase) * 256.0 + 0.5), 0.0, 65535.0);
@@ -764,9 +968,12 @@ uniform ivec2 uSliceSize;         // cells
 uniform ivec2 uWorldSize;         // cells
 uniform float uFloor;             // skirt bottom, steps
 uniform ivec2 uNearFirst;         // 1 where instances run from high to low x / y (nearest first)
-uniform int uWallEdge;            // -1: draw tops (one instance per micro-cell); else walls on this edge
+uniform int uWallEdge;            // -1: draw tops (one instance per micro-cell); WATER_PLANE: water; else walls on this edge
 uniform float uStepWorld;
 
+const int WATER_PLANE = -2;
+const int NO_WATER = -32768;
+const float SHORE_DEPTH = 3.0;  // micro-steps: the deepest bed the pipeline sinks (micro.SHORE_DEPTH)
 const ivec2 CORNER_OFF[4] = ivec2[4](ivec2(0, 0), ivec2(1, 0), ivec2(1, 1), ivec2(0, 1));
 const ivec2 EDGE_CORNERS[4] = ivec2[4](ivec2(0, 1), ivec2(1, 2), ivec2(2, 3), ivec2(3, 0));
 const ivec2 EDGE_NEIGHBOR[4] = ivec2[4](ivec2(0, -1), ivec2(1, 0), ivec2(0, 1), ivec2(-1, 0));
@@ -801,11 +1008,43 @@ float topHeight(ivec4 h, vec2 f) {
                           : c.z + (c.w - c.z) * (1.0 - f.x) + (c.y - c.z) * (1.0 - f.y);
 }
 
+// Height (micro-steps) of the drawn micro-terrain at micro-coordinates p,
+// clamped to the slice (its margin keeps every owned pixel's ring inside).
+float microHeightAt(vec2 p) {
+  vec2 q = clamp(p, vec2(0.0), vec2(microSize()));
+  ivec2 m = clamp(ivec2(floor(q)), ivec2(0), microSize() - 1);
+  return topHeight(cornersAt(m), clamp(q - vec2(m), 0.0, 1.0));
+}
+
+// The ground's slope around a point in world cells (micro-steps per cell, x
+// and y): a plane fitted to the drawn heights on a 3×3 ring SLOPE_CELLS apart,
+// so a slope drawn as flats and risers (heights are whole micro-steps) reads
+// as one slope, as pavement does with its way's grade.
+const float SLOPE_CELLS = 1.0;
+// z: how far the ground here lies below (+) or above (−) the mean of the same
+// ring (micro-steps): hollows and gullies are positive, ridges and knolls negative.
+vec3 groundShape(vec2 grid) {
+  vec2 p = (grid - vec2(uSliceOrigin)) * float(uK);
+  float r = SLOPE_CELLS * float(uK);
+  vec2 g = vec2(0.0);
+  float sum = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      if (i == 0 && j == 0) continue;
+      float h = microHeightAt(p + vec2(float(i), float(j)) * r);
+      g += vec2(float(i), float(j)) * h;
+      sum += h;
+    }
+  }
+  // least squares: Σ i² = 6 per axis over the ring
+  return vec3(g / (6.0 * SLOPE_CELLS), sum / 8.0 - microHeightAt(p));
+}
 
 `;
 
 /** Vertex-shader-only part of the field code (uses gl_InstanceID / gl_VertexID). */
 const FIELD_VERTEX = /* glsl */ `
+const int FACE_WATER = 5;  // as GBUFFER_FS
 uniform isampler2D uWallList;  // wall draws: micro-cells (row-major index) with a wall on uWallEdge, 4096 per row
 // One vertex of the instance. pos: world cells and steps. hm: its height in
 // micro-steps; corner: the micro-corner it sits on (for AO). kind: face kind.
@@ -827,6 +1066,38 @@ void fieldVertex(out vec3 pos, out vec3 nrm, out int kind, out ivec2 corner, out
   ivec4 h = cornersAt(m);
   float k = float(uK);
   vec2 org = vec2(uSliceOrigin) + vec2(m) / k;
+  if (uWallEdge == WATER_PLANE) {
+    // Water (D-094): a flat plane at the water's level over the water cells
+    // and their neighbours (a cell's own level, else the highest of its 8
+    // neighbours', none on a dry road cell; micro.plane_levels mirrors this).
+    // The ground under it is shaped to dip below the level where the map has
+    // water, so the depth test draws the shoreline where the two cross. hm:
+    // the water's depth over this corner of the ground (micro-steps).
+    ivec2 cell = m / uK;
+    ivec4 attr = texelFetch(uFieldCells, cell, 0);
+    int lv = attr.w;
+    bool own = lv != NO_WATER;
+    if (!own && (attr.y & 0x0fff) == 0)
+      for (int j = 0; j < 9; j++) {
+        ivec2 nc = cell + ivec2(j % 3 - 1, j / 3 - 1);
+        if (all(greaterThanEqual(nc, ivec2(0))) && all(lessThan(nc, uSliceSize)))
+          lv = max(lv, texelFetch(uFieldCells, nc, 0).w);
+      }
+    float level = float(lv);
+    ivec3 t = vid < 3 ? ivec3(0, 1, 2) : ivec3(0, 2, 3);
+    int c = t[vid % 3];
+    // nothing to draw (all six vertices at one point) where no ground dips
+    // under it, nor beside the water where the ground lies deeper than a shore's
+    // bed (below a dam, at a cliff's foot): not its shore (micro.SHORE_DEPTH)
+    float lowest = float(min(min(h.x, h.y), min(h.z, h.w)));
+    bool dry = lv == NO_WATER || level * k <= lowest || (!own && lowest < level * k - SHORE_DEPTH);
+    pos = dry ? vec3(org, level) : vec3(org + vec2(CORNER_OFF[c]) / k, level);
+    hm = level * k - float(h[c]);
+    nrm = vec3(0.0, 0.0, 1.0);
+    kind = FACE_WATER;
+    corner = m + CORNER_OFF[c];
+    return;
+  }
   if (uWallEdge < 0) {
     ivec3 t = splitDiag(h) == 0
       ? (vid < 3 ? ivec3(0, 1, 2) : ivec3(0, 2, 3))
@@ -924,10 +1195,8 @@ uniform vec3 uLightRight;
 uniform vec3 uLightUp;
 uniform float uScale;
 uniform sampler2D uFieldAo;      // (k·W + 1) × (k·H + 1): AO at each corner's lowest and highest height
-uniform int uSteepDrop;          // micro-steps; tops this far above a neighbour are bare rock (0 = off)
-uniform int uRockSurface;        // surface id drawn on steep tops (-1 = none)
+uniform sampler2D uFieldShape;   // (k·W + 1) × (k·H + 1): FIELD_SHAPE_FS at each corner
 uniform int uWaterSurface;
-uniform int uSnowSurface;
 
 out vec3 vNormal;
 out vec3 vLight;
@@ -938,6 +1207,7 @@ flat out vec2 vMat;
 flat out vec2 vCell;
 flat out vec2 vRoad;
 flat out float vGeol;
+out vec3 vShape;  // tops: the ground's slope and hollowness here (FIELD_SHAPE_FS), for natural ground (D-095)
 
 // Real height (steps) of a drawn point, for strata: undo the relief exaggeration
 // (ref + (h − ref)·invR), interpolated between cell centres.
@@ -976,32 +1246,8 @@ void main() {
   fieldVertex(pos, nrm, kind, corner, hm, m);
   ivec2 cell = m / uK;
   ivec4 attr = texelFetch(uFieldCells, cell, 0);
-  int surface = attr.x;
-  // Ragged land-cover borders: each micro-cell takes its surface from a point
-  // jittered by up to ±0.4 cell (hashed in world coordinates, so tiles agree).
-  // Water keeps its exact cells: its geometry is flat only there.
-  {
-    ivec2 wm = uSliceOrigin * uK + m;
-    uint hx = uint(wm.x) * 0x8da6b343u ^ uint(wm.y) * 0xd8163841u;
-    hx ^= hx >> 16; hx *= 0x7feb352du; hx ^= hx >> 15; hx *= 0x846ca68bu; hx ^= hx >> 16;
-    vec2 jit = vec2(float(hx & 0xffffu), float(hx >> 16)) / 65536.0 - 0.5;
-    ivec2 jc = clamp(ivec2(floor((vec2(m) + 0.5) / float(uK) + jit * 0.8)), ivec2(0), uSliceSize - 1);
-    int js = texelFetch(uFieldCells, jc, 0).x;
-    if (surface != uWaterSurface && js != uWaterSurface) surface = js;
-  }
-  if (kind <= 1 && uSteepDrop > 0 && uRockSurface >= 0 && surface != uWaterSurface && surface != uSnowSurface) {
-    ivec4 h = cornersAt(m);
-    bool steep = false;
-    for (int e = 0; e < 4; e++) {
-      ivec2 nb = m + EDGE_NEIGHBOR[e];
-      if (!inSlice(nb)) continue;
-      ivec4 nh = cornersAt(nb);
-      ivec2 ec = EDGE_CORNERS[e];
-      ivec2 nc = EDGE_NB_CORNERS[e];
-      if (min(h[ec.x], h[ec.y]) - max(nh[nc.x], nh[nc.y]) >= uSteepDrop) steep = true;
-    }
-    if (steep) surface = uRockSurface;
-  }
+  int surface = kind == FACE_WATER ? uWaterSurface : attr.x;
+  // tops take their surface per pixel in the fragment shader (groundSurface, D-096)
 
   vec2 uv = uRot * pos.xy;
   float h = pos.z;
@@ -1016,13 +1262,18 @@ void main() {
   vNormal = vec3(uRot * nrm.xy, nrm.z);
   vec3 P = vec3(uv, h * uStepWorld) + vNormal * 0.04 * uScale;
   vLight = vec3(dot(P, uLightRight), dot(P, uLightUp), dot(P, uSun));
-  vH = realHeight(pos);
-  vAo = cornerAo(corner, hm);
+  vH = kind == FACE_WATER ? hm : realHeight(pos);  // water: its depth (micro-steps), for the shallows
+  vAo = kind == FACE_WATER ? 1.0 : cornerAo(corner, hm);
   vGrid = pos.xy / uScale;
   vMat = vec2(float(surface), float(kind));
   vCell = vec2(uSliceOrigin + cell);
-  vRoad = kind <= 1 ? vec2(float(attr.y), float(attr.z & 255)) : vec2(0.0);
+  vRoad = kind <= 1 ? vec2(float(attr.y), float(attr.z & 255)) : vec2(0.0);  // not on water
   vGeol = float(attr.z >> 8);
+  vShape = vec3(0.0);
+  if (kind <= 1) {
+    vec4 e = texelFetch(uFieldShape, corner, 0);
+    vShape = vec3(tan((e.xy - 0.5) * 3.14159265), (e.z - 0.5) * 4.0);
+  }
 }
 `;
 
@@ -1071,6 +1322,28 @@ void main() {
     sumHi += bestHi / sqrt(1.0 + bestHi * bestHi);
   }
   o = vec4(1.0 - sumLo / 8.0, 1.0 - sumHi / 8.0, 0.0, 1.0);
+}
+`;
+
+/**
+ * Natural ground's shape at every micro-corner (D-095), once per field like
+ * its AO: the slope of the plane through a ring a cell around it (rise over
+ * run along x and y, as angles: atan / π + 0.5) and how far it lies below the
+ * ring's mean (steps, 0.5 + h / 4), in RGBA8. A ring a cell wide is smooth at
+ * micro-corners, so the vertex shader reads it there rather than every pixel
+ * sampling the ring.
+ */
+export const FIELD_SHAPE_FS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+${FIELD_COMMON}
+out vec4 o;
+
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy);
+  vec3 s = groundShape(vec2(uSliceOrigin) + vec2(c) / float(uK));
+  vec2 slope = s.xy * uStepWorld / float(uK);
+  o = vec4(atan(slope) / 3.14159265 + 0.5, clamp(0.5 + s.z / float(uK) / 4.0, 0.0, 1.0), 1.0);
 }
 `;
 

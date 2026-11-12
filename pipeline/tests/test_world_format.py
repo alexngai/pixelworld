@@ -171,3 +171,19 @@ def test_objects_golden_files_hold_the_same_instances():
     v2 = json.loads((GOLDEN_DIR / "objects-v2.json").read_text())
     # 245.125 sits on a rounding boundary: the anchor rounds half up, to 245.13
     assert v2["version"] == 2 and v2["instances"][0]["fp"][0] == [-23, -28]
+
+
+def test_rail_corridor_pieces_round_trip_and_are_left_out_when_empty():
+    # D-097: TSG sections, one per used slot, beside the RAIL layer's counts
+    chunk = golden_chunk()
+    n = chunk.base.shape[0]
+    chunk.rail = np.zeros((n, n), np.uint16)
+    chunk.rail[1, 2] = (3 << 12) | (3 << 8) | 0x800
+    chunk.rail_seg0 = np.zeros((n, n), np.uint32)
+    chunk.rail_seg0[1, 2] = 0x10FF2000
+    data = encode_chunk(chunk)
+    assert b"TSG0" in data and b"TSG1" not in data
+    out = decode_chunk(data)
+    assert int(out.rail[1, 2]) == (3 << 12) | (3 << 8) | 0x800
+    assert int(out.rail_seg0[1, 2]) == 0x10FF2000
+    assert b"TSG" not in encode_chunk(golden_chunk())

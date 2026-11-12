@@ -5,6 +5,7 @@ version = "0.0.0"
 description = "Offline geo pipeline for Pixelworld: real data -> gridded world packages."
 requires-python = ">=3.12"
 dependencies = [
+  "certifi>=2024.2.2",
   "laspy>=2.7.0",
   "lazrs>=0.8.2",
   "numpy>=2.0",
@@ -23,21 +24,9 @@ dev = [
   "pytest>=8",
   "ruff>=0.6",
 ]
-# The city packs this repository's worlds need (worlds/sf names `facts: datasf`).
-plugins = [
-  "pixelworld-city-sf",
-]
 
 [tool.uv]
-default-groups = ["dev", "plugins"]
-
-# Plugin packages live in plugins/ (docs/plugins.md); `uv sync` installs them
-# into this environment, editable.
-[tool.uv.workspace]
-members = ["plugins/*"]
-
-[tool.uv.sources]
-pixelworld-city-sf = { workspace = true }
+default-groups = ["dev"]
 
 [build-system]
 requires = ["hatchling"]
@@ -47,15 +36,15 @@ build-backend = "hatchling.build"
 packages = ["src/pixelworld_pipeline"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["/plugins", "/.cache"]
+exclude = ["/.cache"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "plugins/*/tests"]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "plugins/*/src"]
+src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "NPY"]

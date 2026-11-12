@@ -95,6 +95,10 @@ export function building(x0: number, y0: number, x1: number, y1: number, group =
 }
 
 class FakeEntity implements Entity {
+  reveal = null;
+  pitch = 0;
+  roll = 0;
+
   constructor(
     readonly id: number,
     public x: number,

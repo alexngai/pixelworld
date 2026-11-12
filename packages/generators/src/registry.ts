@@ -14,7 +14,7 @@ import { builtinGenerators } from "./builtins";
 export const BUILTIN_SOURCE = "@pixelworlds/generators";
 
 /**
- * Generators that plugins published from this repository provide, and which
+ * Generators that the city packs in this repository provide, and which
  * plugin: a style that names one without its plugin loaded gets an error that
  * says what to load (as the pipeline's registry does for `datasf`).
  */
@@ -25,6 +25,47 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   sfTower: "@pixelworlds/city-sf",
   gate: "@pixelworlds/city-sf",
   lanterns: "@pixelworlds/city-sf",
+  brownstone: "@pixelworlds/city-nyc",
+  tenement: "@pixelworlds/city-nyc",
+  castIronLoft: "@pixelworlds/city-nyc",
+  prewarBlock: "@pixelworlds/city-nyc",
+  haussmann: "@pixelworlds/city-paris",
+  faubourg: "@pixelworlds/city-paris",
+  hbm: "@pixelworlds/city-paris",
+  cathedral: "@pixelworlds/city-paris",
+  triumphalArch: "@pixelworlds/city-paris",
+  latticeArchTower: "@pixelworlds/city-paris",
+  operaHouse: "@pixelworlds/city-paris",
+  steelArchBridge: "@pixelworlds/city-paris",
+  domedChurch: "@pixelworlds/city-paris",
+  glassPalace: "@pixelworlds/city-paris",
+  stoneArchBridge: "@pixelworlds/city-paris",
+  palace: "@pixelworlds/city-paris",
+  machiya: "@pixelworlds/city-kyoto",
+  midrise: "@pixelworlds/city-kyoto",
+  templeHall: "@pixelworlds/city-kyoto",
+  towerGate: "@pixelworlds/city-kyoto",
+  pagoda: "@pixelworlds/city-kyoto",
+  candleTower: "@pixelworlds/city-kyoto",
+  kura: "@pixelworlds/city-kyoto",
+  utilityPole: "@pixelworlds/city-kyoto",
+  torii: "@pixelworlds/city-kyoto",
+  goldenPavilion: "@pixelworlds/city-kyoto",
+  stoneWall: "@pixelworlds/city-kyoto",
+  zakkyo: "@pixelworlds/city-tokyo",
+  mansion: "@pixelworlds/city-tokyo",
+  kodate: "@pixelworlds/city-tokyo",
+  twinTowerHall: "@pixelworlds/city-tokyo",
+  cylinderTower: "@pixelworlds/city-tokyo",
+  myojinTorii: "@pixelworlds/city-tokyo",
+  utilityPoles: "@pixelworlds/city-tokyo",
+  wireSpan: "@pixelworlds/city-tokyo",
+  tongLau: "@pixelworlds/city-hongkong",
+  compositeTower: "@pixelworlds/city-hongkong",
+  pencilTower: "@pixelworlds/city-hongkong",
+  curvedRoofHall: "@pixelworlds/city-hongkong",
+  grandHotel: "@pixelworlds/city-hongkong",
+  neonSign: "@pixelworlds/city-hongkong",
 };
 
 export interface GeneratorInfo {

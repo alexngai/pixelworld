@@ -1,0 +1,183 @@
+# New York, driving level (D-083): Manhattan at 25 m per cell, from the
+# Battery to Inwood, with the waterfronts across the rivers that the box takes
+# in: Brooklyn Heights, DUMBO, Williamsburg and Greenpoint; Long Island City
+# and Astoria; the South Bronx along the Harlem River; Jersey City, Hoboken
+# and the Palisades from Weehawken to Fort Lee. What should make it
+# recognizable is the fabric between the landmarks: the grid of tenements and
+# brownstone rows, the prewar apartment blocks of the Upper West and East
+# Sides, Midtown's setback towers and glass, and the parks.
+# The walking level (walk.yaml) extends this file; what both levels share
+# (style, sources, typology, ground) lives here. Lists replace, mappings merge.
+# Build: cd pipeline && uv run pixelworld build ../worlds/nyc/region.yaml
+id: nyc
+name: New York
+bounds: [-74.030, 40.690, -73.905, 40.882] # lon/lat: west, south, east, north
+
+level: drive
+levels:
+  - { name: drive, world: nyc, label: Driving Manhattan }
+  - { name: walk, world: nyc-walk, label: Walking Lower Manhattan and Midtown }
+
+# Manhattan is flat but for its north end; 1.5x lets the Palisades, Fort
+# Tryon's ridge and the Brooklyn Heights bluff read without lifting the streets
+metersPerCell: 25
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# Lower Manhattan's colonial streets run every way; the grid north of them is
+# 29 degrees off north, 2.4 degrees from a 2:1 grid direction. Streets near one
+# of the 16 directions (the 8 and the 2:1 ones) snap to it (D-049, D-082);
+# the rest keep their angle and are drawn along their own centre lines.
+snap:
+  roads: { angle: 12, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+
+# streets at 1.5x their real width, so a 10 m side street reads at 25 m; no
+# lane lines at this scale. Ways drawn along their centre lines (D-082).
+widths: { scale: 1.5, minCells: 0.1, centrelines: true, lanes: { lines: false } }
+micro: { k: 4, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+# parks and plazas as lawn (Central Park's meadows, Riverside and the Battery,
+# the cemeteries), and the yards behind the brownstone rows
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, golf_course, fairway, green, tee, rough, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+  yard:
+    near: [building.brownstone, building.house, building.residential]
+    over: [urban, grass, desert]
+    reachMeters: 15
+    paved: 0.3
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 30
+    towerMeters: 45
+    podiumMeters: 18
+    houseMaxArea: 350
+    # Overture stacks a setback tower's upper tiers as parts standing on the
+    # ones below (the 1916 zoning law's wedding cakes, Citigroup Center on its
+    # stilts): drawn from the ground, not dropped
+    tiers: true
+  # Building typologies (D-055) from NYC Open Data (D-080): PLUTO's building
+  # class (its years are mostly rounded to 5 or 10), the Landmarks
+  # Preservation Commission's facade material where a building has a record,
+  # the neighbourhood (2020 NTAs), and the footprint's shape and street.
+  # First match wins. Over the rivers in New Jersey there are no facts, and
+  # buildings keep their generic groups.
+  typology:
+    rules:
+      - { group: building.pier, onWater: true }
+      # brownstone and brick rows: one- and two-family houses (A, B) and
+      # brownstone-fronted walk-ups, before 1915, 2 to 6 storeys
+      - { group: building.brownstone, materials: [Brownstone], floors: [2, 6] }
+      - { group: building.brownstone, classes: ["A*", "B*"], year: [1800, 1915], floors: [2, 5] }
+      # rows converted to flats (C0, C2, C3: three to six families; C5:
+      # converted dwellings), narrow and low: the brownstone rows of the Upper
+      # West and East Sides, Harlem and the Village, and Brooklyn's. Elsewhere
+      # (the East Village, the Lower East Side, East Harlem) they are tenements.
+      - group: building.brownstone
+        classes: [C0, C2, C3, C5]
+        year: [1840, 1915]
+        floors: [2, 5]
+        maxWidth: 9
+        hoods:
+          - Upper West Side (Central)
+          - Upper West Side-Manhattan Valley
+          - Upper West Side-Lincoln Square
+          - Upper East Side-Carnegie Hill
+          - Upper East Side-Lenox Hill-Roosevelt Island
+          - Upper East Side-Yorkville
+          - Harlem (North)
+          - Harlem (South)
+          - Hamilton Heights-Sugar Hill
+          - Manhattanville-West Harlem
+          - Morningside Heights
+          - Chelsea-Hudson Yards
+          - West Village
+          - Greenwich Village
+          - Murray Hill-Kips Bay
+          - Gramercy
+          - Brooklyn Heights
+          - Downtown Brooklyn-DUMBO-Boerum Hill
+          - Fort Greene
+          - Clinton Hill
+          - Bedford-Stuyvesant (West)
+          - Bedford-Stuyvesant (East)
+          - Carroll Gardens-Cobble Hill-Gowanus-Red Hook
+      # cast-iron and loft buildings: Tribeca, SoHo's edge, the Seaport
+      - { group: building.loft.castiron, materials: [Cast Iron] }
+      - { group: building.loft.castiron, classes: ["L*"], year: [1840, 1930] }
+      # walk-ups (C) and buildings with flats over shops (S): tenements
+      - { group: building.tenement, classes: ["C*", "S*"], year: [1840, 1930], floors: [3, 7] }
+      # elevator apartments (D) before the war, at any height: base, shaft and
+      # cap, from the Upper West Side's side streets to the towers on Central
+      # Park West and Fifth and Park Avenues
+      - { group: building.apartment.prewar, classes: ["D*"], year: [1890, 1946], from: [building.residential, building.commercial, building.parking, building.tower] }
+      - { group: building.commercial.historic, year: [1840, 1946], uses: [commercial, mixed, civic], floors: [1, 20] }
+      - { group: building.industrial, uses: [industrial] }
+      # the outer boroughs' one- and two-family houses after the brownstones:
+      # brick and frame rows of Astoria, Sunnyside and the Bronx
+      - { group: building.house, classes: ["A*", "B*"], floors: [1, 3] }
+      # towers by era: setback towers of the 1916 zoning law and the 1920s
+      # and 30s; slabs of the 1950s to 80s; postmodern; glass
+      - { group: building.tower.deco, from: [building.tower, building.tower.hotel], year: [1890, 1946] }
+      - { group: building.tower.slab, from: [building.tower, building.tower.hotel], year: [1946, 1985] }
+      - { group: building.tower.postmodern, from: [building.tower, building.tower.hotel], year: [1985, 2000] }
+      - { group: building.tower.glass, from: [building.tower, building.tower.hotel], year: [2000, 2100] }
+  vegetation:
+    # park and backyard trees where the canopy height map (WRI/Meta, 1 m)
+    # shows 3 m or more; one every 16 m at most at this scale (every 12 m
+    # gave 115,000 trees and 0.9 MB more)
+    - { group: tree, canopy: 3, spacing: 16, density: 0.9 }
+  streetTrees:
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 16, kerb: 2, offset: 9 }
+  # landmarks from the registry (worlds/_landmarks, D-051), drawn generically;
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks:
+    - one-world-trade-center
+    - woolworth-building
+    - brooklyn-bridge
+    - manhattan-bridge
+    # Midtown
+    - empire-state-building
+    - chrysler-building
+    - flatiron-building
+    - grand-central-terminal
+    # the East River's other bridges, and the Hudson's
+    - williamsburg-bridge
+    - queensboro-bridge
+    - george-washington-bridge
+  landmarkDepiction: generic
+  # true heights: the skyline is the point
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: new-york
+start: { lon: -73.9855, lat: 40.7580 } # Times Square
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  facts: { kind: pluto }
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street]
+  rivers:
+    subtypes: [river]
+  # rails out of their tunnels: the elevated subway in Harlem, the Bronx and
+  # Queens, over the Manhattan and Williamsburg Bridges; Metro-North on Park
+  # Avenue's viaduct
+  rails:
+    - { draw: train, rail: [subway, standard_gauge] }
+
+geology: null

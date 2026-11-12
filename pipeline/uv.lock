@@ -2,12 +2,6 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
-[manifest]
-members = [
-    "pixelworld-city-sf",
-    "pixelworld-pipeline",
-]
-
 [[package]]
 name = "affine"
 version = "3.0.1"
@@ -186,29 +180,11 @@ wheels = [
 ]
 
 [[package]]
-name = "pixelworld-city-sf"
-version = "0.0.0"
-source = { editable = "plugins/pixelworld-city-sf" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pixelworld-pipeline" },
-    { name = "rasterio" },
-    { name = "shapely" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "numpy", specifier = ">=2.0" },
-    { name = "pixelworld-pipeline", editable = "." },
-    { name = "rasterio", specifier = ">=1.4" },
-    { name = "shapely", specifier = ">=2.2.0" },
-]
-
-[[package]]
 name = "pixelworld-pipeline"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "laspy" },
     { name = "lazrs" },
     { name = "numpy" },
@@ -224,12 +200,10 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
-plugins = [
-    { name = "pixelworld-city-sf" },
-]
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2024.2.2" },
     { name = "laspy", specifier = ">=2.7.0" },
     { name = "lazrs", specifier = ">=0.8.2" },
     { name = "numpy", specifier = ">=2.0" },
@@ -245,7 +219,6 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.6" },
 ]
-plugins = [{ name = "pixelworld-city-sf", editable = "plugins/pixelworld-city-sf" }]
 
 [[package]]
 name = "pluggy"

@@ -59,6 +59,12 @@ export interface WorldViewOptions {
   renderScale?: number;
   /** Keep baked tiles: true for IndexedDB (default), false for none, or your own store. */
   cache?: boolean | TileStore;
+  /**
+   * The world's start tiles (tools/prebake.mjs), read before baking so a
+   * first visit shows its first view at once: default `start-tiles.bin` in
+   * the world package, where there is one; false for none.
+   */
+  startTiles?: string | URL | false;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
   /** Decorative scatter where the level asks for it (default true). */
@@ -99,6 +105,23 @@ export interface WorldViewOptions {
    * which Vite, webpack 5 and plain ESM resolve themselves (docs/npm.md).
    */
   workerUrl?: string | URL;
+  /**
+   * Bake the ground of visible tiles first (default true): quick, so the view
+   * shows the ground at once and buildings appear as their tiles finish.
+   */
+  groundFirst?: boolean;
+  /**
+   * While nothing else waits, bake one tile at a time for later: the visible
+   * tiles in the other rotations, then those around the view (default true,
+   * where tiles are kept: they go to the cache, not the GPU).
+   */
+  idleBake?: boolean;
+  /**
+   * Bake workers: each bakes a tile at a time, so the view fills that many
+   * times faster where tiles take long. Default: the CPU's cores less one, at
+   * most 4 (each holds its own copy of the world's objects).
+   */
+  bakeWorkers?: number;
   /**
    * Plugins with generators the world's style uses (D-071), such as the city
    * pack @pixelworlds/city-sf's `cityPlugin`: loaded in the bake worker and on
@@ -180,7 +203,11 @@ export interface CanvasPoint {
 export interface ViewStats {
   renderer: string;
   bakeMode: "worker" | "inline";
+  /** Bakers running (workers, or the one in-thread fallback). */
+  bakeWorkers: number;
   tilesBaked: number;
+  /** Ground-only bakes, shown while their whole tiles bake (not in `tilesBaked`). */
+  groundTiles: number;
   tilesFromCache: number;
   tilesPerRotation: number;
   /** Tiles wanted (in and around the view, and baked ahead) that aren't baked yet. */
@@ -243,6 +270,8 @@ export interface FrameEvent extends FrameClock {
   now: number;
   /** Whether the frame was drawn (the loop redraws only when something changed). */
   drawn: boolean;
+  /** Visible tiles not baked whole yet (their ground shows, or nothing). */
+  missingTiles: number;
 }
 
 /** A view's state for determinism: the camera, every layer's own state and the controller's. */
@@ -436,11 +465,29 @@ export interface EntitySpec {
   heading?: number;
   /** Headings baked around the circle (default 16). */
   headings?: number;
+  /** The nose up and the right side down (radians; a plane's pitch and bank), baked to the nearest 10°. */
+  pitch?: number;
+  roll?: number;
   /** Raise the sprite this many steps above `h`. */
   lift?: number;
   /** Draw a dithered silhouette where the world hides it (default false). */
   silhouette?: boolean;
+  /**
+   * See through what stands in front of it (D-079), for a player among tall
+   * buildings: within `margin` render px of its sprite (default 24),
+   * buildings and landmarks in front of it are dithered away (`density` of
+   * their pixels, 0–1, default 0.75) to the ground behind. The tiles around
+   * it are baked a second time without their buildings for this. The first
+   * visible entity with `reveal` counts. Default off.
+   */
+  reveal?: { margin?: number; density?: number };
   visible?: boolean;
+}
+
+/** An entity's `reveal`, with its defaults. */
+export interface EntityReveal {
+  margin: number;
+  density: number;
 }
 
 export interface Entity {
@@ -449,8 +496,13 @@ export interface Entity {
   readonly y: number;
   readonly h: number;
   heading: number;
+  /** The nose up and the right side down (radians), baked to the nearest 10°. */
+  pitch: number;
+  roll: number;
   visible: boolean;
   silhouette: boolean;
+  /** Seeing through what stands in front of it (`EntitySpec.reveal`, with its defaults), or null. */
+  reveal: EntityReveal | null;
   /** Move (cells, steps); the height defaults to the ground there, or stays where it isn't loaded. */
   moveTo(x: number, y: number, h?: number): void;
   remove(): void;

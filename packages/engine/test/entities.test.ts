@@ -1,4 +1,4 @@
-import type { Box } from "@pixelworlds/generators";
+import { buildBoxesMesh, type Box } from "@pixelworlds/generators";
 import { project, type Rotation } from "@pixelworlds/grid";
 import { Camera, type GpuImage } from "@pixelworlds/runtime";
 import { describe, expect, it } from "vitest";
@@ -56,7 +56,7 @@ describe("entities", () => {
     frame = t.list.draws(0, proj);
     const p = project(5, 6, 0.5, 0);
     expect(frame.complete).toBe(true);
-    expect(frame.list).toEqual([{ sprite: t.sprite(1), sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: true }]);
+    expect(frame.list).toEqual([{ sprite: t.sprite(1), sx: p.sx, sy: p.sy, depth: p.depth, silhouette: true, reveal: null }]);
     // another heading and another rotation are baked on demand
     a.heading = Math.PI / 2;
     t.list.request(0);
@@ -66,6 +66,20 @@ describe("entities", () => {
       [0, (4 * 2 * Math.PI) / 16],
       [1, (4 * 2 * Math.PI) / 16],
     ]);
+  });
+
+  it("reveals with defaults when asked, and passes it to its sprite", async () => {
+    const t = entities();
+    const a = t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6, reveal: {} });
+    expect(a.reveal).toEqual({ margin: 24, density: 0.75 });
+    a.reveal = { margin: 24, density: 2 }; // clamped
+    expect(a.reveal).toEqual({ margin: 24, density: 1 });
+    t.list.request(0);
+    t.jobs[0]!.done(t.sprite(1));
+    await t.flush();
+    expect(t.list.draws(0, proj).list[0]!.reveal).toEqual({ margin: 24, density: 1 });
+    a.reveal = null;
+    expect(t.list.draws(0, proj).list[0]!.reveal).toBeNull();
   });
 
   it("shares a group model's sprites between entities and asks for hidden ones too", async () => {
@@ -162,6 +176,51 @@ describe("the camera", () => {
     view.setCanvasSize(640, 360);
     expect(view.zoom).toBe(2);
     expect([view.internalWidth, view.internalHeight]).toEqual([cam.internalWidth, 180]);
+  });
+});
+
+describe("posed entities", () => {
+  it("bakes pitch and roll to 10° steps, tilted about the model's middle height, and shows the last pose while the next bakes", async () => {
+    const t = entities();
+    const e = t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6 });
+    const level = t.sprite(1);
+    t.list.request(0);
+    t.jobs[0]!.done(level);
+    await t.flush();
+    expect(t.list.draws(0, proj).list[0]!.sprite).toBe(level);
+    e.roll = 0.52; // 30°
+    e.pitch = 0.04; // rounds to level
+    t.list.request(0);
+    expect(t.jobs.length).toBe(2);
+    expect(t.jobs[1]!.boxes[0]).toMatchObject({ roll: Math.PI / 6, pitch: 0, pivot: 0.5 });
+    const frame = t.list.draws(0, proj);
+    expect(frame.complete).toBe(false);
+    expect(frame.list[0]!.sprite).toBe(level); // no blink
+    e.roll = 0.5; // the same step: nothing new to bake
+    t.list.request(0);
+    expect(t.jobs.length).toBe(2);
+    t.jobs[1]!.done(t.sprite(2));
+    await t.flush();
+    const rolled = t.list.draws(0, proj).list[0]!.sprite;
+    // a pose not drawn for a while is let go; the one shown stays
+    e.roll = 0;
+    for (let i = 0; i < 800; i++) t.list.draws(0, proj);
+    expect(t.released).toContain(rolled);
+    expect(t.released).not.toContain(level);
+  });
+
+  it("tilts a box's mesh: a right roll puts its right side down, a nose-up pitch its front up", () => {
+    const wing: Box = { x0: -0.5, y0: -2, z0: 0, x1: 0.5, y1: 2, z1: 0.5, ramp: 1 };
+    const lowest = (b: Box, side: (x: number, y: number) => boolean) => {
+      const m = buildBoxesMesh([b]);
+      let z = Infinity;
+      for (let i = 0; i < m.vertexCount; i++) if (side(m.position[i * 3]!, m.position[i * 3 + 1]!)) z = Math.min(z, m.position[i * 3 + 2]!);
+      return z;
+    };
+    const rolled = { ...wing, roll: 0.3, pivot: 0.25 };
+    expect(lowest(rolled, (_x, y) => y > 1)).toBeLessThan(lowest(rolled, (_x, y) => y < -1));
+    const nose = { ...wing, x0: -2, x1: 2, y0: -0.5, y1: 0.5, pitch: 0.3, pivot: 0.25 };
+    expect(lowest(nose, (x) => x > 1)).toBeGreaterThan(lowest(nose, (x) => x < -1));
   });
 });
 

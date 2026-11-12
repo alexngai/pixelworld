@@ -1,7 +1,7 @@
 import { generateContained, type ModelFailure, type ModelSite } from "./failures";
 import { MeshBuilder, type MeshData } from "./mesh";
 import { getGenerator } from "./registry";
-import { VoxelModel, meshVoxels, rng, type VoxelScale } from "./voxel";
+import { VoxelModel, meshLines, meshVoxels, rng, type VoxelScale } from "./voxel";
 
 /**
  * Procedural assets for semantic groups (D-030). A style pack maps group
@@ -25,6 +25,8 @@ export interface ObjectInstance {
   r?: number;
   /** Footprint polygon in world cells (buildings). */
   fp?: [number, number][];
+  /** The footprint's courtyards: rings in world cells, left out of it (buildings; D-088). */
+  fh?: [number, number][][];
   /** Real height in metres (buildings, landmarks). */
   hm?: number;
   /** Real metres per cell at the instance (warped worlds; the world's scale otherwise). */
@@ -111,7 +113,13 @@ export interface GenContext {
    * Where the model sits (footprint objects): its (0, 0) corner in world cells
    * and the voxel size in cells; for a piece of a long landmark, the whole line.
    */
-  frame?: { x0: number; y0: number; voxel: number; line?: { a: [number, number]; b: [number, number]; half: number } };
+  frame?: {
+    x0: number;
+    y0: number;
+    voxel: number;
+    /** A line object's ends and half-width (cells), and the ground's height at its ends above its base (voxels; D-098). */
+    line?: { a: [number, number]; b: [number, number]; half: number; rise?: [number, number] };
+  };
   /** Target size in voxels (traffic vehicles, D-064): along, across, up. */
   size?: { length: number; width: number; height: number };
   /** Which car of a consist (traffic vehicles): 0 the head, then its wagons. */
@@ -162,6 +170,8 @@ export function rotateModel(model: VoxelModel, quarters: number): VoxelModel {
     const out = new VoxelModel(m.sy, m.sx, m.sz, [...m.materials]);
     for (let z = 0; z < m.sz; z++)
       for (let y = 0; y < m.sy; y++) for (let x = 0; x < m.sx; x++) out.set(m.sy - 1 - y, x, z, m.get(x, y, z));
+    // a voxel at (x, y) spans [x, x+1): its corner point turns to (sy - y, x)
+    for (const l of m.lines) out.line([m.sy - l.a[1], l.a[0], l.a[2]], [m.sy - l.b[1], l.b[0], l.b[2]], l.m);
     m = out;
   }
   return m;
@@ -188,6 +198,8 @@ export interface ObjectBuildOptions {
   heightAt: (x: number, y: number) => number;
   /** Variants generated per group for instanced objects. */
   variants?: number;
+  /** Merge buildings' and landmarks' faces of several colours, the colours kept as texels (MeshData.texels). */
+  texels?: boolean;
 }
 
 export interface InstancedBatch {
@@ -201,6 +213,8 @@ export interface InstancedBatch {
 export interface ObjectMeshes {
   /** Unique objects (buildings, landmarks) merged into one mesh. */
   merged: MeshData;
+  /** Their one-pixel lines (VoxelModel.lines, D-098), a "lines" mesh. */
+  lines: MeshData;
   /** Repeated objects (vegetation, rocks) drawn instanced per variant. */
   batches: InstancedBatch[];
   skipped: number;
@@ -260,10 +274,11 @@ function makeContext(spec: AssetSpec, opts: ObjectBuildOptions, seed: number): G
   };
 }
 
-/** Rasterize a footprint polygon (world cells) into voxel columns. */
+/** Rasterize a footprint polygon (world cells) into voxel columns, leaving out its courtyards (`holes`). */
 export function footprintMask(
   fp: [number, number][],
   voxelCells: number,
+  holes: readonly [number, number][][] = [],
 ): { mask: { sx: number; sy: number; on: Uint8Array }; x0: number; y0: number } {
   let minX = Infinity;
   let minY = Infinity;
@@ -280,17 +295,20 @@ export function footprintMask(
   const sx = Math.max(1, Math.ceil((maxX - x0) / voxelCells));
   const sy = Math.max(1, Math.ceil((maxY - y0) / voxelCells));
   const on = new Uint8Array(sx * sy);
+  const within = (ring: readonly [number, number][], px: number, py: number) => {
+    let inside = false;
+    for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) {
+      const [xa, ya] = ring[a]!;
+      const [xb, yb] = ring[b]!;
+      if (ya > py !== yb > py && px < ((xb - xa) * (py - ya)) / (yb - ya) + xa) inside = !inside;
+    }
+    return inside;
+  };
   for (let j = 0; j < sy; j++)
     for (let i = 0; i < sx; i++) {
       const px = x0 + (i + 0.5) * voxelCells;
       const py = y0 + (j + 0.5) * voxelCells;
-      let inside = false;
-      for (let a = 0, b = fp.length - 1; a < fp.length; b = a++) {
-        const [xa, ya] = fp[a]!;
-        const [xb, yb] = fp[b]!;
-        if (ya > py !== yb > py && px < ((xb - xa) * (py - ya)) / (yb - ya) + xa) inside = !inside;
-      }
-      on[j * sx + i] = inside ? 1 : 0;
+      on[j * sx + i] = within(fp, px, py) && !holes.some((h) => within(h, px, py)) ? 1 : 0;
     }
   // tiny footprints still get one column
   if (!on.some((v) => v)) on[Math.floor(sy / 2) * sx + Math.floor(sx / 2)] = 1;
@@ -299,8 +317,12 @@ export function footprintMask(
 
 /** Build meshes for a set of instances. */
 export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptions): ObjectMeshes {
-  const merged = new MeshBuilder();
-  const variants = new Map<string, { mesh: MeshData; offsets: number[]; cells: number[] }>();
+  const merged = new MeshBuilder({ texels: opts.texels });
+  const lines = new MeshBuilder();
+  // a model's one-pixel lines (D-098), placed as its voxels are, owned by the object's cell
+  const addLines = (model: VoxelModel, origin: [number, number, number], cell: [number, number], into = lines) =>
+    meshLines(model, opts.voxel, origin, cell, into);
+  const variants = new Map<string, { mesh: MeshData; lines: MeshData | null; offsets: number[]; cells: number[] }>();
   const nVariants = opts.variants ?? 6;
   let skipped = 0;
   const failures: ModelFailure[] = [];
@@ -340,14 +362,22 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       let origin: [number, number, number];
       let model: VoxelModel;
       if (inst.fp) {
-        const fpm = footprintMask(inst.fp, opts.voxel.h);
+        const fpm = footprintMask(inst.fp, opts.voxel.h, inst.fh);
         ctx.mask = fpm.mask;
         ctx.frame = { x0: fpm.x0, y0: fpm.y0, voxel: opts.voxel.h };
-        if (inst.ln && inst.lw !== undefined)
-          ctx.frame.line = { a: [inst.ln[0], inst.ln[1]], b: [inst.ln[2], inst.ln[3]], half: inst.lw };
+        if (inst.ln && inst.lw !== undefined) {
+          const rise = (x: number, y: number) => (opts.heightAt(x, y) - base) / opts.voxel.v;
+          ctx.frame.line = {
+            a: [inst.ln[0], inst.ln[1]],
+            b: [inst.ln[2], inst.ln[3]],
+            half: inst.lw,
+            rise: [rise(inst.ln[0], inst.ln[1]), rise(inst.ln[2], inst.ln[3])],
+          };
+        }
         const [bx0, by0, bx1, by1] = footprintBounds(inst.fp);
         model = gen(ctx, { footprint: { cells: [bx1 - bx0, by1 - by0], voxels: [fpm.mask.sx, fpm.mask.sy] } });
         origin = [fpm.x0, fpm.y0, base];
+        addLines(model, origin, cell);
         if (Math.max(bx1 - bx0, by1 - by0) > BIG_FOOTPRINT_CELLS) {
           meshVoxels(model, opts.voxel, origin, "column", merged);
           continue;
@@ -356,6 +386,7 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
         // landmarks may be turned (an observation wheel's plane)
         model = inst.r ? rotateModel(gen(ctx), inst.r) : gen(ctx);
         origin = [inst.x - (model.sx * opts.voxel.h) / 2, inst.y - (model.sy * opts.voxel.h) / 2, base];
+        addLines(model, origin, cell);
       }
       meshVoxels(model, opts.voxel, origin, cell, merged);
       continue;
@@ -368,7 +399,10 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
       const model = rotateModel(gen(makeContext(spec, opts, seed), { seed, repeated: true }), inst.r ?? 0);
       // instance origin is the model's bottom centre
       const origin: [number, number, number] = [-(model.sx * opts.voxel.h) / 2, -(model.sy * opts.voxel.h) / 2, 0];
-      batch = { mesh: meshVoxels(model, opts.voxel, origin, [0, 0]).build(), offsets: [], cells: [] };
+      const lb = new MeshBuilder();
+      addLines(model, origin, [0, 0], lb);
+      const ln = lb.vertexCount ? { ...lb.build(), primitive: "lines" as const } : null;
+      batch = { mesh: meshVoxels(model, opts.voxel, origin, [0, 0]).build(), lines: ln, offsets: [], cells: [] };
       variants.set(key, batch);
     }
     batch.offsets.push(inst.x, inst.y, base);
@@ -376,12 +410,14 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
   }
   return {
     merged: merged.build(),
-    // an empty variant would have no bounds: leave it out
-    batches: [...variants.values()].filter((b) => b.mesh.vertexCount > 0).map((b) => ({
-      mesh: b.mesh,
-      offsets: new Float32Array(b.offsets),
-      cells: new Float32Array(b.cells),
-    })),
+    lines: { ...lines.build(), primitive: "lines" },
+    // an empty variant would have no bounds: leave it out; a variant's lines are a batch of their own
+    // (a "lines" mesh, D-098), with copies of its offsets, which a render scale scales per batch
+    batches: [...variants.values()].flatMap((b) =>
+      [b.mesh, b.lines]
+        .filter((mesh): mesh is MeshData => !!mesh && mesh.vertexCount > 0)
+        .map((mesh) => ({ mesh, offsets: new Float32Array(b.offsets), cells: new Float32Array(b.cells) })),
+    ),
     skipped,
     failures,
   };

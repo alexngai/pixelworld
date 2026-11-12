@@ -113,29 +113,66 @@ export const TAKEOFF = {
 
 /** The plane (speeds at the flying level's pace; heights in steps). */
 export const PLANE = {
-  stallSpeed: 2.6,
+  /** The throttle's slowest (cells/s). Nothing stalls: see `maxAoa`. */
+  slowSpeed: 2.6,
+  /**
+   * Over a walking level (10–20 m cells, flown over itself): a much lower
+   * slowest, so the throttle can slow the plane to a sightseeing drift past
+   * the towers (cruise and top speed stay).
+   */
+  walkSlowSpeed: 1.2,
   cruiseSpeed: 5,
   maxSpeed: 8,
-  /** Speed change toward the throttle's (cells/s²). */
-  accel: 1.6,
+  /** Speed toward the throttle's: this share of the difference per second, gaining at most `maxAccel` (cells/s²). */
+  thrust: 0.9,
+  maxAccel: 1.2,
   /** Throttle change per second while a key is held. */
   throttleRate: 0.6,
-  /** Steepest climb and dive (flight path angle, rad) and how fast the nose follows (rad/s). */
-  maxClimb: (22 * Math.PI) / 180,
-  maxDive: (28 * Math.PI) / 180,
-  pitchRate: 1.4,
-  /** Bank (rad), roll rate (rad/s) and the turn rate at full bank (rad/s). */
-  maxBank: (40 * Math.PI) / 180,
-  rollRate: 2.2,
-  turnRate: 0.85,
+  /** Gravity on the flight path (cells/s² at pace 1): a level turn's rate is gravity·tan(bank)/speed. */
+  gravity: 3.5,
+  /**
+   * No stall, on any map: past this angle of attack (rad) the wing just gives
+   * no more lift, and the plane never flies slower than `floorShare` of the
+   * throttle's slowest, where that most lift still holds it level.
+   */
+  maxAoa: (16 * Math.PI) / 180,
+  floorShare: 0.85,
+  /** The stick: the most it pulls and pushes (g, up to `maxAoa`), its roll rate (rad/s), the rudder's slip (rad), and the lags to reach them (s). */
+  maxLoad: 3,
+  maxPush: 1.5,
+  pitchLag: 0.15,
+  rollRate: 3.2,
+  rollLag: 0.12,
+  maxSlip: (12 * Math.PI) / 180,
+  yawLag: 0.25,
+  /**
+   * Hands off (the stick centred): the wings roll the short way back to level
+   * and the path eases level, at these rates (1/s). Nothing else limits the
+   * attitude: held, the stick loops and rolls the plane.
+   */
+  levelRoll: 1.5,
+  levelClimb: 1.6,
+  /** The slip: turns the path (1/s per rad) and rolls the plane (rad/s per rad). */
+  slipTurn: 1.2,
+  slipRoll: 0.8,
   /** Height steps gained per cell flown along a climb of 45°. */
   stepsPerCell: Math.sqrt(6),
-  /** Climbing costs speed and diving adds it (cells/s² at a 45° path). */
+  /** Climbing costs speed and diving adds it (cells/s² at a 45° path); pulling g's and slipping cost more. */
   climbCost: 3,
-  /** Below the stall speed the nose drops (rad/s). */
-  stallDrop: 0.8,
-  /** The ceiling, above the world's highest ground (steps). */
-  ceiling: 14,
+  loadDrag: 0.6,
+  slipDrag: 0.6,
+  /** The autopilot's steepest climb and dive (flight path angle, rad) and bank (rad). */
+  pilotClimb: (20 * Math.PI) / 180,
+  pilotDive: (25 * Math.PI) / 180,
+  pilotBank: (45 * Math.PI) / 180,
+  /** The ceiling, above the world's highest ground or tallest landmark (steps): room for a loop over it. */
+  ceiling: 40,
+  /** The camera keeps the plane at most this share of the view's height above its middle (a high plane's shadow may leave the view). */
+  camAbove: 0.3,
+  /** The camera's height follows the ground under the plane this slowly (s). */
+  camGroundEase: 0.8,
+  /** Headings baked around the circle for the plane and its shadow: a turn reads as a turn, not a click. */
+  headings: 64,
   /** Clearance under which the plane touches the ground: a crash (steps). */
   crashClearance: 0.15,
   /** Landing: at most this high over the ground (steps) and this fast, within `roadReach` cells of a road. */
@@ -144,6 +181,8 @@ export const PLANE = {
   roadReach: 1.5,
   /** Seconds of low, slow flight over a road before the plane lands by itself. */
   landDwell: 0.6,
+  /** Switched to flying (Tab, the level buttons): this high over what stands there (steps). */
+  switchAgl: 5,
   /** After a take-off: height over the ground (steps) and climb (rad). */
   startAgl: 1.6,
   startClimb: (6 * Math.PI) / 180,
@@ -153,9 +192,17 @@ export const PLANE = {
   seed: 1,
   /** The shadow rides this far over the ground (steps), so the terrain's own pixels don't hide it. */
   shadowLift: 0.06,
-  /** A crash puts the plane back where it was this many seconds earlier, at least `resetAgl` up. */
+  /**
+   * A crash puts the plane back where it was `resetBack` seconds earlier,
+   * `resetAgl` over everything on its way for `clearAhead` seconds at cruise;
+   * a second crash within `retryWindow` seconds, or R, puts it that far over
+   * everything within `safeRadius` cells too.
+   */
   resetBack: 3,
   resetAgl: 2.5,
+  clearAhead: 3,
+  retryWindow: 6,
+  safeRadius: 4,
 };
 
 /** The camera: it looks ahead of the vehicle by `ahead` seconds of travel, at most `max` cells, and eases toward it. */

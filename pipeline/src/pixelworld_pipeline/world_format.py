@@ -47,6 +47,9 @@ _HEADER = struct.Struct("<4sHHiiHH")  # magic, version, flags, x, y, size, secti
 _ENTRY = struct.Struct("<4sII")  # tag, offset, length
 
 # (attribute, tag, dtype, fill) for every per-cell layer. The first three are
+# Centre-line pieces per cell and kind (D-082): one optional section per slot.
+PIECES = 6
+
 # required; the rest are optional and only written when they hold data.
 LAYERS = (
     ("base", b"BASE", "<i2", 0),
@@ -70,6 +73,14 @@ LAYERS = (
     # lanes and medians (M3.5): the widest road's lane count in bits 0-3, one-way
     # in bit 4, divided (a carriageway with a median beside it) in bit 5 (lanes.py)
     ("lane", b"LANE", "u1", 0),
+    # centre lines (D-082): up to PIECES pieces of way per cell, each the stretch
+    # of its centre line inside the cell, packed x0 | y0 << 8 | x1 << 16 | y1 << 24
+    # in 1/255 cell; drawn instead of the connection bits where a cell has them
+    *((f"road_seg{k}", f"RSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
+    *((f"path_seg{k}", f"PSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
+    # rail corridors (D-097): the same for rail corridors' centre lines; their
+    # track counts are in the RAIL layer's bits 8-10
+    *((f"rail_seg{k}", f"TSG{k}".encode(), "<u4", 0) for k in range(PIECES)),
 )
 _REQUIRED = {"base", "shape", "surface"}
 
@@ -137,6 +148,25 @@ class Chunk:
     path_width: np.ndarray = field(default=None)  # uint8 path half-width, 1/32 cell
     rail: np.ndarray = field(default=None)  # uint16 rail connectivity | kind << 12
     lane: np.ndarray = field(default=None)  # uint8 lane count | one-way << 4 | divided << 5
+    # uint32 centre-line pieces (D-082), PIECES slots per kind
+    road_seg0: np.ndarray = field(default=None)
+    road_seg1: np.ndarray = field(default=None)
+    road_seg2: np.ndarray = field(default=None)
+    road_seg3: np.ndarray = field(default=None)
+    road_seg4: np.ndarray = field(default=None)
+    road_seg5: np.ndarray = field(default=None)
+    path_seg0: np.ndarray = field(default=None)
+    path_seg1: np.ndarray = field(default=None)
+    path_seg2: np.ndarray = field(default=None)
+    path_seg3: np.ndarray = field(default=None)
+    path_seg4: np.ndarray = field(default=None)
+    path_seg5: np.ndarray = field(default=None)
+    rail_seg0: np.ndarray = field(default=None)
+    rail_seg1: np.ndarray = field(default=None)
+    rail_seg2: np.ndarray = field(default=None)
+    rail_seg3: np.ndarray = field(default=None)
+    rail_seg4: np.ndarray = field(default=None)
+    rail_seg5: np.ndarray = field(default=None)
     micro_corners: np.ndarray | None = None  # int16 (K·size + 1)² micro-steps, optional
 
     def __post_init__(self) -> None:
@@ -327,6 +357,11 @@ def encode_objects(instances: list[dict[str, Any]], version: int = OBJECTS_VERSI
                     **inst,
                     "fp": [[_hundredths(px) - ax, _hundredths(py) - ay] for px, py in inst["fp"]],
                 }
+                if inst.get("fh"):
+                    inst["fh"] = [
+                        [[_hundredths(px) - ax, _hundredths(py) - ay] for px, py in ring]
+                        for ring in inst["fh"]
+                    ]
             out.append(inst)
         instances = out
     blob = json.dumps({"version": version, "instances": instances}, separators=(",", ":"))
@@ -348,6 +383,11 @@ def decode_objects(blob: bytes) -> list[dict[str, Any]]:
             if inst.get("fp"):
                 ax, ay = _hundredths(inst["x"]), _hundredths(inst["y"])
                 inst["fp"] = [[(ax + dx) / 100, (ay + dy) / 100] for dx, dy in inst["fp"]]
+                if inst.get("fh"):
+                    inst["fh"] = [
+                        [[(ax + dx) / 100, (ay + dy) / 100] for dx, dy in ring]
+                        for ring in inst["fh"]
+                    ]
     return instances
 
 
@@ -386,6 +426,9 @@ def write_package(
     path_width: np.ndarray | None = None,
     rail: np.ndarray | None = None,
     lane: np.ndarray | None = None,
+    road_pieces: np.ndarray | None = None,
+    path_pieces: np.ndarray | None = None,
+    rail_pieces: np.ndarray | None = None,
     path_classes: dict[int, str] | None = None,
     chunk_scale: np.ndarray | None = None,
     warp_info: dict[str, Any] | None = None,
@@ -432,6 +475,19 @@ def write_package(
         "path_width": path_width,
         "rail": rail,
         "lane": lane,
+        # (cy, cx, PIECES) centre-line pieces (roads.rasterize with pieces), one layer per slot
+        **{
+            f"road_seg{k}": None if road_pieces is None else road_pieces[..., k]
+            for k in range(PIECES)
+        },
+        **{
+            f"path_seg{k}": None if path_pieces is None else path_pieces[..., k]
+            for k in range(PIECES)
+        },
+        **{
+            f"rail_seg{k}": None if rail_pieces is None else rail_pieces[..., k]
+            for k in range(PIECES)
+        },
     }
     chunk_dir = out_dir / "chunks"
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -521,7 +577,8 @@ def write_package(
     if render is not None:
         manifest["render"] = render
     if micro is not None:
-        manifest["micro"] = {"k": int(micro[1])}
+        # shores: water is a plane over shaped shores (D-094); older packages lack it
+        manifest["micro"] = {"k": int(micro[1]), "shores": True}
     if warp_info is not None:
         manifest["warp"] = warp_info
     objects_path = out_dir / OBJECTS_FILE

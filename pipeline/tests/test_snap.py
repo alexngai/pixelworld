@@ -9,6 +9,7 @@ import pytest
 from pixelworld_pipeline import objects
 from pixelworld_pipeline import roads as R
 from pixelworld_pipeline.region import Region
+from pixelworld_pipeline.sources import features
 
 
 def _kinks(layer: R.RoadLayer) -> int:
@@ -275,7 +276,6 @@ def test_rungs_between_parallel_tracks_go_but_crossings_stay():
 def test_rail_rules_pick_segments_and_tunnels_are_left_out():
     from pixelworld_pipeline.build import rail_lines
     from pixelworld_pipeline.layout import UniformLayout
-    from pixelworld_pipeline.sources import overture
 
     def line(coords):
         return f"LINESTRING ({', '.join(f'{x} {y}' for x, y in coords)})"
@@ -318,8 +318,8 @@ def test_rail_rules_pick_segments_and_tunnels_are_left_out():
         {"draw": "street", "rail": ["tram"]},
         {"draw": "train", "rail": ["standard_gauge"]},
     ]
-    assert overture.rail_matches(rules[0], rows[1]) and not overture.rail_matches(rules[0], rows[0])
-    assert len(overture.rail_open_parts(rows[0])) == 2  # either side of the tunnel
+    assert features.rail_matches(rules[0], rows[1]) and not features.rail_matches(rules[0], rows[0])
+    assert len(features.rail_open_parts(rows[0])) == 2  # either side of the tunnel
     region = Region.from_dict(
         {
             "id": "s",
@@ -471,3 +471,113 @@ def test_kept_streets_swing_and_take_their_class_and_gardens_from_the_rule():
         3: "tertiary",
     }
     assert class_ids(["residential", "tertiary"], ROAD_ORDER) == {1: "residential", 2: "tertiary"}
+
+
+def test_sixteen_directions_snap_two_to_one_edges_exactly():
+    # an edge 27 degrees off the x axis: 18 degrees from 45, so 8 directions leave it,
+    # while 16 snap it onto 2:1 (26.57 degrees)
+    lines = [
+        ("a", 1, [(np.array([2.0, 12.0]), np.array([2.0, 2.0 + 10 * np.tan(np.radians(27))]))])
+    ]
+    assert R.straighten(lines, angle=12).constrained == 0
+    st = R.straighten(lines, angle=12, directions=16)
+    assert st.constrained == 1
+    ((xs, ys),) = st.lines[0][2]
+    assert np.degrees(np.arctan2(ys[1] - ys[0], xs[1] - xs[0])) == pytest.approx(26.565, abs=1e-3)
+    with pytest.raises(ValueError, match="8 or 16"):
+        R.straighten(lines, directions=12)
+
+
+def test_centre_line_pieces_follow_the_line_cell_by_cell():
+    got = list(R.cell_pieces(0.5, 0.5, 2.5, 1.5))
+    assert [(cx, cy) for cx, cy, _ in got] == [(0, 0), (1, 0), (1, 1), (2, 1)]
+    # each piece ends where the next begins, in world coordinates
+    ends = [(cx + p[2], cy + p[3]) for cx, cy, p in got]
+    starts = [(cx + p[0], cy + p[1]) for cx, cy, p in got]
+    assert all(np.allclose(e, s) for e, s in zip(ends, starts[1:], strict=False))
+    assert R.pack_piece(0.0, 0.0, 1.0, 0.5) == 0 | 0 << 8 | 255 << 16 | 128 << 24
+    assert R.pack_piece(0.3, 0.3, 0.3, 0.3) == 0  # too short to hold: an empty slot
+
+
+def test_rasterize_with_pieces_keeps_the_widest_four_and_marks_clipped_cells():
+    line = ("a", 2, [(np.array([0.5, 4.5]), np.array([0.5, 2.5]))])
+    layer = R.rasterize([line], (4, 6), deviation=1.0, widths={"a": 8.0}, pieces=True)
+    assert layer.pieces is not None and layer.pieces.shape == (4, 6, R.PIECES)
+    cells = {(x, y) for x, y, _ in R.cell_pieces(0.5, 0.5, 4.5, 2.5)}
+    assert {(x, y) for y, x in zip(*np.nonzero(layer.pieces[..., 0]), strict=True)} == cells
+    # every cell the line crosses has its class and width, connections or not
+    assert all(layer.cls[y, x] == 2 and layer.width[y, x] == 8.0 for x, y in cells)
+    # one way more than fits through one cell: the narrowest is left out
+    n = R.PIECES + 1
+    ways = [
+        (f"w{k}", 1, [(np.array([0.05 + 0.12 * k, 0.05 + 0.12 * k]), np.array([0.0, 1.0]))])
+        for k in range(n)
+    ]
+    crowded = R.rasterize(ways, (2, 2), widths={f"w{k}": 2.0 + k for k in range(n)}, pieces=True)
+    assert crowded.pieces_dropped == 1
+    kept = [int(p) & 0xFF for p in crowded.pieces[0, 0]]  # x0 of each piece
+    assert kept == [round((0.05 + 0.12 * k) * 255) for k in range(n - 1, 0, -1)]
+
+
+def test_a_ways_wiggle_in_a_cell_merges_into_one_piece_but_a_bend_does_not():
+    # a vertex 0.02 cell off the straight line: one piece; 0.2 off: two
+    flat = R.merge_pieces([(0.0, 0.5, 0.5, 0.52), (0.5, 0.52, 1.0, 0.5)])
+    assert flat == [(0.0, 0.5, 1.0, 0.5)]
+    bent = R.merge_pieces([(0.0, 0.5, 0.5, 0.7), (0.5, 0.7, 1.0, 0.5)])
+    assert len(bent) == 2
+    # pieces that don't join stay apart
+    assert len(R.merge_pieces([(0.0, 0.2, 1.0, 0.2), (0.0, 0.8, 1.0, 0.8)])) == 2
+
+
+def _track(y0: float, x0: float = 0.0, x1: float = 20.0):
+    xs = np.linspace(x0, x1, 41)
+    return xs, np.full_like(xs, y0)
+
+
+def test_parallel_tracks_bundle_into_one_corridor_on_their_middle():
+    # three tracks 0.3 cells apart for 10 cells, two on to 20, a third's
+    # continuation end to end with the first (Overture splits tracks at switches)
+    lines = [
+        ("a", 3, [_track(5.0)]),
+        ("b", 3, [_track(5.3)]),
+        ("c", 3, [_track(5.6, 0, 10)]),
+        ("a2", 3, [_track(5.0, 20.0, 30.0)]),
+    ]
+    (corridor,) = R.bundle_tracks(lines, reach=1.5)
+    _cid, kind, ((xs, ys, ns),) = corridor
+    assert kind == 3
+    assert xs.min() < 0.5 and xs.max() > 29.5  # a and a2 joined end to end
+    assert abs(float(np.interp(4.0, xs, ys)) - 5.3) < 0.05  # the three tracks' middle
+    assert set(ns.tolist()) == {2}  # one count, the corridor's median
+
+
+def test_tracks_that_part_become_two_corridors_joined_where_they_part():
+    lines = [
+        ("main", 3, [_track(5.0)]),
+        ("branch", 3, [(np.array([0.0, 8.0, 14.0, 18.0]), np.array([5.2, 5.2, 9.0, 13.0]))]),
+    ]
+    corridors = [c[2][0] for c in R.bundle_tracks(lines, reach=1.0)]
+    assert len(corridors) == 2
+    # one runs out to the branch's end, the other to the main line's
+    out = next(c for c in corridors if abs(c[0][-1] - 18.0) < 0.1 and abs(c[1][-1] - 13.0) < 0.1)
+    on = next(c for c in corridors if c is not out)
+    assert abs(on[0][-1] - 20.0) < 0.1 and abs(on[1][-1] - 5.0) < 0.1
+    # where they part, the second starts on the first's line, before the branch leaves (x 8)
+    import shapely
+
+    start = shapely.Point(on[0][0], on[1][0])
+    assert shapely.LineString(np.column_stack(out[:2])).distance(start) < 0.05 and on[0][0] < 9.0
+
+
+def test_rail_pieces_store_kind_tracks_and_the_cells_they_reach():
+    corridor = ("c", 3, [(np.array([0.5, 9.5]), np.array([4.5, 4.5]), np.array([5, 5]))])
+    pieces, bits, dropped = R.rail_pieces([corridor], (9, 10))
+    assert dropped == 0
+    held = (pieces[..., 0] != 0).nonzero()
+    assert set(held[0].tolist()) == {4}  # the row it runs along
+    assert bits[4, 3] >> R.RAIL_KIND_SHIFT == 3
+    assert ((bits[4, 3] >> R.RAIL_TRACK_SHIFT) & 7) + 1 == 5
+    # five tracks 0.36 apart reach 0.88 cells either side: one row each way is flagged, not two
+    near = (bits & R.RAIL_NEAR) != 0
+    assert near[3:6, 3].all() and not near[2, 3] and not near[6, 3]
+    assert (bits[3, 3] >> R.RAIL_KIND_SHIFT) == 0  # flagged only

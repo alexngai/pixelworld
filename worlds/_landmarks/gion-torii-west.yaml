@@ -1,0 +1,8 @@
+name: Torii by Marishiten-dō (west)
+# OSM's line for the second unnamed torii on the same lane, 16 m west
+anchor: { lon: 135.7720163, lat: 34.9997937 }
+height: 4           # depicted
+clear: 0
+orient: 1
+depictions:
+  generic: { group: landmark.torii }

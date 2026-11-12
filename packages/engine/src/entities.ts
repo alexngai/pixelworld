@@ -1,6 +1,6 @@
 import type { Box } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
-import type { Entity, EntityList, EntityModel, EntitySpec, Sprite, SpriteDraw } from "./types";
+import type { Entity, EntityList, EntityModel, EntityReveal, EntitySpec, Sprite, SpriteDraw } from "./types";
 
 /**
  * Entities: depth-tested sprites placed in world cells and heights, baked
@@ -9,6 +9,12 @@ import type { Entity, EntityList, EntityModel, EntitySpec, Sprite, SpriteDraw } 
  */
 
 export const DEFAULT_HEADINGS = 16;
+
+/** Pitch and roll are baked to the nearest of these (radians): 10°. */
+export const ATTITUDE_STEP = Math.PI / 18;
+
+/** A posed sprite (pitch or roll) not drawn for this many frames is let go: a long flight passes through many poses. */
+const POSE_KEEP_FRAMES = 600;
 
 export interface EntityDeps {
   /** Bake boxes into a sprite for a rotation (null if the bake failed). */
@@ -29,17 +35,35 @@ function modelKey(model: EntityModel, id: number): string {
   return ["group", model.group, model.seed, model.variant ?? 0, model.part ?? 0, s ? `${s.length}x${s.width}x${s.height}` : ""].join(":");
 }
 
+function withRevealDefaults(r: EntitySpec["reveal"] | null | undefined): EntityReveal | null {
+  return r ? { margin: Math.max(0, r.margin ?? 24), density: Math.min(1, Math.max(0, r.density ?? 0.75)) } : null;
+}
+
 /** The heading index nearest an angle, of n around the circle. */
 export function headingIndex(heading: number, n: number): number {
   const k = Math.round((heading / (2 * Math.PI)) * n) % n;
   return (k + n) % n;
 }
 
-/** Boxes turned to heading index k of n; heading 0 is the model as given. */
-export function turnBoxes(boxes: Box[], k: number, n: number): Box[] {
-  if (k === 0) return boxes;
+/**
+ * Boxes turned to heading index k of n, and tilted (radians: nose up, right
+ * wing down) about their middle height; heading 0 untilted is the model as given.
+ */
+export function turnBoxes(boxes: Box[], k: number, n: number, tilt?: { pitch: number; roll: number }): Box[] {
+  const tilted = !!tilt && (tilt.pitch !== 0 || tilt.roll !== 0);
+  if (k === 0 && !tilted) return boxes;
   const angle = (k * 2 * Math.PI) / n;
-  return boxes.map((b) => ({ ...b, rot: (b.rot ?? 0) + angle }));
+  let pivot = 0;
+  if (tilted) {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const b of boxes) {
+      lo = Math.min(lo, b.z0);
+      hi = Math.max(hi, b.z1);
+    }
+    pivot = (lo + hi) / 2;
+  }
+  return boxes.map((b) => ({ ...b, rot: (b.rot ?? 0) + angle, ...(tilted ? { pitch: tilt.pitch, roll: tilt.roll, pivot } : {}) }));
 }
 
 class EntityImpl implements Entity {
@@ -47,8 +71,11 @@ class EntityImpl implements Entity {
   private _y: number;
   private _h: number;
   private _heading: number;
+  private _pitch: number;
+  private _roll: number;
   private _visible: boolean;
   private _silhouette: boolean;
+  private _reveal: EntityReveal | null;
   readonly headings: number;
   readonly lift: number;
 
@@ -64,8 +91,11 @@ class EntityImpl implements Entity {
     this._y = spec.y;
     this._h = h;
     this._heading = spec.heading ?? 0;
+    this._pitch = spec.pitch ?? 0;
+    this._roll = spec.roll ?? 0;
     this._visible = spec.visible ?? true;
     this._silhouette = spec.silhouette ?? false;
+    this._reveal = withRevealDefaults(spec.reveal);
     this.headings = Math.max(1, Math.round(spec.headings ?? DEFAULT_HEADINGS));
     this.lift = spec.lift ?? 0;
   }
@@ -89,6 +119,24 @@ class EntityImpl implements Entity {
     this.owner.changed();
   }
 
+  get pitch(): number {
+    return this._pitch;
+  }
+  set pitch(v: number) {
+    if (v === this._pitch) return;
+    this._pitch = v;
+    this.owner.changed();
+  }
+
+  get roll(): number {
+    return this._roll;
+  }
+  set roll(v: number) {
+    if (v === this._roll) return;
+    this._roll = v;
+    this.owner.changed();
+  }
+
   get visible(): boolean {
     return this._visible;
   }
@@ -107,6 +155,14 @@ class EntityImpl implements Entity {
     this.owner.changed();
   }
 
+  get reveal(): EntityReveal | null {
+    return this._reveal;
+  }
+  set reveal(v: EntityReveal | null) {
+    this._reveal = withRevealDefaults(v);
+    this.owner.changed();
+  }
+
   moveTo(x: number, y: number, h?: number): void {
     const nh = h ?? this.owner.heightAt(x, y) ?? this._h;
     if (x === this._x && y === this._y && nh === this._h) return;
@@ -120,10 +176,17 @@ class EntityImpl implements Entity {
     this.owner.remove(this);
   }
 
-  /** The sprite key for a rotation: model, headings, rotation and heading index. */
-  spriteKey(rotation: Rotation): { key: string; k: number } {
+  /** The last sprite drawn: shown while the next pose's bakes. */
+  shown: Sprite | null = null;
+  shownRotation: Rotation | null = null;
+
+  /** The sprite key for a rotation: model, headings, rotation, heading index and pitch and roll steps. */
+  spriteKey(rotation: Rotation): { key: string; k: number; pitch: number; roll: number; posed: boolean } {
     const k = headingIndex(this._heading, this.headings);
-    return { key: `${this.key}|${this.headings}|${rotation}|${k}`, k };
+    const p = Math.round(this._pitch / ATTITUDE_STEP);
+    const r = Math.round(this._roll / ATTITUDE_STEP);
+    const pose = p || r ? `|${p}|${r}` : "";
+    return { key: `${this.key}|${this.headings}|${rotation}|${k}${pose}`, k, pitch: p * ATTITUDE_STEP, roll: r * ATTITUDE_STEP, posed: pose !== "" };
   }
 }
 
@@ -134,6 +197,9 @@ export class Entities implements EntityList {
   private readonly sprites = new Map<string, Sprite | null | false>();
   /** Each model's boxes at heading 0. */
   private readonly boxes = new Map<string, Box[]>();
+  /** Posed sprites by key: the last frame each was asked for or drawn. */
+  private readonly posedUse = new Map<string, number>();
+  private frame = 0;
 
   constructor(private readonly deps: EntityDeps) {}
 
@@ -160,6 +226,7 @@ export class Entities implements EntityList {
         if (k.startsWith(`${e.key}|`)) {
           if (s) this.deps.release(s);
           this.sprites.delete(k);
+          this.posedUse.delete(k);
         }
     }
     this.deps.invalidate();
@@ -182,10 +249,11 @@ export class Entities implements EntityList {
   /** Ask for every entity's sprite in a rotation (hidden ones too, so showing them is instant). */
   request(rotation: Rotation): void {
     for (const e of this.items) {
-      const { key, k } = e.spriteKey(rotation);
+      const { key, k, pitch, roll, posed } = e.spriteKey(rotation);
+      if (posed) this.posedUse.set(key, this.frame);
       if (this.sprites.has(key)) continue;
       this.sprites.set(key, null);
-      const boxes = turnBoxes(this.boxes.get(e.key)!, k, e.headings);
+      const boxes = turnBoxes(this.boxes.get(e.key)!, k, e.headings, { pitch, roll });
       void this.deps.bake(rotation, boxes).then((img) => {
         if (!this.sprites.has(key)) {
           if (img) this.deps.release(img); // the model went away meanwhile
@@ -199,7 +267,8 @@ export class Entities implements EntityList {
 
   /**
    * The visible entities' sprites for a frame; `complete` is false while
-   * some are still baking. An entity where the ground isn't drawn yet
+   * some are still baking (an entity whose new pose is baking shows its last
+   * sprite in the meantime, so it doesn't blink). An entity where the ground isn't drawn yet
    * (`isDrawn`, its tile still baking) is left out, so it doesn't float over
    * the void.
    */
@@ -210,18 +279,39 @@ export class Entities implements EntityList {
   ): { list: SpriteDraw[]; complete: boolean } {
     const list: SpriteDraw[] = [];
     let complete = true;
+    if (++this.frame % 120 === 0) this.letGoOfPoses();
     for (const e of this.items) {
       if (!e.visible) continue;
-      const sprite = this.sprites.get(e.spriteKey(rotation).key);
+      const { key, posed } = e.spriteKey(rotation);
+      if (posed) this.posedUse.set(key, this.frame);
+      let sprite = this.sprites.get(key);
       if (sprite === false || !isDrawn(e.x, e.y)) continue;
       if (!sprite) {
         complete = false;
-        continue;
+        // the last pose, in this rotation (another rotation's would face the wrong way)
+        if (!e.shown || e.shownRotation !== rotation) continue;
+        sprite = e.shown;
       }
+      e.shown = sprite;
+      e.shownRotation = rotation;
       const p = project(e.x, e.y, e.h + e.lift);
-      list.push({ sprite, sx: Math.round(p.sx), sy: Math.round(p.sy), depth: p.depth, silhouette: e.silhouette });
+      // not rounded: the compositor places sprites between art pixels, so they glide
+      list.push({ sprite, sx: p.sx, sy: p.sy, depth: p.depth, silhouette: e.silhouette, reveal: e.reveal });
     }
     return { list, complete };
+  }
+
+  /** Let go of posed sprites not drawn for a while (but not one an entity still shows while its next pose bakes). */
+  private letGoOfPoses(): void {
+    const shown = new Set(this.items.map((e) => e.shown));
+    for (const [key, last] of this.posedUse) {
+      if (this.frame - last <= POSE_KEEP_FRAMES) continue;
+      const s = this.sprites.get(key);
+      if (s && shown.has(s)) continue;
+      if (s) this.deps.release(s);
+      this.sprites.delete(key); // one still baking is let go when it arrives
+      this.posedUse.delete(key);
+    }
   }
 
   /** Sprites baked or baking. */
@@ -233,6 +323,7 @@ export class Entities implements EntityList {
   dispose(): void {
     for (const s of this.sprites.values()) if (s) this.deps.release(s);
     this.sprites.clear();
+    this.posedUse.clear();
     this.boxes.clear();
     this.items.splice(0);
   }

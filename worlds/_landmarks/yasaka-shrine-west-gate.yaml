@@ -1,0 +1,13 @@
+name: Yasaka Shrine West Gate (Nishi-rōmon)
+# Wikidata has no item with coordinates for the gate: Overture's footprint of it
+# (西楼門), at the east end of Shijō-dōri, facing west across Higashiōji-dōri;
+# drawn on that footprint
+anchor: { lon: 135.777531, lat: 35.00373 }
+height: 9           # PLATEAU's measured height (Wikidata has none)
+clear: 0
+footprint: true
+replaces: [e32f52bd-26b5-42b5-b204-19527ce284d6]
+depictions:
+  # a vermilion two-storey gate (rōmon): three bays, the middle one open, a
+  # balcony, a hip-and-gable roof of cypress bark; no name
+  generic: { group: landmark.gate.romon }

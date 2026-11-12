@@ -227,3 +227,39 @@ def test_single_track_keeps_one_of_two_parallel_tracks():
     rows = [({"id": i}, "train", xy) for i, xy in (("a", a), ("b", b), ("c", c))]
     kept = [r[0]["id"] for r in R.single_track(rows)]
     assert kept == ["a", "c"]
+
+
+def test_roads_drawn_along_centre_lines_carry_their_routes_on_the_line(tmp_path):
+    # a street at 2:1 (D-082): traced cell by cell, its route's inner vertices
+    # sit on the line itself, not on the staircase of cell centres
+    h, w = 24, 40
+    line = ("s", 1, [(np.array([2.0, 36.0]), np.array([3.0, 20.0]))])
+    layer = road_stage.rasterize([line], (h, w), pieces=True)
+    write_package(
+        tmp_path,
+        world_id="t",
+        name="t",
+        base=np.full((h, w), 2, np.int16),
+        shape=np.zeros((h, w), np.uint8),
+        surface=np.ones((h, w), np.uint8),
+        water=np.full((h, w), NO_WATER, np.int16),
+        road=layer.mask,
+        road_class=layer.cls,
+        road_pieces=layer.pieces,
+        chunk_size=16,
+        scale={"metersPerCell": 10, "metersPerStep": 2.7, "elevationDatumMeters": 0},
+        surfaces={1: "grass"},
+        road_classes={1: "residential"},
+        style="test",
+        attribution=[],
+    )
+    pkg = R.load_package(tmp_path)
+    assert pkg.road_pieces is not None
+    (route,) = [r for r in R.make_routes(tmp_path)[0]["routes"] if r["net"] == "road"]
+    p = _pts(route)
+    assert np.allclose(p[0, :2] % 1, 0.5) and np.allclose(p[-1, :2] % 1, 0.5)  # ends at centres
+    # every vertex in between within a pixel's worth of the line
+    a, b = np.array([2.0, 3.0]), np.array([36.0, 20.0])
+    u = (b - a) / np.hypot(*(b - a))
+    off = np.abs((p[1:-1, 0] - a[0]) * u[1] - (p[1:-1, 1] - a[1]) * u[0])
+    assert len(off) and off.max() < 0.02

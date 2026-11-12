@@ -10,7 +10,8 @@ objects.place uses. A landmark file holds:
     height: 350                     # metres (towers, wheels)
     crest: 376                      # metres above sea level (dam crests, bridge decks)
     reservoir: 10                   # a dam's lake stands this many metres below its crest
-    base: 0                         # metres: a long landmark's foot (a bridge's water level)
+    base: 0                         # metres: a long landmark's foot (a bridge's water level),
+                                    # or an anchored one's below its anchor (a stage on a slope)
     snap: true                      # a bridge turns to the grid direction of its road (D-049)
     thickness: 45                   # metres across a line landmark
     bulge: 0.15                     # how far a line landmark bows to the left of its direction
@@ -18,6 +19,7 @@ objects.place uses. A landmark file holds:
     orient: 1                       # quarter turns
     scale: 1.0                      # extra depiction scale for this landmark
     replaces: [Stratosphere Tower]  # Overture building names or ids it stands in for
+    footprint: true                 # drawn on the footprint of the building it replaces
     parts:                          # sub-objects placed along a line landmark
       - { group: landmark.dam.intake, along: 0.15, offset: 70, aboveCrest: 12 }  # offset: left
     hero: true                      # baked offline and painted over (D-053): files in <id>/
@@ -103,6 +105,8 @@ def resolve(entry: Any, root: Path | None, variant: str) -> dict[str, Any]:
         out["replaces"] = [str(r) for r in raw["replaces"]]
     if raw.get("parts"):
         out["parts"] = [dict(p) for p in raw["parts"]]
+    if raw.get("footprint"):
+        out["footprint"] = True
     if raw.get("hero"):
         out["hero"] = True  # baked offline and painted over (D-053)
     # the region's entry can override anything (e.g. scale for one level)

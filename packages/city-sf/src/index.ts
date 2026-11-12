@@ -9,8 +9,8 @@ import workerUrl from "./worker?worker&url";
 
 /**
  * @pixelworlds/city-sf: San Francisco's city pack (D4 in docs/library.md,
- * D-071, D-074). The pipeline half (DataSF facts) is the Python distribution
- * pixelworld-city-sf; this is the browser half, San Francisco's generators.
+ * D-071, D-074). The pipeline half (DataSF facts) is the pipeline's built-in
+ * `datasf` facts source; this is the browser half, San Francisco's generators.
  *
  *   import { cityPlugin } from "@pixelworlds/city-sf";
  *   const view = await createWorldView({ canvas, worldUrl: "/sf/", style: bayArea, plugins: [cityPlugin] });

@@ -1,17 +1,25 @@
 import type { PluginDescriptor } from "@pixelworlds/engine";
+import { cityPlugin as hongKong } from "@pixelworlds/city-hongkong";
+import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
+import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
+import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
+import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 
 /**
  * The city packs the viewer can load (docs/plugins.md §9.7, D-074). A world's
  * style pack names the plugins its generators come from (`"plugins"`), and the
  * viewer loads the ones listed here: San Francisco's for the bay-area pack,
- * nothing for the Southwest.
+ * San Francisco's and New York's for the new-york pack, San Francisco's and
+ * Paris's for the paris pack, Kyoto's for the kyoto pack, San Francisco's
+ * and Tokyo's for the tokyo pack, San Francisco's and Hong Kong's for the
+ * hongkong pack, nothing for the Southwest.
  *
  * To add a city pack: depend on it in apps/web/package.json (`"workspace:*"`
  * for one in packages/, else its npm version), run `pnpm install`, then import
  * its descriptor and add it to CITY_PACKS.
  */
-export const CITY_PACKS: PluginDescriptor[] = [sanFrancisco];
+export const CITY_PACKS: PluginDescriptor[] = [sanFrancisco, newYork, paris, kyoto, tokyo, hongKong];
 
 /**
  * For createWorldView({ plugins }): the city packs among `names`, the plugins

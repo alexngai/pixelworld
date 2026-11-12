@@ -1,0 +1,65 @@
+# New York, walking level (D-078, D-083): Manhattan at 10 m per cell from the
+# Battery to 86th Street, across the south half of Central Park, with the East
+# River's bridges and the waterfronts across it: Brooklyn Heights, DUMBO,
+# Williamsburg, Greenpoint, Long Island City and Astoria's south end. The
+# Financial District's towers stand over colonial streets; Tribeca's cast-iron
+# lofts, the Seaport, City Hall and Chinatown's tenements around them; the
+# East Village's tenements, the Village's rows, and Midtown's setback towers
+# and glass to the north; then the prewar apartment blocks and brownstone rows
+# of the Upper West and East Sides. (Further north the package would pass
+# 8 MB: D-083.)
+# It extends the driving level (region.yaml), which holds what the levels
+# share: the style, the sources, the typology and the ground.
+# Build: cd pipeline && uv run pixelworld build ../worlds/nyc/walk.yaml
+extends: region.yaml
+id: nyc-walk
+name: New York (walking)
+level: walk
+bounds: [-74.020, 40.690, -73.945, 40.792] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+
+# buildings the shift leaves over a drawn road move off it, up to 5 m, or
+# lose the part over it (M3.5)
+snap:
+  buildings: { clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2 }
+
+objects:
+  buildings:
+    minArea: 15
+  vegetation:
+    # street and park trees where the canopy height map (WRI/Meta, 1 m) shows 3 m or more
+    - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+  streetTrees:
+    - { group: tree.street, roads: [residential, tertiary, secondary, primary, unclassified, living_street], canopy: 3, spacing: 8, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+  # the driving level's, but for the George Washington Bridge (outside this
+  # level); new ones go at the end: a landmark's seed is its place in the list
+  landmarks:
+    - one-world-trade-center
+    - woolworth-building
+    - brooklyn-bridge
+    - manhattan-bridge
+    - empire-state-building
+    - chrysler-building
+    - flatiron-building
+    - grand-central-terminal
+    - williamsburg-bridge
+    - queensboro-bridge
+
+start: { lon: -74.0107, lat: 40.7094 } # Broadway at Liberty Street
+
+sources:
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }

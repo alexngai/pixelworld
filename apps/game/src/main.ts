@@ -1,5 +1,10 @@
 import type { PluginDescriptor } from "@pixelworlds/engine";
+import { cityPlugin as hongKong } from "@pixelworlds/city-hongkong";
+import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
+import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
+import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin } from "@pixelworlds/city-sf";
+import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { StyleError, parseStyleJson, resolveStyleExtends, suggest } from "@pixelworlds/style";
 import type { CarInput } from "./car";
 import { Game } from "./game";
@@ -11,11 +16,11 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
 /**
  * pixelworld's example game (M4): drive and fly a world package, built only
  * on the public API of `@pixelworlds/engine` and `@pixelworlds/sim`, the
- * style packs and San Francisco's city pack.
+ * style packs and the city packs (San Francisco's, New York's, Paris's, Kyoto's, Tokyo's, Hong Kong's).
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
- * `start=lon,lat`, `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
- * `cache=0`, `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
+ * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
+ * `cache=0`, `startTiles=0` (bake the first view too), `workers` (bake workers), `ground=0` (no ground while tiles bake), `idle=0` (no baking ahead while idle), `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
  * scripted run in real time, then its frame times).
  */
 
@@ -31,7 +36,7 @@ async function stylePack(id: string): Promise<object> {
 }
 
 // The city packs the game can load, by name (D-071); a world's style pack names the ones it needs.
-const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin };
+const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris, [kyoto.name]: kyoto, [tokyo.name]: tokyo, [hongKong.name]: hongKong };
 
 const params = new URLSearchParams(location.search);
 const num = (key: string, fallback: number) => {
@@ -51,6 +56,12 @@ export interface GameDebug {
   /** Plan a road route to a lon/lat and drive it with a fixed dt; returns its samples. */
   driveTo(lon: number, lat: number, opts?: { dt?: number; maxSeconds?: number; stop?: boolean }): Promise<{ planned: number; byClass: Record<string, number>; samples: Sample[]; reached: boolean }>;
   takeOff(force?: boolean): Promise<boolean>;
+  /** Another map ("drive", "walk", "fly") here, in the same vehicle (Tab, the map buttons). */
+  switchMap(name: string): Promise<boolean>;
+  /** The other vehicle (or this one) here, on the same map (C, the vehicle buttons). */
+  switchVehicle(mode?: "car" | "plane"): Promise<boolean>;
+  /** Back to safety (R). */
+  reset(): void;
   land(force?: boolean): Promise<boolean>;
   /** Fly a landing approach to the nearest road within a radius (cells) of the plane: the cell, or null without one. */
   approachRoad(radius: number): { x: number; y: number } | null;
@@ -105,10 +116,15 @@ async function main() {
     },
     fog: params.get("fog") !== "0",
     cache: params.get("cache") !== "0",
+    startTiles: params.get("startTiles") !== "0",
+    bakeWorkers: params.has("workers") ? num("workers", 0) : undefined,
+    groundFirst: params.get("ground") !== "0",
+    idleBake: params.get("idle") !== "0",
     size,
     zoom: params.has("zoom") ? num("zoom", 2) : "auto",
     rotation: num("rot", 0) & 3,
     hud: params.get("hud") === "0" ? null : ui,
+    fly: params.get("fly") === "1",
   });
 
   window.addEventListener("keydown", (e) => game.keyDown(e));
@@ -134,6 +150,9 @@ async function main() {
       return { planned: plan.cells, byClass: plan.byClass, samples, reached: pilot.done };
     },
     takeOff: (force) => game.takeOff(force),
+    switchMap: (name) => game.switchMap(name),
+    switchVehicle: (mode) => game.switchVehicle(mode),
+    reset: () => game.reset(),
     land: (force) => game.land(force),
     approachRoad: (radius) => {
       const p = game.plane?.state;

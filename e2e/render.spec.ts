@@ -324,6 +324,71 @@ test.describe("Hero landmarks (D-053)", () => {
   });
 });
 
+test.describe("New York (D-078, D-080, D-081)", () => {
+  test("brownstone rows in Brooklyn Heights: the walking level typed from NYC Open Data", async ({ page }) => {
+    // the new-york style pack and its city pack, named by the world
+    await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9952,40.6944");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-heights-r0.png");
+  });
+
+  test("the Flatiron Building on its own wedge in Midtown (D-083)", async ({ page }) => {
+    // a landmark drawn on its building's footprint, with Madison Square's lawn beside it
+    await open(page, "world=/nyc-walk/&marker=0&zoom=2&rot=0&at=-73.9897,40.7411");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-walk-flatiron-r0.png");
+  });
+
+  test("brownstone rows in Harlem: the driving level (D-083)", async ({ page }) => {
+    // Strivers' Row: rows typed from PLUTO's classes in Harlem's neighbourhoods
+    await open(page, "world=/nyc/&marker=0&zoom=2&rot=0&at=-73.9445,40.8180");
+    await expect(page.locator("#view")).toHaveScreenshot("nyc-harlem-r0.png");
+  });
+});
+
+test.describe("Paris (D-084, D-085, D-086)", () => {
+  test("Haussmann blocks in the Gros-Caillou: the walking level typed from APUR and IGN", async ({ page }) => {
+    // the paris style pack and its city pack, named by the world
+    await open(page, "world=/paris-walk/&marker=0&zoom=2&rot=0&at=2.3027,48.8570");
+    await expect(page.locator("#view")).toHaveScreenshot("paris-walk-gros-caillou-r0.png");
+  });
+});
+
+test.describe("Kyoto (D-089, D-090, D-091, D-100, D-101)", () => {
+  test("machiya streets under the Yasaka Pagoda: the walking level typed from PLATEAU", async ({ page }) => {
+    // the kyoto style pack and its city pack, named by the world: machiya and
+    // wooden houses under grey tile round a pagoda landmark
+    await open(page, "world=/kyoto-walk/&marker=0&zoom=2&rot=0&at=135.7790,34.9985");
+    await expect(page.locator("#view")).toHaveScreenshot("kyoto-walk-yasaka-r0.png");
+  });
+
+  test("Tō-ji's pagoda among the town: the driving level (D-101)", async ({ page }) => {
+    // 25 m cells: the machiya and houses as small tile-roofed blocks round a temple's grounds
+    await open(page, "world=/kyoto/&marker=0&zoom=2&rot=0&at=135.7487,34.9799");
+    await expect(page.locator("#view")).toHaveScreenshot("kyoto-toji-r0.png");
+  });
+});
+
+test.describe("Tokyo (D-092, D-093)", () => {
+  test("houses, apartment slabs and utility poles in Yoyogi: the walking level typed from PLATEAU", async ({ page }) => {
+    // the tokyo style pack and its city pack, named by the world
+    await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.6912,35.6796");
+    await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-yoyogi-r0.png");
+  });
+
+  test("the Yamanote's tracks by Harajuku as one corridor along its centre line (D-097)", async ({ page }) => {
+    await open(page, "world=/tokyo-walk/&marker=0&zoom=2&rot=0&at=139.7027,35.6700");
+    await expect(page.locator("#view")).toHaveScreenshot("tokyo-walk-harajuku-rails-r0.png");
+  });
+});
+
+test.describe("Hong Kong (D-107, D-108, D-109)", () => {
+  test("Yau Ma Tei's tong lau under neon signs: Kowloon on open data alone", async ({ page }) => {
+    // the hongkong style pack and its city pack; terrain from GLO-30 with its
+    // buildings filtered off, heights from OSM or each neighbourhood's (D-107)
+    await open(page, "world=/hongkong-walk/&marker=0&zoom=2&rot=0&at=114.1700,22.3120");
+    await expect(page.locator("#view")).toHaveScreenshot("hongkong-walk-yaumatei-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world

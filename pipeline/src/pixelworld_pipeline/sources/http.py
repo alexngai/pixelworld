@@ -5,12 +5,18 @@ from __future__ import annotations
 
 import io
 import os
+import ssl
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
+import certifi
+
 USER_AGENT = "pixelworld-pipeline/0.1 (+https://github.com/alexngai/pixelworld)"
+# Mozilla's roots (certifi), not the OS file: macOS's /etc/ssl/cert.pem, which a
+# standalone Python reads, lacks roots some portals use (GlobalSign Root R46: Socrata)
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 REPO = Path(__file__).resolve().parents[4]
 
 
@@ -50,7 +56,9 @@ def get(
     for attempt in range(tries):
         try:
             with urllib.request.urlopen(
-                urllib.request.Request(url, data=data, headers=h), timeout=timeout
+                urllib.request.Request(url, data=data, headers=h),
+                timeout=timeout,
+                context=SSL_CONTEXT,
             ) as r:
                 return r.read()
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:

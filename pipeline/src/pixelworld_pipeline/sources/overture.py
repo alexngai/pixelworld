@@ -4,6 +4,9 @@ Overture files are spatially clustered and every row group carries bbox
 statistics, so we index each file's row groups once (footers only, cached as
 JSON) and later download just the column chunks of row groups that intersect
 the region. Releases are pinned for reproducibility.
+
+The built-in `features` source (`Overture`, D-110): `sources.features:
+{ kind: overture, release: 2026-10-21.0 }`.
 """
 
 from __future__ import annotations
@@ -16,8 +19,10 @@ from urllib.parse import quote
 
 import pyarrow.parquet as pq
 import shapely
-from shapely.ops import substring
 
+from ..region import RegionError
+from ..schema import Key, Str
+from .features import PATH_SOURCE_CLASSES, FeatureSource, path_class
 from .http import CACHE_ROOT, HttpRangeFile, get
 
 BUCKET = "https://overturemaps-us-west-2.s3.amazonaws.com/"
@@ -66,10 +71,8 @@ def build_index(release: str, theme: str, kind: str, workers: int = 6) -> list[d
         return json.loads(path.read_text())
     files = list_files(f"release/{release}/theme={theme}/type={kind}/")
     if not files:
-        from ..region import RegionError
-
         raise RegionError(
-            f"sources.overture.release: Overture has no release '{release}' (no "
+            f"sources.features.release: Overture has no release '{release}' (no "
             f"{theme}/{kind} files under {BUCKET}release/{release}/); releases are named "
             "like 2026-10-21.0, see https://docs.overturemaps.org/release-calendar/"
         )
@@ -188,18 +191,6 @@ def road_subclasses(
     )
 
 
-# Footways split by their subclass: sidewalks and crosswalks look different.
-FOOTWAY_SUBCLASSES = {"sidewalk", "crosswalk"}
-PATH_SOURCE_CLASSES = {"footway", "pedestrian", "path", "steps", "cycleway"}
-
-
-def path_class(row: dict) -> str:
-    """The path class a segment is drawn as: footway subclasses count as their own."""
-    if row["class"] == "footway" and row.get("subclass") in FOOTWAY_SUBCLASSES:
-        return row["subclass"]
-    return row["class"]
-
-
 def paths(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
     """Pedestrian and cycle ways whose path_class is in `classes` (D-050)."""
     wanted = set(classes)
@@ -231,52 +222,6 @@ def rails(release: str, bbox: tuple[float, float, float, float], classes: list[s
         lambda r: r["subtype"] == "rail" and r["class"] in wanted,
         filter_tag=f"rails:{','.join(sorted(wanted))}",
     )
-
-
-def rail_open_parts(row: dict) -> list:
-    """A rail segment's lon/lat line without its tunnels (`is_tunnel` ranges
-    in its rail flags; a flag without a range covers the whole segment)."""
-    line = shapely.from_wkt(row["geometry"])
-    parts = list(line.geoms) if hasattr(line, "geoms") else [line]
-    if line.geom_type != "LineString":
-        return parts  # ranges are along a single line; multi-lines are kept whole
-    cuts: list[tuple[float, float]] = []
-    for flag in row.get("rail_flags") or []:
-        if "is_tunnel" not in (flag.get("values") or []):
-            continue
-        a, b = flag.get("between") or (0.0, 1.0)
-        cuts.append((float(a), float(b)))
-    if not cuts:
-        return [line]
-    out, at = [], 0.0
-    for a, b in sorted(cuts):
-        if a > at:
-            out.append(substring(line, at, a, normalized=True))
-        at = max(at, b)
-    if at < 1.0:
-        out.append(substring(line, at, 1.0, normalized=True))
-    return [g for g in out if g.geom_type == "LineString" and g.length > 0]
-
-
-def rail_matches(rule: dict, row: dict) -> bool:
-    """A rail segment matches a rule by its class (`rail`), and optionally by
-    name (any of `names`, case-insensitive, within its primary name; or
-    `unnamed: true`, none) and by a lon/lat box (`bounds`: west, south, east,
-    north) that holds all of it."""
-    if row["class"] not in set(rule.get("rail") or []):
-        return False
-    name = (((row.get("names") or {}).get("primary")) or "").lower()
-    if rule.get("unnamed") and name:
-        return False
-    names = [n.lower() for n in rule.get("names") or []]
-    if names and not any(n in name for n in names):
-        return False
-    if "bounds" in rule:
-        w, s, e, n = (float(v) for v in rule["bounds"])
-        x0, y0, x1, y1 = shapely.from_wkt(row["geometry"]).bounds
-        if x0 < w or y0 < s or x1 > e or y1 > n:
-            return False
-    return True
 
 
 def rivers(
@@ -335,6 +280,37 @@ def land_use(
     return _areas(release, bbox, "land_use", classes)
 
 
+def water_areas(
+    release: str, bbox: tuple[float, float, float, float], classes: list[str]
+) -> list[dict]:
+    """Water polygons of the given classes (base theme `water`): the sea from
+    OpenStreetMap's coastline, rivers' banks, lakes and docks."""
+    return _areas(release, bbox, "water", classes)
+
+
+def barriers(
+    release: str, bbox: tuple[float, float, float, float], classes: list[str]
+) -> list[dict]:
+    """Barrier lines of the given classes (base theme `infrastructure`, from
+    OpenStreetMap's barrier tags): retaining walls, walls, fences, …"""
+    wanted = set(classes)
+
+    def keep(r) -> bool:
+        if r["class"] not in wanted:
+            return False
+        return shapely.from_wkb(r["geometry"]).geom_type in ("LineString", "MultiLineString")
+
+    return query(
+        release,
+        "base",
+        "infrastructure",
+        bbox,
+        ["id", "class", "subtype", "geometry"],
+        keep,
+        filter_tag=f"barriers:{','.join(sorted(wanted))}",
+    )
+
+
 def land(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
     """Natural land polygons of the given classes (base theme `land`, from
     OpenStreetMap's natural tags): grassland, scrub, heath, beach, sand, …"""
@@ -381,3 +357,99 @@ def building_parts(release: str, bbox: tuple[float, float, float, float]) -> lis
         PART_COLUMNS,
         lambda r: not r.get("is_underground"),
     )
+
+
+RELEASE = re.compile(r"\d{4}-\d{2}-\d{2}\.\d+")
+
+
+class Overture(FeatureSource):
+    """Overture Maps (ODbL 1.0, from OpenStreetMap and others) at a pinned release:
+    the built-in features source. Option `release` (required): e.g. `2026-10-21.0`."""
+
+    attribution = {
+        "name": "© OpenStreetMap contributors, Overture Maps Foundation "
+        "(transportation and base themes)",
+        "license": "ODbL 1.0",
+        "url": "https://overturemaps.org",
+    }
+    buildings_attribution = {
+        "name": "Overture Maps Foundation buildings theme: © OpenStreetMap contributors, "
+        "Esri Community Maps contributors, Microsoft, Google Open Buildings",
+        "license": "ODbL 1.0",
+        "url": "https://docs.overturemaps.org/attribution/",
+    }
+
+    options_schema = {
+        "release": Key(
+            Str(pattern=RELEASE.pattern, pattern_doc="an Overture release like 2026-10-21.0"),
+            "The Overture Maps release, pinned so builds repeat (e.g. `2026-10-21.0`).",
+            required=True,
+        )
+    }
+
+    def __init__(self, region=None, options=None):
+        super().__init__(region, options)
+        self.release = str(self.options.pop("release", "") or "")
+        if not RELEASE.fullmatch(self.release):
+            raise RegionError(
+                "sources.features: the overture source needs `release:`, an Overture release "
+                f"like 2026-10-21.0 (got {self.release or 'none'})"
+            )
+        if self.options:
+            raise RegionError(
+                f"sources.features: unknown overture options {', '.join(sorted(self.options))}"
+            )
+
+    def summary(self) -> str:
+        return f"Overture {self.release}"
+
+    # each method calls the module's function at call time, so tests can patch those
+    def roads(self, bbox, classes, exclude_subclasses=None, lanes=False):
+        return roads(self.release, bbox, classes, exclude_subclasses, lanes=lanes)
+
+    def road_subclasses(self, bbox, subclasses, lanes=False):
+        return road_subclasses(self.release, bbox, subclasses, lanes=lanes)
+
+    def paths(self, bbox, classes):
+        return paths(self.release, bbox, classes)
+
+    def streets(self, bbox, classes):
+        classes = set(classes)
+        return query(
+            self.release,
+            "transportation",
+            "segment",
+            bbox,
+            ["id", "class", "names", "geometry"],
+            lambda r: r["class"] in classes,
+            filter_tag=f"classes:{','.join(sorted(classes))}",
+        )
+
+    def rails(self, bbox, classes):
+        return rails(self.release, bbox, classes)
+
+    def rivers(self, bbox, subtypes):
+        return rivers(self.release, bbox, subtypes)
+
+    def water_areas(self, bbox, classes):
+        return water_areas(self.release, bbox, classes)
+
+    def land_use(self, bbox, classes):
+        return land_use(self.release, bbox, classes)
+
+    def land(self, bbox, classes):
+        return land(self.release, bbox, classes)
+
+    def barriers(self, bbox, classes):
+        return barriers(self.release, bbox, classes)
+
+    def buildings(self, bbox):
+        return buildings(self.release, bbox)
+
+    def building_parts(self, bbox):
+        return building_parts(self.release, bbox)
+
+    def transit(self, bbox):
+        from . import transit
+
+        return transit.segments(self.release, bbox)

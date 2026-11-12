@@ -78,7 +78,7 @@ Because of this, the same real building can take up more or fewer cells dependin
   - **Street networks:** they are straightened as a whole. Each road edge within a few degrees of a grid direction is made to run exactly along it, with junctions moving as little as possible (under 2 cells) and staying shared. A slightly rotated street grid therefore comes out aligned rather than full of one-cell jogs.
   - **Long runs:** roads are laid in long runs, so in-between angles alternate a few long runs instead of single steps.
   - **Buildings:** they move with their streets and turn to the nearest grid direction when they're close to one.
-- **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree.
+- **Micro-terrain (M1.6, D-037, D-038):** inside every cell, a K×K grid of micro-cells (K=4: 100 m at the Southwest's 400 m cells), each an 8×4 px diamond with quarter-step (2 px) heights. Micro-cells follow the same model, derived from shared micro-corner heights: a slope tile up to 3 micro-steps, a flat terrace when steeper. Cells stay the unit of gameplay and the summary of their micro-cells; water and roads constrain the micro-terrain so the two agree. Water is drawn as a flat plane at each water body's level over its cells and their neighbours, and the micro-terrain sinks under it where the map's water polygons and river lines lie (D-094), so shorelines follow the map at micro-cell resolution.
 - **Chunk:** 64×64 cells, the unit of streaming and storage. Bake tiles, the unit of client baking, may be smaller (to be tuned in M0).
 
 ### 3.4 Projection (initial constants, tuned in M0)
@@ -147,14 +147,15 @@ snap: { roads: { angle: 16 }, buildings: { angle: 12, follow: 3 } }
 widths: { scale: 2.0, minCells: 0.08 }
 micro: { k: 4, dem: { overview: 2 } }
 objects:
-  buildings: { bounds: [[-115.19, 36.08, -115.14, 36.15]], minArea: 200, lidar: { project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018 } }
+  buildings: { bounds: [[-115.19, 36.08, -115.14, 36.15]], minArea: 200, lidar: {} }   # heights from sources.heights
   landmarks: [strat-tower, welcome-sign, hoover-dam, desert-view-watchtower]   # worlds/_landmarks
 style: desert-southwest                    # worlds/_styles/desert-southwest
 start: { lon: -115.1728, lat: 36.1147 }
 sources:
   dem: { kind: usgs-3dep-1arcsec, overview: 4 }
   landcover: { kind: esa-worldcover-2021, overview: 16 }
-  overture: { release: 2026-10-21.0 }      # pinned, so builds repeat
+  features: { kind: overture, release: 2026-10-21.0 }   # pinned, so builds repeat
+  heights: { kind: usgs-3dep-lidar, project: USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018 }
   roads: { classes: [motorway, trunk, primary, secondary] }
   rivers: { subtypes: [river] }
 geology: { default: basin-and-range }      # plus provinces: outlines with their own strata
@@ -185,7 +186,7 @@ Stages run in order. Each one caches its outputs, keyed by the hash of its input
 
 **M1 implementation** (`pipeline/src/pixelworld_pipeline/`):
 - **Sources** (`sources/`): rasters are read from cloud-optimized GeoTIFF overviews over HTTP range requests, mean-resampled for elevation and mode-resampled for land cover. Overture GeoParquet is read the same way: a one-time index of every file's row-group bounding boxes (footers only), then only the intersecting row groups and columns.
-- **Plugins** (`plugins.py`, [plugins.md](plugins.md)): the spec names its elevation and land-cover sources and its building facts source, and the registry finds each by name: built in, or from an installed package's entry points. San Francisco's DataSF facts are the city pack `pipeline/plugins/pixelworld-city-sf`.
+- **Plugins** (`plugins.py`, [plugins.md](plugins.md)): the spec names each external data source (`sources:`, each `{ kind, …options }`) by role, and the registry finds it by name: built in, or from an installed package's entry points. The city sources (`datasf`, `pluto`, `apur`, `plateau`, `ign-*`, `gsi-dem`) are built in (D-110).
 - **Corner field:** every height decision works on one integer corner-height grid before cells are formed:
   1. Elevation is converted to steps.
   2. Lakes are flattened per water body.
@@ -281,22 +282,26 @@ Bake tiles are 32×32 cells. Each bake renders the tile plus a 16-cell margin of
 
 Bakes run in two places with the same code:
 
-- **On the client**, in a worker using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. If a worker can't create WebGL2, baking falls back to the main thread. When a player edits the grid, only the affected bake tiles are re-baked.
+- **On the client**, in a pool of workers (the cores less one, at most 4) using OffscreenCanvas + WebGL2, for terrain and generated content as chunks stream in. A tile's other rotations and bare variant go back to the worker that keeps its meshes. If a worker can't create WebGL2, baking falls back to the main thread. When a player edits the grid, only the affected bake tiles are re-baked.
   - **Streaming (M1):** a `ChunkStore` fetches gzipped chunks around the view, deduplicated, with URLs carrying the chunk hash. For each tile it slices the tile plus margin across chunk boundaries and hands the slice to the worker. The mesh builder only adds skirts at real world edges, not slice edges.
-  - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed and pruned least-recently-used. Cache keys include the package hash, style hash, the bake code's identity (a hash of the baker, generators and bake pipeline sources, D-072) and the plugins' code, so any change to the world, the style or the code that bakes makes old tiles unreachable.
+  - **Persistent cache (M1):** baked tiles are kept in IndexedDB, gzip-compressed (about 230 KB a tile) and pruned least-recently-used, as many as fit a quarter of the storage the browser offers (200 to 2000). Cache keys include the package hash, style hash, the bake code's identity (a hash of the baker, generators and bake pipeline sources, D-072) and the plugins' code, so any change to the world, the style or the code that bakes makes old tiles unreachable.
   - **GPU budget:** tile textures stay on the GPU within a memory budget (192 MB), evicting least-recently-drawn tiles.
+  - **Ground first:** the ground of each visible tile not baked yet is baked alone first (no buildings, quick) and drawn behind everything until the view is whole, so it is never blank.
+  - **Ahead and while idle:** the view bakes what it will show 1.5, 3 and 6 s along the camera's motion. With the camera still and nothing else waiting, one worker bakes what the view would show there in the other rotations, then the tiles around it, into the cache rather than onto the GPU.
+  - **Start tiles:** `tools/prebake.mjs` bakes a world's first view ahead into `start-tiles.bin` beside the package, read before the cache; packs are built where they are served, not committed.
+  - **Not done: pre-baked tiles from a CDN** (estimated November 2026, deferred). The eight levels then built came to 3,103 tiles per rotation at about 215 KB each: about 650 MB per rotation, 2.6 GB for four, baked in roughly 15–35 minutes on one machine with four workers. A tile would download in about 35 ms at 50 Mbps against about 0.7 s to bake. Any change to the bake code, plugins, style or package makes the whole set stale, so it would be rebuilt for each release against the shipped build. Deferred while live baking keeps up on desktops; phones are the case for it.
 - **Offline**, in headless Chromium via Playwright, for hero assets (`tools/hero-bake.mjs`, D-053), building kits and vehicle sprite sheets. Cars get 16 headings; planes get 16–32 headings × pitch/bank steps. These outputs are indexed PNGs that can be painted over (e.g. in Aseprite's indexed mode).
 
 ### 8.2 Runtime compositor
 
-1. Draw bake tiles into an **index + depth** framebuffer at the internal resolution. Each tile writes its baked depth.
-2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth: the runtime layers' sprites (traffic), then the entities' (the rover). Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test.
-3. Draw the silhouette of entities that ask for one (the player) where they are hidden: pixels that fail the depth test are drawn with a dither pattern.
+1. Draw bake tiles into an **index + depth** framebuffer at the canvas's own resolution, each art pixel a zoom × zoom block on the art-pixel grid. Each tile writes its baked depth.
+2. Draw dynamic sprites (vehicles, characters, effects) with per-pixel depth: the runtime layers' sprites (traffic), then the entities' (the rover, the player's car and plane). Their depth comes from the object's 3D position plus the sprite's own baked depth offsets. Correct occlusion falls out of the depth test. Sprites are placed to the canvas pixel, not the art pixel: their blocks may sit between the grid's lines, so a moving vehicle glides over the world (and the world under a followed one) instead of stepping a whole art pixel at a time.
+3. Draw the silhouette of entities that ask for one (the player) where they are hidden: pixels that fail the depth test are drawn with a dither pattern on the sprite's own art pixels.
 4. **Atmosphere (fog, D-063):** a layer's screen pass. Where a fog layer is in view, a pass recovers each pixel's ground position and height from its screen position and depth (tiles write their depth beside the index), and veils its colour index toward the fog's through per-level lookup tables, dithered on the screen's Bayer pattern. It is skipped when no fog is in view.
 5. **Palette pass:** index → RGB through a palette LUT. Swapping LUTs gives time of day, seasons, style variants and **palette cycling** (water, lights) almost for free.
-6. Upscale by an integer factor with nearest-neighbor sampling. The camera position is snapped to whole pixels at internal resolution, and the leftover sub-pixel amount is applied during the upscale so scrolling stays smooth.
+6. The camera's position is not snapped: its sub-pixel part is where the art-pixel blocks fall on the canvas, so scrolling stays smooth. Dithers (fog, the reveal, the silhouette) are worked out per art pixel, so they stay pixel art.
 
-- **Internal resolution:** chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270).
+- **Internal resolution:** the art-pixel grid, chosen per screen as an integer divisor (e.g. 1080p shown at 3× = 640×360, or 4× = 480×270); the framebuffers are the canvas's size.
 - **Zoom:** integer zooms only. Coarser views are separate scale levels (§3.5) with their own generalization and oversized landmarks, not shrunken images.
 
 ### 8.3 The engine (the world view as a library)
@@ -347,7 +352,6 @@ assets/†                  hero models (.vox), palettes
 fixtures/                 committed world packages served by the dev app (M0 slice, Southwest)
 testdata/                 cross-language golden files
 pipeline/                 Python geo pipeline (uv-managed package + CLI)
-pipeline/plugins/         pipeline plugins in the uv workspace: city packs (pixelworld-city-sf)
 packages/grid/            coordinates, projection, rotations, cell model
 packages/world-format/    chunk + manifest codecs (TS)
 packages/style/           style-pack validation, palette, material tables

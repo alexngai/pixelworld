@@ -2,6 +2,7 @@ import type { BakeScene, BakedImage } from "@pixelworlds/bake";
 import {
   buildBoxesMesh,
   generateModel,
+  meshLines,
   meshVoxels,
   objectVoxelScale,
   registerPlugin,
@@ -273,14 +274,17 @@ export function defaultGroundRamp(style: StylePack): string {
 
 /**
  * A model's bake scene at render scale 1, as a world tile meshes it
- * (meshVoxels at the object voxel scale, centred on the origin, standing on
- * z = 0), on a ground plate one voxel thick and two voxels wider all round.
+ * (meshVoxels and meshLines at the object voxel scale, centred on the origin,
+ * standing on z = 0), on a ground plate one voxel thick and two voxels wider
+ * all round.
  */
 export function previewScene(model: VoxelModel, groundRamp: number | null): BakeScene {
   const voxel = objectVoxelScale(1);
   const hx = (model.sx * voxel.h) / 2;
   const hy = (model.sy * voxel.h) / 2;
   const meshes = [meshVoxels(model, voxel, [-hx, -hy, 0], [0, 0]).build()];
+  // its one-pixel lines (D-098), as a world tile draws them
+  if (model.lines.length) meshes.push({ ...meshLines(model, voxel, [-hx, -hy, 0], [0, 0]).build(), primitive: "lines" });
   if (groundRamp !== null) {
     const m = 2 * voxel.h;
     meshes.push(buildBoxesMesh([{ x0: -hx - m, y0: -hy - m, z0: -voxel.v, x1: hx + m, y1: hy + m, z1: 0, ramp: groundRamp }]));

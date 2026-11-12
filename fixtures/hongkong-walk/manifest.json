@@ -1,0 +1,431 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "hongkong-walk",
+  "name": "Hong Kong (walking)",
+  "chunkSize": 64,
+  "cellsX": 228,
+  "cellsY": 444,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "7012af33fd979ba154c46838e4380fe5ec472dee5a3af63c1095609b45f67b67",
+      "heightRange": [
+        1,
+        6
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "4d02f9e641b55488264aafc08c5eba437dc5cfb43c8e020d6418c95a439ce6d5",
+      "heightRange": [
+        2,
+        16
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "7ec39af3b4167a7df9df898a4cd0fb6c03314c28c06769d18bc91a3a7d058047",
+      "heightRange": [
+        2,
+        16
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "a863c20e338a4cb793e43c0cd4533a8477572432baba884065824d0b312fd91a",
+      "heightRange": [
+        3,
+        11
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "bd374d76fcc064f94749e2bb4f123ae0e2d0bf856f39b16d85ffcd123d4a0367",
+      "heightRange": [
+        1,
+        5
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "c6243279df31f5a68f9635308fb7382f2813ee9cae2d21a8cbcbefdd10df4e1d",
+      "heightRange": [
+        2,
+        5
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "b20b33562591a1dff4e3203871a2f92b82203ace79301edf06b35c9f328b1a8d",
+      "heightRange": [
+        2,
+        13
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "87dfeb26735ce2821c1a6961cd45ac1980318b82901b54c4531105323677650f",
+      "heightRange": [
+        4,
+        13
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "d22687bec105d08aab3c204b1d48e8b6bb1655919e2e8e5faf2635bcbe4f858d",
+      "heightRange": [
+        -2,
+        5
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "eddb3e4203a2b3762e3691504c4e9f689aa975e8f5f61c1986986b74f5f26194",
+      "heightRange": [
+        1,
+        4
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "fe7110249b934f143a7fafec42cceda14f88d51935a139dc2fb5a1ba0a26fdb1",
+      "heightRange": [
+        2,
+        13
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "bdee1437e694a9bdf9d2347d23016aa38434610714b4acbc42e4aab304701e96",
+      "heightRange": [
+        4,
+        15
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "72ca2a8d7b90d0c3f4db569ea7bbcdb83ed0784d11f2791e58842b407943a40c",
+      "heightRange": [
+        -2,
+        4
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "b933b0f01a94fce741da519d7318d184f6c5805334f0521ce8e5db1915459316",
+      "heightRange": [
+        1,
+        4
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "9f1abf99934a38e14a783cfd3c5f23eef0b71576ecb55d543a859f7e7ae78e5b",
+      "heightRange": [
+        1,
+        14
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "8151b736b08f27fa3e100129d4bc5fe83660b1d77e69ba12152f79eda3f99d3e",
+      "heightRange": [
+        3,
+        14
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "9a110c7b56af230ab8b9ed8314d08c0063a4df11d1c74fff92d42c8976a54cd7",
+      "heightRange": [
+        -2,
+        8
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "51333e04f4882645f6029ada8bcd394e6d6cb8f824d5e91ff258dd02d542e210",
+      "heightRange": [
+        0,
+        8
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "c993d2f60d3e82b3e1f59709bbbdd5242237aa69e20d1e0da5bd2fd9d94b642d",
+      "heightRange": [
+        2,
+        7
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "6c137d6c615d42a0ac87cc9caa043b8fb2aa9e56a4812ccc21da9cc8e824db49",
+      "heightRange": [
+        2,
+        7
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "656017c9f9d63f27d7a75e77c27ca48dd8023622cb5ab914fdf4719f6997e800",
+      "heightRange": [
+        -2,
+        2
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "76c54cab899b4980ab02e99f1236ace6565df9b0d1614c9ddb2162c9244e2a0f",
+      "heightRange": [
+        -2,
+        5
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "56e7f7648ecf80e5832387bd746901b8727b24827178df37a6959dcc3b6f2e89",
+      "heightRange": [
+        0,
+        7
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "0478186da01d8249680d678df139a8b1a62806871833ec61bae3e07710654f9c",
+      "heightRange": [
+        -2,
+        7
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "2302b9d55515d61967f7d88f5959da4763eb46743e5b399cd7382490ed27af2a",
+      "heightRange": [
+        -2,
+        0
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "273bd315815da1e67904f7af8ae6fa7a486b03298af1f6b80006e1cbb240d9e5",
+      "heightRange": [
+        -2,
+        1
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "8bd3daf464fcc75faf79281335e2fef26aac4af772c7034fa4b5622af253fe5a",
+      "heightRange": [
+        -2,
+        4
+      ]
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "path": "chunks/3_6.pxwc.gz",
+      "sha256": "6bee706ffd77e1e815c2d57c83b6012aba58c2db4b1ade85488e74e8084547b0",
+      "heightRange": [
+        -2,
+        3
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 2.721655,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.5
+  },
+  "heightRange": [
+    -2,
+    16
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow",
+    "12": "lawn",
+    "13": "yard"
+  },
+  "style": "hongkong",
+  "attribution": [
+    {
+      "name": "produced using Copernicus WorldDEM-30 \u00a9 DLR e.V. 2010-2014 and \u00a9 Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
+      "license": "Copernicus DEM licence (GLO-30): free, worldwide, adaptation allowed",
+      "url": "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "living_street",
+    "4": "residential",
+    "5": "tertiary",
+    "6": "secondary",
+    "7": "primary",
+    "8": "trunk",
+    "9": "motorway"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "cycleway",
+    "3": "steps",
+    "4": "footway",
+    "5": "sidewalk",
+    "6": "crosswalk",
+    "7": "pedestrian"
+  },
+  "geology": {
+    "0": "default"
+  },
+  "start": {
+    "x": 162,
+    "y": 122
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=22.31 +lon_0=114.167 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      114.156,
+      22.29,
+      114.178,
+      22.33
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "0da75fa6b8383d88",
+      "overtureRelease": "2026-10-21.0",
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 2,
+    "shores": true
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "3f55b61b523ed3a905bfbc91d6541cc4e51afb2fdf944958f52035a9809fe0f7",
+    "count": 23730
+  },
+  "depiction": {
+    "heightStretch": 1.0,
+    "scatter": 1.0
+  },
+  "level": "walk",
+  "levels": [
+    {
+      "name": "walk",
+      "world": "hongkong-walk",
+      "label": "Walking Kowloon: Tsim Sha Tsui to Mong Kok"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      16,
+      29
+    ],
+    "sha256": "0ce12b18a2a2d80483d30d9caf477d0ce36ba5a910f6b08eb26e05fffa1de59d"
+  },
+  "packageHash": "3d6d3adfb64e8fe5f0f1b10c773ef28474bd3dae60ee41d70662f705df8ff2bc",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "4715aa19449a810c51546804bae841cb754f3e8c4136c6cc232c95bfd20c9712",
+    "version": 1,
+    "count": 3961
+  }
+}

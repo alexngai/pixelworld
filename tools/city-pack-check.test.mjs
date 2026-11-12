@@ -148,7 +148,12 @@ describe("city-pack-check tool", () => {
   it("knows the generators core expects of the pack, from the registry's table", () => {
     const registry = readFileSync(new URL("../packages/generators/src/registry.ts", import.meta.url), "utf8");
     expect(knownGenerators(registry, NAME).sort()).toEqual(["block", "decoTower", "gate", "lanterns", "rowhouse", "sfTower"]);
-    expect(knownGenerators(registry, "@pixelworlds/city-nyc")).toEqual([]);
+    expect(knownGenerators(registry, "@pixelworlds/city-nyc").sort()).toEqual(["brownstone", "castIronLoft", "prewarBlock", "tenement"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-paris").sort()).toEqual(["cathedral", "domedChurch", "faubourg", "glassPalace", "haussmann", "hbm", "latticeArchTower", "operaHouse", "palace", "steelArchBridge", "stoneArchBridge", "triumphalArch"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-kyoto").sort()).toEqual(["candleTower", "goldenPavilion", "kura", "machiya", "midrise", "pagoda", "stoneWall", "templeHall", "torii", "towerGate", "utilityPole"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-tokyo").sort()).toEqual(["cylinderTower", "kodate", "mansion", "myojinTorii", "twinTowerHall", "utilityPoles", "wireSpan", "zakkyo"]);
+    expect(knownGenerators(registry, "@pixelworlds/city-hongkong").sort()).toEqual(["compositeTower", "curvedRoofHall", "grandHotel", "neonSign", "pencilTower", "tongLau"]);
+    expect(knownGenerators(registry, "@my-org/city-vegas")).toEqual([]);
   });
 
   it("measures sizes against the budgets", () => {

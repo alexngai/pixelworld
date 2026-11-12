@@ -1,0 +1,10 @@
+name: Kiyomizu-dera Three-storied Pagoda
+# Wikidata has no item with coordinates for the pagoda: OSM's footprint of it
+# (三重塔), beside the west gate
+anchor: { lon: 135.78384, lat: 34.99506 }
+height: 31          # the temple's figure, to the finial's top (PLATEAU measures 22.3 m without it)
+clear: 5
+replaces: [ae7692c5-cbf3-466b-9fcb-5b3f7948cc36]
+depictions:
+  # a three-storey pagoda in vermilion with its finial; no name
+  generic: { group: landmark.pagoda.three }

@@ -505,22 +505,22 @@
     "prop.lanterns": {
       "generator": "lanterns",
       "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
-      "params": { "span": 24, "height": 12, "every": 4, "sag": 2 }
+      "params": { "span": 24, "height": 12, "every": 4, "sag": 2, "lines": 1 }
     },
     "prop.lanterns.wide": {
       "generator": "lanterns",
       "ramps": { "lantern": "chinatown-red", "gold": "tower-gold", "wire": "asphalt" },
-      "params": { "span": 32, "height": 13, "every": 5, "sag": 2 }
+      "params": { "span": 32, "height": 13, "every": 5, "sag": 2, "lines": 1 }
     },
     "prop.streetlight": {
       "generator": "streetLight",
       "ramps": { "pole": "concrete", "lamp": "lit" },
-      "params": { "height": 6 }
+      "params": { "height": 16, "lines": 1, "reach": 3 }
     },
     "prop.signal": {
       "generator": "trafficSignal",
       "ramps": { "pole": "concrete", "head": "asphalt", "light": "marker" },
-      "params": { "height": 5 }
+      "params": { "height": 12, "lines": 1, "reach": 5 }
     },
     "prop.cablecar": {
       "generator": "cableCar",

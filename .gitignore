@@ -2,6 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .vite/
+.omc/
+.sessionlog/
 
 # Playwright
 test-results/
@@ -24,6 +26,10 @@ __pycache__/
 fixtures/_try/
 fixtures/_variants/
 
+# Start tiles (tools/prebake.mjs): stale after any change to the bake code, plugins,
+# style or package, so built where they are served rather than committed
+fixtures/*/start-tiles.bin
+
 # Agent worktrees (local, never committed)
 .claude/worktrees/
 
@@ -31,6 +37,11 @@ fixtures/_variants/
 # root at build time; tarballs from `pnpm pack`; the API reference (pnpm docs:api)
 packages/pixelworld/LICENSE-*
 packages/city-sf/LICENSE-*
+packages/city-nyc/LICENSE-*
+packages/city-paris/LICENSE-*
+packages/city-kyoto/LICENSE-*
+packages/city-tokyo/LICENSE-*
+packages/city-hongkong/LICENSE-*
 *.tgz
 docs/api/
 

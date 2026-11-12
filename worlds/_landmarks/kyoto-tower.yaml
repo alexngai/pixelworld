@@ -1,0 +1,10 @@
+name: Kyoto Tower
+wikidata: Q1201304
+# Wikidata's coordinates: the tower stands on its nine-storey building (Overture's
+# 京都タワーホテル, 31 m), which stays; the tower rises through it from the ground
+anchor: { lon: 135.759167, lat: 34.9875 }
+height: 131         # Wikidata's height
+clear: 0
+depictions:
+  # a slender white shaft, an observation deck, a spire with vermilion bands; no name
+  generic: { group: landmark.tower.candle }

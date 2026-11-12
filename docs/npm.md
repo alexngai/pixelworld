@@ -157,7 +157,7 @@ await createWorldView({ canvas, worldUrl, style, workerUrl });
 
 | Command | Checks |
 |---|---|
-| `pnpm package:check` | packs both packages and checks the tarballs. `pixelworld`: its files, manifest, `exports`, the worker literal, the licences, and size budgets (tarball, unpacked, JS, worker). The city pack (`tools/city-pack-check.mjs`): its files, manifest (`pixelworld` its only peer), `exports`, the descriptor's `new URL("./worker.js", import.meta.url)`, and its worker module, imported alone, which must define the plugin and register its generators |
+| `pnpm package:check` | packs the packages and checks the tarballs. `pixelworld`: its files, manifest, `exports`, the worker literal, the licences, and size budgets (tarball, unpacked, JS, worker). Each city pack (`tools/city-pack-check.mjs`, all of `packages/city-*`): its files, manifest (`pixelworld` its only peer), `exports`, the descriptor's `new URL("./worker.js", import.meta.url)`, and its worker module, imported alone, which must define the plugin and register its generators |
 | `pnpm package:size` | size-limit: what a consumer bundles from each entry point, gzipped, and the worker ([`.size-limit.json`](../packages/pixelworld/.size-limit.json)) |
 | `pnpm package:consumers` | packs both, then builds and runs the [consumer examples](../examples/consumers/) in headless Chromium: the Grand Canyon, and San Francisco with its city pack. It checks the worker baked their tiles, and that San Francisco's buildings did (`--tarball`, `--city-tarball` to reuse packed ones) |
 | `pnpm docs:api` | the API reference |
@@ -170,39 +170,47 @@ await createWorldView({ canvas, worldUrl, style, workerUrl });
 
 ## 9. Releases
 
-Publishing is manual: CI builds, packs and checks on every push, and holds no tokens.
+The npm packages are `pixelworld` and the five city packs, `@pixelworlds/city-sf`, `-nyc`, `-paris`, `-kyoto` and `-tokyo`. CI releases them ([`.github/workflows/release.yml`](../.github/workflows/release.yml), D-105) through npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm trusts that workflow in this repository, so no npm token is stored anywhere.
 
-**With each change** to what a package ships, add a changeset: `pnpm changeset`, pick `pixelworld`, `@pixelworlds/city-sf` or both and a bump (patch or minor before 1.0), and write a line for the changelog. Commit the file it writes in `.changeset/`. The two version on their own; a `pixelworld` release that leaves the city pack's peer range bumps the pack too ([.changeset/README.md](../.changeset/README.md)).
+**With each change** to what a package ships, add a changeset: `pnpm changeset`, pick the packages and a bump (patch or minor before 1.0), and write a line for the changelog. Commit the file it writes in `.changeset/`. The packages version on their own; a `pixelworld` release that leaves the city packs' peer range bumps them too ([.changeset/README.md](../.changeset/README.md)).
 
-**To release** (a maintainer with npm rights, from a clean `main`):
+**A release,** once changesets are on `main`:
 
-```sh
-pnpm install --frozen-lockfile
-pnpm changeset version                 # bumps the packages' versions, writes their CHANGELOG.md
-node tools/version-pins.mjs --write    # the examples and docs name the new versions
-git add -A .changeset packages/pixelworld packages/city-sf examples/consumers docs
-git commit -m "Release pixelworld $(node -p 'require("./packages/pixelworld/package.json").version')"
-pnpm check && pnpm package:check && pnpm package:size && pnpm package:consumers
-pnpm -r publish --access public        # each public package not yet on npm, pixelworld first; prepack builds dist/
-for p in pixelworld city-sf; do t=$(node -p "const p = require('./packages/$p/package.json'); p.name + '@' + p.version"); git tag -a "$t" -m "$t"; done
-git push --follow-tags
-```
+1. The release workflow opens (or updates) the **Version packages** pull request: `pnpm release:version` bumps the versions, writes each `CHANGELOG.md` and sets the version pins (§7).
+2. GitHub doesn't run CI on a pull request the workflow opened. Run it on the branch: `gh workflow run ci.yml --ref changeset-release/main`; its checks show on the pull request.
+3. **Merge it.** The workflow packs every package whose version isn't on npm yet, checks the tarballs (`pnpm package:check`), publishes them, and tags and releases each on GitHub (`pixelworld@0.2.0`).
 
-- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports` and turns the city pack's `workspace:^` peer range into `^<pixelworld's version>`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` and `node tools/city-pack-check.mjs` reject one.
-- **`pnpm -r publish`** skips the private packages and any version already on npm, and asks for your npm 2FA code. A tag that already exists (a package that wasn't bumped) fails harmlessly.
-- **Check first:** `pnpm pack` writes the tarball `pnpm publish` would upload. `node tools/pack-check.mjs pixelworld-x.y.z.tgz`, `node tools/city-pack-check.mjs pixelworlds-city-sf-x.y.z.tgz` and `node tools/consumers.mjs --tarball pixelworld-x.y.z.tgz --city-tarball pixelworlds-city-sf-x.y.z.tgz` check them.
+- **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports` and turns the city packs' `workspace:^` peer range into `^<pixelworld's version>`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` and `node tools/city-pack-check.mjs` reject one. The workflow packs with pnpm; pnpm publishes through the npm CLI (11.5.1 or later for trusted publishing).
+- **Provenance:** npm attests where each version was built when it is published from a public repository.
 
-**The Python distributions** (`pixelworld-pipeline` and the city pack `pixelworld-city-sf`) are released by hand too. Bump the versions, build, check, then upload the pipeline first, since the city pack depends on it:
+**One-time setup** (a maintainer, before the first release):
+
+1. **npm:** an account with 2FA, and the npm organization `pixelworlds`, which owns the `@pixelworlds/*` names.
+2. **GitHub:** Settings → Actions → General → *Allow GitHub Actions to create and approve pull requests*, for the version pull request.
+3. **The first release, by hand:** npm attaches a trusted publisher only to a package that exists. Once the version pull request is open, from its branch:
+
+   ```sh
+   git switch changeset-release/main && pnpm install --frozen-lockfile
+   pnpm check && pnpm package:check && pnpm package:size && pnpm package:consumers
+   npm login                              # npm CLI 11.5.1 or later
+   pnpm -r publish --access public        # each public package not yet on npm; prepack builds dist/; asks for your 2FA code
+   ```
+
+   Then merge the pull request; the workflow finds everything published and publishes nothing.
+4. **Trusted publishers:** on npmjs.com, for each of the six packages, Settings → Trusted publishing → GitHub Actions: organization or user `alexngai`, repository `pixelworld`, workflow `release.yml`, no environment.
+5. **Lock it down:** for each package, Settings → Publishing access → *Require two-factor authentication and disallow tokens*. Trusted publishing keeps working.
+
+**By hand, if CI can't** (an outage): as step 3, from a clean `main` after merging the version pull request, then tag each package (`git tag -a <name>@<version>`) and `git push --follow-tags`.
+
+**The Python distribution** (`pixelworld-pipeline`, the only one since D-110) is released by hand too. Bump the version, build, check, upload:
 
 ```sh
 cd pipeline
-uv version --bump minor                                   # pixelworld-pipeline
-uv version --bump minor --package pixelworld-city-sf
-uv build --all-packages --out-dir dist                    # sdists and wheels of both
+uv version --bump minor
+uv build --out-dir dist                    # the sdist and the wheel
 uv run --no-project --isolated --with dist/pixelworld_pipeline-*.whl \
-  --with dist/pixelworld_city_sf-*.whl pixelworld plugins   # the wheels alone: lists datasf
-uv publish dist/pixelworld_pipeline-*                     # token from UV_PUBLISH_TOKEN or a prompt
-uv publish dist/pixelworld_city_sf-*
+  pixelworld plugins                       # the wheel alone: lists every built-in source by role
+uv publish dist/pixelworld_pipeline-*      # token from UV_PUBLISH_TOKEN or a prompt
 ```
 
 Extras (`[lidar]`, `[cityjson]`, library.md §3.5) and a PyPI release job are later work.

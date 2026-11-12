@@ -12,6 +12,7 @@ region spec's optional `ground` section tells them apart:
         maxSlope: 0.2      # a park steeper than this (median) stays wild
         slopeMeters: 50    # slopes measured over about this distance
         wooded: { over: [woodland], maxCover: 0.5 }  # tree cover, where the canopy map is open
+        paved: [pedestrian]  # land use inside a park left as it is (courts, plazas)
         spread: { over: [grass], meters: 20 }  # into the open grass around a lawn
       yard:   # backyards and front gardens, beside houses (after objects)
         near: [building.rowhouse, building.house, building.residential, building.apartment]
@@ -31,8 +32,8 @@ from typing import Any
 import numpy as np
 import shapely
 
+from . import plugins
 from .region import Region
-from .sources import overture
 
 # Surface ids for the ground classes, after build.SURFACES (ids are local to a
 # package; the name is the contract with the style pack).
@@ -197,26 +198,29 @@ def lawn(
 ) -> np.ndarray:
     """The lawn rule on a region (uniform layouts): Overture's land use and
     natural land, sampled where each cell is drawn."""
-    release = region.sources["overture"]["release"]
+    feats = plugins.source(region, "features")
     bbox = region.lonlat_envelope()
     xs, ys = drawn_cell_points(region, surface.shape, shift)
-    parks = project_rows(region, overture.land_use(release, bbox, list(rule["landUse"])))
+    parks = project_rows(region, feats.land_use(bbox, list(rule["landUse"])))
     slope = cell_slope(corner_m, region.meters_per_cell, float(rule.get("slopeMeters", 50.0)))
     gentle = gentle_land(
         points_in(parks, xs, ys), len(parks), slope, float(rule.get("maxSlope", 0.2))
     )
     wild = np.zeros(surface.shape, dtype=bool)
     if rule.get("keep"):
-        natural = project_rows(region, overture.land(release, bbox, list(rule["keep"])))
+        natural = project_rows(region, feats.land(bbox, list(rule["keep"])))
         pts, _ = points_in(natural, xs, ys)
+        wild.ravel()[pts] = True
+    if rule.get("paved"):
+        # courts and plazas inside a park (land use `pedestrian`) stay as they are (D-103)
+        courts = project_rows(region, feats.land_use(bbox, list(rule["paved"])))
+        pts, _ = points_in(courts, xs, ys)
         wild.ravel()[pts] = True
     cover = None
     wooded = rule.get("wooded")
     if wooded:
         if canopy is None:
-            from .sources.canopy import CanopyGrid
-
-            canopy = CanopyGrid(region.lonlat_envelope())
+            canopy = plugins.source(region, "canopy").grid(region.lonlat_envelope())
         under = np.isin(surface, surface_ids(names, list(wooded.get("over", ["woodland"]))))
         cover = canopy_cover(
             region, canopy, xs, ys, gentle & ~wild & under, float(wooded.get("canopy", 3.0))
@@ -224,6 +228,20 @@ def lawn(
     out = lawn_cells(surface, names, gentle, wild, rule, cover)
     if rule.get("spread"):
         out = spread_lawn(out, surface, names, wild, rule["spread"], region.meters_per_cell)
+    return out
+
+
+def water_area_cells(region: Region, shape: tuple[int, int], classes: list[str]) -> np.ndarray:
+    """Cells whose centre lies in an Overture water area of `classes` (ponds,
+    moats, lakes): still water beside land cover's, which misses a pond in a
+    garden or a castle's moat (D-103). Uniform layouts; cells as laid out."""
+    feats = plugins.source(region, "features")
+    polys = project_rows(region, feats.water_areas(region.lonlat_envelope(), classes))
+    out = np.zeros(shape, dtype=bool)
+    if polys:
+        xs, ys = drawn_cell_points(region, shape)
+        pts, _ = points_in(polys, xs, ys)
+        out.ravel()[pts] = True
     return out
 
 

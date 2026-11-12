@@ -42,7 +42,14 @@ For our level of abstraction, yes. Cells range from about 10 to about 400 m, and
 | Rail and ferry lines (M3.5) | Overture `transportation/segment`, subtypes rail and water | rails drawn in the street (D-061) and traffic routes (D-060) |
 | Parks and natural land (M3.5) | Overture `base/land_use` (park, golf, pitch, garden, cemetery, …) and `base/land` (grassland, scrub, heath, beach) | polygons moved with the straightened roads; lawn surfaces where the spec's `ground` section asks (D-062) |
 | Lakes | WorldCover water class, flattened per water body | — |
-| Building facts (San Francisco, D-055) | DataSF assessor roll and parcels | the `datasf` facts source, in the city pack `pixelworld-city-sf` (`pipeline/plugins/pixelworld-city-sf/`): Socrata API, paged, cached in `pipeline/.cache/datasf/` |
+| Building facts (San Francisco, D-055) | DataSF assessor roll and parcels | the built-in `datasf` facts source: Socrata API, paged, cached in `pipeline/.cache/datasf/` |
+| APUR Emprise bâtie Paris | built footprints with construction period and year, median height, roof form and urban fabric class. Read by the built-in `apur` facts source | Paris | ODbL 1.0 |
+| IGN BD TOPO® | buildings with storeys, dwellings, use and height | France | Licence Ouverte 2.0 |
+| Building facts (New York, D-080) | NYC Open Data: BUILDING footprints (OTI, `5zhs-2jue`), PLUTO (DCP, `64uk-42ks`), the LPC Individual Landmark and Historic District Building Database (`gpmc-yuvp`), 2020 NTAs (DCP, `9nt8-h7nd`). Licence: NYC Admin Code §23-502(d), "without any registration requirement, license requirement or restrictions on their use"; the city may ask for each data set's source, version and a description of modifications, which the attribution gives (checked 2026-11-09, second-region.md §7) | the built-in `pluto` facts source: Socrata API, limited to the region's box, paged, cached in `pipeline/.cache/nyc/` under the PLUTO release |
+| Elevation (France, D-084) | IGN RGE ALTI® 1 m and LiDAR HD 50 cm DTMs, from the Géoplateforme's WMS-Raster. Licence: Licence Ouverte / Open Licence 2.0 (Etalab), per IGN's catalogue records (checked 2026-11-10, second-region.md §8) | the built-in terrain sources `ign-rgealti` and `ign-lidar-hd-mnt`: 2,000-pixel float32 GeoTIFF tiles in Lambert-93 at the resolution the overview asks for (the server resamples), cached in `pipeline/.cache/ign/`, then reprojected and averaged per cell corner |
+| Building facts (Paris, D-084) | APUR's "Emprise bâtie Paris" (period, year, median height, roof form, urban fabric) and "Quartier de Paris": ODbL 1.0. IGN's BD TOPO® buildings (storeys, dwellings, use): Licence Ouverte 2.0, which asks for the source and the date of its last update (checked 2026-11-10, second-region.md §8) | the built-in `apur` facts source: APUR's ArcGIS REST service and the Géoplateforme's WFS, limited to the region's box, paged, cached in `pipeline/.cache/paris/` under a version tag. Its `height` fills buildings Overture gives no height or floors |
+| Building facts (Japan, D-089) | MLIT's PLATEAU 3D city models (CityGML, spec 5.0; Kyoto and Tokyo's wards 2025): per building the LoD0 footprint, `measuredHeight`, `storeysAboveGround`, `yearOfConstruction`, `usage`, `uro:buildingStructureType` and the LoD2 roof surfaces. Licence: PLATEAU's site policy, Public Data License 1.0 (copyright: each municipality), compatible with CC BY 4.0; credit "出典：国土交通省 PLATEAUウェブサイト", say the data was processed, and don't present it as MLIT's (checked 2026-11-11, second-region.md §9) | the built-in `plateau` facts source: the region's 1 km meshes, each mesh's building file found through PLATEAU's data catalog API, streamed gzip-encoded and parsed with `iterparse`; only a compact extract per mesh is cached, in `pipeline/.cache/plateau/` under city, release year and spec. Its `height` fills buildings Overture gives no height or floors; its `roof` is read from the LoD2 roof planes |
+| Elevation (Japan, D-089) | GSI's elevation tiles (地理院タイル 標高タイル): DEM1A 1 m (lidar, where flown), DEM5A 5 m, DEM10B 10 m, anonymous PNG tiles on the Web Mercator grid. Licence: GSI's content terms (revised 2025-11-20), PDL 1.0, compatible with CC BY 4.0; credit "出典：国土地理院ウェブサイト" and say the tiles were processed ("地理院タイル（標高タイル）を加工して作成") (checked 2026-11-11, second-region.md §9) | the built-in terrain source `gsi-dem`: tiles at the zoom just finer than the overview's resolution, from the finest DEM with a tile, holes filled from the next; decoded (24 bits, 0.01 m), mosaicked in Web Mercator, cached in `pipeline/.cache/gsi/`, then reprojected and averaged per cell corner |
 
 - **Plugins:** elevation and land cover are read through source adapters, and building facts through facts sources, all found by name ([plugins.md](plugins.md)). A new region's national DEM or city records come in as a plugin. 3DEP and WorldCover are built in.
 - **Why Overture rather than OSM extracts:** releases are versioned, so builds are reproducible from the spec alone, and GeoParquet supports bounding-box range reads. (Geofabrik and Overpass were also unreachable from the build environment at the time.)
@@ -87,7 +94,8 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | USGS 3DEP lidar | classified point clouds (ground, buildings, vegetation) | most of the US | public domain |
 | AHN | lidar / DSM / DTM | Netherlands | CC0 |
 | Environment Agency lidar | DSM / DTM | England | Open Government Licence |
-| IGN LiDAR HD | classified point clouds | France | Licence Ouverte 2.0 |
+| IGN LiDAR HD | classified point clouds; DTM, DSM and canopy height at 50 cm | France (where flown; Paris is) | Licence Ouverte 2.0 (IGN's catalogue record, checked 2026-11-10) |
+| IGN RGE ALTI® | bare-earth DTM | 1 m, France | Licence Ouverte 2.0 (IGN's catalogue record, checked 2026-11-10) |
 | PNOA-LiDAR | point clouds | Spain | CC BY 4.0 |
 | swissSURFACE3D | point clouds / DSM | Switzerland | swisstopo open data (attribution) |
 
@@ -103,7 +111,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | Overture buildings | footprints merged from OSM, Microsoft, Google Open Buildings and others; heights where known | global | ODbL |
 | Microsoft building footprints | ML footprints, some heights | global | ODbL |
 | Google Open Buildings (incl. 2.5D) | ML footprints; heights in some areas | Global South focus | CC BY 4.0 / ODbL |
-| DataSF assessor roll and parcels | year built, storeys, units, use, property class and neighbourhood per lot; lot polygons. Read by the `datasf` facts source in the city pack `pixelworld-city-sf` | San Francisco | ODC PDDL 1.0 |
+| DataSF assessor roll and parcels | year built, storeys, units, use, property class and neighbourhood per lot; lot polygons. Read by the built-in `datasf` facts source | San Francisco | ODC PDDL 1.0 |
 
 ### Vector features and POIs
 
@@ -123,6 +131,7 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 | ESA WorldCover | 11 land-cover classes | 10 m, global | CC BY 4.0 |
 | NLCD (Annual) | land cover, including how built-up an area is | 30 m, US | public domain |
 | Meta/WRI canopy height | tree canopy height | 1 m, global | CC BY 4.0 |
+| City of Paris, "Les arbres" | 220,339 trees with species, height and girth (not read yet) | Paris | ODbL 1.0 |
 
 ### Imagery (color sampling, gap fill, editor reference)
 
@@ -162,7 +171,7 @@ Nearmap (~5–7 cm aerials and 3D), Planet SkySat (50 cm), Airbus Pléiades Neo 
 
 - **Default:** buildings and landmarks visible from public places are depicted in their canonical form. In the US, 17 U.S.C. §120 allows pictorial representations of constructed architectural works visible from public places.
 - **Protected elements get a stylized or generic variant**, chosen per release target in the landmark registry (`depiction` field). These include:
-  - trademarks (e.g. the Hollywood Sign)
+  - trademarks (e.g. the Hollywood Sign; the Empire State Building's image, which its owners use as a trademark: its generic depiction is a setback tower of its height, with no mast or lighting of its own)
   - copyrighted displays (e.g. the Eiffel Tower's night lighting)
   - public sculpture and artworks (§120 covers architecture, not sculpture)
 - **Brands and signage:** no real brand names or logos on buildings by default (relevant to the Las Vegas Strip). Signs use generic or invented names unless licensed.

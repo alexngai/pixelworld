@@ -50,7 +50,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   "generator": { "name": "…", "version": "…", "params": { } },
   "render": { "scale": 0.125, "tileSize": 512 },  // optional (M1.5): render units per cell; bake tile edge in cells
   "objects": { "path": "objects.json.gz", "sha256": "…", "count": 9401 },  // optional (M1.5)
-  "micro": { "k": 4 },              // optional (M1.6): every chunk has an MHGT section
+  "micro": { "k": 4, "shores": true }, // optional (M1.6): every chunk has an MHGT section
   "warp": { "method": "v2", "background": 500, "focus": [ … ], "pins": 0, "vertical": { … } },  // optional (M2), informational
   "depiction": { "heightStretch": 1.0, "scatter": 1.0 },  // optional (D-047, D-054): how objects are drawn at this level
   "level": "drive",                 // optional (D-046): this package's scale level
@@ -73,7 +73,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - **Summary:** `warp` summarises the layout (focus targets and what they achieved).
   - **Nominal scale:** `scale.metersPerCell` stays the base scale that heights and steepness rules are expressed in.
   - **Objects:** instances carry `m`, their local metres per cell, and a dam carries `top`, its crest height in steps.
-- **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too.
+- **Micro-terrain (optional, D-038):** `micro.k` (2, 4 or 8; the Southwest uses 4) means every chunk carries micro-corner heights (`MHGT`). Height ranges in the manifest and chunk refs cover micro-terrain too. `micro.shores` (D-094): the micro-terrain sinks under the water, which the client draws as a plane at each water cell's level over it and its neighbours; without it, water cells' micro-corners lie flat at their level.
 - **Render scale (optional, D-032):** `render.scale` in (0, 1] draws each cell at that fraction of a 32×16 px tile, and heights shrink by the same factor. Fine experiment worlds use it to stand in for micro-terrain. `render.tileSize` overrides the bake tile edge (default 32 cells).
 - **Objects (optional, D-034):** `objects.path` points to a gzipped JSON file, `{ "version": 2, "instances": [...] }`. Each instance has:
   - `g`: semantic group
@@ -81,6 +81,7 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - `s`: seed, which picks the variant
   - optional `r`: quarter-turns
   - optional `fp`: footprint polygon, as `[dx, dy]` points in integer hundredths of a cell from the anchor rounded to hundredths. A point is at `((⌊100·x + ½⌋ + dx) / 100, (⌊100·y + ½⌋ + dy) / 100)` cells, with the rounding computed in double precision. Relative points cut the driving level of San Francisco from 8.30 to 6.15 MB.
+  - optional `fh`: the footprint's courtyards (D-088), a list of rings in the same relative points as `fp`. Columns inside a ring are left out of the footprint. Written only when the spec turns on `objects.buildings.courtyards`.
     - **Version 1** stored the points in absolute cells with two decimals. Readers still accept it. Version 2 decodes to the same numbers wherever those had at most two decimals, as the pipeline writes them, except that −0 reads back as 0.
     - **Readers:** `world_format.decode_objects` (Python) and `parseObjects` (TypeScript) return absolute footprints whatever the version. The shared golden files `testdata/world-format/objects-v1.json` and `objects-v2.json` hold the same instances in both versions.
   - optional `hm`: real or depicted height in metres
@@ -157,8 +158,9 @@ All per-cell arrays are `size × size` and row-major: `y` (south) is the outer l
 | `PATH` | `u16[]` | no | path network (footways, sidewalks, crosswalks, …), encoded like `ROAD` |
 | `PCLS` | `u8[]` | no | path class ID (see `manifest.pathClasses`); 0 = none |
 | `PWID` | `u8[]` | no | path half-width, in 1/32 cell |
-| `RAIL` | `u16[]` | no | rails drawn in the street (M3.5, D-061): connections in bits 0–7, encoded like `ROAD`; what is drawn in bits 12–15 (1 street tracks, 2 cable-car tracks with a slot, 3 a train's tracks on ballast; the highest where kinds meet) |
+| `RAIL` | `u16[]` | no | rails drawn in the street (M3.5, D-061): connections in bits 0–7, encoded like `ROAD`; what is drawn in bits 12–15 (1 street tracks, 2 cable-car tracks with a slot, 3 a train's tracks on ballast; the highest where kinds meet). Rail corridors (D-097): a cell holding a corridor's pieces (`TSG`) has its track count less one in bits 8–10; bit 11 flags every cell its drawn tracks may reach |
 | `LANE` | `u8[]` | no | lanes and medians (M3.5, D-065), for the widest road through the cell (the one `RWID` describes): its lane count in bits 0–3 (0 = none), bit 4 one-way (no centre line), bit 5 divided (a carriageway with its partner across a median); bits 6–7 are 0 |
+| `RSG0`–`RSG5`, `PSG0`–`PSG5`, `TSG0`–`TSG5` | `u32[]` | no | centre-line pieces (D-082; rail corridors D-097): up to six per cell of road (`RSG`), path (`PSG`) and rail corridor (`TSG`) centre line, one section per slot, written only where the slot holds data; each the stretch of line inside the cell, its ends as four bytes x0, y0, x1, y1 (little-endian) in 1/255 cell (0: an empty slot, used slots first). Drawn instead of the connection bits where a cell has them |
 
 Optional sections are omitted when they hold only their default value (no water, no roads, province 0). Readers must ignore unknown tags. Writers must not emit duplicate tags.
 

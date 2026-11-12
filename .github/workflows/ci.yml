@@ -83,9 +83,9 @@ jobs:
           retention-days: 7
 
   package:
-    # The npm packages (docs/npm.md): `pixelworld` and San Francisco's city
-    # pack `@pixelworlds/city-sf` (D-074). Builds and packs both and checks the
-    # tarballs on every push; publishing stays manual (no tokens here).
+    # The npm packages (docs/npm.md): `pixelworld` and the city packs
+    # `@pixelworlds/city-*` (D-074). Builds and packs them and checks the
+    # tarballs on every push; release.yml publishes them (no tokens here).
     name: npm packages (build, pack, size, consumers)
     runs-on: ubuntu-latest
     steps:
@@ -97,11 +97,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Pack (builds dist/ first)
-        run: pnpm --filter pixelworld --filter @pixelworlds/city-sf pack --pack-destination "$RUNNER_TEMP/pack"
+        run: pnpm --filter pixelworld --filter "@pixelworlds/city-*" pack --pack-destination "$RUNNER_TEMP/pack"
       - name: Tarball contents, manifest and size budgets
         run: node tools/pack-check.mjs "$RUNNER_TEMP"/pack/pixelworld-*.tgz
-      - name: City pack tarball (manifest, peer, self-contained worker module)
-        run: node tools/city-pack-check.mjs "$RUNNER_TEMP"/pack/pixelworlds-city-sf-*.tgz
+      - name: City pack tarballs (manifest, peer, self-contained worker module)
+        run: node tools/city-pack-check.mjs "$RUNNER_TEMP"/pack/pixelworlds-city-*.tgz
       - name: Bundle size budgets (size-limit, gzipped)
         run: pnpm package:size
       - name: API reference

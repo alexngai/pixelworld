@@ -209,9 +209,9 @@ The first GPU version took 1.2 s per tile. Two changes brought it down:
 - **Walls only where they exist:** this keeps wall cost proportional to actual cliffs.
 
 **Known issues:**
-- **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix.
-- **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized.
-- **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds.
+- **Water is still per cell.** Rivers show as chains of 400 m diamonds. Micro-resolution water (river buffers, land-cover water at 100 m) is the fix. *Fixed (D-094):* water is a plane over micro-terrain shaped from the map's water polygons and river lines.
+- **Land cover is still per cell.** Jittered borders hide the grid, but small patches still come out cell-sized. *Softened (D-096):* surfaces are chosen per pixel with warped, dithered borders, and rock follows the ground's slope.
+- **Steep outcrops** in dark-rock areas show as scattered dark micro-diamonds. *Partly (D-096):* the per-micro-cell rock test is gone and rock follows the smoothed slope; the walls of single micro-steps still show as dark strata marks.
 - **Road beds** are 0.3 cells to either side of the centre line, so in mountains they read as wide benches.
 - **Not combined yet:** render scale (the M1.5 experiment worlds) and micro-terrain don't work together.
 
@@ -784,7 +784,13 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 **Goal:** prove the system generalizes beyond one region.
 
 - Zoom-level (semantic LOD) bakes: blocks → city silhouettes → landmark icons.
-- A second region from coverage tier 1 (open 3D city models, e.g. NYC, a Dutch city or a PLATEAU city), with CityJSON/CityGML ingestion.
+- More regions from coverage tier 1, in order (D-078): New York, then Paris, then Amsterdam. CityJSON/CityGML ingestion comes with Amsterdam (3D BAG).
+  - **New York, walking level: built** (`nyc-walk`, Lower Manhattan at 10 m). Its buildings are typed from NYC Open Data (D-080) and drawn by the `new-york` pack and the `city-nyc` generators (D-081). In the game, the player sees through the towers in front of it (D-079). Still to come: the driving and flying levels, the blind test, heights from the city's footprints, and stacked setback tiers.
+  - **New York, Manhattan: built** (D-083). A driving level for the whole island at 25 m (`nyc`, the Battery to Inwood, with the waterfronts across both rivers), and the walking level extended through Midtown to 86th Street; the two switch between each other. Setback towers keep their stacked tiers, and Midtown's landmarks and the Williamsburg, Queensboro and George Washington Bridges joined the registry. Still to come: the walking level north of 86th Street, the flying level, the blind test, and heights from the city's footprints.
+  - **Paris, walking level: built** (`paris-walk`, from the Eiffel Tower to the Marais at 10 m). Its sources were checked directly (second-region.md §8); its buildings are typed from APUR's periods and fabric classes and IGN's BD TOPO, with heights from APUR where Overture has none, on IGN's RGE ALTI terrain (D-084), and drawn by the `paris` pack and the `city-paris` generators: Haussmann blocks, faubourg houses, HBM blocks, a cathedral and a triumphal arch (D-085, D-086). Still to come: the driving and flying levels, the blind test, pans coupés and courtyards, street trees from the city's records.
+  - **Kyoto, walking level: built** (`kyoto-walk`, from Nakagyō's machiya streets across the Kamo to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto Tower, at 10 m). Its buildings are typed from PLATEAU's building models (structure, year, storeys, usage code, LoD2 roof) and Overture's building class, on GSI's elevation tiles (D-089), and drawn by the `kyoto` pack and the `city-kyoto` generators: machiya with lattice fronts and pent roofs, wooden houses, mid-rises, temple and shrine halls under hip-and-gable roofs, and the landmarks Kiyomizu-dera's hall on its stage, two pagodas, two gates and Kyoto Tower (D-090, D-091). Its driving level (`kyoto`, the city centre at 25 m) and flying level (`kyoto-fly`, the basin at 100 m) followed, with PLATEAU's roofs drawn, halls typed by their grounds and names, kura, torii, poles and lanterns, and a blind test in which every view read as Kyoto (D-100, D-101). Then Kyoto's mid-rises, rows split into houses, wires on the poles, Kinkaku-ji and the palaces of Nijō and the Imperial Palace (D-102). Ponds and moats from Overture's water areas, the palace's courts left paved and wires along diagonal streets followed (D-103). Then walls from OSM's retaining walls (Nijō's ishigaki), the palace's corridors and wires on the 2:1 streets (D-104). Then its wires strung pole to pole in one-pixel lines at any angle, Tokyo's wire spans, with one pole group (D-106).
+  - **Tokyo, walking level: built** (`tokyo-walk`, Shibuya to Shinjuku at 10 m). Its buildings are typed from PLATEAU's models (D-089), which in Tokyo carry use, storeys and height but no year: by use, storeys, footprint size and neighbourhood boxes (a new typology rule field, `bounds`), on GSI's elevation tiles, and drawn by the `tokyo` pack and the `city-tokyo` generators: zakkyo under stacked signs that glow at night, mansions with their balconies, detached houses, utility poles, and four landmarks (D-092, D-093). Still to come: the driving and flying levels, the blind test, Tokyo's fire-resistance codes as facts, and wires that follow streets at any angle.
+  - **Hong Kong, Kowloon's walking level: built on open data alone** (`hongkong-walk`, Tsim Sha Tsui to Prince Edward at 10 m). Hong Kong's own building and terrain data can't be adapted under its terms, so it is the global path's first city (D-107): Copernicus GLO-30 with its buildings filtered off, OSM's floors, and each neighbourhood's typical height from the spec, drawn by the `hongkong` pack and the `city-hongkong` generators: tong lau, composite buildings, pencil towers and neon signs hung across the streets (D-108, D-109). What open data loses there was measured against the Lands Department's data (docs/cities.md). Still to come: Hong Kong Island and the Mid-Levels, the driving and flying levels, and the Lands Department's data if it grants its use.
 - A second style pack.
 - CDN hosting with archive range requests.
 - Performance budgets met on mid-range phones.
@@ -823,7 +829,7 @@ Four agents in worktrees, on the third round's list, merged and rebuilt once:
 | Risk | Mitigation |
 |---|---|
 | Procedural bakes don't look hand-made | M0 is dedicated to the look; style reference sheet; cleanup passes; paint-over for hero assets |
-| Client baking too slow on phones | Measure in M0; prioritize visible tiles; smaller bake tiles; serve pre-baked tiles from the CDN for busy areas |
+| Client baking too slow on phones | Measure in M0; prioritize visible tiles; smaller bake tiles; serve pre-baked tiles from the CDN for busy areas (estimated and deferred: about 2.6 GB for eight levels in four rotations, [architecture.md](architecture.md) §8.1) |
 | GPU rasterization differs across devices | Compare palette indices with tolerance in tests; hero assets are baked offline only |
 | Warp distorts or folds | Shape-preserving solver, fold check, editor pins; v1 separable as a fallback |
 | Thin data outside the US / Europe / Japan | Prefer tier 1–2 regions first; procedural fallbacks for every layer |
@@ -836,7 +842,7 @@ The current defaults are in parentheses.
 
 1. **Multiplayer:** single-player through M5, but keep the simulation deterministic so it stays possible.
 2. **Hand-authoring budget:** about 10–20 hero landmarks per region.
-3. **Second region:** a tier-1 city with open 3D city models; candidates compared in [second-region.md](second-region.md): Amsterdam (3D BAG, BAG, AHN), New York (PLUTO, footprints, lidar) and Paris (APUR, BD TOPO) score highest, with Montréal close.
+3. **Second region: decided (D-078).** All three top candidates from [second-region.md](second-region.md), in order: New York (PLUTO, footprints, LPC), Paris (APUR, BD TOPO), Amsterdam (3D BAG, BAG, AHN). New York's sources are checked in second-region.md §7.
 4. **Target devices:** desktop and modern mobile browsers; WebGL2 required.
 5. **Commercial intent: fully open source** (decided). Code, style packs and world packages are published under open licences ([library.md](library.md) §3.6); world packages stay ODbL as derived databases.
 6. **Grid building:** core gameplay loop or sandbox tool?

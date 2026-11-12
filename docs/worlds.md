@@ -30,7 +30,7 @@ Contents:
   - `overturemaps-us-west-2.s3.amazonaws.com`: Overture Maps roads, rivers, buildings and land use
   - `dataforgood-fb-data.s3.amazonaws.com` (canopy trees) and `usgs-lidar-public.s3.amazonaws.com` (lidar heights), only for specs that ask for them
 - **The download cache:** downloads are cached in `pipeline/.cache/`, so a rebuild reads nothing again. Set `PIXELWORLD_CACHE=/some/dir` to keep the cache elsewhere, or to share one between checkouts and worktrees. A town needs a few megabytes; the whole Southwest about a gigabyte.
-- **Coverage:** the built-in elevation sources are the USGS's, so they cover the United States. ESA WorldCover and Overture Maps are worldwide. Anywhere else needs a terrain source plugin ([plugins.md](plugins.md) §4).
+- **Coverage:** the built-in elevation sources are the USGS's, so they cover the United States. ESA WorldCover and Overture Maps are worldwide. Elsewhere the built-in `copernicus-glo30` (worldwide), `ign-rgealti` (France) and `gsi-dem` (Japan) cover terrain, or a terrain source from an installed package ([plugins.md](plugins.md) §4).
 
 ## 2. Pick a place and a scale
 
@@ -63,14 +63,14 @@ start: { lon: -112.1138, lat: 34.7489 }
 sources:
   dem: { kind: usgs-3dep-13arcsec, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
-  overture: { release: 2026-10-21.0 }
+  features: { kind: overture, release: 2026-10-21.0 }
   roads: { classes: [primary, secondary, tertiary, residential] }
 ```
 
 That gives terrain, land cover, water and roads. [`worlds/jerome/region.yaml`](../worlds/jerome/region.yaml) adds what makes it Jerome: steeper slopes (`maxSlope: 3`), more road classes and streams, grid-snapped streets at 1.5× their width, micro-terrain, buildings and pinyon-juniper woodland. §7 explains each.
 
 - **Style packs:** `desert-southwest` (the Southwest's: red rock, desert, adobe) and `bay-area` (San Francisco's). A style pack decides what every surface and object looks like; the spec only names semantic groups.
-- **The Overture release** is pinned so builds repeat. Releases are named like `2026-10-21.0`, the one this repository's worlds use.
+- **The Overture release** (`sources.features`) is pinned so builds repeat. Releases are named like `2026-10-21.0`, the one this repository's worlds use.
 - **Scale levels** (`level:`, `levels:`) are optional. A world with one level needs neither.
 
 ## 4. Check it
@@ -94,7 +94,7 @@ jerome-typos.yaml:26: sources.roads.classes[5]: unknown value 'residental'; did 
 jerome-typos.yaml: 4 problems
 ```
 
-It also checks types and ranges, required keys, a start outside the bounds, landmark ids, and that the plugins the spec names are installed. `pixelworld build` runs the same checks first, so a bad spec never starts a build, and exits with 2.
+It also checks types and ranges, required keys, a start outside the bounds, landmark ids, and that the sources the spec names exist. `pixelworld build` runs the same checks first, so a bad spec never starts a build, and exits with 2.
 
 ## 5. Build it
 
@@ -178,7 +178,7 @@ Each of these is a section of the spec; the reference (§10) lists their keys.
 - **Vegetation** (`objects.vegetation`): trees and shrubs scattered by ESA WorldCover class (`tree`, `shrub`, `grass`, `bare`, …) at a spacing and density, or from the canopy height map (`canopy: 3`, trees 3 m and taller) where it has data.
 - **Street furniture** (`objects.streetTrees`, `objects.streetProps`): rows along roads of given classes, or at junctions.
 - **Landmarks** (`objects.landmarks`): ids from the registry, [`worlds/_landmarks/`](../worlds/_landmarks/README.md), or inline `{ group, lon, lat, hm }`.
-- **Building types** (`objects.typology`): rules that retype buildings by shape, street and public records, as San Francisco's rowhouses are. Records come from a facts source plugin ([plugins.md](plugins.md) §3).
+- **Building types** (`objects.typology`): rules that retype buildings by shape, street and public records, as San Francisco's rowhouses are. Records come from a facts source (`sources.facts`; [plugins.md](plugins.md) §3).
 - **Ground** (`ground:`): park lawns and yards from land use.
 - **Traffic** (`routes:`): every build writes ambient traffic routes along its roads, and along Overture's rail and ferry lines. `--no-routes` skips them; `pixelworld routes` adds them later without a rebuild.
 
@@ -205,8 +205,8 @@ Each of these is a section of the spec; the reference (§10) lists their keys.
 |---|---|
 | `…: unknown key; did you mean …?` (exit 2) | A typo: fix the spelling. An unknown key is an error, never silently ignored. |
 | `no style pack 'x'` (exit 2) | Use one of the packs listed. A pack of your own goes in a `_styles/<name>/style.json` beside (or above) the spec. |
-| `no terrain source named 'x'` (exit 2) | Use `usgs-3dep-13arcsec` or `usgs-3dep-1arcsec`, or install the plugin that provides it (`pixelworld plugins` lists what's installed). |
-| `sources.overture.release: Overture has no release 'x'` (exit 2) | Use a release that exists, such as `2026-10-21.0`. |
+| `no terrain source named 'x'` (exit 2) | Use `usgs-3dep-13arcsec` or `usgs-3dep-1arcsec`, or install a package that provides it (`pixelworld plugins` lists the sources by role). |
+| `sources.features.release: Overture has no release 'x'` (exit 2) | Use a release that exists, such as `2026-10-21.0`. |
 | `a download failed` (exit 3) | Check the network or proxy (the hosts in §1) and build again; what was already downloaded is cached. |
 | `the build failed in the … stage` with a traceback (exit 3) | A bug: report it with the traceback. If the stage was `routes`, `--no-routes` builds the world without traffic. |
 | `the road report found problems` (exit 1) | The package is written. Roads that don't join up are usually fixed by `snap:` (as in Jerome), or by finer cells. |
@@ -269,35 +269,82 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 |---|---|---|---|
 | `dem` | [mapping](#spec-sources-dem) | **required** | Elevation: the terrain source. |
 | `landcover` | [mapping](#spec-sources-landcover) | **required** | Land cover: surfaces, water and vegetation. |
-| `overture` | [mapping](#spec-sources-overture) | **required** | Overture Maps: roads, paths, rivers, rail, buildings, land use. |
+| `features` | [mapping](#spec-sources-features) | **required** | The vector map (D-110). |
+| `facts` | [mapping](#spec-sources-facts) | — | Building facts (D-055). |
+| `canopy` | [mapping](#spec-sources-canopy) | — | Tree canopy heights. |
+| `heights` | [mapping](#spec-sources-heights) | — | Measured building heights (D-052). |
+| `importance` | [mapping](#spec-sources-importance) | — | Place fame, for warped layouts. |
 | `roads` | [mapping](#spec-sources-roads) | **required** | The road network. |
 | `rivers` | [mapping](#spec-sources-rivers) | `{ subtypes: [river] }` | River lines. |
+| `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-103): a garden's pond, a castle's moat. Each is levelled as a lake. |
 | `paths` | [mapping](#spec-sources-paths) | — | Footways and cycleways (walking levels). |
 | `rails` | [list of mappings](#spec-sources-rails) | — | Rails drawn in the street, each segment by the first rule it matches. |
 
 <a id="spec-sources-dem"></a>
 #### `sources.dem`
 
+Other keys here are the source's options.
+
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `kind` | string | **required** | The terrain source: `usgs-3dep-13arcsec` (10 m, United States), `usgs-3dep-1arcsec` (30 m, United States), or a plugin's (`pixelworld plugins` lists them). |
+| `kind` | string | **required** | The terrain source: `usgs-3dep-13arcsec` (10 m, United States), `usgs-3dep-1arcsec` (30 m, United States), `copernicus-glo30` (30 m, worldwide), `gsi-dem` (Japan), `ign-rgealti` (France), or an installed one (`pixelworld plugins` lists them). |
 | `overview` | 1, 2, 4, 8, … | 4 | Read the source's overview this many times coarser than its full resolution (1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source. |
 | `resampling` | one of `average`, `bilinear`, `cubic`, `nearest`, `mode`, `min`, `max`, `med` | `average` | How source pixels become cell corners: `average` when cells are coarser than the source, `bilinear` when they're finer. |
 
 <a id="spec-sources-landcover"></a>
 #### `sources.landcover`
 
+Other keys here are the source's options.
+
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `kind` | string | **required** | The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or a plugin's. |
+| `kind` | string | **required** | The land-cover source: `esa-worldcover-2021` (10 m, worldwide), or an installed one giving ESA WorldCover's class codes. |
 | `overview` | 1, 2, 4, 8, … | 16 | Read the source's overview this many times coarser than its full resolution (1: full). Match it to the cell size: 1 for 10–20 m cells from a 10 m source. |
 
-<a id="spec-sources-overture"></a>
-#### `sources.overture`
+<a id="spec-sources-features"></a>
+#### `sources.features`
+
+Other keys here are the source's options.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `release` | string | **required** | The Overture Maps release roads, rivers, buildings and land use come from, pinned so builds repeat (e.g. `2026-10-21.0`). |
+| `kind` | string | **required** | The map's roads, paths, rivers, rail, water, land use and buildings: `overture` (with `release:`, an Overture Maps release like `2026-10-21.0`, pinned so builds repeat), or an installed source. |
+
+<a id="spec-sources-facts"></a>
+#### `sources.facts`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | **required** | Per-building facts (year built, storeys, use) for `objects.typology`: `datasf`, `pluto`, `apur`, `plateau`, `areas`, or an installed source. |
+
+<a id="spec-sources-canopy"></a>
+#### `sources.canopy`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `meta-chm` | Tree heights for `canopy:` rules: `meta-chm` (WRI and Meta, 1 m, worldwide). |
+
+<a id="spec-sources-heights"></a>
+#### `sources.heights`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `usgs-3dep-lidar` | Building heights for `objects.buildings.lidar`: `usgs-3dep-lidar` (with `project:`, a USGS 3DEP EPT project). |
+
+<a id="spec-sources-importance"></a>
+#### `sources.importance`
+
+Other keys here are the source's options.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | string | `wikidata` | Famous places for `warp.importance`: `wikidata`. |
 
 <a id="spec-sources-roads"></a>
 #### `sources.roads`
@@ -314,6 +361,13 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `subtypes` | list of strings | `[river]` | Overture water lines burned in as rivers (`river`, `stream`, `canal`, …). Lakes and the sea come from land cover. |
+
+<a id="spec-sources-lakes"></a>
+#### `sources.lakes`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `classes` | list of strings | **required** | Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …). |
 
 <a id="spec-sources-paths"></a>
 #### `sources.paths`
@@ -332,6 +386,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `names` | list of strings | — | Only lines whose name contains one of these. |
 | `unnamed` | true/false | — | Only lines without a name. |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only lines wholly inside this box. |
+| `bundle` | number, > 0 (m) | — | Parallel tracks within this distance are drawn as one corridor along its centre line, with its track count (D-097; micro-terrain worlds). |
 
 <a id="spec-smoothing"></a>
 #### `smoothing`
@@ -378,6 +433,8 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 
 <a id="spec-micro-dem"></a>
 #### `micro.dem`
+
+Other keys here are the source's options.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
@@ -477,6 +534,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `simplify` | number, ≥ 0 | 0.75 | Cells of wiggle removed first. |
 | `deviation` | number, ≥ 0 | 1 | How far (cells) an in-between road may stray to keep long runs. |
 | `maxShift` | number, ≥ 0 | 2 | No junction moves further than this (cells). |
+| `directions` | 8 or 16 | 8 | Snap to the 8 grid directions, or 16 with the 2:1 ones (D-082). |
 | `keep` | [list of mappings](#spec-snap-roads-keep) | — | Streets left as mapped (a crooked street). |
 
 <a id="spec-snap-roads-keep"></a>
@@ -514,6 +572,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 |---|---|---|---|
 | `scale` | number, > 0 | 1 | Ways are drawn this many times their real width. |
 | `minCells` | number, ≥ 0 | 0.1 | …never narrower than this (cells). |
+| `centrelines` | true/false | false | Draw ways along their own centre lines rather than their cells' connections (any angle, curves; D-082). |
 | `roads` | mapping of road class → metres | — | Real width per road class (defaults: motorway 16, trunk and primary 14, secondary 12, tertiary 10, residential 8, unclassified 7, living_street 6, service 5). |
 | `paths` | mapping of path class → metres | — | Real width per path class (defaults: pedestrian 8, crosswalk 4, sidewalk, footway and steps 3, cycleway 2.5, path 2). |
 | `lanes` | [mapping](#spec-widths-lanes) | — | Lanes and medians. |
@@ -555,6 +614,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `landUse` | list of strings | **required** | Overture land-use classes that are lawns (`park`, `golf_course`, …). |
 | `over` | list of strings | `[grass]` | Surfaces a lawn replaces. |
 | `keep` | list of strings | — | Natural land (Overture base `land` classes) left as it is. |
+| `paved` | list of strings | — | Land-use classes inside a park left as they are (`pedestrian`: courts and plazas). |
 | `maxSlope` | number, ≥ 0 | 0.2 | A park steeper than this (rise over run) stays wild. |
 | `slopeMeters` | number, ≥ 0 | 50 | Slopes are measured over about this distance. |
 | `wooded` | [mapping](#spec-ground-lawn-wooded) | — | Lawn under open tree cover. |
@@ -597,6 +657,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `vegetation` | [list of mappings](#spec-objects-vegetation) | — | Trees and shrubs scattered by land cover. |
 | `streetTrees` | [list of mappings](#spec-objects-streettrees) | — | Rows of trees along roads. |
 | `streetProps` | [list of mappings](#spec-objects-streetprops) | — | Street lights and signals: rows, or at junctions. |
+| `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-104). |
 | `landmarks` | list of ids or mappings | — | Landmarks: registry ids (`worlds/_landmarks/`), `{ id, …overrides }`, or inline mappings. |
 | `landmarkDepiction` | string | `generic` | Which registry depiction to draw. |
 | `depiction` | [mapping](#spec-objects-depiction) | — | How big things are drawn at this scale level. |
@@ -611,10 +672,12 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `minArea` | number, ≥ 0 (m²) | 30 | Smaller footprints are left out. |
 | `towerMeters` | number, ≥ 0 (m) | 45 | Buildings this tall are towers. |
 | `podiumMeters` | number, ≥ 0 (m) | 15 | A tower's podium height. |
+| `tiers` | true/false | off | Parts standing on others (setback tiers) are drawn from the ground where they stand over their building, not dropped. |
 | `houseMaxArea` | number, ≥ 0 (m²) | 0 | Residential footprints up to this size are houses (0: none). |
 | `simplifyMeters` | number, ≥ 0 (m) | 2 | Footprint simplification. |
+| `courtyards` | true/false | false | Keep footprints' courtyards (their holes, as `fh`) instead of filling them. |
 | `implausible` | [mapping](#spec-objects-buildings-implausible) | on | Footprints in parks that are really trees are dropped (null keeps every one). |
-| `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from USGS 3DEP lidar. |
+| `lidar` | [mapping](#spec-objects-buildings-lidar) | — | Heights and tower parts from measured heights (`sources.heights`: USGS 3DEP lidar). |
 
 <a id="spec-objects-buildings-implausible"></a>
 #### `objects.buildings.implausible`
@@ -631,7 +694,6 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `project` | string | **required** | The USGS 3DEP lidar project (e.g. `USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018`). |
 | `res` | number, > 0 (m) | 4 | Height grid resolution. |
 | `depth` | integer, ≥ 0 | 6 | Point-cloud octree depth read. |
 | `towerGap` | number, ≥ 0 (m) | 25 | Roofs this far above the median are tower parts. |
@@ -640,21 +702,10 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 <a id="spec-objects-typology"></a>
 #### `objects.typology`
 
-Other keys here are facts source options (the older form).
-
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `facts` | [a plugin name, or { plugin, …options }](#spec-objects-typology-facts) | — | A facts source plugin (year built, use, storeys) by name: `datasf`, or `{ plugin: datasf, …options }`. |
 | `rules` | [list of mappings](#spec-objects-typology-rules) | — | Matched in order; the first match picks the group. |
-
-<a id="spec-objects-typology-facts"></a>
-#### `objects.typology.facts`
-
-Other keys here are plugin options.
-
-| Key | Type | Default | Meaning |
-|---|---|---|---|
-| `plugin` | string | **required** | The facts source plugin. |
+| `roofHints` | true/false | false | The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof hint where Overture gives none. |
 
 <a id="spec-objects-typology-rules"></a>
 #### `objects.typology.rules[]`
@@ -668,9 +719,15 @@ Other keys here are plugin options.
 | `hoods` | list of strings | — | Neighbourhood names (from the facts source). |
 | `classes` | list of strings | — | Class codes: exact, or a prefix ending in `*`. |
 | `roofs` | list of strings | — | Roof shapes. |
+| `materials` | list of strings | — | Facade materials (from the facts source; any case). |
+| `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `grounds` | list of strings | — | Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) the building's centroid stands in. |
+| `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
+| `maxDepth` | number, ≥ 0 (m) | — | Deepest (the footprint's long side). |
+| `maxFill` | number, in [0, 1] | — | Most share of its smallest enclosing rectangle the footprint fills (a ring, a C). |
 | `minParty` | number, in [0, 1] | — | Least share of outline shared with neighbours. |
 | `maxParty` | number, in [0, 1] | — | Most share of outline shared with neighbours. |
 | `floors` | [min, max] | — | Storeys. |
@@ -678,6 +735,7 @@ Other keys here are plugin options.
 | `maxHeight` | number, ≥ 0 (m) | — | Tallest. |
 | `onWater` | true/false | — | Stands over water. |
 | `corner` | true/false | — | On a corner lot. |
+| `bounds` | a box or a list of boxes | — | Only buildings whose centroid is in this box (or these boxes): a neighbourhood. |
 
 <a id="spec-objects-vegetation"></a>
 #### `objects.vegetation[]`
@@ -701,9 +759,13 @@ Other keys here are plugin options.
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
+| `notName` | string | — | Not on roads whose name contains this (D-109). |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
@@ -719,14 +781,30 @@ Other keys here are plugin options.
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
+| `notName` | string | — | Not on roads whose name contains this (D-109). |
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
 | `density` | number, in [0, 1] | 1 | With `canopy`: share of spots kept. |
 | `at` | one of `junctions` | — | Two per junction of 3+ roads, on opposite corners. |
+| `wires` | string | — | Strung props (D-098): one row on each street's left at `offset` (default 3 m), joined through junctions where the street runs on straight, and a span of this group from each prop to the next. |
+
+<a id="spec-objects-walls"></a>
+#### `objects.walls[]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `group` | string | **required** | The group of a wall's segment. |
+| `classes` | list of strings | **required** | Overture barrier classes (`retaining_wall`, `wall` …). |
+| `spacing` | number, ≥ 0 (m) | **required** | Segment length. |
+| `diagonal` | string | — | The group on diagonal lines. |
+| `slants` | list of strings | — | The groups on the 2:1 lines. |
 
 <a id="spec-objects-landmarks"></a>
 #### `objects.landmarks[]`
@@ -750,6 +828,7 @@ Other keys here are plugin options.
 | `orient` | integer | 0 | Quarter turns. |
 | `scale` | number, > 0 | `depiction.landmarks.scale` | Drawn this many times its size. |
 | `replaces` | list of strings | — | Overture building names or ids it stands in for. |
+| `footprint` | true/false | off | Drawn on the footprint of the building it replaces, not on a box. |
 | `parts` | [list of mappings](#spec-objects-landmarks-parts) | — | Sub-objects along a line landmark. |
 | `hero` | true/false | — | Baked offline and painted over. |
 

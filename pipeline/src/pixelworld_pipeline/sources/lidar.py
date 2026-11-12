@@ -5,6 +5,9 @@ An EPT dataset is an octree of LAZ tiles: depth d holds points spaced about
 (root cube edge / span / 2^d). Reading every node down to a modest depth over
 an area gives an even, thinned sample of the whole survey, enough for a height
 grid of a few metres. Tiles and hierarchy files are cached under .cache/lidar.
+
+It is the built-in source of role `heights` (`usgs-3dep-lidar`, D-110):
+`sources.heights: { kind: usgs-3dep-lidar, project: <an EPT project> }`.
 """
 
 from __future__ import annotations
@@ -21,7 +24,10 @@ import numpy as np
 from rasterio.transform import Affine
 from rasterio.warp import transform as transform_points
 
-from .http import CACHE_ROOT
+from ..plugins import Source
+from ..region import RegionError
+from ..schema import Key, Str
+from .http import CACHE_ROOT, SSL_CONTEXT
 
 BUCKET = "https://usgs-lidar-public.s3.amazonaws.com/"
 GROUND = 2
@@ -34,7 +40,7 @@ def _get(url: str, path: Path) -> bytes:
     if path.exists():
         return path.read_bytes()
     req = urllib.request.Request(url, headers={"User-Agent": "pixelworld-pipeline"})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with urllib.request.urlopen(req, timeout=120, context=SSL_CONTEXT) as r:
         data = r.read()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
@@ -197,3 +203,52 @@ def height_grid(
     )
     meta_path.write_text(tag)
     return HeightGrid(heights, covered, tr, res)
+
+
+class HeightSource(Source):
+    """The contract of role `heights`: building heights above the ground, for
+    massing (`objects.buildings.lidar`)."""
+
+    role = "heights"
+
+    def height_grid(
+        self, lonlat_box: tuple[float, float, float, float], crs, res: float, max_depth: int
+    ) -> HeightGrid | None:
+        """Heights above ground (m) on a res-metre grid in `crs` over a lon/lat box,
+        or None where there is no data. `max_depth` is how fine to read (a source
+        may ignore it)."""
+        raise NotImplementedError
+
+
+class USGSLidar(HeightSource):
+    """USGS 3DEP lidar (EPT on AWS). Option `project` (required): the EPT
+    project's name, e.g. USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018."""
+
+    attribution = {
+        "name": "USGS 3D Elevation Program (3DEP) lidar point clouds",
+        "license": "Public domain",
+        "url": "https://www.usgs.gov/3d-elevation-program",
+    }
+
+    options_schema = {
+        "project": Key(
+            Str(),
+            "The USGS 3DEP lidar project (e.g. `USGS_LPC_NV_LasVegas_QL1_2016_LAS_2018`).",
+            required=True,
+        )
+    }
+
+    def __init__(self, region=None, options=None):
+        super().__init__(region, options)
+        self.project = str(self.options.pop("project", "") or "")
+        if not self.project:
+            raise RegionError("sources.heights: usgs-3dep-lidar needs `project:` (an EPT project)")
+        if self.options:
+            unknown = ", ".join(sorted(self.options))
+            raise RegionError(f"sources.heights: unknown usgs-3dep-lidar options {unknown}")
+
+    def height_grid(self, lonlat_box, crs, res, max_depth):
+        return height_grid(self.project, lonlat_box, crs, res, max_depth)
+
+    def summary(self) -> str:
+        return f"USGS 3DEP lidar {self.project}"

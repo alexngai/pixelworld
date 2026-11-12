@@ -12,7 +12,19 @@ export interface Box {
   ramp: number; // ramp id in the palette
   /** Turn about the vertical axis through the origin (radians, x toward y); vehicles. */
   rot?: number;
+  /**
+   * Tilt before the turn, about a point on the vertical axis at height `pivot`
+   * (steps): `roll` about x (radians, +y down) then `pitch` about y (radians,
+   * +x up); a plane banking and climbing. In cubic voxels (VOXEL: a cell is
+   * as wide as 2 steps are tall).
+   */
+  pitch?: number;
+  roll?: number;
+  pivot?: number;
 }
+
+/** Steps as tall as a cell is wide, in cubic voxels: for tilting. */
+const STEPS_PER_CELL = 2;
 
 /** Closed boxes as a mesh (all six faces; the depth test hides the rest). */
 export function buildBoxesMesh(boxes: Box[]): MeshData {
@@ -21,8 +33,26 @@ export function buildBoxesMesh(boxes: Box[]): MeshData {
     const mat = DIRECT_RAMP_BASE + b.ramp;
     const cos = Math.cos(b.rot ?? 0);
     const sin = Math.sin(b.rot ?? 0);
-    const turn = (v: [number, number, number]): [number, number, number] =>
-      b.rot ? [v[0] * cos - v[1] * sin, v[0] * sin + v[1] * cos, v[2]] : v;
+    const tilted = !!(b.pitch || b.roll);
+    const cp = Math.cos(b.pitch ?? 0);
+    const sp = Math.sin(b.pitch ?? 0);
+    const cr = Math.cos(b.roll ?? 0);
+    const sr = Math.sin(b.roll ?? 0);
+    const pivot = b.pivot ?? 0;
+    // roll, then pitch, about the pivot (in cubic units); a normal turns without the shift
+    const tilt = (v: [number, number, number], normal: boolean): [number, number, number] => {
+      if (!tilted) return v;
+      const z = normal ? v[2] : (v[2] - pivot) / STEPS_PER_CELL;
+      const y1 = v[1] * cr + z * sr;
+      const z1 = -v[1] * sr + z * cr;
+      const x2 = v[0] * cp - z1 * sp;
+      const z2 = v[0] * sp + z1 * cp;
+      return [x2, y1, normal ? z2 : z2 * STEPS_PER_CELL + pivot];
+    };
+    const turn = (v: [number, number, number], normal = false): [number, number, number] => {
+      const t = tilt(v, normal);
+      return b.rot ? [t[0] * cos - t[1] * sin, t[0] * sin + t[1] * cos, t[2]] : t;
+    };
     const quad = (
       a: [number, number, number],
       c: [number, number, number],
@@ -30,7 +60,7 @@ export function buildBoxesMesh(boxes: Box[]): MeshData {
       e: [number, number, number],
       n: [number, number, number],
     ) => {
-      for (const v of [a, c, d, a, d, e]) mb.vertex(turn(v), turn(n), mat, FACE_OBJECT, 1, 0, 0);
+      for (const v of [a, c, d, a, d, e]) mb.vertex(turn(v), turn(n, true), mat, FACE_OBJECT, 1, 0, 0);
     };
     const { x0, y0, z0, x1, y1, z1 } = b;
     quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1]);

@@ -35,7 +35,7 @@ The committed world packages in `fixtures/` are served as they are, so the viewe
 | `apps/editor` | Editor v0: focus areas and pins against `pixelworld serve` |
 | `apps/game` | M4's example game: a car and a plane on the engine's public API |
 | `examples/` | The minimal viewer, and the npm package's consumers (Vite, webpack 5, plain ESM) |
-| `pipeline/` | The Python geo pipeline and its CLI (`pixelworld build`, `serve`, `routes`); `pipeline/plugins/` holds city packs (`pixelworld-city-sf`) |
+| `pipeline/` | The Python geo pipeline and its CLI (`pixelworld build`, `serve`, `routes`); `pipeline/src/pixelworld_pipeline/sources/` holds every data source, the city ones too (D-110) |
 | `worlds/` | Region specs, style packs (`worlds/_styles/<pack>/style.json`), the landmark registry with hero bakes and paint-overs |
 | `fixtures/` | The committed world packages the viewer and tests use ([fixtures/README.md](fixtures/README.md)) |
 | `e2e/` | Playwright tests and their golden images (`e2e/__screenshots__/`) |

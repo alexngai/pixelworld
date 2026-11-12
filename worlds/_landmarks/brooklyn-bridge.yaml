@@ -1,0 +1,12 @@
+name: Brooklyn Bridge
+wikidata: Q125006
+# the suspension spans, anchorage to anchorage (486 m main span, 283 m side
+# spans): 1,053 m along Overture's carriageways, centred on Wikidata's point
+line: [[-74.00064, 40.70910], [-73.99202, 40.70223]]
+crest: 41           # deck height above the water at mid-span (m)
+base: 0             # the towers stand in the river
+thickness: 26       # the deck's width
+bulge: 0
+snap: true          # turns with its road to the grid (D-049)
+depictions:
+  generic: { group: landmark.bridge.suspension }   # a suspension bridge; no name
