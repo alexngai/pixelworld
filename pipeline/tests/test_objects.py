@@ -3,6 +3,7 @@
 import gzip
 import hashlib
 import json
+import math
 
 import numpy as np
 import pytest
@@ -559,3 +560,115 @@ def test_lowrise_blocks_cover_free_built_up_cells():
     again = objects.lowrise({}, built, blocked, taken)
     assert [a["s"] for a in again] == [a["s"] for a in out] and "m" not in again[0]
     assert again[0]["g"] == "city.blocks" and again[0]["hm"] == 8.0
+
+
+def test_props_along_a_street_stand_on_one_side_turned_with_it():
+    """D-102: `along` puts one row of props on one side of a road, turned so a
+    model drawn along y runs with the road (utility poles and their wires)."""
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.195 36.001, -115.195 36.009)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)",
+        },
+    ]
+    rule = {"group": "prop.pole", "roads": ["residential"], "spacing": 100, "offset": 5}
+    both = objects.street_trees(p, rule, rows, _none, "t")
+    one = objects.street_trees(p, rule | {"along": True}, rows, _none, "t")
+    assert len(one) * 2 == len(both)
+    (ax,), (ay,) = p.to_cells(
+        *objects.transform_points("EPSG:4326", region.crs, [-115.195], [36.005])
+    )
+    ns = [i for i in one if abs(i["x"] - ax) < 0.5 and abs(i["y"] - ay) >= 0.5]
+    ew = [i for i in one if abs(i["y"] - ay) < 0.5 and abs(i["x"] - ax) >= 0.5]
+    assert ns and ew
+    assert {i["r"] for i in ns} == {0} and {i["r"] for i in ew} == {1}
+
+
+def test_props_along_a_diagonal_street_take_their_diagonal_group():
+    """D-103: with `diagonal`, props along a road running diagonally take that
+    group, turned for the diagonal they follow."""
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    rows = [
+        {
+            "id": "a",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.198 36.002, -115.192 36.008)",
+        },
+        {
+            "id": "b",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.198 36.008, -115.192 36.002)",
+        },
+        {
+            "id": "c",
+            "class": "residential",
+            "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)",
+        },
+    ]
+    rule = {"group": "prop.pole", "roads": ["residential"], "spacing": 100, "along": True}
+    out = objects.street_trees(p, rule | {"diagonal": "prop.pole.diagonal"}, rows, _none, "t")
+    diag = [i for i in out if i["g"] == "prop.pole.diagonal"]
+    assert diag and {i["r"] for i in diag} == {0, 1}
+    assert all(i["g"] == "prop.pole" for i in objects.street_trees(p, rule, rows, _none, "t"))
+
+
+def test_along_turns_pick_the_group_drawn_nearest_the_lines_direction():
+    """D-104: straight, diagonal and the two 2:1 groups, each with the quarter
+    turn for the direction at right angles; a missing group falls back."""
+    rule = {"group": "g", "diagonal": "d", "slants": ["s1", "s2"]}
+    cases = {
+        0: ("g", 1),
+        90: ("g", 0),
+        45: ("d", 1),
+        135: ("d", 0),
+        26.57: ("s1", 0),
+        116.57: ("s1", 1),
+        63.43: ("s2", 0),
+        153.43: ("s2", 1),
+    }
+    for deg, want in cases.items():
+        a = math.radians(deg)
+        assert objects.along_turn(math.cos(a), math.sin(a), rule) == want, deg
+        # the same line run the other way
+        assert objects.along_turn(-math.cos(a), -math.sin(a), rule) == want, deg
+    # without slants, a 2:1 line takes the nearest diagonal; without either, the straight group
+    a = math.radians(26.57)
+    assert objects.along_turn(math.cos(a), math.sin(a), {"group": "g", "diagonal": "d"}) == ("d", 1)
+    assert objects.along_turn(math.cos(a), math.sin(a), {"group": "g"}) == ("g", 1)
+
+
+def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
+    """D-104: `objects.walls` puts one segment every `spacing` on Overture's barrier
+    lines of the given classes, turned with each line, over water's edge too."""
+    from pixelworld_pipeline.sources import overture
+
+    asked = []
+    line = "LINESTRING (-115.199 36.005, -115.191 36.005)"
+
+    def barriers(release, bbox, classes):
+        asked.append(classes)
+        return [{"id": "w", "class": "retaining_wall", "geometry": line}]
+
+    monkeypatch.setattr(overture, "barriers", barriers)
+    spec = {**SPEC, "sources": {**SPEC["sources"], "overture": {"release": "r"}}}
+    spec["objects"] = {
+        "walls": [{"group": "wall.stone", "classes": ["retaining_wall"], "spacing": 50}]
+    }
+    region = Region.from_dict(spec)
+    cx, cy = region.cells
+    blocked = np.ones((cy, cx), dtype=bool)  # all water: walls stand anyway
+    out, _ = objects.place(region, blocked, [])
+    walls = [i for i in out if i["g"] == "wall.stone"]
+    assert asked == [["retaining_wall"]]
+    assert len(walls) >= 10 and {i["r"] for i in walls} == {1}  # an east-west line

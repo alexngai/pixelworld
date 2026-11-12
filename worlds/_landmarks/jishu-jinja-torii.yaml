@@ -1,0 +1,9 @@
+name: Jishu Shrine torii
+# OSM's point for the torii (地主神社鳥居), at the top of the steps to the
+# shrine behind Kiyomizu-dera's main hall; Wikidata has no item for it
+anchor: { lon: 135.7852006, lat: 34.9950587 }
+height: 5           # depicted: a small vermilion torii
+clear: 0
+depictions:
+  # a vermilion myōjin torii with a stone lantern before each pillar; no plaque lettering
+  generic: { group: landmark.torii }

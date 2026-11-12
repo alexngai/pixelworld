@@ -343,6 +343,29 @@ def water_areas(
     return _areas(release, bbox, "water", classes)
 
 
+def barriers(
+    release: str, bbox: tuple[float, float, float, float], classes: list[str]
+) -> list[dict]:
+    """Barrier lines of the given classes (base theme `infrastructure`, from
+    OpenStreetMap's barrier tags): retaining walls, walls, fences, …"""
+    wanted = set(classes)
+
+    def keep(r) -> bool:
+        if r["class"] not in wanted:
+            return False
+        return shapely.from_wkb(r["geometry"]).geom_type in ("LineString", "MultiLineString")
+
+    return query(
+        release,
+        "base",
+        "infrastructure",
+        bbox,
+        ["id", "class", "subtype", "geometry"],
+        keep,
+        filter_tag=f"barriers:{','.join(sorted(wanted))}",
+    )
+
+
 def land(release: str, bbox: tuple[float, float, float, float], classes: list[str]) -> list[dict]:
     """Natural land polygons of the given classes (base theme `land`, from
     OpenStreetMap's natural tags): grassland, scrub, heath, beach, sand, …"""

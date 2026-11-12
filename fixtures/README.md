@@ -175,6 +175,61 @@ Sources and licenses:
 - Building records: Apur, Emprise bâtie Paris and Quartier de Paris (ODbL 1.0); IGN, BD TOPO® (Licence Ouverte 2.0).
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## kyoto-walk
+
+Kyoto's walking level (D-091, D-100), built from [`worlds/kyoto/walk.yaml`](../worlds/kyoto/walk.yaml) on the `kyoto` style pack (D-090): from Nakagyō's machiya streets east across the Kamo river to Gion, Higashiyama and Kiyomizu-dera, and south to Kyoto Tower, at 10 m per cell (338 × 300 cells). Heights are true (`heightStretch` 1.0) and the relief 1.5×. Its roads and paths are drawn along their own centre lines, snapped to 16 directions within 6° of one (D-082): the Heian grid snaps, the lanes up the Higashiyama slopes keep their angles. Its neighbours are the driving level (`kyoto`) and the flying level (`kyoto-fly`).
+
+- **Terrain:** GSI's elevation tiles read at 4 m (the `gsi-dem` terrain source, D-089): 8 to 89 drawn steps, from the Kamo river up the Higashiyama hills.
+- **Buildings:** 33,691 from Overture footprints; 31,420 have facts from PLATEAU's 2025 building models (the `plateau` facts source, D-089: structure, year, storeys, usage code, LoD2 roof shape), 29,493 that Overture gives no height take PLATEAU's, and 29,976 take PLATEAU's roof shape as their generator's hint (`roofHints`, D-100).
+- **Types:** mid-rises (10,923), wooden houses under gabled (7,924) and hipped (332) roofs, machiya (6,451), temple halls and pavilions (513, 180 buildings stand in temple and shrine grounds), kura (91) and shrine halls (57); the rest keep the defaults (6,888 houses, 427 low blocks, 17 car parks, 68 taller blocks).
+- **Centre lines:** 20,250 road cells and 17,581 path cells carry pieces; 8 and 34 have more than six, and drop their narrowest.
+- **Also:** 20,861 canopy trees and 559 street trees, 3,416 lawn cells, 199 cells of ponds from Overture's water areas (D-103), 1,265 utility poles strung with wires (one side of each lane, D-102; 39 on diagonal streets, D-103, and 172 on 2:1 streets, D-104), 1,142 street lights and 54 signals, 1,174 rail cells (the JR lines into Kyoto Station), 3,266 traffic routes.
+- **Landmarks (generic depictions):** Kiyomizu-dera's main hall on its stage, its three-storey pagoda, the Yasaka Pagoda, Yasaka Shrine's west gate, Chion-in's Sanmon, Kyoto Tower, and three torii (Jishu Shrine's and two in Gion).
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 2.1 MB. Built in about 55 s with the download cache (about 250 s fetching PLATEAU, GSI and Overture the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: 出典：国土地理院ウェブサイト (地理院タイル 標高タイル), processed. Public Data License 1.0 (PDL 1.0), compatible with CC BY 4.0.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks, land use and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Building records: 出典：国土交通省 PLATEAUウェブサイト (3D city models of Kyoto, 2025), processed. PDL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## kyoto
+
+Kyoto's driving level (D-101), built from [`worlds/kyoto/region.yaml`](../worlds/kyoto/region.yaml): the city centre at 25 m per cell (294 × 378 cells), from Kinkaku-ji's hills in the north-west to Tō-ji and Fushimi Inari's gate in the south and Ginkaku-ji in the east, with Nijō Castle, the Imperial Palace, the Kamo river and Heian Shrine's great torii. Heights 1.5×, relief 1.5×; the walking level's typology (D-091, D-100).
+
+- **Buildings:** 182,019 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
+- **Types:** wooden houses under gabled (72,608) and hipped (1,538) roofs, mid-rises (38,479), machiya (28,162), temple halls and pavilions (1,138; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (145), Nijō Castle's palace halls and gates (33) and the Imperial Palace's halls, gates and corridors (64 pieces), by name and shape (D-102, D-103, D-104); the defaults 36,535 houses, 2,765 low blocks, 76 taller blocks, 65 car parks.
+- **Walls:** 1,944 stretches of stone wall along OSM's retaining walls (814 pieces of line), Nijō Castle's ishigaki round its moats among them (D-104).
+- **Also:** 42,128 canopy trees and 3,224 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,329 traffic routes.
+- **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m), Heian Shrine's great torii (24.4 m) and Kinkaku-ji's Golden Pavilion (D-102).
+- **Road report:** clean (29 components).
+- **Size:** 7.5 MB. Built in about 170 s with the download cache (about 380 s the first time).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/region.yaml
+```
+
+Sources and licenses: as `kyoto-walk`.
+
+## kyoto-fly
+
+Kyoto's flying level (D-101), built from [`worlds/kyoto/fly.yaml`](../worlds/kyoto/fly.yaml) (it extends `region.yaml`): the whole basin at 100 m per cell (184 × 222 cells), from Arashiyama to the slopes of Hiei and from the Kitayama hills south past Fushimi. Relief 2×. Only its landmarks are drawn, three times their size: Kyoto Tower, Tō-ji's and the Yasaka pagodas, Kiyomizu-dera's hall, Chion-in's Sanmon, Heian Shrine's great torii and Kinkaku-ji. GSI's tiles are read at 16 m. Rivers only, no canals: Overture's canals are mostly field and street-side channels, a whole cell wide here. 0 to 42 drawn steps. 392 KB, built in about 15 s with the cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/kyoto/fly.yaml
+```
+
+Sources and licenses: as `kyoto-walk`, without the building records and tree canopy.
+
 ## tokyo-walk
 
 Tokyo's walking level (D-093), built from [`worlds/tokyo/walk.yaml`](../worlds/tokyo/walk.yaml) on the `tokyo` style pack: Shibuya to Shinjuku at 10 m per cell (228 × 478 cells), with the scramble crossing and Dōgenzaka, Harajuku, Takeshita Street and Omotesandō, Yoyogi Park and the Meiji Shrine's forest, west Shinjuku's skyscrapers and the station's east side, and the residential streets of Yoyogi, Sendagaya and Tomigaya between them. Heights are true (`heightStretch` 1.0). Roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).

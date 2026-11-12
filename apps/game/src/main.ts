@@ -1,4 +1,5 @@
 import type { PluginDescriptor } from "@pixelworlds/engine";
+import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
 import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin } from "@pixelworlds/city-sf";
@@ -34,7 +35,7 @@ async function stylePack(id: string): Promise<object> {
 }
 
 // The city packs the game can load, by name (D-071); a world's style pack names the ones it needs.
-const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris, [tokyo.name]: tokyo };
+const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris, [kyoto.name]: kyoto, [tokyo.name]: tokyo };
 
 const params = new URLSearchParams(location.search);
 const num = (key: string, fallback: number) => {

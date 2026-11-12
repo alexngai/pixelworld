@@ -44,7 +44,7 @@ from .region import RegionError
 FACT_KEYS = ("year", "stories", "units", "use", "class", "hood", "roof", "material", "height")
 # keys of the typology section itself: anything else beside a bare `facts: name`
 # is an option for the facts source (the older form, `rollYear:` beside `facts: datasf`)
-TYPOLOGY_KEYS = ("facts", "rules")
+TYPOLOGY_KEYS = ("facts", "rules", "roofHints")
 
 
 class FactsSource:

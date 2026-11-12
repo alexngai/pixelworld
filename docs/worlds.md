@@ -272,6 +272,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `overture` | [mapping](#spec-sources-overture) | **required** | Overture Maps: roads, paths, rivers, rail, buildings, land use. |
 | `roads` | [mapping](#spec-sources-roads) | **required** | The road network. |
 | `rivers` | [mapping](#spec-sources-rivers) | `{ subtypes: [river] }` | River lines. |
+| `lakes` | [mapping](#spec-sources-lakes) | — | Overture's water areas drawn as still water beside land cover's (D-103): a garden's pond, a castle's moat. Each is levelled as a lake. |
 | `paths` | [mapping](#spec-sources-paths) | — | Footways and cycleways (walking levels). |
 | `rails` | [list of mappings](#spec-sources-rails) | — | Rails drawn in the street, each segment by the first rule it matches. |
 
@@ -314,6 +315,13 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `subtypes` | list of strings | `[river]` | Overture water lines burned in as rivers (`river`, `stream`, `canal`, …). Lakes and the sea come from land cover. |
+
+<a id="spec-sources-lakes"></a>
+#### `sources.lakes`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `classes` | list of strings | **required** | Overture water area classes (`pond`, `moat`, `lake`, `reservoir` …). |
 
 <a id="spec-sources-paths"></a>
 #### `sources.paths`
@@ -558,6 +566,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `landUse` | list of strings | **required** | Overture land-use classes that are lawns (`park`, `golf_course`, …). |
 | `over` | list of strings | `[grass]` | Surfaces a lawn replaces. |
 | `keep` | list of strings | — | Natural land (Overture base `land` classes) left as it is. |
+| `paved` | list of strings | — | Land-use classes inside a park left as they are (`pedestrian`: courts and plazas). |
 | `maxSlope` | number, ≥ 0 | 0.2 | A park steeper than this (rise over run) stays wild. |
 | `slopeMeters` | number, ≥ 0 | 50 | Slopes are measured over about this distance. |
 | `wooded` | [mapping](#spec-ground-lawn-wooded) | — | Lawn under open tree cover. |
@@ -600,6 +609,7 @@ Every key a region spec can hold, generated from the pipeline's schema ([`schema
 | `vegetation` | [list of mappings](#spec-objects-vegetation) | — | Trees and shrubs scattered by land cover. |
 | `streetTrees` | [list of mappings](#spec-objects-streettrees) | — | Rows of trees along roads. |
 | `streetProps` | [list of mappings](#spec-objects-streetprops) | — | Street lights and signals: rows, or at junctions. |
+| `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-104). |
 | `landmarks` | list of ids or mappings | — | Landmarks: registry ids (`worlds/_landmarks/`), `{ id, …overrides }`, or inline mappings. |
 | `landmarkDepiction` | string | `generic` | Which registry depiction to draw. |
 | `depiction` | [mapping](#spec-objects-depiction) | — | How big things are drawn at this scale level. |
@@ -651,6 +661,7 @@ Other keys here are facts source options (the older form).
 |---|---|---|---|
 | `facts` | [a plugin name, or { plugin, …options }](#spec-objects-typology-facts) | — | A facts source plugin (year built, use, storeys) by name: `datasf`, or `{ plugin: datasf, …options }`. |
 | `rules` | [list of mappings](#spec-objects-typology-rules) | — | Matched in order; the first match picks the group. |
+| `roofHints` | true/false | false | The facts' roof shape (`gabled`, `hipped`, `flat` …) becomes the generator's roof hint where Overture gives none. |
 
 <a id="spec-objects-typology-facts"></a>
 #### `objects.typology.facts`
@@ -675,10 +686,13 @@ Other keys here are plugin options.
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `grounds` | list of strings | — | Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) the building's centroid stands in. |
+| `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
 | `maxWidth` | number, ≥ 0 (m) | — | Widest. |
 | `minDepth` | number, ≥ 0 (m) | — | Shallowest. |
 | `maxDepth` | number, ≥ 0 (m) | — | Deepest (the footprint's long side). |
+| `maxFill` | number, in [0, 1] | — | Most share of its smallest enclosing rectangle the footprint fills (a ring, a C). |
 | `minParty` | number, in [0, 1] | — | Least share of outline shared with neighbours. |
 | `maxParty` | number, in [0, 1] | — | Most share of outline shared with neighbours. |
 | `floors` | [min, max] | — | Storeys. |
@@ -713,6 +727,9 @@ Other keys here are plugin options.
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
@@ -731,12 +748,26 @@ Other keys here are plugin options.
 | `bounds` | [west, south, east, north] (lon/lat) | — | Only within this box. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | Only on these land-cover classes. |
 | `across` | true/false | — | Over the road, turned across it (strung lanterns). |
+| `along` | true/false | — | On one side only, turned to run with the road (utility poles and their wires). |
+| `diagonal` | string | — | With `along`: the group placed where the road runs diagonally, for a model drawn along x = y. |
+| `slants` | list of strings | — | With `along`: two groups for the 2:1 directions (26.6° and 63.4° from east), for models drawn along (2, −1) and (1, −2). |
 | `canopy` | number, ≥ 0 (m) | — | On the verge past the drawn asphalt, where the canopy map has trees this tall. |
 | `kerb` | number, ≥ 0 (m) | 2 | With `canopy`: distance past the drawn asphalt. |
 | `search` | number, ≥ 0 (m) | 3 | With `canopy`: how far to look for a mapped tree. |
 | `density` | number, in [0, 1] | 1 | With `canopy`: share of spots kept. |
 | `at` | one of `junctions` | — | Two per junction of 3+ roads, on opposite corners. |
 | `wires` | string | — | Strung props (D-098): one row on each street's left at `offset` (default 3 m), joined through junctions where the street runs on straight, and a span of this group from each prop to the next. |
+
+<a id="spec-objects-walls"></a>
+#### `objects.walls[]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `group` | string | **required** | The group of a wall's segment. |
+| `classes` | list of strings | **required** | Overture barrier classes (`retaining_wall`, `wall` …). |
+| `spacing` | number, ≥ 0 (m) | **required** | Segment length. |
+| `diagonal` | string | — | The group on diagonal lines. |
+| `slants` | list of strings | — | The groups on the 2:1 lines. |
 
 <a id="spec-objects-landmarks"></a>
 #### `objects.landmarks[]`

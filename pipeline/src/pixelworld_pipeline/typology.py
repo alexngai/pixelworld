@@ -24,13 +24,17 @@ group:
 Rule fields (all optional): year [from, to) · uses (residential, mixed,
 commercial, industrial, civic) · hoods (neighbourhood names) · classes (the
 facts' class codes: exact, or a prefix ending in `*`) · names (Overture's
-primary name of the building, exactly; its parts share it) · roofs (roof shapes:
+primary name of the building, exactly; its parts share it) · kinds (Overture's
+class of the building, OSM's `building=*`: temple, shrine, house …, exactly; its
+parts share it) · grounds (Overture's land-use classes the building's centroid
+stands in: religious, cemetery …) · roofs (roof shapes:
 the facts' where they have one, else Overture's) · minWidth / maxWidth /
-minDepth / maxDepth (metres) · minParty / maxParty (share of the outline) ·
-floors [min, max] · minHeight / maxHeight (metres) · onWater · corner · bounds
-(a lon/lat box or a list of them, holding the building's centroid: a
-neighbourhood where the facts have none) · from (groups the rule may replace;
-default: the generic building groups).
+minDepth / maxDepth (metres) · maxFill (the footprint's share of its smallest
+enclosing rectangle: low for a ring or a C) · minParty / maxParty (share of
+the outline) · floors [min, max] · minHeight / maxHeight (metres) · onWater ·
+corner · bounds (a lon/lat box or a list of them, holding the building's
+centroid: a neighbourhood where the facts have none) · from (groups the rule
+may replace; default: the generic building groups).
 
 Buildings drawn in parts (Overture's parts, lidar's tower parts) share their
 building's facts, and each part has its own height and storeys but no
@@ -118,6 +122,7 @@ def features(
         f: dict[str, Any] = {
             "height": float(inst.get("hm") or 0.0),
             "name": inst.get("_name") or "",
+            "kind": inst.get("_cls") or "",
         }
         if rc is None:
             out[i] = f
@@ -126,6 +131,8 @@ def features(
         lengths = [float(np.hypot(*(b - a))) * m for a, b in sides]
         f["width"] = min(lengths)
         f["depth"] = max(lengths)
+        # the footprint's share of its smallest enclosing rectangle: low for a ring or a C (D-104)
+        f["fill"] = float(poly.area) / max(float(rect.area), 1e-9)
         # shared walls
         shared = 0.0
         near = tree.query(poly.buffer(tol)) if tree is not None else []
@@ -194,6 +201,7 @@ def features(
             "height": float(instances[i].get("hm") or 0.0),
             "parts": True,
             "name": instances[i].get("_name") or "",
+            "kind": instances[i].get("_cls") or "",
         }
         fact = shared.get(instances[i].get("_grp"))
         if fact:
@@ -255,6 +263,10 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         return False
     if "names" in rule and f.get("name", "") not in [str(n) for n in rule["names"]]:
         return False
+    if "kinds" in rule and f.get("kind", "") not in [str(k) for k in rule["kinds"]]:
+        return False
+    if "grounds" in rule and f.get("ground", "") not in [str(g) for g in rule["grounds"]]:
+        return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),
         ("maxWidth", "width", -1),
@@ -264,6 +276,7 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         ("maxParty", "party", -1),
         ("minHeight", "height", 1),
         ("maxHeight", "height", -1),
+        ("maxFill", "fill", -1),
     ):
         if key in rule:
             v = f.get(feat)

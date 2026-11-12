@@ -1,0 +1,13 @@
+name: Chion-in Sanmon
+wikidata: Q107020601
+# Wikidata's coordinates, on OSM's footprint of the gate (三門), which faces
+# west down to Jingū-michi; drawn on that footprint, which runs north-south
+anchor: { lon: 135.7817, lat: 35.0048 }
+height: 24          # the temple's figure (Wikidata has none; PLATEAU measures 24.3 m)
+clear: 0
+footprint: true
+replaces: [15bbb8b1-892e-4326-830c-9a0f6fa7cecd]
+depictions:
+  # a two-storey temple gate (sanmon): five bays, the middle three open, a
+  # skirt roof of tile round the lower storey, a hip-and-gable roof; no name
+  generic: { group: landmark.gate.sanmon }

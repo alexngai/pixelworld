@@ -43,6 +43,9 @@ importers:
 
   apps/game:
     dependencies:
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../../packages/city-kyoto
       '@pixelworlds/city-nyc':
         specifier: workspace:*
         version: link:../../packages/city-nyc
@@ -70,6 +73,9 @@ importers:
       '@pixelworlds/bake':
         specifier: workspace:*
         version: link:../../packages/bake
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../../packages/city-kyoto
       '@pixelworlds/city-nyc':
         specifier: workspace:*
         version: link:../../packages/city-nyc
@@ -124,6 +130,15 @@ importers:
       '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
+
+  packages/city-kyoto:
+    devDependencies:
+      pixelworld:
+        specifier: workspace:*
+        version: link:../pixelworld
+      tsup:
+        specifier: 9.0.0
+        version: 9.0.0(postcss@8.5.32)(typescript@6.0.3)(yaml@2.9.1)
 
   packages/city-nyc:
     devDependencies:

@@ -779,7 +779,17 @@ def build(
     # water
     terrain = region.terrain or {}
     min_lake_cells = round(terrain.get("minLakeArea", 0) / region.meters_per_cell**2)
-    lake = drop_small(landcover == 80, min_lake_cells)
+    lake = landcover == 80
+    if (region.sources.get("lakes") or {}).get("classes"):
+        # Overture's ponds and moats as still water too (D-103)
+        if layout.warped:
+            progress.log("lakes: Overture's water areas aren't laid out on warped layouts yet")
+        else:
+            classes = list(region.sources["lakes"]["classes"])
+            areas = ground_stage.water_area_cells(region, (cy, cx), classes)
+            progress.log(f"lakes: {int(areas.sum())} cells of Overture's {classes}")
+            lake = lake | areas
+    lake = drop_small(lake, min_lake_cells)
     if "maxLakeRelief" in terrain:
         lake = drop_sloped(lake, dem, terrain["maxLakeRelief"])
     river_lines = _lines_in_cells(layout, river_rows, lambda r: 1)
