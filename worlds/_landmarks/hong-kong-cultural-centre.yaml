@@ -1,0 +1,14 @@
+name: Hong Kong Cultural Centre
+# Overture's footprint (香港文化中心, civic): the concert hall, the theatres
+# and their foyers beside the clock tower, 132 m east-west along Salisbury
+# Road and 116 m north-south to the harbour, narrowing toward the water; its
+# centroid. Drawn on that footprint.
+anchor: { lon: 114.170339, lat: 22.293814 }
+height: 50          # depicted: the curved roofs' crest (Overture has no height for it)
+footprint: true
+clear: 0
+replaces: [d76e1ed5-4bc8-48ba-bfec-6e9b4c9d4fc2]
+depictions:
+  # windowless walls of pink tile under a roof that sweeps up from the
+  # harbour side to its crest at the back in a concave curve; no name
+  generic: { group: landmark.hall.curved }

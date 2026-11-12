@@ -60,6 +60,12 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   myojinTorii: "@pixelworlds/city-tokyo",
   utilityPoles: "@pixelworlds/city-tokyo",
   wireSpan: "@pixelworlds/city-tokyo",
+  tongLau: "@pixelworlds/city-hongkong",
+  compositeTower: "@pixelworlds/city-hongkong",
+  pencilTower: "@pixelworlds/city-hongkong",
+  curvedRoofHall: "@pixelworlds/city-hongkong",
+  grandHotel: "@pixelworlds/city-hongkong",
+  neonSign: "@pixelworlds/city-hongkong",
 };
 
 export interface GeneratorInfo {
