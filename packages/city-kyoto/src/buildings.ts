@@ -513,46 +513,27 @@ export const kura: Generator = (ctx) => {
 };
 
 /**
- * A concrete utility pole (denchū): a slim pole, a steel crossarm near its
- * top with an insulator at each end, and on some a transformer drum. With
- * `span`, its wires: two power lines from the crossarm's ends and a thicker
- * telecom cable lower down, reaching `span` voxels along y to each side and
- * sagging toward their ends, where the next pole's meet them (placed with
- * the street props' `along`, turned to run with the road; D-102). A prop:
- * the wires hang in the air.
- * params: height (16 voxels), transformers (share with a transformer; 0.3),
- * span (voxels each side; 0, no wires), sag (voxels at mid-span; 2), wx,
- * wy (the wires' direction in voxels: 0, 1 along y; 1, 1 a diagonal street;
- * 2, −1 and 1, −2 the 2:1 streets; D-103, D-104).
- * roles: pole, arm (pole if absent), transformer (arm if absent), wire (arm if absent).
+ * A concrete utility pole (denchū): a slim pole, a steel crossarm across x
+ * near its top with an insulator at each end, and on some a transformer drum.
+ * Its wires are spans of their own (Tokyo's `wireSpan`: two power lines from
+ * the insulators and a telecom cable from the pole, one-pixel lines at any
+ * angle), placed with it by the street props' `wires`, which turn the pole
+ * so x runs across the street (D-105). A prop.
+ * params: height (16 voxels), transformers (share with a transformer; 0.3).
+ * roles: pole, arm (pole if absent), transformer (arm if absent).
  */
 export const utilityPole: Generator = (ctx) => {
   const { rand, param } = ctx;
-  const H = Math.max(6, Math.round(param("height", 16) * (0.9 + rand() * 0.2)));
-  const span = Math.max(0, Math.round(param("span", 0)));
-  const sag = Math.max(0, Math.round(param("sag", 2)));
-  const wx = Math.round(param("wx", 0));
-  const wy = Math.round(param("wy", 1));
-  if (wx !== 0) return slantPole(ctx, H, span, sag, wx, wy);
-  const c = span; // the pole's row
-  const m = new VoxelModel(5, 2 * span + 1, H + 1);
+  const H = Math.max(6, Math.round(param("height", 16)));
+  const m = new VoxelModel(5, 1, H);
   const pole = m.material(ctx.ramp("pole"));
   const arm = optional(ctx, m, "arm", pole);
   const drum = optional(ctx, m, "transformer", arm);
-  const wire = optional(ctx, m, "wire", arm);
-  for (let z = 0; z < H; z++) m.set(2, c, z, pole);
-  for (let x = 0; x < 5; x++) m.set(x, c, H - 2, arm);
-  m.set(0, c, H - 1, arm);
-  m.set(4, c, H - 1, arm);
-  if (rand() < param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(3, c, z, drum);
-  for (let t = 1; t <= span; t++) {
-    const drop = Math.round(sag * (1 - (1 - t / span) ** 2));
-    for (const y of [c - t, c + t]) {
-      m.set(0, y, H - 1 - drop, wire);
-      m.set(4, y, H - 1 - drop, wire);
-      m.set(2, y, Math.max(1, H - 5 - drop), wire);
-    }
-  }
+  for (let z = 0; z < H; z++) m.set(2, 0, z, pole);
+  for (let x = 0; x < 5; x++) m.set(x, 0, H - 2, arm);
+  m.set(0, 0, H - 1, arm);
+  m.set(4, 0, H - 1, arm);
+  if (rand() < param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(3, 0, z, drum);
   return m;
 };
 
@@ -570,32 +551,6 @@ function lineCells(c: number, wx: number, wy: number, reach: number): [number, n
 
 /** Steps along a line's longer axis for `voxels` of its length. */
 const stepsFor = (voxels: number, wx: number, wy: number) => Math.round((voxels * Math.max(Math.abs(wx), Math.abs(wy))) / Math.hypot(wx, wy));
-
-/** The pole on a diagonal or 2:1 street (D-103, D-104): its crossarm across (wx, wy), its wires along it. */
-function slantPole(ctx: GenContext, H: number, span: number, sag: number, wx: number, wy: number): VoxelModel {
-  const reach = stepsFor(span, wx, wy);
-  const c = reach + 3;
-  const m = new VoxelModel(2 * c + 1, 2 * c + 1, H + 1);
-  const pole = m.material(ctx.ramp("pole"));
-  const arm = optional(ctx, m, "arm", pole);
-  const drum = optional(ctx, m, "transformer", arm);
-  const wire = optional(ctx, m, "wire", arm);
-  for (let z = 0; z < H; z++) m.set(c, c, z, pole);
-  // the crossarm across the wires, an insulator at each end
-  const across = lineCells(c, -wy, wx, 2);
-  for (const [x, y] of across) m.set(x, y, H - 2, arm);
-  const ends = [across[0]!, across[across.length - 1]!];
-  for (const [x, y] of ends) m.set(x, y, H - 1, arm);
-  if (ctx.rand() < ctx.param("transformers", 0.3)) for (let z = Math.round(H * 0.55); z < Math.round(H * 0.55) + 3; z++) m.set(across[3]![0], across[3]![1], z, drum);
-  // two power lines from the insulators and the telecom cable from the pole, sagging toward mid-span
-  for (const [ex, ey, from] of [[ends[0]![0], ends[0]![1], H - 1], [ends[1]![0], ends[1]![1], H - 1], [c, c, H - 5]] as const)
-    for (const [x, y, t] of lineCells(c, wx, wy, reach)) {
-      if (t === 0) continue;
-      const drop = Math.round(sag * (1 - (1 - Math.abs(t) / reach) ** 2));
-      m.set(x + ex - c, y + ey - c, Math.max(1, from - drop), wire);
-    }
-  return m;
-}
 
 /**
  * A stretch of stone wall (a castle's ishigaki, a retaining wall) along

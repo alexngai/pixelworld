@@ -75,29 +75,40 @@ export const utilityPoles: Generator = ({ rand, ramp, ramps, param }) => {
  * one pole to the same over the ground at the other, sagging between them in
  * short straight pieces. The pipeline places it with the poles
  * (`streetProps` with `wires`). A prop, not a building: it hangs over the
- * street.
+ * street. With `across`, two lines instead, from the ends of a crossarm
+ * `across` voxels to each side of the poles (D-105).
  * params: height (voxels over the ground at each end; 25, a voxel over
- * `utilityPoles`' crossarm at its default height), sag (2).
+ * `utilityPoles`' crossarm at its default height), sag (2), across (0: one
+ * line, over the poles; else a pair, that many voxels to either side along
+ * the cell axis nearer square to the span, as a pole's crossarm turns by
+ * quarter turns), cable (0: none; else one more line over the poles, that
+ * many voxels over the ground).
  * roles: wire.
  */
 export const wireSpan: Generator = ({ mask, frame, param, ramp }) => {
   if (!mask || !frame?.line) throw new Error("wireSpan needs a line object's footprint and frame");
   const h = Math.max(2, param("height", 25));
   const sag = Math.max(0, param("sag", 2));
+  const across = Math.max(0, param("across", 0));
+  const cable = Math.max(0, param("cable", 0));
   const { a, b } = frame.line;
   const [ra, rb] = frame.line.rise ?? [0, 0];
   const v = frame.voxel;
   const m = new VoxelModel(mask.sx, mask.sy, Math.ceil(Math.max(ra, rb, 0) + h) + 1);
   const wire = m.material(ramp("wire"));
+  // the strands: sideways offset (voxels) and height over the ground
+  const [ox, oy] = Math.abs(b[1] - a[1]) >= Math.abs(b[0] - a[0]) ? [across, 0] : [0, across];
+  const strands: [number, number, number][] = across > 0 ? [[-ox, -oy, h], [ox, oy, h]] : [[0, 0, h]];
+  if (cable > 0) strands.push([0, 0, cable]);
   // in the model's voxels: x and y from the frame's corner, z over the object's base
-  const at = (t: number): [number, number, number] => [
-    (a[0] + (b[0] - a[0]) * t - frame.x0) / v,
-    (a[1] + (b[1] - a[1]) * t - frame.y0) / v,
-    ra + (rb - ra) * t + h - sag * 4 * t * (1 - t),
+  const at = (t: number, [dx, dy, z]: [number, number, number]): [number, number, number] => [
+    (a[0] + (b[0] - a[0]) * t - frame.x0) / v + dx,
+    (a[1] + (b[1] - a[1]) * t - frame.y0) / v + dy,
+    ra + (rb - ra) * t + z - sag * 4 * t * (1 - t),
   ];
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]) / v;
   const n = Math.max(2, Math.ceil(len / 6)); // a piece every six voxels or so
-  for (let k = 0; k < n; k++) m.line(at(k / n), at((k + 1) / n), wire);
+  for (const s of strands) for (let k = 0; k < n; k++) m.line(at(k / n, s), at((k + 1) / n, s), wire);
   return m;
 };
 

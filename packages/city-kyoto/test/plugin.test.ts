@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { KNOWN_PLUGIN_GENERATORS, hasGenerator, listGenerators, loadPlugin, type AssetCatalog } from "pixelworld/generators";
+import { register as registerTokyo } from "@pixelworlds/city-tokyo";
 import { describe, expect, it } from "vitest";
 import { PLUGIN_NAME, cityPlugin, kyotoGenerators, plugin, register } from "../src/index";
 
@@ -36,9 +37,10 @@ describe("@pixelworlds/city-kyoto", () => {
     expect(got.sort()).toEqual(Object.keys(kyotoGenerators()).sort());
   });
 
-  it("covers every generator the kyoto pack names that core doesn't", async () => {
-    expect(kyoto.plugins).toEqual([PLUGIN_NAME]);
+  it("with Tokyo's (its wire spans, D-105), covers every generator the kyoto pack names that core doesn't", async () => {
+    expect(kyoto.plugins).toEqual([PLUGIN_NAME, "@pixelworlds/city-tokyo"]);
     await register();
+    await registerTokyo();
     for (const a of Object.values(kyoto.assets)) expect(hasGenerator(a.generator), a.generator).toBe(true);
   });
 });
