@@ -13,7 +13,7 @@ test.use({ baseURL: `http://localhost:${GAME_PORT}` });
 
 async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
-  await page.goto(`/?hud=0&cache=0&traffic=0&fog=0&paused=1&w=${width}&h=${height}&${query}`);
+  await page.goto(`/?hud=0&cache=0&ground=0&traffic=0&fog=0&paused=1&w=${width}&h=${height}&${query}`);
   await page.waitForFunction(() => window.__game !== undefined, null, { timeout: 120_000 });
   await page.evaluate(() => window.__game!.ready());
   await page.evaluate(() => window.__game!.pause(true));
