@@ -43,11 +43,13 @@ GROUPS = {FACTS: "facts source", SOURCES: "source adapter", STAGES: "stage hook"
 
 # Shipped with the pipeline, as "module:attribute" (loaded on first use).
 BUILTIN: dict[str, dict[str, str]] = {
-    FACTS: {},
+    FACTS: {"areas": "pixelworld_pipeline.areas:AreaFacts"},
     SOURCES: {
         "usgs-3dep-1arcsec": "pixelworld_pipeline.sources.rasters:USGS_3DEP_1ARCSEC",
         "usgs-3dep-13arcsec": "pixelworld_pipeline.sources.rasters:USGS_3DEP_13ARCSEC",
         "esa-worldcover-2021": "pixelworld_pipeline.sources.rasters:ESA_WORLDCOVER_2021",
+        "copernicus-glo30": "pixelworld_pipeline.sources.rasters:COPERNICUS_GLO30",
+        "copernicus-glo30-ground": "pixelworld_pipeline.sources.rasters:COPERNICUS_GLO30_GROUND",
     },
     STAGES: {},
 }

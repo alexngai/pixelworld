@@ -229,6 +229,107 @@ USGS_3DEP_1ARCSEC = USGS3DEP("usgs-3dep-1arcsec", 30.0, "1 arc-second", deepest_
 USGS_3DEP_13ARCSEC = USGS3DEP("usgs-3dep-13arcsec", 10.0, "1/3 arc-second")
 
 
+def copernicus_glo30_tiles(bounds: tuple[float, float, float, float]) -> list[str]:
+    w, s, e, n = bounds
+    urls = []
+    for lat in range(math.floor(s), math.ceil(n)):
+        for lon in range(math.floor(w), math.ceil(e)):
+            ns = f"{'N' if lat >= 0 else 'S'}{abs(lat):02d}_00"
+            ew = f"{'E' if lon >= 0 else 'W'}{abs(lon):03d}_00"
+            name = f"Copernicus_DSM_COG_10_{ns}_{ew}_DEM"
+            urls.append(f"https://copernicus-dem-30m.s3.amazonaws.com/{name}/{name}.tif")
+    return urls
+
+
+class CopernicusGLO30(RasterSource):
+    """Copernicus DEM GLO-30: a 30 m surface model of the whole world, 1°×1°
+    cloud-optimized GeoTIFFs on AWS (D-107). A surface model: in a dense city
+    or a forest it stands on roofs and canopy; `copernicus-glo30-ground`
+    takes them off. Tiles over the sea don't exist and are skipped."""
+
+    role = "terrain"
+    native_m = 30.0
+    deepest_overview = 8
+    attribution = {
+        "name": (
+            "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence "
+            "and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; "
+            "all rights reserved. The organisations in charge of the Copernicus programme by law "
+            "or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30."
+        ),
+        "license": "Copernicus DEM licence (GLO-30): free, worldwide, adaptation allowed",
+        "url": "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM",
+    }
+
+    def tiles(self, bounds: tuple[float, float, float, float]) -> list[str]:
+        return copernicus_glo30_tiles(bounds)
+
+
+def ground_filter(a: np.ndarray, k: int) -> np.ndarray:
+    """A surface model's ground: a grey opening (the lowest value in each k×k
+    window, then the highest of those) that takes off what stands narrower
+    than the window (buildings, trees), then a 3×3 mean. Water (≤ 0.5 m) and
+    gaps (NaN) are left as they are and don't pull the shore down (D-107)."""
+    from scipy import ndimage
+
+    if k < 3:
+        return a
+    water = ~(a > 0.5)
+    b = ndimage.grey_erosion(np.where(water, np.inf, a), size=(k, k))
+    b = ndimage.grey_dilation(np.where(water, -np.inf, b), size=(k, k))
+    b = np.where(np.isfinite(b), b, a)
+    ok = np.isfinite(b)
+    weight = ndimage.uniform_filter(ok.astype(float), 3)
+    mean = ndimage.uniform_filter(np.where(ok, b, 0.0), 3) / np.maximum(weight, 1e-9)
+    return np.where(water | ~ok, a, mean)
+
+
+class CopernicusGLO30Ground(CopernicusGLO30):
+    """GLO-30 with buildings and trees taken off by `ground_filter` over a
+    210 m window, on its own 1″ grid before it's warped onto the region's.
+    Measured in Kowloon against the Lands Department's 5 m DTM: an RMSE of
+    7.9 m on flat streets (12.3 m unfiltered), 15.4 m on slopes over 15°
+    (13.4 m unfiltered), so for flat dense cities, not hillsides (D-107)."""
+
+    window_m = 210.0
+
+    def read_into(self, dst, transform, crs, bounds, overview, resampling, nodata) -> list[str]:
+        from rasterio.transform import from_origin
+
+        pad = 2 * self.window_m / 111_000  # degrees, past the window's reach
+        w, s, e, n = bounds[0] - pad, bounds[1] - pad, bounds[2] + pad, bounds[3] + pad
+        step = overview / 3600  # GLO-30's 1″ pixels at this overview (wider in longitude past 50°)
+        grid = np.full((math.ceil((n - s) / step), math.ceil((e - w) / step)), np.nan, np.float32)
+        grid_transform = from_origin(w, n, step, step)
+        missing = _warp_tiles(
+            self.tiles((w, s, e, n)),
+            grid,
+            grid_transform,
+            "EPSG:4326",
+            overview,
+            Resampling.nearest,
+            np.nan,
+        )
+        k = int(round(self.window_m / (self.native_m * overview))) | 1
+        reproject(
+            source=ground_filter(grid, k),
+            destination=dst,
+            src_transform=grid_transform,
+            src_crs="EPSG:4326",
+            src_nodata=np.nan,
+            dst_transform=transform,
+            dst_crs=crs,
+            dst_nodata=nodata,
+            init_dest_nodata=False,
+            resampling=resampling,
+        )
+        return missing
+
+
+COPERNICUS_GLO30 = CopernicusGLO30()
+COPERNICUS_GLO30_GROUND = CopernicusGLO30Ground()
+
+
 def fill_nan_nearest(a: np.ndarray, max_iter: int = 64) -> np.ndarray:
     """Fill NaNs by repeatedly averaging valid 4-neighbours (small gaps at tile edges)."""
     a = a.copy()
