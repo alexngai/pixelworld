@@ -380,6 +380,15 @@ test.describe("Tokyo (D-092, D-093)", () => {
   });
 });
 
+test.describe("Hong Kong (D-107, D-108, D-109)", () => {
+  test("Yau Ma Tei's tong lau under neon signs: Kowloon on open data alone", async ({ page }) => {
+    // the hongkong style pack and its city pack; terrain from GLO-30 with its
+    // buildings filtered off, heights from OSM or each neighbourhood's (D-107)
+    await open(page, "world=/hongkong-walk/&marker=0&zoom=2&rot=0&at=114.1700,22.3120");
+    await expect(page.locator("#view")).toHaveScreenshot("hongkong-walk-yaumatei-r0.png");
+  });
+});
+
 test.describe("San Francisco (D-055, D-056)", () => {
   test("Victorian rows by Alamo Square: typologies on the walking level", { tag: "@smoke" }, async ({ page }) => {
     // the city's own style pack (bay-area), named by the world

@@ -1,0 +1,15 @@
+name: The Peninsula Hong Kong
+# Overture's footprints: the 1928 hotel (40 m, 7 storeys), 88 m east-west by
+# 72 m, its wings round a forecourt open to Salisbury Road (south), and the
+# 30-storey tower built behind it in 1994 (115 m, 59 by 24 m), which this
+# replaces too. Drawn as one on the old hotel's footprint, its centroid;
+# the tower rises across the back of the main block.
+anchor: { lon: 114.171773, lat: 22.295247 }
+height: 115          # the tower's roof (Overture's); the old hotel is 0.35 of it
+footprint: true
+replaces: [3e57e8da-c156-4540-a03b-06a55519ae95, 77b494f4-f4ef-4e72-bd5d-58d633fa87ed]
+depictions:
+  # cream wings round the forecourt over a granite ground storey, under a
+  # balustrade, and the tower behind them with its glazed top storey and a
+  # helipad's ring; no name
+  generic: { group: landmark.hotel }

@@ -114,14 +114,14 @@ def test_a_missing_plugin_lists_what_is_installed(monkeypatch):
         plugins.load(plugins.FACTS, "cadastre", where="objects.typology.facts")
     msg = str(e.value)
     assert "no facts source named 'cadastre' (named by objects.typology.facts)" in msg
-    assert "Installed facts sources: bag." in msg
+    assert "Installed facts sources: areas, bag." in msg
     assert "entry point group 'pixelworld.facts'" in msg and "docs/plugins.md" in msg
-    assert e.value.available == ["bag"]
+    assert e.value.available == ["areas", "bag"]
     # names published from this repository say which package to install
     installed(monkeypatch, plugins.FACTS)
     with pytest.raises(plugins.PluginNotFoundError) as e:
         plugins.load(plugins.FACTS, "datasf")
-    assert "Installed facts sources: none." in str(e.value)
+    assert "Installed facts sources: areas." in str(e.value)
     assert "pip install pixelworld-city-sf" in str(e.value)
 
 
@@ -130,6 +130,8 @@ def test_a_missing_terrain_source_lists_terrain_sources_only():
         rasters.source("ahn-dtm-05", "terrain", where="sources.dem.kind")
     # the built-ins, and Paris's and Japan's city packs' (installed in this repository)
     assert e.value.available == [
+        "copernicus-glo30",
+        "copernicus-glo30-ground",
         "gsi-dem",
         "ign-lidar-hd-mnt",
         "ign-rgealti",

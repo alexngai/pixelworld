@@ -1,0 +1,11 @@
+name: International Commerce Centre
+# Overture's footprint (環球貿易廣場, 484 m, 118 storeys), over Kowloon
+# station: a square about 60 m on a side; its centroid
+anchor: { lon: 114.160226, lat: 22.303378 }
+height: 484
+clear: 30
+replaces: [5798fa51-891d-4db8-89ac-8a3716fe6d0f]
+depictions:
+  # a tapering shaft of blue-green glass between steel fins, 60 m across at
+  # its foot; no light show, no name
+  generic: { group: landmark.tower.glass }

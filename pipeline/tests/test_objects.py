@@ -672,3 +672,23 @@ def test_walls_stand_in_segments_along_barrier_lines(monkeypatch):
     walls = [i for i in out if i["g"] == "wall.stone"]
     assert asked == [["retaining_wall"]]
     assert len(walls) >= 10 and {i["r"] for i in walls} == {1}  # an east-west line
+
+
+def test_street_rows_keep_to_a_name_or_keep_off_one(monkeypatch):
+    region = Region.from_dict(SPEC | {"sources": {**SPEC["sources"], "overture": {"release": "x"}}})
+    cx, cy = region.cells
+    p = objects.Placement(region, np.ones((cy, cx), dtype=bool))
+    rows = [
+        {"id": "a", "class": "secondary", "names": {"primary": "Nathan Road"},
+         "geometry": "LINESTRING (-115.195 36.001, -115.195 36.009)"},
+        {"id": "b", "class": "secondary", "names": {"primary": "Shanghai Street"},
+         "geometry": "LINESTRING (-115.199 36.005, -115.191 36.005)"},
+    ]  # fmt: skip
+    # names come from their own query of the road layer
+    monkeypatch.setattr(objects.overture, "query", lambda *a, **k: rows)
+    rule = {"group": "prop.neon", "roads": ["secondary"], "across": True, "spacing": 40}
+    every = objects.street_trees(p, rule, rows, _none, "t")
+    on = objects.street_trees(p, rule | {"name": "nathan"}, rows, _none, "t")
+    off = objects.street_trees(p, rule | {"notName": "Nathan Road"}, rows, _none, "t")
+    assert on and off and len(on) + len(off) == len(every)
+    assert {i["r"] for i in on} == {0} and {i["r"] for i in off} == {1}

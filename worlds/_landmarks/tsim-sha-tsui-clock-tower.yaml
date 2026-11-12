@@ -1,0 +1,16 @@
+name: Tsim Sha Tsui Clock Tower
+# the Kowloon-Canton Railway terminus's clock tower (1915), all that is left
+# of the station, on the waterfront: Overture's footprint (尖沙咀鐘樓, 44 m)
+# is about 8 m across, centred at 114.169538 E 22.293593 N. A line landmark
+# 8 m long through it, 8 m thick, so the kit's tower hall draws the shaft on
+# a band as wide as the tower, a low plinth with arched openings at its foot
+line: [[114.169499, 22.293593], [114.169577, 22.293593]]
+height: 44
+thickness: 8
+bulge: 0
+clear: 8
+replaces: [95a4bb07-56fd-4d55-8db1-80e9db75b90d]
+depictions:
+  # a red-brick shaft with a clock on each face under a cornice, an open
+  # belvedere, a lantern and a pointed granite cap with its flagpole; no lettering
+  generic: { group: landmark.tower.clock }

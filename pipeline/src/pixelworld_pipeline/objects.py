@@ -564,7 +564,8 @@ def street_trees(
     turns: list[int] = []
     groups: list[str] = []
     name = rule.get("name", "").lower()
-    if name:
+    not_name = rule.get("notName", "").lower()
+    if name or not_name:
         # names aren't in the road layer's columns; fetch them for this rule only
         road_rows = overture.query(
             p.region.sources["overture"]["release"],
@@ -578,7 +579,8 @@ def street_trees(
     for row in sorted(road_rows, key=lambda r: r["id"]):
         if row["class"] not in classes:
             continue
-        if name and name not in ((row.get("names") or {}).get("primary") or "").lower():
+        called = ((row.get("names") or {}).get("primary") or "").lower()
+        if (name and name not in called) or (not_name and not_name in called):
             continue
         line = p.project(shapely.from_wkt(row["geometry"]))
         parts = list(line.geoms) if hasattr(line, "geoms") else [line]
