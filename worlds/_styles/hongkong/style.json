@@ -125,6 +125,11 @@
       },
       "params": { "style": 1, "litFraction": 0.35 }
     },
+    "building.village": {
+      "generator": "building",
+      "ramps": { "wall": "mosaic-white", "wall.b": "paint-cream", "wall.c": "paint-salmon", "trim": "mosaic-white", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "params": { "style": 1, "litFraction": 0.35 }
+    },
     "building.civic": {
       "generator": "block",
       "ramps": {
@@ -374,6 +379,11 @@
       "ramps": { "wall": "paint-salmon", "trim": "tile-beige", "roof": "paint-salmon" },
       "params": { "low": 0.3, "rise": 6 }
     },
+    "landmark.hall.curved.glass": {
+      "generator": "curvedRoofHall",
+      "ramps": { "wall": "curtain-glass", "trim": "steel", "roof": "steel" },
+      "params": { "low": 0.3, "rise": 6 }
+    },
     "landmark.hotel": {
       "generator": "grandHotel",
       "ramps": { "wall": "paint-cream", "trim": "mosaic-white", "base": "granite", "pad": "marking", "roof": "roof-flat", "window": "glass", "lit": "lit" },
@@ -388,6 +398,16 @@
       "generator": "obeliskTower",
       "ramps": { "structure": "steel", "window": "curtain-glass" },
       "params": { "base": 0.125, "top": 0.82, "corner": 0.1, "crown": 0.04 }
+    },
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "steel", "window": "glass" },
+      "params": { "base": 0.14, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1 }
+    },
+    "landmark.tower.pyramid": {
+      "generator": "pyramidTower",
+      "ramps": { "structure": "granite", "window": "curtain-glass" },
+      "params": { "base": 0.16, "spire": 0.18, "wing": 0.45 }
     },
     "prop.neon": {
       "generator": "neonSign",

@@ -1136,7 +1136,9 @@ VEGETATION_RULE = Map(
             "`built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss`.",
         ),
         "canopy": Key(
-            Num(0, unit="m"), "Instead: where the canopy height map is at least this tall."
+            Num(0, unit="m"),
+            "Where the canopy height map is at least this tall (with `landcover`, on those "
+            "classes only).",
         ),
         "byLandcover": Key(
             MapOf(Str(landcover_classes), ListOf(Str()), "mapping of class → groups"),

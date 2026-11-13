@@ -1,0 +1,10 @@
+name: Central Plaza
+# Overture's footprint (中環廣場, 309 m to its roof, 78 storeys) on Harbour
+# Road, Wan Chai, about 60 m across; its centroid
+anchor: { lon: 114.173643, lat: 22.279963 }
+height: 374          # the mast's tip; the roof is at 309 m
+clear: 30
+replaces: [9e0f056c-a83a-4055-b109-cba6b704eb72]
+depictions:
+  # a glass tower under a pyramid roof and a mast; no clock lights, no name
+  generic: { group: landmark.tower.pyramid }

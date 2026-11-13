@@ -240,7 +240,9 @@ def _codes(names: list[str]) -> set[int]:
 def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=None) -> list[dict]:
     """Jittered-lattice scatter where the land cover matches, thinned by density.
     A rule with `canopy: <metres>` keeps points where the canopy height map
-    (WRI/Meta, 1 m) is at least that tall instead (M3): trees where trees are."""
+    (WRI/Meta, 1 m) is at least that tall (M3): trees where trees are; with
+    `landcover` too, only on those classes (D-117: town's trees placed, the
+    woods left to the client's scatter)."""
     spacing = float(rule["spacing"])
     density = float(rule.get("density", 1.0))
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
@@ -264,7 +266,7 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
         if canopy is not None and len(cand):
             tall[cand] = canopy.sample(xs[cand], ys[cand], p.region.crs) >= float(rule["canopy"])
         ok &= tall
-    else:
+    if codes is not None:
         ok &= np.isin(p.landcover_at(xs, ys), list(codes))
     ok &= ~occupied(xs, ys)
     keep = np.nonzero(ok)[0]

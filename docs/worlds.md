@@ -747,7 +747,7 @@ Other keys here are the source's options.
 | `spacing` | number, > 0 (m) | **required** | Grid spacing of candidate spots. |
 | `density` | number, in [0, 1] | 1 | Share of spots kept. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | ESA WorldCover classes it grows on: `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss`. |
-| `canopy` | number, ≥ 0 (m) | — | Instead: where the canopy height map is at least this tall. |
+| `canopy` | number, ≥ 0 (m) | — | Where the canopy height map is at least this tall (with `landcover`, on those classes only). |
 | `byLandcover` | mapping of class → groups | — | Pick the group by the land cover it stands on. |
 
 <a id="spec-objects-streettrees"></a>

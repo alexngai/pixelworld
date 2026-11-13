@@ -380,12 +380,19 @@ test.describe("Tokyo (D-092, D-093)", () => {
   });
 });
 
-test.describe("Hong Kong (D-107, D-108, D-109)", () => {
+test.describe("Hong Kong (D-107, D-108, D-109, D-117)", () => {
   test("Yau Ma Tei's tong lau under neon signs: Kowloon on open data alone", async ({ page }) => {
     // the hongkong style pack and its city pack; terrain from GLO-30 with its
     // buildings filtered off, heights from OSM or each neighbourhood's (D-107)
     await open(page, "world=/hongkong-walk/&marker=0&zoom=2&rot=0&at=114.1700,22.3120");
     await expect(page.locator("#view")).toHaveScreenshot("hongkong-walk-yaumatei-r0.png");
+  });
+
+  test("Central's towers over the harbour: the whole of Hong Kong Island (D-115, D-117)", async ({ page }) => {
+    // Two IFC and the Bank of China Tower (generic), the Mid-Levels behind;
+    // the ground filtered only in town, the woods the client's scatter
+    await open(page, "world=/hongkong-island/&marker=0&zoom=1&rot=0&at=114.1600,22.2820");
+    await expect(page.locator("#view")).toHaveScreenshot("hongkong-island-central-r0.png");
   });
 });
 

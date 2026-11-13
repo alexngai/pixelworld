@@ -278,6 +278,29 @@ Sources and licenses:
 - Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## hongkong-island
+
+Hong Kong Island's walking level (D-117), built from [`worlds/hongkong/island.yaml`](../worlds/hongkong/island.yaml) on the `hongkong` style pack: the whole island from Kennedy Town to Cape D'Aguilar and from North Point's waterfront to Stanley, with the north tip of Lamma, at 10 m per cell (1650 × 1086 cells, 442 chunks), on open data alone (D-107). Heights are true (`heightStretch` 1.0); roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
+
+- **Terrain:** Copernicus GLO-30 with buildings filtered off in town and at most a canopy's height off the woods (D-115): 201 drawn steps from the sea to the Peak. Its 183 summits with a surveyed height come out a median 14 m low (RMSE 15 m). On the Mid-Levels' slopes streets and building bases are several floors off (docs/cities.md).
+- **Buildings:** 20,947 from Overture footprints (OpenStreetMap). OSM gives floors on 37–79% along the north shore and far fewer on the Peak and the south side; the rest take their neighbourhood's typical height from the spec (the `areas` facts source: 20 neighbourhoods, 9,208 buildings).
+- **Types:** composite buildings (4,487), residential towers (1,924), tong lau (1,670) in the old districts, podiums and malls (340), civic buildings (315), village houses and villas (7,321, white tile, cream or salmon), glass towers (353) and hotels (40); 1,722 commercial and 2,733 residential keep the defaults.
+- **Also:** 2,139 neon signs across Wan Chai's and Causeway Bay's back streets, 10,808 canopy trees in town and 7,157 street trees (the country parks' woods are the client's scatter), 6,582 street lights and 634 signals; the trams in the street (1,999 cells) and the Peak Tram and the MTR's open stretches (896 cells); 9,663 traffic routes (22 for the trams, 36 for ferries). Road tunnels over 150 m aren't drawn (D-115).
+- **Landmarks (generic depictions, D-117):** Two IFC, the Bank of China Tower, Central Plaza and the Convention Centre's New Wing.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 6.1 MB. Built in about 60 s with the download cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/hongkong/island.yaml
+```
+
+Sources and licenses:
+- Elevation: Copernicus DEM GLO-30, produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Copernicus DEM licence.
+- Land cover (and where the ground filter applies): ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

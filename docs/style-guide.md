@@ -604,6 +604,7 @@ A full pack (`worlds/_styles/hongkong/style.json`), laid out like `tokyo` with i
 
 - **Nothing projects** but lines (the building rules, §13): balconies, verandas and their railings are painted flush on the wall; the laundry poles and aerials are one-pixel lines.
 - **Paint schemes:** trim follows the wall's variant (§15): a mint tong lau's railings are white, a white mosaic one's sky blue.
+- **Village houses and villas** (`building.village`, D-117): core's `building` in white mosaic tile, cream or salmon paint, under a flat roof: Shek O's and Stanley's three-storey houses, the Peak's villas.
 - **Generic groups:** `building.residential`, `building.commercial`, `building.parking` (core's `building`, concrete) and `building.tower` (below) are mapped, as the pipeline names them before its typology rules; `building` is core's low-rise in concrete and tile for anything else.
 
 **Reused from San Francisco:** `building.civic` (`block`, white tile and concrete), `building.industrial` (`block`'s warehouse: flatted factories) and `building.tower` (`sfTower`: blue-green curtain glass more than half the time, white slabs, granite and a few postmodern towers in tile, for the commercial towers of Tsim Sha Tsui and West Kowloon).
@@ -619,4 +620,7 @@ A full pack (`worlds/_styles/hongkong/style.json`), laid out like `tokyo` with i
 | `landmark.tower.glass` | `obeliskTower` (core's kit) | the International Commerce Centre: a shaft of blue-green glass between steel fins, 60 m across at its foot, tapering as it rises; its corners round off near the top, which the real tower's do not |
 | `landmark.tower.clock` | `towerHall` (core's kit) | the Tsim Sha Tsui Clock Tower: a red-brick shaft on a low plinth with arched openings, a clock on each face (they glow at night) under a cornice, an open belvedere, a lantern and a pointed granite cap with its flagpole |
 | `landmark.hall.curved` | `curvedRoofHall` (Hong Kong's) | the Hong Kong Cultural Centre, on its footprint: walls of pink tile with no windows, a joint every five courses, under a roof that sweeps up from the harbour side to its crest at the back in a concave curve, flat at its foot and steep near the top |
+| `landmark.hall.curved.glass` | `curvedRoofHall` (Hong Kong's) | the Convention Centre's New Wing (D-117), on its footprint: the same roof in steel over walls of curtain glass |
+| `landmark.tower.obelisk.diagonal` | `obeliskTower` (core's kit, `turn: 1`) | the Bank of China Tower (D-117): a square tower of glass whose corners are cut as it rises, to a square turned 45 degrees at its top; no masts, no bracing |
+| `landmark.tower.pyramid` | `pyramidTower` (core's kit) | Central Plaza (D-117): a granite-framed tower of curtain glass under a pyramid roof and a mast; no clock lights |
 | `landmark.hotel` | `grandHotel` (Hong Kong's) | The Peninsula, on the old hotel's footprint: cream wings round the forecourt over a granite ground storey, paired windows, a cornice and a balustrade; across the back of its main block, the 1994 tower to the full height, its windows in bands, its top storey glazed and a helipad's ring on its roof |
