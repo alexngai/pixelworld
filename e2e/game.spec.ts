@@ -209,7 +209,9 @@ test.describe("the game (M4)", () => {
   });
 
   test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", async ({ page }) => {
-    await open(page, "");
+    // a small canvas: each change of map waits for the new map's view, and the walking map's tiles
+    // are heavy (44 s at 640×360 with one bake worker, 14 s at 320×180); nothing here reads pixels
+    await open(page, "", 320, 180);
     const from = (await state(page)).lonLat!;
     const km = (a: [number, number]) => Math.hypot((a[0] - from[0]) * 90, (a[1] - from[1]) * 111);
     const arrive = async (want: { mode: string; world: string }) => {
