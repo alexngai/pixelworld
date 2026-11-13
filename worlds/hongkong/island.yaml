@@ -13,7 +13,7 @@
 # them and from each neighbourhood's typical height where it doesn't, and the
 # ground from Copernicus GLO-30 with its buildings filtered off in town and
 # a canopy's height off the woods (D-115): the island's surveyed summits come
-# out a median 14 m low. On the Mid-Levels' slopes streets and building
+# out a median 16 m low. On the Mid-Levels' slopes streets and building
 # bases are off by several floors (docs/cities.md).
 # Build: cd pipeline && uv run pixelworld build ../worlds/hongkong/island.yaml
 id: hongkong-island
@@ -112,8 +112,10 @@ style: hongkong
 start: { lon: 114.1588, lat: 22.2815 } # Statue Square, Central
 
 sources:
-  # Copernicus GLO-30 with buildings filtered off in town (D-107, D-115)
-  dem: { kind: copernicus-glo30-ground, overview: 1 }
+  # Copernicus GLO-30 with buildings filtered off in town (D-107, D-115);
+  # its 30 m pixels are coarser than the cells and the micro-cells, so they're
+  # interpolated (bilinear), not each spread flat over 3×3 cells (D-132)
+  dem: { kind: copernicus-glo30-ground, overview: 1, resampling: bilinear }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
   features: { kind: overture, release: 2026-10-21.0 }
   # facts by neighbourhood box (D-107), for objects.typology: no records to

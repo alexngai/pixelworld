@@ -1,5 +1,5 @@
 {
-  "packageHash": "783cbfc8ebc21c3599bb8443cc605cef52ec72a88f048bc5437c4a680152885d",
+  "packageHash": "21744c1842aca4cfa6e2e4d108326304faa6bb8deb68725d915d8e28cc5329d1",
   "cells": [
     1650,
     1086
@@ -7,7 +7,7 @@
   "chunks": 442,
   "heightRange": [
     -2,
-    199
+    198
   ],
   "inputs": {
     "roadSegments": 11059,
@@ -30,9 +30,9 @@
     "landmark.tower.obelisk.diagonal": 1,
     "landmark.tower.pyramid": 1,
     "prop.neon": 2139,
-    "prop.signal": 634,
-    "prop.streetlight": 6582,
-    "tree": 10808,
+    "prop.signal": 642,
+    "prop.streetlight": 6869,
+    "tree": 11402,
     "tree.street": 7157
   },
   "roads": {
@@ -60,14 +60,14 @@
     "divided": 17883
   },
   "surfaces": {
-    "woodland": 668322,
+    "woodland": 668370,
     "scrub": 6,
     "water": 882449,
     "desert": 15731,
     "grass": 14727,
     "farmland": 423,
-    "urban": 192652,
-    "lawn": 17590
+    "urban": 192697,
+    "lawn": 17497
   },
   "routes": {
     "ferry": 36,

@@ -1,5 +1,5 @@
 {
-  "packageHash": "7fec05b39b60f73ade4dfb1271c477432fc1761b29135ff76acecdc514a15d63",
+  "packageHash": "22fe297bf6c133b4ae959a82abc21acd2c7c8795b84da2c440f1b45732da071e",
   "cells": [
     228,
     444
@@ -32,7 +32,7 @@
     "prop.neon.wide": 597,
     "prop.signal": 291,
     "prop.streetlight": 2154,
-    "tree": 7689,
+    "tree": 7846,
     "tree.street": 714
   },
   "roads": {
@@ -65,8 +65,8 @@
     "desert": 1144,
     "grass": 73,
     "farmland": 56,
-    "urban": 61927,
-    "lawn": 6591
+    "urban": 61929,
+    "lawn": 6589
   },
   "routes": {
     "ferry": 21,

@@ -139,6 +139,7 @@ Status values:
 | D-131 | Bridges come ashore on approaches over land, and the land a deck lands on stays land | Accepted |
 | D-115 | Hong Kong Island's first pieces: road tunnels left out of what is drawn, and GLO-30's ground filter only in town | Accepted (M5) |
 | D-117 | Hong Kong Island's walking level: the whole island on open data, its woods left to the client's scatter | Accepted (M5) |
+| D-132 | Hong Kong's hills smooth: GLO-30's 30 m pixels interpolated onto finer cells, not spread flat | Accepted (M5) |
 
 ---
 
@@ -1962,3 +1963,14 @@ The point is more room for visual interest; both halves are wanted.
   - **The Convention Centre on the Cultural Centre's curved hall:** pink tile.
   - **Lamma cut off:** the bounds are a box; it is scenery across the channel.
 - **Later:** the Mid-Levels' streets and stairs (a ground that reads the roads, D-107); stacked roads (the Island Eastern Corridor, the flyovers); towers on podiums; the Peak Tower, HSBC and The Center as landmarks (no kit shape fits them yet); the Central–Mid-Levels escalator; the driving and flying levels over the harbour, with Kowloon.
+
+### D-132: Hong Kong's hills smooth: GLO-30's 30 m pixels interpolated onto finer cells, not spread flat (accepted, M5)
+- **Why:** the owner asked why Hong Kong Island's hills and beaches don't get the smoothing the other worlds' do. They do: the shores (D-094) and the slope-lit, per-pixel ground (D-095, D-096) run wherever micro-terrain does, and Kowloon's seawall is one straight line. What differed was the ground under them: the island's hills came out as flat terraces about 30 m deep with brown cliffs between, and its beaches as blocks. The elevation's sampling (`resampling`) defaults to `average`, which suits a source finer than the cells (every other world: 3DEP, lidar, GSI and IGN at 1–10 m on 10 m cells). Copernicus GLO-30's pixels are 30 m: on 10 m cells and 5 m micro-cells `average` takes each pixel as it is, flat over 3 × 3 cells and 6 × 6 micro-cells, and a step to the next. On Kowloon's flat streets it didn't show; on the island's slopes every pixel became a terrace.
+- **What:** both Hong Kong specs set `sources.dem.resampling: bilinear`, as the spec reference says to where cells are finer than the source; `micro.dem` takes it from `sources.dem`. No code changes: the knob was there and its cache key already carried it.
+- **Measured** (builds of 2026-11-13): on the island, neighbouring land cells more than 3 steps apart (cliffs) from 33,090 to 9,541, and flat land cells from 74% to 61%; land steeper than 35° from 7% to 3%. Its 183 surveyed summits a median 16 m low (14 m before: interpolation rounds off the highest pixel). Kowloon: cliffs from 36 to 5, its 11 hills an RMSE of 11 m. 49,160 objects on the island (48,271 before: more street lights, signals and canopy trees placed) and 23,768 in Kowloon; 6.4 MB and 1.2 MB. Both goldens regenerated: signs, roof edges and lane marks moved.
+- **Looked at** (headless): the country parks' slopes as smooth, slope-lit woods where they were terraces; the Peak's flanks; Repulse Bay's and Shek O's beaches without their brown blocks.
+- **Rejected alternatives:**
+  - **Bilinear whenever the source is coarser than the corners, in `dem_corners`:** the right default, but it changes the micro-terrain of every US world (3DEP's 10 m on 5 m micro-cells, 2 × 2) and their goldens; Hong Kong's 3 × 3 and 6 × 6 are where it shows.
+  - **Cubic:** not tried; it rings at steps (seawalls, cuttings), and bilinear already takes the terraces off.
+  - **Smoothing (`smoothing`, the bilateral filter):** it rounds heights after they're sampled; the terraces were already in the samples.
+- **Later:** the beaches' waterline still has a sawtooth where the bed slopes under the plane, as Central Park's lake does in `nyc-walk` (not Hong Kong's own); bilinear by default where the source is coarser than the corners, with the US worlds rebuilt.
