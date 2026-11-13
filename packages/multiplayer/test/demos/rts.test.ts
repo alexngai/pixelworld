@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { Bot } from "../../src/demos/rts/bot";
 import { RtsGame, parseCommand } from "../../src/demos/rts/game";
 import {
   BUILDINGS,
@@ -266,6 +265,50 @@ describe("Fogfront's match (D-121)", () => {
     expect(seen.units.filter((u) => u.s === "tide").every((u) => u.g === undefined)).toBe(true);
   });
 
+  it("units on one spot step apart", () => {
+    const game = field();
+    const [a, b] = unitsOf(game, "kiln");
+    for (const u of [a!, b!]) Object.assign(u, { x: 12.5, y: 3.5, order: { k: "idle" } });
+    run(game, 1);
+    expect(Math.hypot(a!.x - b!.x, a!.y - b!.y)).toBeGreaterThan(0.3);
+  });
+
+  it("a seep or a foe it can't get to doesn't hold a unit for good", () => {
+    // the Tide's seep is on an island; the Kiln's runners are sent to it
+    const g = gridOf([
+      "........................................",
+      "..............................~~~~~.....",
+      "..............................~...~.....",
+      "..............................~~~~~.....",
+      "........................................",
+      "........................................",
+    ]);
+    const game = new RtsGame(g, { hearths: { kiln: [2, 2], tide: [36, 2] }, seeps: [[32, 2]] });
+    const runners = unitsOf(game, "kiln", "runner");
+    expect(game.order("kiln", { t: "gather", u: runners.map((u) => u.id), seep: [...game.seeps.keys()][0]! })).toBeNull();
+    run(game, 25);
+    expect(runners.every((u) => u.order.k === "idle")).toBe(true);
+  });
+
+  it("finds at most so many paths a tick, however many units are ordered", () => {
+    const game = new RtsGame(open(60, 40), { hearths: { kiln: [2, 2], tide: [55, 35] }, seeps: [] });
+    game.glim.kiln = 100_000;
+    const hearth = [...game.buildings.values()].find((b) => b.team === "kiln")!;
+    // forty runners, five queued at a time
+    for (let n = 0; n < 40; n++) {
+      game.order("kiln", { t: "train", b: hearth.id });
+      if (hearth.queue.length >= 5) run(game, 6.2);
+    }
+    run(game, 40);
+    const all = unitsOf(game, "kiln");
+    expect(all.length).toBeGreaterThan(30);
+    game.order("kiln", { t: "move", u: all.map((u) => u.id), x: 40, y: 30 });
+    game.step(TICK);
+    expect(all.filter((u) => u.pathTo !== null).length).toBe(16);
+    run(game, 40);
+    expect(all.every((u) => Math.hypot(u.x - 40, u.y - 30) < 6)).toBe(true);
+  });
+
   it("takes only its own side's units, and checks a page's command's shape", () => {
     const game = field();
     const theirs = unitsOf(game, "tide")[0]!;
@@ -413,19 +456,18 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect(lb.failed).toBeUndefined();
   });
 
-  it("a snapshot stays small with dozens of units a side", () => {
+  it("a snapshot stays small with forty units", () => {
     const game = new RtsGame({ ...world.grid, building: new Int32Array(world.grid.building.length) });
-    const bots = (["kiln", "tide"] as const).map((t) => new Bot(game, t));
-    for (const t of ["kiln", "tide"] as const) game.glim[t] = 100_000;
-    // forty units each, trained in their bases
-    for (let n = 0; n < 3000 && unitsOf(game, "kiln").length + unitsOf(game, "tide").length < 80; n++) {
-      if (n % 20 === 0) for (const b of bots) for (const c of b.orders()) game.order(b.team, c);
-      for (const b of game.buildings.values()) if (b.queue.length < 2 && b.built >= 1) game.order(b.team, { t: "train", b: b.id });
+    game.glim.kiln = 100_000;
+    const hearth = [...game.buildings.values()].find((b) => b.team === "kiln")!;
+    // forty runners, trained one after another, each off to a seep
+    for (let n = 0; n < 6000 && unitsOf(game, "kiln").length < 40; n++) {
+      if (hearth.queue.length < 2) game.order("kiln", { t: "train", b: hearth.id });
       game.step(TICK);
     }
     const snap = game.view("kiln");
-    expect(snap.units.length).toBeGreaterThanOrEqual(25);
-    // under 100 bytes a unit as JSON, positions to a hundredth of a cell: a side's forty in about 4 KB, ten a second
+    expect(snap.units).toHaveLength(40);
+    // under 100 bytes a unit as JSON, positions to a hundredth of a cell: about 3.5 KB, ten a second
     expect(JSON.stringify(snap.units).length / snap.units.length).toBeLessThan(100);
   });
 });

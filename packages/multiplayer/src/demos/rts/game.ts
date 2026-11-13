@@ -47,8 +47,9 @@ export interface Unit {
   hd: number;
   hp: number;
   order: Order;
-  /** What it is fighting now: its order's target, or one it took on in sight. */
+  /** What it is fighting now: its order's target, or one it took on in sight; and one it found it can't reach, not taken on again. */
   target: number | null;
+  skip: number | null;
   /** Seconds until its next blow. */
   cooldown: number;
   path: Point[];
@@ -87,6 +88,13 @@ export interface Seep {
 /** What happened in a step, for the room to tell the pages that see it. */
 export type GameEvent = { kind: "hit"; by: number; to: number; x: number; y: number } | { kind: "die"; id: number; team: Team; x: number; y: number };
 
+/**
+ * Paths found a tick at most: a page re-sending orders for many units can't
+ * stall the server (an A* over the map is 1–2 ms).
+ */
+// ponytail: first come first served; a queue by waiting time if units starve
+const SEARCHES = 16;
+
 const other = (t: Team): Team => (t === "kiln" ? "tide" : "kiln");
 const mid = (b: Building): Point => ({ x: b.x + b.size / 2, y: b.y + b.size / 2 });
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -105,6 +113,8 @@ export class RtsGame {
   /** Each side's enemies in sight now (units and buildings), and the enemy buildings it has ever seen. */
   private readonly sight: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
   private readonly known: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
+  /** Paths found this tick (`walk`). */
+  private searches = 0;
   /** Each side's view, built once a step at most. */
   private readonly views = new Map<Team, { time: number; snap: RtsSnap }>();
 
@@ -203,6 +213,7 @@ export class RtsGame {
   private give(u: Unit, order: Order): void {
     u.order = order;
     u.target = order.k === "attack" ? order.target : null;
+    u.skip = null;
     u.path = [];
     u.pathTo = null;
     u.repath = 0;
@@ -219,7 +230,7 @@ export class RtsGame {
 
   private isEnemy(team: Team, id: number): boolean {
     const t = this.units.get(id) ?? this.buildings.get(id);
-    return !!t && t.team !== team && this.canSee(team, id);
+    return !!t && t.hp > 0 && t.team !== team && this.canSee(team, id);
   }
 
   /** Whether a side sees one of the other's units or buildings now (buildings: once seen, still known). */
@@ -232,6 +243,7 @@ export class RtsGame {
   step(dt: number): void {
     if (this.winner) return;
     this.time += dt;
+    this.searches = 0;
     for (const b of [...this.buildings.values()]) this.work(b, dt);
     this.see();
     for (const u of this.units.values()) this.think(u, dt);
@@ -283,6 +295,7 @@ export class RtsGame {
   }
 
   private think(u: Unit, dt: number): void {
+    if (u.hp <= 0) return; // fell this tick
     const rule = UNITS[u.kind];
     u.cooldown = Math.max(0, u.cooldown - dt);
     u.repath = Math.max(0, u.repath - dt);
@@ -309,7 +322,11 @@ export class RtsGame {
     const t = b ?? this.units.get(id)!;
     const at = b ? mid(b) : (t as Unit);
     if (this.distTo(u, id) > rule.range) {
-      this.walk(u, at, dt, true);
+      // at the end of a path found to where it is, and still out of reach: it can't be got at (across water, walled in)
+      if (this.walk(u, at, dt, true) && u.pathTo && Math.hypot(u.pathTo.x - at.x, u.pathTo.y - at.y) <= 1) {
+        if (u.order.k === "attack") this.give(u, { k: "idle" });
+        else [u.target, u.skip] = [null, id];
+      }
       return;
     }
     u.hd = Math.atan2(at.y - u.y, at.x - u.x);
@@ -331,7 +348,7 @@ export class RtsGame {
       const home = this.nearestOwn(u, "hearth");
       if (!home) return this.give(u, { k: "idle" });
       if (distToBuilding(u, home) > GATHER.reach) {
-        this.walk(u, mid(home), dt);
+        if (this.walk(u, mid(home), dt)) this.give(u, { k: "idle" }); // as near as it gets, and not there: shut out
         return;
       }
       this.glim[u.team] += u.carry;
@@ -341,7 +358,7 @@ export class RtsGame {
       return;
     }
     if (Math.hypot(seep!.x - u.x, seep!.y - u.y) > GATHER.reach) {
-      this.walk(u, seep!, dt);
+      if (this.walk(u, seep!, dt)) this.give(u, { k: "idle" }); // the seep is walled in
       return;
     }
     u.mined += dt;
@@ -357,11 +374,14 @@ export class RtsGame {
   /**
    * A step along a path to a goal, found again when the goal moved (a chase,
    * at most twice a second) or the way is shut (a building went up on it).
-   * True once it is there, or as near as it can get.
+   * True once it is there, or as near as it can get. At most `SEARCHES`
+   * paths are found a tick; a unit past them waits for the next.
    */
   private walk(u: Unit, goal: Point, dt: number, chasing = false): boolean {
     const moved = !u.pathTo || Math.hypot(u.pathTo.x - goal.x, u.pathTo.y - goal.y) > (chasing ? 1 : 0.01);
     if (moved && u.repath <= 0) {
+      if (this.searches >= SEARCHES) return false;
+      this.searches++;
       u.path = findPath(this.grid, u, goal);
       u.pathTo = { x: goal.x, y: goal.y };
       u.repath = chasing ? 0.5 : 0;
@@ -400,7 +420,7 @@ export class RtsGame {
         const d = Math.hypot(dx, dy);
         if (d >= 0.45) continue;
         if (d < 1e-6) [dx, dy] = [Math.cos(a.id), Math.sin(a.id)]; // on the same spot: apart some way
-        const push = (0.45 - d) / 4 / Math.max(d, 1e-6);
+        const push = (0.45 - d) / 4 / (d < 1e-6 ? 1 : d);
         this.nudge(a, -dx * push, -dy * push);
         this.nudge(b, dx * push, dy * push);
       }
@@ -429,7 +449,7 @@ export class RtsGame {
     let bestD = Infinity;
     for (const buildings of [false, true]) {
       for (const id of this.sight[u.team]) {
-        if (this.buildings.has(id) !== buildings) continue;
+        if (this.buildings.has(id) !== buildings || id === u.skip) continue;
         const d = this.distTo(u, id);
         if (d <= sight && d < bestD) [best, bestD] = [id, d];
       }
@@ -489,6 +509,7 @@ export class RtsGame {
       hp: UNITS[kind].hp,
       order: { k: "idle" },
       target: null,
+      skip: null,
       cooldown: 0,
       path: [],
       pathTo: null,

@@ -303,7 +303,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     this.room.broadcast({ k: "world", t: this.time, ...this.shared() } satisfies TickShared, skip);
     for (const [id, seat] of this.seats)
       if (seat.role === "player" && !seat.drive && !skip.has(id))
-        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...(seat.cmd ? { cmd: seat.cmd } : {}), ...this.snapshot(id) } satisfies TickSnapshot);
+        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id), ...(seat.cmd ? { cmd: seat.cmd } : {}) } satisfies TickSnapshot);
   }
 
   private admit(id: string, join: J): void {

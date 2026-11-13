@@ -297,13 +297,16 @@ export async function startRts(opts: RtsOptions): Promise<void> {
         buildingsDrawn.delete(id);
         if (picked === id) picked = null;
       }
-    for (const sp of s.seeps) {
-      let d = seepsDrawn.get(sp.i);
-      if (sp.left <= 0) {
-        d?.e.remove();
-        seepsDrawn.delete(sp.i);
-        continue;
+    // seeps with glim; a new match's are new ones
+    const wet = new Set(s.seeps.filter((sp) => sp.left > 0).map((sp) => sp.i));
+    for (const [id, d] of seepsDrawn)
+      if (!wet.has(id)) {
+        d.e.remove();
+        seepsDrawn.delete(id);
       }
+    for (const sp of s.seeps) {
+      if (!wet.has(sp.i)) continue;
+      let d = seepsDrawn.get(sp.i);
       d ??= { e: view.entities.add({ model: { boxes: seepBoxes(ramp), key: "rts.seep" }, x: sp.x, y: sp.y, headings: 1, wait: false }), key: "rts.seep", net: sp };
       d.net = sp;
       seepsDrawn.set(sp.i, d);
@@ -525,7 +528,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     else if (e.phase === "playing") hud.say("The match is on: gather glim, raise a lodge, take their hearth", 4);
     else hud.say(e.winner ? (e.winner === side ? "Their hearth has fallen: you win!" : `Your hearth has fallen: ${nameOf(e.winner)} wins`) : "The match ran out of time", 8);
   };
-  room.onClose = (why) => hud.status(`Fogfront: ${why ?? "the server went away"}`);
+  /** Why the room let the page go (sent away, the room closed, the server gone): the board says it from then on. */
+  let closed: string | null = null;
+  room.onClose = (why) => (closed = `Fogfront: ${why ?? "the server went away"}`);
 
   // ---------------------------------------------------------------- each frame
 
@@ -616,6 +621,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   function text(t: number): string {
+    if (closed) return closed;
     const m = world?.match;
     const shown = client.seen(t);
     const left = m?.until != null && shown !== null ? Math.max(0, m.until - shown) : null;

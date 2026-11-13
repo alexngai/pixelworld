@@ -444,6 +444,7 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   command(c: unknown): number {
     const n = ++this.cmdSeq;
     this.cmdSentAt.set(n, this.now());
+    if (this.cmdSentAt.size > 100) this.cmdSentAt.delete(this.cmdSentAt.keys().next().value!); // a spectator's: no snapshot of its own acknowledges them
     this.room.send({ k: "cmd", c, n } satisfies TickMessage<I>);
     return n;
   }
