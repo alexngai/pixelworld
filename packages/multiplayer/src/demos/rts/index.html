@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pixelworld · Fogfront</title>
+    <style>
+      .rts-overlay {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        font: 12px ui-monospace, Menlo, Consolas, monospace;
+      }
+      .rts-panel {
+        position: fixed;
+        padding: 6px 10px;
+        background: rgba(20, 19, 32, 0.82);
+        border-radius: 4px;
+        pointer-events: none;
+        white-space: pre;
+      }
+      .rts-board {
+        left: 8px;
+        top: 8px;
+      }
+      .rts-toast {
+        left: 50%;
+        top: 8px;
+        transform: translateX(-50%);
+      }
+      .rts-bar {
+        position: fixed;
+        left: 50%;
+        bottom: 12px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+      }
+      .rts-bar button {
+        font: inherit;
+        color: #e8dcbc;
+        background: rgba(20, 19, 32, 0.88);
+        border: 1px solid #6a6378;
+        border-radius: 4px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      .rts-bar button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      #ui {
+        position: fixed;
+        left: 8px;
+        bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="ui"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

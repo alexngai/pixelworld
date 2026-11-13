@@ -22,15 +22,17 @@ export const SERVER = "server";
  * A page to a `TickRoom` (D-114, D-116): who it is (`hello`, the game's own
  * join data), its inputs, numbered, with `seen` (when what it shows of the
  * others happened, on the server's clock), and commands (a team pick, a
- * ready, a build: reliable, once).
+ * ready, a build: reliable, once), numbered `n` by a `TickClient` (D-121).
  */
-export type TickMessage<I> = { k: "hello"; join: unknown } | { k: "in"; seq: number; i: I; seen: number | null } | { k: "cmd"; c: unknown };
+export type TickMessage<I> = { k: "hello"; join: unknown } | { k: "in"; seq: number; i: I; seen: number | null } | { k: "cmd"; c: unknown; n?: number };
 
 /** A `TickRoom`'s snapshot for one player: server time, the last of its inputs stepped, and its own state (the game's fields). */
 export interface TickSnapshot {
   k: "snap";
   t: number;
   ack: number;
+  /** The last numbered command the game took from this page (D-121): its state here has it. Absent until one. */
+  cmd?: number;
 }
 
 /** A `TickRoom`'s shared snapshot, to every page at once: server time and the game's fields (the others, the score). */
@@ -394,18 +396,25 @@ export interface TickClientOptions<I, S, W> {
  * time). It says who it is (`hello`), sends commands (`command`), and as a
  * player its inputs at the room's fixed tick, stepped at once (`Prediction`),
  * numbered and sent with `seen`. `clock` is the server's: give it to
- * `RemotePlayers`. `ping` is the round trip from an input to the snapshot
- * that has it.
+ * `RemotePlayers`. `ping` is the round trip from an input (or a command) to
+ * the snapshot that has it.
+ *
+ * A page with no vehicle of its own (a strategy game's, D-121) sends no
+ * inputs: it calls `sync` each frame instead of `advance`, and its numbered
+ * commands come back acknowledged (`TickSnapshot.cmd`), so it can show an
+ * order at once and know which snapshot has it.
  */
 export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   readonly prediction: Prediction<I>;
   readonly clock = new ServerClock();
   readonly events = new EventQueue<E>();
-  /** The round trip from an input to the snapshot that has it (ms, recent average), or null before one. */
+  /** The round trip from an input or a command to the snapshot that has it (ms, recent average), or null before one. */
   ping: number | null = null;
   private acc = 0;
   private latest: (TickSnapshot & S) | null = null;
   private readonly sentAt = new Map<number, number>();
+  private cmdSeq = 0;
+  private readonly cmdSentAt = new Map<number, number>();
   private readonly now: () => number;
 
   constructor(
@@ -431,9 +440,12 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
     this.room.send({ k: "hello", join } satisfies TickMessage<I>);
   }
 
-  /** A command to the room's game: reliable, once (not a tick's input). */
-  command(c: unknown): void {
-    this.room.send({ k: "cmd", c } satisfies TickMessage<I>);
+  /** A command to the room's game: reliable, once (not a tick's input). Its number: the first snapshot whose `cmd` is at least it has it. */
+  command(c: unknown): number {
+    const n = ++this.cmdSeq;
+    this.cmdSentAt.set(n, this.now());
+    this.room.send({ k: "cmd", c, n } satisfies TickMessage<I>);
+    return n;
   }
 
   /** The server time this page shows of the others now (null before any message). */
@@ -454,12 +466,7 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
    * events will name by that number).
    */
   advance(dt: number, input: () => I, after?: (input: I, seq: number) => void): void {
-    const snap = this.latest;
-    if (snap) {
-      this.latest = null;
-      this.prediction.reconcile(snap.ack, () => this.opts.restore?.(snap));
-      this.opts.reconciled?.(snap);
-    }
+    this.sync();
     const tick = this.opts.tick;
     this.acc = Math.min(this.acc + dt, (this.opts.maxTicksPerFrame ?? 6) * tick);
     while (this.acc >= tick) {
@@ -472,15 +479,35 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
     }
   }
 
+  /**
+   * The newest snapshot of the page's own put in place (`restore`, the inputs
+   * the server hasn't stepped yet stepped again, `reconciled`), if one came
+   * since: what `advance` does first. A page with no vehicle calls it each
+   * frame instead.
+   */
+  sync(): void {
+    const snap = this.latest;
+    if (!snap) return;
+    this.latest = null;
+    this.prediction.reconcile(snap.ack, () => this.opts.restore?.(snap));
+    this.opts.reconciled?.(snap);
+  }
+
   private snapshot(snap: TickSnapshot & S): void {
     if (this.latest && snap.t < this.latest.t) return;
     this.latest = snap;
-    const sent = this.sentAt.get(snap.ack);
+    this.measure(this.sentAt, snap.ack);
+    if (typeof snap.cmd === "number") this.measure(this.cmdSentAt, snap.cmd);
+  }
+
+  /** The round trip to a snapshot that has what was sent as `n`, and what it has let go. */
+  private measure(sentAt: Map<number, number>, n: number): void {
+    const sent = sentAt.get(n);
     if (sent !== undefined) {
       const ms = (this.now() - sent) * 1000;
       this.ping = this.ping === null ? ms : this.ping * 0.8 + ms * 0.2;
     }
-    for (const seq of this.sentAt.keys()) if (seq <= snap.ack) this.sentAt.delete(seq);
+    for (const k of sentAt.keys()) if (k <= n) sentAt.delete(k);
   }
 }
 

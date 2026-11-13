@@ -351,7 +351,7 @@ describe("a page in a room the server runs (TickClient)", () => {
     expect([x, seqs]).toEqual([2, [1, 2]]);
     client.advance(1, () => 1); // a stall: at most 3 ticks
     expect(x).toBe(5);
-    expect(sent.slice(0, 3)).toEqual([{ k: "hello", join: { name: "Alex" } }, { k: "cmd", c: "ready" }, { k: "in", seq: 1, i: 1, seen: 99.9 }]);
+    expect(sent.slice(0, 3)).toEqual([{ k: "hello", join: { name: "Alex" } }, { k: "cmd", c: "ready", n: 1 }, { k: "in", seq: 1, i: 1, seen: 99.9 }]);
     // three snapshots in one frame: the newest is put in place once, and the inputs after it stepped again once
     t = 5.2;
     server({ k: "snap", t: 100.1, ack: 2, x: 1.5 } satisfies TickSnapshot & { x: number });

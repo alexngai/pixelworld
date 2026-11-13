@@ -32,6 +32,7 @@ view.onFrame(() => others.update());
   - **Joining:** a page says who it is (`hello`, the game's join data `J`, checked by `parseJoin`); once the world is ready, `added` makes it a `"player"`, a `"spectator"` (gets the shared snapshot, sends no inputs) or turns it away.
   - **Inputs:** a player's numbered inputs queue (15 at most, the oldest dropped) and are stepped one a tick with a little credit over (1.02), so a page can't play faster than the clock and a backlog after a stall drains rather than lagging for good. `input` validates each.
   - **Commands:** `cmd` messages (a team pick, a ready, a build) reach `command`, from players and spectators, reliably and once.
+  - **Commands acknowledged** (D-121): a `TickClient` numbers its commands (`n`), and each of the player's snapshots says the last one the game took (`cmd`), so a page can show an order at once and know which snapshot has it. A game run by commands alone (a strategy game) sends no inputs: its `input` gives null, and its bots' `drive` can give orders for `step` to carry out.
   - **Bots:** `addBot(id, join, drive)` is a player the server drives each tick; `removeBot`.
   - **Snapshots:** `shared()` to every page at once (`world`, serialized once), and `snapshot(id)` to each player (`snap`, with `t` and its `ack`).
   - **Events:** `emit(e, to?)`, stamped with the server time, for pages to show at that time of the others.
@@ -42,6 +43,7 @@ view.onFrame(() => others.update());
 - **`History`** (server): where something was, by server time, to test a shot against where its shooter saw the target.
 - **`serveStatic(root)`** (server): a request handler for a built game's directory, beside the rooms on the same port: GET and HEAD, nothing outside `root`, hashed `/assets/` cached for good, world package files as stored.
 - **`TickClient<I, S, W, E>`** (page, D-114, D-116, D-118): a page in a `TickRoom`; it takes the room's messages. `hello(join)`, `command(c)`; `advance(dt, input, after?)` puts the newest snapshot of its own in place once a frame (`restore`, then the inputs the server hasn't stepped are stepped again; `reconciled` after) and steps the fixed ticks the time holds, each input predicted, numbered (`after(input, seq)`) and sent with `seen`. `onWorld` gets the shared snapshot; `due()` lets events out at their time; `ping` is the round trip from an input to its snapshot. `clock` is the server's: give it to `RemotePlayers`.
+  - **A page with no vehicle of its own** (D-121): `command(c)` returns the command's number (the snapshot whose `cmd` is at least it has it); `sync()` puts the newest snapshot in place without stepping anything, called each frame instead of `advance`; `ping` comes from commands' round trips too.
 - **`EventQueue<E>`** (page): events held until the page shows their time.
 - **`cleanName(raw, max)`:** a name safe to show the others (letters, digits, spaces, `-_.'`; no control or direction characters).
 - **`listRooms()`, `openRoom()`, `quickRoom()`** (page): the lobby's HTTP API.
@@ -57,3 +59,4 @@ view.onFrame(() => others.update());
 Games built on the package, in `src/demos/` (not part of what the package ships):
 
 - **[The dogfight](src/demos/dogfight/README.md)** (D-113, D-114, D-116, D-118): planes over the Grand Canyon on the example game's flight model, run by the server; matches, quick play and room codes, spectators, and a bot when a pilot is alone. `pnpm --filter @pixelworlds/multiplayer demo:dogfight`, then open `http://localhost:5253/` (quick play) and share the room's code. It builds into one Node server with the page beside it, and a Docker image.
+- **[Fogfront](src/demos/rts/README.md)** (D-121): a small real-time strategy game on the Presidio (San Francisco's driving level), run by commands: two guilds gather glim, raise lodges, train wardens and take each other's hearth, with the fog of war, A* paths over the level's cells, and a bot. `pnpm --filter @pixelworlds/multiplayer demo:rts`, then open `http://localhost:5254/` (quick play; `?vs=bot` for the bot at once).
