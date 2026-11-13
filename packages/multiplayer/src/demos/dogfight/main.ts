@@ -7,7 +7,8 @@ import { DOGFIGHT_START, DOGFIGHT_WORLD } from "./rules";
 /**
  * The dogfight demo's page (D-114): the example game in the air over the
  * Grand Canyon, its plane flown through the server (client.ts). `?room=`
- * (default "canyon") and `&name=`. Keys: the game's plane's, and Space fires.
+ * (default "canyon"), `&name=`, and `&watch=1` to watch rather than fly.
+ * Keys: the game's plane's, and Space fires (watching: the next plane).
  */
 async function main() {
   const params = new URLSearchParams(location.search);
@@ -22,7 +23,7 @@ async function main() {
   window.addEventListener("keydown", (e) => game.keyDown(e));
   window.addEventListener("keyup", (e) => game.keyUp(e));
   window.addEventListener("blur", () => game.blur());
-  await startDogfight(game, { room: params.get("room") || "canyon", name: params.get("name") });
+  await startDogfight(game, { room: params.get("room") || "canyon", name: params.get("name"), watch: params.get("watch") === "1" });
 }
 
 main().catch((e: unknown) => {

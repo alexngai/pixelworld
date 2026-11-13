@@ -1,6 +1,6 @@
 import { axes, type PlaneInput, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
 import { PLANE } from "@pixelworlds/game/src/tuning";
-import type { TickSnapshot } from "../../index";
+import type { TickShared, TickSnapshot } from "../../index";
 
 /**
  * The dogfight's rules and messages, the same on the server (server.ts, a
@@ -39,6 +39,15 @@ export const MAX_REWIND = 0.5;
 export interface DogfightInput extends PlaneInput {
   fire: boolean;
 }
+
+/** Who a page is: its name, and whether it only watches. */
+export interface DogfightJoin {
+  name: string;
+  watch: boolean;
+}
+
+/** The bot's id: one flies whenever a pilot would be alone. */
+export const BOT = "bot";
 
 /** A point in the planes' own space: cells across, heights in steps. */
 export interface Point {
@@ -87,7 +96,7 @@ export function passes(a: Point, b: Point, p: Point): number {
 
 // ---------------------------------------------------------------- messages (the page's are `TickMessage<DogfightInput>`)
 
-/** A plane in a snapshot: where it is drawn (its nose's yaw, the drawn pitch, its roll) and its score. */
+/** A plane in the shared snapshot: where it is drawn (its nose's yaw, the drawn pitch, its roll), its score, and which life it is on. */
 export interface PlaneNet extends Point {
   id: string;
   name: string;
@@ -97,13 +106,16 @@ export interface PlaneNet extends Point {
   hp: number;
   kills: number;
   deaths: number;
-  /** It respawned: don't slide it there. */
-  jump?: boolean;
+  /** Its deaths: a new life is drawn where it respawned at once, not slid there. */
+  life: number;
+  bot?: boolean;
 }
 
-/** The server to the pages: snapshots (every plane, and the page's own after its last input stepped) and events as they happen. */
-export type ServerMsg =
-  | (TickSnapshot & { you: PlaneState; planes: PlaneNet[] })
-  | ({ k: "fire"; by: string } & Round)
-  | { k: "hit"; by: string; to: string }
-  | ({ k: "down"; who: string; by: string | null } & Point);
+/** An event, at server time `t`: a page shows it when it shows that time of the others. */
+export type DogfightEvent =
+  | ({ k: "fire"; t: number; by: string } & Round)
+  | { k: "hit"; t: number; by: string; to: string }
+  | ({ k: "down"; t: number; who: string; by: string | null } & Point);
+
+/** The server to the pages: the shared snapshot (every plane), each player's own (its plane after its last input stepped), and events. */
+export type ServerMsg = (TickShared & { planes: PlaneNet[] }) | (TickSnapshot & { you: PlaneState }) | DogfightEvent;

@@ -3,7 +3,7 @@ import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { extname, join, normalize, sep } from "node:path";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
-import { SERVER, type ServerMessage, type TickMessage, type TickSnapshot } from "./index";
+import { SERVER, type ServerMessage, type TickMessage, type TickShared, type TickSnapshot } from "./index";
 
 /**
  * Rooms of players on one HTTP server's WebSocket path (Node).
@@ -12,8 +12,9 @@ import { SERVER, type ServerMessage, type TickMessage, type TickSnapshot } from 
  *   room, as they are, with who sent them. It keeps no game state and decides
  *   nothing, so a game runs its rules on its clients.
  * - **Hosted rooms** (`host`, D-113): players' messages go to a game the
- *   server runs for the room instead, which answers them (`from` is `SERVER`).
- *   The server owns the state; clients predict their own vehicle (`Prediction`).
+ *   server runs for the room instead (a `TickRoom`), which answers them
+ *   (`from` is `SERVER`) and may send a page away (`kick`, `close`, with a
+ *   reason). The server owns the state; pages predict their own vehicle.
  *
  *   attachRelay(createServer().listen(8080));                    // on its own
  *   configureServer(server) { attachRelay(server.httpServer!) }  // beside Vite's dev server
@@ -24,9 +25,13 @@ export interface HostedRoom {
   readonly name: string;
   /** To one player. */
   send(to: string, data: unknown): void;
-  /** To every player in the room. */
+  /** To every player in the room (serialized once). */
   broadcast(data: unknown): void;
   players(): string[];
+  /** Send a player away, saying why (its page's `onClose` gets the reason). */
+  kick(id: string, why: string): void;
+  /** Send every player away, saying why: the room goes once it is empty. */
+  close(why: string): void;
 }
 
 /** A room's game on the server: its players' messages come here instead of going to the others. */
@@ -43,6 +48,8 @@ export interface RelayOptions {
   path?: string;
   /** Most players in a room (default 16); one more is told the room is full. */
   maxPlayers?: number;
+  /** Most rooms at once (default 64): any page may open one by naming it, and each hosted one runs a clock. */
+  maxRooms?: number;
   /** Largest message a player may send (bytes, default 16 KB). */
   maxMessage?: number;
   /** Hold every message back this many ms on each hop (to a player, and to a hosted room's game): lag to try a game under (default 0). */
@@ -61,56 +68,73 @@ export interface Relay {
 const HEARTBEAT_MS = 5000;
 const ROOM_NAME_MAX = 64;
 
+interface OpenRoom {
+  name: string;
+  members: Map<string, WebSocket>;
+  host: RoomHost | null;
+}
+
 export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
   const path = opts.path ?? "/relay";
   const maxPlayers = opts.maxPlayers ?? 16;
+  const maxRooms = opts.maxRooms ?? 64;
   const lag = opts.lag ?? 0;
   const wss = new WebSocketServer({ noServer: true, maxPayload: opts.maxMessage ?? 16 * 1024 });
-  const rooms = new Map<string, Map<string, WebSocket>>();
-  const hosts = new Map<string, RoomHost>();
+  const rooms = new Map<string, OpenRoom>();
   let next = 1;
 
   const later = (f: () => void) => (lag > 0 ? void setTimeout(f, lag) : f());
-  const send = (ws: WebSocket, msg: ServerMessage) =>
+  const sendText = (ws: WebSocket, text: string) =>
     later(() => {
-      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+      if (ws.readyState === ws.OPEN) ws.send(text);
+    });
+  const send = (ws: WebSocket, msg: ServerMessage) => sendText(ws, JSON.stringify(msg));
+  const bye = (ws: WebSocket, why: string) =>
+    later(() => {
+      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ t: "bye", why } satisfies ServerMessage));
+      ws.close();
     });
 
-  const hostFor = (name: string, members: Map<string, WebSocket>): RoomHost | null => {
-    if (!opts.host) return null;
-    let host = hosts.get(name);
-    if (!host) {
-      host = opts.host({
+  const open = (name: string): OpenRoom => {
+    const room: OpenRoom = { name, members: new Map(), host: null };
+    room.host =
+      opts.host?.({
         name,
         send: (to, data) => {
-          const ws = members.get(to);
+          const ws = room.members.get(to);
           if (ws) send(ws, { t: "msg", from: SERVER, data });
         },
         broadcast: (data) => {
-          for (const ws of members.values()) send(ws, { t: "msg", from: SERVER, data });
+          const text = JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);
+          for (const ws of room.members.values()) sendText(ws, text);
         },
-        players: () => [...members.keys()],
-      });
-      hosts.set(name, host);
-    }
-    return host;
+        players: () => [...room.members.keys()],
+        kick: (id, why) => {
+          const ws = room.members.get(id);
+          if (ws) bye(ws, why);
+        },
+        close: (why) => {
+          for (const ws of room.members.values()) bye(ws, why);
+        },
+      }) ?? null;
+    rooms.set(name, room);
+    return room;
   };
 
   const join = (ws: WebSocket, name: string) => {
-    let room = rooms.get(name);
-    if (room && room.size >= maxPlayers) {
+    const room = rooms.get(name);
+    if (!room && rooms.size >= maxRooms) return bye(ws, "the server has all the rooms it can take: join one that is open");
+    if (room && room.members.size >= maxPlayers) {
       ws.send(JSON.stringify({ t: "full" } satisfies ServerMessage));
       ws.close();
       return;
     }
-    if (!room) rooms.set(name, (room = new Map()));
-    const members = room;
+    const r = room ?? open(name);
     const id = String(next++);
-    ws.send(JSON.stringify({ t: "welcome", id, peers: [...members.keys()] } satisfies ServerMessage));
-    for (const other of members.values()) send(other, { t: "join", id });
-    members.set(id, ws);
-    const host = hostFor(name, members);
-    host?.join?.(id);
+    ws.send(JSON.stringify({ t: "welcome", id, peers: [...r.members.keys()] } satisfies ServerMessage));
+    for (const other of r.members.values()) send(other, { t: "join", id });
+    r.members.set(id, ws);
+    r.host?.join?.(id);
 
     let alive = true;
     ws.on("pong", () => (alive = true));
@@ -128,18 +152,18 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
       } catch {
         return; // not JSON: the others' clients couldn't read it
       }
-      if (host) later(() => members.has(id) && host.message(id, data));
-      else for (const [other, peer] of members) if (other !== id) send(peer, { t: "msg", from: id, data });
+      const host = r.host;
+      if (host) later(() => r.members.has(id) && host.message(id, data));
+      else for (const [other, peer] of r.members) if (other !== id) send(peer, { t: "msg", from: id, data });
     });
     ws.on("close", () => {
       clearInterval(beat);
-      members.delete(id);
-      host?.leave?.(id);
-      if (members.size === 0) {
-        rooms.delete(name);
-        host?.close?.();
-        hosts.delete(name);
-      } else for (const peer of members.values()) send(peer, { t: "leave", id });
+      if (!r.members.delete(id)) return;
+      r.host?.leave?.(id);
+      if (r.members.size === 0) {
+        if (rooms.get(name) === r) rooms.delete(name);
+        r.host?.close?.();
+      } else for (const peer of r.members.values()) send(peer, { t: "leave", id });
     });
   };
 
@@ -152,59 +176,75 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
   server.on("upgrade", onUpgrade);
 
   return {
-    rooms: () => new Map([...rooms].map(([name, members]) => [name, members.size])),
+    rooms: () => new Map([...rooms].map(([name, r]) => [name, r.members.size])),
     close() {
       server.off("upgrade", onUpgrade);
       for (const ws of wss.clients) ws.terminate();
       wss.close();
-      for (const host of hosts.values()) host.close?.();
-      hosts.clear();
+      for (const r of rooms.values()) r.host?.close?.();
+      rooms.clear();
     },
   };
 }
 
 // ---------------------------------------------------------------- a game at a fixed tick
 
-export interface TickRoomOptions {
+/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
+export type TickRole = "player" | "spectator";
+
+export interface TickRoomOptions<W> {
   /** The fixed step (s; default 1/60): the pages' `TickClient` steps at the same. */
   tick?: number;
   /** A snapshot every this many ticks (default 3: 20 a second at 60). */
   snapshotEvery?: number;
-  /** Inputs a player may have waiting (default 120), and steps it may catch up in one tick after a stall (default 8). */
+  /** Inputs a player may have waiting (default 15): past it, the oldest waiting is dropped and its page's prediction corrected. */
   maxQueue?: number;
+  /** Inputs a player may step in one tick after a stall (default 8). */
   maxBurst?: number;
-  /** Players are added once this resolves (the game's world, say); until then they wait. */
-  ready?: Promise<unknown>;
+  /** Inputs credited a tick (default 1.02): a little over one, so a backlog left by a stall drains instead of lagging for good. */
+  credit?: number;
+  /** The game's world: players are admitted once it resolves (`world` holds it); if it fails, the room closes saying why. */
+  ready?: Promise<W>;
   /** Run in real time (default); off for tests, which call `tick()`. */
   clock?: boolean;
 }
 
-interface TickPlayer<I> {
-  name: string;
+interface Seat<I, J> {
+  role: TickRole;
+  join: J;
   queue: { seq: number; i: I; seen: number | null }[];
   ack: number;
   budget: number;
+  /** A bot's driver. */
+  drive?: () => I;
 }
 
 /**
- * A room whose game the server runs at a fixed tick (D-113, D-114): the
- * `host` of `attachRelay`. Each player's inputs (`TickMessage`, from a
- * `TickClient`) queue, numbered, and are stepped one a tick, a backlog caught
- * up a few at a time, so a page can't play faster than the clock; out-of-order
- * and excess inputs are dropped, and the game validates each (`input`). Every
- * `snapshotEvery` ticks each player gets a snapshot: the server time, the last
- * of its inputs stepped, and the game's fields for it.
+ * A room whose game the server runs at a fixed tick (D-113, D-114, D-116):
+ * the `host` of `attachRelay`.
  *
- * A game says what an input is (`input`), what a player's step does (`step`),
- * what the world does each tick (`update`) and what a snapshot carries
- * (`snapshot`).
+ * - **Joining:** a page says who it is (`hello`, the game's own join data,
+ *   which `parseJoin` checks) and is admitted once the game's world is ready:
+ *   `added` makes it a player, a spectator, or turns it away.
+ * - **Inputs:** a player's numbered inputs (`TickMessage`, from a
+ *   `TickClient`) queue and are stepped one a tick, a little credit over so
+ *   a backlog after a stall drains; out-of-order, invalid and excess inputs
+ *   are dropped. **Commands** (`cmd`: a team pick, a ready, a build) reach
+ *   `command` from players and spectators alike, reliably and once.
+ * - **Bots** (`addBot`): players the server drives itself, each tick.
+ * - **Snapshots,** every `snapshotEvery` ticks: one shared part for every
+ *   page (`shared`, serialized once), and to each player its own (`snapshot`,
+ *   with `t` and its `ack`).
  */
-export abstract class TickRoom<I> implements RoomHost {
+export abstract class TickRoom<I, J = unknown, W = undefined> implements RoomHost {
   /** Server time (s): whole ticks. */
   time = 0;
   readonly tickLength: number;
-  private readonly tickPlayers = new Map<string, TickPlayer<I>>();
-  private readonly waiting = new Map<string, string>();
+  /** The game's world, from `ready`: in place before any page is admitted. */
+  protected world!: W;
+  private readonly seats = new Map<string, Seat<I, J>>();
+  /** Connected, not admitted: their join (null until their `hello`). */
+  private readonly pending = new Map<string, J | null>();
   private isReady: boolean;
   private ticks = 0;
   private last = performance.now();
@@ -213,43 +253,55 @@ export abstract class TickRoom<I> implements RoomHost {
 
   constructor(
     protected readonly room: HostedRoom,
-    private readonly opts: TickRoomOptions = {},
+    private readonly opts: TickRoomOptions<W> = {},
   ) {
     this.tickLength = opts.tick ?? 1 / 60;
     this.isReady = !opts.ready;
     opts.ready?.then(
-      () => {
+      (w) => {
+        this.world = w;
         this.isReady = true;
-        for (const [id, name] of this.waiting) this.add(id, name);
-        this.waiting.clear();
+        for (const [id, join] of this.pending) if (join !== null) this.admit(id, join);
       },
-      () => {}, // the game says why
+      (e: unknown) => this.room.close(`the game didn't start: ${e instanceof Error ? e.message : String(e)}`),
     );
     this.timer = opts.clock === false ? null : setInterval(() => this.run(), (this.tickLength * 1000) / 2);
   }
 
-  /** An untrusted input from a page, as the game's own (clamped, checked), or null to drop it. */
-  protected abstract input(data: unknown): I | null;
-  /** A player arrives (its name sanitized) once the room is ready. */
-  protected abstract added(id: string, name: string): void;
+  // ---------------------------------------------------------------- the game's part
+
+  /** A page's join data (untrusted), as the game's own: checked, cleaned; null turns the page away. */
+  protected abstract parseJoin(data: unknown): J | null;
+  /** A page (or a bot) arrives with its join: a player, a spectator, or null to turn it away. It counts among the seats already. */
+  protected abstract added(id: string, join: J): TickRole | null;
+  /** A player or spectator went (left, was kicked, or a bot removed). */
   protected abstract removed(id: string): void;
-  /** One tick of a player with its input; `seen` as its page sent it (`lagOf` turns it into a rewind). */
+  /** A player's input (untrusted), as the game's own (clamped, checked), or null to drop it. */
+  protected abstract input(data: unknown): I | null;
+  /** One tick of a player with its input; `seen` as its page sent it (`lagOf` makes it a rewind; null for a bot). */
   protected abstract step(id: string, input: I, seen: number | null): void;
   /** The world's own tick, after the players' steps. */
   protected update(): void {}
-  /** What a player's snapshot carries besides `t` and `ack`. */
-  protected abstract snapshot(id: string): object;
-  /** A player named itself. */
-  protected renamed(_id: string, _name: string): void {}
+  /** What every page's snapshot shares (the others, the score): serialized once. */
+  protected shared(): object {
+    return {};
+  }
+  /** What one player's own snapshot carries besides `t` and `ack` (its own state, for its prediction). */
+  protected snapshot(_id: string): object {
+    return {};
+  }
+  /** A command from a player or spectator (untrusted): a team pick, a ready, a build. */
+  protected command(_id: string, _c: unknown): void {}
+
+  // ---------------------------------------------------------------- RoomHost
 
   join(id: string): void {
-    if (this.isReady) this.add(id, `Pilot ${id}`);
-    else this.waiting.set(id, `Pilot ${id}`);
+    this.pending.set(id, null);
   }
 
   leave(id: string): void {
-    this.waiting.delete(id);
-    if (this.tickPlayers.delete(id)) this.removed(id);
+    this.pending.delete(id);
+    if (this.seats.delete(id)) this.removed(id);
   }
 
   close(): void {
@@ -259,36 +311,69 @@ export abstract class TickRoom<I> implements RoomHost {
   message(id: string, data: unknown): void {
     const m = data as Partial<TickMessage<unknown>> | null;
     if (!m || typeof m !== "object") return;
-    if (m.k === "hello" && typeof m.name === "string") {
-      const name = m.name.trim().slice(0, 20) || `Pilot ${id}`;
-      if (this.waiting.has(id)) this.waiting.set(id, name);
-      const p = this.tickPlayers.get(id);
-      if (p) {
-        p.name = name;
-        this.renamed(id, name);
-      }
+    if (m.k === "hello") {
+      if (this.pending.get(id) !== null) return; // once, and not once in
+      const join = this.parseJoin(m.join);
+      if (join === null) return this.room.kick(id, "the game can't take that join");
+      this.pending.set(id, join);
+      if (this.isReady) this.admit(id, join);
       return;
     }
-    const p = this.tickPlayers.get(id);
-    if (m.k !== "in" || !p || !Number.isInteger(m.seq) || m.seq! <= (p.queue.at(-1)?.seq ?? p.ack) || p.queue.length >= (this.opts.maxQueue ?? 120)) return;
+    const seat = this.seats.get(id);
+    if (!seat) return;
+    if (m.k === "cmd") return this.command(id, m.c);
+    if (m.k !== "in" || seat.role !== "player" || seat.drive || !Number.isInteger(m.seq) || m.seq! <= (seat.queue.at(-1)?.seq ?? seat.ack)) return;
     const i = this.input(m.i);
     if (i === null) return;
-    p.queue.push({ seq: m.seq!, i, seen: typeof m.seen === "number" && Number.isFinite(m.seen) ? m.seen : null });
+    if (seat.queue.length >= (this.opts.maxQueue ?? 15)) seat.queue.shift();
+    seat.queue.push({ seq: m.seq!, i, seen: typeof m.seen === "number" && Number.isFinite(m.seen) ? m.seen : null });
   }
 
-  /** A player's name, as it gave it. */
-  nameOf(id: string): string {
-    return this.tickPlayers.get(id)?.name ?? this.waiting.get(id) ?? `Pilot ${id}`;
+  // ---------------------------------------------------------------- for the game
+
+  /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
+  addBot(id: string, join: J, drive: () => I): boolean {
+    if (this.seats.has(id) || this.pending.has(id)) return false;
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, drive };
+    this.seats.set(id, seat);
+    if (this.added(id, join) !== null) return true;
+    this.seats.delete(id);
+    return false;
+  }
+
+  removeBot(id: string): void {
+    if (this.seats.get(id)?.drive && this.seats.delete(id)) this.removed(id);
+  }
+
+  /** Send a page away, saying why. */
+  kick(id: string, why: string): void {
+    this.room.kick(id, why);
+  }
+
+  roleOf(id: string): TickRole | null {
+    return this.seats.get(id)?.role ?? null;
+  }
+
+  joinOf(id: string): J | null {
+    return this.seats.get(id)?.join ?? null;
+  }
+
+  isBot(id: string): boolean {
+    return !!this.seats.get(id)?.drive;
+  }
+
+  /** The players (bots among them), in the order they arrived. */
+  playerIds(): string[] {
+    return [...this.seats].filter(([, s]) => s.role === "player").map(([id]) => id);
+  }
+
+  spectatorIds(): string[] {
+    return [...this.seats].filter(([, s]) => s.role === "spectator").map(([id]) => id);
   }
 
   /** The last of a player's inputs stepped. */
   ackOf(id: string): number {
-    return this.tickPlayers.get(id)?.ack ?? 0;
-  }
-
-  /** The players in the game (not those waiting for it). */
-  playerIds(): string[] {
-    return [...this.tickPlayers.keys()];
+    return this.seats.get(id)?.ack ?? 0;
   }
 
   /** How far back to rewind for what a page saw at `seen` (s), at most `max`. */
@@ -296,28 +381,43 @@ export abstract class TickRoom<I> implements RoomHost {
     return seen === null ? 0 : Math.max(0, Math.min(max, this.time - seen));
   }
 
-  /** One tick: the players' steps, the world's, and a snapshot every `snapshotEvery`. */
+  /** One tick: the players' steps, the world's, and the snapshots every `snapshotEvery`. */
   tick(): void {
     this.time = ++this.ticks * this.tickLength;
     if (!this.isReady) return;
     const burst = this.opts.maxBurst ?? 8;
-    for (const [id, p] of this.tickPlayers) {
-      p.budget = Math.min(burst, p.budget + 1);
-      while (p.budget >= 1 && p.queue.length) {
-        p.budget--;
-        const next = p.queue.shift()!;
-        p.ack = next.seq;
+    const credit = this.opts.credit ?? 1.02;
+    for (const [id, seat] of [...this.seats]) {
+      if (seat.role !== "player" || !this.seats.has(id)) continue;
+      if (seat.drive) {
+        this.step(id, seat.drive(), null);
+        continue;
+      }
+      seat.budget = Math.min(burst, seat.budget + credit);
+      while (seat.budget >= 1 && seat.queue.length) {
+        seat.budget--;
+        const next = seat.queue.shift()!;
+        seat.ack = next.seq;
         this.step(id, next.i, next.seen);
       }
     }
     this.update();
-    if (this.ticks % (this.opts.snapshotEvery ?? 3) === 0)
-      for (const [id, p] of this.tickPlayers) this.room.send(id, { k: "snap", t: this.time, ack: p.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+    if (this.ticks % (this.opts.snapshotEvery ?? 3)) return;
+    this.room.broadcast({ k: "world", t: this.time, ...this.shared() } satisfies TickShared);
+    for (const [id, seat] of this.seats)
+      if (seat.role === "player" && !seat.drive) this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
   }
 
-  private add(id: string, name: string): void {
-    this.tickPlayers.set(id, { name, queue: [], ack: 0, budget: 0 });
-    this.added(id, name);
+  private admit(id: string, join: J): void {
+    this.pending.delete(id);
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0 };
+    this.seats.set(id, seat);
+    const role = this.added(id, join);
+    if (role === null) {
+      this.seats.delete(id);
+      return this.room.kick(id, "the game turned you away");
+    }
+    seat.role = role;
   }
 
   /** Whole ticks for the time gone by. */

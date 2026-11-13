@@ -123,6 +123,7 @@ Status values:
 | D-112 | `@pixelworlds/multiplayer`, relay-first, and the example game's dogfight over the Grand Canyon | Accepted |
 | D-113 | Rooms the server runs: the dogfight's server owns the planes, and each page predicts its own | Accepted |
 | D-114 | The game the server runs, made generic in the package; the dogfight a demo of it, with a production server and an image | Accepted |
+| D-116 | The game the server runs, made sturdier and open to other modes: a join flow, roles, commands, bots, shared snapshots, one server clock | Accepted |
 
 ---
 
@@ -1516,3 +1517,22 @@ The point is more room for visual interest; both halves are wanted.
   - **The production server through Vite (`vite preview` with a plugin):** a dev tool in production; a built Node file has nothing to install.
   - **Every world package in the build:** 85 MB for a demo that flies one.
 - **Later:** pre-baked start tiles (`tools/prebake.mjs`) in the build, so the first view doesn't bake on the page (a headless page joined in about 20 s, most of it baking on SwiftShader); compression of the page's scripts; deploying on push; the race demo.
+
+### D-116: The game the server runs, made sturdier and open to other modes: a join flow, roles, commands, bots, shared snapshots, one server clock (accepted)
+- **Why:** a review of the package against modes beyond the dogfight (a race against traffic, team modes with a match, bots, spectators, building, more players) found the seams mostly right, but four robustness gaps and missing hooks:
+  - **A server stall lagged for good.** After a stall the server's clock falls behind; with exactly one input credited a tick, the backlog it left never drained (about 350 ms of input lag after a 600 ms stall, every player, for the rest of the match). Smoothing's smallest-gap clock never recovered either, and lag compensation switched itself off.
+  - **A world that failed to open stranded the room:** its pages waited at "joining…" for good.
+  - **Rooms were unbounded,** each with a clock at 120 Hz: any page could open as many as it liked.
+  - **A connection was a player at once,** named "Pilot n" in generic code: a game couldn't refuse one, hold it, take a team or a role with it, or seat a spectator. Only inputs reached the game, so a team pick or a ready would have had to ride in a lossy per-tick input. Snapshots were built and serialized once per player. Bots would have had to fake sockets.
+- **What:**
+  - **Robustness:** inputs are credited 1.02 a tick (a backlog drains: 8 queued inputs in a few hundred ticks), and a player's queue keeps 15, dropping the oldest (its page's prediction corrects). A page's view of another clock is a `ServerClock`: the quickest message's gap over the last 10 s, so it comes back after a stall; one per hosted room. `TickRoom`'s `ready` failing closes the room with the reason, which reaches the page (`bye` → `onClose(why)`). `maxRooms` (64), told to the page that would open one more.
+  - **The relay:** `HostedRoom.kick(id, why)` and `close(why)`; `broadcast` serializes once.
+  - **`TickRoom<I, J, W>`:** a page joins by saying who it is (`hello` with the game's join data, checked by `parseJoin`); once the world is ready, `added` makes it a player or a spectator, or turns it away; nothing in the generic code names anyone. Commands (`cmd`) reach `command`, from players and spectators. Bots: `addBot(id, join, drive)`, `removeBot`. Snapshots: `shared()` once for every page (`world`), `snapshot(id)` for each player (`snap`). `ready` is typed: `world` holds the game's world.
+  - **The page:** `TickClient` has `hello(join)`, `command(c)`, `seen()` and `clock`; `Smoothing` and `RemotePlayers` take the room's clock; a pose's `life` replaces the respawn flag (a new life is drawn there at once); `RemotePlayers.retain(ids)` drops the players a snapshot no longer has.
+  - **The dogfight on it:** spectators (`&watch=1`: no plane, they follow one, Space for the next); a bot when a pilot is alone (the example game's `FlightPilot` after the nearest plane, firing when it is near the nose), gone when another pilot arrives; lives instead of the respawn flag; events (shots, hits, downs) carry their server time and play when the page shows that time of the others, so they no longer run ahead of the planes.
+  - **Checked:** Node tests of the join flow, roles, refusals, commands, bots, the credit draining a backlog, the queue dropping its oldest, a failing world closing the room, kicks and closes with reasons, the room cap, `ServerClock` recovering after a stall, and the dogfight's bot and spectators over the committed flying level. On the built production server with three headless pages: alone, a pilot got the bot, which hunted it and fired; a second pilot sent the bot away; a watcher followed a plane with its own hidden; steering never needed a correction (0.0000 cells).
+- **Rejected alternatives:**
+  - **Join data and commands inside the per-tick input:** dropped with it when a queue overflows, and stepped a tick at a time.
+  - **A server-side room clock driven by the page clocks:** the server's own ticks are the authority; pages only read them.
+  - **Waiting for the race demo for the hooks:** the review's choice; the owner chose to do them now, with the dogfight exercising spectators and bots.
+- **Later** (the review's, for the race demo): smoothing a prediction's corrections; `History` of more than a position (a heading, for oriented hits); a player's step count for race times; a step that waits while its area loads; a policy for a player whose inputs stop; resuming after a reconnect; traffic around several foci, fed by the server. And the watcher's HUD still shows its own idle plane.

@@ -3,15 +3,17 @@ import { flyPlane } from "@pixelworlds/game/src/plane";
 import { PLANE } from "@pixelworlds/game/src/tuning";
 import type { Entity } from "pixelworld/engine";
 import { RemotePlayers, SERVER, TickClient, joinRoom, type Pose, type Room } from "../../index";
-import { GUN, TICK, fireRound, type DogfightInput, type PlaneNet, type Round, type ServerMsg } from "./rules";
+import { GUN, TICK, fireRound, type DogfightEvent, type DogfightInput, type DogfightJoin, type PlaneNet, type Round, type ServerMsg } from "./rules";
 
 /**
- * The dogfight, in the page (D-113, D-114): planes over the Grand Canyon, run
- * by the server (server.ts) on `/dogfight?room=`. The example game's plane
- * controller only draws the page's own plane; a `TickClient` flies it a fixed
- * tick at a time with the keys, sends each input, and corrects to each
- * snapshot. The others are drawn a little behind (`RemotePlayers`). Hits,
- * health, kills and respawns are the server's; the page draws them.
+ * The dogfight, in the page (D-113, D-114, D-116): planes over the Grand
+ * Canyon, run by the server (server.ts) on `/dogfight?room=`. As a pilot,
+ * the example game's plane controller only draws the page's own plane; a
+ * `TickClient` flies it a fixed tick at a time with the keys and corrects to
+ * each snapshot. As a watcher (`watch`), the page flies nothing and follows
+ * the others (Space for the next). The others are drawn a little behind on
+ * the server's clock, and events (shots, hits, planes going down) show when
+ * the page shows that time of them.
  */
 
 interface Peer {
@@ -27,9 +29,10 @@ interface Drawn extends Round {
   e: Entity;
 }
 
-type Snapshot = Extract<ServerMsg, { k: "snap" }>;
+/** A plane's model seed from its id: a few liveries. */
+const seedOf = (id: string) => 1 + (Math.abs([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % 4);
 
-export async function startDogfight(game: Game, opts: { room: string; name?: string | null; path?: string }): Promise<void> {
+export async function startDogfight(game: Game, opts: { room: string; name?: string | null; watch?: boolean; path?: string }): Promise<void> {
   const plane = game.plane;
   if (!plane) throw new Error("the dogfight starts in the air");
   game.stay = true;
@@ -42,24 +45,30 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
     hud?.say(`Dogfight: ${e instanceof Error ? e.message : String(e)} · flying alone`, 6);
     return;
   }
+  const watching = opts.watch === true;
   const w = view.world;
   const size = { length: PLANE.voxels.length * w.renderScale, width: PLANE.voxels.width * w.renderScale, height: PLANE.voxels.height * w.renderScale };
-  const model = (id: string) => ({ group: PLANE.group, seed: 1 + (Number(id) % 4), size });
-  const remotes = new RemotePlayers(view.entities, (id) => ({ model: model(id), headings: PLANE.headings, silhouette: true }));
+  const model = (id: string) => ({ group: PLANE.group, seed: seedOf(id), size });
   const now = () => performance.now() / 1000;
   const client = new TickClient<DogfightInput>(room, {
     tick: TICK,
-    step: (i) => void flyPlane(plane.state, i, plane.fly, plane.params, TICK),
-    seen: () => {
-      const anyone = remotes.ids()[0];
-      return anyone ? remotes.smoothing.time(anyone, now()) : null;
-    },
+    step: watching ? undefined : (i) => void flyPlane(plane.state, i, plane.fly, plane.params, TICK),
   });
-  client.hello((opts.name || `Pilot ${room.id}`).slice(0, 20));
+  const remotes = new RemotePlayers(view.entities, (id) => ({ model: model(id), headings: PLANE.headings, silhouette: true }), { clock: client.clock });
+  client.hello({ name: (opts.name || "Pilot").slice(0, 20), watch: watching } satisfies DogfightJoin);
   plane.paused = true; // the TickClient flies it; the controller only draws it
+  if (watching) {
+    plane.follow = false;
+    plane.entity.visible = false;
+    plane.shadow.visible = false;
+  }
 
   const peers = new Map<string, Peer>();
   let me: PlaneNet | null = null;
+  /** The life the page's own plane was last put at (a new one is a respawn: the camera goes with it). */
+  let placed: number | null = null;
+  /** The plane a watcher follows. */
+  let watched: string | null = null;
   const pal = w.palette.rampIds;
   // the style's ramps where it has them (the desert's): pale tracers, fire, smoke
   const ramp = (...names: string[]) => names.map((n) => pal.get(n)).find((r) => r !== undefined) ?? 0;
@@ -80,6 +89,8 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   for (const m of [roundModel, puffModel]) view.entities.add({ model: m, x: plane.state.x, y: plane.state.y, headings: 1, visible: false, wait: false });
   const rounds: Drawn[] = [];
   const puffs: { e: Entity; life: number }[] = [];
+  /** Events waiting for the page to show their time of the others. */
+  const events: DogfightEvent[] = [];
 
   // ---------------------------------------------------------------- the page
 
@@ -106,72 +117,86 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   /** How far the last snapshot moved the plane (cells): 0 when the prediction was right. */
   let correction = 0;
 
-  const snapshot = (m: Snapshot) => {
-    const t = now();
-    for (const net of m.planes) {
-      if (net.id === room.id) {
-        me = net;
-        continue;
-      }
-      let p = peers.get(net.id);
-      if (!p) {
-        const tag = document.createElement("div");
-        tag.className = "label";
-        tag.style.color = "#ffb38a";
-        document.body.append(tag);
-        peers.set(net.id, (p = { net, tag, shadow: null, flash: 0 }));
-      }
-      p.net = net;
-      remotes.push(net.id, m.t, { x: net.x, y: net.y, h: net.h, heading: net.hd, pitch: net.p, roll: net.r }, net.jump ?? false, t);
-    }
-    const s = plane.state;
-    const before = { x: s.x, y: s.y, h: s.h };
-    if (me?.jump) plane.place(m.you.x, m.you.y, m.you.heading, m.you.h); // a respawn: the camera goes with it
-    client.reconcile(m, () => Object.assign(s, m.you));
-    correction = me?.jump ? 0 : Math.hypot(s.x - before.x, s.y - before.y, (s.h - before.h) / PLANE.stepsPerCell);
-  };
-
   room.onMessage = (from, data) => {
     if (from !== SERVER) return;
     const m = data as ServerMsg;
-    if (m.k === "snap") snapshot(m);
-    else if (m.k === "fire") {
-      if (m.by !== room.id) draw(m);
-    } else if (m.k === "hit") {
-      const p = peers.get(m.to);
-      if (p && m.by === room.id) p.flash = 0.25;
-    } else if (m.k === "down") {
-      puff(m.x, m.y, m.h);
+    if (m.k === "world") {
+      client.heard(m.t);
+      const others = m.planes.filter((n) => n.id !== room.id);
+      me = m.planes.find((n) => n.id === room.id) ?? null;
+      for (const net of others) {
+        let p = peers.get(net.id);
+        if (!p) {
+          const tag = document.createElement("div");
+          tag.className = "label";
+          document.body.append(tag);
+          peers.set(net.id, (p = { net, tag, shadow: null, flash: 0 }));
+        }
+        p.net = net;
+        remotes.push(net.id, m.t, { x: net.x, y: net.y, h: net.h, heading: net.hd, pitch: net.p, roll: net.r, life: net.life });
+      }
+      // the planes the snapshot doesn't have went (left, or a bot gone)
+      const here = new Set(others.map((n) => n.id));
+      remotes.retain(here);
+      for (const [id, p] of peers)
+        if (!here.has(id)) {
+          p.tag.remove();
+          p.shadow?.remove();
+          peers.delete(id);
+        }
+      if (watching && (!watched || !here.has(watched))) watched = others[0]?.id ?? null;
+    } else if (m.k === "snap") {
+      const s = plane.state;
+      const before = { x: s.x, y: s.y, h: s.h };
+      const respawned = me !== null && me.life !== placed;
+      if (respawned) {
+        plane.place(m.you.x, m.you.y, m.you.heading, m.you.h); // the camera goes with it
+        placed = me!.life;
+      }
+      client.reconcile(m, () => Object.assign(s, m.you));
+      correction = respawned ? 0 : Math.hypot(s.x - before.x, s.y - before.y, (s.h - before.h) / PLANE.stepsPerCell);
+    } else if (!(m.k === "fire" && m.by === room.id)) events.push(m); // its own rounds are drawn at once
+  };
+
+  /** An event, shown when the page shows its time of the others. */
+  const play = (e: DogfightEvent) => {
+    if (e.k === "fire") draw(e);
+    else if (e.k === "hit") {
+      const p = peers.get(e.to);
+      if (p && e.by === room.id) p.flash = 0.25;
+    } else {
+      puff(e.x, e.y, e.h);
       const what =
-        m.who === room.id
-          ? m.by
-            ? `Shot down by ${nameOf(m.by)}`
+        e.who === room.id
+          ? e.by
+            ? `Shot down by ${nameOf(e.by)}`
             : "You crashed"
-          : m.by === room.id
-            ? `You shot down ${nameOf(m.who)}`
-            : m.by
-              ? `${nameOf(m.by)} shot down ${nameOf(m.who)}`
-              : `${nameOf(m.who)} crashed`;
+          : e.by === room.id
+            ? `You shot down ${nameOf(e.who)}`
+            : e.by
+              ? `${nameOf(e.by)} shot down ${nameOf(e.who)}`
+              : `${nameOf(e.who)} crashed`;
       hud?.say(what, 2.5);
     }
   };
-  room.onLeave = (id) => {
-    const p = peers.get(id);
-    p?.tag.remove();
-    p?.shadow?.remove();
-    peers.delete(id);
-    remotes.remove(id);
-    hud?.say(`${p?.net.name ?? "A pilot"} left`, 2);
-  };
-  room.onClose = () => {
+
+  room.onLeave = (id) => hud?.say(`${peers.get(id)?.net.name ?? "A pilot"} left`, 2);
+  room.onClose = (why) => {
     plane.paused = false; // flying alone, by the controller again
-    hud?.say("Dogfight: the server went away · flying alone", 6);
+    if (watching) plane.entity.visible = plane.shadow.visible = plane.follow = true;
+    hud?.say(`Dogfight: ${why ?? "the server went away"} · flying alone`, 6);
   };
 
   window.addEventListener("keydown", (e) => {
     if (e.code !== "Space") return;
     e.preventDefault();
-    firing = true;
+    if (!watching) firing = true;
+    else {
+      // the next plane along
+      const ids = remotes.ids();
+      watched = ids[(ids.indexOf(watched ?? "") + 1) % ids.length] ?? null;
+      if (watched) hud?.say(`Watching ${nameOf(watched)}`, 1.5);
+    }
   });
   window.addEventListener("keyup", (e) => {
     if (e.code === "Space") firing = false;
@@ -181,11 +206,12 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   // ---------------------------------------------------------------- each frame
 
   view.onFrame(({ dt }) => {
-    if (plane.paused)
+    const t = now();
+    if (!watching && plane.paused)
       client.advance(
         dt,
         () => ({ ...plane.input(), fire: firing }),
-        // its own rounds drawn at once, as the server will fire them; the others' come from the server
+        // its own rounds drawn at once, as the server will fire them; the others' come with the events
         (i) => {
           cooldown = Math.max(0, cooldown - TICK);
           if (!i.fire || cooldown > 0) return;
@@ -193,7 +219,13 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
           draw(fireRound(plane.state, plane.params, remotes.ids().map((id) => remotes.pose(id)!)));
         },
       );
-    remotes.update(now());
+    remotes.update(t);
+    const shown = client.seen(t);
+    while (events.length && shown !== null && events[0]!.t <= shown) play(events.shift()!);
+    if (watching && watched) {
+      const p = remotes.pose(watched);
+      if (p) view.camera.setFocus(p.x, p.y, p.h);
+    }
     for (let i = rounds.length - 1; i >= 0; i--) {
       const r = rounds[i]!;
       r.x += r.vx * dt;
@@ -220,8 +252,8 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   /** Shadows under the others, their name tags (at the canvas edge, pointing, when out of view), the scores. */
   function drawPage(): void {
     const canvas = view.canvas.getBoundingClientRect();
-    const mine = plane!.state;
-    const myAlt = view.query.elevationAt(mine.x, mine.y, mine.h);
+    const eye = watching && watched ? remotes.pose(watched) : plane!.state;
+    const myAlt = eye ? view.query.elevationAt(eye.x, eye.y, eye.h) : null;
     for (const [id, peer] of peers) {
       const p: Pose | null = remotes.pose(id);
       if (!p) continue;
@@ -232,9 +264,9 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
         peer.shadow.heading = p.heading;
       }
       const alt = view.query.elevationAt(p.x, p.y, p.h);
-      const up = alt !== null && myAlt !== null ? Math.round(alt - myAlt) : null;
-      const km = (Math.hypot(p.x - mine.x, p.y - mine.y) * view.query.metersPerCellAt(p.x, p.y)) / 1000;
-      const text = `${peer.net.name} ${Math.max(0, peer.net.hp)}% · ${km.toFixed(1)} km${up === null ? "" : ` · ${up >= 0 ? "▲" : "▼"}${Math.abs(up)} m`}`;
+      const up = alt !== null && myAlt !== null && id !== watched ? Math.round(alt - myAlt) : null;
+      const km = eye && id !== watched ? (Math.hypot(p.x - eye.x, p.y - eye.y) * view.query.metersPerCellAt(p.x, p.y)) / 1000 : null;
+      const text = `${peer.net.name}${peer.net.bot ? " (bot)" : ""} ${Math.max(0, peer.net.hp)}%${km === null ? "" : ` · ${km.toFixed(1)} km`}${up === null ? "" : ` · ${up >= 0 ? "▲" : "▼"}${Math.abs(up)} m`}`;
       const at = view.camera.project(p.x, p.y, p.h);
       // clear of the HUD's panels at the canvas's corners
       const [mx, my] = [70, 100];
@@ -257,18 +289,20 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
       peer.tag.style.left = `${canvas.left + x}px`;
       peer.tag.style.top = `${canvas.top + y}px`;
     }
-    const row = (n: PlaneNet) => `${n.name.padEnd(12)} ${String(n.kills).padStart(2)} down ${String(n.deaths).padStart(2)} lost`;
+    const row = (n: PlaneNet) => `${(n.name + (n.bot ? " (bot)" : "")).padEnd(14)} ${String(n.kills).padStart(2)} down ${String(n.deaths).padStart(2)} lost`;
     board.textContent = [
       `DOGFIGHT · room ${room.name} · server`,
-      me ? `${row(me)} · ${Math.max(0, me.hp)}%` : "joining…",
+      watching ? `watching ${watched ? nameOf(watched) : "nobody yet"} · Space: next` : me ? `${row(me)} · ${Math.max(0, me.hp)}%` : "joining…",
       ...[...peers.values()].map((p) => row(p.net)),
-      peers.size ? "Space: guns" : "waiting for others: open this page in another window",
-      `prediction: ${client.prediction.unacknowledged} ahead · corr ${correction.toFixed(3)}`,
-    ].join("\n");
+      watching ? "" : peers.size ? "Space: guns" : "waiting for others: open this page in another window",
+      watching ? "" : `prediction: ${client.prediction.unacknowledged} ahead · corr ${correction.toFixed(3)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
-  hud?.say(`Dogfight · room ${room.name} · Space fires`, 4);
-  window.__dogfight = { game, room, me: () => me, remotes, peers, client, correction: () => correction };
+  hud?.say(watching ? `Dogfight · room ${room.name} · watching (Space: next plane)` : `Dogfight · room ${room.name} · Space fires`, 4);
+  window.__dogfight = { game, room, me: () => me, remotes, peers, client, correction: () => correction, watched: () => watched };
 }
 
 declare global {
@@ -281,6 +315,7 @@ declare global {
       peers: ReadonlyMap<string, Peer>;
       client: TickClient<DogfightInput>;
       correction: () => number;
+      watched: () => string | null;
     };
   }
 }

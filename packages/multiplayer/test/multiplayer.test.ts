@@ -1,13 +1,13 @@
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
-import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { Prediction, SERVER, Smoothing, TickClient, joinRoom, type Room, type TickMessage } from "../src/index";
-import { History, TickRoom, attachRelay, serveStatic, type HostedRoom, type Relay } from "../src/server";
+import { Prediction, SERVER, ServerClock, Smoothing, TickClient, joinRoom, type Room, type TickMessage } from "../src/index";
+import { History, TickRoom, attachRelay, serveStatic, type HostedRoom, type Relay, type TickRole } from "../src/server";
 
-/** A relay on a free port, and its URL. */
+/** A server on a free port, and its URL. */
 async function relay(opts: Parameters<typeof attachRelay>[1] = {}): Promise<{ url: string; relay: Relay; server: Server }> {
   const server = createServer((_, res) => res.end("an HTTP page")).listen(0);
   await new Promise((r) => server.once("listening", r));
@@ -16,6 +16,7 @@ async function relay(opts: Parameters<typeof attachRelay>[1] = {}): Promise<{ ur
 
 /** The arguments of the next call to a handler. */
 const once = <A extends unknown[]>(set: (f: (...a: A) => void) => void) => new Promise<A>((resolve) => set((...a) => resolve(a)));
+const flush = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 
 const open: { rooms: Room[]; servers: { relay: Relay; server: Server }[] } = { rooms: [], servers: [] };
 afterEach(() => {
@@ -55,7 +56,7 @@ describe("the relay and its rooms (D-112)", () => {
     a.onMessage = () => (echoed = true);
     a.send({ t: 1.5, pose: { x: 1, y: 2, h: 3, heading: 0 } });
     expect(await got).toEqual([a.id, { t: 1.5, pose: { x: 1, y: 2, h: 3, heading: 0 } }]);
-    await new Promise((r) => setTimeout(r, 30));
+    await flush(30);
     expect([strayed, echoed]).toEqual([false, false]);
 
     const left = once<[string]>((f) => (b.onLeave = f));
@@ -64,11 +65,12 @@ describe("the relay and its rooms (D-112)", () => {
     expect(b.peers.has(a.id)).toBe(false);
   });
 
-  it("turns away a player when the room is full, and says so when no relay answers", async () => {
-    const { join, url } = await setup({ maxPlayers: 1 });
+  it("turns players away from a full room and past the room cap, saying why, and says so when no server answers", async () => {
+    const { join, url } = await setup({ maxPlayers: 1, maxRooms: 1 });
     await join("duel");
     await expect(joinRoom(url, "duel")).rejects.toThrow('room "duel" is full');
-    await expect(joinRoom("ws://127.0.0.1:9/relay", "duel")).rejects.toThrow("no relay answered at ws://127.0.0.1:9/relay");
+    await expect(joinRoom(url, "another")).rejects.toThrow("the server has all the rooms it can take");
+    await expect(joinRoom("ws://127.0.0.1:9/relay", "duel")).rejects.toThrow("no server answered at ws://127.0.0.1:9/relay");
   });
 
   it("holds messages back by `lag`, in order", async () => {
@@ -90,8 +92,8 @@ describe("the relay and its rooms (D-112)", () => {
   });
 });
 
-describe("rooms the server runs (D-113)", () => {
-  it("sends players' messages to the room's game, which answers one or all; it closes when the room empties", async () => {
+describe("rooms the server runs (D-113, D-116)", () => {
+  it("sends players' messages to the room's game, which answers one or all, sends players away saying why, and closes", async () => {
     const log: string[] = [];
     let hosted: HostedRoom | null = null;
     const { join, relay } = await setup({
@@ -113,81 +115,129 @@ describe("rooms the server runs (D-113)", () => {
     const a = await join("arena");
     const b = await join("arena");
     const toA: unknown[] = [];
-    const toB: unknown[] = [];
     a.onMessage = (from, data) => toA.push([from, data]);
-    let gotB: () => void;
-    const bGot = new Promise<void>((r) => (gotB = r));
-    b.onMessage = (from, data) => {
-      toB.push([from, data]);
-      gotB();
-    };
+    const bGot = once<[string, unknown]>((f) => (b.onMessage = f));
     a.send({ in: 1 });
-    await bGot;
-    await new Promise((r) => setTimeout(r, 20));
+    expect(await bGot).toEqual([SERVER, { players: [a.id, b.id] }]); // not a's message itself
+    await flush();
     expect(toA).toEqual([
       [SERVER, { echo: { in: 1 } }],
       [SERVER, { players: [a.id, b.id] }],
     ]);
-    expect(toB).toEqual([[SERVER, { players: [a.id, b.id] }]]); // not a's message itself
-    expect(hosted!.name).toBe("arena");
-    const bLeft = once<[string]>((f) => (a.onLeave = f));
-    b.close();
-    await bLeft;
-    a.close();
-    await new Promise((r) => setTimeout(r, 30));
+    const bGone = once<[string | null]>((f) => (b.onClose = f));
+    hosted!.kick(b.id, "you were in the way");
+    expect(await bGone).toEqual(["you were in the way"]);
+    const aGone = once<[string | null]>((f) => (a.onClose = f));
+    hosted!.close("the match is over");
+    expect(await aGone).toEqual(["the match is over"]);
+    await flush(30);
     expect(log).toEqual([`open arena`, `join ${a.id}`, `join ${b.id}`, `${a.id}: {"in":1}`, `leave ${b.id}`, `leave ${a.id}`, "close"]);
     expect(relay.rooms().size).toBe(0);
   });
 });
 
-/** A toy game at a fixed tick: each player is a number its inputs (−1 to 1) add to. */
-class Toy extends TickRoom<number> {
+/** A toy game at a fixed tick: each player is a number its inputs (−1 to 1) add to; "watch" joins spectate, "no" are turned away. */
+class Toy extends TickRoom<number, string> {
   readonly at = new Map<string, number>();
   readonly log: string[] = [];
-  protected input(data: unknown): number | null {
-    return typeof data === "number" && Number.isFinite(data) ? Math.max(-1, Math.min(1, data)) : null;
+  protected parseJoin(data: unknown): string | null {
+    return typeof data === "string" ? data : null;
   }
-  protected added(id: string, name: string): void {
+  protected added(id: string, join: string): TickRole | null {
+    this.log.push(`added ${id} ${join}`);
+    if (join === "no") return null;
+    if (join === "watch") return "spectator";
     this.at.set(id, 0);
-    this.log.push(`added ${id} ${name}`);
+    return "player";
   }
   protected removed(id: string): void {
     this.at.delete(id);
     this.log.push(`removed ${id}`);
   }
+  protected input(data: unknown): number | null {
+    return typeof data === "number" && Number.isFinite(data) ? Math.max(-1, Math.min(1, data)) : null;
+  }
   protected step(id: string, input: number, seen: number | null): void {
     this.at.set(id, this.at.get(id)! + input);
     if (seen !== null) this.log.push(`seen ${id} lag ${this.lagOf(seen, 0.5).toFixed(3)}`);
   }
-  protected snapshot(id: string): object {
+  protected override command(id: string, c: unknown): void {
+    this.log.push(`cmd ${id} ${JSON.stringify(c)}`);
+  }
+  protected override shared(): object {
+    return { all: Object.fromEntries(this.at) };
+  }
+  protected override snapshot(id: string): object {
     return { x: this.at.get(id) };
   }
 }
 
-function toyRoom(ready?: Promise<unknown>) {
+function toyRoom(opts: { ready?: Promise<undefined> } = {}) {
   const sent: [string, unknown][] = [];
-  const hosted: HostedRoom = { name: "toy", send: (to, data) => sent.push([to, data]), broadcast: () => {}, players: () => [] };
-  return { game: new Toy(hosted, { clock: false, ready, snapshotEvery: 2 }), sent };
+  const kicked: [string, string][] = [];
+  let closed: string | null = null;
+  const hosted: HostedRoom = {
+    name: "toy",
+    send: (to, data) => sent.push([to, data]),
+    broadcast: (data) => sent.push(["*", data]),
+    players: () => [],
+    kick: (id, why) => kicked.push([id, why]),
+    close: (why) => (closed = why),
+  };
+  const game = new Toy(hosted, { clock: false, snapshotEvery: 2, ...opts });
+  const enter = (id: string, join: unknown = "play") => {
+    game.join(id);
+    game.message(id, { k: "hello", join } satisfies TickMessage<number>);
+  };
+  return { game, sent, kicked, enter, closed: () => closed };
 }
 
-describe("a game at a fixed tick (TickRoom, D-114)", () => {
-  it("steps each player's inputs one a tick, catches up a backlog a few at a time, and snapshots with the last input stepped", () => {
-    const { game, sent } = toyRoom();
+describe("a game at a fixed tick (TickRoom, D-114, D-116)", () => {
+  it("admits a page once it says who it is: a player, a spectator, or turned away", () => {
+    const { game, kicked, enter } = toyRoom();
     game.join("1");
-    game.message("1", { k: "hello", name: "  Alex Alexander Alexandrovich  " });
-    expect(game.nameOf("1")).toBe("Alex Alexander Alexa"); // trimmed, 20 at most
-    for (let seq = 1; seq <= 20; seq++) game.message("1", { k: "in", seq, i: 1, seen: null } satisfies TickMessage<number>);
-    game.tick();
-    expect([game.at.get("1"), game.ackOf("1")]).toEqual([1, 1]); // one a tick: a page can't play faster than the clock
-    game.tick();
-    expect(sent).toEqual([["1", { k: "snap", t: 2 / 60, ack: 2, x: 2 }]]);
-    for (let t = 0; t < 30; t++) game.tick(); // the rest, one a tick
-    expect(game.ackOf("1")).toBe(20);
+    expect(game.playerIds()).toEqual([]); // connected, not in: no hello yet
+    game.message("1", { k: "hello", join: "play" });
+    enter("2", "watch");
+    enter("3", "no");
+    enter("4", 42); // not a join the game takes
+    expect([game.playerIds(), game.spectatorIds()]).toEqual([["1"], ["2"]]);
+    expect(kicked).toEqual([
+      ["3", "the game turned you away"],
+      ["4", "the game can't take that join"],
+    ]);
+    game.message("1", { k: "hello", join: "watch" }); // once
+    expect(game.roleOf("1")).toBe("player");
   });
 
-  it("drops inputs out of order, past its queue, or that the game won't take", () => {
-    const { game } = toyRoom();
-    game.join("1");
+  it("steps each player's inputs one a tick, a little credit over so a backlog drains, and snapshots: shared once, and each player's own", () => {
+    const { game, sent, enter } = toyRoom();
+    enter("1");
+    enter("2", "watch");
+    for (let seq = 1; seq <= 10; seq++) game.message("1", { k: "in", seq, i: 1, seen: null });
+    game.tick();
+    expect([game.at.get("1"), game.ackOf("1")]).toEqual([1, 1]); // a page can't play faster than the clock
+    game.message("2", { k: "in", seq: 1, i: 1, seen: null }); // a spectator's: dropped
+    game.tick();
+    expect(sent).toEqual([
+      ["*", { k: "world", t: 2 / 60, all: { "1": 2 } }],
+      ["1", { k: "snap", t: 2 / 60, ack: 2, x: 2 }],
+    ]);
+    // a backlog of 8 while one more input a tick arrives: the credit (1.02) wins it back in a few hundred ticks, not never
+    let seq = 10;
+    let ticks = 0;
+    while (game.ackOf("1") < seq && ticks < 1000) {
+      game.message("1", { k: "in", seq: ++seq, i: 0, seen: null });
+      game.tick();
+      ticks++;
+    }
+    expect(game.ackOf("1")).toBe(seq);
+    expect(ticks).toBeLessThan(500);
+  });
+
+  it("drops inputs out of order, invalid, or past its queue (the oldest waiting goes)", () => {
+    const { game, enter } = toyRoom();
+    enter("1");
     game.message("1", { k: "in", seq: 2, i: 1, seen: null });
     game.message("1", { k: "in", seq: 2, i: 1, seen: null }); // repeated
     game.message("1", { k: "in", seq: 1, i: 1, seen: null }); // older
@@ -197,17 +247,39 @@ describe("a game at a fixed tick (TickRoom, D-114)", () => {
     game.message("1", null);
     for (let t = 0; t < 5; t++) game.tick();
     expect([game.at.get("1"), game.ackOf("1")]).toEqual([2, 4]);
+    for (let seq = 5; seq <= 30; seq++) game.message("1", { k: "in", seq, i: 1, seen: null }); // 26 waiting, 15 kept: 5–15 dropped
+    game.tick();
+    // the credit saved while nothing waited (3 ticks at 1.02) steps 16–19 at once
+    expect([game.ackOf("1"), game.at.get("1")]).toEqual([19, 6]);
   });
 
-  it("holds players until the game is ready, and rewinds by a page's lag at most `max`", async () => {
+  it("passes commands on from players and spectators, and drives bots each tick", () => {
+    const { game, enter } = toyRoom();
+    enter("1");
+    enter("2", "watch");
+    game.message("1", { k: "cmd", c: { team: "red" } });
+    game.message("2", { k: "cmd", c: "ready" });
+    game.message("9", { k: "cmd", c: "not in" });
+    expect(game.addBot("bot", "play", () => -1)).toBe(true);
+    expect(game.addBot("bot", "play", () => -1)).toBe(false); // taken
+    expect(game.addBot("nobot", "no", () => -1)).toBe(false); // turned away
+    game.tick();
+    game.tick();
+    expect([game.at.get("bot"), game.isBot("bot"), game.playerIds()]).toEqual([-2, true, ["1", "bot"]]);
+    game.removeBot("bot");
+    game.removeBot("1"); // not a bot
+    expect(game.playerIds()).toEqual(["1"]);
+    expect(game.log.filter((l) => l.startsWith("cmd") || l.startsWith("removed"))).toEqual(['cmd 1 {"team":"red"}', 'cmd 2 "ready"', "removed bot"]);
+  });
+
+  it("holds pages until the game's world is ready, rewinds by a page's lag at most `max`, and closes the room when the world fails", async () => {
     let ready!: () => void;
-    const { game } = toyRoom(new Promise<void>((r) => (ready = r)));
-    game.join("1");
-    game.message("1", { k: "hello", name: "Bo" });
+    const { game, enter } = toyRoom({ ready: new Promise<undefined>((r) => (ready = () => r(undefined))) });
+    enter("1", "Bo");
     game.tick();
     expect(game.playerIds()).toEqual([]);
     ready();
-    await new Promise((r) => setTimeout(r, 0));
+    await flush(0);
     expect(game.log).toEqual(["added 1 Bo"]);
     for (let t = 0; t < 30; t++) game.tick();
     game.message("1", { k: "in", seq: 1, i: 0, seen: game.time - 0.2 });
@@ -217,6 +289,10 @@ describe("a game at a fixed tick (TickRoom, D-114)", () => {
     expect(game.log.slice(1)).toEqual(["seen 1 lag 0.217", "seen 1 lag 0.500"]);
     game.leave("1");
     expect(game.log.at(-1)).toBe("removed 1");
+
+    const failing = toyRoom({ ready: Promise.reject(new Error("no world")) });
+    await flush(0);
+    expect(failing.closed()).toBe("the game didn't start: no world");
   });
 });
 
@@ -233,19 +309,24 @@ describe("where things were (History)", () => {
 });
 
 describe("a page in a room the server runs (TickClient)", () => {
-  it("steps fixed ticks for the time gone by, sends each input numbered with what it saw, and reconciles", () => {
+  it("says who it is, sends commands, steps fixed ticks with `seen` from the server's clock, and reconciles", () => {
     const sent: unknown[] = [];
     const room = { send: (d: unknown) => sent.push(d) } as unknown as Room;
     let x = 0;
-    const client = new TickClient<number>(room, { tick: 0.1, step: (i) => (x += i), seen: () => 7, maxTicksPerFrame: 3 });
-    client.hello("Alex");
+    const client = new TickClient<number>(room, { tick: 0.1, step: (i) => (x += i), delay: 0.1, maxTicksPerFrame: 3 });
+    client.hello({ name: "Alex" });
+    client.command("ready");
+    expect(client.seen(5)).toBeNull(); // no snapshot yet
+    const now = performance.now() / 1000;
+    client.heard(100, now); // server time 100 as our clock reads now
     const after: number[] = [];
     client.advance(0.25, () => 1, (i) => after.push(i));
     expect([x, after]).toEqual([2, [1, 1]]);
     client.advance(1, () => 1); // a stall: at most 3 ticks
     expect(x).toBe(5);
-    expect(sent.slice(0, 3)).toEqual([{ k: "hello", name: "Alex" }, { k: "in", seq: 1, i: 1, seen: 7 }, { k: "in", seq: 2, i: 1, seen: 7 }]);
-    client.reconcile({ k: "snap", t: 0, ack: 4 }, () => (x = 3.5)); // the server held it back a little
+    expect(sent.slice(0, 3)).toEqual([{ k: "hello", join: { name: "Alex" } }, { k: "cmd", c: "ready" }, expect.objectContaining({ k: "in", seq: 1, i: 1 })]);
+    expect((sent[2] as { seen: number }).seen).toBeCloseTo(100 - 0.1, 1); // what it shows of the others: the server's time, less the delay
+    client.reconcile({ k: "snap", t: 100, ack: 4 }, () => (x = 3.5)); // the server held it back a little
     expect(x).toBe(4.5);
   });
 });
@@ -303,8 +384,23 @@ describe("prediction", () => {
   });
 });
 
+describe("the server's clock as a page sees it (ServerClock, D-116)", () => {
+  it("takes the quickest message's gap, and comes back after a stall once the window has passed", () => {
+    const c = new ServerClock(10);
+    c.sample(100, 0.05); // 50 ms on the way
+    c.sample(100.05, 0.07); // 20 ms: the quickest
+    c.sample(100.1, 0.2); // 100 ms
+    expect(c.time(1, 0.1)).toBeCloseTo(100.88, 9); // theirs is ours + 99.98 (the quickest message), less the delay
+    // the server stalls for half a second: from then on its messages read 0.63 s less than before
+    c.sample(100.15, 0.8);
+    expect(c.time(1, 0)).toBeCloseTo(100.98, 9); // the quick sample still counts…
+    for (let n = 1; n <= 200; n++) c.sample(100.15 + n * 0.05, 0.8 + n * 0.05);
+    expect(c.time(10.8, 0)).toBeCloseTo(110.15, 9); // …until it leaves the window: the new gap, 99.35
+  });
+});
+
 describe("smoothing other players' poses", () => {
-  const pose = (x: number, heading = 0) => ({ x, y: 0, h: 0, heading });
+  const pose = (x: number, heading = 0, life = 0) => ({ x, y: 0, h: 0, heading, life });
 
   it("draws them `delay` behind on their own clock, between samples, and holds the newest", () => {
     const s = new Smoothing(0.1);
@@ -323,13 +419,22 @@ describe("smoothing other players' poses", () => {
     expect(s.time("b", 1000)).toBeNull();
   });
 
-  it("turns the short way round, and doesn't slide into a jump", () => {
+  it("uses one clock for everyone when given one (a room the server runs)", () => {
+    const clock = new ServerClock();
+    const s = new Smoothing(0, clock);
+    s.push("a", 50, pose(1), 0);
+    s.push("b", 50, pose(2), 0);
+    expect(clock.time(0)).toBe(50);
+    expect(s.time("b", 1)).toBe(51);
+  });
+
+  it("turns the short way round, and doesn't slide into a new life", () => {
     const s = new Smoothing(0);
     s.push("a", 0, pose(0, 3.0), 0);
     s.push("a", 1, pose(10, -3.0), 1);
     const mid = s.at("a", 0.5)!;
     expect(Math.abs(Math.atan2(Math.sin(mid.heading), Math.cos(mid.heading)))).toBeCloseTo(Math.PI, 2); // through π, not 0
-    s.push("a", 2, pose(500), 2, true); // respawned far away
+    s.push("a", 2, pose(500, 0, 1), 2); // respawned far away
     expect(s.at("a", 1.5)!.x).toBe(10); // held where it was…
     expect(s.at("a", 2)!.x).toBe(500); // …then there at once
   });
