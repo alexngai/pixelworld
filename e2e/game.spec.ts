@@ -136,9 +136,9 @@ test.describe("the game (M4)", () => {
     expect(res.far).toBe(0);
   });
 
-  test("takes off from a straight road into the flying level without a flash, flies over its shadow, and lands back on a road", async ({ page }) => {
-    // two changes of map, each waiting for the new map's view: about 30 s here, but CI's 2-core
-    // runners (one bake worker, software GL) take eight to nine times as long as a desktop
+  test("takes off from a straight road into the flying level without a flash, flies over its shadow, and lands back on a road", { tag: "@slow" }, async ({ page }) => {
+    // @slow: two changes of map, each waiting for the new map's view: about 30 s on a desktop, but
+    // CI's 2-core runners (one bake worker, software GL) take eight to nine times as long, so CI leaves it out
     test.slow();
     await open(page, "");
     // a straight stretch of the boulevard south of the Strip, heading south
@@ -211,10 +211,10 @@ test.describe("the game (M4)", () => {
     expect(landed.h).toBeCloseTo(landed.ground!, 6);
   });
 
-  test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", async ({ page }) => {
+  test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", { tag: "@slow" }, async ({ page }) => {
     // four changes of map, each waiting for the new map's view, and the walking map's tiles are heavy
     // (44 s at 640×360 with one bake worker, 14 s at 320×180): a small canvas, since nothing here reads
-    // pixels, and slow, since CI's 2-core runners take eight to nine times as long as a desktop
+    // pixels, and @slow, since CI's 2-core runners take eight to nine times as long as a desktop: CI leaves it out
     test.slow();
     await open(page, "", 320, 180);
     const from = (await state(page)).lonLat!;
