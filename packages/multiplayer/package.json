@@ -49,7 +49,10 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "prepack": "node build.mjs"
+    "prepack": "node build.mjs",
+    "demo:dogfight": "vite --config src/demos/dogfight/vite.config.ts",
+    "demo:dogfight:build": "vite build --config src/demos/dogfight/vite.config.ts && vite build --config src/demos/dogfight/vite.config.ts --ssr serve.ts",
+    "demo:dogfight:start": "node src/demos/dogfight/dist/server/serve.js"
   },
   "dependencies": {
     "ws": "8.18.3"
@@ -58,6 +61,7 @@
     "pixelworld": "workspace:^"
   },
   "devDependencies": {
+    "@pixelworlds/game": "workspace:*",
     "@types/ws": "8.18.1",
     "pixelworld": "workspace:*",
     "tsup": "9.0.0"

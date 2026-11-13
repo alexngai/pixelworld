@@ -1,7 +1,9 @@
-import type { IncomingMessage, Server } from "node:http";
+import { createReadStream, statSync } from "node:fs";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import { extname, join, normalize, sep } from "node:path";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
-import { SERVER, type ServerMessage } from "./index";
+import { SERVER, type ServerMessage, type TickMessage, type TickSnapshot } from "./index";
 
 /**
  * Rooms of players on one HTTP server's WebSocket path (Node).
@@ -158,5 +160,264 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
       for (const host of hosts.values()) host.close?.();
       hosts.clear();
     },
+  };
+}
+
+// ---------------------------------------------------------------- a game at a fixed tick
+
+export interface TickRoomOptions {
+  /** The fixed step (s; default 1/60): the pages' `TickClient` steps at the same. */
+  tick?: number;
+  /** A snapshot every this many ticks (default 3: 20 a second at 60). */
+  snapshotEvery?: number;
+  /** Inputs a player may have waiting (default 120), and steps it may catch up in one tick after a stall (default 8). */
+  maxQueue?: number;
+  maxBurst?: number;
+  /** Players are added once this resolves (the game's world, say); until then they wait. */
+  ready?: Promise<unknown>;
+  /** Run in real time (default); off for tests, which call `tick()`. */
+  clock?: boolean;
+}
+
+interface TickPlayer<I> {
+  name: string;
+  queue: { seq: number; i: I; seen: number | null }[];
+  ack: number;
+  budget: number;
+}
+
+/**
+ * A room whose game the server runs at a fixed tick (D-113, D-114): the
+ * `host` of `attachRelay`. Each player's inputs (`TickMessage`, from a
+ * `TickClient`) queue, numbered, and are stepped one a tick, a backlog caught
+ * up a few at a time, so a page can't play faster than the clock; out-of-order
+ * and excess inputs are dropped, and the game validates each (`input`). Every
+ * `snapshotEvery` ticks each player gets a snapshot: the server time, the last
+ * of its inputs stepped, and the game's fields for it.
+ *
+ * A game says what an input is (`input`), what a player's step does (`step`),
+ * what the world does each tick (`update`) and what a snapshot carries
+ * (`snapshot`).
+ */
+export abstract class TickRoom<I> implements RoomHost {
+  /** Server time (s): whole ticks. */
+  time = 0;
+  readonly tickLength: number;
+  private readonly tickPlayers = new Map<string, TickPlayer<I>>();
+  private readonly waiting = new Map<string, string>();
+  private isReady: boolean;
+  private ticks = 0;
+  private last = performance.now();
+  private acc = 0;
+  private readonly timer: ReturnType<typeof setInterval> | null;
+
+  constructor(
+    protected readonly room: HostedRoom,
+    private readonly opts: TickRoomOptions = {},
+  ) {
+    this.tickLength = opts.tick ?? 1 / 60;
+    this.isReady = !opts.ready;
+    opts.ready?.then(
+      () => {
+        this.isReady = true;
+        for (const [id, name] of this.waiting) this.add(id, name);
+        this.waiting.clear();
+      },
+      () => {}, // the game says why
+    );
+    this.timer = opts.clock === false ? null : setInterval(() => this.run(), (this.tickLength * 1000) / 2);
+  }
+
+  /** An untrusted input from a page, as the game's own (clamped, checked), or null to drop it. */
+  protected abstract input(data: unknown): I | null;
+  /** A player arrives (its name sanitized) once the room is ready. */
+  protected abstract added(id: string, name: string): void;
+  protected abstract removed(id: string): void;
+  /** One tick of a player with its input; `seen` as its page sent it (`lagOf` turns it into a rewind). */
+  protected abstract step(id: string, input: I, seen: number | null): void;
+  /** The world's own tick, after the players' steps. */
+  protected update(): void {}
+  /** What a player's snapshot carries besides `t` and `ack`. */
+  protected abstract snapshot(id: string): object;
+  /** A player named itself. */
+  protected renamed(_id: string, _name: string): void {}
+
+  join(id: string): void {
+    if (this.isReady) this.add(id, `Pilot ${id}`);
+    else this.waiting.set(id, `Pilot ${id}`);
+  }
+
+  leave(id: string): void {
+    this.waiting.delete(id);
+    if (this.tickPlayers.delete(id)) this.removed(id);
+  }
+
+  close(): void {
+    if (this.timer) clearInterval(this.timer);
+  }
+
+  message(id: string, data: unknown): void {
+    const m = data as Partial<TickMessage<unknown>> | null;
+    if (!m || typeof m !== "object") return;
+    if (m.k === "hello" && typeof m.name === "string") {
+      const name = m.name.trim().slice(0, 20) || `Pilot ${id}`;
+      if (this.waiting.has(id)) this.waiting.set(id, name);
+      const p = this.tickPlayers.get(id);
+      if (p) {
+        p.name = name;
+        this.renamed(id, name);
+      }
+      return;
+    }
+    const p = this.tickPlayers.get(id);
+    if (m.k !== "in" || !p || !Number.isInteger(m.seq) || m.seq! <= (p.queue.at(-1)?.seq ?? p.ack) || p.queue.length >= (this.opts.maxQueue ?? 120)) return;
+    const i = this.input(m.i);
+    if (i === null) return;
+    p.queue.push({ seq: m.seq!, i, seen: typeof m.seen === "number" && Number.isFinite(m.seen) ? m.seen : null });
+  }
+
+  /** A player's name, as it gave it. */
+  nameOf(id: string): string {
+    return this.tickPlayers.get(id)?.name ?? this.waiting.get(id) ?? `Pilot ${id}`;
+  }
+
+  /** The last of a player's inputs stepped. */
+  ackOf(id: string): number {
+    return this.tickPlayers.get(id)?.ack ?? 0;
+  }
+
+  /** The players in the game (not those waiting for it). */
+  playerIds(): string[] {
+    return [...this.tickPlayers.keys()];
+  }
+
+  /** How far back to rewind for what a page saw at `seen` (s), at most `max`. */
+  lagOf(seen: number | null, max: number): number {
+    return seen === null ? 0 : Math.max(0, Math.min(max, this.time - seen));
+  }
+
+  /** One tick: the players' steps, the world's, and a snapshot every `snapshotEvery`. */
+  tick(): void {
+    this.time = ++this.ticks * this.tickLength;
+    if (!this.isReady) return;
+    const burst = this.opts.maxBurst ?? 8;
+    for (const [id, p] of this.tickPlayers) {
+      p.budget = Math.min(burst, p.budget + 1);
+      while (p.budget >= 1 && p.queue.length) {
+        p.budget--;
+        const next = p.queue.shift()!;
+        p.ack = next.seq;
+        this.step(id, next.i, next.seen);
+      }
+    }
+    this.update();
+    if (this.ticks % (this.opts.snapshotEvery ?? 3) === 0)
+      for (const [id, p] of this.tickPlayers) this.room.send(id, { k: "snap", t: this.time, ack: p.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+  }
+
+  private add(id: string, name: string): void {
+    this.tickPlayers.set(id, { name, queue: [], ack: 0, budget: 0 });
+    this.added(id, name);
+  }
+
+  /** Whole ticks for the time gone by. */
+  private run(): void {
+    const now = performance.now();
+    this.acc += Math.min(0.25, (now - this.last) / 1000);
+    this.last = now;
+    while (this.acc >= this.tickLength) {
+      this.acc -= this.tickLength;
+      this.tick();
+    }
+  }
+}
+
+/** A point: cells across, height in steps (as a `Pose`'s). */
+export interface Place {
+  x: number;
+  y: number;
+  h: number;
+}
+
+/** Where something was, by server time, a few seconds back: to test a shot against where its shooter saw the target (lag compensation). */
+export class History {
+  private readonly at_: (Place & { t: number })[] = [];
+
+  /** @param keep Seconds kept. */
+  constructor(private readonly keep: number) {}
+
+  record(t: number, p: Place): void {
+    this.at_.push({ t, x: p.x, y: p.y, h: p.h });
+    while (this.at_.length && t - this.at_[0]!.t > this.keep) this.at_.shift();
+  }
+
+  /** Where it was at t: between the two records around it; the oldest before them; `now` after the newest. */
+  at(t: number, now: Place): Place {
+    const hs = this.at_;
+    if (!hs.length || t >= hs[hs.length - 1]!.t) return { x: now.x, y: now.y, h: now.h };
+    if (t <= hs[0]!.t) return hs[0]!;
+    let i = hs.length - 1;
+    while (hs[i - 1]!.t > t) i--;
+    const [a, b] = [hs[i - 1]!, hs[i]!];
+    const f = (t - a.t) / (b.t - a.t);
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, h: a.h + (b.h - a.h) * f };
+  }
+
+  /** A jump (a respawn): don't rewind across it. */
+  clear(): void {
+    this.at_.length = 0;
+  }
+}
+
+// ---------------------------------------------------------------- serving a built game
+
+const TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".wasm": "application/wasm",
+  ".txt": "text/plain; charset=utf-8",
+};
+
+/**
+ * A request handler for a built game's directory (D-114), beside the rooms on
+ * the same server: GET and HEAD only, nothing outside `root`, `index.html` for
+ * a directory. Vite's hashed `/assets/` are cached for good; the rest is
+ * checked each time. World package files (`.gz` and the like) go out as they
+ * are stored, for the page to inflate.
+ */
+export function serveStatic(root: string): (req: IncomingMessage, res: ServerResponse) => void {
+  const base = normalize(root.endsWith(sep) ? root : root + sep);
+  return (req, res) => {
+    const fail = (code: number, text: string) => {
+      res.writeHead(code, { "content-type": "text/plain; charset=utf-8" });
+      res.end(text);
+    };
+    if (req.method !== "GET" && req.method !== "HEAD") return fail(405, "method not allowed");
+    let path: string;
+    try {
+      path = decodeURIComponent(new URL(req.url ?? "/", "http://game").pathname);
+    } catch {
+      return fail(400, "bad path");
+    }
+    let file = normalize(join(base, path));
+    if (path.includes("\0") || !(file + sep).startsWith(base)) return fail(404, "not found");
+    let stat = statSync(file, { throwIfNoEntry: false });
+    if (stat?.isDirectory()) {
+      file = join(file, "index.html");
+      stat = statSync(file, { throwIfNoEntry: false });
+    }
+    if (!stat?.isFile()) return fail(404, "not found");
+    res.writeHead(200, {
+      "content-type": TYPES[extname(file)] ?? "application/octet-stream",
+      "content-length": stat.size,
+      "cache-control": path.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
+    });
+    if (req.method === "HEAD") return res.end();
+    createReadStream(file).pipe(res);
   };
 }

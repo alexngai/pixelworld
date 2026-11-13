@@ -1,18 +1,19 @@
-import { axes, type PlaneInput, type PlaneParams, type PlaneState } from "./plane";
-import { PLANE } from "./tuning";
+import { axes, type PlaneInput, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
+import { PLANE } from "@pixelworlds/game/src/tuning";
+import type { TickSnapshot } from "../../index";
 
 /**
- * The dogfight's rules and messages, the same on the server
- * (dogfightServer.ts, which runs the game) and in the page (dogfight.ts,
- * which predicts its own plane and draws the rest): D-113.
+ * The dogfight's rules and messages, the same on the server (server.ts, a
+ * `TickRoom`) and in the page (client.ts, a `TickClient`): D-113, D-114. The
+ * planes fly the example game's flight model (apps/game's plane.ts).
  */
 
 /** Where the planes start: over the inner canyon, between the village and Phantom Ranch. */
 export const DOGFIGHT_START = { lon: -112.11, lat: 36.08 };
+/** The flying level they fly over. */
+export const DOGFIGHT_WORLD = "/southwest-fly/";
 /** The fixed step both sides fly at (s): one input each. */
 export const TICK = 1 / 60;
-/** A snapshot every this many ticks: 20 a second. */
-export const SNAPSHOT_TICKS = 3;
 export const HP = 100;
 export const GUN = {
   /** Seconds between rounds while the trigger is held. */
@@ -33,6 +34,11 @@ export const CREDIT_S = 6;
 export const SPAWN_SPREAD = 8;
 /** A shooter's view is rewound by its lag for its hits, at most this much (s): more is a lagging or lying client. */
 export const MAX_REWIND = 0.5;
+
+/** A page's input for a tick: the stick, and the trigger. */
+export interface DogfightInput extends PlaneInput {
+  fire: boolean;
+}
 
 /** A point in the planes' own space: cells across, heights in steps. */
 export interface Point {
@@ -79,10 +85,7 @@ export function passes(a: Point, b: Point, p: Point): number {
   return Math.hypot(rel[0] - d[0] * f, rel[1] - d[1] * f, rel[2] - d[2] * f);
 }
 
-// ---------------------------------------------------------------- messages
-
-/** The page to the server. `seen`: when what it draws of the others happened, on the server's clock (for rewinding its hits). */
-export type ClientMsg = { k: "hello"; name: string } | { k: "in"; seq: number; i: PlaneInput; f: boolean; seen: number | null };
+// ---------------------------------------------------------------- messages (the page's are `TickMessage<DogfightInput>`)
 
 /** A plane in a snapshot: where it is drawn (its nose's yaw, the drawn pitch, its roll) and its score. */
 export interface PlaneNet extends Point {
@@ -98,9 +101,9 @@ export interface PlaneNet extends Point {
   jump?: boolean;
 }
 
-/** The server to the pages. A snapshot carries, for each page, the last input it stepped and that page's own plane after it. */
+/** The server to the pages: snapshots (every plane, and the page's own after its last input stepped) and events as they happen. */
 export type ServerMsg =
-  | { k: "snap"; t: number; ack: number; you: PlaneState | null; planes: PlaneNet[] }
+  | (TickSnapshot & { you: PlaneState; planes: PlaneNet[] })
   | ({ k: "fire"; by: string } & Round)
   | { k: "hit"; by: string; to: string }
   | ({ k: "down"; who: string; by: string | null } & Point);

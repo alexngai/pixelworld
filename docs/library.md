@@ -50,7 +50,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworlds/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
 | `@pixelworlds/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
 | `@pixelworlds/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
-| `@pixelworlds/multiplayer` | optional: rooms on a WebSocket server, relayed (D-112) or run by the server (D-113), a room client, prediction, other players smoothed into entities; never imported by the engine (D-111) | `packages/multiplayer` (private until released) |
+| `@pixelworlds/multiplayer` | optional: rooms on a WebSocket server, relayed (D-112) or run by the server at a fixed tick (D-113, D-114), a room client, prediction, other players smoothed into entities, serving a built game; demos in `src/demos/`; never imported by the engine (D-111) | `packages/multiplayer` (private until released) |
 | `@pixelworlds/style-desert-southwest`, `@pixelworlds/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, every built-in source (the city facts and terrain sources too), plugins | `pipeline/` |
 | `@pixelworlds/city-sf` (npm) | San Francisco's city pack, browser half: its generators (facades, towers, Chinatown) as a plugin | `packages/city-sf` (§8) |

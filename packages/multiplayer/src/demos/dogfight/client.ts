@@ -1,26 +1,18 @@
-import type { Entity } from "@pixelworlds/engine";
-import { Prediction, RemotePlayers, SERVER, joinRoom, type Pose, type Room } from "@pixelworlds/multiplayer";
-import { GUN, TICK, fireRound, type ClientMsg, type PlaneNet, type Round, type ServerMsg } from "./dogfightRules";
-import type { Game } from "./game";
-import { flyPlane, type PlaneInput } from "./plane";
-import { PLANE } from "./tuning";
+import type { Game } from "@pixelworlds/game/src/game";
+import { flyPlane } from "@pixelworlds/game/src/plane";
+import { PLANE } from "@pixelworlds/game/src/tuning";
+import type { Entity } from "pixelworld/engine";
+import { RemotePlayers, SERVER, TickClient, joinRoom, type Pose, type Room } from "../../index";
+import { GUN, TICK, fireRound, type DogfightInput, type PlaneNet, type Round, type ServerMsg } from "./rules";
 
 /**
- * The dogfight, in the page (D-113): planes over the Grand Canyon, run by the
- * server (dogfightServer.ts) on `/dogfight?room=`. The page sends its keys at
- * the server's fixed 60 a second, numbered, and flies its own plane with them
- * at once through the same flight model (`Prediction`); each snapshot puts
- * the plane where the server has it after the last input it stepped, and
- * steps the rest again. The others are drawn a little behind, smoothed. Hits,
+ * The dogfight, in the page (D-113, D-114): planes over the Grand Canyon, run
+ * by the server (server.ts) on `/dogfight?room=`. The example game's plane
+ * controller only draws the page's own plane; a `TickClient` flies it a fixed
+ * tick at a time with the keys, sends each input, and corrects to each
+ * snapshot. The others are drawn a little behind (`RemotePlayers`). Hits,
  * health, kills and respawns are the server's; the page draws them.
- *
- * `?dogfight=<room>` (`&name=`): the flying level at the canyon, guns on Space.
  */
-
-export { DOGFIGHT_START } from "./dogfightRules";
-
-/** Ticks a frame may catch up (a stalled tab doesn't burst inputs at the server). */
-const MAX_TICKS_PER_FRAME = 6;
 
 interface Peer {
   net: PlaneNet;
@@ -35,6 +27,8 @@ interface Drawn extends Round {
   e: Entity;
 }
 
+type Snapshot = Extract<ServerMsg, { k: "snap" }>;
+
 export async function startDogfight(game: Game, opts: { room: string; name?: string | null; path?: string }): Promise<void> {
   const plane = game.plane;
   if (!plane) throw new Error("the dogfight starts in the air");
@@ -48,14 +42,22 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
     hud?.say(`Dogfight: ${e instanceof Error ? e.message : String(e)} · flying alone`, 6);
     return;
   }
-  const send = (m: ClientMsg) => room.send(m);
-  send({ k: "hello", name: (opts.name || `Pilot ${room.id}`).slice(0, 20) });
-  plane.paused = true; // the page flies it here, a fixed tick at a time; the controller only draws it
-
   const w = view.world;
   const size = { length: PLANE.voxels.length * w.renderScale, width: PLANE.voxels.width * w.renderScale, height: PLANE.voxels.height * w.renderScale };
   const model = (id: string) => ({ group: PLANE.group, seed: 1 + (Number(id) % 4), size });
   const remotes = new RemotePlayers(view.entities, (id) => ({ model: model(id), headings: PLANE.headings, silhouette: true }));
+  const now = () => performance.now() / 1000;
+  const client = new TickClient<DogfightInput>(room, {
+    tick: TICK,
+    step: (i) => void flyPlane(plane.state, i, plane.fly, plane.params, TICK),
+    seen: () => {
+      const anyone = remotes.ids()[0];
+      return anyone ? remotes.smoothing.time(anyone, now()) : null;
+    },
+  });
+  client.hello((opts.name || `Pilot ${room.id}`).slice(0, 20));
+  plane.paused = true; // the TickClient flies it; the controller only draws it
+
   const peers = new Map<string, Peer>();
   let me: PlaneNet | null = null;
   const pal = w.palette.rampIds;
@@ -78,7 +80,6 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   for (const m of [roundModel, puffModel]) view.entities.add({ model: m, x: plane.state.x, y: plane.state.y, headings: 1, visible: false, wait: false });
   const rounds: Drawn[] = [];
   const puffs: { e: Entity; life: number }[] = [];
-  const now = () => performance.now() / 1000;
 
   // ---------------------------------------------------------------- the page
 
@@ -98,58 +99,43 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   const puff = (x: number, y: number, h: number) => puffs.push({ e: view.entities.add({ model: puffModel, x, y, h, headings: 1, wait: false }), life: 0.7 });
   const draw = (r: Round) => rounds.push({ ...r, life: GUN.life, e: view.entities.add({ model: roundModel, x: r.x, y: r.y, h: r.h, headings: 1, wait: false }) });
 
-  // ---------------------------------------------------------------- flying, a tick at a time
+  // ---------------------------------------------------------------- the server's word
 
-  /** The page's own plane: stepped here at once, put right by the server's snapshots. */
-  const prediction = new Prediction<{ i: PlaneInput; f: boolean }>(({ i }) => void flyPlane(plane.state, i, plane.fly, plane.params, TICK));
   let firing = false;
   let cooldown = 0;
-  let acc = 0;
   /** How far the last snapshot moved the plane (cells): 0 when the prediction was right. */
   let correction = 0;
 
-  const tick = () => {
-    const i = plane.input();
-    const seq = prediction.apply({ i, f: firing });
-    // the guns as the server fires them; drawn here at once (the server sends the others' rounds)
-    cooldown = Math.max(0, cooldown - TICK);
-    if (firing && cooldown <= 0) {
-      cooldown = GUN.interval;
-      draw(fireRound(plane.state, plane.params, remotes.ids().map((id) => remotes.pose(id)!)));
+  const snapshot = (m: Snapshot) => {
+    const t = now();
+    for (const net of m.planes) {
+      if (net.id === room.id) {
+        me = net;
+        continue;
+      }
+      let p = peers.get(net.id);
+      if (!p) {
+        const tag = document.createElement("div");
+        tag.className = "label";
+        tag.style.color = "#ffb38a";
+        document.body.append(tag);
+        peers.set(net.id, (p = { net, tag, shadow: null, flash: 0 }));
+      }
+      p.net = net;
+      remotes.push(net.id, m.t, { x: net.x, y: net.y, h: net.h, heading: net.hd, pitch: net.p, roll: net.r }, net.jump ?? false, t);
     }
-    const anyone = remotes.ids()[0];
-    send({ k: "in", seq, i, f: firing, seen: anyone ? remotes.smoothing.time(anyone, now()) : null });
+    const s = plane.state;
+    const before = { x: s.x, y: s.y, h: s.h };
+    if (me?.jump) plane.place(m.you.x, m.you.y, m.you.heading, m.you.h); // a respawn: the camera goes with it
+    client.reconcile(m, () => Object.assign(s, m.you));
+    correction = me?.jump ? 0 : Math.hypot(s.x - before.x, s.y - before.y, (s.h - before.h) / PLANE.stepsPerCell);
   };
 
   room.onMessage = (from, data) => {
     if (from !== SERVER) return;
     const m = data as ServerMsg;
-    if (m.k === "snap") {
-      const t = now();
-      for (const net of m.planes) {
-        if (net.id === room.id) {
-          me = net;
-          continue;
-        }
-        let p = peers.get(net.id);
-        if (!p) {
-          const tag = document.createElement("div");
-          tag.className = "label";
-          tag.style.color = "#ffb38a";
-          document.body.append(tag);
-          peers.set(net.id, (p = { net, tag, shadow: null, flash: 0 }));
-        }
-        p.net = net;
-        remotes.push(net.id, m.t, { x: net.x, y: net.y, h: net.h, heading: net.hd, pitch: net.p, roll: net.r }, net.jump ?? false, t);
-      }
-      const you = m.you;
-      if (!you) return;
-      const s = plane.state;
-      const before = { x: s.x, y: s.y, h: s.h };
-      if (me?.jump) plane.place(you.x, you.y, you.heading, you.h); // a respawn: the camera goes with it
-      prediction.reconcile(m.ack, () => Object.assign(s, you));
-      correction = me?.jump ? 0 : Math.hypot(s.x - before.x, s.y - before.y, (s.h - before.h) / PLANE.stepsPerCell);
-    } else if (m.k === "fire") {
+    if (m.k === "snap") snapshot(m);
+    else if (m.k === "fire") {
       if (m.by !== room.id) draw(m);
     } else if (m.k === "hit") {
       const p = peers.get(m.to);
@@ -195,13 +181,18 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   // ---------------------------------------------------------------- each frame
 
   view.onFrame(({ dt }) => {
-    if (plane.paused) {
-      acc = Math.min(acc + dt, MAX_TICKS_PER_FRAME * TICK);
-      while (acc >= TICK) {
-        acc -= TICK;
-        tick();
-      }
-    }
+    if (plane.paused)
+      client.advance(
+        dt,
+        () => ({ ...plane.input(), fire: firing }),
+        // its own rounds drawn at once, as the server will fire them; the others' come from the server
+        (i) => {
+          cooldown = Math.max(0, cooldown - TICK);
+          if (!i.fire || cooldown > 0) return;
+          cooldown = GUN.interval;
+          draw(fireRound(plane.state, plane.params, remotes.ids().map((id) => remotes.pose(id)!)));
+        },
+      );
     remotes.update(now());
     for (let i = rounds.length - 1; i >= 0; i--) {
       const r = rounds[i]!;
@@ -272,22 +263,23 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
       me ? `${row(me)} · ${Math.max(0, me.hp)}%` : "joining…",
       ...[...peers.values()].map((p) => row(p.net)),
       peers.size ? "Space: guns" : "waiting for others: open this page in another window",
-      `prediction: ${prediction.unacknowledged} ahead · corr ${correction.toFixed(3)}`,
+      `prediction: ${client.prediction.unacknowledged} ahead · corr ${correction.toFixed(3)}`,
     ].join("\n");
   }
 
   hud?.say(`Dogfight · room ${room.name} · Space fires`, 4);
-  window.__dogfight = { room, me: () => me, remotes, peers, prediction, correction: () => correction };
+  window.__dogfight = { game, room, me: () => me, remotes, peers, client, correction: () => correction };
 }
 
 declare global {
   interface Window {
     __dogfight?: {
+      game: Game;
       room: Room;
       me: () => PlaneNet | null;
       remotes: RemotePlayers;
       peers: ReadonlyMap<string, Peer>;
-      prediction: Prediction<{ i: PlaneInput; f: boolean }>;
+      client: TickClient<DogfightInput>;
       correction: () => number;
     };
   }

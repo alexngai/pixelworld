@@ -5,13 +5,14 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { StyleError, parseStyleJson, resolveStyleExtends, suggest } from "@pixelworlds/style";
+import { resolveStyleExtends } from "@pixelworlds/style";
+import "./game.css";
 import type { CarInput } from "./car";
-import { DOGFIGHT_START, startDogfight } from "./dogfight";
 import { Game } from "./game";
 import { blocksCar } from "./ground";
 import type { PlaneInput } from "./plane";
 import { nearestRoad, roadUnder } from "./roads";
+import { stylePack } from "./styles";
 import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample } from "./run";
 
 /**
@@ -22,20 +23,10 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  * URL parameters: `world` (a package, default the Southwest's driving level),
  * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
  * `cache=0`, `startTiles=0` (bake the first view too), `workers` (bake workers), `ground=0` (no ground while tiles bake), `idle=0` (no baking ahead while idle), `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
- * scripted run in real time, then its frame times), `dogfight=<room>` (and `name`: the dogfight over the Grand Canyon,
- * dogfight.ts, through the dev server's relay).
+ * scripted run in real time, then its frame times). The dogfight is a demo of @pixelworlds/multiplayer
+ * (packages/multiplayer/src/demos/dogfight), on this game's plane.
  */
 
-// Every style pack in the repo, by id; a world names its pack in the manifest. Read as
-// text only when a world needs it and parsed here (D-075), so a broken pack fails only
-// the worlds that use it, with its file, line and column.
-const STYLE_FILES = import.meta.glob<string>("../../../worlds/_styles/*/style.json", { query: "?raw", import: "default" });
-const STYLE_IDS = Object.keys(STYLE_FILES).map((path) => path.split("/").at(-2)!);
-async function stylePack(id: string): Promise<object> {
-  const file = STYLE_FILES[`../../../worlds/_styles/${id}/style.json`];
-  if (!file) throw new StyleError(`no style pack "${id}"${suggest(id, STYLE_IDS)}; there are ${STYLE_IDS.join(", ")} (worlds/_styles/)`, { pack: id });
-  return parseStyleJson(await file(), `worlds/_styles/${id}/style.json`) as object;
-}
 
 // The city packs the game can load, by name (D-071); a world's style pack names the ones it needs.
 const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin, [newYork.name]: newYork, [paris.name]: paris, [kyoto.name]: kyoto, [tokyo.name]: tokyo, [hongKong.name]: hongKong };
@@ -101,13 +92,12 @@ async function main() {
     canvas.style.width = `${size.width}px`;
     canvas.style.height = `${size.height}px`;
   }
-  const dogfight = params.get("dogfight"); // a room
   const startParam = params.get("start");
   const [slon, slat] = startParam ? startParam.split(",").map(Number) : [NaN, NaN];
   const game = await Game.create({
     canvas,
-    worldUrl: params.get("world") ?? (dogfight !== null ? "/southwest-fly/" : "/southwest/"),
-    start: Number.isFinite(slon) && Number.isFinite(slat) ? { lon: slon!, lat: slat! } : dogfight !== null ? DOGFIGHT_START : null,
+    worldUrl: params.get("world") ?? "/southwest/",
+    start: Number.isFinite(slon) && Number.isFinite(slat) ? { lon: slon!, lat: slat! } : null,
     // ?style= replaces the world's pack, with its own `extends` merged in here
     style: params.has("style") ? ((await resolveStyleExtends(await stylePack(params.get("style")!), stylePack)) as object) : stylePack,
     plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
@@ -127,7 +117,7 @@ async function main() {
     zoom: params.has("zoom") ? num("zoom", 2) : "auto",
     rotation: num("rot", 0) & 3,
     hud: params.get("hud") === "0" ? null : ui,
-    fly: params.get("fly") === "1" || dogfight !== null,
+    fly: params.get("fly") === "1",
   });
 
   window.addEventListener("keydown", (e) => game.keyDown(e));
@@ -209,7 +199,6 @@ async function main() {
   // paused=1: the vehicles wait for a script (tests, screenshots)
   if (params.get("paused") === "1") game.pause(true);
   game.hud?.say(`${game.mode === "car" ? "Drive" : "Fly"} · H for keys`, 4);
-  if (dogfight !== null) await startDogfight(game, { room: dogfight || "canyon", name: params.get("name") });
   if (params.get("run") === "1" && game.manifest.id.startsWith("southwest")) {
     const report = await scriptedRun(game);
     const f = report.frames;

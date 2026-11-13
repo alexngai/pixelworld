@@ -122,6 +122,7 @@ Status values:
 | D-111 | Multiplayer-friendly without netcode in the engine: world queries without a view, and entities that don't wait | Accepted |
 | D-112 | `@pixelworlds/multiplayer`, relay-first, and the example game's dogfight over the Grand Canyon | Accepted |
 | D-113 | Rooms the server runs: the dogfight's server owns the planes, and each page predicts its own | Accepted |
+| D-114 | The game the server runs, made generic in the package; the dogfight a demo of it, with a production server and an image | Accepted |
 
 ---
 
@@ -1496,4 +1497,22 @@ The point is more room for visual interest; both halves are wanted.
   - **The relayed dogfight beside it:** two dogfights to keep. The relay stays in the package for games that want one.
   - **Lockstep or rollback:** the model's float maths may differ between browsers' engines in the last bits (D-111); a server with corrections absorbs that.
   - **The server loaded from the Vite config's own imports:** Node can't load the engine's TypeScript sources; a built server bundle would work, as a build step to keep.
-- **Later:** a server for production (a bundle of `dogfightServer.ts` beside the built game); a mode that ensures the world around each plane for big levels; hits shown at the moment a page's round meets a target rather than at the server's word; a race sample.
+- **Later:** a server for production (a bundle of `dogfightServer.ts` beside the built game; built: D-114, where these files moved to the package's demos); a mode that ensures the world around each plane for big levels; hits shown at the moment a page's round meets a target rather than at the server's word; a race sample.
+
+### D-114: The game the server runs, made generic in the package; the dogfight a demo of it, with a production server and an image (accepted)
+- **Why:** the multiplayer code sat in the example game, part generic and part the dogfight's: the fixed tick, input queues, acks and rewinding were written for planes. A race, or anyone else's game, would have copied them. And the dogfight ran only on a dev server.
+- **What:**
+  - **Generic, in `@pixelworlds/multiplayer`:**
+    - `TickRoom<I>` (server): a hosted room's game at a fixed tick. Each player's numbered inputs queue and are stepped one a tick (a backlog caught up at most `maxBurst` at a time); out-of-order, excess and invalid inputs are dropped; names are sanitized; players wait until the game's world is ready; snapshots carry `t`, `ack` and the game's fields. A game writes `input`, `added`, `removed`, `step`, `update` and `snapshot`; `lagOf(seen, max)` turns what a page saw into a rewind.
+    - `History` (server): where something was by server time, for lag compensation; cleared across a jump.
+    - `serveStatic(root)` (server): a built game beside the rooms on one port. GET and HEAD only, nothing outside its directory (dot segments, encoded ones and null bytes refused), `index.html` for a directory, hashed `/assets/` cached for good, world package files as stored.
+    - `TickClient<I>` (page): the fixed ticks in each frame's time, each input predicted, numbered and sent with `seen`, `after` for effects drawn at once; `reconcile` on each snapshot. `TickMessage` and `TickSnapshot` are the protocol.
+  - **The dogfight, a demo** (`packages/multiplayer/src/demos/dogfight/`): `rules.ts`, `server.ts` (a `TickRoom`), `client.ts` (a `TickClient`), a page of its own (`main.ts`, `index.html`) on the example game, and `serve.ts`. It imports the game's plane, flight model and style packs from `@pixelworlds/game` (a dev dependency of the package; the demos aren't in what it ships). The example game has no multiplayer code again; its page's CSS moved to `src/game.css`, which the demo's page imports, and its style packs to `src/styles.ts`, which the demo's server reads (bundled, not from disk).
+  - **Production:** `demo:dogfight:build` builds the page with only the world it flies (`southwest-fly`, 1.4 MB with the page) and the server as one Node file with everything in it (380 KB); `demo:dogfight:start` runs it on `PORT` (8080). It used 79 MB with a room open. A `Dockerfile` (built from the repository's root; a root `.dockerignore` keeps local files and the other worlds out) and a `fly.toml` (one machine, as rooms live in memory; it stops when idle).
+  - **Checked:** Node tests of `TickRoom` (on a toy game), `History`, `TickClient` and `serveStatic` (traversal refused), and of the dogfight demo over the committed flying level. Two headless Chromium pages on the demo's dev server and on the built production server: both joined, steering never needed a correction (0.0000 cells, up to 7 inputs ahead), every round fired reached the other page.
+- **Rejected alternatives:**
+  - **The dogfight as a mode of the example game:** the game would carry multiplayer code and its server; a demo shows what the package does with the game as a dependency.
+  - **The flight model moved into a package:** it is the game's, and a demo may depend on the game.
+  - **The production server through Vite (`vite preview` with a plugin):** a dev tool in production; a built Node file has nothing to install.
+  - **Every world package in the build:** 85 MB for a demo that flies one.
+- **Later:** pre-baked start tiles (`tools/prebake.mjs`) in the build, so the first view doesn't bake on the page (a headless page joined in about 20 s, most of it baking on SwiftShader); compression of the page's scripts; deploying on push; the race demo.

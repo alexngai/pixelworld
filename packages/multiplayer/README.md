@@ -24,9 +24,17 @@ view.onFrame(() => others.update());
 ```
 
 - **`attachRelay(server, { path, maxPlayers, maxMessage, lag, host })`:** rooms by `?room=` on one path (default `/relay`); other upgrades (Vite's HMR) are left alone. `lag` holds every message back on each hop, to try a game under lag. With `host(room)`, each room's messages go to a game the server runs (`RoomHost`: `join`, `message`, `leave`, `close`), which answers with `room.send(to, data)` and `room.broadcast(data)`; players see them `from` `SERVER`.
-- **`Prediction(step)`:** `apply(input)` steps the player's vehicle at once and numbers the input for the server; `reconcile(ack, restore)` puts the server's state back and steps the inputs it hasn't yet.
+- **`TickRoom<I>`** (server, D-114): a hosted room's game at a fixed tick. Each player's numbered inputs queue and are stepped one a tick (a backlog caught up a few at a time), so a page can't play faster than the clock; out-of-order and excess inputs are dropped, names sanitized, and players held until the game's world is ready. A game says what an input is (`input`, validating the untrusted data), what a player's step does (`step`), what the world does each tick (`update`) and what a snapshot carries (`snapshot`); `lagOf(seen, max)` says how far back to rewind for what a page saw.
+- **`History`** (server): where something was, by server time, to test a shot against where its shooter saw the target.
+- **`serveStatic(root)`** (server): a request handler for a built game's directory, beside the rooms on the same port: GET and HEAD, nothing outside `root`, hashed `/assets/` cached for good, world package files as stored.
+- **`TickClient<I>`** (page, D-114): a page in a `TickRoom`. `advance(dt, input, after?)` steps the fixed ticks the time holds, each input predicted, numbered and sent with when what the page shows of the others happened (`seen`); `reconcile(snapshot, restore)` on each snapshot.
+- **`Prediction(step)`:** `apply(input)` steps the player's vehicle at once and numbers the input for the server; `reconcile(ack, restore)` puts the server's state back and steps the inputs it hasn't yet. `TickClient` is built on it.
 - **`joinRoom(url, room)`:** `id`, `peers`, `send(data)`, `onMessage(from, data)`, `onJoin`, `onLeave`, `onClose`, `close()`.
 - **`Smoothing`:** poses stamped with the sender's clock, drawn `delay` seconds behind (default 0.1 s) and in between; `jump` for a respawn, which isn't slid to. `time(id, now)` is when what is drawn happened, on the sender's clock: a hosted game rewinds a shooter's view by it.
 - **`RemotePlayers(view.entities, spec, delay?)`:** an entity per player (`wait: false`), moved by `update()` each frame; `pose(id)` is where it was drawn, to aim and hit at.
 
-The example game's dogfight is a hosted room (apps/game/src/dogfightServer.ts on the dev server): `pnpm --filter @pixelworlds/game dev`, then open `http://localhost:5252/?dogfight=canyon` in two windows.
+## Demos
+
+Games built on the package, in `src/demos/` (not part of what the package ships):
+
+- **[The dogfight](src/demos/dogfight/README.md)** (D-113, D-114): planes over the Grand Canyon on the example game's flight model, run by the server. `pnpm --filter @pixelworlds/multiplayer demo:dogfight`, then open `http://localhost:5253/?room=canyon` in two windows. It builds into one Node server with the page beside it, and a Docker image.

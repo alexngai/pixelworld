@@ -64,9 +64,6 @@ importers:
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
-      '@pixelworlds/multiplayer':
-        specifier: workspace:*
-        version: link:../../packages/multiplayer
       '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../../packages/sim
@@ -247,6 +244,9 @@ importers:
         specifier: 8.18.3
         version: 8.18.3
     devDependencies:
+      '@pixelworlds/game':
+        specifier: workspace:*
+        version: link:../../apps/game
       '@types/ws':
         specifier: 8.18.1
         version: 8.18.1

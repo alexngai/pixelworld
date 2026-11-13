@@ -23,6 +23,16 @@ import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
 /** `from` on what a hosted room's game sends (D-113). */
 export const SERVER = "server";
 
+/** A page to a `TickRoom` (D-114): its name, and its inputs, numbered, with `seen`: when what it shows of the others happened, on the server's clock. */
+export type TickMessage<I> = { k: "hello"; name: string } | { k: "in"; seq: number; i: I; seen: number | null };
+
+/** A `TickRoom`'s snapshot, to each page: server time, the last of its inputs stepped, and the game's own fields. */
+export interface TickSnapshot {
+  k: "snap";
+  t: number;
+  ack: number;
+}
+
 /** What the relay sends (JSON text frames). A player sends its own messages as plain JSON. */
 export type ServerMessage =
   | { t: "welcome"; id: string; peers: string[] }
@@ -254,6 +264,58 @@ export class Prediction<I> {
   /** Inputs stepped here that the server hasn't yet. */
   get unacknowledged(): number {
     return this.pending.length;
+  }
+}
+
+// ---------------------------------------------------------------- a page in a room the server runs
+
+export interface TickClientOptions<I> {
+  /** The room's fixed step (s): the server's `TickRoom` steps at the same. */
+  tick: number;
+  /** One fixed step of the page's own vehicle with an input. */
+  step: (input: I) => void;
+  /** When what the page shows of the others happened, on the server's clock (for the server's rewind); null when it shows none. */
+  seen?: () => number | null;
+  /** Ticks one frame may catch up (default 6): a stalled tab doesn't burst inputs at the server. */
+  maxTicksPerFrame?: number;
+}
+
+/**
+ * A page in a `TickRoom` (D-114): its inputs at the room's fixed tick,
+ * stepped at once (`Prediction`), numbered and sent; `reconcile` on each
+ * snapshot. The game decides what an input is and what a snapshot carries.
+ */
+export class TickClient<I> {
+  readonly prediction: Prediction<I>;
+  private acc = 0;
+
+  constructor(
+    readonly room: Room,
+    private readonly opts: TickClientOptions<I>,
+  ) {
+    this.prediction = new Prediction(opts.step);
+  }
+
+  hello(name: string): void {
+    this.room.send({ k: "hello", name } satisfies TickMessage<I>);
+  }
+
+  /** The ticks in `dt` seconds: each samples `input()`, steps and sends it, then calls `after` (effects drawn at once). */
+  advance(dt: number, input: () => I, after?: (input: I) => void): void {
+    const tick = this.opts.tick;
+    this.acc = Math.min(this.acc + dt, (this.opts.maxTicksPerFrame ?? 6) * tick);
+    while (this.acc >= tick) {
+      this.acc -= tick;
+      const i = input();
+      const seq = this.prediction.apply(i);
+      after?.(i);
+      this.room.send({ k: "in", seq, i, seen: this.opts.seen?.() ?? null } satisfies TickMessage<I>);
+    }
+  }
+
+  /** A snapshot: `restore` puts the server's state for this page in place, and the inputs it hasn't stepped yet are stepped again. */
+  reconcile(snap: TickSnapshot, restore: () => void): void {
+    this.prediction.reconcile(snap.ack, restore);
   }
 }
 

@@ -1,0 +1,32 @@
+import "@pixelworlds/game/src/game.css";
+import { Game } from "@pixelworlds/game/src/game";
+import { stylePack } from "@pixelworlds/game/src/styles";
+import { startDogfight } from "./client";
+import { DOGFIGHT_START, DOGFIGHT_WORLD } from "./rules";
+
+/**
+ * The dogfight demo's page (D-114): the example game in the air over the
+ * Grand Canyon, its plane flown through the server (client.ts). `?room=`
+ * (default "canyon") and `&name=`. Keys: the game's plane's, and Space fires.
+ */
+async function main() {
+  const params = new URLSearchParams(location.search);
+  const game = await Game.create({
+    canvas: document.getElementById("view") as HTMLCanvasElement,
+    worldUrl: DOGFIGHT_WORLD,
+    start: DOGFIGHT_START,
+    style: stylePack,
+    hud: document.getElementById("ui"),
+    fly: true,
+  });
+  window.addEventListener("keydown", (e) => game.keyDown(e));
+  window.addEventListener("keyup", (e) => game.keyUp(e));
+  window.addEventListener("blur", () => game.blur());
+  await startDogfight(game, { room: params.get("room") || "canyon", name: params.get("name") });
+}
+
+main().catch((e: unknown) => {
+  console.error(e);
+  const ui = document.getElementById("ui");
+  if (ui) ui.textContent = `error: ${String(e)}`;
+});

@@ -1,8 +1,11 @@
+import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { createServer, type Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { Prediction, SERVER, Smoothing, joinRoom, type Room } from "../src/index";
-import { attachRelay, type HostedRoom, type Relay } from "../src/server";
+import { Prediction, SERVER, Smoothing, TickClient, joinRoom, type Room, type TickMessage } from "../src/index";
+import { History, TickRoom, attachRelay, serveStatic, type HostedRoom, type Relay } from "../src/server";
 
 /** A relay on a free port, and its URL. */
 async function relay(opts: Parameters<typeof attachRelay>[1] = {}): Promise<{ url: string; relay: Relay; server: Server }> {
@@ -134,6 +137,148 @@ describe("rooms the server runs (D-113)", () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(log).toEqual([`open arena`, `join ${a.id}`, `join ${b.id}`, `${a.id}: {"in":1}`, `leave ${b.id}`, `leave ${a.id}`, "close"]);
     expect(relay.rooms().size).toBe(0);
+  });
+});
+
+/** A toy game at a fixed tick: each player is a number its inputs (−1 to 1) add to. */
+class Toy extends TickRoom<number> {
+  readonly at = new Map<string, number>();
+  readonly log: string[] = [];
+  protected input(data: unknown): number | null {
+    return typeof data === "number" && Number.isFinite(data) ? Math.max(-1, Math.min(1, data)) : null;
+  }
+  protected added(id: string, name: string): void {
+    this.at.set(id, 0);
+    this.log.push(`added ${id} ${name}`);
+  }
+  protected removed(id: string): void {
+    this.at.delete(id);
+    this.log.push(`removed ${id}`);
+  }
+  protected step(id: string, input: number, seen: number | null): void {
+    this.at.set(id, this.at.get(id)! + input);
+    if (seen !== null) this.log.push(`seen ${id} lag ${this.lagOf(seen, 0.5).toFixed(3)}`);
+  }
+  protected snapshot(id: string): object {
+    return { x: this.at.get(id) };
+  }
+}
+
+function toyRoom(ready?: Promise<unknown>) {
+  const sent: [string, unknown][] = [];
+  const hosted: HostedRoom = { name: "toy", send: (to, data) => sent.push([to, data]), broadcast: () => {}, players: () => [] };
+  return { game: new Toy(hosted, { clock: false, ready, snapshotEvery: 2 }), sent };
+}
+
+describe("a game at a fixed tick (TickRoom, D-114)", () => {
+  it("steps each player's inputs one a tick, catches up a backlog a few at a time, and snapshots with the last input stepped", () => {
+    const { game, sent } = toyRoom();
+    game.join("1");
+    game.message("1", { k: "hello", name: "  Alex Alexander Alexandrovich  " });
+    expect(game.nameOf("1")).toBe("Alex Alexander Alexa"); // trimmed, 20 at most
+    for (let seq = 1; seq <= 20; seq++) game.message("1", { k: "in", seq, i: 1, seen: null } satisfies TickMessage<number>);
+    game.tick();
+    expect([game.at.get("1"), game.ackOf("1")]).toEqual([1, 1]); // one a tick: a page can't play faster than the clock
+    game.tick();
+    expect(sent).toEqual([["1", { k: "snap", t: 2 / 60, ack: 2, x: 2 }]]);
+    for (let t = 0; t < 30; t++) game.tick(); // the rest, one a tick
+    expect(game.ackOf("1")).toBe(20);
+  });
+
+  it("drops inputs out of order, past its queue, or that the game won't take", () => {
+    const { game } = toyRoom();
+    game.join("1");
+    game.message("1", { k: "in", seq: 2, i: 1, seen: null });
+    game.message("1", { k: "in", seq: 2, i: 1, seen: null }); // repeated
+    game.message("1", { k: "in", seq: 1, i: 1, seen: null }); // older
+    game.message("1", { k: "in", seq: 3, i: "far", seen: null }); // not an input
+    game.message("1", { k: "in", seq: 4, i: 9, seen: null }); // clamped to 1
+    game.message("1", { k: "in", seq: 5.5, i: 1, seen: null }); // not a whole number
+    game.message("1", null);
+    for (let t = 0; t < 5; t++) game.tick();
+    expect([game.at.get("1"), game.ackOf("1")]).toEqual([2, 4]);
+  });
+
+  it("holds players until the game is ready, and rewinds by a page's lag at most `max`", async () => {
+    let ready!: () => void;
+    const { game } = toyRoom(new Promise<void>((r) => (ready = r)));
+    game.join("1");
+    game.message("1", { k: "hello", name: "Bo" });
+    game.tick();
+    expect(game.playerIds()).toEqual([]);
+    ready();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(game.log).toEqual(["added 1 Bo"]);
+    for (let t = 0; t < 30; t++) game.tick();
+    game.message("1", { k: "in", seq: 1, i: 0, seen: game.time - 0.2 });
+    game.message("1", { k: "in", seq: 2, i: 0, seen: game.time - 9 });
+    game.tick();
+    game.tick();
+    expect(game.log.slice(1)).toEqual(["seen 1 lag 0.217", "seen 1 lag 0.500"]);
+    game.leave("1");
+    expect(game.log.at(-1)).toBe("removed 1");
+  });
+});
+
+describe("where things were (History)", () => {
+  it("rewinds between records, holds the oldest, and gives where it is now past the newest", () => {
+    const h = new History(1);
+    for (let t = 0; t <= 2; t += 0.5) h.record(t, { x: t * 10, y: 0, h: 1 });
+    expect(h.at(1.25, { x: 99, y: 0, h: 1 })).toEqual({ x: 12.5, y: 0, h: 1 });
+    expect(h.at(0, { x: 99, y: 0, h: 1 }).x).toBe(10); // t 0.5 is the oldest kept (1 s)
+    expect(h.at(3, { x: 99, y: 0, h: 1 }).x).toBe(99);
+    h.clear();
+    expect(h.at(1.25, { x: 99, y: 0, h: 1 }).x).toBe(99);
+  });
+});
+
+describe("a page in a room the server runs (TickClient)", () => {
+  it("steps fixed ticks for the time gone by, sends each input numbered with what it saw, and reconciles", () => {
+    const sent: unknown[] = [];
+    const room = { send: (d: unknown) => sent.push(d) } as unknown as Room;
+    let x = 0;
+    const client = new TickClient<number>(room, { tick: 0.1, step: (i) => (x += i), seen: () => 7, maxTicksPerFrame: 3 });
+    client.hello("Alex");
+    const after: number[] = [];
+    client.advance(0.25, () => 1, (i) => after.push(i));
+    expect([x, after]).toEqual([2, [1, 1]]);
+    client.advance(1, () => 1); // a stall: at most 3 ticks
+    expect(x).toBe(5);
+    expect(sent.slice(0, 3)).toEqual([{ k: "hello", name: "Alex" }, { k: "in", seq: 1, i: 1, seen: 7 }, { k: "in", seq: 2, i: 1, seen: 7 }]);
+    client.reconcile({ k: "snap", t: 0, ack: 4 }, () => (x = 3.5)); // the server held it back a little
+    expect(x).toBe(4.5);
+  });
+});
+
+describe("serving a built game (serveStatic)", () => {
+  it("serves files and index.html, caches hashed assets, and nothing outside its directory", async () => {
+    const dir = mkdtempSync(joinPath(tmpdir(), "serve-"));
+    mkdirSync(joinPath(dir, "assets"));
+    mkdirSync(joinPath(dir, "w"));
+    writeFileSync(joinPath(dir, "index.html"), "<p>game</p>");
+    writeFileSync(joinPath(dir, "assets", "main-1a2b.js"), "1");
+    writeFileSync(joinPath(dir, "w", "chunk.bin.gz"), "zz");
+    writeFileSync(joinPath(tmpdir(), "secret.txt"), "no");
+    const server = createServer(serveStatic(dir)).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const get = async (path: string, method = "GET") => {
+      const r = await fetch(base + path, { method });
+      return [r.status, r.headers.get("content-type"), r.headers.get("cache-control"), method === "HEAD" ? "" : await r.text()];
+    };
+    try {
+      expect(await get("/?room=canyon")).toEqual([200, "text/html; charset=utf-8", "no-cache", "<p>game</p>"]);
+      expect(await get("/assets/main-1a2b.js")).toEqual([200, "text/javascript; charset=utf-8", "public, max-age=31536000, immutable", "1"]);
+      expect(await get("/w/chunk.bin.gz")).toEqual([200, "application/octet-stream", "no-cache", "zz"]); // as stored: the page inflates it
+      expect((await get("/../secret.txt"))[0]).toBe(404);
+      expect((await get("/%2e%2e/secret.txt"))[0]).toBe(404);
+      expect((await get("/w/%00"))[0]).toBe(404);
+      expect((await get("/nope"))[0]).toBe(404);
+      expect((await get("/", "HEAD"))[0]).toBe(200);
+      expect((await get("/", "POST"))[0]).toBe(405);
+    } finally {
+      server.close();
+    }
   });
 });
 
