@@ -78,7 +78,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e --shard=${{ matrix.shard }}/4
+      # @slow tests (the game's changes of map) don't fit a 2-core runner: run them locally (pnpm test:e2e:slow)
+      - run: pnpm test:e2e --grep-invert @slow --shard=${{ matrix.shard }}/4
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:

@@ -3,7 +3,7 @@ name = "pixelworld-pipeline"
 license = "MIT OR Apache-2.0"
 # copies of the repository's own, which a test keeps the same (a wheel only holds files in here)
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
-version = "0.0.0"
+version = "0.1.0"
 description = "Offline geo pipeline for Pixelworld: real data -> gridded world packages."
 readme = "README.md"
 authors = [{ name = "The pixelworld contributors" }]
