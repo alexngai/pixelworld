@@ -1,5 +1,5 @@
 import { cpSync } from "node:fs";
-import type { Server } from "node:http";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { bakeCode } from "../../../../../tools/bake-code.mjs";
@@ -22,9 +22,11 @@ const rooms: Plugin = {
   name: "dogfight-rooms",
   configureServer(s) {
     const http = s.httpServer as Server | null;
+    let lobby: ((req: IncomingMessage, res: ServerResponse) => boolean) | null = null;
+    s.middlewares.use((req, res, next) => void (lobby?.(req, res) || next()));
     http?.once("listening", async () => {
-      const { attachDogfight } = (await s.ssrLoadModule("/server.ts")) as typeof import("./server");
-      attachDogfight(http, { lag: Number(process.env.DOGFIGHT_LAG ?? 0) });
+      const { attachDogfight, dogfightLobby } = (await s.ssrLoadModule("/server.ts")) as typeof import("./server");
+      lobby = dogfightLobby(attachDogfight(http, { lag: Number(process.env.DOGFIGHT_LAG ?? 0) }));
     });
   },
 };

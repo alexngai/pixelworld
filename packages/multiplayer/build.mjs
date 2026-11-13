@@ -13,6 +13,7 @@ await rm(here("./dist/"), { recursive: true, force: true });
 await Promise.all(["LICENSE-MIT", "LICENSE-APACHE"].map((f) => copyFile(here("../../" + f), here(f))));
 await build({ ...common, platform: "browser", entry: { index: here("src/index.ts") }, external: [/^pixelworld(\/|$)/], dts: true });
 await build({ ...common, platform: "node", entry: { server: here("src/server.ts") }, external: ["ws"], dts: true });
+await build({ ...common, platform: "neutral", entry: { testing: here("src/testing.ts") }, dts: true });
 
 const files = await readdir(here("./dist/"));
-for (const f of ["index.js", "index.d.ts", "server.js", "server.d.ts"]) if (!files.includes(f)) throw new Error(`dist/${f} is missing`);
+for (const f of ["index.js", "index.d.ts", "server.js", "server.d.ts", "testing.js", "testing.d.ts"]) if (!files.includes(f)) throw new Error(`dist/${f} is missing`);

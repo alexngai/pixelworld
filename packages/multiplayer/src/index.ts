@@ -39,6 +39,21 @@ export interface TickShared {
   t: number;
 }
 
+/** A `TickRoom`'s event (`emit`): the game's own, at server time `t`; a page shows it when it shows that time of the others (`TickClient.due`). */
+export interface TickEvent<E> {
+  k: "ev";
+  t: number;
+  e: E;
+}
+
+/** A room as the lobby lists it (`Relay.list`, `listRooms`): its code, players, room for more, and what its game says of it. */
+export interface RoomInfo {
+  name: string;
+  players: number;
+  max: number;
+  info: object;
+}
+
 /** What the server sends (JSON text frames). A player sends its own messages as plain JSON. */
 export type ServerMessage =
   | { t: "welcome"; id: string; peers: string[] }
@@ -318,36 +333,97 @@ export class Prediction<I> {
   }
 }
 
+// ---------------------------------------------------------------- events at their time
+
+/**
+ * Events held until their time (D-118): each stamped with the time it
+ * happened on another clock (the server's), and let out (`due`) once the page
+ * shows that time of the others, so a shot or an explosion doesn't run ahead
+ * of the planes it belongs to.
+ */
+export class EventQueue<E> {
+  private readonly held: { t: number; e: E }[] = [];
+
+  push(t: number, e: E): void {
+    let i = this.held.length;
+    while (i > 0 && this.held[i - 1]!.t > t) i--;
+    this.held.splice(i, 0, { t, e });
+  }
+
+  /** The events up to `shown` (that clock's time the page shows), oldest first; none before the page knows the time. */
+  due(shown: number | null): E[] {
+    if (shown === null) return [];
+    let n = 0;
+    while (n < this.held.length && this.held[n]!.t <= shown) n++;
+    return this.held.splice(0, n).map((h) => h.e);
+  }
+
+  get size(): number {
+    return this.held.length;
+  }
+}
+
 // ---------------------------------------------------------------- a page in a room the server runs
 
-export interface TickClientOptions<I> {
+export interface TickClientOptions<I, S, W> {
   /** The room's fixed step (s): the server's `TickRoom` steps at the same. */
   tick: number;
   /** One fixed step of the page's own vehicle with an input (none for a spectator). */
   step?: (input: I) => void;
-  /** How far behind the page draws the others (s; default 0.1, `Smoothing`'s): `seen` is the server time it shows. */
+  /** A snapshot of the page's own: put the server's state for it in place (the inputs not yet stepped there are stepped again after). */
+  restore?: (snap: TickSnapshot & S) => void;
+  /** After a snapshot is put in place and the inputs stepped again: to see how far the prediction was off. */
+  reconciled?: (snap: TickSnapshot & S) => void;
+  /** The shared snapshot (the others, the score), as it arrives. */
+  onWorld?: (world: TickShared & W) => void;
+  /** Anything else the room's game sends. */
+  onMessage?: (data: unknown) => void;
+  /** How far behind the page draws the others (s; default 0.1, `Smoothing`'s): `seen` is the server time it shows, and events wait for it. */
   delay?: number;
   /** Ticks one frame may catch up (default 6): a stalled tab doesn't burst inputs at the server. */
   maxTicksPerFrame?: number;
+  /** The page's clock (s; default `performance.now()`): tests pass their own. */
+  now?: () => number;
 }
 
 /**
- * A page in a `TickRoom` (D-114, D-116): it says who it is (`hello`), sends
- * commands (`command`), and as a player its inputs at the room's fixed tick,
- * stepped at once (`Prediction`), numbered and sent with `seen`;
- * `reconcile` on each of its snapshots. `clock` is the server's, from every
- * snapshot: give it to `RemotePlayers`, and time events by it.
+ * A page in a `TickRoom` (D-114, D-116, D-118). It takes the room's server
+ * messages: the shared snapshot (`onWorld`), its own snapshots (put in place
+ * once a frame, at the next `advance`: a burst after a stall replays its
+ * inputs once, not once each), and events (`due` lets them out at their
+ * time). It says who it is (`hello`), sends commands (`command`), and as a
+ * player its inputs at the room's fixed tick, stepped at once (`Prediction`),
+ * numbered and sent with `seen`. `clock` is the server's: give it to
+ * `RemotePlayers`. `ping` is the round trip from an input to the snapshot
+ * that has it.
  */
-export class TickClient<I> {
+export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   readonly prediction: Prediction<I>;
   readonly clock = new ServerClock();
+  readonly events = new EventQueue<E>();
+  /** The round trip from an input to the snapshot that has it (ms, recent average), or null before one. */
+  ping: number | null = null;
   private acc = 0;
+  private latest: (TickSnapshot & S) | null = null;
+  private readonly sentAt = new Map<number, number>();
+  private readonly now: () => number;
 
   constructor(
     readonly room: Room,
-    private readonly opts: TickClientOptions<I>,
+    private readonly opts: TickClientOptions<I, S, W>,
   ) {
     this.prediction = new Prediction(opts.step ?? (() => {}));
+    this.now = opts.now ?? (() => performance.now() / 1000);
+    room.onMessage = (from, data) => {
+      if (from !== SERVER) return;
+      const m = data as { k?: unknown; t?: unknown };
+      const t = typeof m?.t === "number" ? m.t : null;
+      if (t !== null && (m.k === "world" || m.k === "snap" || m.k === "ev")) this.clock.sample(t, this.now());
+      if (m.k === "world") opts.onWorld?.(data as TickShared & W);
+      else if (m.k === "snap") this.snapshot(data as TickSnapshot & S);
+      else if (m.k === "ev") this.events.push((data as TickEvent<E>).t, (data as TickEvent<E>).e);
+      else opts.onMessage?.(data);
+    };
   }
 
   /** Who this page is: the game's join data (a name, a team, to watch). */
@@ -360,34 +436,93 @@ export class TickClient<I> {
     this.room.send({ k: "cmd", c } satisfies TickMessage<I>);
   }
 
-  /** The server time this page shows of the others at `now` (null before any snapshot). */
-  seen(now = performance.now() / 1000): number | null {
+  /** The server time this page shows of the others now (null before any message). */
+  seen(now = this.now()): number | null {
     return this.clock.time(now, this.opts.delay ?? 0.1);
   }
 
-  /** The ticks in `dt` seconds: each samples `input()`, steps and sends it, then calls `after` (effects drawn at once). */
-  advance(dt: number, input: () => I, after?: (input: I) => void): void {
+  /** The events whose time the page now shows of the others, oldest first. */
+  due(now = this.now()): E[] {
+    return this.events.due(this.seen(now));
+  }
+
+  /**
+   * A frame: the newest snapshot of the page's own put in place (and the
+   * inputs the server hasn't stepped yet stepped again), then the ticks in
+   * `dt` seconds: each samples `input()`, steps and sends it, then calls
+   * `after` with it and its number (effects drawn at once, which the server's
+   * events will name by that number).
+   */
+  advance(dt: number, input: () => I, after?: (input: I, seq: number) => void): void {
+    const snap = this.latest;
+    if (snap) {
+      this.latest = null;
+      this.prediction.reconcile(snap.ack, () => this.opts.restore?.(snap));
+      this.opts.reconciled?.(snap);
+    }
     const tick = this.opts.tick;
     this.acc = Math.min(this.acc + dt, (this.opts.maxTicksPerFrame ?? 6) * tick);
     while (this.acc >= tick) {
       this.acc -= tick;
       const i = input();
       const seq = this.prediction.apply(i);
-      after?.(i);
+      this.sentAt.set(seq, this.now());
+      after?.(i, seq);
       this.room.send({ k: "in", seq, i, seen: this.seen() } satisfies TickMessage<I>);
     }
   }
 
-  /** A server message stamped `t` arrived: the clock learns from it (snapshots do this themselves). */
-  heard(t: number, now = performance.now() / 1000): void {
-    this.clock.sample(t, now);
+  private snapshot(snap: TickSnapshot & S): void {
+    if (this.latest && snap.t < this.latest.t) return;
+    this.latest = snap;
+    const sent = this.sentAt.get(snap.ack);
+    if (sent !== undefined) {
+      const ms = (this.now() - sent) * 1000;
+      this.ping = this.ping === null ? ms : this.ping * 0.8 + ms * 0.2;
+    }
+    for (const seq of this.sentAt.keys()) if (seq <= snap.ack) this.sentAt.delete(seq);
   }
+}
 
-  /** A snapshot of this page's own: `restore` puts the server's state in place, and the inputs it hasn't stepped yet are stepped again. */
-  reconcile(snap: TickSnapshot, restore: () => void, now = performance.now() / 1000): void {
-    this.clock.sample(snap.t, now);
-    this.prediction.reconcile(snap.ack, restore);
-  }
+// ---------------------------------------------------------------- names and the lobby
+
+/**
+ * A player's name made safe to show the others (D-118): letters, digits,
+ * spaces and `-_.'`, no control or direction-changing characters, at most
+ * `max` long; empty if nothing is left.
+ */
+export function cleanName(raw: unknown, max = 20): string {
+  if (typeof raw !== "string") return "";
+  return raw
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N} _.'-]/gu, "")
+    .replace(/ +/g, " ")
+    .trim()
+    .slice(0, max)
+    .trim();
+}
+
+const lobbyJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const res = await fetch(url, { ...init, headers: { "content-type": "application/json" } });
+  const body = (await res.json()) as T & { error?: string };
+  if (!res.ok) throw new Error(body.error ?? `the lobby answered ${res.status}`);
+  return body;
+};
+
+/** The public rooms, busiest first (`lobbyHandler`'s `GET <base>/rooms`). */
+export function listRooms(base = "/api"): Promise<RoomInfo[]> {
+  return lobbyJson(`${base}/rooms`);
+}
+
+/** Open a room: its code, to join and to share (`POST <base>/rooms`). */
+export async function openRoom(opts: { public?: boolean; settings?: unknown } = {}, base = "/api"): Promise<string> {
+  return (await lobbyJson<{ room: string }>(`${base}/rooms`, { method: "POST", body: JSON.stringify(opts) })).room;
+}
+
+/** Quick play: the code of the room to join (`POST <base>/quick`). */
+export async function quickRoom(settings?: unknown, base = "/api"): Promise<string> {
+  return (await lobbyJson<{ room: string }>(`${base}/quick`, { method: "POST", body: JSON.stringify({ settings }) })).room;
 }
 
 // ---------------------------------------------------------------- other players as entities

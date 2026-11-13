@@ -4,8 +4,9 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { Prediction, SERVER, ServerClock, Smoothing, TickClient, joinRoom, type Room, type TickMessage } from "../src/index";
-import { History, TickRoom, attachRelay, serveStatic, type HostedRoom, type Relay, type TickRole } from "../src/server";
+import { EventQueue, Prediction, SERVER, ServerClock, Smoothing, TickClient, cleanName, joinRoom, type Room, type TickMessage, type TickSnapshot } from "../src/index";
+import { History, Phases, TickRoom, attachRelay, lobbyHandler, serveStatic, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../src/server";
+import { loopback } from "../src/testing";
 
 /** A server on a free port, and its URL. */
 async function relay(opts: Parameters<typeof attachRelay>[1] = {}): Promise<{ url: string; relay: Relay; server: Server }> {
@@ -137,7 +138,7 @@ describe("rooms the server runs (D-113, D-116)", () => {
 });
 
 /** A toy game at a fixed tick: each player is a number its inputs (−1 to 1) add to; "watch" joins spectate, "no" are turned away. */
-class Toy extends TickRoom<number, string> {
+class Toy extends TickRoom<number, string, undefined, string> {
   readonly at = new Map<string, number>();
   readonly log: string[] = [];
   protected parseJoin(data: unknown): string | null {
@@ -157,12 +158,17 @@ class Toy extends TickRoom<number, string> {
   protected input(data: unknown): number | null {
     return typeof data === "number" && Number.isFinite(data) ? Math.max(-1, Math.min(1, data)) : null;
   }
-  protected step(id: string, input: number, seen: number | null): void {
+  protected step(id: string, input: number, seen: number | null, seq: number): void {
+    if (input === 0.5) throw new Error("half a step"); // a bug in the game
     this.at.set(id, this.at.get(id)! + input);
     if (seen !== null) this.log.push(`seen ${id} lag ${this.lagOf(seen, 0.5).toFixed(3)}`);
+    if (input === -1) this.emit(`back ${seq}`);
   }
   protected override command(id: string, c: unknown): void {
     this.log.push(`cmd ${id} ${JSON.stringify(c)}`);
+  }
+  protected override describe(): object {
+    return { mode: "toy" };
   }
   protected override shared(): object {
     return { all: Object.fromEntries(this.at) };
@@ -178,11 +184,15 @@ function toyRoom(opts: { ready?: Promise<undefined> } = {}) {
   let closed: string | null = null;
   const hosted: HostedRoom = {
     name: "toy",
+    settings: undefined,
+    isPublic: false,
     send: (to, data) => sent.push([to, data]),
     broadcast: (data) => sent.push(["*", data]),
     players: () => [],
     kick: (id, why) => kicked.push([id, why]),
     close: (why) => (closed = why),
+    fail: (e) => (closed = `failed: ${String(e)}`),
+    log: () => {},
   };
   const game = new Toy(hosted, { clock: false, snapshotEvery: 2, ...opts });
   const enter = (id: string, join: unknown = "play") => {
@@ -309,25 +319,62 @@ describe("where things were (History)", () => {
 });
 
 describe("a page in a room the server runs (TickClient)", () => {
-  it("says who it is, sends commands, steps fixed ticks with `seen` from the server's clock, and reconciles", () => {
+  /** A room a test drives by hand: what the page sends, and messages from the server. */
+  function fakeRoom() {
     const sent: unknown[] = [];
-    const room = { send: (d: unknown) => sent.push(d) } as unknown as Room;
+    const room = { send: (d: unknown) => sent.push(d), onMessage: null } as unknown as Room;
+    return { room, sent, server: (data: unknown) => room.onMessage!(SERVER, data) };
+  }
+
+  it("says who it is, sends commands, steps fixed ticks numbered with `seen` from the server's clock, and puts the newest snapshot in place once a frame", () => {
+    const { room, sent, server } = fakeRoom();
+    let t = 5;
     let x = 0;
-    const client = new TickClient<number>(room, { tick: 0.1, step: (i) => (x += i), delay: 0.1, maxTicksPerFrame: 3 });
+    let restores = 0;
+    const seqs: number[] = [];
+    const client = new TickClient<number, { x: number }>(room, {
+      tick: 0.1,
+      step: (i) => (x += i),
+      restore: (snap) => {
+        restores++;
+        x = snap.x;
+      },
+      delay: 0.1,
+      maxTicksPerFrame: 3,
+      now: () => t,
+    });
     client.hello({ name: "Alex" });
     client.command("ready");
-    expect(client.seen(5)).toBeNull(); // no snapshot yet
-    const now = performance.now() / 1000;
-    client.heard(100, now); // server time 100 as our clock reads now
-    const after: number[] = [];
-    client.advance(0.25, () => 1, (i) => after.push(i));
-    expect([x, after]).toEqual([2, [1, 1]]);
+    expect(client.seen()).toBeNull(); // no word from the server yet
+    server({ k: "world", t: 100 }); // the server's 100 as ours reads 5
+    client.advance(0.25, () => 1, (_, seq) => seqs.push(seq));
+    expect([x, seqs]).toEqual([2, [1, 2]]);
     client.advance(1, () => 1); // a stall: at most 3 ticks
     expect(x).toBe(5);
-    expect(sent.slice(0, 3)).toEqual([{ k: "hello", join: { name: "Alex" } }, { k: "cmd", c: "ready" }, expect.objectContaining({ k: "in", seq: 1, i: 1 })]);
-    expect((sent[2] as { seen: number }).seen).toBeCloseTo(100 - 0.1, 1); // what it shows of the others: the server's time, less the delay
-    client.reconcile({ k: "snap", t: 100, ack: 4 }, () => (x = 3.5)); // the server held it back a little
-    expect(x).toBe(4.5);
+    expect(sent.slice(0, 3)).toEqual([{ k: "hello", join: { name: "Alex" } }, { k: "cmd", c: "ready" }, { k: "in", seq: 1, i: 1, seen: 99.9 }]);
+    // three snapshots in one frame: the newest is put in place once, and the inputs after it stepped again once
+    t = 5.2;
+    server({ k: "snap", t: 100.1, ack: 2, x: 1.5 } satisfies TickSnapshot & { x: number });
+    server({ k: "snap", t: 100.2, ack: 3, x: 2.5 });
+    server({ k: "snap", t: 100.15, ack: 2, x: 9 }); // late: older than the newest
+    client.advance(0, () => 1);
+    expect([restores, x]).toEqual([1, 4.5]); // 2.5, then inputs 4 and 5
+    expect(client.ping).toBeCloseTo(200, 6); // input 3 went at our 5, its snapshot came at 5.2
+  });
+
+  it("holds events until the page shows their time of the others", () => {
+    const { room, server } = fakeRoom();
+    let t = 0;
+    const client = new TickClient<number, unknown, unknown, string>(room, { tick: 0.1, delay: 0.1, now: () => t });
+    server({ k: "world", t: 10 });
+    server({ k: "ev", t: 10.05, e: "bang" }); // the quickest message: the server's clock is ours + 10.05
+    server({ k: "ev", t: 10.02, e: "flash" });
+    expect(client.due()).toEqual([]); // it shows the server's 9.95
+    t = 0.08;
+    expect(client.due()).toEqual(["flash"]); // 10.03
+    t = 0.2;
+    expect(client.due()).toEqual(["bang"]);
+    expect(client.events.size).toBe(0);
   });
 });
 
@@ -447,3 +494,198 @@ describe("smoothing other players' poses", () => {
     expect(s.at("a", 5)!.x).toBe(1);
   });
 });
+
+describe("a game's errors stay in its room (D-118)", () => {
+  it("closes the room whose game threw, saying so, and the server and its other rooms go on", async () => {
+    const lines: RelayLog[] = [];
+    const { join } = await setup({
+      log: (l) => lines.push(l),
+      host: (room) => ({
+        message: (id, data) => {
+          if (data === "bug") throw new Error("a bug in the game");
+          room.send(id, data);
+        },
+      }),
+    });
+    const a = await join("one");
+    const b = await join("two");
+    const aGone = once<[string | null]>((f) => (a.onClose = f));
+    a.send("bug");
+    expect(await aGone).toEqual(["the game hit an error"]);
+    const echo = once<[string, unknown]>((f) => (b.onMessage = f));
+    b.send("still here");
+    expect(await echo).toEqual([SERVER, "still here"]);
+    expect(lines.find((l) => l.kind === "error")).toMatchObject({ room: "one", message: "a bug in the game" });
+  });
+
+  it("closes a TickRoom whose tick threw", () => {
+    const { game, enter, closed } = toyRoom();
+    enter("1");
+    game.message("1", { k: "in", seq: 1, i: 0.5, seen: null });
+    expect(() => game.tick()).toThrow("half a step"); // by hand, the throw comes out; on its clock, the room fails:
+    const failing = toyRoom();
+    failing.enter("1");
+    failing.game.message("1", { k: "in", seq: 1, i: 0.5, seen: null });
+    (failing.game as unknown as { run(): void; last: number; acc: number }).acc = 1;
+    (failing.game as unknown as { run(): void }).run();
+    expect(failing.closed()).toBe("failed: Error: half a step");
+    expect(closed()).toBeNull();
+  });
+});
+
+describe("limits on what a page sends (D-118)", () => {
+  it("drops messages past the rate, sends a page away that keeps on, and refuses messages over the size", async () => {
+    const got: unknown[] = [];
+    const { join } = await setup({ rate: { perSecond: 1, burst: 5 }, maxMessage: 64, host: () => ({ message: (_, d) => got.push(d) }) });
+    const a = await join("spam");
+    const gone = once<[string | null]>((f) => (a.onClose = f));
+    for (let n = 0; n < 20; n++) a.send(n);
+    expect(await gone).toEqual(["too many messages"]);
+    expect(got).toEqual([0, 1, 2, 3, 4]);
+    const b = await join("big");
+    const bGone = once<[string | null]>((f) => (b.onClose = f));
+    b.send("x".repeat(100));
+    expect(await bGone).toEqual([null]); // over the size: the connection is closed
+  });
+
+  it("cleans a name to what is safe to show the others", () => {
+    expect(cleanName("  Ace\u202E  Pilot\u0000\n<b>  ")).toBe("Ace Pilot b");
+    expect(cleanName("ｆｕｌｌ　ｗｉｄｔｈ")).toBe("full width");
+    expect(cleanName("Zoë-O'Neil_2.0")).toBe("Zoë-O'Neil_2.0");
+    expect(cleanName("x".repeat(40), 8)).toBe("xxxxxxxx");
+    expect([cleanName(42), cleanName("\u200B")]).toEqual(["", ""]);
+  });
+});
+
+describe("the lobby (D-118)", () => {
+  it("opens rooms with codes, lists the public ones busiest first, puts quick play in the busiest with space, and keeps an empty room a while", async () => {
+    const { relay, url } = await setup({ maxPlayers: 2, idle: { public: 80, private: 80 }, host: () => ({ message: () => {}, info: () => ({ mode: "duel" }) }) });
+    const pub = relay.open({ public: true, settings: { map: "canyon" } })!;
+    const priv = relay.open()!;
+    expect(pub).toMatch(/^[ACDEFHJKMNPQRTUVWXY3479]{4}$/);
+    expect(relay.list()).toEqual([{ name: pub, players: 0, max: 2, info: { mode: "duel" } }]); // the private one isn't listed
+    const a = await joinRoom(url, pub);
+    open.rooms.push(a);
+    expect(relay.quick()).toBe(pub); // space for one more
+    const b = await joinRoom(url, pub);
+    open.rooms.push(b);
+    const other = relay.quick()!; // full: a new public room
+    expect(other).not.toBe(pub);
+    expect(relay.list().map((r) => [r.name, r.players])).toEqual([
+      [pub, 2],
+      [other, 0],
+    ]);
+    a.close();
+    b.close();
+    await flush(20);
+    expect(relay.rooms().has(pub)).toBe(true); // empty, kept for its players to come back
+    await flush(120);
+    expect([relay.rooms().has(pub), relay.rooms().has(priv)]).toEqual([false, false]);
+  });
+
+  it("only opens rooms from the lobby when asked, and answers over HTTP", async () => {
+    const server = createServer().listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const relay = attachRelay(server, { lobbyOnly: true, host: () => ({ message: () => {} }) });
+    const lobby = lobbyHandler(relay, { settings: (b) => (b === null || (typeof b === "object" && !Array.isArray(b)) ? b : null) });
+    server.on("request", (req, res) => lobby(req, res) || res.writeHead(404).end());
+    open.servers.push({ relay, server });
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    await expect(joinRoom(`${base.replace("http", "ws")}/relay`, "NOPE")).rejects.toThrow('there is no room "NOPE" open');
+    const opened = (await (await fetch(`${base}/api/rooms`, { method: "POST", body: JSON.stringify({ public: true, settings: { map: "canyon" } }) })).json()) as { room: string };
+    expect(opened.room).toMatch(/^[A-Z0-9]{4}$/);
+    expect((await fetch(`${base}/api/rooms`, { method: "POST", body: JSON.stringify({ settings: [1] }) })).status).toBe(400);
+    expect(await (await fetch(`${base}/api/rooms`)).json()).toEqual([{ name: opened.room, players: 0, max: 16, info: {} }]);
+    expect(await (await fetch(`${base}/api/quick`, { method: "POST" })).json()).toEqual({ room: opened.room });
+    const page = await joinRoom(`${base.replace("http", "ws")}/relay`, opened.room);
+    open.rooms.push(page);
+    expect(page.name).toBe(opened.room);
+  });
+
+  it("tells every page why when the server goes down", async () => {
+    const { relay, join } = await setup();
+    const a = await join("x");
+    const gone = once<[string | null]>((f) => (a.onClose = f));
+    relay.close("the server is restarting");
+    expect(await gone).toEqual(["the server is restarting"]);
+  });
+});
+
+describe("a match's phases (Phases)", () => {
+  it("runs a phase for its seconds on the server's clock, or open-ended", () => {
+    const m = new Phases<"staging" | "playing">("staging");
+    expect([m.left(5), m.over(5)]).toEqual([Infinity, false]);
+    m.set("playing", 10, 30);
+    expect([m.phase, m.left(25), m.over(39.9), m.over(40), m.net()]).toEqual(["playing", 15, false, true, { phase: "playing", until: 40 }]);
+  });
+});
+
+describe("events at their time (EventQueue)", () => {
+  it("lets events out in time order once their time is shown", () => {
+    const q = new EventQueue<string>();
+    q.push(3, "c");
+    q.push(1, "a");
+    q.push(2, "b");
+    expect([q.due(null), q.due(1.5), q.due(5), q.size]).toEqual([[], ["a"], ["b", "c"], 0]);
+  });
+});
+
+describe("netcode run whole (loopback, D-118)", () => {
+  /** A page in a loopback room: a TickClient stepping x by its inputs, as the Toy's server does. */
+  function pageOn(lb: ReturnType<typeof loopback<Toy>>, latency: number, inputs: () => number) {
+    const page = lb.join(latency);
+    const me = { x: 0, corr: 0, before: 0 };
+    const client = new TickClient<number, { x: number }>(page.room, {
+      tick: lb.host.tickLength,
+      step: (i) => (me.x += i),
+      restore: (snap) => {
+        me.before = me.x;
+        me.x = snap.x;
+      },
+      reconciled: () => (me.corr = Math.max(me.corr, Math.abs(me.x - me.before))),
+      now: lb.now,
+    });
+    client.hello("play");
+    return { page, client, me, frame: (dt: number) => client.advance(dt, inputs) };
+  }
+
+  it("keeps a page's prediction exact under 50 ms of latency each way, and reads its ping", () => {
+    const lb = loopback((room) => new Toy(room, { clock: false }));
+    let n = 0;
+    const a = pageOn(lb, 0.05, () => [0.25, -0.75, 1][n++ % 3]!);
+    lb.run(3, a.frame);
+    expect(a.me.corr).toBe(0);
+    expect(Math.abs(lb.host.at.get(a.page.room.id)! - a.me.x)).toBeLessThanOrEqual(a.client.prediction.unacknowledged); // the server a few inputs behind, each at most 1
+    expect(a.client.ping).toBeCloseTo(100, 6); // 50 ms each way: the input's snapshot left as it was stepped
+  });
+
+  it("comes back to its usual lag after a stalled server, where one input a tick and a long queue lagged for good", () => {
+    const after = (opts: { credit?: number; maxQueue?: number }) => {
+      const lb = loopback((room) => new Toy(room, { clock: false, ...opts }));
+      const a = pageOn(lb, 0.05, () => 0);
+      lb.run(2, a.frame);
+      const usual = a.client.prediction.unacknowledged; // the round trip's worth of inputs
+      lb.stall(0.6);
+      lb.run(0.6, a.frame); // the page sends 36 inputs into a stopped server, which catches up a quarter second
+      lb.run(15, a.frame);
+      return a.client.prediction.unacknowledged - usual;
+    };
+    expect(after({})).toBeLessThanOrEqual(2);
+    expect(after({ credit: 1, maxQueue: 120 })).toBeGreaterThanOrEqual(15); // the old way: about 0.35 s more, for good
+  });
+
+  it("sends a backed-up page every 10th snapshot until it catches up", () => {
+    const lb = loopback((room) => new Toy(room, { clock: false }));
+    const a = pageOn(lb, 0.05, () => 0);
+    const b = pageOn(lb, 0.05, () => 0);
+    lb.run(3, (dt) => (a.frame(dt), b.frame(dt)));
+    b.page.latency = 0.6; // b's connection backs up
+    const [a0, b0] = [a.page.received.length, b.page.received.length];
+    lb.run(4, (dt) => (a.frame(dt), b.frame(dt)));
+    const [aGot, bGot] = [a.page.received.length - a0, b.page.received.length - b0];
+    expect(lb.host.isBehind(b.page.room.id)).toBe(true);
+    expect(lb.host.stats().behind).toBe(1);
+    expect(bGot).toBeLessThan(aGot / 3);
+  });
+});
+

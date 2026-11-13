@@ -2,13 +2,15 @@ import { readFileSync } from "node:fs";
 import { LEVEL_FLIGHT, flyPlane, type PlaneState } from "@pixelworlds/game/src/plane";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { DogfightRoom, openDogfightWorld, type DogfightWorld } from "../../src/demos/dogfight/server";
-import { BOT, GUN, HP, TICK, type DogfightInput, type ServerMsg } from "../../src/demos/dogfight/rules";
+import { BOT, GUN, HP, MATCH, TICK, flyTick, type DogfightEvent, type DogfightInput, type DogfightSnap, type DogfightWorldNet } from "../../src/demos/dogfight/rules";
+import { TickClient, type TickEvent, type TickShared, type TickSnapshot } from "../../src/index";
 import type { HostedRoom } from "../../src/server";
+import { loopback } from "../../src/testing";
 
 /**
- * The dogfight demo's server (D-113, D-114, D-116) over the real flying
- * level, in Node: the world from the committed package, a room with a
- * made-up transport, and ticks stepped by hand.
+ * The dogfight demo's server (D-113, D-114, D-116, D-118) over the real
+ * flying level, in Node: the world from the committed package, a room with a
+ * made-up transport and ticks stepped by hand, or the loopback with latency.
  */
 
 const ROOT = new URL("../../../../", import.meta.url);
@@ -28,24 +30,28 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-type Snap = Extract<ServerMsg, { k: "snap" }>;
-type World = Extract<ServerMsg, { k: "world" }>;
+type Msg = (TickShared & DogfightWorldNet) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
 
 /** A room over a transport that keeps what it sends, by page. */
 function room() {
-  const inbox = new Map<string, ServerMsg[]>();
-  const all: ServerMsg[] = [];
-  const kicked: string[] = [];
+  const inbox = new Map<string, Msg[]>();
+  const all: Msg[] = [];
   const hosted: HostedRoom = {
     name: "test",
-    send: (to, data) => inbox.get(to)?.push(data as ServerMsg),
-    broadcast: (data) => {
-      all.push(data as ServerMsg);
-      for (const box of inbox.values()) box.push(data as ServerMsg);
+    settings: undefined,
+    isPublic: false,
+    send: (to, data) => inbox.get(to)?.push(data as Msg),
+    broadcast: (data, except) => {
+      all.push(data as Msg);
+      for (const [id, box] of inbox) if (!except?.has(id)) box.push(data as Msg);
     },
     players: () => [...inbox.keys()],
-    kick: (id) => kicked.push(id),
+    kick: () => {},
     close: () => {},
+    fail: (e) => {
+      throw e;
+    },
+    log: () => {},
   };
   const game = new DogfightRoom(hosted, Promise.resolve(world), false);
   const join = async (id: string, name = id, watch = false) => {
@@ -54,17 +60,20 @@ function room() {
     game.message(id, { k: "hello", join: { name, watch } });
     await new Promise((r) => setTimeout(r, 0)); // the world arrives
   };
-  const of = <K extends ServerMsg["k"]>(id: string, k: K) => inbox.get(id)!.filter((m): m is Extract<ServerMsg, { k: K }> => m.k === k);
+  const worlds = (id: string) => inbox.get(id)!.filter((m): m is TickShared & DogfightWorldNet => m.k === "world");
+  const snaps = (id: string) => inbox.get(id)!.filter((m): m is TickSnapshot & DogfightSnap => m.k === "snap");
+  const events = (kind?: DogfightEvent["kind"]) => all.filter((m): m is TickEvent<DogfightEvent> => m.k === "ev" && (!kind || m.e.kind === kind)).map((m) => ({ ...m.e, t: m.t }));
   const send = (id: string, seq: number, i: Partial<DogfightInput>, seen: number | null = null) =>
     game.message(id, { k: "in", seq, i: { ...LEVEL_FLIGHT, fire: false, ...i }, seen });
-  return { game, join, all, of, send, kicked };
+  const play = () => game.match.set("playing", game.time, MATCH.seconds);
+  return { game, join, worlds, snaps, events, send, play };
 }
 
 const ahead = (a: PlaneState, gap: number): PlaneState => ({ ...a, x: a.x + Math.cos(a.heading) * gap, y: a.y + Math.sin(a.heading) * gap });
 
-describe("the dogfight demo's server (D-113, D-114, D-116)", () => {
+describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
   it("flies each page's inputs through the flight model, and a page predicting with the same inputs lands exactly where the server says", async () => {
-    const { game, join, of, send } = room();
+    const { game, join, snaps, worlds, send } = room();
     await join("a", "Alex");
     const start = { ...game.plane("a")!.s } as PlaneState;
     const inputs = Array.from({ length: 30 }, (_, n) => ({ pitch: n < 10 ? 0.5 : 0, roll: n >= 10 && n < 20 ? -1 : 0, throttle: 1, yaw: 0 }));
@@ -72,23 +81,25 @@ describe("the dogfight demo's server (D-113, D-114, D-116)", () => {
       send("a", n + 1, i); // one a tick, as a page sends them
       game.tick();
     });
-    const last = of("a", "snap").at(-1)! as Snap;
+    const last = snaps("a").at(-1)!;
     expect(last.ack).toBe(30);
-    // the page's prediction: the same model, the same inputs, the same fixed step
     const predicted = { ...start };
     for (const i of inputs) flyPlane(predicted, i, world.fly, world.params, TICK);
     expect(last.you).toEqual(predicted);
     expect(predicted.x).not.toBe(start.x);
-    // the shared snapshot: Alex, and the bot a pilot alone gets
-    expect((of("a", "world").at(-1) as World).planes).toEqual([
-      expect.objectContaining({ id: "a", name: "Alex", hp: HP, kills: 0, deaths: 0, life: 0 }),
+    // the shared snapshot: Alex, the bot a pilot alone gets, and the match
+    const w = worlds("a").at(-1)!;
+    expect(w.planes).toEqual([
+      expect.objectContaining({ id: "a", name: "Alex", hp: HP, kills: 0, deaths: 0 }),
       expect.objectContaining({ id: BOT, name: "Bot", bot: true }),
     ]);
+    expect(w.match).toEqual({ phase: "staging", until: expect.any(Number), kills: MATCH.kills, winner: null });
   });
 
-  it("gives a pilot alone a bot, which goes when another pilot arrives and comes back when one is alone again; watchers don't count", async () => {
+  it("cleans a pilot's name, and gives a pilot alone a bot, which goes when another pilot arrives; watchers don't count", async () => {
     const { game, join } = room();
-    await join("a");
+    await join("a", "  Ace‮\u0000 ");
+    expect(game.joinOf("a")!.name).toBe("Ace");
     expect(game.playerIds()).toEqual(["a", BOT]);
     await join("w", "Watcher", true);
     expect([game.playerIds(), game.spectatorIds()]).toEqual([["a", BOT], ["w"]]);
@@ -101,58 +112,85 @@ describe("the dogfight demo's server (D-113, D-114, D-116)", () => {
   });
 
   it("gives a watcher the shared snapshot and the events, and no plane of its own", async () => {
-    const { game, join, of } = room();
+    const { game, join, snaps, worlds } = room();
     await join("a");
     await join("w", "Watcher", true);
     for (let t = 0; t < 3; t++) game.tick();
     expect(game.plane("w")).toBeUndefined();
-    expect(of("w", "snap")).toEqual([]);
-    expect((of("w", "world").at(-1) as World).planes.map((p) => p.id)).toEqual(["a", BOT]);
+    expect(snaps("w")).toEqual([]);
+    expect(worlds("w").at(-1)!.planes.map((p) => p.id)).toEqual(["a", BOT]);
   });
 
-  it("fires the guns, judges hits, and shoots a plane down: its shooter scores, it respawns on a new life, and events carry their time", async () => {
-    const { game, join, all, of, send } = room();
+  it("runs a match: waiting, the countdown with the guns cold, play to the kill limit, the end screen, and the next with the scores back to nothing", async () => {
+    const { game, join, events } = room();
+    expect(game.match.net()).toEqual({ phase: "staging", until: null });
+    await join("a");
+    game.tick();
+    expect(game.match.phase).toBe("staging");
+    expect(game.match.left(game.time)).toBeCloseTo(MATCH.staging, 1);
+    game.plane("a")!.s.h += 0; // cold guns: firing in the countdown fires nothing
+    game.message("a", { k: "in", seq: 1, i: { ...LEVEL_FLIGHT, fire: true }, seen: null });
+    game.tick();
+    expect(events("fire")).toEqual([]);
+    for (let t = 0; t < MATCH.staging / TICK; t++) game.tick();
+    expect(game.match.phase).toBe("playing");
+    (game.plane("a") as { kills: number }).kills = MATCH.kills; // the limit
+    game.tick();
+    expect([game.match.phase, events("phase").at(-1)]).toEqual(["ended", expect.objectContaining({ phase: "ended", winner: "a" })]);
+    for (let t = 0; t < MATCH.ended / TICK + 1; t++) game.tick();
+    expect([game.match.phase, game.plane("a")!.kills]).toEqual(["staging", 0]);
+  });
+
+  it("fires the guns, names each round by its shooter's input, judges hits, and shoots a plane down: its shooter scores, it respawns on a new life", async () => {
+    const { game, join, worlds, events, send, play } = room();
     await join("a", "Alex");
     await join("b", "Bo");
+    play();
     const a = game.plane("a")!;
     const b = game.plane("b")!;
     Object.assign(b.s, ahead(a.s, 3)); // b 3 cells ahead of a, the same way, at the same height
+    const life = worlds("a").at(-1)?.planes.find((p) => p.id === "b")?.life ?? 1;
     for (let seq = 1; seq <= 120 && b.deaths === 0; seq++) {
       send("a", seq, { fire: true }, game.time);
       send("b", seq, {});
       game.tick();
     }
-    const hits = all.filter((m) => m.k === "hit");
-    expect(all.filter((m) => m.k === "fire").length).toBeGreaterThanOrEqual(HP / GUN.damage);
+    const fires = events("fire");
+    const hits = events("hit");
+    expect(fires.length).toBeGreaterThanOrEqual(HP / GUN.damage);
     expect(hits.length).toBe(HP / GUN.damage);
-    expect(hits.every((m) => m.k === "hit" && m.by === "a" && m.to === "b" && m.t > 0 && m.t <= game.time)).toBe(true);
-    expect(all.filter((m) => m.k === "down")).toEqual([expect.objectContaining({ k: "down", who: "b", by: "a", t: game.time })]);
+    // each hit names the round that made it: one a's page fired, by its input's number
+    const fired = new Set(fires.map((f) => f.kind === "fire" && f.seq));
+    expect(hits.every((h) => h.kind === "hit" && h.by === "a" && h.to === "b" && fired.has(h.seq) && h.t > 0)).toBe(true);
+    expect(events("down")).toEqual([expect.objectContaining({ kind: "down", who: "b", by: "a", t: game.time })]);
     expect([a.kills, b.deaths, b.hp]).toEqual([1, 1, HP]);
     for (let t = 0; t < 3; t++) game.tick();
-    expect((of("a", "world").at(-1) as World).planes.find((p) => p.id === "b")).toMatchObject({ hp: HP, deaths: 1, life: 1 });
+    expect(worlds("a").at(-1)!.planes.find((p) => p.id === "b")).toMatchObject({ hp: HP, deaths: 1, life: life + 1 });
   });
 
   it("counts a crash soon after a hit for the shooter", async () => {
-    const { game, join, all, send } = room();
+    const { game, join, events, send, play } = room();
     await join("a");
     await join("b");
+    play();
     const b = game.plane("b")!;
     (b as { lastHit: unknown }).lastHit = { by: "a", at: game.time };
     b.s.h = (world.fly.groundAt(b.s.x, b.s.y) ?? 0) + 0.05; // into the ground
     send("b", 1, {});
     game.tick();
-    expect(all.filter((m) => m.k === "down")).toEqual([expect.objectContaining({ who: "b", by: "a" })]);
+    expect(events("down")).toEqual([expect.objectContaining({ who: "b", by: "a" })]);
     expect(game.plane("a")!.kills).toBe(1);
   });
 
   it("flies a bot after the pilot and fires when it is near the nose", async () => {
-    const { game, join, all } = room();
+    const { game, join, events, play } = room();
     await join("a");
+    play();
     const a = game.plane("a")!;
     Object.assign(game.plane(BOT)!.s, ahead(a.s, -4)); // the bot 4 cells behind a, the same way
     for (let t = 0; t < 30; t++) game.tick(); // a sends nothing: it holds still on the server
-    expect(all.filter((m) => m.k === "fire" && m.by === BOT).length).toBeGreaterThan(0);
-    expect(all.filter((m) => m.k === "hit" && m.by === BOT && m.to === "a").length).toBeGreaterThan(0);
+    expect(events("fire").filter((e) => e.kind === "fire" && e.by === BOT).length).toBeGreaterThan(0);
+    expect(events("hit").filter((e) => e.kind === "hit" && e.by === BOT && e.to === "a").length).toBeGreaterThan(0);
   });
 
   it("clamps a page's stick and trigger to what they can be", async () => {
@@ -164,5 +202,38 @@ describe("the dogfight demo's server (D-113, D-114, D-116)", () => {
     flyPlane(s, { pitch: 0, roll: 1, throttle: 0, yaw: 0 }, world.fly, world.params, TICK);
     expect(game.plane("a")!.s).toEqual(s);
     expect(game.plane("a")!.cooldown).toBe(0); // "yes" didn't fire
+  });
+
+  it("keeps a page's prediction exact through the loopback, 50 ms each way, rolling and pulling with the real flight model", async () => {
+    const lb = loopback((r) => new DogfightRoom(r, Promise.resolve(world), false));
+    const page = lb.join(0.05);
+    const plane = { s: null as PlaneState | null, corr: 0, before: { x: 0, y: 0, h: 0 } };
+    const client = new TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent>(page.room, {
+      tick: TICK,
+      step: (i) => plane.s && void flyTick(plane.s, i, world.fly, world.params),
+      restore: (snap) => {
+        if (plane.s) plane.before = { x: plane.s.x, y: plane.s.y, h: plane.s.h };
+        const first = !plane.s;
+        plane.s = { ...snap.you };
+        if (first) plane.before = { x: snap.you.x, y: snap.you.y, h: snap.you.h };
+      },
+      reconciled: () => {
+        const s = plane.s!;
+        plane.corr = Math.max(plane.corr, Math.hypot(s.x - plane.before.x, s.y - plane.before.y, s.h - plane.before.h));
+      },
+      now: lb.now,
+    });
+    client.hello({ name: "Alex", watch: false });
+    await new Promise((r) => setTimeout(r, 0)); // the world arrives
+    let n = 0;
+    const stick = (): DogfightInput => {
+      n++;
+      return { pitch: n % 120 < 40 ? 0.6 : 0, roll: n % 90 < 30 ? 1 : n % 90 < 45 ? -1 : 0, throttle: 0, yaw: 0, fire: false };
+    };
+    lb.run(0.5, (dt) => client.advance(dt, () => ({ ...LEVEL_FLIGHT, fire: false }))); // the first snapshot: the page takes its plane from it
+    plane.corr = 0;
+    lb.run(4, (dt) => client.advance(dt, stick));
+    expect(plane.corr).toBe(0);
+    expect(client.ping).toBeCloseTo(100, 6);
   });
 });

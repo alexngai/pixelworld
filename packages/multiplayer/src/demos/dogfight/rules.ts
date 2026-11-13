@@ -1,6 +1,6 @@
-import { axes, type PlaneInput, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
+import type { PlaneWorld } from "@pixelworlds/game/src/ground";
+import { axes, flyPlane, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "@pixelworlds/game/src/plane";
 import { PLANE } from "@pixelworlds/game/src/tuning";
-import type { TickShared, TickSnapshot } from "../../index";
 
 /**
  * The dogfight's rules and messages, the same on the server (server.ts, a
@@ -49,6 +49,18 @@ export interface DogfightJoin {
 /** The bot's id: one flies whenever a pilot would be alone. */
 export const BOT = "bot";
 
+/** A match: a countdown with the guns cold, play to `kills` or `seconds`, the end screen, and the next. */
+export const MATCH = { staging: 10, seconds: 300, kills: 10, ended: 10 };
+export type MatchPhase = "staging" | "playing" | "ended";
+
+/** The match in the shared snapshot: its phase and when that ends (server time; null: waiting for pilots), the kill limit, and the winner once it ended. */
+export interface MatchNet {
+  phase: MatchPhase;
+  until: number | null;
+  kills: number;
+  winner: string | null;
+}
+
 /** A point in the planes' own space: cells across, heights in steps. */
 export interface Point {
   x: number;
@@ -61,6 +73,19 @@ export interface Round extends Point {
   vx: number;
   vy: number;
   vh: number;
+}
+
+/**
+ * One tick of a plane, the same on both sides: the flight model, then any −0
+ * in its state made 0. JSON writes −0 as 0, so a page restoring the server's
+ * state would otherwise step on from a different number than the server
+ * (atan2 of a −0 and of a 0 differ by 2π), and its prediction drift after a
+ * roll right round.
+ */
+export function flyTick(s: PlaneState, input: PlaneInput, world: PlaneWorld, p: PlaneParams): PlaneStep {
+  const r = flyPlane(s, input, world, p, TICK);
+  for (const k in s) (s as unknown as Record<string, number>)[k]! += 0;
+  return r;
 }
 
 /** A round from a plane's nose: along it, or at the nearest target within the assist's angle and its reach. */
@@ -111,11 +136,30 @@ export interface PlaneNet extends Point {
   bot?: boolean;
 }
 
-/** An event, at server time `t`: a page shows it when it shows that time of the others. */
+/**
+ * An event (`TickRoom.emit`, at its server time): a page shows it when it
+ * shows that time of the others. A round is named by its shooter and the
+ * input it was fired on (`seq`), so a page matches it to the one it drew at once.
+ */
 export type DogfightEvent =
-  | ({ k: "fire"; t: number; by: string } & Round)
-  | { k: "hit"; t: number; by: string; to: string }
-  | ({ k: "down"; t: number; who: string; by: string | null } & Point);
+  | ({ kind: "fire"; by: string; seq: number } & Round)
+  | { kind: "hit"; by: string; seq: number; to: string }
+  | ({ kind: "down"; who: string; by: string | null } & Point)
+  | { kind: "phase"; phase: MatchPhase; winner: string | null };
 
-/** The server to the pages: the shared snapshot (every plane), each player's own (its plane after its last input stepped), and events. */
-export type ServerMsg = (TickShared & { planes: PlaneNet[] }) | (TickSnapshot & { you: PlaneState }) | DogfightEvent;
+/** The shared snapshot: every plane, and the match. */
+export interface DogfightWorldNet {
+  planes: PlaneNet[];
+  match: MatchNet;
+}
+
+/** A player's own snapshot: its plane after its last input stepped. */
+export interface DogfightSnap {
+  you: PlaneState;
+}
+
+/** What the lobby lists of a room: the match's phase and the seconds it has left. */
+export interface DogfightInfo {
+  phase: MatchPhase;
+  left: number | null;
+}
