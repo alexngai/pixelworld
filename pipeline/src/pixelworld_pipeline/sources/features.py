@@ -10,12 +10,13 @@ them from Overture's releases; a source for other data (OpenStreetMap, a
 city's own) maps its classes to Overture's words. A field it can't fill is
 left out or None.
 
-The row helpers below (path_class, rail_open_parts, rail_matches) read rows
+The row helpers below (path_class, rail_open_parts, without_tunnels, rail_matches) read rows
 of this shape, whatever their source.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import shapely
@@ -32,8 +33,9 @@ class FeatureSource(Source):
 
     Fields beyond `id` and `geometry`:
     - roads, road_subclasses, paths: subtype ("road"), class, subclass,
-      connectors ([{connector_id, at}], where segments join); with `lanes`,
-      also names ({primary}), access_restrictions and width_rules.
+      connectors ([{connector_id, at}], where segments join), road_flags
+      ([{values, between}]: `is_tunnel` ranges along the segment); with
+      `lanes`, also names ({primary}), access_restrictions and width_rules.
     - rails: subtype ("rail"), class, names, rail_flags ([{values, between}]:
       `is_tunnel`, `is_bridge` ranges along the segment), connectors.
     - rivers, water_areas, land_use, land, barriers: subtype, class.
@@ -126,6 +128,40 @@ def path_class(row: dict) -> str:
     return row["class"]
 
 
+def _tunnel_cuts(row: dict) -> list[tuple[float, float]]:
+    """A segment's `is_tunnel` ranges (0..1 along it) from its road or rail
+    flags; a flag without a range covers the whole segment."""
+    cuts = []
+    for flag in (row.get("rail_flags") or []) + (row.get("road_flags") or []):
+        if "is_tunnel" in (flag.get("values") or []):
+            a, b = flag.get("between") or (0.0, 1.0)
+            cuts.append((float(a), float(b)))
+    return sorted(cuts)
+
+
+def _runs(cuts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Sorted cuts with overlapping or touching ones merged."""
+    out: list[tuple[float, float]] = []
+    for a, b in cuts:
+        if out and a <= out[-1][1] + 1e-9:
+            out[-1] = (out[-1][0], max(out[-1][1], b))
+        else:
+            out.append((a, b))
+    return out
+
+
+def _open_spans(cuts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """The ranges (0..1) between sorted cuts."""
+    out, at = [], 0.0
+    for a, b in cuts:
+        if a > at:
+            out.append((at, a))
+        at = max(at, b)
+    if at < 1.0:
+        out.append((at, 1.0))
+    return out
+
+
 def rail_open_parts(row: dict) -> list:
     """A rail segment's lon/lat line without its tunnels (`is_tunnel` ranges
     in its rail flags; a flag without a range covers the whole segment)."""
@@ -133,22 +169,64 @@ def rail_open_parts(row: dict) -> list:
     parts = list(line.geoms) if hasattr(line, "geoms") else [line]
     if line.geom_type != "LineString":
         return parts  # ranges are along a single line; multi-lines are kept whole
-    cuts: list[tuple[float, float]] = []
-    for flag in row.get("rail_flags") or []:
-        if "is_tunnel" not in (flag.get("values") or []):
-            continue
-        a, b = flag.get("between") or (0.0, 1.0)
-        cuts.append((float(a), float(b)))
+    cuts = _tunnel_cuts(row)
     if not cuts:
         return [line]
-    out, at = [], 0.0
-    for a, b in sorted(cuts):
-        if a > at:
-            out.append(substring(line, at, a, normalized=True))
-        at = max(at, b)
-    if at < 1.0:
-        out.append(substring(line, at, 1.0, normalized=True))
+    out = [substring(line, a, b, normalized=True) for a, b in _open_spans(cuts)]
     return [g for g in out if g.geom_type == "LineString" and g.length > 0]
+
+
+def _metres(line) -> float:
+    """A lon/lat line's length in metres (equirectangular: fine at a segment's size)."""
+    c = shapely.get_coordinates(line)
+    kx = 111_320.0 * math.cos(math.radians(float(c[:, 1].mean())))
+    return float(math.fsum(math.hypot(dx * kx, dy * 110_540.0) for dx, dy in c[1:] - c[:-1]))
+
+
+TUNNEL_MIN_M = 150.0
+
+
+def without_tunnels(rows: Rows, min_m: float = TUNNEL_MIN_M) -> Rows:
+    """Road or path rows with their tunnels cut out: harbour crossings and
+    tunnels through hills aren't drawn over the water or the hill. A row wholly
+    in a tunnel is dropped; one open on both sides becomes a row per stretch
+    (ids `<id>~1`, `<id>~2`), each keeping the connectors on it with `at`
+    rescaled to the stretch. Tunnels shorter than `min_m` stay drawn: Overture
+    doesn't tell an underpass or a building passage from a bored tunnel, and
+    those carry the street across at grade."""
+    # ponytail: a length threshold stands in for the tunnel's kind, judged per
+    # segment: a tunnel cut into segments under min_m each stays drawn. Join
+    # tunnel runs across shared connectors, or read OSM's `tunnel=` and `layer`
+    # if Overture ever carries them.
+    out = []
+    for row in rows:
+        cuts = _tunnel_cuts(row)
+        line = shapely.from_wkt(row["geometry"]) if cuts else None
+        if line is None or line.geom_type != "LineString":
+            out.append(row)
+            continue
+        total = _metres(line)
+        # adjacent ranges (flags that differ only in another value) are one tunnel
+        tunnels = [(a, b) for a, b in _runs(cuts) if (b - a) * total >= min_m]
+        if not tunnels:
+            out.append(row)
+            continue
+        spans = _open_spans(tunnels)
+        for k, (a, b) in enumerate(spans):
+            part = substring(line, a, b, normalized=True)
+            if part.geom_type != "LineString" or part.length == 0:
+                continue
+            conns = [
+                {**c, "at": min(1.0, max(0.0, (float(c.get("at") or 0.0) - a) / (b - a)))}
+                for c in row.get("connectors") or []
+                if a - 1e-9 <= float(c.get("at") or 0.0) <= b + 1e-9
+            ]
+            sid = row["id"] if len(spans) == 1 else f"{row['id']}~{k + 1}"
+            # its flags' ranges were the whole segment's: the stretch has no tunnel left
+            out.append(
+                {**row, "id": sid, "geometry": part.wkt, "connectors": conns, "road_flags": None}
+            )
+    return out
 
 
 def rail_matches(rule: dict, row: dict) -> bool:

@@ -64,6 +64,7 @@ from rasterio.warp import transform as transform_points
 from . import plugins, progress
 from .region import Region
 from .sources import rasters
+from .sources.features import without_tunnels
 
 LANDCOVER_CODES = {name: code for code, name in rasters.WORLDCOVER.items()}
 RESIDENTIAL = {
@@ -567,8 +568,8 @@ def street_trees(
     not_name = rule.get("notName", "").lower()
     if name or not_name:
         # names aren't in the road layer's columns; fetch them for this rule only
-        road_rows = plugins.source(p.region, "features").streets(
-            p.region.lonlat_envelope(), classes
+        road_rows = without_tunnels(
+            plugins.source(p.region, "features").streets(p.region.lonlat_envelope(), classes)
         )
     for row in sorted(road_rows, key=lambda r: r["id"]):
         if row["class"] not in classes:

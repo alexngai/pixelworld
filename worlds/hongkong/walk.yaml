@@ -103,7 +103,7 @@ style: hongkong
 start: { lon: 114.1717, lat: 22.3190 } # Nathan Road at Argyle Street, Mong Kok
 
 sources:
-  # Copernicus GLO-30 with buildings filtered off (D-107)
+  # Copernicus GLO-30 with buildings filtered off in town (D-107, D-115)
   dem: { kind: copernicus-glo30-ground, overview: 1 }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
   features: { kind: overture, release: 2026-10-21.0 }

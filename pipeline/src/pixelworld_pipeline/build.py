@@ -768,11 +768,13 @@ def build(
         joined = road_stage.joining_segments(road_rows, extra)
         road_rows = sorted(road_rows + joined, key=lambda r: r["id"])
         progress.log(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
+    # harbour crossings and hill tunnels aren't drawn over the water or the hill
+    road_rows = features.without_tunnels(road_rows)
     path_ids: dict[int, str] = {}
     path_rows: list[dict] = []
     if region.sources.get("paths"):
         path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
-        path_rows = feats.paths(bbox, region.sources["paths"]["classes"])
+        path_rows = features.without_tunnels(feats.paths(bbox, region.sources["paths"]["classes"]))
     path_id = {c: i for i, c in path_ids.items()}
     rivers = region.sources.get("rivers") or {}
     river_rows = feats.rivers(bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
@@ -1154,6 +1156,8 @@ def build(
     wooded = ((region.ground or {}).get("lawn") or {}).get("wooded")
     if any("canopy" in r for r in canopy_rules) or wooded:
         attribution += plugins.attribution(region, "canopy")
+    # a source may name another's data it reads (GLO-30's ground reads WorldCover): once each
+    attribution = [a for i, a in enumerate(attribution) if a not in attribution[:i]]
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None

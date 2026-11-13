@@ -569,6 +569,82 @@ def test_tracks_that_part_become_two_corridors_joined_where_they_part():
     assert shapely.LineString(np.column_stack(out[:2])).distance(start) < 0.05 and on[0][0] < 9.0
 
 
+def test_road_tunnels_are_cut_out_and_their_junctions_kept_on_each_side():
+    """D-115: a harbour crossing isn't drawn over the water; an underpass is."""
+
+    def line(coords):
+        return f"LINESTRING ({', '.join(f'{x} {y}' for x, y in coords)})"
+
+    lon0, lat0 = 114.17, 22.28  # 0.01° of longitude is about 1 km here
+    conns = [{"connector_id": c, "at": at} for c, at in [("p", 0.0), ("q", 0.2), ("r", 0.9)]]
+    rows = [
+        # its middle 600 m in a tunnel: split either side, connectors rescaled
+        {
+            "id": "a",
+            "class": "trunk",
+            "connectors": conns,
+            "road_flags": [{"values": ["is_tunnel"], "between": [0.3, 0.9]}],
+            "geometry": line([(lon0, lat0), (lon0 + 0.01, lat0)]),
+        },
+        # wholly in a tunnel
+        {
+            "id": "b",
+            "class": "motorway",
+            "road_flags": [{"values": ["is_tunnel"]}],
+            "geometry": line([(lon0, lat0), (lon0, lat0 + 0.02)]),
+        },
+        # a 50 m underpass stays drawn
+        {
+            "id": "c",
+            "class": "residential",
+            "road_flags": [{"values": ["is_tunnel"], "between": [0.4, 0.45]}],
+            "geometry": line([(lon0, lat0), (lon0 + 0.01, lat0)]),
+        },
+        # a bridge isn't a tunnel
+        {
+            "id": "d",
+            "class": "primary",
+            "road_flags": [{"values": ["is_bridge"]}],
+            "geometry": line([(lon0, lat0), (lon0 + 0.01, lat0)]),
+        },
+    ]
+    rows += [
+        # a 200 m tunnel given as two adjacent 100 m ranges is one tunnel
+        {
+            "id": "e",
+            "class": "trunk",
+            "road_flags": [
+                {"values": ["is_tunnel"], "between": [0.4, 0.5]},
+                {"values": ["is_tunnel", "is_covered"], "between": [0.5, 0.6]},
+            ],
+            "geometry": line([(lon0, lat0), (lon0 + 0.02, lat0)]),
+        },
+        # a portal at its start: one stretch keeps the id, and a connector a hair
+        # inside the tunnel stays at the stretch's start (not past its end)
+        {
+            "id": "f",
+            "class": "trunk",
+            "connectors": [{"connector_id": "s", "at": 0.5 - 1e-12}],
+            "road_flags": [{"values": ["is_tunnel"], "between": [0.0, 0.5]}],
+            "geometry": line([(lon0, lat0), (lon0 + 0.01, lat0)]),
+        },
+    ]
+    out = {r["id"]: r for r in features.without_tunnels(rows)}
+    assert set(out) == {"a~1", "a~2", "c", "d", "e~1", "e~2", "f"}
+    assert out["f"]["connectors"] == [{"connector_id": "s", "at": 0.0}]
+    assert out["f"]["road_flags"] is None  # the stretch has no tunnel left
+    assert [r["id"] for r in features.without_tunnels([out["f"]])] == ["f"]
+    assert out["c"] is rows[2] and out["d"] is rows[3]
+    assert [(c["connector_id"], round(c["at"], 6)) for c in out["a~1"]["connectors"]] == [
+        ("p", 0.0),
+        ("q", round(0.2 / 0.3, 6)),
+    ]
+    assert [(c["connector_id"], c["at"]) for c in out["a~2"]["connectors"]] == [("r", 0.0)]
+    import shapely
+
+    assert shapely.from_wkt(out["a~2"]["geometry"]).bounds[0] == pytest.approx(lon0 + 0.009)
+
+
 def test_rail_pieces_store_kind_tracks_and_the_cells_they_reach():
     corridor = ("c", 3, [(np.array([0.5, 9.5]), np.array([4.5, 4.5]), np.array([5, 5]))])
     pieces, bits, dropped = R.rail_pieces([corridor], (9, 10))
