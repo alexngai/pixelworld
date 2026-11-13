@@ -34,7 +34,7 @@ import {
 } from "@pixelworlds/world-format";
 import { landmarkPlan, ObjectIndex } from "./objects";
 import { createQuery, type PickView } from "./queries";
-import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldViewOptions } from "./types";
+import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -105,10 +105,11 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
   return pack;
 }
 
-export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects">): Promise<LoadedWorld> {
+export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB">): Promise<LoadedWorld> {
   const url = opts.worldUrl;
   const manifest = await loadManifest(url);
   const store = new ChunkStore(manifest, url);
+  if (opts.chunkBudgetMB !== undefined) store.maxBytes = opts.chunkBudgetMB * 2 ** 20;
   const base = new URL(url, globalThis.location?.href); // openWorld outside a browser passes an absolute URL
   // Lon/lat of cell corners: places between scale levels (D-046), fog areas, queries.
   const geo = await GeoGrid.load(manifest, base).catch((e: unknown) => {
@@ -203,7 +204,8 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): World
  * A world package's queries without a view, canvas or GPU (D-111): what a
  * game server, a bot or a worker reads to agree with the players' views on
  * heights, surfaces, roads and occupancy. Nothing streams by itself: `ensure`
- * the area first, as a controller does.
+ * the area first, as a controller does. `chunkBudgetMB` caps what it keeps
+ * (D-120): a server on a world too big to hold loads around its players.
  */
 export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
   let worldUrl: string;
@@ -213,7 +215,12 @@ export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
     throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
   }
   const w = await loadWorld({ ...opts, worldUrl });
-  return { world: worldInfo(w), query: worldQuery(w, null) };
+  return { world: worldInfo(w), query: worldQuery(w, null), stats: () => chunkStats(w.store) };
+}
+
+/** What a store holds now (`OpenedWorld.stats`, and a view's). */
+export function chunkStats(store: ChunkStore): WorldStats {
+  return { chunksLoaded: store.loadedCount, chunksTotal: store.manifest.chunks.length, chunksMB: store.loadedBytes / 2 ** 20, chunksEvicted: store.evicted };
 }
 
 /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */

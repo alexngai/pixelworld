@@ -73,7 +73,11 @@ const LAG_CREEP = 0.0005;
  * - **Snapshots,** every `snapshotEvery` ticks: one shared part for every
  *   page (`shared`, serialized once), and to each player its own (`snapshot`,
  *   with `t` and its `ack`). A player whose connection is backed up gets
- *   fewer until it catches up.
+ *   fewer until it catches up. With interest (`groupOf`, D-120), each group
+ *   of pages gets its own shared part, serialized once for the group.
+ * - **Waiting:** a `step` that returns false hasn't happened (its area is
+ *   loading, D-120): the input stays first in the queue for the next tick,
+ *   spends no credit and isn't acknowledged.
  * - **Events** (`emit`): stamped with the server time, for pages to show when
  *   they show that time of the others (`TickClient.due`).
  * - **Errors:** a throw in the game closes this room (`HostedRoom.fail`), not
@@ -132,13 +136,23 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
    * One tick of a player with its input: `seen` as its page sent it (`lagOf`
    * makes it a rewind; null for a bot), and `seq` the input's number (its
    * page's, so an effect the page drew at once can be matched to the server's).
+   * False: it can't step yet (its area is loading, D-120), and the input
+   * waits for the next tick.
    */
-  protected abstract step(id: string, input: I, seen: number | null, seq: number): void;
+  protected abstract step(id: string, input: I, seen: number | null, seq: number): void | boolean;
   /** The world's own tick, after the players' steps. */
   protected update(): void {}
-  /** What every page's snapshot shares (the others, the score, the match's phase): serialized once. */
-  protected shared(): object {
+  /** What every page's snapshot shares (the others, the score, the match's phase): serialized once, or once per `group` (D-120). */
+  protected shared(_group?: string): object {
     return {};
+  }
+  /**
+   * Interest (D-120): the group whose shared snapshot a page gets (the
+   * others near it: `Interest.groupOf`), or undefined for the whole one.
+   * Pages in one group share one serialization.
+   */
+  protected groupOf(_id: string): string | undefined {
+    return undefined;
   }
   /** What one player's own snapshot carries besides `t` and `ack` (its own state, for its prediction). */
   protected snapshot(_id: string): object {
@@ -195,11 +209,12 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   // ---------------------------------------------------------------- for the game
 
-  /** An event to every page (or one), stamped with the server time: pages show it when they show that time of the others. */
-  emit(e: E, to?: string): void {
+  /** An event to every page, one, or some (those near it: `Interest.around`), stamped with the server time: pages show it when they show that time of the others. */
+  emit(e: E, to?: string | readonly string[]): void {
     const m: TickEvent<E> = { k: "ev", t: this.time, e };
     if (to === undefined) this.room.broadcast(m);
-    else this.room.send(to, m);
+    else if (typeof to === "string") this.room.send(to, m);
+    else this.room.broadcast(m, this.allBut(to));
   }
 
   /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
@@ -277,15 +292,16 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
       }
       seat.budget = Math.min(burst, seat.budget + credit);
       while (seat.budget >= 1 && seat.queue.length) {
+        const next = seat.queue[0]!;
+        if (this.step(id, next.i, next.seen, next.seq) === false) break; // it waits, first in line
+        seat.queue.shift();
         seat.budget--;
-        const next = seat.queue.shift()!;
         seat.ack = next.seq;
         if (next.seen !== null) {
           const lag = this.time - next.seen;
           seat.base = seat.base === null ? lag : Math.min(seat.base + LAG_CREEP, lag);
           seat.behind = lag - seat.base > behind;
         }
-        this.step(id, next.i, next.seen, next.seq);
       }
     }
     this.update();
@@ -293,10 +309,37 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     // a backed-up player gets every `behindEvery`th snapshot
     const everyone = ++this.snapshots % (this.opts.behindEvery ?? 10) === 0;
     const skip = new Set([...this.seats].filter(([, s]) => s.behind && !everyone).map(([id]) => id));
-    this.room.broadcast({ k: "world", t: this.time, ...this.shared() } satisfies TickShared, skip);
+    this.sendShared(skip);
     for (const [id, seat] of this.seats)
       if (seat.role === "player" && !seat.drive && !skip.has(id))
         this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+  }
+
+  /**
+   * The shared snapshot: once to everyone, or with interest once per group,
+   * and the whole to pages in none (waiting to be admitted, or as the game
+   * says). Not to the `skip`ped.
+   */
+  private sendShared(skip: ReadonlySet<string>): void {
+    const world = (group?: string) => ({ k: "world", t: this.time, ...this.shared(group) }) satisfies TickShared;
+    const groups = new Map<string, string[]>();
+    for (const [id, seat] of this.seats) {
+      const g = seat.drive || skip.has(id) ? undefined : this.groupOf(id);
+      if (g === undefined) continue;
+      const ids = groups.get(g);
+      if (ids) ids.push(id);
+      else groups.set(g, [id]);
+    }
+    if (!groups.size) return this.room.broadcast(world(), skip);
+    const grouped = new Set([...groups.values()].flat());
+    if (this.room.players().some((id) => !grouped.has(id) && !skip.has(id))) this.room.broadcast(world(), new Set([...skip, ...grouped]));
+    for (const [g, ids] of groups) this.room.broadcast(world(g), this.allBut(ids));
+  }
+
+  /** Every page in the room but these. */
+  private allBut(ids: readonly string[]): Set<string> {
+    const keep = new Set(ids);
+    return new Set(this.room.players().filter((id) => !keep.has(id)));
   }
 
   private admit(id: string, join: J): void {

@@ -50,18 +50,38 @@ function withSlash(url: string): string {
   return url.endsWith("/") ? url : url + "/";
 }
 
+/** A loaded chunk, its decoded size, and when it was last used (a count, for least recently used first). */
+interface Held {
+  chunk: Chunk;
+  bytes: number;
+  used: number;
+}
+
 /**
  * Streams chunks of a world package on demand. Chunks are immutable for a
  * given manifest, so their URLs carry the chunk hash for HTTP caching.
+ *
+ * A memory budget (`maxBytes`, D-120): past it, the chunks least recently
+ * used (read, ensured or checked) go after each load, but never one an
+ * `ensureRect` is loading or has just loaded, which stays until after the
+ * caller's own reads that follow its await. Unlimited by default.
  */
 export class ChunkStore {
   private readonly base: string;
   private readonly refs = new Map<string, ChunkRef>();
-  private readonly chunks = new Map<string, Chunk>();
+  private readonly chunks = new Map<string, Held>();
   private readonly pending = new Map<string, Promise<Chunk | null>>();
+  /** Chunks an `ensureRect` holds: how many hold each. */
+  private readonly pins = new Map<string, number>();
+  private uses = 0;
+  private held = 0;
   readonly chunkSize: number;
   readonly cellsX: number;
   readonly cellsY: number;
+  /** Bytes of decoded chunks to keep at most (default unlimited). */
+  maxBytes = Infinity;
+  /** Chunks let go so far to stay within `maxBytes`. */
+  evicted = 0;
 
   constructor(
     readonly manifest: WorldManifest,
@@ -79,8 +99,13 @@ export class ChunkStore {
     return this.chunks.size;
   }
 
+  /** Bytes of the decoded chunks loaded now. */
+  get loadedBytes(): number {
+    return this.held;
+  }
+
   get(cx: number, cy: number): Chunk | undefined {
-    return this.chunks.get(key(cx, cy));
+    return this.use(key(cx, cy))?.chunk;
   }
 
   ref(cx: number, cy: number): ChunkRef | undefined {
@@ -90,8 +115,8 @@ export class ChunkStore {
   /** Load one chunk (deduplicated); null when the package has no such chunk. */
   ensure(cx: number, cy: number): Promise<Chunk | null> {
     const k = key(cx, cy);
-    const have = this.chunks.get(k);
-    if (have) return Promise.resolve(have);
+    const have = this.use(k);
+    if (have) return Promise.resolve(have.chunk);
     const inflight = this.pending.get(k);
     if (inflight) return inflight;
     const ref = this.refs.get(k);
@@ -104,12 +129,35 @@ export class ChunkStore {
     };
     const p = load()
       .then((chunk) => {
-        this.chunks.set(k, chunk);
+        const bytes = chunkBytes(chunk);
+        this.chunks.set(k, { chunk, bytes, used: ++this.uses });
+        this.held += bytes;
+        this.trim();
         return chunk;
       })
       .finally(() => this.pending.delete(k));
     this.pending.set(k, p);
     return p;
+  }
+
+  /** A loaded chunk, marked used now. */
+  private use(k: string): Held | undefined {
+    const h = this.chunks.get(k);
+    if (h) h.used = ++this.uses;
+    return h;
+  }
+
+  /** Over the budget: the least recently used chunks go, but not those an `ensureRect` holds. */
+  private trim(): void {
+    if (this.held <= this.maxBytes) return;
+    // ponytail: a sort per load over budget, fine for hundreds of chunks; a heap if worlds hold thousands
+    const old = [...this.chunks].filter(([k]) => !this.pins.has(k)).sort((a, b) => a[1].used - b[1].used);
+    for (const [k, h] of old) {
+      if (this.held <= this.maxBytes) break;
+      this.chunks.delete(k);
+      this.held -= h.bytes;
+      this.evicted++;
+    }
   }
 
   /** Chunk coordinates overlapping a cell rectangle (clipped to the world). */
@@ -124,12 +172,34 @@ export class ChunkStore {
     return out;
   }
 
+  /**
+   * Load the chunks under a cell rectangle. They are held from the call until
+   * a task after it resolves, so the budget can't let one go before the
+   * caller's reads that follow its await (a tile's slice, a step).
+   */
   async ensureRect(x0: number, y0: number, x1: number, y1: number): Promise<void> {
-    await Promise.all(this.chunksFor(x0, y0, x1, y1).map(([cx, cy]) => this.ensure(cx, cy)));
+    const cs = this.chunksFor(x0, y0, x1, y1);
+    const keys = cs.map(([cx, cy]) => key(cx, cy));
+    for (const k of keys) this.pins.set(k, (this.pins.get(k) ?? 0) + 1);
+    try {
+      await Promise.all(cs.map(([cx, cy]) => this.ensure(cx, cy)));
+    } finally {
+      setTimeout(() => {
+        for (const k of keys) {
+          const n = this.pins.get(k)! - 1;
+          if (n > 0) this.pins.set(k, n);
+          else this.pins.delete(k);
+        }
+        this.trim();
+      });
+    }
   }
 
+  /** Whether every chunk under a cell rectangle is loaded (one the package lacks has nothing to wait for), marking them used: a check is a use. */
   isLoadedRect(x0: number, y0: number, x1: number, y1: number): boolean {
-    return this.chunksFor(x0, y0, x1, y1).every(([cx, cy]) => this.chunks.has(key(cx, cy)));
+    let all = true;
+    for (const [cx, cy] of this.chunksFor(x0, y0, x1, y1)) if (!this.use(key(cx, cy)) && this.refs.has(key(cx, cy))) all = false;
+    return all;
   }
 
   /**
@@ -147,7 +217,7 @@ export class ChunkStore {
     const grid = new TerrainGrid(w, h, k ? { micro: emptyMicro(k, w, h) } : undefined);
     const s = this.chunkSize;
     for (const [cx, cy] of this.chunksFor(sx0, sy0, sx1, sy1)) {
-      const chunk = this.chunks.get(key(cx, cy));
+      const chunk = this.use(key(cx, cy))?.chunk;
       if (!chunk) continue;
       copyCells(chunk.terrain, 0, 0, grid, cx * s - sx0, cy * s - sy0, s, s);
     }
@@ -159,7 +229,7 @@ export class ChunkStore {
     const s = this.chunkSize;
     const cx = Math.floor(x / s);
     const cy = Math.floor(y / s);
-    const chunk = this.chunks.get(key(cx, cy));
+    const chunk = this.use(key(cx, cy))?.chunk;
     return chunk ? { chunk, lx: x - cx * s, ly: y - cy * s } : null;
   }
 
@@ -213,6 +283,13 @@ export class ChunkStore {
     }
     return Number.isFinite(lo) ? [lo, hi] : [0, 0];
   }
+}
+
+/** A decoded chunk's size: its layers and micro-terrain. */
+function chunkBytes(chunk: Chunk): number {
+  let n = chunk.terrain.micro?.corners.byteLength ?? 0;
+  for (const a of Object.values(chunk.terrain.layers())) n += a.byteLength;
+  return n;
 }
 
 function key(cx: number, cy: number): string {

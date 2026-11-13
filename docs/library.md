@@ -228,6 +228,7 @@ interface WorldViewOptions {
   cache?: boolean | TileStore;                        // IndexedDB by default
   startTiles?: string | URL | false;                  // the first view baked ahead (tools/prebake.mjs); default start-tiles.bin in the package
   objects?: boolean; scatter?: boolean; heroes?: boolean;
+  chunkBudgetMB?: number;                             // decoded terrain kept at most, least recently used let go (D-120); default unlimited
   palette?: "day" | "night";
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
   layers?: Layer[];
@@ -349,13 +350,16 @@ view.query.roadAt(x, y)               // { classId, class, width, connections, l
 view.query.pick(screenX, screenY)     // { x, y, h, cellX, cellY } under a canvas point (CSS px)
 view.query.lonLatToCell(lon, lat); view.query.cellToLonLat(x, y)   // through the geo grid (D-048)
 view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.ensure(x0, y0, x1, y1)
+view.query.isLoaded(x0, y0, x1, y1)   // whether the terrain under a rectangle is loaded now (D-120)
 view.query.objectsAt(x, y)            // placed objects standing there: { group, id, x, y, bounds, footprint, base, top }[]
 view.query.landmarks()                // registry landmarks, one per id: { id, group, x, y, parts }[]
 
-const { world, query } = await openWorld({ worldUrl, style, base?, renderScale?, objects? })   // the same, without a view (D-111)
+const { world, query, stats } = await openWorld({ worldUrl, style, base?, renderScale?, objects?, chunkBudgetMB? })   // the same, without a view (D-111)
+stats()                               // { chunksLoaded, chunksTotal, chunksMB, chunksEvicted } (D-120)
 ```
 
-- **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle.
+- **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle; `isLoaded` says whether it is, so a game server's step can wait for its ground (D-120).
+- **A memory budget (`chunkBudgetMB`, D-120):** decoded terrain is about 0.5 MB a 64-cell chunk with micro-terrain (the southwest whole is 112 MB), and nothing is let go by default. With a budget, the chunks least recently read, ensured or checked go once it is passed, to load again when something `ensure`s them; never one an `ensure` is loading or has just loaded, until after the reads that follow its await. Size it over what is in use at once (a view's ring of tiles, the areas around a server's players), or chunks load over and over: `stats().chunksEvicted` (and the view's) counts them. Placed objects still load whole (nyc's 282,000 hold about 115 MB of heap; `objects: false` where occupancy isn't needed).
 - **Without a view (`openWorld`, D-111):** the same queries over the same package and style, with no canvas, GPU or page: for a game server, a bot or a worker that must agree with the players' views on heights and occupancy. `world` is a view's `WorldInfo`; `pick` throws. In Node, `worldUrl` is absolute (or relative to `base`) and served over HTTP, since Node's `fetch` can't read `file:` URLs, and `style` is the pack's JSON or a resolver.
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
 - **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { LEVEL_FLIGHT, flyPlane, type PlaneState } from "@pixelworlds/game/src/plane";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { DogfightRoom, openDogfightWorld, type DogfightWorld } from "../../src/demos/dogfight/server";
 import { BOT, GUN, HP, MATCH, TICK, flyTick, type DogfightEvent, type DogfightInput, type DogfightSnap, type DogfightWorldNet } from "../../src/demos/dogfight/rules";
 import { TickClient, type TickEvent, type TickShared, type TickSnapshot } from "../../src/index";
@@ -29,11 +29,19 @@ beforeAll(async () => {
 afterAll(() => {
   vi.unstubAllGlobals();
 });
+// respawns are random: the same ones each run, or a plane may spawn where a test's terrain doesn't do what it expects
+beforeEach(() => {
+  let seed = 1;
+  vi.spyOn(Math, "random").mockImplementation(() => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 type Msg = (TickShared & DogfightWorldNet) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
 
 /** A room over a transport that keeps what it sends, by page. */
-function room() {
+function room(w = world) {
   const inbox = new Map<string, Msg[]>();
   const all: Msg[] = [];
   const hosted: HostedRoom = {
@@ -53,7 +61,7 @@ function room() {
     },
     log: () => {},
   };
-  const game = new DogfightRoom(hosted, Promise.resolve(world), false);
+  const game = new DogfightRoom(hosted, Promise.resolve(w), false);
   const join = async (id: string, name = id, watch = false) => {
     inbox.set(id, []);
     game.join(id);
@@ -191,6 +199,25 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     for (let t = 0; t < 30; t++) game.tick(); // a sends nothing: it holds still on the server
     expect(events("fire").filter((e) => e.kind === "fire" && e.by === BOT).length).toBeGreaterThan(0);
     expect(events("hit").filter((e) => e.kind === "hit" && e.by === BOT && e.to === "a").length).toBeGreaterThan(0);
+  });
+
+  it("loads the level around the start and the planes, not whole: a plane over ground still loading waits, then flies on (D-120)", async () => {
+    const fresh = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
+    const { query, world: info, stats } = fresh.opened;
+    expect(stats().chunksLoaded).toBeLessThan(stats().chunksTotal);
+    const { game, join, send } = room(fresh);
+    await join("a");
+    // somewhere not loaded yet
+    const far = Array.from({ length: 24 }, (_, n) => [(n % 6) * 64 + 32, Math.floor(n / 6) * 64 + 32] as const).find(([x, y]) => x < info.cellsX && y < info.cellsY && !query.isLoaded(x - 2, y - 2, x + 2, y + 2))!;
+    const p = game.plane("a")!;
+    Object.assign(p.s, { x: far[0], y: far[1], h: fresh.params.ceiling - 1 });
+    send("a", 1, {});
+    game.tick(); // it waits, and its area is asked for
+    expect([game.ackOf("a"), p.s.x]).toEqual([0, far[0]]);
+    for (let n = 0; n < 100 && !query.isLoaded(far[0] - 2, far[1] - 2, far[0] + 2, far[1] + 2); n++) await new Promise((r) => setTimeout(r, 5));
+    game.tick();
+    expect(game.ackOf("a")).toBe(1);
+    expect(game.plane("a")!.s.x).not.toBe(far[0]);
   });
 
   it("clamps a page's stick and trigger to what they can be", async () => {

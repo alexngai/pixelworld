@@ -82,6 +82,7 @@ export class FakeWorld {
       elevationAt: (x, y, h) => (h ?? this.cell(x, y)?.h ?? 0) * 10,
       metersPerCellAt: () => 400,
       ensure: async () => {},
+      isLoaded: () => true,
       objectsAt: (x, y) =>
         this.objects.filter((o) => x >= o.bounds[0] && y >= o.bounds[1] && x <= o.bounds[2] && y <= o.bounds[3]),
       landmarks: () => [],

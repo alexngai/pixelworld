@@ -58,12 +58,28 @@ export interface OpenWorldOptions {
   renderScale?: number;
   /** Load the placed objects, for `objectsAt` and `landmarks` (default true). */
   objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
 }
 
 /** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
+  /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
+  stats(): WorldStats;
+}
+
+/** `OpenedWorld.stats` (D-120). */
+export interface WorldStats {
+  chunksLoaded: number;
+  chunksTotal: number;
+  chunksMB: number;
+  chunksEvicted: number;
 }
 
 export interface WorldViewOptions {
@@ -90,6 +106,12 @@ export interface WorldViewOptions {
   startTiles?: string | URL | false;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
   /** Decorative scatter where the level asks for it (default true). */
   scatter?: boolean;
   /** Stamp painted-over hero landmarks into tiles (default true). */
@@ -237,6 +259,9 @@ export interface ViewStats {
   tilesPending: number;
   chunksLoaded: number;
   chunksTotal: number;
+  /** Megabytes of the chunks loaded, and how many `chunkBudgetMB` let go (D-120). */
+  chunksMB: number;
+  chunksEvicted: number;
   gpuTiles: number;
   gpuMB: number;
   avgMeshMs: number;
@@ -412,6 +437,8 @@ export interface WorldQuery {
   metersPerCellAt(x: number, y: number): number;
   /** Load the terrain under a rectangle of cells, so queries answer there. */
   ensure(x0: number, y0: number, x1: number, y1: number): Promise<void>;
+  /** Whether the terrain under a rectangle of cells is loaded now (D-120): a game server's step can wait until it is. */
+  isLoaded(x0: number, y0: number, x1: number, y1: number): boolean;
   /**
    * Placed objects standing at a point (occupancy): those whose footprint
    * contains it; landmarks drawn from an anchor (City Hall, a tower) where

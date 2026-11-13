@@ -28,6 +28,7 @@ function world() {
     surfaceHeightAt: (x, y) => (loaded ? g.surfaceHeightAt(x, y) : null),
     realHeightAt: (_x, _y, h) => h / 2, // a vertical caricature of 2×
     metersPerCellAt: () => 100,
+    isLoadedRect: () => loaded,
     ensureRect: async () => {
       loaded = true;
     },

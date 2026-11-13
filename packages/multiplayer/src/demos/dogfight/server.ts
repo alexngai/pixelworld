@@ -5,9 +5,9 @@ import { FlightPilot } from "@pixelworlds/game/src/pilot";
 import { LEVEL_FLIGHT, axes, drawnPitch, flightParams, spawnPlane, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { PLANE } from "@pixelworlds/game/src/tuning";
-import { openWorld } from "pixelworld/engine";
+import { openWorld, type OpenedWorld } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
-import { History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
+import { Areas, History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import {
   BOT,
   CREDIT_S,
@@ -42,6 +42,8 @@ import {
  * A match: a countdown with the guns cold, play to `MATCH.kills` or
  * `MATCH.seconds`, the end screen, and the next. Pages may watch instead of
  * fly; a pilot alone gets a bot to fight, which goes when another arrives.
+ * The world is loaded around each plane and the start (`Areas`, D-120), so
+ * a level too big to load whole flies too.
  */
 
 export interface DogfightWorld {
@@ -49,16 +51,32 @@ export interface DogfightWorld {
   params: PlaneParams;
   /** The start (cells). */
   start: [number, number];
+  /** The world's queries and what it holds, for loading around the planes. */
+  opened: OpenedWorld;
 }
 
-/** Open the flying level the pages fly, over HTTP, with the style packs the game has; the whole level is loaded (a few dozen chunks). */
-export async function openDogfightWorld(worldUrl: string): Promise<DogfightWorld> {
-  const { world, query } = await openWorld({ worldUrl, style: stylePack });
-  // ponytail: the whole level, as the flying levels are small; a big one would load around each plane
-  await query.ensure(0, 0, world.cellsX, world.cellsY);
-  const tops = query.landmarks().flatMap((l) => query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity));
+/** Cells loaded around the start, which respawns fly out of: their spread, and the clearance a spawn looks for ahead and around. */
+const START_AREA = 32;
+/** Around each plane, and around where it will be 2 s on (D-120). */
+const AREAS = { radius: 16, ahead: 2, reach: 2 };
+/** Not a page's id: the start's area. */
+const START = "@start";
+
+/**
+ * Open the flying level the pages fly, over HTTP, with the style packs the
+ * game has: the start's area and the ground under the landmarks (for the
+ * ceiling over their tops); the rest loads around the planes as they fly,
+ * at most `chunkBudgetMB` of it (D-120).
+ */
+export async function openDogfightWorld(worldUrl: string, opts: { chunkBudgetMB?: number } = {}): Promise<DogfightWorld> {
+  const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64 });
+  const { world, query } = opened;
+  const landmarks = query.landmarks();
+  await Promise.all(landmarks.map((l) => query.ensure(l.x - 1, l.y - 1, l.x + 1, l.y + 1)));
+  const tops = landmarks.flatMap((l) => query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity)); // kept by the objects once read
   const start = query.lonLatToCell(DOGFIGHT_START.lon, DOGFIGHT_START.lat) ?? [world.cellsX / 2, world.cellsY / 2];
-  return { fly: new FlyWorld(query, world.cellsX, world.cellsY), params: flightParams(world, tops), start };
+  await query.ensure(start[0] - START_AREA, start[1] - START_AREA, start[0] + START_AREA, start[1] + START_AREA);
+  return { fly: new FlyWorld(query, world.cellsX, world.cellsY), params: flightParams(world, tops), start, opened };
 }
 
 /** The server's log, a line each. */
@@ -74,12 +92,12 @@ export function logLine(l: RelayLog): void {
  * next one tries again. An empty room stays open a minute. `lag` holds every
  * message back that many ms each way.
  */
-export function attachDogfight(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void } = {}): Relay {
+export function attachDogfight(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void; chunkBudgetMB?: number } = {}): Relay {
   let opened: Promise<DogfightWorld> | null = null;
   const world = () => {
     if (!opened) {
       const { port } = server.address() as AddressInfo;
-      opened = openDogfightWorld(`http://localhost:${port}${DOGFIGHT_WORLD}`);
+      opened = openDogfightWorld(`http://localhost:${port}${DOGFIGHT_WORLD}`, { chunkBudgetMB: opts.chunkBudgetMB });
       opened.catch((e: unknown) => {
         console.error("dogfight: the world didn't open:", e);
         opened = null;
@@ -135,6 +153,7 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   /** The match: waiting for pilots (open-ended staging), the countdown, play, the end screen. */
   readonly match = new Phases<MatchPhase>("staging");
   private winner: string | null = null;
+  private areasOf: Areas | null = null;
 
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<DogfightWorld>, clock = true) {
@@ -161,7 +180,13 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
 
   protected removed(id: string): void {
     this.lives.delete(id);
+    this.areas.forget(id);
     if (this.planes.delete(id)) this.botWhenAlone();
+  }
+
+  /** The world around each plane and the start, this room's (the world is every room's). */
+  private get areas(): Areas {
+    return (this.areasOf ??= new Areas(this.world.opened.query, AREAS));
   }
 
   /** A pilot alone gets a bot to fight; it goes when another pilot arrives, or the pilot leaves. */
@@ -203,9 +228,10 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
     return { pitch: clamp(i.pitch, -1, 1), roll: clamp(i.roll, -1, 1), throttle: clamp(i.throttle, -1, 1), yaw: clamp(i.yaw, -1, 1), fire: i.fire === true };
   }
 
-  protected step(id: string, input: DogfightInput, seen: number | null, seq: number): void {
+  protected step(id: string, input: DogfightInput, seen: number | null, seq: number): boolean | void {
     const w = this.world;
     const p = this.planes.get(id)!;
+    if (!this.areas.ready(p.s.x, p.s.y)) return false; // over ground still loading: the input waits (D-120)
     const r = flyTick(p.s, input, w.fly, w.params);
     p.cooldown = Math.max(0, p.cooldown - TICK);
     if (r.crashed) return this.down(id, p.lastHit && this.time - p.lastHit.at < CREDIT_S ? p.lastHit.by : null);
@@ -223,6 +249,8 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   protected override update(): void {
     this.flyRounds();
     for (const p of this.planes.values()) p.history.record(this.time, p.s);
+    for (const [id, { s }] of this.planes) this.areas.track(id, s.x, s.y, s.speed * Math.cos(s.heading), s.speed * Math.sin(s.heading));
+    this.areas.track(START, ...this.world.start);
     this.runMatch();
   }
 

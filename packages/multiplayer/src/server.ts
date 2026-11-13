@@ -4,6 +4,8 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { SERVER, type RoomInfo, type ServerMessage } from "./index";
 
+export * from "./areas";
+export * from "./interest";
 export * from "./static";
 export * from "./tick";
 

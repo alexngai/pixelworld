@@ -34,10 +34,14 @@ view.onFrame(() => others.update());
   - **Commands:** `cmd` messages (a team pick, a ready, a build) reach `command`, from players and spectators, reliably and once.
   - **Bots:** `addBot(id, join, drive)` is a player the server drives each tick; `removeBot`.
   - **Snapshots:** `shared()` to every page at once (`world`, serialized once), and `snapshot(id)` to each player (`snap`, with `t` and its `ack`).
-  - **Events:** `emit(e, to?)`, stamped with the server time, for pages to show at that time of the others.
+  - **Interest (D-120):** with `groupOf(id)` (say `Interest.groupOf`), each group of pages gets its own `shared(group)`, built and serialized once for the group, and pages in none (a watcher, a page not yet admitted) the whole. The page's `onWorld` then has only who is near: call `RemotePlayers.retain` with them, and a player that comes back into range is drawn where it is at once.
+  - **Events:** `emit(e, to?)` to every page, one, or a list (`Interest.around(x, y)`: the pages near it), stamped with the server time, for pages to show at that time of the others.
+  - **Waiting (D-120):** a `step` that returns false hasn't happened (its ground is still loading: `Areas.ready`): the input stays first in its queue for the next tick, spends no credit and isn't acknowledged, and the backlog drains after as after a stall.
   - **A backed-up connection:** a player whose page shows the others more than `behind` (0.25 s) later than its own best gets only every 10th snapshot until it catches up (`isBehind`).
   - **Health:** `stats()` (tick time, overruns, players behind); late clocks and slow ticks go to the server's log.
   - Also `step(id, input, seen, seq)` (the input's number, to match a page's at-once effects), `update`, `removed`, `describe` (for the lobby), `lagOf(seen, max)`, `roleOf`, `joinOf`, `isBot`, `playerIds`, `spectatorIds`, `kick`.
+- **`Areas(query, { radius, ahead, reach })`** (server, D-120): the world around each player loaded ahead of where it is going, for a world too big to load whole (`openWorld({ chunkBudgetMB })` then lets go of the areas no one is near). `track(id, x, y, vx, vy)` each tick (cheap while its area is loaded: a check that keeps it in use), `ready(x, y)` for a step that waits, `forget(id)`, `pending`, `failed`.
+- **`Interest(cell, reach)`** (server, D-120): who is near whom, in squares `cell` cells across: `place(id, x, y)`, `remove`, `groupOf(id)` (its square: a page's group), `near(group)` (what is within `reach` squares of it), `around(x, y)` (who should hear of an event there). A page sees everything within `cell × reach` cells of it.
 - **`Phases<P>`** (server, D-118): a match's phases on the server's clock (`set(phase, now, seconds)`, `left`, `over`, `net()` for the shared snapshot).
 - **`History`** (server): where something was, by server time, to test a shot against where its shooter saw the target.
 - **`serveStatic(root)`** (server): a request handler for a built game's directory, beside the rooms on the same port: GET and HEAD, nothing outside `root`, hashed `/assets/` cached for good, world package files as stored.
@@ -56,4 +60,16 @@ view.onFrame(() => others.update());
 
 Games built on the package, in `src/demos/` (not part of what the package ships):
 
-- **[The dogfight](src/demos/dogfight/README.md)** (D-113, D-114, D-116, D-118): planes over the Grand Canyon on the example game's flight model, run by the server; matches, quick play and room codes, spectators, and a bot when a pilot is alone. `pnpm --filter @pixelworlds/multiplayer demo:dogfight`, then open `http://localhost:5253/` (quick play) and share the room's code. It builds into one Node server with the page beside it, and a Docker image.
+- **[The dogfight](src/demos/dogfight/README.md)** (D-113, D-114, D-116, D-118, D-120): planes over the Grand Canyon on the example game's flight model, run by the server; matches, quick play and room codes, spectators, and a bot when a pilot is alone. `pnpm --filter @pixelworlds/multiplayer demo:dogfight`, then open `http://localhost:5253/` (quick play) and share the room's code. It builds into one Node server with the page beside it, and a Docker image. Its server loads the level around the start and each plane (`Areas`), not whole, within 64 MB.
+
+### On a big world (D-120)
+
+32 bots and 8 pages spread over the whole southwest (228 chunks), 20 s, in `test/bigworld.test.ts` (`BIGWORLD_LOG=1 BIGWORLD_SECONDS=20`):
+
+| | everyone everywhere, the world loaded whole | `Areas` within 40 MB, `Interest(128)` |
+|---|---|---|
+| terrain held | 228 chunks, 112 MB | 81 chunks, 40 MB (171 let go) |
+| server memory (heap + buffers, over before it opened) | 26 + 113 MB | 10 + 41 MB |
+| a tick (mean, p99) | 0.035, 0.10 ms | 0.058, 0.20 ms |
+| a page gets | 82 KB/s, 39 others | 12 KB/s, at most 6 others |
+| steps that waited for their ground | 0 | 12–30 of 48,000 |
