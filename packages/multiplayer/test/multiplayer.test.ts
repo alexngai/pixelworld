@@ -1,8 +1,8 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { Smoothing, joinRoom, type Room } from "../src/index";
-import { attachRelay, type Relay } from "../src/server";
+import { Prediction, SERVER, Smoothing, joinRoom, type Room } from "../src/index";
+import { attachRelay, type HostedRoom, type Relay } from "../src/server";
 
 /** A relay on a free port, and its URL. */
 async function relay(opts: Parameters<typeof attachRelay>[1] = {}): Promise<{ url: string; relay: Relay; server: Server }> {
@@ -87,6 +87,77 @@ describe("the relay and its rooms (D-112)", () => {
   });
 });
 
+describe("rooms the server runs (D-113)", () => {
+  it("sends players' messages to the room's game, which answers one or all; it closes when the room empties", async () => {
+    const log: string[] = [];
+    let hosted: HostedRoom | null = null;
+    const { join, relay } = await setup({
+      host: (room) => {
+        hosted = room;
+        log.push(`open ${room.name}`);
+        return {
+          join: (id) => log.push(`join ${id}`),
+          message: (id, data) => {
+            log.push(`${id}: ${JSON.stringify(data)}`);
+            room.send(id, { echo: data });
+            room.broadcast({ players: room.players() });
+          },
+          leave: (id) => log.push(`leave ${id}`),
+          close: () => log.push("close"),
+        };
+      },
+    });
+    const a = await join("arena");
+    const b = await join("arena");
+    const toA: unknown[] = [];
+    const toB: unknown[] = [];
+    a.onMessage = (from, data) => toA.push([from, data]);
+    let gotB: () => void;
+    const bGot = new Promise<void>((r) => (gotB = r));
+    b.onMessage = (from, data) => {
+      toB.push([from, data]);
+      gotB();
+    };
+    a.send({ in: 1 });
+    await bGot;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(toA).toEqual([
+      [SERVER, { echo: { in: 1 } }],
+      [SERVER, { players: [a.id, b.id] }],
+    ]);
+    expect(toB).toEqual([[SERVER, { players: [a.id, b.id] }]]); // not a's message itself
+    expect(hosted!.name).toBe("arena");
+    const bLeft = once<[string]>((f) => (a.onLeave = f));
+    b.close();
+    await bLeft;
+    a.close();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(log).toEqual([`open arena`, `join ${a.id}`, `join ${b.id}`, `${a.id}: {"in":1}`, `leave ${b.id}`, `leave ${a.id}`, "close"]);
+    expect(relay.rooms().size).toBe(0);
+  });
+});
+
+describe("prediction", () => {
+  it("steps inputs at once, and on the server's word puts its state back and steps the inputs it hasn't yet", () => {
+    let x = 0;
+    const p = new Prediction<number>((dx) => (x += dx));
+    expect([p.apply(1), p.apply(2), p.apply(3)]).toEqual([1, 2, 3]);
+    expect(x).toBe(6);
+    // the server stepped inputs 1 and 2, but its world held the vehicle back: 2.5, not 3
+    p.reconcile(2, () => (x = 2.5));
+    expect(x).toBe(5.5); // 2.5, then input 3 again
+    expect(p.unacknowledged).toBe(1);
+    p.reconcile(3, () => (x = 5.5));
+    expect([x, p.unacknowledged]).toEqual([5.5, 0]);
+  });
+
+  it("keeps at most `keep` inputs for the server", () => {
+    const p = new Prediction<number>(() => {}, 3);
+    for (let i = 0; i < 10; i++) p.apply(i);
+    expect(p.unacknowledged).toBe(3);
+  });
+});
+
 describe("smoothing other players' poses", () => {
   const pose = (x: number, heading = 0) => ({ x, y: 0, h: 0, heading });
 
@@ -103,6 +174,8 @@ describe("smoothing other players' poses", () => {
     expect(s.at("a", 1000.19)!.x).toBeCloseTo(7, 9);
     expect(s.at("a", 1001)!.x).toBe(10); // nothing newer: held
     expect(s.at("b", 1000)).toBeNull();
+    expect(s.time("a", 1000.14)).toBeCloseTo(0.02, 9); // when what is drawn happened, on their clock
+    expect(s.time("b", 1000)).toBeNull();
   });
 
   it("turns the short way round, and doesn't slide into a jump", () => {

@@ -10,11 +10,18 @@ import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
  *   little in the past and in between, as they moved.
  * - `RemotePlayers`: those poses as entities in a world view.
  *
- * Relay-first: each client runs its own vehicle and tells the others where it
- * is, so a game's rules run on its clients. The game decides what to send.
+ * - `Prediction`: for a room the server runs (`host`, D-113), the player's own
+ *   vehicle answers its inputs at once and still ends where the server says.
+ *
+ * A relayed room: each client runs its own vehicle and tells the others where
+ * it is, so a game's rules run on its clients. A hosted room: the server runs
+ * the game and sends the state. The game decides what to send.
  */
 
 // ---------------------------------------------------------------- the relay's protocol
+
+/** `from` on what a hosted room's game sends (D-113). */
+export const SERVER = "server";
 
 /** What the relay sends (JSON text frames). A player sends its own messages as plain JSON. */
 export type ServerMessage =
@@ -188,6 +195,12 @@ export class Smoothing {
     return b.jump ? a!.pose : lerp(a!.pose, b.pose, (t - a!.t) / (b.t - a!.t));
   }
 
+  /** The time on a player's clock that `at` draws at `now`: when what this player sees of it happened (null for one never heard from). */
+  time(id: string, now: number): number | null {
+    const o = this.offsets.get(id);
+    return o === undefined ? null : now - o - this.delay;
+  }
+
   delete(id: string): void {
     this.samples.delete(id);
     this.offsets.delete(id);
@@ -195,6 +208,52 @@ export class Smoothing {
 
   ids(): string[] {
     return [...this.samples.keys()];
+  }
+}
+
+// ---------------------------------------------------------------- prediction
+
+/**
+ * Prediction, for a room the server runs (D-113): the player's own vehicle
+ * steps at once with each input (`apply`), and the input goes to the server
+ * with its number. A snapshot says the last input the server has stepped and
+ * the state after it (`reconcile`): that state goes back in place and the
+ * inputs the server hasn't stepped yet are stepped again, so the vehicle
+ * answers the keys at once and still ends where the server says. Both sides
+ * step the same code at the same fixed time step.
+ */
+export class Prediction<I> {
+  private readonly pending: { seq: number; input: I }[] = [];
+  private seq = 0;
+
+  /**
+   * @param step One fixed step of the player's own vehicle with an input.
+   * @param keep Inputs kept for the server at most (default 600: 10 s at 60 a second).
+   */
+  constructor(
+    private readonly step: (input: I) => void,
+    private readonly keep = 600,
+  ) {}
+
+  /** Step with an input; send it to the server with the number this returns. */
+  apply(input: I): number {
+    const seq = ++this.seq;
+    this.pending.push({ seq, input });
+    if (this.pending.length > this.keep) this.pending.shift();
+    this.step(input);
+    return seq;
+  }
+
+  /** The server has stepped every input up to `ack`: `restore` puts its state in place, and the later ones are stepped again. */
+  reconcile(ack: number, restore: () => void): void {
+    while (this.pending.length && this.pending[0]!.seq <= ack) this.pending.shift();
+    restore();
+    for (const p of this.pending) this.step(p.input);
+  }
+
+  /** Inputs stepped here that the server hasn't yet. */
+  get unacknowledged(): number {
+    return this.pending.length;
   }
 }
 

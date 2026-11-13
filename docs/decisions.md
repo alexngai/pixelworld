@@ -121,6 +121,7 @@ Status values:
 | D-110 | Every data source selected by role in the spec; the Python city packs merged into the pipeline | Accepted |
 | D-111 | Multiplayer-friendly without netcode in the engine: world queries without a view, and entities that don't wait | Accepted |
 | D-112 | `@pixelworlds/multiplayer`, relay-first, and the example game's dogfight over the Grand Canyon | Accepted |
+| D-113 | Rooms the server runs: the dogfight's server owns the planes, and each page predicts its own | Accepted |
 
 ---
 
@@ -1475,4 +1476,24 @@ The point is more room for visual interest; both halves are wanted.
   - **Vite's HMR channel as the transport:** no dependency, but it exists only on a dev server, and its API is for module updates.
   - **WebSocket framing written on `node:http`:** about a hundred lines of protocol code to save one small dependency.
   - **The server running the game first:** it needs the flight model on the server (it lives in the game) and prediction on the client. The shape for when cheating matters: a shared simulation stepped at a fixed rate, client prediction with corrections, and hits checked against where players were when the shot was fired.
-- **Later:** publishing the package (a changeset, the release workflow and npm's trusted publisher); a mode where the server runs the game (`openWorld` for its collisions, D-111); a race sample; sprite bake priority measured with several planes (D-111); a livery per player (the plane's seed doesn't change its colours much).
+- **Later:** publishing the package (a changeset, the release workflow and npm's trusted publisher); a mode where the server runs the game (`openWorld` for its collisions, D-111; built: D-113, and the dogfight moved to it); a race sample; sprite bake priority measured with several planes (D-111); a livery per player (the plane's seed doesn't change its colours much).
+
+### D-113: Rooms the server runs: the dogfight's server owns the planes, and each page predicts its own (accepted)
+- **Why:** in a relayed room (D-112) each page flies its own plane and judges its own hits, so any page can cheat, and two pages can disagree. A server that runs the game decides for everyone. The pieces were there: `openWorld` gives a server the players' world (D-111), and the flight model is pure functions that already ran in Node.
+- **What:**
+  - **The package:** `attachRelay(server, { host })` runs a game per room (`RoomHost`: `join`, `message`, `leave`, `close`; it answers with `send` and `broadcast`, `from` `SERVER`). `lag` now holds messages back on each hop, the game's included. `Prediction`: inputs stepped at once and numbered; `reconcile(ack, restore)` puts the server's state back and steps the rest again. `Smoothing.time` says when what is drawn happened, on the sender's clock.
+  - **The flight model shared:** `flightParams`, `levelOut`, `clearance`, `spawnPlane` and `drawnPitch` moved from the plane's controller into plane.ts, for the controller and the server alike.
+  - **The dogfight's server** (`apps/game/src/dogfightServer.ts`, on `/dogfight?room=`):
+    - Opens the flying level with `openWorld` from the dev server itself, the style pack from disk, and loads all of it (a few dozen chunks).
+    - Ticks at a fixed 60 a second. Each page's numbered inputs queue and are stepped one a tick (a backlog caught up at most 8 at a time), so a page can't fly faster than the clock. Input values are clamped; out-of-order, malformed or excess inputs are dropped; names are cut to 20 characters.
+    - Owns the guns (the cooldown counts the page's steps), rounds, hits, health, kills, crash credit and respawns.
+    - Judges a round against where its shooter saw the targets: the page sends, with each input, when what it draws of the others happened on the server's clock (`seen`); the server rewinds the targets by that lag, at most 0.5 s, from a history of where each plane was.
+    - Sends each page a snapshot 20 times a second: every plane (where it is drawn, its score, a respawn flag) and the page's own plane after its last input stepped. Fire, hit and down events go out as they happen.
+  - **The page** (`dogfight.ts`): the plane's controller only draws; the page steps the plane a fixed tick at a time with its keys through `Prediction` and sends each input. Each snapshot puts the plane back and steps the inputs not yet stepped; a respawn moves the camera with it. The others are drawn 0.1 s behind; rounds are drawn at once for its own shots and from the server's events for the others'. The board shows how many inputs are ahead of the server and the last correction.
+  - **Where it runs:** on the game's dev server, loaded through Vite's module runner once the server listens (the config loader leaves workspace packages to Node, which can't load their TypeScript). `DOGFIGHT_LAG=ms` holds messages back each way. `vite preview` has no dogfight server.
+  - **Checked:** Node tests of hosted rooms and `Prediction`; of the dogfight server over the committed flying level (a page predicting with the same inputs ends exactly where the server says; one step a tick; untrusted inputs dropped or clamped; ten hits shoot a plane down, its shooter scores and it respawns flagged; a crash within 6 s of a hit counts for the shooter). Two headless Chromium pages on the dev server: steering through rolls and pulls, the largest correction was 0.0000 cells with up to five inputs ahead of the server; the other page drew every round fired; crashes respawned.
+- **Rejected alternatives:**
+  - **The relayed dogfight beside it:** two dogfights to keep. The relay stays in the package for games that want one.
+  - **Lockstep or rollback:** the model's float maths may differ between browsers' engines in the last bits (D-111); a server with corrections absorbs that.
+  - **The server loaded from the Vite config's own imports:** Node can't load the engine's TypeScript sources; a built server bundle would work, as a build step to keep.
+- **Later:** a server for production (a bundle of `dogfightServer.ts` beside the built game); a mode that ensures the world around each plane for big levels; hits shown at the moment a page's round meets a target rather than at the server's word; a race sample.

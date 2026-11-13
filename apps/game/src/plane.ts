@@ -1,6 +1,6 @@
 import { wrapAngle } from "./car";
 import type { PlaneWorld } from "./ground";
-import { MAX_STEP, PLANE } from "./tuning";
+import { FLY_PACE, MAX_STEP, PLANE, pace } from "./tuning";
 
 /**
  * The flight model, as pure functions over `PlaneWorld`: a point mass with a
@@ -252,6 +252,56 @@ export function stepPlane(s: PlaneState, input: PlaneInput, world: PlaneWorld, p
   const tower = world.objectTopAt(s.x, s.y);
   if (tower !== null && s.h < tower) return { crashed: "tower", agl };
   return { crashed: null, agl };
+}
+
+// ---------------------------------------------------------------- setting a plane up: the controller's and the dogfight server's
+
+/** A flying level's flight (its pace) and its ceiling, over its highest ground and the landmark tops given. */
+export function flightParams(world: { manifest: { scale: { metersPerCell: number }; level?: string | null }; renderScale: number; heightRange: readonly [number, number] }, tops: readonly number[] = []): PlaneParams {
+  const m = world.manifest;
+  return {
+    pace: pace(m.scale.metersPerCell, FLY_PACE.ref, FLY_PACE.floor) / world.renderScale,
+    ceiling: Math.max(world.heightRange[1], ...tops) + PLANE.ceiling,
+    length: PLANE.voxels.length / 16,
+    slowest: m.level === "walk" ? PLANE.walkSlowSpeed : PLANE.slowSpeed,
+  };
+}
+
+/** Wings level, no roll or slip, and the angle of attack that holds the height at its speed. */
+export function levelOut(s: PlaneState, p: PlaneParams): void {
+  Object.assign(s, { bank: 0, slip: 0, rollRate: 0, alpha: Math.min(PLANE.maxAoa, aoaFor(s.speed, s.climb, 0, p)) });
+  settleNose(s);
+}
+
+/**
+ * The highest ground or object top (steps) within `radius` cells of the way
+ * from (x, y) `ahead` cells along `heading`; null where nothing is loaded.
+ */
+export function clearance(w: PlaneWorld, x: number, y: number, heading: number, ahead: number, radius: number): number | null {
+  const c = Math.cos(heading);
+  const n = Math.sin(heading);
+  let top: number | null = null;
+  for (let u = -radius; u <= ahead; u += 0.5)
+    for (let v = -radius; v <= radius; v += 0.5) {
+      const px = x + c * u - n * v;
+      const py = y + n * u + c * v;
+      for (const t of [w.groundAt(px, py), w.objectTopAt(px, py)]) if (t !== null) top = Math.max(top ?? -Infinity, t);
+    }
+  return top;
+}
+
+/** A plane at (x, y) facing `heading`: level, at cruise, `resetAgl` over everything within `safeRadius` cells and a few seconds ahead. */
+export function spawnPlane(w: PlaneWorld, p: PlaneParams, x: number, y: number, heading: number): PlaneState {
+  const cruise = PLANE.cruiseSpeed * p.pace;
+  const clear = clearance(w, x, y, heading, cruise * PLANE.clearAhead, PLANE.safeRadius) ?? 0;
+  const s: PlaneState = { x, y, h: Math.min(p.ceiling, clear + PLANE.resetAgl), heading, speed: cruise, climb: 0, bank: 0, rollRate: 0, alpha: 0, slip: 0, throttle: throttleFor(cruise, p.pace, p.slowest), yaw: heading, pitch: 0, roll: 0 };
+  levelOut(s, p);
+  return s;
+}
+
+/** The pitch a plane's sprite is drawn at: the path climbs `stepsPerCell` steps per cell at 45°, where the sprite's cubic voxels climb 2. */
+export function drawnPitch(pitch: number): number {
+  return Math.atan((PLANE.stepsPerCell / 2) * Math.tan(pitch));
 }
 
 /** Advance the plane by dt in steps of at most MAX_STEP; stops at a crash. */

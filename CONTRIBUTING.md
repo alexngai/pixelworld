@@ -30,7 +30,7 @@ The committed world packages in `fixtures/` are served as they are, so the viewe
 | `packages/runtime` | Chunk streaming, the tile cache, the bake worker and service, the compositor, fog fields (internal to the engine) |
 | `packages/engine` | The public world view: `createWorldView`, layers, entities (the rover), controllers, queries |
 | `packages/sim` | Ambient traffic: routes, the simulation, vehicle models, the traffic layer |
-| `packages/multiplayer` | Optional multiplayer (D-112): the relay (Node), rooms, smoothing other players into entities; the example game's dogfight uses it |
+| `packages/multiplayer` | Optional multiplayer (D-112, D-113): rooms on a WebSocket server (relayed or run by the server), prediction, smoothing other players into entities; the example game's dogfight server (`apps/game/src/dogfightServer.ts`) runs on it |
 | `packages/pixelworld` | The npm package `pixelworld`: entry points over the packages above ([docs/npm.md](docs/npm.md)) |
 | `apps/web` | The viewer (URL parameters, HUD, the `__pixelworld` debug API), the model preview (`model.html`), the bench (`bench.html`) |
 | `apps/editor` | Editor v0: focus areas and pins against `pixelworld serve` |
