@@ -52,18 +52,21 @@ The committed world packages in `fixtures/` are served as they are, so the viewe
 
 ## 3. The checks, as CI runs them
 
-`.github/workflows/ci.yml` is the source of truth; these are its jobs' steps.
+`.github/workflows/ci.yml` is the source of truth; these are its jobs' steps. Every pull request and push to `main` runs `web`, `pipeline` and the e2e smoke subset, about 10 minutes of runner time. The full e2e suite and the npm package's consumers run on demand, about 75 minutes: `gh workflow run ci.yml --ref <branch>`, for a change to rendering, the game or what a package ships, and before a release.
 
 ```sh
 # web: lint, typecheck, unit tests (together: pnpm check)
 pnpm install --frozen-lockfile
 pnpm lint && pnpm typecheck && pnpm test
 
-# web-e2e: the Playwright suite (on CI in four shards, --shard=1/4 … 4/4)
+# web-e2e-smoke: the tests tagged @smoke
 pnpm exec playwright install --with-deps chromium
+pnpm test:e2e:smoke
+
+# web-e2e (on demand): the whole Playwright suite (on CI in four shards, --shard=1/4 … 4/4)
 pnpm test:e2e
 
-# package: the npm package (pack, tarball contents and size budgets, API docs, consumers)
+# package (on demand, and on the "Version packages" pull request): the npm packages (pack, tarball contents and size budgets, API docs, consumers)
 pnpm package:check && pnpm package:size && pnpm docs:api && pnpm package:consumers
 
 # pipeline
