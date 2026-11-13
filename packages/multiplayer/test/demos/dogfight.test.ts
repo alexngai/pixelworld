@@ -220,6 +220,32 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(game.plane("a")!.s.x).not.toBe(far[0]);
   });
 
+  it("keeps the ground respawns read loaded under a tight budget, while planes far off load and let go of theirs (D-120)", async () => {
+    const tight = await openDogfightWorld("https://pixelworld.test/southwest-fly/", { chunkBudgetMB: 5 });
+    const { query, world: info, stats } = tight.opened;
+    const { game, join, send } = room(tight);
+    await join("a");
+    const p = game.plane("a")!;
+    const [sx, sy] = tight.start;
+    const startArea = () => query.isLoaded(sx - 32, sy - 32, sx + 32, sy + 32);
+    expect(startArea()).toBe(true);
+    let seq = 0;
+    // a far corner at a time: the plane waits there for its ground, which loads and pushes older chunks out
+    for (const [x, y] of [[20, 20], [info.cellsX - 20, 20], [20, info.cellsY - 20], [info.cellsX - 20, info.cellsY - 20]] as const) {
+      Object.assign(p.s, { x, y, h: tight.params.ceiling - 1 });
+      send("a", ++seq, {});
+      game.tick();
+      for (let n = 0; n < 100 && game.ackOf("a") < seq; n++) {
+        await new Promise((r) => setTimeout(r, 5));
+        game.tick();
+      }
+      expect(game.ackOf("a")).toBe(seq);
+    }
+    expect(stats().chunksEvicted).toBeGreaterThan(0);
+    expect(stats().chunksMB).toBeLessThanOrEqual(5);
+    expect(startArea()).toBe(true);
+  });
+
   it("clamps a page's stick and trigger to what they can be", async () => {
     const { game, join } = room();
     await join("a");

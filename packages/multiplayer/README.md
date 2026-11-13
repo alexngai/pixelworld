@@ -64,12 +64,12 @@ Games built on the package, in `src/demos/` (not part of what the package ships)
 
 ### On a big world (D-120)
 
-32 bots and 8 pages spread over the whole southwest (228 chunks), 20 s, in `test/bigworld.test.ts` (`BIGWORLD_LOG=1 BIGWORLD_SECONDS=20`):
+32 bots and 8 pages spread over the whole southwest (228 chunks), 20 s, in `test/bigworld.test.ts` (`BIGWORLD_LOG=1 BIGWORLD_SECONDS=20`; ranges over several runs):
 
 | | everyone everywhere, the world loaded whole | `Areas` within 40 MB, `Interest(128)` |
 |---|---|---|
-| terrain held | 228 chunks, 112 MB | 81 chunks, 40 MB (171 let go) |
-| server memory (heap + buffers, over before it opened) | 26 + 113 MB | 10 + 41 MB |
-| a tick (mean, p99) | 0.035, 0.10 ms | 0.058, 0.20 ms |
+| terrain held | 228 chunks, 112 MB | 81 chunks, 40 MB (156–171 let go) |
+| server memory (heap + buffers, over before it opened) | 26 + 113 MB | 8–10 + 41 MB |
+| a tick (mean, p99) | 0.035–0.043, 0.10–0.20 ms | 0.058–0.088, 0.20–0.48 ms |
 | a page gets | 82 KB/s, 39 others | 12 KB/s, at most 6 others |
-| steps that waited for their ground | 0 | 12–30 of 48,000 |
+| steps that waited for their ground | 0 | ~2,500 in the first second (all on unloaded ground), then 50–230 of 48,000 |

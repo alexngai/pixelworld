@@ -59,8 +59,6 @@ export interface DogfightWorld {
 const START_AREA = 32;
 /** Around each plane, and around where it will be 2 s on (D-120). */
 const AREAS = { radius: 16, ahead: 2, reach: 2 };
-/** Not a page's id: the start's area. */
-const START = "@start";
 
 /**
  * Open the flying level the pages fly, over HTTP, with the style packs the
@@ -71,9 +69,15 @@ const START = "@start";
 export async function openDogfightWorld(worldUrl: string, opts: { chunkBudgetMB?: number } = {}): Promise<DogfightWorld> {
   const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64 });
   const { world, query } = opened;
-  const landmarks = query.landmarks();
-  await Promise.all(landmarks.map((l) => query.ensure(l.x - 1, l.y - 1, l.x + 1, l.y + 1)));
-  const tops = landmarks.flatMap((l) => query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity)); // kept by the objects once read
+  // each read just after its own load, which a budget can't let go of before then; the objects keep a top once read
+  const tops = (
+    await Promise.all(
+      query.landmarks().map(async (l) => {
+        await query.ensure(l.x - 1, l.y - 1, l.x + 1, l.y + 1);
+        return query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity);
+      }),
+    )
+  ).flat();
   const start = query.lonLatToCell(DOGFIGHT_START.lon, DOGFIGHT_START.lat) ?? [world.cellsX / 2, world.cellsY / 2];
   await query.ensure(start[0] - START_AREA, start[1] - START_AREA, start[0] + START_AREA, start[1] + START_AREA);
   return { fly: new FlyWorld(query, world.cellsX, world.cellsY), params: flightParams(world, tops), start, opened };
@@ -153,7 +157,7 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   /** The match: waiting for pilots (open-ended staging), the countdown, play, the end screen. */
   readonly match = new Phases<MatchPhase>("staging");
   private winner: string | null = null;
-  private areasOf: Areas | null = null;
+  private areasOf: { planes: Areas; start: Areas } | null = null;
 
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<DogfightWorld>, clock = true) {
@@ -180,13 +184,14 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
 
   protected removed(id: string): void {
     this.lives.delete(id);
-    this.areas.forget(id);
+    this.areas.planes.forget(id);
     if (this.planes.delete(id)) this.botWhenAlone();
   }
 
-  /** The world around each plane and the start, this room's (the world is every room's). */
-  private get areas(): Areas {
-    return (this.areasOf ??= new Areas(this.world.opened.query, AREAS));
+  /** The world around each plane, and all a respawn reads around the start: this room's (the world is every room's). */
+  private get areas(): { planes: Areas; start: Areas } {
+    const q = this.world.opened.query;
+    return (this.areasOf ??= { planes: new Areas(q, AREAS), start: new Areas(q, { radius: START_AREA, ahead: 0 }) });
   }
 
   /** A pilot alone gets a bot to fight; it goes when another pilot arrives, or the pilot leaves. */
@@ -231,7 +236,7 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   protected step(id: string, input: DogfightInput, seen: number | null, seq: number): boolean | void {
     const w = this.world;
     const p = this.planes.get(id)!;
-    if (!this.areas.ready(p.s.x, p.s.y)) return false; // over ground still loading: the input waits (D-120)
+    if (!this.areas.planes.ready(p.s.x, p.s.y)) return false; // over ground still loading: the input waits (D-120)
     const r = flyTick(p.s, input, w.fly, w.params);
     p.cooldown = Math.max(0, p.cooldown - TICK);
     if (r.crashed) return this.down(id, p.lastHit && this.time - p.lastHit.at < CREDIT_S ? p.lastHit.by : null);
@@ -249,8 +254,8 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   protected override update(): void {
     this.flyRounds();
     for (const p of this.planes.values()) p.history.record(this.time, p.s);
-    for (const [id, { s }] of this.planes) this.areas.track(id, s.x, s.y, s.speed * Math.cos(s.heading), s.speed * Math.sin(s.heading));
-    this.areas.track(START, ...this.world.start);
+    for (const [id, { s }] of this.planes) this.areas.planes.track(id, s.x, s.y, s.speed * Math.cos(s.heading), s.speed * Math.sin(s.heading));
+    this.areas.start.track("start", ...this.world.start); // kept in use, so a budget lets go of it last
     this.runMatch();
   }
 

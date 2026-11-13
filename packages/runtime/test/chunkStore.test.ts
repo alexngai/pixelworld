@@ -88,7 +88,7 @@ describe("loading a world package", () => {
 
 describe("a chunk store's memory budget (D-120)", () => {
   /** A world four chunks across, one down; each chunk's ground stands at its column. */
-  function strip(missing: number[] = []) {
+  function strip(missing: number[] = [], delay = false) {
     const fetched: string[] = [];
     const m = {
       ...manifest,
@@ -97,6 +97,7 @@ describe("a chunk store's memory budget (D-120)", () => {
     } as unknown as WorldManifest;
     const store = new ChunkStore(m, "/strip", async (url) => {
       const x = Number(/c(\d)\.bin/.exec(url)![1]);
+      if (delay) await new Promise((r) => setTimeout(r, 4 - x)); // each in its own task, the later chunks first
       fetched.push(`c${x}`);
       const terrain = new TerrainGrid(4, 4);
       terrain.base.fill(x);
@@ -136,6 +137,22 @@ describe("a chunk store's memory budget (D-120)", () => {
     expect(store.loadedCount).toBe(4);
     await tick();
     expect([store.loadedCount, store.evicted]).toEqual([1, 3]);
+  });
+
+  it("holds each of overlapping ensureRects' chunks for its own caller, loads landing in separate tasks", async () => {
+    const { store, fetched } = strip([], true);
+    store.maxBytes = 16 * 94;
+    const [a, b] = [store.ensureRect(0, 0, 8, 4), store.ensureRect(4, 0, 16, 4)];
+    const read = (x0: number, x1: number) => {
+      const { grid } = store.slice(x0, 0, x1, 4);
+      return Array.from({ length: (x1 - x0) / 4 }, (_, i) => grid.base[i * 4]);
+    };
+    const [ra, rb] = await Promise.all([a.then(() => read(0, 8)), b.then(() => read(4, 16))]);
+    expect([ra, rb]).toEqual([[0, 1], [1, 2, 3]]);
+    expect(fetched.sort()).toEqual(["c0", "c1", "c2", "c3"]); // chunk 1, wanted by both, loaded once
+    await tick();
+    await tick();
+    expect([store.loadedCount, store.loadedBytes]).toEqual([1, 16 * 94]); // both let go: trimmed to the budget
   });
 
   it("takes a chunk the package lacks as loaded: there is nothing to wait for", async () => {

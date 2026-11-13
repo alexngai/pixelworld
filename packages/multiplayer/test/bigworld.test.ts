@@ -386,9 +386,8 @@ async function rovers(mode: Mode, seconds: number) {
   const opened = await openWorld({ worldUrl: "https://pixelworld.test/southwest/", style: stylePack, chunkBudgetMB: mode.budgetMB });
   const { cellsX, cellsY } = opened.world;
   if (!mode.areas) await opened.query.ensure(0, 0, cellsX, cellsY); // the whole world, as the dogfight did
-  // everyone on a grid over the world, their own area loaded to start with
+  // everyone on a grid over the world, where (with areas) nothing is loaded yet: they wait for their ground first
   const spots = Array.from({ length: BOTS + PAGES }, (_, n) => ({ x: (((n % 8) + 0.5) * cellsX) / 8, y: ((Math.floor(n / 8) + 0.5) * cellsY) / 5 }));
-  await Promise.all(spots.map((s) => opened.query.ensure(s.x - 8, s.y - 8, s.x + 8, s.y + 8)));
   const lb = loopback((room) => new Rovers(room, opened, mode));
   await new Promise((r) => setTimeout(r, 0)); // the world arrives
   const game = lb.host;
@@ -418,7 +417,7 @@ async function rovers(mode: Mode, seconds: number) {
   const from = pages.map((p) => p.page.received.length);
   const start = new Map([...game.rovers].map(([id, r]) => [id, { ...r }]));
   game.tickMs.length = 0;
-  game.waits = 0;
+  const waitsAtStart = game.waits;
   await run(seconds);
   const bytes = pages.map((p, n) => p.page.received.slice(from[n]).reduce((sum: number, m) => sum + JSON.stringify(m).length, 0));
   const moved = [...game.rovers].map(([id, r]) => Math.hypot(r.x - start.get(id)!.x, r.y - start.get(id)!.y));
@@ -428,7 +427,9 @@ async function rovers(mode: Mode, seconds: number) {
     world: opened.stats(),
     perPageKBs: bytes.reduce((a, b) => a + b, 0) / pages.length / seconds / 1024,
     tickMs: { mean: ms.reduce((a, b) => a + b, 0) / ms.length, p99: ms[Math.floor(ms.length * 0.99)]!, max: ms.at(-1)! },
+    /** Steps that waited for their ground: in the first second (everyone on ground not loaded), and after. */
     waits: game.waits,
+    waitsAtStart,
     slowest: Math.min(...moved),
     others: Math.max(...pages.flatMap((p) => [...p.others])),
     /** What the room and its world hold (more than when it opened). */
@@ -448,6 +449,9 @@ describe("dozens of players across the southwest (D-120)", () => {
     expect(after.world.chunksLoaded).toBeLessThan(after.world.chunksTotal / 2);
     expect(after.perPageKBs).toBeLessThan(before.perPageKBs / 3);
     expect(after.others).toBeLessThan(before.others);
-    expect(after.slowest).toBeGreaterThan(before.slowest * 0.9); // nobody held up long waiting for its ground
+    // every rover waited for its ground at first, chunks went and came back as they moved, and nobody stayed stuck
+    expect(after.waits).toBeGreaterThan(0);
+    expect(after.world.chunksEvicted).toBeGreaterThan(0);
+    expect(after.slowest).toBeGreaterThan(before.slowest * 0.5);
   }, 60_000);
 });
