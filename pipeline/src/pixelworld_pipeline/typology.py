@@ -125,6 +125,8 @@ def features(
             "kind": inst.get("_cls") or "",
         }
         if rc is None:
+            # a footprint too thin for a rectangle (a sliver): its height still gives its storeys
+            f["floors"] = max(1, int(round(f["height"] / FLOOR_METERS)))
             out[i] = f
             continue
         sides = [(rc[j], rc[(j + 1) % 4]) for j in range(4)]

@@ -10,7 +10,7 @@
   "ao": { "strength": 2.2 },
   "terrain": { "steepRockSlope": 0.7 },
   "ramps": {
-    "loam": ["#1f1a17", "#382c25", "#544033", "#715742", "#8f7056", "#ad8b6e"],
+    "shotcrete": ["#262624", "#3f3e3b", "#5c5a55", "#7b7972", "#9b9890", "#bab6ac"],
     "grass": ["#18241c", "#253a27", "#355230", "#476b39", "#5c8543", "#76a052"],
     "lawn": ["#13221b", "#1d3624", "#2a4d2b", "#386632", "#4b8039", "#649b45"],
     "scrub": ["#20251f", "#343d30", "#4b5641", "#636f52", "#7d8a66", "#99a67c"],
@@ -52,7 +52,12 @@
     "taxi": ["#22090b", "#3f1013", "#65181b", "#8a2224", "#ad322f", "#ca4a42"],
     "jade": ["#0c1c18", "#133128", "#1b4838", "#246049", "#307a5b", "#40946e"]
   },
-  "strataSets": { "kowloon": [{ "name": "Kowloon granite", "aboveMeters": -100000, "ramp": "loam" }] },
+  "strataSets": {
+    "kowloon": [
+      { "name": "Granite and volcanic tuff", "aboveMeters": 250, "ramp": "granite" },
+      { "name": "Cut slopes in shotcrete", "aboveMeters": -100000, "ramp": "shotcrete" }
+    ]
+  },
   "defaultStrata": "kowloon",
   "provinces": {},
   "surfaces": {
@@ -404,10 +409,29 @@
       "ramps": { "structure": "steel", "window": "glass" },
       "params": { "base": 0.14, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1 }
     },
+    "landmark.tower.cylinder": {
+      "generator": "column",
+      "ramps": { "stone": "mosaic-white", "detail": "glass", "window": "curtain-glass" },
+      "params": { "radius": 0.11 }
+    },
     "landmark.tower.pyramid": {
       "generator": "pyramidTower",
       "ramps": { "structure": "granite", "window": "curtain-glass" },
       "params": { "base": 0.16, "spire": 0.18, "wing": 0.45 }
+    },
+    "prop.boat": {
+      "generator": "boat",
+      "ramps": {
+        "hull.a": "bark", "hull.b": "rust", "hull.c": "jade", "hull.d": "mosaic-white",
+        "stripe.a": "mosaic-white", "stripe.b": "paint-sky", "stripe.c": "paint-yellow",
+        "canopy.a": "paint-sky", "canopy.b": "bark", "canopy.c": "jade",
+        "cabin": "mosaic-white", "window": "glass", "sail": "taxi", "trim": "bark"
+      }
+    },
+    "prop.boat.junk": {
+      "generator": "boat",
+      "ramps": { "hull": "bark", "stripe": "bark", "canopy": "bark", "cabin": "mosaic-white", "window": "glass", "sail": "taxi", "trim": "grime" },
+      "params": { "kind": 3 }
     },
     "prop.neon": {
       "generator": "neonSign",
@@ -459,7 +483,8 @@
       "params": { "radius": 2.8, "radiusJitter": 0.5, "height": 2.2, "trunk": 3, "lobes": 6, "holes": 0.08 }
     },
     "vehicle.bus": {
-      "generator": "bus",
+      "generator": "doubleDeckBus",
+      "params": { "height": 1.4 },
       "ramps": {
         "body.a": "paint-cream",
         "body.b": "paint-yellow",
@@ -573,22 +598,28 @@
       }
     },
     "vehicle.streetcar": {
-      "generator": "tram",
+      "generator": "doubleDeckTram",
       "ramps": {
-        "upper.a": "jade",
-        "upper.b": "paint-cream",
-        "upper.c": "jade",
-        "upper.d": "paint-cream",
-        "lower.a": "jade",
-        "lower.b": "jade",
-        "lower.c": "taxi",
-        "lower.d": "paint-sky",
-        "roof": "steel",
+        "classic": "jade",
+        "band": "paint-cream",
+        "ad.a": "taxi",
+        "ad.b": "paint-yellow",
+        "ad.c": "paint-sky",
+        "ad.d": "paint-mint",
+        "ad.e": "paint-salmon",
+        "ad.f": "mosaic-white",
+        "ad.g": "jade",
+        "ad.h": "tile-beige",
         "window": "lit",
+        "door": "glass",
+        "roof": "steel",
         "tyre": "asphalt",
+        "trim": "steel",
         "light": "lit-cool",
-        "tail": "marker"
-      }
+        "tail": "marker",
+        "sign": "lit"
+      },
+      "params": { "length": 0.8, "width": 0.8, "height": 1.45, "classic": 0.35 }
     },
     "vehicle.train": {
       "generator": "train",

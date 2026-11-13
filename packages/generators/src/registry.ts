@@ -66,6 +66,9 @@ export const KNOWN_PLUGIN_GENERATORS: Readonly<Record<string, string>> = {
   curvedRoofHall: "@pixelworlds/city-hongkong",
   grandHotel: "@pixelworlds/city-hongkong",
   neonSign: "@pixelworlds/city-hongkong",
+  doubleDeckTram: "@pixelworlds/city-hongkong",
+  doubleDeckBus: "@pixelworlds/city-hongkong",
+  boat: "@pixelworlds/city-hongkong",
 };
 
 export interface GeneratorInfo {

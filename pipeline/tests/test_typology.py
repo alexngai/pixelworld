@@ -279,3 +279,22 @@ def test_bounds_rules_keep_to_a_neighbourhoods_box_and_max_depth_to_small_lots()
     assert not typology.matches(
         {"group": "x", "bounds": [0, 0, 1, 1]}, "building.residential", {"floors": 1}
     )
+
+
+def test_a_sliver_footprint_still_has_its_storeys_for_rules_that_dont_ask():
+    """A footprint too thin for a rectangle keeps its floors, so a rule by kind can retype it."""
+    sliver = {
+        "g": "building.residential",
+        "x": 1.0,
+        "y": 1.0,
+        "s": 1,
+        "fp": [[1.0, 1.0], [1.5, 1.0], [1.0, 1.0]],
+        "hm": 9.6,
+        "_cls": "school",
+    }
+    f = typology.features([sliver], STREET, None, 25.0)
+    assert f[0]["floors"] == 3
+    counts = typology.classify(
+        [sliver], {"rules": [{"group": "building.civic", "kinds": ["school"]}]}, f
+    )
+    assert counts == {"building.civic": 1} and sliver["fl"] == 3

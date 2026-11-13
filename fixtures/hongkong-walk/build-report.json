@@ -1,5 +1,5 @@
 {
-  "packageHash": "22fe297bf6c133b4ae959a82abc21acd2c7c8795b84da2c440f1b45732da071e",
+  "packageHash": "7bcae5073a08a7e8beb8602829ac5ee4355aae2d3109bf0e11767c02461f6f81",
   "cells": [
     228,
     444
@@ -28,6 +28,8 @@
     "landmark.hotel": 1,
     "landmark.tower.clock": 1,
     "landmark.tower.glass": 1,
+    "prop.boat": 139,
+    "prop.boat.junk": 2,
     "prop.neon": 5059,
     "prop.neon.wide": 597,
     "prop.signal": 291,

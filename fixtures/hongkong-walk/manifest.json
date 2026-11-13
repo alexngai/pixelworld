@@ -382,7 +382,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "6e16c0e5769a9b23",
+      "region": "65b29e71ba36d772",
       "features": {
         "kind": "overture",
         "release": "2026-10-21.0"
@@ -400,8 +400,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "25a8e33ac29a787382036d0fef609741f12d763ae267a27bc33f9e01d663fa2a",
-    "count": 23768
+    "sha256": "70d22a8bce9d611174d6640288688bf0373d1d0fda4f166ba8712b99e6670383",
+    "count": 23909
   },
   "depiction": {
     "heightStretch": 1.0,
@@ -410,9 +410,14 @@
   "level": "walk",
   "levels": [
     {
+      "name": "drive",
+      "world": "hongkong",
+      "label": "Driving round Victoria Harbour"
+    },
+    {
       "name": "walk",
       "world": "hongkong-walk",
-      "label": "Walking Kowloon: Tsim Sha Tsui to Mong Kok"
+      "label": "Walking Kowloon"
     }
   ],
   "geo": {
@@ -424,7 +429,7 @@
     ],
     "sha256": "0ce12b18a2a2d80483d30d9caf477d0ce36ba5a910f6b08eb26e05fffa1de59d"
   },
-  "packageHash": "22fe297bf6c133b4ae959a82abc21acd2c7c8795b84da2c440f1b45732da071e",
+  "packageHash": "7bcae5073a08a7e8beb8602829ac5ee4355aae2d3109bf0e11767c02461f6f81",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "66f6b6ae85a9f8b2a2a0421e522821b23080a0622f968140324ee5623136b793",

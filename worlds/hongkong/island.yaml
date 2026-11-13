@@ -20,7 +20,8 @@ id: hongkong-island
 name: Hong Kong Island (walking)
 level: walk
 levels:
-  - { name: walk, world: hongkong-island, label: "Walking Hong Kong Island: Kennedy Town to Shek O" }
+  - { name: drive, world: hongkong, label: "Driving round Victoria Harbour" }
+  - { name: walk, world: hongkong-island, label: "Walking Hong Kong Island" }
 bounds: [114.105, 22.195, 114.265, 22.293] # lon/lat: west, south, east, north
 
 metersPerCell: 10
@@ -54,6 +55,10 @@ ground:
     slopeMeters: 50
     wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
     spread: { over: [grass], meters: 25 }
+
+  # the open ridges (Dragon's Back, High West): WorldCover calls them tree
+  # cover; where the canopy map shows few trees 3 m or taller, scrub (D-133)
+  scrub: { over: [woodland], maxCover: 0.3 }
 
 terrain: { minLakeArea: 4000 }
 
@@ -91,6 +96,15 @@ objects:
     # town's trees where the canopy map shows 3 m or more and the land isn't
     # wooded; the country parks' woods are the client's scatter (D-117)
     - { group: tree, canopy: 3, landcover: [built, grass, shrub, crop, bare, wetland], spacing: 8, density: 0.9 }
+    # sampans and fishing boats moored in the typhoon shelters (Causeway Bay,
+    # Aberdeen, Shau Kei Wan), afloat at the water's level (D-133)
+    - group: prop.boat
+      water: true
+      spacing: 18
+      density: 0.45
+      bounds: [[114.1805, 22.2845, 114.1895, 22.2895], [114.1460, 22.2435, 114.1660, 22.2490], [114.2240, 22.2800, 114.2330, 22.2860]]
+    # a few junks under red sails out on the harbour
+    - { group: prop.boat.junk, water: true, spacing: 400, density: 0.35, bounds: [114.1500, 22.2860, 114.2100, 22.2930] }
   streetTrees:
     - { group: tree.street, roads: [primary, secondary, tertiary], canopy: 3, spacing: 10, kerb: 1.2 }
   streetProps:
@@ -103,8 +117,13 @@ objects:
       across: true
       spacing: 12
       bounds: [114.1700, 22.2740, 114.1920, 22.2810]
+    # and in the other old districts' back streets: Sheung Wan and Sai Ying
+    # Pun, North Point, Shau Kei Wan (D-133)
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1400, 22.2840, 114.1560, 22.2885] }
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1925, 22.2860, 114.2040, 22.2915] }
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.2250, 22.2775, 114.2320, 22.2820] }
   # new ones go at the end: a landmark's seed is its place in the list
-  landmarks: [two-international-finance-centre, bank-of-china-tower, central-plaza, hong-kong-convention-and-exhibition-centre]
+  landmarks: [two-international-finance-centre, bank-of-china-tower, central-plaza, hong-kong-convention-and-exhibition-centre, hopewell-centre]
   landmarkDepiction: generic
   depiction: { heightStretch: 1.0, scatter: 1.0 }
 

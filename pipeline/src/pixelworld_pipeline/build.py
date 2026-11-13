@@ -995,6 +995,13 @@ def build(
         )
         surface[lawn] = surface_id["lawn"]
         progress.log(f"ground: {int(lawn.sum())} lawn cells")
+    if ground.get("scrub"):
+        # open hillsides the canopy map shows few trees on (D-133)
+        open_ground = ground_stage.scrub(
+            region, surface, surface_names, ground["scrub"], road_shift
+        )
+        surface[open_ground] = surface_id["scrub"]
+        progress.log(f"ground: {int(open_ground.sum())} scrub cells")
     # a swung street's gardens: the cells its bends sweep take the rule's surface
     for a, b, half, name in gardens:
         band = road_stage.street_band(a, b, half + 0.5, (cy, cx)) & (water == NO_WATER)
@@ -1094,6 +1101,7 @@ def build(
             ground=base,
             open_water=(water_level != NO_WATER) | river,
             on_road=on_road,
+            water_level=water_level,
         )
         progress.log(f"objects: {object_counts}")
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
@@ -1153,7 +1161,9 @@ def build(
     if objects.get("typology"):
         attribution += plugins.attribution(region, "facts")
     canopy_rules = [*(objects.get("vegetation") or []), *(objects.get("streetTrees") or [])]
-    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded")
+    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded") or (region.ground or {}).get(
+        "scrub"
+    )
     if any("canopy" in r for r in canopy_rules) or wooded:
         attribution += plugins.attribution(region, "canopy")
     # a source may name another's data it reads (GLO-30's ground reads WorldCover): once each

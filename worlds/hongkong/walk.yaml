@@ -15,7 +15,8 @@ id: hongkong-walk
 name: Hong Kong (walking)
 level: walk
 levels:
-  - { name: walk, world: hongkong-walk, label: "Walking Kowloon: Tsim Sha Tsui to Mong Kok" }
+  - { name: drive, world: hongkong, label: "Driving round Victoria Harbour" }
+  - { name: walk, world: hongkong-walk, label: "Walking Kowloon" }
 bounds: [114.156, 22.290, 114.178, 22.330] # lon/lat: west, south, east, north
 
 metersPerCell: 10
@@ -80,6 +81,9 @@ objects:
   vegetation:
     # Kowloon Park's and King's Park's trees where the canopy map shows 3 m or more
     - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+    # boats moored in the Yau Ma Tei typhoon shelter, junks out on the harbour (D-133)
+    - { group: prop.boat, water: true, spacing: 18, density: 0.45, bounds: [114.1590, 22.3050, 114.1650, 22.3150] }
+    - { group: prop.boat.junk, water: true, spacing: 400, density: 0.35, bounds: [114.1560, 22.2900, 114.1780, 22.2930] }
   streetTrees:
     - { group: tree.street, roads: [primary, secondary, tertiary], canopy: 3, spacing: 10, kerb: 1.2 }
   streetProps:

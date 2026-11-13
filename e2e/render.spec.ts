@@ -380,7 +380,7 @@ test.describe("Tokyo (D-092, D-093)", () => {
   });
 });
 
-test.describe("Hong Kong (D-107, D-108, D-109, D-117)", () => {
+test.describe("Hong Kong (D-107, D-108, D-109, D-117, D-133)", () => {
   test("Yau Ma Tei's tong lau under neon signs: Kowloon on open data alone", async ({ page }) => {
     // the hongkong style pack and its city pack; terrain from GLO-30 with its
     // buildings filtered off, heights from OSM or each neighbourhood's (D-107)
@@ -393,6 +393,13 @@ test.describe("Hong Kong (D-107, D-108, D-109, D-117)", () => {
     // the ground filtered only in town, the woods the client's scatter
     await open(page, "world=/hongkong-island/&marker=0&zoom=1&rot=0&at=114.1600,22.2820");
     await expect(page.locator("#view")).toHaveScreenshot("hongkong-island-central-r0.png");
+  });
+
+  test("Victoria Harbour between two skylines: the driving level (D-133)", async ({ page }) => {
+    // the Convention Centre's curved roof on Wan Chai's waterfront, junks
+    // under red sails out on the harbour
+    await open(page, "world=/hongkong/&marker=0&zoom=1&rot=0&at=114.1750,22.2860");
+    await expect(page.locator("#view")).toHaveScreenshot("hongkong-harbour-r0.png");
   });
 });
 

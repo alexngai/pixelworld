@@ -82,4 +82,78 @@ function board(m: VoxelModel, b: { x0: number; x1: number; y: number; z0: number
     }
 }
 
-export const PROP_GENERATORS: Record<string, Generator> = { neonSign };
+/**
+ * A boat afloat (D-133), moored in a typhoon shelter or out on the harbour,
+ * standing on the water's level (the instance's `z0`), its hull's lowest
+ * voxel under the plane. By seed, unless `kind` names one: a sampan (a small
+ * open hull under an arched canopy of tarpaulin, 11 voxels long), a fishing
+ * boat (a broad hull with a stripe, a wheelhouse aft and a mast, 24 long) or,
+ * with `kind: 3`, a junk (a dark hull with a raised stern and two masts
+ * carrying battened red sails, 28 long). Faces +x; the hull narrows to its bow.
+ * params: kind (0: sampans and fishing boats by seed, 1 a sampan, 2 a fishing
+ * boat, 3 a junk), fishing (0.35, the share of fishing boats).
+ * roles: hull.*, stripe.*, canopy.*, cabin, window, sail, trim (masts, battens).
+ */
+export const boat: Generator = ({ rand, ramp, ramps, param }) => {
+  const kind = Math.round(param("kind", 0)) || (rand() < param("fishing", 0.35) ? 2 : 1);
+  const L = kind === 1 ? 11 : kind === 2 ? 24 : 28;
+  const W = kind === 1 ? 3 : 7;
+  const mast = kind === 1 ? 0 : kind === 2 ? 12 : 22;
+  const m = new VoxelModel(L, W, 6 + mast);
+  const one = (role: string) => {
+    const ids = ramps(role);
+    return m.material(ids.length ? ids[Math.floor(rand() * ids.length)]! : ramp(role));
+  };
+  const hull = one("hull");
+  const stripe = kind === 3 ? hull : one("stripe");
+  const trim = m.material(ramp("trim"));
+  // the hull, narrowing to its bow over its last quarter; a stripe along its top
+  const bow = Math.max(2, Math.round(L / 4));
+  const half = (u: number) => (u < L - bow ? W / 2 : (W / 2) * Math.max(0.35, (L - u) / bow));
+  const c = (W - 1) / 2;
+  const deck = kind === 1 ? 2 : 3;
+  for (let u = 0; u < L; u++)
+    for (let v = 0; v < W; v++) {
+      if (Math.abs(v - c) > half(u) - 0.25) continue;
+      for (let z = 0; z < deck; z++) m.set(u, v, z, z === deck - 1 ? stripe : hull);
+      if (kind === 3 && u < 4) for (let z = deck; z < deck + 2; z++) m.set(u, v, z, hull); // the raised stern
+    }
+  if (kind === 1) {
+    // an arched canopy over the middle: tarpaulin in a barrel
+    const canopy = one("canopy");
+    for (let u = 2; u < L - 3; u++) {
+      m.set(u, 0, deck, canopy);
+      m.set(u, W - 1, deck, canopy);
+      for (let v = 0; v < W; v++) m.set(u, v, deck + 1, canopy);
+    }
+    return m;
+  }
+  if (kind === 2) {
+    // the wheelhouse aft, windows round its top; a mast forward of it
+    const cabin = m.material(ramp("cabin"));
+    const win = m.material(ramp("window"));
+    for (let u = 2; u < 8; u++)
+      for (let v = 1; v < W - 1; v++)
+        for (let z = deck; z < deck + 3; z++) {
+          const skin = u === 2 || u === 7 || v === 1 || v === W - 2;
+          m.set(u, v, z, skin && z === deck + 1 && (u + v) % 2 === 0 ? win : cabin);
+        }
+    for (let z = deck; z < deck + mast; z++) m.set(11, Math.floor(c), z, trim);
+    return m;
+  }
+  // a junk: two masts, each with a battened red sail along the hull, a voxel thick
+  const sail = m.material(ramp("sail"));
+  const v0 = Math.floor(c);
+  for (const [u0, len, top] of [
+    [7, 9, mast],
+    [17, 7, mast - 5],
+  ] as const) {
+    for (let z = deck; z < deck + top; z++) m.set(u0 + len, v0, z, trim);
+    for (let z = deck + 3; z < deck + top; z++)
+      for (let u = u0 + Math.max(0, Math.floor((deck + top - z) / 4) - 1); u < u0 + len; u++)
+        m.set(u, v0, z, (z - deck) % 3 === 0 ? trim : sail);
+  }
+  return m;
+};
+
+export const PROP_GENERATORS: Record<string, Generator> = { neonSign, boat };

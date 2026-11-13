@@ -259,6 +259,28 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
     xs = (ii.ravel() + jitter[0]) * spacing
     ys = (jj.ravel() + jitter[1]) * spacing
     cx, cy = p.to_cells(xs, ys)
+    if rule.get("water"):
+        # on the water, afloat at its level (D-133): boats in a harbour's shelters
+        ix = np.clip(cx.astype(np.int64), 0, p.cx - 1)
+        iy = np.clip(cy.astype(np.int64), 0, p.cy - 1)
+        wet = p.water[iy, ix] if p.water is not None else np.zeros(n, dtype=bool)
+        ok = p.inside(cx, cy) & wet & (keep_roll < density)
+        if "bounds" in rule:
+            ok &= _in_boxes(p, rule["bounds"], xs, ys)
+        ok &= ~occupied(xs, ys)
+        keep = np.nonzero(ok)[0]
+        return [
+            {
+                "g": rule["group"],
+                "x": float(cx[k]),
+                "y": float(cy[k]),
+                "s": int(seeds[k]),
+                "r": int(rots[k]),
+                # a voxel (an eighth of a step) of the hull under the water's surface
+                "z0": float(p.water_level[iy[k], ix[k]]) - 0.125,
+            }
+            for k in keep
+        ]
     ok = p.free(cx, cy) & (keep_roll < density)
     if "canopy" in rule:
         cand = np.nonzero(ok)[0]
@@ -281,6 +303,17 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
         }
         for k, g in zip(keep, groups, strict=True)
     ]
+
+
+def _in_boxes(p: Placement, boxes, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+    """Projected points inside any of the lon/lat boxes ([w, s, e, n], or a list of them)."""
+    boxes = boxes if isinstance(boxes[0], (list, tuple)) else [boxes]
+    lon, lat = transform_points(p.region.crs, "EPSG:4326", list(xs), list(ys))
+    lon, lat = np.asarray(lon), np.asarray(lat)
+    hit = np.zeros(len(xs), dtype=bool)
+    for w, s, e, n in boxes:
+        hit |= (lon >= w) & (lon <= e) & (lat >= s) & (lat <= n)
+    return hit
 
 
 def _groups_by_landcover(
@@ -1774,18 +1807,21 @@ def place(
     ground: np.ndarray | None = None,
     open_water: np.ndarray | None = None,
     on_road: np.ndarray | None = None,
+    water_level: np.ndarray | None = None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
     streets (the straightened road lines in cells) and water (a cell mask) feed
-    the building typology (D-055). roads (the road mask and half-widths in
+    the building typology (D-055) and vegetation rules on the water, which
+    float at `water_level` (steps). roads (the road mask and half-widths in
     cells) are what `snap.buildings.clearRoads` keeps buildings off. ground
     (cell heights, steps) and open_water (the water mask with the roads that cross
     it) and on_road (the road mask) shape bridges' approaches (`bridge_approaches`).
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
+    p.water, p.water_level = water, water_level
     snap = (region.snap or {}).get("buildings")
     instances: list[dict] = []
 
