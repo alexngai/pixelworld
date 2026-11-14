@@ -11,6 +11,7 @@ A small real-time strategy game on [`@pixelworlds/multiplayer`](../../../README.
 - **Garrisons:** units go into one of the level's buildings (two a cell it covers, at most eight, one side's): hidden from the other side, they watch from its roof, further. Knocked down, it throws them out hurt.
 - **Landmarks:** the Palace of Fine Arts and the Golden Gate Bridge's shore end are objectives: a side alone by one for 10 s takes it, and it pays half a glim a second and sees from it.
 - **Night** falls every 4 minutes for a minute and a half: units see less, and the page takes the style's night palette, windows lit.
+- **Traffic (D-126):** the server runs the level's cars on the motorway up to the Golden Gate Bridge and the trunk road by the bay, the same for every page (40–55 cars over the map, five times a second). A unit waits to step onto a car's cell until it has passed. A car on a deck over the cell doesn't stop it.
 - **Orders:** move, fight-move (taking on whatever comes into sight on the way), attack, gather, stop. Idle wardens take on foes that come into sight.
 - **A match:** two pages play each other; a page alone gets the bot after 20 s, or at once with `?vs=bot`. A side whose hearth falls, or whose player leaves, loses; after 15 s of the result the next match starts with whoever is there. A third page is told the match is full.
 
