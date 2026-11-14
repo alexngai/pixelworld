@@ -127,6 +127,9 @@ export interface FogField {
   cellsPerTexel: number;
   /** Coverage × 255, row-major (y outer). */
   data: Uint8Array;
+  /** The cell its first texel starts at (default 0, 0: the world's corner): a field over part of a world, a game's veil (D-125). Beyond it, its edge's values. */
+  x0?: number;
+  y0?: number;
 }
 
 /**

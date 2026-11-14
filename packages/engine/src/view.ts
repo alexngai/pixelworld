@@ -11,7 +11,7 @@ import {
   tileKey,
   worldDepthRange,
   type FogField,
-  type FogFrame,
+  type FogDraw,
   type GpuImage,
   type PreparedTile,
   type SpriteInstance,
@@ -185,7 +185,8 @@ class View implements WorldView {
   private renderMs = 0;
   /** The last frame drawn, again (timeFrames). */
   private redrawLast: (() => void) | null = null;
-  private fogField: FogField | null = null;
+  /** The fog field each layer's pass last had (by layer id). */
+  private readonly fogFields = new Map<string, FogField>();
   private raf = 0;
   private stopped = false;
   private readonly frameListeners = new Set<(e: FrameEvent) => void>();
@@ -630,15 +631,16 @@ class View implements WorldView {
         if (!s.complete) complete = false;
       }
       const t0 = performance.now();
-      let fog: FogFrame | null = null;
+      // every layer's pass in the layers' order (the style's fog, a game's veil: D-125)
+      const fog: FogDraw[] = [];
       for (const layer of layers) {
         const pass = layer.screenPass?.(info);
-        if (!pass || fog) continue;
-        if (pass.field !== this.fogField) {
-          this.compositor.setFogField(pass.field);
-          this.fogField = pass.field;
+        if (!pass) continue;
+        if (pass.field !== this.fogFields.get(layer.id)) {
+          this.compositor.setFogField(pass.field, layer.id);
+          this.fogFields.set(layer.id, pass.field);
         }
-        fog = pass.frame;
+        fog.push({ id: layer.id, frame: pass.frame });
       }
       const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;

@@ -10,6 +10,12 @@ import {
 import type { FogField } from "./fog";
 import { FogPass, type FogFrame } from "./fogPass";
 
+/** A fog pass to draw over a frame: the layer's id (its field, `setFogField`) and its parameters. */
+export interface FogDraw {
+  id: string;
+  frame: FogFrame;
+}
+
 /** How far back (depth units) `behind` tiles are drawn: beyond a depth's 1/256 quantisation, short of anything standing in front. */
 const BEHIND_DEPTH = 0.5;
 
@@ -183,11 +189,12 @@ export class Compositor {
     color: WebGLTexture;
     depth: WebGLRenderbuffer;
     fb: WebGLFramebuffer;
-    /** The fog pass's output, made when a frame first has fog. */
-    fogColor: WebGLTexture | null;
-    fogFb: WebGLFramebuffer | null;
+    /** The fog passes' outputs, two to take turns, made when a frame first has fog. */
+    fogColor: (WebGLTexture | null)[];
+    fogFb: (WebGLFramebuffer | null)[];
   } | null = null;
-  private fogPass: FogPass | null = null;
+  /** A fog pass per layer that has one (the style's fog, a game's veil: D-125), by its id. */
+  private readonly fogPasses = new Map<string, FogPass>();
   lut = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
@@ -227,8 +234,8 @@ export class Compositor {
     gl.deleteFramebuffer(t.fb);
     gl.deleteTexture(t.color);
     gl.deleteRenderbuffer(t.depth);
-    if (t.fogFb) gl.deleteFramebuffer(t.fogFb);
-    if (t.fogColor) gl.deleteTexture(t.fogColor);
+    for (const fb of t.fogFb) if (fb) gl.deleteFramebuffer(fb);
+    for (const c of t.fogColor) if (c) gl.deleteTexture(c);
     this.target = null;
   }
 
@@ -243,8 +250,8 @@ export class Compositor {
     this.releaseTarget();
     if (this.paletteTex) gl.deleteTexture(this.paletteTex);
     this.paletteTex = null;
-    this.fogPass?.dispose();
-    this.fogPass = null;
+    for (const p of this.fogPasses.values()) p.dispose();
+    this.fogPasses.clear();
     gl.deleteProgram(this.quadProg);
     gl.deleteProgram(this.palProg);
     gl.deleteVertexArray(this.vao);
@@ -260,15 +267,16 @@ export class Compositor {
     gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT32F, w, h);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-    this.target = { w, h, color, depth, fb, fogColor: null, fogFb: null };
+    this.target = { w, h, color, depth, fb, fogColor: [null, null], fogFb: [null, null] };
     return this.target;
   }
 
-  /** The fog layer's coverage over the world's cells (null: no fog). */
-  setFogField(field: FogField | null): void {
-    if (!field && !this.fogPass) return;
-    this.fogPass ??= new FogPass(this.gl);
-    this.fogPass.setField(field);
+  /** A fog layer's coverage over the world's cells (null: no fog), by the layer's id (default the style's fog). */
+  setFogField(field: FogField | null, id = "fog"): void {
+    let pass = this.fogPasses.get(id);
+    if (!field && !pass) return;
+    if (!pass) this.fogPasses.set(id, (pass = new FogPass(this.gl)));
+    pass.setField(field);
   }
 
   /**
@@ -281,7 +289,7 @@ export class Compositor {
     frame: FrameParams,
     tiles: GpuImage[],
     sprites: SpriteInstance[],
-    fog: FogFrame | null = null,
+    fogs: readonly FogDraw[] = [],
     bare: GpuImage[] = [],
     behind: GpuImage[] = [],
   ): void {
@@ -364,17 +372,21 @@ export class Compositor {
     gl.depthFunc(gl.LESS);
     gl.disable(gl.DEPTH_TEST);
 
-    // Atmosphere: fog dithered into the indices, from the depth beside them.
+    // Atmosphere: fog dithered into the indices, from the depth beside them; each pass after the last, taking turns between two targets.
     let shown = t.color;
-    if (fog && this.fogPass?.hasField) {
-      if (!t.fogFb) {
-        t.fogColor = rgba8Texture(gl, w, h);
-        t.fogFb = framebuffer(gl, t.fogColor, null);
+    let turn = 0;
+    for (const { id, frame: fog } of fogs) {
+      const pass = this.fogPasses.get(id);
+      if (!pass?.hasField) continue;
+      if (!t.fogFb[turn]) {
+        t.fogColor[turn] = rgba8Texture(gl, w, h);
+        t.fogFb[turn] = framebuffer(gl, t.fogColor[turn]!, null);
       }
-      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fogFb);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fogFb[turn]!);
       gl.viewport(0, 0, w, h);
-      this.fogPass.draw(fog, t.color, [ox, oy], k, frame.depthRange);
-      shown = t.fogColor!;
+      pass.draw(fog, shown, [ox, oy], k, frame.depthRange);
+      shown = t.fogColor[turn]!;
+      turn = 1 - turn;
     }
 
     // Palette + integer upscale to the canvas.

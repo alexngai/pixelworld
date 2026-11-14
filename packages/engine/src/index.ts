@@ -20,4 +20,5 @@ export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";
 export * from "./cells";
+export { veilLayer, VeilLayer, type VeilLayerOptions } from "./veil";
 export type * from "./types";

@@ -1,6 +1,6 @@
 import { cityPlugin } from "@pixelworlds/city-sf";
 import { stylePack } from "@pixelworlds/game/src/styles";
-import { createWorldView, type Controller, type ControllerView, type Entity, type EntityModel, type KeyInput, type WorldView } from "pixelworld/engine";
+import { createWorldView, fogLayer, fogSampler, veilLayer, type Controller, type ControllerView, type Entity, type EntityModel, type KeyInput, type WorldView } from "pixelworld/engine";
 import { Smoothing, TickClient, joinRoom, type Room } from "../../index";
 import {
   BUILDINGS,
@@ -29,6 +29,11 @@ import {
   type Team,
   type UnitKind,
   type UnitNet,
+  BUILDING_EYE,
+  SIGHT,
+  fogCells,
+  sideSight,
+  type Eye,
 } from "./rules";
 
 /**
@@ -210,6 +215,10 @@ export interface RtsOptions {
 export async function startRts(opts: RtsOptions): Promise<void> {
   const camera = new RtsCamera();
   const home = LAYOUT.hearths.kiln;
+  // the fog of war (D-125): what the side doesn't see darkened, what it has never seen darker
+  const veil = veilLayer({ id: "sight", label: "Fog of war", ramp: "asphalt", shade: 1, levels: [0.3, 0.55, 0.8] });
+  // the Golden Gate's fog, on the server's clock: what stands in it is hidden as the server reckons it
+  const weather = fogLayer({ paused: true });
   const view: WorldView = await createWorldView({
     canvas: opts.canvas,
     worldUrl: opts.worldUrl,
@@ -219,6 +228,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     startTiles: false, // none baked for this level
     camera: { x: home[0] + 1.5, y: home[1] + 1.5, zoom: 2 },
     controller: camera,
+    layers: [veil, weather],
   });
   const hud = makeHud();
   hud.status("joining…");
@@ -236,6 +246,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   /** The level's buildings knocked down: out of the view's world and the page's cells, rubble where each stood. */
   const razed = new Razed(view.edits, grid);
   const rubble = new Map<number, Entity>();
+  const fog = fogSampler(view.world, view.query);
 
   const ramp: Ramps = (name) => view.world.palette.rampIds.get(name) ?? 0;
   const now = () => performance.now() / 1000;
@@ -593,9 +604,48 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   // ---------------------------------------------------------------- each frame
 
+  // ---------------------------------------------------------------- what the side sees (D-125)
+
+  /** Each cell's distance to the nearest eye of the side that sees it; whether it has ever been seen; the veil over it. */
+  const sight = new Float32Array(grid.flags.length);
+  const explored = new Uint8Array(grid.flags.length);
+  const veiled = new Uint8Array(grid.flags.length);
+  let fogCover: Float32Array | null = null;
+  let sightAt = -Infinity;
+  let fogAt = -Infinity;
+  let matchSeen: number | null = null;
+
+  /** The fog on the server's clock each frame; the side's sight, as the server works it out, four times a second; the veil from it. */
+  function see(t: number): void {
+    const shown = client.seen(t);
+    if (shown !== null && Math.abs(shown - weather.time) > 1 / 12) weather.set({ time: shown });
+    if (!snap || !side || t - sightAt < 0.25) return;
+    sightAt = t;
+    // a new match: nothing seen yet
+    if (world && world.match.phase === "playing" && matchSeen !== world.match.until) {
+      matchSeen = world.match.until;
+      explored.fill(0);
+    }
+    if (fog && shown !== null && t - fogAt > 2) {
+      fogCover = fogCells(grid, (x, y, h) => fog.at(x, y, h, shown), fogCover ?? undefined);
+      fogAt = t;
+    }
+    const eyes: Eye[] = [];
+    for (const u of snap.units) if (u.s === side) eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight });
+    for (const b of snap.buildings)
+      if (b.s === side) eyes.push({ x: b.x + BUILDINGS[b.k].size / 2, y: b.y + BUILDINGS[b.k].size / 2, up: BUILDING_EYE[b.k] * Math.max(0.3, b.b), radius: BUILDINGS[b.k].sight });
+    sideSight(grid, eyes, fogCover, sight);
+    for (let i = 0; i < sight.length; i++) {
+      if (sight[i]! < Infinity) explored[i] = 1;
+      veiled[i] = sight[i]! < Infinity ? 0 : explored[i] ? 150 : 255;
+    }
+    veil.set(MAP, veiled);
+  }
+
   view.onFrame(({ realDt }) => {
     const t = now();
     client.sync();
+    see(t);
     drawUnits(t);
     for (const e of client.due(t)) play(e);
     for (let i = sparks.length - 1; i >= 0; i--) {
@@ -758,6 +808,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     grid,
     command,
     selectBox,
+    /** The side's sight now: cells seen, cells ever seen, and the share of the field in fog. */
+    sight: () => ({ seen: sight.filter((d) => d < Infinity).length, explored: explored.reduce((a, b) => a + b, 0), cells: sight.length, fog: fogCover ? fogCover.filter((f) => f > 0.3).length / fogCover.length : 0 }),
   };
 }
 
@@ -828,6 +880,7 @@ declare global {
       grid: MapGrid;
       command: (sx: number, sy: number, attack?: boolean) => void;
       selectBox: (a: Point, b: Point, add: boolean) => void;
+      sight: () => { seen: number; explored: number; cells: number; fog: number };
     };
   }
 }
