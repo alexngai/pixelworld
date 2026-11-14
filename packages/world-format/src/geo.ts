@@ -1,5 +1,5 @@
 import { maybeGunzip } from "./chunk";
-import { fetchWorldFile, parseWorldFile } from "./fetch";
+import { fetchWorldFile, parseWorldFile, type WorldFetch } from "./fetch";
 import type { WorldManifest } from "./manifest";
 
 const M_PER_DEG_LAT = 110_540;
@@ -60,11 +60,11 @@ export class GeoGrid {
   }
 
   /** Fetch and decode the geo file a manifest names, or null if it has none. */
-  static async load(manifest: WorldManifest, baseUrl: string | URL): Promise<GeoGrid | null> {
+  static async load(manifest: WorldManifest, baseUrl: string | URL, fetcher?: WorldFetch): Promise<GeoGrid | null> {
     const g = manifest.geo;
     if (!g) return null;
     const url = new URL(g.path, baseUrl);
-    const bytes = await fetchWorldFile(url, { label: "world geo grid", expected: "the geo grid the manifest names" });
+    const bytes = await fetchWorldFile(url, { label: "world geo grid", expected: "the geo grid the manifest names" }, fetcher);
     return parseWorldFile(url, "world geo grid", () =>
       GeoGrid.decode(bytes, g.size[0], g.size[1], g.step, manifest.cellsX, manifest.cellsY),
     );

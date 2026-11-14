@@ -39,13 +39,15 @@ import {
   DAY,
   GARRISON,
   OBJECTIVE,
+  roofEye,
 } from "./rules";
 
 /**
  * Fogfront in the page (D-121): San Francisco's driving level at the
  * Presidio, a room on `/rts?room=` run by the server (server.ts). The page
  * predicts nothing and sends no inputs: it sends orders (`TickClient.command`,
- * numbered) and puts the newest snapshot of what its side sees in place each
+ * numbered) and takes what its side sees from the shared snapshot as it comes
+ * (its side's group's, D-127), and which orders were taken from its own each
  * frame (`sync`). Units are entities drawn a little behind on the server's
  * clock (`Smoothing`), buildings and seeps entities where they stand, all
  * built from boxes in the side's colours. An order shows at once (a marker,
@@ -54,8 +56,10 @@ import {
  * snapshot's `razed`) are taken out of the view (`view.edits`, D-124), which
  * bakes their tiles again, and rubble is left where each stood.
  *
- * Two to a side (D-127), the snapshot is the side's, shared with a teammate
- * who orders the same units from the same glim; the board names them. A page
+ * Two to a side (D-127), the side's view comes in its group's shared
+ * snapshot, the same for a teammate who orders the same units from the same
+ * glim; the board names them. The page's own snapshot says which of its
+ * orders were taken (`cmd`). A page
  * that watches (`watch`) orders nothing and draws what the side it watches
  * sees, veiled as that side's own page would, or everything, unveiled.
  *
@@ -265,18 +269,24 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const ramp: Ramps = (name) => view.world.palette.rampIds.get(name) ?? 0;
   const now = () => performance.now() / 1000;
 
-  let snap: (RtsSnap & { t: number; cmd?: number }) | null = null;
+  let snap: (RtsSnap & { t: number }) | null = null;
   let world: (RtsWorldNet & { t: number }) | null = null;
   /** The side this page plays (null for a spectator), and the side its snapshot is of: its own, the one it watches, or `all`. */
   let side: Team | null = null;
   let shows: Watch | null = null;
   const units = new Map<number, UnitNet>();
 
-  const client: TickClient<never, RtsSnap, RtsWorldNet, RtsEvent> = new TickClient(room, {
+  const client: TickClient<never, object, RtsWorldNet, RtsEvent> = new TickClient(room, {
     tick: TICK,
     delay: DELAY,
-    restore: (s) => takeSnap(s),
-    onWorld: (w) => takeWorld(w),
+    // the side's view comes with the shared snapshot (its group's, D-127); the page's own says which orders were taken, and comes after it
+    restore: (s) => {
+      for (const n of [...pending.keys()]) if ((s.cmd ?? 0) >= n) pending.delete(n);
+    },
+    onWorld: (w) => {
+      takeWorld(w);
+      if (w.view) takeSnap({ ...w.view, t: w.t });
+    },
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
@@ -317,7 +327,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (pickedStructure !== null && now.has(pickedStructure)) pickedStructure = null;
   }
 
-  function takeSnap(s: RtsSnap & { t: number; cmd?: number }): void {
+  function takeSnap(s: RtsSnap & { t: number }): void {
     const first = shows === null;
     snap = s;
     shows = s.side;
@@ -326,7 +336,6 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       const [x, y] = shows === "all" ? [MAP.x0 + MAP.w / 2 - 1.5, MAP.y0 + MAP.h / 2 - 1.5] : LAYOUT.hearths[shows];
       void view.camera.lookAt({ x: x + 1.5, y: y + 1.5 });
     }
-    for (const n of [...pending.keys()]) if ((s.cmd ?? 0) >= n) pending.delete(n);
     const seen = new Set<number>();
     for (const u of s.units) {
       seen.add(u.i);
@@ -666,6 +675,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   let fogCover: Float32Array | null = null;
   let sightAt = -Infinity;
   let fogAt = -Infinity;
+  let fogNight = false;
   let matchSeen: number | null = null;
 
   /** The fog on the server's clock each frame; the side's sight, as the server works it out, four times a second; the veil from it. */
@@ -685,16 +695,17 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       matchSeen = world.match.until;
       explored.fill(0);
     }
-    if (fog && shown !== null && t - fogAt > 2) {
+    if (fog && shown !== null && (t - fogAt > 2 || night !== fogNight)) {
       fogCover = fogCells(grid, (x, y, h) => fog.at(x, y, h, shown, night), fogCover ?? undefined);
       fogAt = t;
+      fogNight = night;
     }
     const dark = night ? DAY.sight : 1;
     const eyes: Eye[] = [];
     for (const u of snap.units) {
       if (u.s !== who) continue;
       const s = u.in === undefined ? undefined : structures.get(u.in);
-      if (s) eyes.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - (view.query.heightAt(s.x, s.y) ?? 0) + 0.5), radius: (UNITS[u.k].sight + GARRISON.sight) * dark });
+      if (s) eyes.push(roofEye(grid, s, (UNITS[u.k].sight + GARRISON.sight) * dark));
       else eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight * dark });
     }
     for (const m of world?.marks ?? []) if (m.owner === who) eyes.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });
@@ -976,7 +987,7 @@ declare global {
     __rts?: {
       view: WorldView;
       room: Room;
-      client: TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>;
+      client: TickClient<never, object, RtsWorldNet, RtsEvent>;
       side: () => Team | null;
       shows: () => Watch | null;
       snap: () => RtsSnap | null;

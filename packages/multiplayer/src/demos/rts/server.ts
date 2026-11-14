@@ -21,7 +21,6 @@ import {
   type RtsEvent,
   type RtsInfo,
   type RtsJoin,
-  type RtsSnap,
   type RtsWorldNet,
   type Team,
   type Watch,
@@ -35,9 +34,11 @@ import {
  * the room checks each and carries it out in the match (game.ts), and says
  * why when it can't. A side is a team of one or two players (D-127: the
  * room's `size`, from its first page), who share its glim and order any of
- * its units and buildings; its snapshot is what it sees (the fog of war),
- * serialized once for its players and the spectators watching it (a side, or
- * all). The shared one has the match and who plays. The match starts when
+ * its units and buildings. The shared snapshot has the match and who plays,
+ * and, per side (`groupOf`, D-120's interest groups), what that side sees (the
+ * fog of war): serialized once for its players and the spectators watching it
+ * (a side, or all). A player's own snapshot says which of its orders were
+ * taken (`cmd`). The match starts when
  * both sides are full, or after `MATCH.wait` seconds with someone on each; a
  * side with no one gets the bot then (at once with `vs: "bot"`), which plays
  * through the same orders. A side whose hearth falls, or whose last player
@@ -262,8 +263,10 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
 
   // ---------------------------------------------------------------- snapshots
 
-  protected override shared(): RtsWorldNet {
+  /** The match and who plays; and to a side's group (its players and the spectators watching it, D-127), what it sees. */
+  protected override shared(group?: string): RtsWorldNet {
     return {
+      ...(group ? { view: this.game!.view(group as Watch) } : {}),
       match: { ...this.match.net(), winner: this.winner },
       players: [...this.sides].map(([id, side]) => ({ id, name: this.joinOf(id)?.name ?? TEAM_NAMES[side], side, ...(id === BOT ? { bot: true as const } : {}) })),
       razed: this.game?.razed ?? [],
@@ -279,14 +282,9 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     return { night: g.night, light: this.time + (nextLight(g.time) - g.time) };
   }
 
-  /** A player's side, or what a spectator watches (D-127): its pages get that side's snapshot. */
-  protected override teamOf(id: string): Watch | null {
-    return this.sides.get(id) ?? this.watchers.get(id) ?? null;
-  }
-
-  /** What a side sees, or everything: serialized once for its players and its spectators. */
-  protected override teamSnapshot(watch: string): RtsSnap {
-    return this.game!.view(watch as Watch);
+  /** A player's side, or what a spectator watches (D-127): the group whose shared snapshot it gets, serialized once for all in it. */
+  protected override groupOf(id: string): Watch | undefined {
+    return this.sides.get(id) ?? this.watchers.get(id);
   }
 
   protected override describe(): RtsInfo {

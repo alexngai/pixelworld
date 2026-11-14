@@ -31,6 +31,7 @@ import {
   isNight,
   nextLight,
   razeCells,
+  roofEye,
   seesUnit,
   sideSight,
   cellIndex,
@@ -47,8 +48,28 @@ import {
   type Team,
 } from "../../src/demos/rts/rules";
 import { BOT, RtsRoom, openRtsWorld, type RtsWorld } from "../../src/demos/rts/server";
-import { TickClient } from "../../src/index";
+import { TickClient, type Room } from "../../src/index";
 import { loopback } from "../../src/testing";
+
+type Seen = RtsSnap & { t: number; cmd?: number };
+/**
+ * A Fogfront page on the loopback: its side's views as they come (in its
+ * group's shared snapshot, D-127), each marked with the last command its own
+ * snapshot of that time says was taken; and the shared snapshots.
+ */
+const rtsClient = (room: Room, now: () => number, views: Seen[], worlds?: RtsWorldNet[]) =>
+  new TickClient<never, object, RtsWorldNet, RtsEvent>(room, {
+    tick: TICK,
+    now,
+    onWorld: (w) => {
+      worlds?.push(w);
+      if (w.view) views.push({ ...w.view, t: w.t });
+    },
+    restore: (s) => {
+      const v = views.findLast((v) => v.t === s.t);
+      if (v && s.cmd !== undefined) v.cmd = s.cmd;
+    },
+  });
 
 /**
  * Fogfront (D-121): its paths, placing, fights and gathering on small maps
@@ -477,6 +498,13 @@ describe("Fogfront's match (D-121)", () => {
     ]);
   });
 
+  it("keeps a move inside the map", () => {
+    const game = field();
+    const r = unitsOf(game, "kiln")[0]!;
+    game.order("kiln", { t: "move", u: [r.id], x: 1e6, y: -1e6 });
+    expect(r.order).toMatchObject({ k: "move", x: game.grid.x0 + game.grid.w - 0.5, y: game.grid.y0 + 0.5 });
+  });
+
   it("takes only its own side's units, and checks a page's command's shape", () => {
     const game = field();
     const theirs = unitsOf(game, "tide")[0]!;
@@ -519,15 +547,33 @@ describe("Fogfront's garrisons in the level's buildings (D-125)", () => {
     run(game, 2 * UNITS.runner.time + 0.5);
     const more = unitsOf(game, "kiln", "runner").filter((u) => u.inside === null).map((u) => u.id);
     expect(game.order("kiln", { t: "enter", u: more, obj: 7 })).toBe(`it holds ${holds({ cells: [0, 1] })}`);
-    expect(game.order("tide", { t: "enter", u: [scout.id], obj: 7 })).toBe("the other side holds it");
-    // out, beside it
+    // the Tide's order is taken (from across the map it can't know who is inside), and it's turned away at the door
+    expect(game.order("tide", { t: "enter", u: [scout.id], obj: 7 })).toBeNull();
+    run(game, 5);
+    expect(scout.inside).toBeNull();
+    expect(scout.order.k).toBe("idle");
+    // out, where they went in
+    const doors = runners.map((r) => ({ ...r.door! }));
     expect(game.order("kiln", { t: "leave", obj: 7 })).toBeNull();
     expect(game.garrison(7)).toHaveLength(0);
-    for (const r of runners) expect(Math.hypot(r.x - 20.5, r.y - 7.5)).toBeLessThan(3);
+    runners.forEach((r, n) => expect(Math.hypot(r.x - doors[n]!.x, r.y - doors[n]!.y)).toBeLessThan(1));
     expect(game.order("kiln", { t: "leave", obj: 7 })).toBe("none of yours in there");
   });
 
-  it("a building knocked down throws out those inside, hurt", () => {
+  it("watches every side from the roof: its own building's cells don't hide anything from it", () => {
+    const rows = Array.from({ length: 16 }, (_, y) => [...".".repeat(40)].map((c, x) => (y === 7 && x >= 18 && x <= 23 ? "#" : c)).join(""));
+    const g = standing(gridOf(rows), [{ obj: 7, cells: [18, 19, 20, 21, 22, 23].map((x) => [x, 7] as [number, number]) }]);
+    for (const o of g.objects.values()) for (const ob of o) ob.top = 3; // three steps tall
+    const game = new RtsGame(g, { hearths: { kiln: [2, 2], tide: [35, 12] }, seeps: [] });
+    setRemoved(g, () => false);
+    const s = game.structures.get(7)!;
+    const sight = sideSight(g, [roofEye(g, { ...s, top: 3 }, 8)], null);
+    // a cell beyond each end of the building, across its own roof
+    expect(seesUnit(g, sight, 16.5, 7.5)).toBe(true);
+    expect(seesUnit(g, sight, 25.5, 7.5)).toBe(true);
+  });
+
+  it("a building knocked down throws out those inside, hurt, and one too hurt to live falls at once", () => {
     const game = town();
     const [r] = unitsOf(game, "kiln", "runner");
     game.order("kiln", { t: "enter", u: [r!.id], obj: 7 });
@@ -538,6 +584,15 @@ describe("Fogfront's garrisons in the level's buildings (D-125)", () => {
     expect(r!.inside).toBeNull();
     expect(r!.hp).toBe(UNITS.runner.hp - GARRISON.fall);
     expect(game.razed).toEqual([7]);
+    // in again with too little left: gone the step it falls
+    const g2 = town();
+    const [r2] = unitsOf(g2, "kiln", "runner");
+    g2.order("kiln", { t: "enter", u: [r2!.id], obj: 7 });
+    run(g2, 15);
+    r2!.hp = GARRISON.fall - 1;
+    g2.structures.get(7)!.hp = 0;
+    g2.step(TICK);
+    expect(g2.units.has(r2!.id)).toBe(false);
   });
 });
 
@@ -572,6 +627,16 @@ describe("Fogfront's landmarks to hold (D-125)", () => {
     run(game, 12);
     expect(game.view("kiln").units.some((u) => u.i === scout.id)).toBe(true);
     expect(game.marksNet()[0]).toMatchObject({ id: "rock", owner: "kiln" });
+  });
+
+  it("a rival's taking fades while only the holder stands by", () => {
+    const game = held();
+    game.marks[0]!.owner = "kiln";
+    Object.assign(game.marks[0]!, { taker: "tide", hold: 5 });
+    send(game, "kiln", 20.5, 8.5);
+    run(game, 25);
+    expect(game.marks[0]!.taker).toBeNull();
+    expect(game.marks[0]!.owner).toBe("kiln");
   });
 
   it("contested, it stands still; left, the taking fades", () => {
@@ -749,18 +814,10 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
   it("two pages in a room: a side each, orders taken and acknowledged, what each sees its own", async () => {
     const lb = await opened(60);
     const pages = [lb.join(0.05), lb.join(0.08)];
-    const snaps: (RtsSnap & { t: number; cmd?: number })[][] = [[], []];
+    const snaps: Seen[][] = [[], []];
     const worlds: RtsWorldNet[] = [];
     const events: RtsEvent[][] = [[], []];
-    const clients = pages.map(
-      (p, n) =>
-        new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(p.room, {
-          tick: TICK,
-          now: lb.now,
-          restore: (s) => void snaps[n]!.push(s),
-          onWorld: (w) => void worlds.push(w),
-        }),
-    );
+    const clients = pages.map((p, n) => rtsClient(p.room, lb.now, snaps[n]!, worlds));
     clients.forEach((c, n) => c.hello({ name: `P${n}`, vs: "any" }));
     const frame = () => clients.forEach((c, n) => (c.sync(), events[n]!.push(...c.due())));
     lb.run(1, frame);
@@ -833,7 +890,7 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     lb.run(20, frame);
     expect(lb.host.match.phase).toBe("playing");
     expect(lb.failed).toBeUndefined();
-  });
+  }, 20_000); // a whole match: a few seconds alone, more beside the other suites
 
   it("a snapshot stays small with forty units", () => {
     const game = new RtsGame({ ...world.grid, building: new Int32Array(world.grid.building.length) });
@@ -848,7 +905,7 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect(snap.units).toHaveLength(40);
     // under 100 bytes a unit as JSON, positions to a hundredth of a cell: about 3.5 KB, ten a second
     expect(JSON.stringify(snap.units).length / snap.units.length).toBeLessThan(100);
-  });
+  }, 30_000); // minutes of play with forty units on the whole map
 
   it("reads the level's buildings in the play area, with hit points from their size and height (D-124)", () => {
     const list = [...world.grid.structures!.values()];
@@ -920,14 +977,15 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect(lb.failed).toBeUndefined();
   });
 
-  it("two against two, and spectators: a side's snapshot serialized once for its two players and its watchers, shared orders and glim (D-127)", async () => {
+  it("two against two, and spectators: a side's view serialized once for its two players and its watchers, shared orders and glim (D-127)", async () => {
     const teams: { t: number; to: string[] }[] = [];
     const lb = loopback(
       (room) => {
-        const broadcast = room.broadcast;
-        room.broadcast = (data, except) => {
-          if ((data as { k: string }).k === "team") teams.push({ t: (data as { t: number }).t, to: room.players().filter((id) => !except?.has(id)) });
-          broadcast(data, except);
+        const sendTo = room.sendTo!;
+        room.sendTo = (ids, data) => {
+          const m = data as RtsWorldNet & { k: string; t: number };
+          if (m.k === "world" && m.view) teams.push({ t: m.t, to: [...ids] });
+          sendTo(ids, data);
         };
         return new RtsRoom(room, Promise.resolve(world), false);
       },
@@ -943,9 +1001,9 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
       { name: "D", vs: "any" },
     ];
     const pages = joins.map(() => lb.join(0.05));
-    const snaps: (RtsSnap & { t: number; cmd?: number })[][] = pages.map(() => []);
+    const snaps: Seen[][] = pages.map(() => []);
     const events: RtsEvent[][] = pages.map(() => []);
-    const clients = pages.map((p, n) => new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(p.room, { tick: TICK, now: lb.now, restore: (s) => void snaps[n]!.push(s) }));
+    const clients = pages.map((p, n) => rtsClient(p.room, lb.now, snaps[n]!));
     const frame = () => clients.forEach((c, n) => (c.sync(), events[n]!.push(...c.due())));
     // three players: the room waits for the fourth (two a side, from the first page's size)
     clients.slice(0, 5).forEach((c, n) => c.hello(joins[n]));

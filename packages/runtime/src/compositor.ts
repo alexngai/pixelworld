@@ -271,10 +271,14 @@ export class Compositor {
     return this.target;
   }
 
-  /** A fog layer's coverage over the world's cells (null: no fog), by the layer's id (default the style's fog). */
+  /** A fog layer's coverage over the world's cells, by the layer's id (default the style's fog); null lets its pass go. */
   setFogField(field: FogField | null, id = "fog"): void {
     let pass = this.fogPasses.get(id);
-    if (!field && !pass) return;
+    if (!field) {
+      pass?.dispose();
+      this.fogPasses.delete(id);
+      return;
+    }
     if (!pass) this.fogPasses.set(id, (pass = new FogPass(this.gl)));
     pass.setField(field);
   }

@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { TickClient, type TickSnapshot } from "../src/index";
+import { TickClient, type TickShared, type TickSnapshot } from "../src/index";
 import { TickRoom, type HostedRoom, type TickRole } from "../src/server";
 import { loopback } from "../src/testing";
 
 /**
- * Team snapshots and spectators (D-127): a team's snapshot serialized once
- * for its players and the spectators watching it, put together with each
- * page's own `ack` and `cmd` by `t`; a spectator picks a team, or all.
+ * Teams and spectators on interest groups (D-127, over D-120's `groupOf`):
+ * a team's view in its group's shared snapshot, serialized once for its
+ * players and the spectators watching it; a spectator switching teams; and a
+ * player's own snapshot, with the commands taken, after its team's of the
+ * same time, so a page that shows an order at once knows the view has it.
  */
 
-/** Players join a team ("red", "blue"); spectators join "watch:<team>" and switch by command. A team's score goes up by its players' commands. */
+/** Players join a team ("red", "blue"); spectators "watch:<team>" and switch by command. A team's score goes up by its players' commands. */
 class Teams extends TickRoom<never, string> {
   readonly team = new Map<string, string>();
   readonly score = new Map<string, number>();
-  readonly built: string[] = [];
+  readonly built: (string | undefined)[] = [];
   protected parseJoin(data: unknown): string | null {
     return typeof data === "string" ? data : null;
   }
@@ -34,89 +36,64 @@ class Teams extends TickRoom<never, string> {
     if (this.roleOf(id) === "spectator") this.team.set(id, String(c));
     else this.score.set(team, (this.score.get(team) ?? 0) + Number(c));
   }
-  protected override teamOf(id: string): string | null {
-    return this.team.get(id) ?? null;
+  protected override groupOf(id: string): string | undefined {
+    return this.team.get(id);
   }
-  protected override teamSnapshot(team: string): object {
-    this.built.push(team);
-    return team === "all" ? { team, score: Object.fromEntries(this.score) } : { team, score: this.score.get(team) ?? 0 };
-  }
-  protected override snapshot(id: string): object {
-    return { me: id };
+  protected override shared(group?: string): object {
+    this.built.push(group);
+    return group ? { team: group, score: this.score.get(group) ?? 0 } : {};
   }
 }
 
-type Snap = TickSnapshot & { team: string; score: number | Record<string, number>; me?: string };
+type View = TickShared & { team?: string; score?: number };
 
-describe("team snapshots and spectators (D-127)", () => {
-  it("serializes a team's snapshot once for its players and its spectators, each with its own ack and cmd", () => {
-    const broadcasts: { k: string; t: number; except: string[] }[] = [];
+describe("teams and spectators on interest groups (D-127)", () => {
+  it("a team's view once for its players and its watchers; a watcher switches; a player's taken command follows its team's view of the same time", () => {
+    const sent: { k: string; to: string[] }[] = [];
     const lb = loopback((room: HostedRoom) => {
-      // count what goes out serialized once: the shared snapshot and each team's
-      const broadcast = room.broadcast;
-      room.broadcast = (data, except) => {
-        const m = data as { k: string; t: number };
-        broadcasts.push({ k: m.k, t: m.t, except: [...(except ?? [])].sort() });
-        broadcast(data, except);
+      const sendTo = room.sendTo!;
+      room.sendTo = (ids, data) => {
+        sent.push({ k: (data as { k: string }).k, to: [...ids].sort() });
+        sendTo(ids, data);
       };
       return new Teams(room, { clock: false, snapshotEvery: 3 });
     });
-    const joins = ["red", "red", "blue", "watch:red", "watch:all"];
+    const joins = ["red", "red", "blue", "watch:red"];
     const pages = joins.map(() => lb.join(0.05));
-    const got: Snap[][] = pages.map(() => []);
-    const clients = pages.map((p, n) => new TickClient<never, Snap>(p.room, { tick: 1 / 60, now: lb.now, restore: (s) => void got[n]!.push(s) }));
+    const views: View[][] = pages.map(() => []);
+    const own: TickSnapshot[][] = pages.map(() => []);
+    const clients = pages.map(
+      (p, n) => new TickClient<never, object, View>(p.room, { tick: 1 / 60, now: lb.now, onWorld: (w) => void views[n]!.push(w), restore: (s) => void own[n]!.push(s) }),
+    );
     clients.forEach((c, n) => c.hello(joins[n]));
     const frame = () => clients.forEach((c) => c.sync());
     lb.run(0.5, frame);
 
-    // each snapshot tick: one serialization per team watched or played (red, blue, all), whatever the pages on it
-    const t = broadcasts.findLast((b) => b.k === "team")!.t;
-    const teams = broadcasts.filter((b) => b.k === "team" && b.t === t);
-    expect(teams).toHaveLength(3);
-    expect(lb.host.built.slice(-3).sort()).toEqual(["all", "blue", "red"]);
-    // red's goes to its two players and its spectator only
-    const red = teams.find((b) => b.except.length === 2)!;
-    expect(red.except).toEqual([pages[2]!.room.id, pages[4]!.room.id].sort());
+    // red's view goes once, to its two players and its watcher; blue's to its one
+    const ids = pages.map((p) => p.room.id);
+    const tick = sent.slice(-2).map((m) => m.to);
+    expect(tick).toContainEqual([ids[0]!, ids[1]!, ids[3]!].sort());
+    expect(tick).toContainEqual([ids[2]!]);
+    expect(views.map((v) => v.at(-1)!.team)).toEqual(["red", "red", "blue", "red"]);
+    expect(own[3]).toEqual([]); // a watcher has no snapshot of its own
 
-    // the red players restore red's view with their own ack and their own fields; the spectator red's without them
-    const last = got.map((g) => g.at(-1)!);
-    expect(last.map((s) => s.team)).toEqual(["red", "red", "blue", "red", "all"]);
-    expect(last.map((s) => s.me)).toEqual(["1", "2", "3", undefined, undefined]);
-    expect(last.every((s) => s.k === "snap" && s.ack === 0 && s.t === last[0]!.t)).toBe(true);
-
-    // a red player's command: its own snapshot acknowledges it, red's view has it; its teammate's doesn't claim it
+    // a red player's command: the first snapshot of its own that has it, and red's view of that time has its effect
     const n = clients[1]!.command(5);
     lb.run(0.3, frame);
-    const acked = got[1]!.find((s) => (s.cmd ?? 0) >= n)!;
-    expect(acked.score).toBe(5);
-    expect(got[0]!.at(-1)!.score).toBe(5);
-    expect(got[0]!.at(-1)!.cmd).toBeUndefined();
-    expect(got[4]!.at(-1)!.score).toEqual({ red: 5 });
+    const acked = own[1]!.find((s) => (s.cmd ?? 0) >= n)!;
+    expect(views[1]!.find((v) => v.t === acked.t)!.score).toBe(5);
+    expect(pages[1]!.received.findIndex((m) => (m as { k: string; t: number }).k === "world" && (m as { t: number }).t === acked.t)).toBeLessThan(
+      pages[1]!.received.findIndex((m) => (m as { k: string; t: number }).k === "snap" && (m as { t: number }).t === acked.t),
+    );
+    expect(views[3]!.at(-1)!.score).toBe(5);
+    expect(views[2]!.at(-1)!.score).toBe(0);
 
-    // the spectator switches to blue: acknowledged, and blue's view from that snapshot on
-    const m = clients[3]!.command("blue");
+    // the watcher switches to blue
+    clients[3]!.command("blue");
     lb.run(0.3, frame);
-    const switched = got[3]!.find((s) => (s.cmd ?? 0) >= m)!;
-    expect(switched.team).toBe("blue");
-    expect(got[3]!.at(-1)!.team).toBe("blue");
-    expect(clients[3]!.ping).toBeGreaterThan(0);
+    expect(views[3]!.at(-1)!.team).toBe("blue");
+    expect(sent.slice(-2).map((m) => m.to)).toContainEqual([ids[2]!, ids[3]!].sort());
+    expect(lb.host.built.filter((g) => g === undefined)).toEqual([]); // every page in a group: no whole snapshot built
     expect(lb.failed).toBeUndefined();
-  });
-
-  it("a room without teams sends as before: no team snapshot, and spectators get only the shared one", () => {
-    class Plain extends Teams {
-      protected override teamOf(): null {
-        return null;
-      }
-    }
-    const lb = loopback((room) => new Plain(room, { clock: false }));
-    const [player, watcher] = [lb.join(), lb.join()];
-    player.room.send({ k: "hello", join: "red" });
-    watcher.room.send({ k: "hello", join: "watch:red" });
-    lb.run(0.5);
-    const kinds = (p: typeof player) => new Set(p.received.map((m) => (m as { k: string }).k));
-    expect(kinds(player)).toEqual(new Set(["world", "snap"]));
-    expect(kinds(watcher)).toEqual(new Set(["world"]));
-    expect(lb.host.built).toEqual([]);
   });
 });

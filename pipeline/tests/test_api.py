@@ -313,3 +313,10 @@ def test_check_reports_every_problem_without_building(tmp_path, capsys):
     assert f"{bad}: 2 problems" in err
     region, issues = pixelworld_pipeline.check(good)
     assert region.id == "api-test" and issues == []
+
+
+def test_the_distributions_licence_files_are_the_repositorys():
+    """pyproject's license-files are copies: a wheel only holds files under pipeline/."""
+    here = Path(__file__).resolve().parents[1]
+    for name in ("LICENSE-MIT", "LICENSE-APACHE"):
+        assert (here / name).read_bytes() == (here.parent / name).read_bytes(), name
