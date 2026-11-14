@@ -29,7 +29,30 @@ function writeTag(view: DataView, offset: number, tag: string): void {
   for (let i = 0; i < 4; i++) view.setUint8(offset + i, tag.charCodeAt(i));
 }
 
-export function decodeChunk(buffer: ArrayBuffer): Chunk {
+/**
+ * Terrain layers only drawing reads (D-123): the road, path and rail
+ * centre-line pieces (72 of a cell's 94 bytes), the geology, the rails. A
+ * world's queries never read them, so a server may leave them out
+ * (`decodeChunk`'s `drop`, `openWorld`'s `dropLayers`).
+ */
+export const DRAW_ONLY_LAYERS = ["roadSeg", "pathSeg", "railSeg", "geology", "rail"] as const;
+export type DroppableLayer = (typeof DRAW_ONLY_LAYERS)[number];
+
+/** One zero-filled array per kind and length, every dropped layer of that size reads it (never write to a decoded chunk's dropped layers). */
+const empties = new Map<string, Uint8Array | Uint16Array | Uint32Array>();
+function empty<T extends Uint8Array | Uint16Array | Uint32Array>(make: new (n: number) => T, n: number): T {
+  const k = `${make.name}:${n}`;
+  let a = empties.get(k);
+  if (!a) empties.set(k, (a = new make(n)));
+  return a as T;
+}
+
+/**
+ * Decode a chunk. `drop` leaves layers out (D-123): they read as empty (a
+ * zero-filled array shared by every chunk the size), and cost nothing.
+ */
+export function decodeChunk(buffer: ArrayBuffer, opts: { drop?: ReadonlySet<DroppableLayer> } = {}): Chunk {
+  const drop = opts.drop ?? new Set<DroppableLayer>();
   const view = new DataView(buffer);
   if (buffer.byteLength < HEADER_BYTES) throw new ChunkFormatError("truncated header");
   if (readTag(view, 0) !== CHUNK_MAGIC) throw new ChunkFormatError("bad magic");
@@ -92,9 +115,9 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
     });
     return out;
   };
-  const roadSeg = pieces("RSG");
-  const pathSeg = pieces("PSG");
-  const railSeg = pieces("TSG");
+  const roadSeg = drop.has("roadSeg") ? empty(Uint32Array, n * PIECES) : pieces("RSG");
+  const pathSeg = drop.has("pathSeg") ? empty(Uint32Array, n * PIECES) : pieces("PSG");
+  const railSeg = drop.has("railSeg") ? empty(Uint32Array, n * PIECES) : pieces("TSG");
 
   const base = new Int16Array(n);
   const water = new Int16Array(n).fill(NO_WATER);
@@ -109,14 +132,14 @@ export function decodeChunk(buffer: ArrayBuffer): Chunk {
   const bytesOf = (s: { offset: number } | null) =>
     s ? new Uint8Array(buffer.slice(s.offset, s.offset + n)) : new Uint8Array(n);
   const roadClass = bytesOf(rclsS);
-  const geology = bytesOf(geolS);
+  const geology = drop.has("geology") ? empty(Uint8Array, n) : bytesOf(geolS);
   const roadWidth = bytesOf(rwidS);
   const path = new Uint16Array(n);
   if (pathS) for (let i = 0; i < n; i++) path[i] = view.getUint16(pathS.offset + i * 2, true);
   const pathClass = bytesOf(pclsS);
   const pathWidth = bytesOf(pwidS);
-  const rail = new Uint16Array(n);
-  if (railS) for (let i = 0; i < n; i++) rail[i] = view.getUint16(railS.offset + i * 2, true);
+  const rail = drop.has("rail") ? empty(Uint16Array, n) : new Uint16Array(n);
+  if (railS && !drop.has("rail")) for (let i = 0; i < n; i++) rail[i] = view.getUint16(railS.offset + i * 2, true);
   const lane = bytesOf(laneS);
   const shape = new Uint8Array(buffer.slice(shapeS.offset, shapeS.offset + n));
   const surface = new Uint8Array(buffer.slice(surfS.offset, surfS.offset + n));

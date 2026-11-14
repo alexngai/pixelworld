@@ -8,6 +8,9 @@ A world package is a directory, or later an archive, containing:
 manifest.json
 chunks/<cx>_<cy>.pxwc      (or .pxwc.gz)
 objects.json.gz             (optional)
+objects/<cx>_<cy>.json.gz   (optional: the objects by chunk, D-123)
+objects/landmarks.json.gz   (optional: with them, the landmarks)
+coarse.i16.gz               (optional: heights by block of 8 × 8 cells, D-123)
 routes.json.gz              (optional: ambient traffic routes, D-060)
 build-report.json           (optional, written by the pipeline; not read by clients)
 ```
@@ -92,6 +95,19 @@ The geo pipeline (Python) writes packages and the client (TypeScript) reads them
   - optional `z0`: base height in steps, for long landmarks such as bridges, so every tile builds them at the same height (D-056)
 
   Objects with `fp` or `hm` are unique; the rest are instanced per variant. Groups resolve through the style pack (D-030). Decorative scatter is not stored: clients add it by surface, scaled by `depiction.scatter` (D-054).
+- **Objects by chunk (optional, D-123):** for clients that hold part of a world at a time (a game server, `openWorld`), which load each chunk's objects with its terrain and let them go together. Written into a built package beside `objects.json.gz` by `pixelworld object-chunks <package>`, without rebuilding it; views read the whole file, which their bake needs. The manifest's `objectChunks`:
+
+  ```jsonc
+  "objectChunks": {
+    "version": 1,
+    "path": "objects/{x}_{y}.json.gz",                  // each chunk's file
+    "landmarks": { "path": "objects/landmarks.json.gz", "sha256": "…", "count": 11 },
+    "chunks": [{ "x": 3, "y": 1, "sha256": "…", "count": 412 }]   // the chunks that have any
+  }
+  ```
+
+  Every file is an objects file (version 2). A chunk's holds every instance without a landmark `id` whose bounds touch the chunk, edges included: its footprint's bounding box, or its anchor's cell. One straddling an edge is in each chunk it touches, so a point's chunk alone says what stands there. `landmarks` holds every instance with an `id`, kept whole by a client: there are few, and one drawn from its anchor stands where its model reaches, past its own chunk.
+- **Coarse heights (optional, D-123):** `coarse: { version: 1, path: "coarse.i16.gz", sha256, block: 8 }`, written by `pixelworld coarse-heights <package>`: gzip of little-endian int16 pairs, each `block` × `block` cells' lowest drawn ground and highest drawn top (ground or water standing over it), in 1/16 step, a block at a time in rows from the north-west; -32768 twice where no chunk covers it. Heights are the drawn ground's: the micro-corners where there is micro-terrain, else the cells' corners. A game server steps a player clear above a block's top over ground it hasn't loaded yet (the southwest's file is 27 KB).
 - **Scale levels (optional, D-046):**
   - `level` names this package's level.
   - `levels` lists every level of the region, this one included. `world` is a sibling package's id, which is also its directory next to this one.

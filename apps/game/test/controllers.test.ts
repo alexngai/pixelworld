@@ -1,5 +1,6 @@
 import type { WorldManifest } from "@pixelworlds/engine";
 import { describe, expect, it } from "vitest";
+import { carParams } from "../src/car";
 import { CarController } from "../src/carController";
 import { Bob, Follow } from "../src/follow";
 import { geoToPose, levelLabel, levelUrl, poseToGeo, startFor } from "../src/levels";
@@ -83,13 +84,15 @@ describe("the car controller", () => {
     expect(car.canTakeOff).toBe(false);
   });
 
-  it("is paced to its level", async () => {
+  it("is paced to its level, with the parameters a server works out from the world alone (carParams)", async () => {
     const coarse = new CarController({ start: { x: 10.5, y: 10.5 } });
-    await coarse.attach(fakeView(world(), { metersPerCell: 400 }).view);
+    const coarseView = fakeView(world(), { metersPerCell: 400 }).view;
+    await coarse.attach(coarseView);
     const fine = new CarController({ start: { x: 10.5, y: 10.5 } });
     await fine.attach(fakeView(world(), { metersPerCell: 25 }).view);
     expect(coarse.params.pace).toBe(1);
     expect(fine.params.pace).toBe(0.55);
+    expect(coarse.params).toEqual(carParams(coarseView.world));
     expect(pace(100, 400, 0.55)).toBeCloseTo(Math.pow(0.25, 0.3), 9);
   });
 });

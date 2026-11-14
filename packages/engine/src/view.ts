@@ -47,6 +47,7 @@ import type {
 } from "./types";
 import {
   bakeInit,
+  chunkStats,
   loadHeroes,
   loadWorld,
   objectTiles,
@@ -112,8 +113,10 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const compositor = new Compositor(opts.canvas);
   const cache = await openTileCache(opts.cache);
   // the first view's tiles baked ahead, read before the cache (tools/prebake.mjs)
-  const start = opts.startTiles === false ? Promise.resolve(null) : StartTiles.load(opts.startTiles ?? new URL("start-tiles.bin", withSlash(w.base)));
-  const keyed = cache !== null || opts.startTiles !== false;
+  const start = !opts.startTiles
+    ? Promise.resolve(null)
+    : StartTiles.load(opts.startTiles === true ? new URL("start-tiles.bin", withSlash(w.base)) : opts.startTiles);
+  const keyed = cache !== null || !!opts.startTiles;
   const heroes = opts.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
@@ -818,8 +821,7 @@ class View implements WorldView {
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
       tilesPending: this.wanted.filter((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
-      chunksLoaded: this.w.store.loadedCount,
-      chunksTotal: this.w.manifest.chunks.length,
+      ...chunkStats(this.w.store),
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,
       gpuMB: this.gpuBytes / (1024 * 1024),
       avgMeshMs: t.tiles ? t.meshMs / t.tiles : 0,

@@ -11,10 +11,12 @@ import { attachDogfight, dogfightLobby } from "./server";
  * `PORT` (default 8080), `DOGFIGHT_LAG` (ms each way, to try it under lag).
  * Stopped (a deploy), it tells every page why before it goes.
  */
-const files = serveStatic(fileURLToPath(new URL("../client/", import.meta.url)));
+const client = fileURLToPath(new URL("../client/", import.meta.url));
+const files = serveStatic(client);
 let lobby: ReturnType<typeof dogfightLobby> | null = null;
 const server = createServer((req, res) => lobby?.(req, res) || files(req, res));
-const relay = attachDogfight(server, { lag: Number(process.env.DOGFIGHT_LAG ?? 0) });
+// the world packages beside the page, read from disk (D-123)
+const relay = attachDogfight(server, { lag: Number(process.env.DOGFIGHT_LAG ?? 0), worlds: client });
 lobby = dogfightLobby(relay);
 const port = Number(process.env.PORT ?? 8080);
 server.listen(port, () => console.log(`dogfight: http://localhost:${port}/ (rooms on /dogfight?room=, the lobby on /api)`));

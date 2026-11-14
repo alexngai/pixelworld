@@ -177,9 +177,12 @@ async function main() {
     style: params.has("style") ? await stylePack(params.get("style")!) : stylePack,
     size,
     cache: params.get("cache") !== "0",
+    groundFirst: params.get("ground") !== "0", // ground=0: no ground-only bake before a tile's own
+    startTiles: params.get("startTiles") !== "0", // the world's start-tiles.bin, where prebake.mjs built one
     objects: params.get("objects") !== "0",
     scatter: params.get("scatter") !== "0",
     heroes: params.get("paint") !== "0",
+    chunkBudgetMB: maybeNum("chunkBudget"), // decoded terrain kept at most (MB, D-120)
     palette: params.get("palette") === "night" ? "night" : "day",
     camera: {
       rotation: num("rot", 0) & 3,
@@ -299,6 +302,8 @@ async function main() {
       tilesPerRotation: s.tilesPerRotation,
       chunksLoaded: s.chunksLoaded,
       chunksTotal: s.chunksTotal,
+      chunksMB: s.chunksMB,
+      chunksEvicted: s.chunksEvicted,
       gpuTiles: s.gpuTiles,
       gpuMB: s.gpuMB,
       avgMeshMs: s.avgMeshMs,

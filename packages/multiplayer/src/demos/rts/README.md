@@ -32,7 +32,7 @@ The server runs the game (a `TickRoom` at 20 ticks a second, 10 snapshots a seco
 ## Play
 
 ```sh
-pnpm --filter @pixelworlds/multiplayer demo:rts      # http://localhost:5254/?name=You: quick play (share the room's code; alone, the bot comes in 20 s; &vs=bot at once)
+pnpm --filter @pixelworlds/multiplayer demo:rts      # http://localhost:5255/?name=You: quick play (share the room's code; alone, the bot comes in 20 s; &vs=bot at once)
 ```
 
 - **Mouse:** left click selects a unit (or shows a building, one of the level's, or a foe), a left drag selects your units in the box; right click orders: on a foe, attack it; on one of the level's buildings, wardens knock it down; on a seep, runners gather there; elsewhere, move. Middle drag pans; the wheel zooms.
