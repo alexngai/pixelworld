@@ -53,10 +53,10 @@ export class Interest {
     return this.at.get(id);
   }
 
-  /** What is within reach of a group: in its square and the squares around it. */
-  near(group: string): string[] {
+  /** What is within reach of a group: in its square and the squares around it (`reach` of them, default the instance's: a farther ring for things sent less often, D-123). */
+  near(group: string, reach = this.reach): string[] {
     const [i, j] = group.split(",").map(Number) as [number, number];
-    const r = this.reach;
+    const r = reach;
     const out: string[] = [];
     for (let dj = -r; dj <= r; dj++)
       for (let di = -r; di <= r; di++) {

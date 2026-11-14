@@ -2,8 +2,26 @@ import { readFileSync } from "node:fs";
 import { LEVEL_FLIGHT, flyPlane, type PlaneState } from "@pixelworlds/game/src/plane";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { DogfightRoom, openDogfightWorld, type DogfightWorld } from "../../src/demos/dogfight/server";
-import { BOT, GUN, HP, MATCH, TICK, flyTick, type DogfightEvent, type DogfightInput, type DogfightSnap, type DogfightWorldNet } from "../../src/demos/dogfight/rules";
-import { TickClient, type TickEvent, type TickShared, type TickSnapshot } from "../../src/index";
+import {
+  BOT,
+  GUN,
+  HP,
+  MATCH,
+  PLANE_STATE,
+  PLANE_WIRE,
+  TICK,
+  flyTick,
+  planeOf,
+  planesOf,
+  type DogfightEvent,
+  type DogfightInput,
+  type DogfightRoster,
+  type DogfightSnap,
+  type DogfightWorldNet,
+  type PlaneNet,
+  type PlaneWire,
+} from "../../src/demos/dogfight/rules";
+import { Replica, SNAP_BYTE, TickClient, WORLD_BYTE, readSnap, type TickEvent, type TickRoster, type TickShared, type TickSnapshot } from "../../src/index";
 import type { HostedRoom } from "../../src/server";
 import { loopback } from "../../src/testing";
 
@@ -38,7 +56,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-type Msg = (TickShared & DogfightWorldNet) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
+type Msg = Uint8Array | (TickRoster & DogfightRoster) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
 
 /** A room over a transport that keeps what it sends, by page. */
 function room(w = world) {
@@ -68,9 +86,33 @@ function room(w = world) {
     game.message(id, { k: "hello", join: { name, watch } });
     await new Promise((r) => setTimeout(r, 0)); // the world arrives
   };
-  const worlds = (id: string) => inbox.get(id)!.filter((m): m is TickShared & DogfightWorldNet => m.k === "world");
-  const snaps = (id: string) => inbox.get(id)!.filter((m): m is TickSnapshot & DogfightSnap => m.k === "snap");
-  const events = (kind?: DogfightEvent["kind"]) => all.filter((m): m is TickEvent<DogfightEvent> => m.k === "ev" && (!kind || m.e.kind === kind)).map((m) => ({ ...m.e, t: m.t }));
+  /** The shared snapshots a page got, as its page puts them together: the planes replicated in binary (D-123), with the roster's names and scores. */
+  const worlds = (id: string) => {
+    const replica = new Replica(PLANE_WIRE);
+    const states = new Map<string, PlaneWire>();
+    let pilots: DogfightRoster["pilots"] = {};
+    const out: (TickShared & DogfightWorldNet & { planes: PlaneNet[] })[] = [];
+    for (const m of inbox.get(id)!) {
+      if (!(m instanceof Uint8Array)) {
+        if (m.k === "roster") pilots = (m as DogfightRoster).pilots;
+        continue;
+      }
+      if (m[0] !== WORLD_BYTE) continue;
+      const u = replica.read(m);
+      for (const [i, s] of u.states) states.set(i, s);
+      for (const i of u.gone) states.delete(i);
+      out.push({ ...(u.extras as DogfightWorldNet), k: "world", t: u.tick * TICK, planes: planesOf(states, pilots) });
+    }
+    return out;
+  };
+  /** A page's own snapshots, in binary (D-123), read back. */
+  const snaps = (id: string): (TickSnapshot & DogfightSnap)[] =>
+    inbox
+      .get(id)!
+      .filter((m): m is Uint8Array => m instanceof Uint8Array && m[0] === SNAP_BYTE)
+      .map((m) => readSnap(m, PLANE_STATE, TICK));
+  const events = (kind?: DogfightEvent["kind"]) =>
+    all.filter((m): m is TickEvent<DogfightEvent> => !(m instanceof Uint8Array) && m.k === "ev" && (!kind || (m as TickEvent<DogfightEvent>).e.kind === kind)).map((m) => ({ ...m.e, t: m.t }));
   const send = (id: string, seq: number, i: Partial<DogfightInput>, seen: number | null = null) =>
     game.message(id, { k: "in", seq, i: { ...LEVEL_FLIGHT, fire: false, ...i }, seen });
   const play = () => game.match.set("playing", game.time, MATCH.seconds);
@@ -93,7 +135,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(last.ack).toBe(30);
     const predicted = { ...start };
     for (const i of inputs) flyPlane(predicted, i, world.fly, world.params, TICK);
-    expect(last.you).toEqual(predicted);
+    expect(planeOf(last)).toEqual(predicted);
     expect(predicted.x).not.toBe(start.x);
     // the shared snapshot: Alex, the bot a pilot alone gets, and the match
     const w = worlds("a").at(-1)!;
@@ -277,12 +319,13 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     const plane = { s: null as PlaneState | null, corr: 0, before: { x: 0, y: 0, h: 0 } };
     const client = new TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent>(page.room, {
       tick: TICK,
+      snapSchema: PLANE_STATE,
       step: (i) => plane.s && void flyTick(plane.s, i, world.fly, world.params),
       restore: (snap) => {
         if (plane.s) plane.before = { x: plane.s.x, y: plane.s.y, h: plane.s.h };
         const first = !plane.s;
-        plane.s = { ...snap.you };
-        if (first) plane.before = { x: snap.you.x, y: snap.you.y, h: snap.you.h };
+        plane.s = planeOf(snap);
+        if (first) plane.before = { x: snap.x, y: snap.y, h: snap.h };
       },
       reconciled: () => {
         const s = plane.s!;

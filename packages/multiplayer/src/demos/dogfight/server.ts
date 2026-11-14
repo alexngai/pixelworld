@@ -7,7 +7,7 @@ import { stylePack } from "@pixelworlds/game/src/styles";
 import { PLANE } from "@pixelworlds/game/src/tuning";
 import { DRAW_ONLY_LAYERS, openWorld, type OpenedWorld } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
-import { Areas, History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
+import { Areas, History, Phases, Replicator, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import {
   BOT,
   CREDIT_S,
@@ -17,6 +17,8 @@ import {
   HP,
   MATCH,
   MAX_REWIND,
+  PLANE_STATE,
+  PLANE_WIRE,
   SPAWN_SPREAD,
   TICK,
   fireRound,
@@ -26,10 +28,11 @@ import {
   type DogfightInfo,
   type DogfightInput,
   type DogfightJoin,
+  type DogfightRoster,
   type DogfightSnap,
   type DogfightWorldNet,
   type MatchPhase,
-  type PlaneNet,
+  type PlaneWire,
   type Round,
 } from "./rules";
 
@@ -163,6 +166,12 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<DogfightWorld>, clock = true) {
     super(room, { tick: TICK, ready: world, clock });
+    // each page's own plane in binary, exactly; the planes in binary, keyframes then diffs (D-123); every page sees every plane
+    this.snapSchema = PLANE_STATE;
+    this.replicator = new Replicator<PlaneWire>(PLANE_WIRE, {
+      states: () =>
+        [...this.planes].map(([id, p]) => [id, { x: p.s.x, y: p.s.y, h: p.s.h, hd: p.s.yaw, p: drawnPitch(p.s.pitch), r: p.s.roll, hp: p.hp, life: this.lives.get(id) ?? 0 }] as const),
+    });
   }
 
   // ---------------------------------------------------------------- joining
@@ -319,23 +328,15 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   // ---------------------------------------------------------------- snapshots
 
   protected override shared(): DogfightWorldNet {
+    return { match: { ...this.match.net(), kills: MATCH.kills, winner: this.winner } };
+  }
+
+  /** Names and scores, sent when they change (D-123). */
+  protected override roster(): DogfightRoster {
     return {
-      planes: [...this.planes].map(([id, p]): PlaneNet => ({
-        id,
-        name: this.joinOf(id)?.name ?? "Pilot",
-        x: p.s.x,
-        y: p.s.y,
-        h: p.s.h,
-        hd: p.s.yaw,
-        p: drawnPitch(p.s.pitch),
-        r: p.s.roll,
-        hp: p.hp,
-        kills: p.kills,
-        deaths: p.deaths,
-        life: this.lives.get(id) ?? 0,
-        ...(this.isBot(id) ? { bot: true } : {}),
-      })),
-      match: { ...this.match.net(), kills: MATCH.kills, winner: this.winner },
+      pilots: Object.fromEntries(
+        [...this.planes].map(([id, p]) => [id, { name: this.joinOf(id)?.name ?? "Pilot", kills: p.kills, deaths: p.deaths, ...(this.isBot(id) ? { bot: true } : {}) }]),
+      ),
     };
   }
 
@@ -343,7 +344,7 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   private readonly lives = new Map<string, number>();
 
   protected override snapshot(id: string): DogfightSnap {
-    return { you: this.planes.get(id)!.s };
+    return this.planes.get(id)!.s;
   }
 
   // ---------------------------------------------------------------- the guns, and going down

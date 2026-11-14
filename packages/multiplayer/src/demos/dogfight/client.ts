@@ -4,16 +4,22 @@ import type { Entity } from "pixelworld/engine";
 import { RemotePlayers, TickClient, joinRoom, type Pose, type Room } from "../../index";
 import {
   GUN,
+  PLANE_STATE,
+  PLANE_WIRE,
   TICK,
   fireRound,
   flyTick,
+  planeOf,
+  planesOf,
   type DogfightEvent,
   type DogfightInput,
   type DogfightJoin,
+  type DogfightRoster,
   type DogfightSnap,
   type DogfightWorldNet,
   type MatchNet,
   type PlaneNet,
+  type PlaneWire,
   type Round,
 } from "./rules";
 
@@ -69,6 +75,9 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   const now = () => performance.now() / 1000;
 
   const peers = new Map<string, Peer>();
+  /** The planes the server replicates (D-123), and the pilots' names and scores. */
+  const states = new Map<string, PlaneWire>();
+  let pilots: DogfightRoster["pilots"] = {};
   let me: PlaneNet | null = null;
   let match: MatchNet | null = null;
   /** The life the page's own plane was last put at (a new one is a respawn: the camera goes with it). */
@@ -80,24 +89,32 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   let before = { x: 0, y: 0, h: 0 };
   let respawned = false;
 
-  const client: TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent> = new TickClient(room, {
+  const client: TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent, PlaneWire> = new TickClient(room, {
     tick: TICK,
+    schema: PLANE_WIRE,
+    snapSchema: PLANE_STATE,
+    onRoster: (r) => (pilots = (r as unknown as DogfightRoster).pilots),
     step: watching ? undefined : (i) => void flyTick(plane.state, i, plane.fly, plane.params),
     restore: (snap) => {
       const s = plane.state;
       before = { x: s.x, y: s.y, h: s.h };
       respawned = me !== null && me.life !== placed;
       if (respawned) {
-        plane.place(snap.you.x, snap.you.y, snap.you.heading, snap.you.h); // the camera goes with it
+        plane.place(snap.x, snap.y, snap.heading, snap.h); // the camera goes with it
         placed = me!.life;
       }
-      Object.assign(s, snap.you);
+      Object.assign(s, planeOf(snap));
     },
     reconciled: () => {
       const s = plane.state;
       correction = respawned ? 0 : Math.hypot(s.x - before.x, s.y - before.y, (s.h - before.h) / PLANE.stepsPerCell);
     },
-    onWorld: (m) => world(m),
+    onWorld: (m) => {
+      for (const [id, s] of m.entities?.states ?? []) states.set(id, s);
+      for (const id of m.entities?.gone ?? []) states.delete(id);
+      // every plane is in every message (the dogfight replicates all of them, near)
+      world({ ...m, planes: planesOf(states, pilots) });
+    },
   });
   const remotes = new RemotePlayers(view.entities, (id) => ({ model: model(id), headings: PLANE.headings, silhouette: true }), { clock: client.clock });
   client.hello({ name: (opts.name || "Pilot").slice(0, 20), watch: watching } satisfies DogfightJoin);
@@ -154,7 +171,7 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
 
   // ---------------------------------------------------------------- the server's word
 
-  function world(m: DogfightWorldNet & { t: number }): void {
+  function world(m: DogfightWorldNet & { t: number; planes: PlaneNet[] }): void {
     match = m.match;
     const others = m.planes.filter((n) => n.id !== room.id);
     me = m.planes.find((n) => n.id === room.id) ?? null;
@@ -357,7 +374,7 @@ declare global {
       match: () => MatchNet | null;
       remotes: RemotePlayers;
       peers: ReadonlyMap<string, Peer>;
-      client: TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent>;
+      client: TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent, PlaneWire>;
       correction: () => number;
       watched: () => string | null;
       rounds: () => number;

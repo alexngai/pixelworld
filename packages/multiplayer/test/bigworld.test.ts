@@ -3,7 +3,7 @@ import { stylePack } from "@pixelworlds/game/src/styles";
 import { DRAW_ONLY_LAYERS, openWorld, type Entity, type EntityList, type EntitySpec } from "pixelworld/engine";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RemotePlayers, TickClient, type TickEvent, type TickMessage, type TickShared } from "../src/index";
-import { Areas, Interest, TickRoom, type AreaWorld, type HostedRoom, type TickRole } from "../src/server";
+import { Areas, Interest, Replicator, Schema, TickRoom, angle, fixed, type AreaWorld, type HostedRoom, type TickRole } from "../src/server";
 import { loopback } from "../src/testing";
 
 /**
@@ -320,9 +320,14 @@ interface Mode {
   coarse?: boolean;
   /** Interest squares (cells), or every page gets everyone. */
   interest: number | null;
+  /** The rovers in compact binary, keyframes then diffs, the next ring out of squares every 4th snapshot (D-123). */
+  binary?: boolean;
 }
 
 /** Rovers on the ground of a real world: bots and pages spread across it. */
+/** A rover on the wire (D-123): to a 64th of a cell across, a 32nd of a step up, its heading in 256ths of a turn. */
+const ROVER = new Schema<Rover>({ x: fixed(1 / 64), y: fixed(1 / 64), h: fixed(1 / 32), heading: angle() });
+
 class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnType<typeof openWorld>>> {
   readonly rovers = new Map<string, Rover>();
   readonly areas: Areas | null = null;
@@ -335,6 +340,16 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
     super(room, { clock: false, ready: Promise.resolve(world) });
     this.areas = mode.areas ? new Areas(world.query, { radius: 8, ahead: 2, reach: 1 }) : null;
     this.interest = mode.interest === null ? null : new Interest(mode.interest);
+    const interest = this.interest;
+    if (mode.binary)
+      this.replicator = new Replicator(ROVER, {
+        states: () => this.rovers,
+        view: (g) => {
+          if (g === undefined || !interest) return { near: this.rovers.keys() };
+          const near = interest.near(g);
+          return { near, far: interest.near(g, 2) };
+        },
+      }) as unknown as Replicator<object>;
   }
   protected parseJoin = (d: unknown) => d as { x: number; y: number };
   protected added(id: string, j: { x: number; y: number }): TickRole {
@@ -366,6 +381,7 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
     return this.interest?.groupOf(id);
   }
   protected override shared(group?: string) {
+    if (this.mode.binary) return {};
     const ids = group === undefined ? [...this.rovers.keys()] : this.interest!.near(group);
     return { rovers: ids.map((id) => ({ id, ...this.rovers.get(id)! })) };
   }
@@ -403,11 +419,12 @@ async function rovers(mode: Mode, seconds: number) {
     const page = lb.join(0.05);
     const me: Rover = { ...s, h: 0, heading: 0 };
     const others = new Set<number>();
-    const client = new TickClient<RoverIn, { you: Rover }, { rovers: { id: string }[] }>(page.room, {
+    const client = new TickClient<RoverIn, { you: Rover }, { rovers?: { id: string }[] }, unknown, Rover>(page.room, {
       tick: game.tickLength,
       step: (turn) => drive(me, turn, game.tickLength, cellsX, cellsY),
       restore: (snap) => Object.assign(me, snap.you),
-      onWorld: (w) => others.add(w.rovers.length - 1),
+      schema: mode.binary ? ROVER : undefined,
+      onWorld: (w) => others.add((w.rovers?.length ?? client.replica!.ids().length) - 1),
       now: lb.now,
     });
     client.hello(s);
@@ -426,7 +443,7 @@ async function rovers(mode: Mode, seconds: number) {
   game.tickMs.length = 0;
   const waitsAtStart = game.waits;
   await run(seconds);
-  const bytes = pages.map((p, n) => p.page.received.slice(from[n]).reduce((sum: number, m) => sum + JSON.stringify(m).length, 0));
+  const bytes = pages.map((p, n) => p.page.received.slice(from[n]).reduce((sum: number, m) => sum + (m instanceof Uint8Array ? m.length : JSON.stringify(m).length), 0));
   const moved = [...game.rovers].map(([id, r]) => Math.hypot(r.x - start.get(id)!.x, r.y - start.get(id)!.y));
   const ms = game.tickMs.sort((a, b) => a - b);
   const m1 = mem();
@@ -451,7 +468,15 @@ describe("dozens of players across the southwest (D-120)", () => {
     const seconds = Number(process.env.BIGWORLD_SECONDS ?? 4);
     const before = await rovers({ areas: false, interest: null }, seconds);
     const after = await rovers({ areas: true, budgetMB: 40, interest: 128 }, seconds);
-    if (process.env.BIGWORLD_LOG) console.log(JSON.stringify({ bots: BOTS, pages: PAGES, seconds, before, after }, null, 2));
+    // D-123: lean chunks in half the budget, coarse ground instead of waiting, the rovers in binary with a far ring
+    const lean = await rovers({ areas: true, budgetMB: 20, lean: true, coarse: true, interest: 128, binary: true }, seconds);
+    if (process.env.BIGWORLD_LOG) console.log(JSON.stringify({ bots: BOTS, pages: PAGES, seconds, before, after, lean }, null, 2));
+    expect(lean.world.chunksMB).toBeLessThanOrEqual(20);
+    expect(lean.world.chunksLoaded).toBeGreaterThanOrEqual(after.world.chunksLoaded); // as many chunks in half the memory
+    expect(lean.waits).toBe(0); // the coarse ground, never a wait
+    expect(lean.coarseSteps).toBeGreaterThan(0);
+    expect(lean.perPageKBs).toBeLessThan(after.perPageKBs / 3);
+    expect(lean.slowest).toBeGreaterThan(before.slowest * 0.5);
     expect(before.world.chunksLoaded).toBe(before.world.chunksTotal);
     expect(after.world.chunksMB).toBeLessThanOrEqual(40);
     expect(after.world.chunksLoaded).toBeLessThan(after.world.chunksTotal / 2);

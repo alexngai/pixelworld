@@ -1,4 +1,6 @@
-import type { TickEvent, TickMessage, TickShared, TickSnapshot } from "./index";
+import type { TickEvent, TickMessage, TickRoster, TickShared, TickSnapshot } from "./index";
+import { Writer, type Schema } from "./codec";
+import { SNAP_BYTE, type Replicator } from "./replica";
 import type { HostedRoom, RoomHost } from "./server";
 
 /** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
@@ -75,6 +77,10 @@ const LAG_CREEP = 0.0005;
  *   with `t` and its `ack`). A player whose connection is backed up gets
  *   fewer until it catches up. With interest (`groupOf`, D-120), each group
  *   of pages gets its own shared part, serialized once for the group.
+ * - **Compactly (D-123):** with a `replicator`, the shared snapshot goes in
+ *   binary, keyframes then diffs, near things often and far ones less, and
+ *   `shared(group)` rides along; the `roster` (names, scores) goes when it
+ *   changes.
  * - **Waiting:** a `step` that returns false hasn't happened (its area is
  *   loading, D-120): the input stays first in the queue for the next tick,
  *   spends no credit and isn't acknowledged.
@@ -89,6 +95,10 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   readonly tickLength: number;
   /** The game's world, from `ready`: in place before any page is admitted. */
   protected world!: W;
+  /** Set it for the shared snapshot in compact binary (D-123): see `Replicator`. */
+  protected replicator: Replicator<object> | null = null;
+  /** Set it for each player's own snapshot (`snapshot(id)`) in binary, whole (`exact` fields for what its prediction puts back), D-123. */
+  protected snapSchema: Schema<object> | null = null;
   private readonly seats = new Map<string, Seat<I, J>>();
   /** Connected, not admitted: their join (null until their `hello`). */
   private readonly pending = new Map<string, J | null>();
@@ -154,6 +164,10 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   protected groupOf(_id: string): string | undefined {
     return undefined;
   }
+  /** Who is in the room and what changes rarely (names, teams, scores), or null: sent to every page when it changes, and to each as it connects (D-123). */
+  protected roster(): object | null {
+    return null;
+  }
   /** What one player's own snapshot carries besides `t` and `ack` (its own state, for its prediction). */
   protected snapshot(_id: string): object {
     return {};
@@ -169,6 +183,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   join(id: string): void {
     this.pending.set(id, null);
+    if (this.rosterText !== null) this.room.send(id, this.rosterMessage!);
   }
 
   leave(id: string): void {
@@ -306,13 +321,24 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     }
     this.update();
     if (this.ticks % (this.opts.snapshotEvery ?? 3)) return;
+    this.sendRoster();
     // a backed-up player gets every `behindEvery`th snapshot
     const everyone = ++this.snapshots % (this.opts.behindEvery ?? 10) === 0;
     const skip = new Set([...this.seats].filter(([, s]) => s.behind && !everyone).map(([id]) => id));
     this.sendShared(skip);
     for (const [id, seat] of this.seats)
-      if (seat.role === "player" && !seat.drive && !skip.has(id))
-        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+      if (seat.role === "player" && !seat.drive && !skip.has(id)) {
+        if (!this.snapSchema) {
+          this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+          continue;
+        }
+        const w = new Writer();
+        w.byte(SNAP_BYTE);
+        w.uint(this.ticks);
+        w.uint(seat.ack);
+        this.snapSchema.writeFull(w, this.snapSchema.wire(this.snapshot(id)));
+        this.room.send(id, w.done());
+      }
   }
 
   /**
@@ -321,6 +347,18 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
    * says). Not to the `skip`ped.
    */
   private sendShared(skip: ReadonlySet<string>): void {
+    if (this.replicator) {
+      const groups = new Map<string | undefined, string[]>();
+      for (const id of this.room.players()) {
+        if (skip.has(id)) continue;
+        const seat = this.seats.get(id);
+        const g = seat && !seat.drive ? this.groupOf(id) : undefined;
+        const ids = groups.get(g);
+        if (ids) ids.push(id);
+        else groups.set(g, [id]);
+      }
+      return this.replicator.send(this.ticks, groups, (g) => this.shared(g), (data, to) => this.room.broadcast(data, this.allBut(to)));
+    }
     const world = (group?: string) => ({ k: "world", t: this.time, ...this.shared(group) }) satisfies TickShared;
     const groups = new Map<string, string[]>();
     for (const [id, seat] of this.seats) {
@@ -334,6 +372,20 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     const grouped = new Set([...groups.values()].flat());
     if (this.room.players().some((id) => !grouped.has(id) && !skip.has(id))) this.room.broadcast(world(), new Set([...skip, ...grouped]));
     for (const [g, ids] of groups) this.room.broadcast(world(g), this.allBut(ids));
+  }
+
+  private rosterText: string | null = null;
+  private rosterMessage: TickRoster | null = null;
+
+  /** The roster, to every page, when it changed. */
+  private sendRoster(): void {
+    const r = this.roster();
+    if (r === null) return;
+    const text = JSON.stringify(r);
+    if (text === this.rosterText) return;
+    this.rosterText = text;
+    this.rosterMessage = { k: "roster", t: this.time, ...r };
+    this.room.broadcast(this.rosterMessage);
   }
 
   /** Every page in the room but these. */
