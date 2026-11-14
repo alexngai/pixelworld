@@ -1,4 +1,8 @@
+import { cityPlugin as hongKong } from "@pixelworlds/city-hongkong";
+import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
+import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin } from "@pixelworlds/city-sf";
+import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { createWorldView, fogLayer, fogSampler, veilLayer, type Controller, type ControllerView, type Entity, type EntityModel, type KeyInput, type WorldView } from "pixelworld/engine";
 import { trafficLayer, type TrafficLayer } from "pixelworld/traffic";
@@ -6,8 +10,6 @@ import { RemoteTraffic, Smoothing, TickClient, joinRoom, type Room } from "../..
 import {
   BUILDINGS,
   DELAY,
-  LAYOUT,
-  MAP,
   TEAMS,
   TEAM_NAMES,
   TICK,
@@ -43,6 +45,7 @@ import {
   TRAFFIC,
   roofEye,
 } from "./rules";
+import type { RtsMap } from "./maps";
 
 /**
  * Fogfront in the page (D-121): San Francisco's driving level at the
@@ -77,12 +80,16 @@ import {
 
 const PAN = 260; // internal px a second
 const pickRadius = 18; // CSS px round a unit's middle
+/** The city packs the maps' styles name (D-128): each style pack loads those it names. */
+const PLUGINS = Object.fromEntries([cityPlugin, newYork, kyoto, tokyo, hongKong].map((p) => [p.name, p]));
 
 /** The camera: keys and a middle drag pan it over the play area, Q/E turn it, the wheel zooms. */
 class RtsCamera implements Controller {
   readonly id = "rts-camera";
   private view: ControllerView | null = null;
   private readonly keys = new Set<string>();
+
+  constructor(private readonly rect: RtsMap["rect"]) {}
 
   attach(view: ControllerView): void {
     this.view = view;
@@ -111,8 +118,9 @@ class RtsCamera implements Controller {
     if (!v) return;
     v.camera.pan(dx, dy);
     const c = v.camera;
-    const x = Math.min(MAP.x0 + MAP.w, Math.max(MAP.x0, c.x));
-    const y = Math.min(MAP.y0 + MAP.h, Math.max(MAP.y0, c.y));
+    const r = this.rect;
+    const x = Math.min(r.x0 + r.w, Math.max(r.x0, c.x));
+    const y = Math.min(r.y0 + r.h, Math.max(r.y0, c.y));
     if (x !== c.x || y !== c.y) c.setFocus(x, y, v.query.heightAt(x, y) ?? c.h);
   }
 
@@ -230,13 +238,16 @@ export interface RtsOptions {
   watch?: Watch;
   /** The rooms' WebSocket path (default /rts). */
   path?: string;
-  /** Where the level is served (default `RTS_WORLD`). */
-  worldUrl: string;
+  /** The map (D-128): its level, served at `/<world>/` (or `worldUrl`), and its play area. */
+  map: RtsMap;
+  worldUrl?: string;
+  /** The room plays another map than `map`: the page loads that one (its id). */
+  onMap?: (id: string) => void;
 }
 
 export async function startRts(opts: RtsOptions): Promise<void> {
-  const camera = new RtsCamera();
-  const home = LAYOUT.hearths.kiln;
+  const rect = opts.map.rect;
+  const camera = new RtsCamera(rect);
   // the fog of war (D-125): what the side doesn't see darkened, what it has never seen darker
   const veil = veilLayer({ id: "sight", label: "Fog of war", ramp: "asphalt", shade: 1, levels: [0.3, 0.55, 0.8] });
   // the Golden Gate's fog, on the server's clock: what stands in it is hidden as the server reckons it
@@ -246,12 +257,12 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const cars = trafficLayer({ feed: () => traffic?.poses(performance.now() / 1000) ?? [] });
   const view: WorldView = await createWorldView({
     canvas: opts.canvas,
-    worldUrl: opts.worldUrl,
+    worldUrl: opts.worldUrl ?? `/${opts.map.world}/`,
     style: stylePack,
-    plugins: [cityPlugin],
+    plugins: (names) => names.flatMap((n) => PLUGINS[n] ?? []),
     cache: true,
     startTiles: false, // none baked for this level
-    camera: { x: home[0] + 1.5, y: home[1] + 1.5, zoom: 2 },
+    camera: { x: rect.x0 + rect.w / 2, y: rect.y0 + rect.h / 2, zoom: 2 },
     controller: camera,
     layers: [veil, weather, cars],
   });
@@ -266,9 +277,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     hud.status(`Fogfront: ${e instanceof Error ? e.message : String(e)}`);
     return;
   }
-  await view.query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
+  await view.query.ensure(rect.x0, rect.y0, rect.x0 + rect.w, rect.y0 + rect.h);
   /** The play area's cells, for placing a lodge: the server's own check, here before sending. */
-  const grid: MapGrid = buildGrid(view.query);
+  const grid: MapGrid = buildGrid(view.query, rect);
   const structures = grid.structures!;
   /** The level's buildings knocked down: out of the view's world and the page's cells, rubble where each stood. */
   const razed = new Razed(view.edits, grid);
@@ -322,6 +333,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   /** The shared snapshot: the match, who plays, and the level's buildings knocked down (each new one goes in a puff). */
   function takeWorld(w: RtsWorldNet & { t: number }): void {
+    if (w.map && w.map !== opts.map.id) return opts.onMap?.(w.map); // the room plays another map (D-128)
     const first = world === null;
     world = w;
     if (w.cars) traffic?.push(w.t, w.cars, performance.now() / 1000);
@@ -349,8 +361,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     shows = s.side;
     if (!opts.watch) side = s.side as Team;
     if (first) {
-      const [x, y] = shows === "all" ? [MAP.x0 + MAP.w / 2 - 1.5, MAP.y0 + MAP.h / 2 - 1.5] : LAYOUT.hearths[shows];
-      void view.camera.lookAt({ x: x + 1.5, y: y + 1.5 });
+      // its own hearth, as the map has it (D-128); watching all, the middle of the map
+      const hearth = s.buildings.find((b) => b.s === shows && b.k === "hearth");
+      void view.camera.lookAt(hearth ? { x: hearth.x + BUILDINGS.hearth.size / 2, y: hearth.y + BUILDINGS.hearth.size / 2 } : { x: rect.x0 + rect.w / 2, y: rect.y0 + rect.h / 2 });
     }
     const seen = new Set<number>();
     for (const u of s.units) {
@@ -704,7 +717,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (!snap || !shows || t - sightAt < 0.25) return;
     sightAt = t;
     // watching all: nothing veiled
-    if (shows === "all") return veil.set(MAP, veiled.fill(0));
+    if (shows === "all") return veil.set(rect, veiled.fill(0));
     const who = shows;
     // a new match: nothing seen yet
     if (world && world.match.phase === "playing" && matchSeen !== world.match.until) {
@@ -732,7 +745,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       if (sight[i]! < Infinity) explored[i] = 1;
       veiled[i] = sight[i]! < Infinity ? 0 : explored[i] ? 150 : 255;
     }
-    veil.set(MAP, veiled);
+    veil.set(rect, veiled);
   }
 
   view.onFrame(({ realDt }) => {
@@ -903,15 +916,15 @@ export async function startRts(opts: RtsOptions): Promise<void> {
         : pickedU
           ? `${nameOf(pickedU.s)}'s ${pickedU.k} · ${pickedU.hp}/${UNITS[pickedU.k].hp}`
           : pickedS
-            ? `a building of the Presidio · ${new Map(snap?.hurt ?? []).get(pickedS.obj) ?? pickedS.hp}/${pickedS.hp} · wardens knock it down (right click)`
+            ? `a building of ${opts.map.name} · ${new Map(snap?.hurt ?? []).get(pickedS.obj) ?? pickedS.hp}/${pickedS.hp} · wardens knock it down (right click)`
             : "nothing selected";
     return [
-      `FOGFRONT · room ${room.name} · ${phase}`,
+      `FOGFRONT · ${opts.map.name} · room ${room.name} · ${phase}`,
       side ? `you: ${TEAM_NAMES[side]} (${side === "kiln" ? "red" : "blue"})${mates.length ? ` with ${names(mates)}` : ""} · vs ${foes.length ? names(foes) : "nobody yet"}` : watching,
       side && snap ? `glim ${snap.glim} · runners ${count("runner", mineNow)} · wardens ${count("warden", mineNow)} · lodges ${own("lodge").length}` : "",
       world?.marks.length ? `landmarks: ${world.marks.map((m) => `${m.name} (${m.owner ? (m.owner === side ? "yours" : TEAM_NAMES[m.owner]) : "nobody's"})`).join(", ")}` : "",
       sel,
-      `ping ${client.ping === null ? "–" : Math.round(client.ping)} ms · invite: ${location.origin}${location.pathname}?room=${room.name}`,
+      `ping ${client.ping === null ? "–" : Math.round(client.ping)} ms · invite: ${location.origin}${location.pathname}?room=${room.name}&map=${opts.map.id}`,
     ]
       .filter(Boolean)
       .join("\n");

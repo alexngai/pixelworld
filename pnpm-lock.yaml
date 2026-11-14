@@ -244,9 +244,21 @@ importers:
         specifier: 8.18.3
         version: 8.18.3
     devDependencies:
+      '@pixelworlds/city-hongkong':
+        specifier: workspace:*
+        version: link:../city-hongkong
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../city-kyoto
+      '@pixelworlds/city-nyc':
+        specifier: workspace:*
+        version: link:../city-nyc
       '@pixelworlds/city-sf':
         specifier: workspace:*
         version: link:../city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../city-tokyo
       '@pixelworlds/game':
         specifier: workspace:*
         version: link:../../apps/game

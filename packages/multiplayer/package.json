@@ -72,7 +72,11 @@
     "pixelworld": "workspace:^"
   },
   "devDependencies": {
+    "@pixelworlds/city-hongkong": "workspace:*",
+    "@pixelworlds/city-kyoto": "workspace:*",
+    "@pixelworlds/city-nyc": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*",
+    "@pixelworlds/city-tokyo": "workspace:*",
     "@pixelworlds/game": "workspace:*",
     "@types/ws": "8.18.1",
     "pixelworld": "workspace:*",

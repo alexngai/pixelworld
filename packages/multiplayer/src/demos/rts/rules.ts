@@ -247,6 +247,8 @@ export interface RtsWorldNet {
   view?: RtsSnap;
   /** The level's cars round the map, in every `TRAFFIC.every`th shared snapshot (D-126). */
   cars?: VehicleNet[];
+  /** The room's map (D-128): a page on another loads this one. */
+  map: string;
 }
 
 /** A landmark held: who holds it, and who is taking it and how far (0–1). */
@@ -275,6 +277,8 @@ export interface RtsInfo {
   phase: MatchPhase;
   open: boolean;
   size: number;
+  /** Its map (D-128): quick play puts a page in a room on the map it asked for. */
+  map: string;
 }
 
 // ---------------------------------------------------------------- the map's cells
@@ -324,7 +328,7 @@ export interface MapGrid extends Cells {
 const isBuilding = (group: string) => group === "building" || group.startsWith("building.");
 
 /** Read the play area's cells from a world's queries (the terrain and objects there loaded: `query.ensure`). */
-export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP, layout: Pick<typeof LAYOUT, "hearths"> = LAYOUT): MapGrid {
+export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt" | "landmarks">, map = MAP): MapGrid {
   const structures = new Map<number, Structure>();
   const heights = new Map<number, number>();
   const landmarks = new Map<string, number[]>();
@@ -360,16 +364,21 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
   // each landmark reaching in: the cell units can get to nearest its part nearest the middle of the area (a bridge's shore end)
   const mx = map.x0 + map.w / 2;
   const my = map.y0 + map.h / 2;
-  // the cells units can get to: from beside the first hearth (the open cell nearest it)
-  const [hx, hy] = layout.hearths.kiln;
-  const from = nearestOpen(g, hx + 1, hy + 1, 6);
-  const reach = from ? reachable(g, from.x, from.y) : new Uint8Array(g.flags.length);
-  g.objectives = [...landmarks].flatMap(([id, list]) => {
-    const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
-    const part = list.map(at).reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
+  // reachable from both hearths: in the map's largest walkable region, where they stand (D-128)
+  const reach = mainRegion(g);
+  const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
+  const parts = [...landmarks].map(([id, list]) => ({ id, list: list.map(at) }));
+  // a landmark no cell's middle meets (a wheel's thin rim): its anchor, where that is in the area (D-128)
+  for (const l of query.landmarks())
+    if (!landmarks.has(l.id) && cellAt(g, l.x, l.y) >= 0) parts.push({ id: l.id, list: [{ x: Math.floor(l.x), y: Math.floor(l.y) }] });
+  g.objectives = [];
+  for (const { id, list } of parts) {
+    const part = list.reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
     const spot = nearestOpen(g, part.x, part.y, 15, (x, y) => reach[cellIndex(g, x, y)] === 1);
-    return spot ? [{ id, name: landmarkName(id), x: spot.x + 0.5, y: spot.y + 0.5 }] : [];
-  });
+    // one held from where another is (a pair of torii): the first only (D-128)
+    if (spot && !g.objectives.some((o) => Math.hypot(o.x - spot.x - 0.5, o.y - spot.y - 0.5) < 2 * OBJECTIVE.radius))
+      g.objectives.push({ id, name: landmarkName(id), x: spot.x + 0.5, y: spot.y + 0.5 });
+  }
   return g;
 }
 
@@ -416,27 +425,61 @@ export { cellIndex };
 
 /** The cells a unit can walk to from a cell (1 each), steps and corners as paths take them. */
 export function reachable(g: MapGrid, cx: number, cy: number): Uint8Array {
-  const seen = new Uint8Array(g.flags.length);
-  const start = cellIndex(g, cx, cy);
-  if (start < 0 || !passable(g, cx, cy)) return seen;
-  seen[start] = 1;
-  const queue = [start];
-  while (queue.length) {
-    const i = queue.pop()!;
-    const x = (i % g.w) + g.x0;
-    const y = Math.floor(i / g.w) + g.y0;
-    for (let dy = -1; dy <= 1; dy++)
-      for (let dx = -1; dx <= 1; dx++) {
-        if ((!dx && !dy) || !canStep(g, x, y, x + dx, y + dy)) continue;
-        if (dx && dy && !(passable(g, x + dx, y) && passable(g, x, y + dy))) continue;
-        const j = cellIndex(g, x + dx, y + dy);
-        if (!seen[j]) {
-          seen[j] = 1;
-          queue.push(j);
+  return Uint8Array.from(walkFrom(g, [cellIndex(g, cx, cy)]), (d) => (d >= 0 ? 1 : 0));
+}
+
+/**
+ * How long a walk each cell is from the nearest of some cells, as paths go
+ * (cells at open ground's pace: 1 a step to the side, 1.4 a diagonal, over
+ * each cell's pace), -1 where none reaches (D-128). It fills what `out` has
+ * as -1 or further, so one array can take the floods of several regions.
+ */
+export function walkFrom(g: MapGrid, starts: readonly number[], out = new Float32Array(g.flags.length).fill(-1)): Float32Array {
+  flood(g, starts, out);
+  return out;
+}
+
+/** `walkFrom`'s flood, a bucket a fifth of a cell (Dial's): how many cells it reached that none had. */
+function flood(g: MapGrid, starts: readonly number[], out: Float32Array): number {
+  const buckets: number[][] = [[]];
+  let reached = 0;
+  for (const s of starts)
+    if (s >= 0 && out[s] === -1 && passable(g, (s % g.w) + g.x0, Math.floor(s / g.w) + g.y0)) {
+      out[s] = 0;
+      buckets[0]!.push(s);
+      reached++;
+    }
+  for (let b = 0; b < buckets.length; b++)
+    for (const i of buckets[b] ?? []) {
+      if (Math.round(out[i]! * 5) !== b) continue; // reached nearer since
+      const x = (i % g.w) + g.x0;
+      const y = Math.floor(i / g.w) + g.y0;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dy) || !canStep(g, x, y, x + dx, y + dy)) continue;
+          if (dx && dy && !(passable(g, x + dx, y) && passable(g, x, y + dy))) continue;
+          const j = cellIndex(g, x + dx, y + dy);
+          const to = b + Math.round((dx && dy ? 7 : 5) / paceOf(g, j));
+          if (out[j] !== -1 && Math.round(out[j]! * 5) <= to) continue;
+          if (out[j] === -1) reached++;
+          out[j] = to / 5;
+          (buckets[to] ??= []).push(j);
         }
-      }
+    }
+  return reached;
+}
+
+/** The largest set of cells units can walk between (1 each): a map's hearths, seeps and objectives go in it, so each reaches the others (D-128). */
+export function mainRegion(g: MapGrid): Uint8Array {
+  const seen = new Float32Array(g.flags.length).fill(-1);
+  let best = -1;
+  let most = 0;
+  for (let i = 0; i < seen.length; i++) {
+    if (seen[i] !== -1) continue;
+    const n = flood(g, [i], seen);
+    if (n > most) [best, most] = [i, n];
   }
-  return seen;
+  return best < 0 ? new Uint8Array(g.flags.length) : reachable(g, (best % g.w) + g.x0, Math.floor(best / g.w) + g.y0);
 }
 
 /** Whether a unit may stand on a cell: in the area, not water, no wall or match building. */
