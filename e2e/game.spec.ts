@@ -13,7 +13,7 @@ test.use({ baseURL: `http://localhost:${GAME_PORT}` });
 
 async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
-  await page.goto(`/?hud=0&cache=0&traffic=0&fog=0&paused=1&w=${width}&h=${height}&${query}`);
+  await page.goto(`/?hud=0&cache=0&ground=0&traffic=0&fog=0&paused=1&w=${width}&h=${height}&${query}`);
   await page.waitForFunction(() => window.__game !== undefined, null, { timeout: 120_000 });
   await page.evaluate(() => window.__game!.ready());
   await page.evaluate(() => window.__game!.pause(true));
@@ -136,7 +136,10 @@ test.describe("the game (M4)", () => {
     expect(res.far).toBe(0);
   });
 
-  test("takes off from a straight road into the flying level without a flash, flies over its shadow, and lands back on a road", async ({ page }) => {
+  test("takes off from a straight road into the flying level without a flash, flies over its shadow, and lands back on a road", { tag: "@slow" }, async ({ page }) => {
+    // @slow: two changes of map, each waiting for the new map's view: about 30 s on a desktop, but
+    // CI's 2-core runners (one bake worker, software GL) take eight to nine times as long, so CI leaves it out
+    test.slow();
     await open(page, "");
     // a straight stretch of the boulevard south of the Strip, heading south
     await page.evaluate(() => window.__game!.place(193.5, 405.5, Math.PI / 2));
@@ -200,7 +203,7 @@ test.describe("the game (M4)", () => {
     // down low and slow over the nearest road: it lands, back on the driving level
     expect(await page.evaluate(() => window.__game!.approachRoad(30))).not.toBeNull();
     await page.evaluate(() => window.__game!.fly(null, 60, 1 / 30));
-    await page.waitForFunction(() => window.__game!.state().mode === "car", null, { timeout: 120_000 });
+    await page.waitForFunction(() => window.__game!.state().mode === "car", null, { timeout: 360_000 });
     await page.evaluate(() => window.__game!.ready());
     const landed = await state(page);
     expect(landed).toMatchObject({ mode: "car", world: "southwest", level: "Driving" });
@@ -208,12 +211,16 @@ test.describe("the game (M4)", () => {
     expect(landed.h).toBeCloseTo(landed.ground!, 6);
   });
 
-  test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", async ({ page }) => {
-    await open(page, "");
+  test("any vehicle on any map, in place: Tab changes the map, C the vehicle; R puts the plane in clear air", { tag: "@slow" }, async ({ page }) => {
+    // four changes of map, each waiting for the new map's view, and the walking map's tiles are heavy
+    // (44 s at 640×360 with one bake worker, 14 s at 320×180): a small canvas, since nothing here reads
+    // pixels, and @slow, since CI's 2-core runners take eight to nine times as long as a desktop: CI leaves it out
+    test.slow();
+    await open(page, "", 320, 180);
     const from = (await state(page)).lonLat!;
     const km = (a: [number, number]) => Math.hypot((a[0] - from[0]) * 90, (a[1] - from[1]) * 111);
     const arrive = async (want: { mode: string; world: string }) => {
-      await page.waitForFunction((w) => window.__game!.state().world === w.world && window.__game!.state().mode === w.mode && !window.__game!.game.transition, want, { timeout: 120_000 });
+      await page.waitForFunction((w) => window.__game!.state().world === w.world && window.__game!.state().mode === w.mode && !window.__game!.game.transition, want, { timeout: 360_000 });
       await page.evaluate(() => window.__game!.ready());
       const s = await state(page);
       expect(km(s.lonLat!)).toBeLessThan(2);

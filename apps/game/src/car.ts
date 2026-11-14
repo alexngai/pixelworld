@@ -1,4 +1,6 @@
-import { CAR, MAX_STEP } from "./tuning";
+import type { WorldInfo } from "@pixelworlds/engine";
+import { levelScale, vehicleVoxels } from "@pixelworlds/sim";
+import { CAR, DRIVE_PACE, MAX_STEP, pace } from "./tuning";
 
 /**
  * Arcade car physics, as pure functions over a small view of the world
@@ -74,6 +76,24 @@ export interface CarParams {
   /** The car's size in plan (cells). */
   length: number;
   width: number;
+}
+
+/** A world as `carSize` and `carParams` read it (a view's `world`, or `openWorld`'s on a server). */
+export type CarLevel = Pick<WorldInfo, "manifest" | "renderScale">;
+
+/** The drawn car at a world's level (voxels): a little larger than a traffic car there. */
+export function carSize(world: CarLevel): { length: number; width: number; height: number } {
+  const m = world.manifest;
+  const scale = levelScale(m.scale.metersPerCell, m.level, { heightStretch: m.depiction?.heightStretch, maxScale: m.depiction?.vehicleScale });
+  const vox = vehicleVoxels("car", scale, world.renderScale);
+  return { length: vox.length + CAR.extraVoxels.length, width: vox.width + CAR.extraVoxels.width, height: vox.height + CAR.extraVoxels.height };
+}
+
+/** The car's parameters on a world: its level's pace and its size in plan. The controller and a server (the race demo) share them. */
+export function carParams(world: CarLevel): CarParams {
+  const size = carSize(world);
+  const perCell = 16 * world.renderScale;
+  return { pace: pace(world.manifest.scale.metersPerCell, DRIVE_PACE.ref, DRIVE_PACE.floor) / world.renderScale, length: size.length / perCell, width: size.width / perCell };
 }
 
 /** What one step did. */

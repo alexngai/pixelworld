@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { EventQueue, Prediction, SERVER, ServerClock, Smoothing, TickClient, cleanName, joinRoom, type Room, type TickMessage, type TickSnapshot } from "../src/index";
+import { Correction, EventQueue, Prediction, SERVER, ServerClock, Smoothing, TickClient, cleanName, joinRoom, type Room, type TickMessage, type TickSnapshot } from "../src/index";
 import { History, Phases, TickRoom, attachRelay, lobbyHandler, serveStatic, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../src/server";
 import { loopback } from "../src/testing";
 
@@ -689,3 +689,53 @@ describe("netcode run whole (loopback, D-118)", () => {
   });
 });
 
+
+describe("for a race (D-119)", () => {
+  it("says how long a player's inputs have stopped: 0 while they come, and for a bot", () => {
+    const { game, enter } = toyRoom();
+    enter("1");
+    game.addBot("b", "play", () => 0);
+    game.message("1", { k: "in", seq: 1, i: 0, seen: null });
+    game.tick();
+    expect(game.idleFor("1")).toBe(0);
+    for (let t = 0; t < 30; t++) game.tick(); // its page went quiet
+    expect(game.idleFor("1")).toBeCloseTo(30 / 60, 9);
+    expect([game.idleFor("b"), game.idleFor("nobody")]).toEqual([0, 0]);
+    game.message("1", { k: "in", seq: 2, i: 0, seen: null });
+    game.tick();
+    expect(game.idleFor("1")).toBe(0);
+  });
+
+  it("rewinds a heading with the place, the short way round, as Smoothing turns", () => {
+    const h = new History(1);
+    h.record(0, { x: 0, y: 0, h: 0, heading: 3 });
+    h.record(0.1, { x: 1, y: 0, h: 0, heading: -3 }); // across ±π: 0.28 rad, not 6
+    const smoothing = new Smoothing(0);
+    smoothing.push("a", 0, { x: 0, y: 0, h: 0, heading: 3 }, 0);
+    smoothing.push("a", 0.1, { x: 1, y: 0, h: 0, heading: -3 }, 0.1);
+    const at = h.at(0.025, { x: 9, y: 0, h: 0, heading: 0 });
+    expect(at).toEqual({ x: 0.25, y: 0, h: 0, heading: smoothing.at("a", 0.025)!.heading });
+    expect(Math.abs(at.heading! - 3)).toBeLessThan(0.1);
+    // without headings, none
+    const plain = new History(1);
+    plain.record(0, { x: 0, y: 0, h: 0 });
+    plain.record(1, { x: 1, y: 0, h: 0 });
+    expect(plain.at(0.5, { x: 0, y: 0, h: 0 })).toEqual({ x: 0.5, y: 0, h: 0 });
+    expect("heading" in plain.at(0.5, { x: 0, y: 0, h: 0 })).toBe(false);
+  });
+
+  it("draws a correction where the vehicle was and eases it out; a jump is drawn at once", () => {
+    const c = new Correction(0.1, 3);
+    c.moved({ x: 10, y: 5, h: 2, heading: 0.1 }, { x: 10.4, y: 5, h: 2, heading: 0 }); // a bump put it 0.4 cells on
+    expect([c.offset.x, c.offset.y, c.offset.h, c.offset.heading].map((v) => +v.toFixed(9))).toEqual([-0.4, 0, 0, 0.1]);
+    c.update(0.1); // a half-life
+    expect(c.offset.x).toBeCloseTo(-0.2, 9);
+    expect(c.size).toBeCloseTo(0.2, 9);
+    c.moved({ x: 0, y: 0, h: 0, heading: 0 }, { x: 0, y: 0.1, h: 0, heading: 0 }); // another adds to it
+    expect(c.offset.y).toBeCloseTo(-0.1, 9);
+    for (let t = 0; t < 90; t++) c.update(1 / 60);
+    expect(c.offset).toEqual({ x: 0, y: 0, h: 0, heading: 0 }); // eased out
+    c.moved({ x: 0, y: 0, h: 0, heading: 0 }, { x: 5, y: 0, h: 0, heading: 0 }); // the grid, a reset: there at once
+    expect(c.size).toBe(0);
+  });
+});

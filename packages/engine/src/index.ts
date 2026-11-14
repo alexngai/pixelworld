@@ -14,6 +14,7 @@
  */
 export { createWorldView } from "./view";
 export { openWorld } from "./world";
+export { DRAW_ONLY_LAYERS, type DroppableLayer } from "@pixelworlds/world-format";
 export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";
 export { fogLayer, FogLayer, type FogLayerOptions } from "./fog";
 export { listenTo } from "./controller";

@@ -28,6 +28,7 @@ function fakeView(opts: { start?: { x: number; y: number } } = {}) {
     realHeightAt: (_x, _y, h) => h,
     metersPerCellAt: () => 100,
     ensureRect: async () => {},
+    isLoadedRect: () => true,
   };
   const geo = {
     cellToLonLat: (x: number, y: number): [number, number] => [x / 100, -y / 100],

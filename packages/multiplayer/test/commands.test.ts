@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TickClient, type TickSnapshot } from "../src/index";
+import { Schema, TickClient, int, type TickSnapshot } from "../src/index";
 import { TickRoom, type TickRole } from "../src/server";
 import { loopback } from "../src/testing";
 
@@ -74,5 +74,23 @@ describe("commands acknowledged, for a page with no vehicle (D-121)", () => {
     const snaps = page.received.filter((m): m is Snap => (m as { k: string }).k === "snap");
     expect(snaps.at(-1)!.tally).toBe(5);
     expect(snaps.every((s) => s.cmd === undefined)).toBe(true);
+  });
+
+  it("binary snapshots (D-123) say the last command taken too", () => {
+    const TALLY = new Schema<{ tally: number }>({ tally: int });
+    class Binary extends Tally {
+      protected override snapSchema = TALLY;
+    }
+    const lb = loopback((room) => new Binary(room, { clock: false, snapshotEvery: 3 }));
+    const page = lb.join(0.05);
+    const restored: Snap[] = [];
+    const client = new TickClient<never, { tally: number }>(page.room, { tick: 1 / 60, now: lb.now, snapSchema: TALLY, restore: (s) => void restored.push(s) });
+    client.hello("me");
+    lb.run(0.2, () => client.sync());
+    expect(restored.at(-1)!.cmd).toBeUndefined();
+    client.command(4);
+    lb.run(0.3, () => client.sync());
+    expect(restored.at(-1)).toMatchObject({ cmd: 1, tally: 4, ack: 0 });
+    expect(page.received.some((m) => m instanceof Uint8Array)).toBe(true);
   });
 });

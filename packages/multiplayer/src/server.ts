@@ -4,6 +4,10 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { SERVER, type RoomInfo, type ServerMessage } from "./index";
 
+export * from "./areas";
+export * from "./codec";
+export * from "./interest";
+export * from "./replica";
 export * from "./static";
 export * from "./tick";
 
@@ -31,9 +35,11 @@ export interface HostedRoom {
   /** The settings it was opened with (`Relay.open`, as the lobby checked them); undefined for a room a page opened by naming it. */
   readonly settings: unknown;
   readonly isPublic: boolean;
-  /** To one player. */
+  /** To one player: JSON, or binary (a `Uint8Array`, sent as it is: D-123). */
   send(to: string, data: unknown): void;
-  /** To every player in the room but `except` (serialized once). */
+  /** To some players, serialized once (D-123); without it, `TickRoom` broadcasts with the rest excepted. */
+  sendTo?(ids: readonly string[], data: unknown): void;
+  /** To every player in the room but `except` (serialized once; binary as it is). */
   broadcast(data: unknown, except?: ReadonlySet<string>): void;
   players(): string[];
   /** Send a player away, saying why (its page's `onClose` gets the reason). */
@@ -136,7 +142,8 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
   let next = 1;
 
   const later = (f: () => void) => (lag > 0 ? void setTimeout(f, lag) : f());
-  const sendText = (ws: WebSocket, text: string) =>
+  /** Text (JSON), or a hosted game's binary (D-123), which goes as it is, in a binary frame. */
+  const sendText = (ws: WebSocket, text: string | Uint8Array) =>
     later(() => {
       if (ws.readyState === ws.OPEN) ws.send(text);
     });
@@ -187,10 +194,17 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
           isPublic,
           send: (to, data) => {
             const ws = r.members.get(to);
-            if (ws) send(ws, { t: "msg", from: SERVER, data });
+            if (ws) sendText(ws, data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage));
+          },
+          sendTo: (ids, data) => {
+            const text = data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);
+            for (const id of ids) {
+              const ws = r.members.get(id);
+              if (ws) sendText(ws, text);
+            }
           },
           broadcast: (data, except) => {
-            const text = JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);
+            const text = data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);
             for (const [id, ws] of r.members) if (!except?.has(id)) sendText(ws, text);
           },
           players: () => [...r.members.keys()],
