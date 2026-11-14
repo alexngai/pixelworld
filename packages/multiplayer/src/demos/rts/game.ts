@@ -1,3 +1,4 @@
+import { setRemoved } from "pixelworld/engine";
 import {
   BUILDINGS,
   GATHER,
@@ -121,8 +122,6 @@ export class RtsGame {
   readonly structures = new Map<number, Structure>();
   /** The level's buildings knocked down this match, as they fell. */
   razed: number[] = [];
-  /** The cells as the level has them, for a new match. */
-  private readonly pristine: Uint8Array;
   private nextId = 1;
   /** Each side's enemies in sight now (units and buildings), and the enemy buildings it has ever seen. */
   private readonly sight: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
@@ -136,14 +135,13 @@ export class RtsGame {
     readonly grid: MapGrid,
     readonly layout = LAYOUT,
   ) {
-    this.pristine = grid.flags.slice();
     this.reset();
   }
 
   /** A new match: each side's hearth, runners and glim, full seeps, and the level's buildings all standing. */
   reset(): void {
     this.grid.building.fill(0);
-    this.grid.flags.set(this.pristine);
+    setRemoved(this.grid, () => false); // the level's buildings all standing again
     this.razed = [];
     this.structures.clear();
     for (const s of this.grid.structures?.values() ?? []) this.structures.set(s.obj, { ...s });

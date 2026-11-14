@@ -1,4 +1,21 @@
-import type { WorldEdits, WorldQuery } from "pixelworld/engine";
+import {
+  CELL_ROAD,
+  CELL_TREES,
+  CELL_WALL,
+  CELL_WATER,
+  canStep as cellsCanStep,
+  cellIndex,
+  findPath as cellsFindPath,
+  lineClear as cellsLineClear,
+  nearestWalkable,
+  readCells,
+  setRemoved,
+  type CellPoint,
+  type Cells,
+  type PathOptions,
+  type WorldEdits,
+  type WorldQuery,
+} from "pixelworld/engine";
 
 /**
  * Fogfront's rules, the same on the server (game.ts, server.ts) and in the
@@ -6,10 +23,10 @@ import type { WorldEdits, WorldQuery } from "pixelworld/engine";
  * on the Presidio's meadows (San Francisco's driving level, 25 m cells):
  * runners carry it from seeps to their hearth, a lodge trains wardens, and a
  * side whose hearth falls loses. The map is a grid of cells read once from
- * the world's queries (`buildGrid`): water, the level's buildings and the
- * match's block; a step to a neighbour climbs at most `MAX_CLIMB`; roads are
- * quicker and woods slower (and can't be built on). Paths are A* on those
- * cells (`findPath`). The level's buildings have hit points: wardens knock
+ * the world's queries (`buildGrid`, on the engine's cells, D-125): water,
+ * the level's buildings and the match's block; a step to a neighbour climbs
+ * at most `MAX_CLIMB`; roads are quicker and woods slower (and can't be
+ * built on). Paths are the engine's A* on those cells (`findPath`). The level's buildings have hit points: wardens knock
  * them down, the world's edits take them out of every page's view, and their
  * cells open (D-124).
  */
@@ -210,12 +227,13 @@ export interface RtsInfo {
 
 // ---------------------------------------------------------------- the map's cells
 
-export const WATER = 1;
-/** One of the level's buildings: a wall. */
-export const OBJECT = 2;
-export const ROAD = 4;
+/** The engine's cell flags (D-125), by the game's names. */
+export const WATER = CELL_WATER;
+/** One of the level's buildings, walls or landmarks: a wall. */
+export const OBJECT = CELL_WALL;
+export const ROAD = CELL_ROAD;
 /** Trees: slow going, and no building on them. */
-export const WOODS = 8;
+export const WOODS = CELL_TREES;
 
 /** One of the level's buildings in the play area (D-124): wardens can knock it down. */
 export interface Structure {
@@ -234,80 +252,52 @@ export interface Structure {
 /** A level building's hit points: more for each cell it walls and each height step it rises. */
 export const structureHp = (cells: number, height: number): number => Math.min(1000, Math.round((50 + 40 * cells + 60 * Math.max(0, height)) / 10) * 10);
 
-/** The play area's cells, read once from the world: flags, heights, and the buildings standing on them. */
-export interface MapGrid {
-  x0: number;
-  y0: number;
-  w: number;
-  h: number;
-  /** WATER | OBJECT | ROAD | WOODS per cell. */
-  flags: Uint8Array;
-  /** The ground at each cell's middle (steps). */
-  height: Float32Array;
-  /** The building on a cell (its id), 0 for none: changes as they go up and fall. */
+/**
+ * The play area's cells, read once from the world (the engine's `Cells`,
+ * D-125: flags, heights, tops, what stands on each), with the match's own
+ * buildings on them and the level's buildings wardens can knock down.
+ */
+export interface MapGrid extends Cells {
+  /** The match's building on a cell (its id), 0 for none: changes as they go up and fall. */
   building: Int32Array;
   /** The level's buildings, by object (D-124). */
   structures?: Map<number, Structure>;
-  /** Every placed object walling a cell (by cell): it opens once all of them have fallen. */
-  walls?: Map<number, number[]>;
 }
 
-const isTree = (group: string) => group === "tree" || group.startsWith("tree.");
 /** The level's objects wardens can knock down: buildings (not landmarks, walls or bridges). */
 const isBuilding = (group: string) => group === "building" || group.startsWith("building.");
-/** What walls a cell besides water: placed objects but trees (woods) and props (street lights, signals). */
-const blocks = (group: string) => !isTree(group) && !group.startsWith("prop.");
 
 /** Read the play area's cells from a world's queries (the terrain and objects there loaded: `query.ensure`). */
 export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP): MapGrid {
-  const n = map.w * map.h;
   const structures = new Map<number, Structure>();
-  const walls = new Map<number, number[]>();
   const heights = new Map<number, number>();
-  const g: MapGrid = { ...map, flags: new Uint8Array(n), height: new Float32Array(n), building: new Int32Array(n), structures, walls };
-  for (let cy = 0; cy < map.h; cy++)
-    for (let cx = 0; cx < map.w; cx++) {
-      const x = map.x0 + cx + 0.5;
-      const y = map.y0 + cy + 0.5;
-      const i = cy * map.w + cx;
-      g.height[i] = query.heightAt(x, y) ?? 0;
-      let f = 0;
-      if (query.surfaceAt(x, y)?.waterLevel != null) f |= WATER;
-      const objects = query.objectsAt(x, y);
-      const walling = objects.filter((o) => blocks(o.group));
-      if (walling.length) {
-        f |= OBJECT;
-        walls.set(i, walling.map((o) => o.index));
-        for (const o of walling) {
-          if (!isBuilding(o.group)) continue;
-          let s = structures.get(o.index);
-          if (!s) {
-            structures.set(o.index, (s = { obj: o.index, x: 0, y: 0, top: o.top ?? 0, cells: [], hp: 0 }));
-            heights.set(o.index, o.top !== null && o.base !== null ? o.top - o.base : 0);
-          }
-          s.cells.push(i);
-          s.x += x;
-          s.y += y;
-        }
-      } else if (objects.some((o) => isTree(o.group))) f |= WOODS;
-      if (query.roadAt(x, y)) f |= ROAD;
-      g.flags[i] = f;
-    }
+  const cells = readCells(query, map, {
+    onObject: (o, i) => {
+      if (!isBuilding(o.group)) return;
+      let s = structures.get(o.index);
+      if (!s) {
+        structures.set(o.index, (s = { obj: o.index, x: 0, y: 0, top: o.top ?? 0, cells: [], hp: 0 }));
+        heights.set(o.index, o.top !== null && o.base !== null ? o.top - o.base : 0);
+      }
+      s.cells.push(i);
+      s.x += map.x0 + (i % map.w) + 0.5;
+      s.y += map.y0 + Math.floor(i / map.w) + 0.5;
+    },
+  });
   for (const s of structures.values()) {
     s.x /= s.cells.length;
     s.y /= s.cells.length;
     s.hp = structureHp(s.cells.length, heights.get(s.obj)!);
   }
-  return g;
+  return { ...cells, building: new Int32Array(cells.flags.length), structures };
 }
 
 /**
  * One of the level's buildings has fallen (`razed` has it, D-124): the cells
- * it walled open, those nothing else standing walls.
+ * it walled open, those nothing else standing walls, and their tops drop.
  */
-// ponytail: trees on a fallen building's cells stay out of the woods; read them in `walls` if that shows
 export function razeCells(g: MapGrid, obj: number, razed: ReadonlySet<number>): void {
-  for (const i of g.structures?.get(obj)?.cells ?? []) if (g.walls?.get(i)?.every((o) => razed.has(o)) ?? true) g.flags[i]! &= ~OBJECT;
+  setRemoved(g, (o) => razed.has(o), [obj]);
 }
 
 /**
@@ -318,20 +308,17 @@ export function razeCells(g: MapGrid, obj: number, razed: ReadonlySet<number>): 
  */
 export class Razed {
   private applied: number[] = [];
-  private readonly pristine: Uint8Array;
 
   constructor(
     private readonly edits: Pick<WorldEdits, "remove" | "restore">,
     private readonly grid: MapGrid,
-  ) {
-    this.pristine = grid.flags.slice();
-  }
+  ) {}
 
   /** The match's list now: the buildings that fell since the last. */
   sync(razed: readonly number[]): number[] {
     if (this.applied.length > razed.length || this.applied.some((o, i) => razed[i] !== o)) {
       this.edits.restore();
-      this.grid.flags.set(this.pristine);
+      setRemoved(this.grid, () => false);
       this.applied = [];
     }
     const fresh = razed.slice(this.applied.length);
@@ -339,29 +326,17 @@ export class Razed {
     this.applied = [...razed];
     this.edits.remove(fresh);
     const all = new Set(razed);
-    for (const o of fresh) razeCells(this.grid, o, all);
+    setRemoved(this.grid, (o) => all.has(o), fresh);
     return fresh;
   }
 }
 
-/** A cell's index in the grid, or -1 outside it. */
-export function cellIndex(g: MapGrid, cx: number, cy: number): number {
-  const x = cx - g.x0;
-  const y = cy - g.y0;
-  return x < 0 || y < 0 || x >= g.w || y >= g.h ? -1 : y * g.w + x;
-}
+export { cellIndex };
 
-/** Whether a unit may stand on a cell: in the area, not water, no object or building. */
+/** Whether a unit may stand on a cell: in the area, not water, no wall or match building. */
 export function passable(g: MapGrid, cx: number, cy: number): boolean {
   const i = cellIndex(g, cx, cy);
   return i >= 0 && (g.flags[i]! & (WATER | OBJECT)) === 0 && g.building[i] === 0;
-}
-
-/** Whether a unit may step from one cell to a neighbour: both passable, and not too steep. */
-export function canStep(g: MapGrid, ax: number, ay: number, bx: number, by: number): boolean {
-  if (!passable(g, bx, by)) return false;
-  const a = cellIndex(g, ax, ay);
-  return a < 0 || Math.abs(g.height[a]! - g.height[cellIndex(g, bx, by)]!) <= MAX_CLIMB;
 }
 
 /** How quick going is on a cell, over open ground's: roads quicker, woods slower. */
@@ -378,198 +353,37 @@ export function groundAt(g: MapGrid, x: number, y: number): number {
 
 // ---------------------------------------------------------------- paths
 
-export interface Point {
-  x: number;
-  y: number;
+export type Point = CellPoint;
+
+const pathOptions = new WeakMap<MapGrid, PathOptions>();
+/** The match's walking for the engine's paths: walls, water and the match's buildings shut, roads quicker, woods slower, `MAX_CLIMB`. */
+function walking(g: MapGrid): PathOptions {
+  let o = pathOptions.get(g);
+  if (!o) {
+    const shut = WATER | OBJECT;
+    o = { cost: (i) => (g.flags[i]! & shut || g.building[i] ? Infinity : 1 / paceOf(g, i)), minCost: 1 / ROAD_SPEED, maxClimb: MAX_CLIMB };
+    pathOptions.set(g, o);
+  }
+  return o;
 }
 
-const DIRS: [number, number][] = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-  [1, 1],
-  [1, -1],
-  [-1, 1],
-  [-1, -1],
-];
-
-/** A cell's cost to cross a cell's length (s at speed 1). */
-const costAt = (g: MapGrid, i: number) => 1 / paceOf(g, i);
-
-/** A min-heap of grid indices by their f score. */
-class Heap {
-  private readonly items: number[] = [];
-  constructor(private readonly f: Float64Array) {}
-  get size(): number {
-    return this.items.length;
-  }
-  push(i: number): void {
-    const a = this.items;
-    a.push(i);
-    let k = a.length - 1;
-    while (k > 0) {
-      const p = (k - 1) >> 1;
-      if (this.f[a[p]!]! <= this.f[i]!) break;
-      a[k] = a[p]!;
-      k = p;
-    }
-    a[k] = i;
-  }
-  pop(): number {
-    const a = this.items;
-    const top = a[0]!;
-    const last = a.pop()!;
-    if (a.length) {
-      let k = 0;
-      for (;;) {
-        const l = 2 * k + 1;
-        if (l >= a.length) break;
-        const r = l + 1;
-        const c = r < a.length && this.f[a[r]!]! < this.f[a[l]!]! ? r : l;
-        if (this.f[a[c]!]! >= this.f[last]!) break;
-        a[k] = a[c]!;
-        k = c;
-      }
-      a[k] = last;
-    }
-    return top;
-  }
-}
+/** Whether a unit may step from one cell to a neighbour: both passable, and not too steep. */
+export const canStep = (g: MapGrid, ax: number, ay: number, bx: number, by: number): boolean => cellsCanStep(g, ax, ay, bx, by, walking(g));
 
 /**
- * A path from a point to a goal over the cells (A*, eight ways, no corner
- * cutting, roads quicker, woods slower), straightened where a straight line is clear and
- * no slower: the points to walk through, the last the goal itself. A goal
- * that can't be reached (water, a wall of woods, a building's middle) gives
- * the path to the reachable cell nearest it. Empty when already there, or
- * the start is shut in.
+ * A path from a point to a goal over the cells (the engine's A*, D-125: eight
+ * ways, no corner cut, roads quicker, woods slower), straightened where a
+ * straight line is clear and no slower; the reachable cell nearest a goal
+ * that can't be reached.
  */
-export function findPath(g: MapGrid, from: Point, to: Point): Point[] {
-  const sx = Math.floor(from.x);
-  const sy = Math.floor(from.y);
-  const gx = Math.floor(to.x);
-  const gy = Math.floor(to.y);
-  let start = cellIndex(g, sx, sy);
-  if (start < 0) return [];
-  // standing where it can't (pushed, or something went up there): from the nearest open cell
-  if (!passable(g, sx, sy)) {
-    const near = nearestOpen(g, sx, sy, 3);
-    if (!near) return [];
-    start = cellIndex(g, near.x, near.y);
-  }
-  const n = g.w * g.h;
-  const cost = new Float64Array(n).fill(Infinity);
-  const f = new Float64Array(n);
-  const from_ = new Int32Array(n).fill(-1);
-  const closed = new Uint8Array(n);
-  const tx = Math.min(g.w - 1, Math.max(0, gx - g.x0));
-  const ty = Math.min(g.h - 1, Math.max(0, gy - g.y0));
-  const goal = ty * g.w + tx;
-  const guess = (i: number) => {
-    const dx = Math.abs((i % g.w) - tx);
-    const dy = Math.abs(Math.floor(i / g.w) - ty);
-    return (Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy)) / ROAD_SPEED;
-  };
-  cost[start] = 0;
-  f[start] = guess(start);
-  const open = new Heap(f);
-  open.push(start);
-  let best = start;
-  let bestGuess = guess(start);
-  while (open.size) {
-    const i = open.pop();
-    if (closed[i]) continue;
-    closed[i] = 1;
-    const h = guess(i);
-    if (h < bestGuess || (h === bestGuess && cost[i]! < cost[best]!)) {
-      best = i;
-      bestGuess = h;
-    }
-    if (i === goal) break;
-    const cx = (i % g.w) + g.x0;
-    const cy = Math.floor(i / g.w) + g.y0;
-    for (const [dx, dy] of DIRS) {
-      const nx = cx + dx;
-      const ny = cy + dy;
-      if (!canStep(g, cx, cy, nx, ny)) continue;
-      if (dx && dy && !(passable(g, cx + dx, cy) && passable(g, cx, cy + dy))) continue; // no cutting a corner
-      const j = cellIndex(g, nx, ny);
-      if (closed[j]) continue;
-      const c = cost[i]! + ((dx && dy ? Math.SQRT2 : 1) * (costAt(g, i) + costAt(g, j))) / 2;
-      if (c >= cost[j]!) continue;
-      cost[j] = c;
-      from_[j] = i;
-      f[j] = c + guess(j);
-      open.push(j);
-    }
-  }
-  const cells: number[] = [];
-  for (let i = best; i !== -1; i = from_[i]!) cells.push(i);
-  cells.reverse();
-  const pts = cells.map((i) => ({ x: (i % g.w) + g.x0 + 0.5, y: Math.floor(i / g.w) + g.y0 + 0.5 }));
-  const costs = cells.map((i) => cost[i]!);
-  if (best === goal) pts[pts.length - 1] = { x: to.x, y: to.y }; // the goal itself, within its cell
-  pts[0] = { x: from.x, y: from.y };
-  // straighten: from each point, on to the furthest one a straight line reaches as quickly
-  const out: Point[] = [];
-  let a = 0;
-  while (a < pts.length - 1) {
-    let b = pts.length - 1;
-    while (b > a + 1 && !(lineClear(g, pts[a]!, pts[b]!) && lineCost(g, pts[a]!, pts[b]!) <= costs[b]! - costs[a]! + 1e-6)) b--;
-    out.push(pts[b]!);
-    a = b;
-  }
-  return out;
-}
-
-/** Points along a line, a fifth of a cell apart. */
-function* along(a: Point, b: Point): Generator<Point> {
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  const n = Math.max(1, Math.ceil(len * 5));
-  for (let k = 0; k <= n; k++) yield { x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n };
-}
+export const findPath = (g: MapGrid, from: Point, to: Point): Point[] => cellsFindPath(g, from, to, walking(g));
 
 /** Whether a unit can walk a straight line: every cell on it open, and no step too steep. */
-export function lineClear(g: MapGrid, a: Point, b: Point): boolean {
-  let px = Math.floor(a.x);
-  let py = Math.floor(a.y);
-  for (const p of along(a, b)) {
-    const cx = Math.floor(p.x);
-    const cy = Math.floor(p.y);
-    if (cx === px && cy === py) continue;
-    // a diagonal step through a corner: both cells beside it open
-    if (cx !== px && cy !== py && !(passable(g, cx, py) && passable(g, px, cy))) return false;
-    if (!canStep(g, px, py, cx, cy)) return false;
-    px = cx;
-    py = cy;
-  }
-  return true;
-}
-
-/** A straight line's cost (as `findPath` counts it). */
-function lineCost(g: MapGrid, a: Point, b: Point): number {
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  let sum = 0;
-  let n = 0;
-  for (const p of along(a, b)) {
-    const i = cellIndex(g, Math.floor(p.x), Math.floor(p.y));
-    sum += costAt(g, i);
-    n++;
-  }
-  return (len * sum) / n;
-}
+export const lineClear = (g: MapGrid, a: Point, b: Point): boolean => cellsLineClear(g, a, b, walking(g));
 
 /** The open cell nearest a cell, within `radius` rings; null if none. */
-export function nearestOpen(g: MapGrid, cx: number, cy: number, radius: number, ok: (x: number, y: number) => boolean = () => true): Point | null {
-  for (let r = 0; r <= radius; r++)
-    for (let dy = -r; dy <= r; dy++)
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        if (passable(g, cx + dx, cy + dy) && ok(cx + dx, cy + dy)) return { x: cx + dx, y: cy + dy };
-      }
-  return null;
-}
+export const nearestOpen = (g: MapGrid, cx: number, cy: number, radius: number, ok: (x: number, y: number) => boolean = () => true): Point | null =>
+  nearestWalkable(g, cx, cy, radius, walking(g), ok);
 
 // ---------------------------------------------------------------- placing a building
 

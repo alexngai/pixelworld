@@ -19,4 +19,5 @@ export { fogLayer, FogLayer, type FogLayerOptions } from "./fog";
 export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";
+export * from "./cells";
 export type * from "./types";

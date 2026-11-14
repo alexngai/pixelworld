@@ -42,16 +42,31 @@ import { loopback } from "../../src/testing";
  * pages ordering through the loopback, and the bot playing a match to a win.
  */
 
-/** A map from text: `.` open, `#` a building of the level's, `~` water, `=` road, `t` woods, a digit open ground that high (steps). */
+/** A map from text: `.` open, `#` a building of the level's (an object of its own, 1000 + its cell), `~` water, `=` road, `t` woods, a digit open ground that high (steps). */
 function gridOf(rows: string[]): MapGrid {
   const h = rows.length;
   const w = rows[0]!.length;
-  const g: MapGrid = { x0: 0, y0: 0, w, h, flags: new Uint8Array(w * h), height: new Float32Array(w * h), building: new Int32Array(w * h) };
+  const n = w * h;
+  const g: MapGrid = {
+    x0: 0,
+    y0: 0,
+    w,
+    h,
+    flags: new Uint8Array(n),
+    height: new Float32Array(n),
+    top: new Float32Array(n),
+    surface: new Uint8Array(n),
+    roadClass: new Uint8Array(n),
+    objects: new Map(),
+    building: new Int32Array(n),
+  };
   rows.forEach((r, y) =>
     [...r].forEach((c, x) => {
       const i = y * w + x;
       g.flags[i] = c === "~" ? WATER : c === "#" ? OBJECT : c === "=" ? ROAD : c === "t" ? WOODS : 0;
-      if (/\d/.test(c)) g.height[i] = Number(c);
+      if (/\d/.test(c)) g.height[i] = g.top[i] = Number(c);
+      if (c === "#") g.objects.set(i, [{ index: 1000 + i, wall: true, trees: false, top: 1 }]);
+      if (c === "t") g.objects.set(i, [{ index: 1000 + i, wall: false, trees: true, top: 3 }]);
     }),
   );
   return g;
@@ -62,10 +77,14 @@ const open = (w: number, h: number) => gridOf(Array.from({ length: h }, () => ".
 /** Level buildings on a text map's `#` cells: each its object and cells, the cells' walls every one standing there. */
 function standing(g: MapGrid, list: { obj: number; cells: [number, number][] }[]): MapGrid {
   g.structures = new Map();
-  g.walls = new Map();
+  const walled = new Set<number>();
   for (const { obj, cells } of list) {
     const ids = cells.map(([x, y]) => cellIndex(g, x, y));
-    for (const i of ids) g.walls.set(i, [...(g.walls.get(i) ?? []), obj]);
+    for (const i of ids) {
+      if (!walled.has(i)) g.objects.set(i, []); // the cell's own stand-in goes: these wall it
+      walled.add(i);
+      g.objects.get(i)!.push({ index: obj, wall: true, trees: false, top: 1 });
+    }
     const mid = (k: 0 | 1) => cells.reduce((sum, c) => sum + c[k] + 0.5, 0) / cells.length;
     g.structures.set(obj, { obj, x: mid(0), y: mid(1), top: 1, cells: ids, hp: structureHp(cells.length, 1) });
   }
@@ -629,7 +648,7 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     // the building nearest the Tide's hearth, and a cell it alone walls
     const [hx, hy] = LAYOUT.hearths.tide;
     const target = [...world.grid.structures!.values()].sort((a, b) => Math.hypot(a.x - hx, a.y - hy) - Math.hypot(b.x - hx, b.y - hy))[0]!;
-    const cell = target.cells.find((i) => world.grid.walls!.get(i)!.length === 1)!;
+    const cell = target.cells.find((i) => world.grid.objects.get(i)!.filter((o) => o.wall).length === 1)!;
     const [cx, cy] = [(cell % MAP.w) + MAP.x0, Math.floor(cell / MAP.w) + MAP.y0];
     const standsIn = (n: number) => worlds[n]!.query.objectsAt(cx + 0.5, cy + 0.5).some((o) => o.index === target.obj);
     expect([standsIn(0), standsIn(1), standsIn(2)]).toEqual([true, true, true]);
