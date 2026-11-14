@@ -1826,7 +1826,7 @@ The point is more room for visual interest; both halves are wanted.
 - **Trains and ferries** (noted only, D-125's "Later"; `routes.json` against each rectangle): Kowloon has the Star Ferry's routes across the harbour (13 segments, 507 cells in the map); the Strip has one train segment (79 cells). Midtown has none in the routes (the subway is underground), nor do Higashiyama (the Keihan line runs by the Kamo, west of the map) or the Presidio.
 - **Big worlds (D-123):** none of the five levels has object chunks (`objectChunks`, southwest and southwest-fly only), so their objects keep their indices, which the level's buildings and the world's edits need.
 - **Rejected alternatives:**
-  - **The farthest pair of sites:** on the Strip it put the hearths in opposite corners, a 235-cell walk apart (the Presidio's are about 110).
+  - **The farthest pair of sites:** on the Strip it put the hearths in opposite corners, a 235-cell walk apart (the Presidio's stand 94 cells apart in a straight line).
   - **Walks by steps (8-way breadth-first):** a diagonal counts as a straight step, and roads aren't quicker, so seeps "as far from either" weren't by time.
   - **The page asking the lobby for a room's map before joining:** private rooms aren't listed, and the room's own word is the one that counts; loading the page again on a mismatch is one line.
   - **Choosing each map's rectangle by a search over the whole level:** the rectangle is a designer's choice (what landmarks it takes in); the generator does the placing, which is what has to be checked.
