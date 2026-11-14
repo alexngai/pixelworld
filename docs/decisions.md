@@ -142,6 +142,7 @@ Status values:
 | D-132 | Hong Kong's hills smooth: GLO-30's 30 m pixels interpolated onto finer cells, not spread flat | Accepted (M5) |
 | D-133 | Hong Kong's details: double-deckers, boats in the typhoon shelters, open ridges, concrete slopes, more neon and landmarks, and the harbour's driving level | Accepted (M5) |
 | D-134 | Hong Kong's night, cloud, markets, estates, signs and temples | Accepted (M5) |
+| D-135 | Hong Kong's landmark towers lit at night like the buildings round them | Accepted (M5) |
 
 ---
 
@@ -2016,3 +2017,9 @@ The point is more room for visual interest; both halves are wanted.
   - **Lights that move:** palette cycling is a feature of its own (D-012 names it, nothing draws it).
   - **A cloud base in the fog:** an engine change for one world.
 - **Later:** Aberdeen's Tin Hau temple, which the rule misses; palette cycling for the towers' light shows and the neon; a cloud base; vertical signs on the tong lau; Montane Mansion's courtyard (its five blocks are drawn as composites); the driving level's East Kowloon, whose small buildings with no data are typed as village houses.
+
+### D-135: Hong Kong's landmark towers lit at night like the buildings round them (accepted, M5)
+- **Why:** in D-134's night view the ICC and Central Plaza stood out as solid white towers. Their `structure` was `led-white`, and core's `obeliskTower` draws its fins and floor lines (about 60% of the skin) and `pyramidTower` its walls and spire in that role, so most of each façade glowed. The owner asked for them to be lit like the other buildings.
+- **What:** core's `obeliskTower` and `pyramidTower` take an optional `lit` role (lit.* variants, one per tower by seed) and `litFraction` (0.35), as core's `building` does: each window pane is lit by night at that share. Without `lit` they draw nothing random, so every other pack's towers are unchanged. The `hongkong` pack's towers go back to steel (the ICC, Two IFC, the Bank of China Tower) and granite (Central Plaza) with `lit-cool` or `lit` windows at 0.5; the Convention Centre's joints go back to steel, and `led-white` is gone (41 ramps).
+- **Looked at:** the towers in the model preview by day (as before) and night; the harbour at night, the ICC and Central Plaza dark glass with lit windows among their neighbours. The Hong Kong goldens pass unchanged; other packs' towers draw as before (they name no `lit`).
+- **Rejected alternatives:** lighting only the towers' edges and crowns (a new role in both generators for a look the owner didn't ask for); `lit` as the towers' whole `window` (every pane glowing: another white tower).

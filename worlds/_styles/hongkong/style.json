@@ -39,7 +39,6 @@
     "rust": ["#1f1512", "#38231c", "#553428", "#724636", "#8e5a46", "#aa7058"],
     "roof-flat": ["#2a2b2f", "#44454a", "#5f6065", "#7c7d81", "#99999c", "#b6b5b5"],
     "steel": ["#1a1e26", "#2a303b", "#3c4451", "#505a68", "#677281", "#808b9a"],
-    "led-white": ["#1a1e26", "#2a303b", "#3c4451", "#505a68", "#677281", "#808b9a"],
     "glass": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
     "lit": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
     "lit-cool": ["#151b29", "#21293b", "#2f3a4f", "#405065", "#55687c", "#6e8293"],
@@ -403,7 +402,7 @@
     },
     "landmark.hall.curved.glass": {
       "generator": "curvedRoofHall",
-      "ramps": { "wall": "curtain-glass", "trim": "led-white", "roof": "steel" },
+      "ramps": { "wall": "curtain-glass", "trim": "steel", "roof": "steel" },
       "params": { "low": 0.3, "rise": 6 }
     },
     "landmark.hotel": {
@@ -418,13 +417,13 @@
     },
     "landmark.tower.glass": {
       "generator": "obeliskTower",
-      "ramps": { "structure": "led-white", "window": "curtain-glass" },
-      "params": { "base": 0.125, "top": 0.82, "corner": 0.1, "crown": 0.04 }
+      "ramps": { "structure": "steel", "window": "curtain-glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.125, "top": 0.82, "corner": 0.1, "crown": 0.04, "litFraction": 0.5 }
     },
     "landmark.tower.obelisk.diagonal": {
       "generator": "obeliskTower",
-      "ramps": { "structure": "led-white", "window": "glass" },
-      "params": { "base": 0.14, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1 }
+      "ramps": { "structure": "steel", "window": "glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.14, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1, "litFraction": 0.5 }
     },
     "landmark.tower.cylinder": {
       "generator": "column",
@@ -433,8 +432,8 @@
     },
     "landmark.tower.pyramid": {
       "generator": "pyramidTower",
-      "ramps": { "structure": "led-white", "window": "curtain-glass" },
-      "params": { "base": 0.16, "spire": 0.18, "wing": 0.45 }
+      "ramps": { "structure": "granite", "window": "curtain-glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.16, "spire": 0.18, "wing": 0.45, "litFraction": 0.5 }
     },
     "prop.boat": {
       "generator": "boat",
@@ -715,7 +714,6 @@
       "neon-yellow": ["#3a2a06", "#7a5a0c", "#c49414", "#f2c62a", "#ffe066", "#fff4b8"],
       "neon-green": ["#06260e", "#0a5a1c", "#10962e", "#2ee05a", "#7cf29a", "#c8ffd6"],
       "sign-white": ["#2a2c36", "#5c6070", "#a2a8b8", "#d6dbe6", "#eef1f6", "#ffffff"],
-      "led-white": ["#2a2c36", "#6a7080", "#b4bccc", "#e2e8f2", "#f4f7fb", "#ffffff"],
       "marker": ["#2a0f22", "#551628", "#8a1f2c", "#c0302d", "#e6553a", "#ff8a4c"]
     }
   }

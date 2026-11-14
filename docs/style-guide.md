@@ -622,7 +622,7 @@ A full pack (`worlds/_styles/hongkong/style.json`), laid out like `tokyo` with i
 - `building.estate` (`estateTower`, `estate.ts`): the Housing Authority's blocks on whatever plan the footprint gives: white or cream walls gridded with small windows on every storey, air conditioners beside them, one estate colour per block in corner stripes, storey bands or window panels, the corridors as dark slots, a glass lobby, machine rooms and a water tank on the roof.
 - **Vertical signs and rooftop billboards** (`compositeTower`'s `vertical` and `rooftop`): a sign two voxels wide painted up the front near a corner for three to six storeys, its field one sign colour with characters in another; a billboard on the roof's front edge on a steel base. Commercial blocks carry them most (0.6, 0.35), composite blocks often (0.45, 0.15), residential ones rarely.
 
-**Night:** the landmark towers' structure is `led-white`, steel by day and white light at night: the Bank of China Tower's frame, the ICC's and Two IFC's fins, Central Plaza's, the Convention Centre's wall joints. Hopewell Centre's glazed ring is lit.
+**Night:** the landmark towers (the ICC and Two IFC, the Bank of China Tower, Central Plaza) light half their windows by night, cool or warm by tower, as the buildings round them do (core's `obeliskTower` and `pyramidTower` take a `lit` role, D-135); Hopewell Centre's glazed ring is lit.
 
 **Cloud:** fog (D-063) over the island's ridge from High West to Mount Parker, `mosaic-white` shade 5, density 0.55 with a 350 m soft edge, under a ceiling of 900 m, drifting in patches about 350 m across: mist on the hilltops, the Mid-Levels and the town below clear. At night a dim veil.
 
