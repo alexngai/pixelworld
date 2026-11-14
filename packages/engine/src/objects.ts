@@ -311,3 +311,34 @@ export class ObjectIndex {
     return this.landmarkList;
   }
 }
+
+/**
+ * Placed objects by chunk (D-123), for a world that holds part of itself at a
+ * time: each chunk's own index over its own file, made on its first query and
+ * let go with its terrain, and the landmarks' kept whole. A chunk's file holds
+ * everything without a landmark id that touches it, so a point's chunk alone
+ * answers what stands there.
+ */
+export class ChunkedObjects {
+  private readonly indexes = new WeakMap<object, ObjectIndex>();
+
+  constructor(
+    private readonly landmarkIndex: ObjectIndex,
+    /** The instances of the chunk holding a cell: null where it has none, undefined where it isn't loaded. */
+    private readonly ofChunk: (x: number, y: number) => { instances: ObjectInstance[] } | null | undefined,
+    private readonly index: (instances: readonly ObjectInstance[]) => ObjectIndex,
+  ) {}
+
+  at(x: number, y: number): ObjectHit[] {
+    const file = this.ofChunk(x, y);
+    const marks = this.landmarkIndex.at(x, y);
+    if (!file) return marks;
+    let idx = this.indexes.get(file);
+    if (!idx) this.indexes.set(file, (idx = this.index(file.instances)));
+    return [...marks, ...idx.at(x, y)];
+  }
+
+  landmarks(): LandmarkInfo[] {
+    return this.landmarkIndex.landmarks();
+  }
+}

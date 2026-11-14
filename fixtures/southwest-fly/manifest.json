@@ -587,11 +587,100 @@
     ],
     "sha256": "1e90765ad6434a3dab8e697ec3465644d3954197242a308ee9bbd81501d756a2"
   },
-  "packageHash": "c7f06a21aa96bcf0de3a08e4141155e63cfecbf4cb13ceb377d7848dbae23173",
+  "packageHash": "01d260dc424debf3e2c7f452a29d28c6787fb26b9dd5aa965b49c06760405f1f",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "596e06628b110268524a6aee7e61856168fc4319a9d6a0919fb4b2644e500c44",
     "version": 1,
     "count": 479
+  },
+  "objectChunks": {
+    "version": 1,
+    "path": "objects/{x}_{y}.json.gz",
+    "landmarks": {
+      "path": "objects/landmarks.json.gz",
+      "sha256": "d68c4ce45fa07befb520f60521fc9fb97c054dbcaeafca5c06ced9facbb6bfe2",
+      "count": 11
+    },
+    "chunks": [
+      {
+        "x": 0,
+        "y": 0,
+        "sha256": "7642fa4f5ee9fc8cc71a1a44d8e1c4b2e09ab2a097e2fa9db5907de99178309e",
+        "count": 1
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "sha256": "a0595459e0c6325f1e892e2a7172b8ba958970bf124ab7126b53dceb0662406f",
+        "count": 66
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "sha256": "303c10d245b2241da31208694f2298c0b3ef01067af6b707bc6a4924debed8c5",
+        "count": 12
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "sha256": "56765ea4904f2d2db00c80fc7f8af97bfc4c86b8e6173982a599a661122038e7",
+        "count": 2
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "sha256": "ce1b645bc7fad7107eb96659728c5bcd7f428098dc1568af10e13498ec769133",
+        "count": 1203
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "sha256": "5ae54e393c5c00c3fbc48c2f256946c4e2aaff98de4f47b016dd963a9ddadfef",
+        "count": 898
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "sha256": "a12cd8793aac2507a8dd7affd15c9370df775c8918e81e2ba3e9c036a699bbad",
+        "count": 348
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "sha256": "4767037aa38e3863a346b7c475107e97b87108d60bdfa7e89962ee748260361b",
+        "count": 444
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "sha256": "53b5837374c5fcda58a9220fcc24b1e9deb5fc530041d4b20ae11b29d9e637e5",
+        "count": 2
+      },
+      {
+        "x": 1,
+        "y": 3,
+        "sha256": "5133f93534a7e18cd7a6b9dfdd12ddb13e9047ac5b24c3cee1e097fe6872c73d",
+        "count": 15
+      },
+      {
+        "x": 2,
+        "y": 3,
+        "sha256": "849597fc259c162305b3b6c51c319b63392d04ca50fc29104961bfdb1b07afbd",
+        "count": 28
+      },
+      {
+        "x": 4,
+        "y": 3,
+        "sha256": "145faf948f2573b4f2914194df8838deeaf4bb787c0c3184e879c2c38f79ac7e",
+        "count": 1
+      },
+      {
+        "x": 5,
+        "y": 3,
+        "sha256": "e77dd2394cb094fcb6bac07bb52b9d89e2fd7109f41b7b200a03f0d842e576a0",
+        "count": 11
+      }
+    ]
   }
 }

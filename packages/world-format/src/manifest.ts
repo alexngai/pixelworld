@@ -84,6 +84,18 @@ export interface WorldManifest {
   /** Placed objects (a JSON file relative to the manifest); see docs/world-format.md. */
   objects?: { path: string; sha256?: string; count?: number };
   /**
+   * Placed objects by chunk as well (D-123, `pixelworld object-chunks`): each
+   * chunk's file (`path` with its `{x}` and `{y}`) holds the instances without
+   * a landmark id whose bounds touch it; the landmarks have their own file.
+   * For clients that hold part of a world at a time.
+   */
+  objectChunks?: {
+    version: number;
+    path: string;
+    landmarks: { path: string; sha256?: string; count: number };
+    chunks: { x: number; y: number; sha256?: string; count: number }[];
+  };
+  /**
    * How objects are drawn at this scale level; overrides the style pack (D-047).
    * `vehicleScale`: the most traffic vehicles are enlarged over their real size (D-060).
    */

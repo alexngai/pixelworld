@@ -141,6 +141,12 @@ def parser() -> argparse.ArgumentParser:
     rts.add_argument("region", type=Path, help=spec_help)
     rts.add_argument("--out", type=Path, help=out_help)
 
+    obc = add(
+        "object-chunks",
+        "add a built package's objects by chunk, for clients holding part of a world (D-123)",
+    )
+    obc.add_argument("package", type=Path, help="a built world package (its directory)")
+
     her = add(
         "heroes",
         "re-package the offline bakes and paint-overs of hero landmarks into a built package",
@@ -247,6 +253,13 @@ def run(args: argparse.Namespace) -> int:
             report = refresh_routes(args.region, out)
         print(json.dumps(report, indent=2))
         print(f"routes for {out} in {stages.elapsed:.0f}s", file=sys.stderr)
+        return OK
+
+    if args.command == "object-chunks":
+        from .object_chunks import write_object_chunks
+
+        summary = write_object_chunks(args.package)
+        print(json.dumps(summary, indent=2))
         return OK
 
     if args.command == "heroes":

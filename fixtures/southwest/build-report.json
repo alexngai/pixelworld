@@ -1,5 +1,5 @@
 {
-  "packageHash": "7370e793c07f308c217e281a08d99740a632e06af68125553bcb40c2ffcdaf69",
+  "packageHash": "27a4751796427d1d987b48973dac1f4e864b512123d598616200998a49d25828",
   "cells": [
     1155,
     709
@@ -96,5 +96,10 @@
     "ferry": 1,
     "road": 5501,
     "train": 117
+  },
+  "objectChunks": {
+    "chunks": 6,
+    "landmarks": 11,
+    "instances": 5921
   }
 }

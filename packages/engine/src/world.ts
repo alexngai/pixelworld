@@ -1,11 +1,12 @@
 import { BAKE_CODE } from "@pixelworlds/bake";
-import { resolveAsset } from "@pixelworlds/generators";
+import { resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
 import {
   ChunkStore,
   INCOMPLETE_PACKAGE,
   TileCache,
   hashString,
   loadManifest,
+  loadObjectLandmarks,
   loadObjects,
   tileKey,
   type HeroPaint,
@@ -33,7 +34,7 @@ import {
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
-import { landmarkPlan, ObjectIndex } from "./objects";
+import { ChunkedObjects, landmarkPlan, ObjectIndex } from "./objects";
 import { createQuery, type PickView } from "./queries";
 import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
 
@@ -53,7 +54,9 @@ export interface LoadedWorld {
   manifest: WorldManifest;
   store: ChunkStore;
   geo: GeoGrid | null;
+  /** The placed objects; with `chunkedObjects`, only the landmarks (the rest come with their chunks). */
   objects: ObjectsFile | null;
+  chunkedObjects: boolean;
   /** The style pack as given (its hash keys the tile cache) and validated. */
   styleJson: object;
   style: StylePack;
@@ -106,7 +109,13 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
   return pack;
 }
 
-export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB"> & { dropLayers?: readonly DroppableLayer[] }): Promise<LoadedWorld> {
+export async function loadWorld(
+  opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB"> & {
+    dropLayers?: readonly DroppableLayer[];
+    /** Objects by chunk where the package has them (D-123): the landmarks whole, the rest with their terrain. A view's bake needs them whole. */
+    chunkedObjects?: boolean;
+  },
+): Promise<LoadedWorld> {
   const url = opts.worldUrl;
   const manifest = await loadManifest(url);
   const store = new ChunkStore(manifest, url);
@@ -123,7 +132,9 @@ export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style
   const renderScale = opts.renderScale ?? packageScale;
   const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
   const margin = manifest.micro ? MICRO_MARGIN : Math.ceil(MARGIN / renderScale);
-  const objects = opts.objects === false ? null : await loadObjects(url, manifest);
+  const chunkedObjects = opts.objects !== false && !!opts.chunkedObjects && !!manifest.objectChunks;
+  store.objectChunks = chunkedObjects;
+  const objects = opts.objects === false ? null : chunkedObjects ? await loadObjectLandmarks(url, manifest) : await loadObjects(url, manifest);
 
   const styleJson = await resolveStyle(opts.style, manifest.style);
   const baseStyle = validateStyle(styleJson as StylePack);
@@ -143,6 +154,7 @@ export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style
     store,
     geo,
     objects,
+    chunkedObjects,
     styleJson,
     style,
     palette,
@@ -167,7 +179,7 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
     heightRange: w.heightRange,
     floor: w.floor,
     hasGeo: w.geo !== null,
-    objectCount: w.objects?.instances.length ?? 0,
+    objectCount: w.chunkedObjects ? (w.manifest.objects?.count ?? 0) : (w.objects?.instances.length ?? 0),
     level: w.manifest.level ?? null,
   };
 }
@@ -178,23 +190,22 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): World
   const heightStretch = manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1;
   // placed objects for occupancy queries: the ones the style draws, as the bake does
   const assets = w.style.assets;
-  const objects =
-    w.objects && assets
-      ? new ObjectIndex(
-          w.objects.instances,
-          { cellsX: manifest.cellsX, cellsY: manifest.cellsY, metersPerCell: manifest.scale.metersPerCell, heightStretch },
-          (group) => resolveAsset(assets, group) !== null,
-          (x, y) => query.heightAt(x, y),
-          (inst) =>
-            landmarkPlan(inst, {
-              catalog: assets,
-              rampIds: w.palette.rampIds,
-              renderScale: w.renderScale,
-              metersPerCell: manifest.scale.metersPerCell,
-              heightStretch,
-            }),
-        )
-      : null;
+  const index = (instances: readonly ObjectInstance[]) =>
+    new ObjectIndex(
+      instances,
+      { cellsX: manifest.cellsX, cellsY: manifest.cellsY, metersPerCell: manifest.scale.metersPerCell, heightStretch },
+      (group) => resolveAsset(assets!, group) !== null,
+      (x, y) => query.heightAt(x, y),
+      (inst) =>
+        landmarkPlan(inst, {
+          catalog: assets!,
+          rampIds: w.palette.rampIds,
+          renderScale: w.renderScale,
+          metersPerCell: manifest.scale.metersPerCell,
+          heightStretch,
+        }),
+    );
+  const objects = !w.objects || !assets ? null : w.chunkedObjects ? new ChunkedObjects(index(w.objects.instances), (x, y) => w.store.objectsIn(x, y), index) : index(w.objects.instances);
   const noView = (): PickView => {
     throw new Error("pick needs a world view: openWorld's queries have no screen");
   };
@@ -216,7 +227,7 @@ export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
   } catch {
     throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
   }
-  const w = await loadWorld({ ...opts, worldUrl });
+  const w = await loadWorld({ ...opts, worldUrl, chunkedObjects: true });
   return { world: worldInfo(w), query: worldQuery(w, null), stats: () => chunkStats(w.store) };
 }
 

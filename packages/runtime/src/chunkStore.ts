@@ -47,13 +47,31 @@ export async function loadObjects(baseUrl: string, manifest: WorldManifest): Pro
   return parseWorldFile(url, "world objects", () => parseObjects(json));
 }
 
+/** A package's landmarks for clients that load its objects by chunk (D-123): every instance with a landmark id. */
+export async function loadObjectLandmarks(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
+  const lm = manifest.objectChunks?.landmarks;
+  if (!lm) return null;
+  return loadObjectsFile(withSlash(baseUrl) + lm.path + version(lm.sha256), "world landmarks");
+}
+
+async function loadObjectsFile(url: string, label: string): Promise<ObjectsFile> {
+  const json = await fetchWorldJson(url, { label, expected: "the objects file the manifest names", hint: INCOMPLETE_PACKAGE });
+  return parseWorldFile(url, label, () => parseObjects(json));
+}
+
+/** A file's cache-busting query from its hash. */
+function version(sha256: string | undefined): string {
+  return sha256 ? `?v=${sha256.slice(0, 16)}` : "";
+}
+
 function withSlash(url: string): string {
   return url.endsWith("/") ? url : url + "/";
 }
 
-/** A loaded chunk, its decoded size, and when it was last used (a count, for least recently used first). */
+/** A loaded chunk, its objects (with `objectChunks`), its decoded size, and when it was last used (a count, for least recently used first). */
 interface Held {
   chunk: Chunk;
+  objects: ObjectsFile | null;
   bytes: number;
   used: number;
 }
@@ -85,6 +103,9 @@ export class ChunkStore {
   evicted = 0;
   /** Layers left out of every chunk loaded from now on (D-123): they read as empty. */
   dropLayers: ReadonlySet<DroppableLayer> = new Set();
+  /** Load each chunk's placed objects with it, where the package has them by chunk (D-123); the budget counts terrain only. */
+  objectChunks = false;
+  private readonly objectRefs = new Map<string, { sha256?: string }>();
 
   constructor(
     readonly manifest: WorldManifest,
@@ -96,6 +117,7 @@ export class ChunkStore {
     this.cellsX = manifest.cellsX;
     this.cellsY = manifest.cellsY;
     for (const ref of manifest.chunks) this.refs.set(key(ref.x, ref.y), ref);
+    for (const ref of manifest.objectChunks?.chunks ?? []) this.objectRefs.set(key(ref.x, ref.y), ref);
   }
 
   get loadedCount(): number {
@@ -124,16 +146,19 @@ export class ChunkStore {
     if (inflight) return inflight;
     const ref = this.refs.get(k);
     if (!ref) return Promise.resolve(null);
-    const url = this.base + ref.path + (ref.sha256 ? `?v=${ref.sha256.slice(0, 16)}` : "");
+    const url = this.base + ref.path + version(ref.sha256);
     const what = `world chunk ${cx},${cy}`;
-    const load = async (): Promise<Chunk> => {
+    const terrain = async (): Promise<Chunk> => {
       const bytes = await this.fetcher(url, what);
       return parseWorldFile(url, what, async () => decodeChunk(await maybeGunzip(bytes), { drop: this.dropLayers }));
     };
-    const p = load()
-      .then((chunk) => {
+    const oref = this.objectChunks ? this.objectRefs.get(k) : undefined;
+    const objects = async (): Promise<ObjectsFile | null> =>
+      oref ? loadObjectsFile(this.base + this.manifest.objectChunks!.path.replace("{x}", String(cx)).replace("{y}", String(cy)) + version(oref.sha256), `world objects of chunk ${cx},${cy}`) : null;
+    const p = Promise.all([terrain(), objects()])
+      .then(([chunk, objects]) => {
         const bytes = chunkBytes(chunk, this.dropLayers);
-        this.chunks.set(k, { chunk, bytes, used: ++this.uses });
+        this.chunks.set(k, { chunk, objects, bytes, used: ++this.uses });
         this.held += bytes;
         this.trim();
         return chunk;
@@ -196,6 +221,12 @@ export class ChunkStore {
         this.trim();
       });
     }
+  }
+
+  /** The placed objects of the chunk holding a cell (`objectChunks`): null where it has none, undefined where it isn't loaded. */
+  objectsIn(x: number, y: number): ObjectsFile | null | undefined {
+    if (x < 0 || y < 0 || x >= this.cellsX || y >= this.cellsY) return null;
+    return this.use(key(Math.floor(x / this.chunkSize), Math.floor(y / this.chunkSize)))?.objects;
   }
 
   /** Whether every chunk under a cell rectangle is loaded (one the package lacks has nothing to wait for), marking them used: a check is a use. */
