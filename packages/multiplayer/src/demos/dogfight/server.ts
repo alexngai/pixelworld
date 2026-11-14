@@ -5,9 +5,9 @@ import { FlightPilot } from "@pixelworlds/game/src/pilot";
 import { LEVEL_FLIGHT, axes, drawnPitch, flightParams, spawnPlane, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { PLANE } from "@pixelworlds/game/src/tuning";
-import { DRAW_ONLY_LAYERS, openWorld, type OpenedWorld } from "pixelworld/engine";
+import { DRAW_ONLY_LAYERS, openWorld, type OpenedWorld, type OpenWorldOptions } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
-import { Areas, History, Phases, Replicator, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
+import { Areas, History, Phases, Replicator, TickRoom, attachRelay, fileFetch, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import {
   BOT,
   CREDIT_S,
@@ -69,9 +69,9 @@ const AREAS = { radius: 16, ahead: 2, reach: 2 };
  * ceiling over their tops); the rest loads around the planes as they fly,
  * at most `chunkBudgetMB` of it (D-120).
  */
-export async function openDogfightWorld(worldUrl: string, opts: { chunkBudgetMB?: number } = {}): Promise<DogfightWorld> {
+export async function openDogfightWorld(worldUrl: string, opts: { chunkBudgetMB?: number; fetch?: OpenWorldOptions["fetch"] } = {}): Promise<DogfightWorld> {
   // the layers only drawing reads left out: about half of each chunk (D-123)
-  const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64, dropLayers: DRAW_ONLY_LAYERS });
+  const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64, dropLayers: DRAW_ONLY_LAYERS, fetch: opts.fetch });
   const { world, query } = opened;
   // each read just after its own load, which a budget can't let go of before then; the objects keep a top once read
   const tops = (
@@ -100,12 +100,23 @@ export function logLine(l: RelayLog): void {
  * next one tries again. An empty room stays open a minute. `lag` holds every
  * message back that many ms each way.
  */
-export function attachDogfight(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void; chunkBudgetMB?: number } = {}): Relay {
+export function attachDogfight(
+  server: Server,
+  opts: {
+    lag?: number;
+    maxRooms?: number;
+    log?: (l: RelayLog) => void;
+    chunkBudgetMB?: number;
+    /** The directory holding the world packages, read from disk (D-123); without it, over HTTP from the server itself. */
+    worlds?: string;
+  } = {},
+): Relay {
   let opened: Promise<DogfightWorld> | null = null;
   const world = () => {
     if (!opened) {
       const { port } = server.address() as AddressInfo;
-      opened = openDogfightWorld(`http://localhost:${port}${DOGFIGHT_WORLD}`, { chunkBudgetMB: opts.chunkBudgetMB });
+      const disk = opts.worlds ? fileFetch(opts.worlds) : undefined;
+      opened = openDogfightWorld(`http://${disk ? "worlds" : `localhost:${port}`}${DOGFIGHT_WORLD}`, { chunkBudgetMB: opts.chunkBudgetMB, fetch: disk });
       opened.catch((e: unknown) => {
         console.error("dogfight: the world didn't open:", e);
         opened = null;

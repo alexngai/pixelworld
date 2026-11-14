@@ -11,6 +11,7 @@ import {
   type ChunkRef,
   type DroppableLayer,
   type ObjectsFile,
+  type WorldFetch,
   type WorldManifest,
 } from "@pixelworlds/world-format";
 
@@ -20,18 +21,23 @@ type Fetcher = (url: string, what: string) => Promise<ArrayBuffer>;
 /** The advice for a file the manifest names that isn't there. */
 export const INCOMPLETE_PACKAGE = "the package is incomplete, or its files are from different builds";
 
-const defaultFetcher: Fetcher = (url, what) =>
-  fetchWorldFile(url, { label: what, expected: "a chunk the manifest lists", hint: INCOMPLETE_PACKAGE });
+/** A store's chunk fetcher over a world fetch (`fetch` by default; a server's from disk, D-123). */
+export const chunkFetcher =
+  (fetcher?: WorldFetch): Fetcher =>
+  (url, what) =>
+    fetchWorldFile(url, { label: what, expected: "a chunk the manifest lists", hint: INCOMPLETE_PACKAGE }, fetcher);
+
+const defaultFetcher = chunkFetcher();
 
 /**
  * Fetch and validate a world manifest. Its errors name the URL (D-072): a
  * wrong `worldUrl` reads "not a world package: …/manifest.json returned an
  * HTML page (…); check worldUrl", not a JSON parser's "Unexpected token '<'".
  */
-export async function loadManifest(baseUrl: string): Promise<WorldManifest> {
+export async function loadManifest(baseUrl: string, fetcher?: WorldFetch): Promise<WorldManifest> {
   const url = withSlash(baseUrl) + "manifest.json";
   const hint = `check worldUrl ("${baseUrl}")`;
-  const json = await fetchWorldJson(url, { label: "not a world package", expected: "a world manifest", hint });
+  const json = await fetchWorldJson(url, { label: "not a world package", expected: "a world manifest", hint }, fetcher);
   return parseWorldFile(url, "world manifest", () => parseManifest(json));
 }
 
@@ -39,11 +45,11 @@ export async function loadManifest(baseUrl: string): Promise<WorldManifest> {
  * Fetch a world's placed objects, if it has any (gzip or plain JSON, version 1
  * or 2). Footprints come back in absolute cells whichever version was stored.
  */
-export async function loadObjects(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
+export async function loadObjects(baseUrl: string, manifest: WorldManifest, fetcher?: WorldFetch): Promise<ObjectsFile | null> {
   if (!manifest.objects) return null;
   const url = withSlash(baseUrl) + manifest.objects.path;
   const info = { label: "world objects", expected: "the objects file the manifest names", hint: INCOMPLETE_PACKAGE };
-  const json = await fetchWorldJson(url, info);
+  const json = await fetchWorldJson(url, info, fetcher);
   return parseWorldFile(url, "world objects", () => parseObjects(json));
 }
 
@@ -75,12 +81,12 @@ export class CoarseHeights {
 }
 
 /** A package's coarse heights, if it has them (D-123). */
-export async function loadCoarse(baseUrl: string, manifest: WorldManifest): Promise<CoarseHeights | null> {
+export async function loadCoarse(baseUrl: string, manifest: WorldManifest, fetcher?: WorldFetch): Promise<CoarseHeights | null> {
   const c = manifest.coarse;
   if (!c) return null;
   const url = withSlash(baseUrl) + c.path + version(c.sha256);
   const label = "coarse heights";
-  const bytes = await fetchWorldFile(url, { label, expected: "the coarse heights the manifest names", hint: INCOMPLETE_PACKAGE });
+  const bytes = await fetchWorldFile(url, { label, expected: "the coarse heights the manifest names", hint: INCOMPLETE_PACKAGE }, fetcher);
   return parseWorldFile(url, label, async () => {
     const raw = await maybeGunzip(bytes);
     const rows = Math.ceil(manifest.cellsY / c.block);
@@ -94,14 +100,14 @@ export async function loadCoarse(baseUrl: string, manifest: WorldManifest): Prom
 }
 
 /** A package's landmarks for clients that load its objects by chunk (D-123): every instance with a landmark id. */
-export async function loadObjectLandmarks(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
+export async function loadObjectLandmarks(baseUrl: string, manifest: WorldManifest, fetcher?: WorldFetch): Promise<ObjectsFile | null> {
   const lm = manifest.objectChunks?.landmarks;
   if (!lm) return null;
-  return loadObjectsFile(withSlash(baseUrl) + lm.path + version(lm.sha256), "world landmarks");
+  return loadObjectsFile(withSlash(baseUrl) + lm.path + version(lm.sha256), "world landmarks", fetcher);
 }
 
-async function loadObjectsFile(url: string, label: string): Promise<ObjectsFile> {
-  const json = await fetchWorldJson(url, { label, expected: "the objects file the manifest names", hint: INCOMPLETE_PACKAGE });
+async function loadObjectsFile(url: string, label: string, fetcher?: WorldFetch): Promise<ObjectsFile> {
+  const json = await fetchWorldJson(url, { label, expected: "the objects file the manifest names", hint: INCOMPLETE_PACKAGE }, fetcher);
   return parseWorldFile(url, label, () => parseObjects(json));
 }
 
@@ -155,6 +161,8 @@ export class ChunkStore {
   dropLayers: ReadonlySet<DroppableLayer> = new Set();
   /** Load each chunk's placed objects with it, where the package has them by chunk (D-123); the budget counts terrain only. */
   objectChunks = false;
+  /** How those objects files are fetched (`fetch` by default). */
+  worldFetch: WorldFetch | undefined = undefined;
   private readonly objectRefs = new Map<number, { sha256?: string }>();
 
   constructor(
@@ -211,7 +219,7 @@ export class ChunkStore {
     };
     const oref = this.objectChunks ? this.objectRefs.get(k) : undefined;
     const objects = async (): Promise<ObjectsFile | null> =>
-      oref ? loadObjectsFile(this.base + this.manifest.objectChunks!.path.replace("{x}", String(cx)).replace("{y}", String(cy)) + version(oref.sha256), `world objects of chunk ${cx},${cy}`) : null;
+      oref ? loadObjectsFile(this.base + this.manifest.objectChunks!.path.replace("{x}", String(cx)).replace("{y}", String(cy)) + version(oref.sha256), `world objects of chunk ${cx},${cy}`, this.worldFetch) : null;
     const p = Promise.all([terrain(), objects()])
       .then(([chunk, objects]) => {
         const bytes = chunkBytes(chunk, this.dropLayers);

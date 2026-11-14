@@ -1,4 +1,5 @@
 import { createReadStream, statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, normalize, sep } from "node:path";
 
@@ -50,5 +51,30 @@ export function serveStatic(root: string): (req: IncomingMessage, res: ServerRes
     });
     if (req.method === "HEAD") return res.end();
     createReadStream(file).pipe(res);
+  };
+}
+
+/**
+ * A world package's files read from disk, for `openWorld({ fetch })` (D-123):
+ * a URL's path under `root` (any origin), nothing outside it. A server opens
+ * its world this way rather than over HTTP from itself.
+ */
+export function fileFetch(root: string): (url: string) => Promise<Response> {
+  const base = normalize(root.endsWith(sep) ? root : root + sep);
+  const missing = () => new Response("not found", { status: 404, statusText: "Not Found" });
+  return async (url) => {
+    let path: string;
+    try {
+      path = decodeURIComponent(new URL(url).pathname);
+    } catch {
+      return missing();
+    }
+    const file = normalize(join(base, path));
+    if (path.includes("\0") || !(file + sep).startsWith(base)) return missing();
+    try {
+      return new Response(await readFile(file));
+    } catch {
+      return missing();
+    }
   };
 }

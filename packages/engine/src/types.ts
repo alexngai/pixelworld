@@ -3,7 +3,7 @@ import type { Box, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
-import type { DroppableLayer, WorldManifest } from "@pixelworlds/world-format";
+import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
 
 /**
  * The engine's public types (docs/library.md §3.2–3.3). Units, unless said
@@ -71,6 +71,8 @@ export interface OpenWorldOptions {
    * 0.22 MB instead of 0.5.
    */
   dropLayers?: readonly DroppableLayer[];
+  /** How the package's files are fetched (D-123; default `fetch`): a server reads them from disk (`fileFetch` in `@pixelworlds/multiplayer/server`). */
+  fetch?: WorldFetch;
 }
 
 /** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */

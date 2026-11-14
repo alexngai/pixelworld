@@ -3,6 +3,7 @@ import { resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
 import {
   ChunkStore,
   INCOMPLETE_PACKAGE,
+  chunkFetcher,
   TileCache,
   hashString,
   loadCoarse,
@@ -34,6 +35,7 @@ import {
   parseWorldFile,
   type DroppableLayer,
   type ObjectsFile,
+  type WorldFetch,
   type WorldManifest,
 } from "@pixelworlds/world-format";
 import { ChunkedObjects, landmarkPlan, ObjectIndex } from "./objects";
@@ -122,16 +124,19 @@ export async function loadWorld(
      * A view's bake needs the objects whole.
      */
     headless?: boolean;
+    /** How the package's files are fetched (D-123; default `fetch`). */
+    fetch?: WorldFetch;
   },
 ): Promise<LoadedWorld> {
   const url = opts.worldUrl;
-  const manifest = await loadManifest(url);
-  const store = new ChunkStore(manifest, url);
+  const manifest = await loadManifest(url, opts.fetch);
+  const store = new ChunkStore(manifest, url, opts.fetch ? chunkFetcher(opts.fetch) : undefined);
+  store.worldFetch = opts.fetch;
   if (opts.chunkBudgetMB !== undefined) store.maxBytes = opts.chunkBudgetMB * 2 ** 20;
   if (opts.dropLayers) store.dropLayers = new Set(opts.dropLayers);
   const base = new URL(url, globalThis.location?.href); // openWorld outside a browser passes an absolute URL
   // Lon/lat of cell corners: places between scale levels (D-046), fog areas, queries.
-  const geo = await GeoGrid.load(manifest, base).catch((e: unknown) => {
+  const geo = await GeoGrid.load(manifest, base, opts.fetch).catch((e: unknown) => {
     console.warn("geo grid:", e);
     return null;
   });
@@ -141,9 +146,9 @@ export async function loadWorld(
   const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
   const margin = manifest.micro ? MICRO_MARGIN : Math.ceil(MARGIN / renderScale);
   const chunkedObjects = opts.objects !== false && !!opts.headless && !!manifest.objectChunks;
-  const coarse = opts.headless ? await loadCoarse(url, manifest) : null;
+  const coarse = opts.headless ? await loadCoarse(url, manifest, opts.fetch) : null;
   store.objectChunks = chunkedObjects;
-  const objects = opts.objects === false ? null : chunkedObjects ? await loadObjectLandmarks(url, manifest) : await loadObjects(url, manifest);
+  const objects = opts.objects === false ? null : chunkedObjects ? await loadObjectLandmarks(url, manifest, opts.fetch) : await loadObjects(url, manifest, opts.fetch);
 
   const styleJson = await resolveStyle(opts.style, manifest.style);
   const baseStyle = validateStyle(styleJson as StylePack);

@@ -22,7 +22,8 @@ import {
   type PlaneWire,
 } from "../../src/demos/dogfight/rules";
 import { Replica, SNAP_BYTE, TickClient, WORLD_BYTE, readSnap, type TickEvent, type TickRoster, type TickShared, type TickSnapshot } from "../../src/index";
-import type { HostedRoom } from "../../src/server";
+import { fileFetch, type HostedRoom } from "../../src/server";
+import { fileURLToPath } from "node:url";
 import { loopback } from "../../src/testing";
 
 /**
@@ -34,7 +35,8 @@ import { loopback } from "../../src/testing";
 const ROOT = new URL("../../../../", import.meta.url);
 let world: DogfightWorld;
 
-beforeAll(async () => {
+/** fixtures/ at https://pixelworld.test/, read from disk (Node's fetch can't read file: URLs). */
+const stubFixtures = () =>
   vi.stubGlobal("fetch", async (url: string | URL) => {
     try {
       return new Response(readFileSync(new URL(`fixtures${new URL(String(url)).pathname}`, ROOT)));
@@ -42,6 +44,8 @@ beforeAll(async () => {
       return new Response("not found", { status: 404 });
     }
   });
+beforeAll(async () => {
+  stubFixtures();
   world = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
 });
 afterAll(() => {
@@ -300,6 +304,17 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     game.tick();
     expect(game.ackOf("a")).toBe(1); // no wait
     expect(p.s.x).not.toBe(far[0]);
+  });
+
+  it("opens its level from disk, with no HTTP, and reads nothing outside the directory (D-123)", async () => {
+    vi.unstubAllGlobals(); // no fetch stub: fileFetch reads the files
+    const disk = fileFetch(fileURLToPath(new URL("fixtures/", ROOT)));
+    const w = await openDogfightWorld("http://worlds/southwest-fly/", { fetch: disk }).finally(stubFixtures);
+    expect(w.opened.stats().chunksLoaded).toBeGreaterThan(0);
+    expect(w.opened.query.coarseHeightAt(...w.start)).not.toBeNull();
+    expect((await disk("http://worlds/../package.json")).status).toBe(404);
+    expect((await disk("http://worlds/%2e%2e/package.json")).status).toBe(404);
+    expect((await disk("http://worlds/southwest-fly/nothing.json")).status).toBe(404);
   });
 
   it("clamps a page's stick and trigger to what they can be", async () => {
