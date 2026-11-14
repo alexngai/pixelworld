@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { carParams, type CarParams } from "@pixelworlds/game/src/car";
+import { boxesOverlap, carParams, type CarParams } from "@pixelworlds/game/src/car";
 import { Decks, DriveWorld, type TrafficSource } from "@pixelworlds/game/src/ground";
 import { CarPilot } from "@pixelworlds/game/src/pilot";
 import { stylePack } from "@pixelworlds/game/src/styles";
@@ -10,17 +10,26 @@ import { cleanName, type RoomInfo } from "../../index";
 import { History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Place, type Relay, type RelayLog, type TickRole } from "../../server";
 import {
   BOTS,
+  Ghosts,
+  PASS,
   RACE,
   RACE_WORLD,
   TICK,
   contacts,
   courseLine,
+  courseDistance,
+  courseRelative,
   finished,
+  passingRoom,
+  sideLine,
+  roomFor,
+  straightFor,
   gridDistance,
   gridRacer,
   lapOf,
   planCourse,
   progress,
+  raceCar,
   raceTick,
   resetPoint,
   type CarNet,
@@ -55,6 +64,8 @@ export interface RaceWorld {
   params: CarParams;
   course: Course;
   query: WorldQuery;
+  /** Where each side of the course (left, right) has room for a bot to pass, every half cell round it. */
+  room: boolean[][];
   /** The cars the one being stepped bumps into: set before each step (the world is shared by every room, stepped one at a time). */
   contacts: TrafficSource | null;
 }
@@ -69,8 +80,9 @@ export async function openRaceWorld(worldUrl: string): Promise<RaceWorld> {
   const ys = course.path.points.map((p) => p.y);
   // the course, once; off it, the ground ahead of each car as it drives (`RaceRoom.ensureAhead`)
   await query.ensure(Math.min(...xs) - 12, Math.min(...ys) - 12, Math.max(...xs) + 12, Math.max(...ys) + 12);
-  const w: RaceWorld = { course, query, params: carParams(world), contacts: null, drive: null! };
+  const w: RaceWorld = { course, query, params: raceCar(carParams(world)), contacts: null, drive: null!, room: [] };
   w.drive = new DriveWorld(query, world.cellsX, world.cellsY, new Decks(routes), () => w.contacts);
+  w.room = passingRoom(course, w.drive, w.params);
   return w;
 }
 
@@ -127,19 +139,25 @@ interface Car {
   /** Where it was at each shared snapshot (what the pages draw between), and where it was at the start of this tick. */
   history: History;
   last: Place;
-  /** A bot's driver, its share of the top speed, and how long it has been stuck. */
+  /**
+   * A bot's driver (on the course's line, or to the side of it); how far
+   * along the course it is (unwrapped); its share of the top speed; and how
+   * long it has been stuck.
+   */
   pilot?: CarPilot | null;
+  d?: number;
+  /** The car it is passing (as a ghost), and since when (server time). */
+  passing?: { id: string; since: number } | null;
   pace?: number;
   stuck?: number;
   ensured: { x: number; y: number };
 }
 
 /**
- * The bots' pilot: a shorter look-ahead than the game's scripted run, so it
- * keeps to the line through the Strip's one-cell jogs, where buildings stand
- * over the quarter-cell roads' inside corners.
+ * The bots' pilot: a look-ahead a little longer than the game's scripted
+ * run's, so a change of lane is a gentle turn it needn't slow for.
  */
-const BOT_PILOT = { stop: false, lookMin: 0.8, lookTime: 0.25, lookMax: 3 };
+const BOT_PILOT = { stop: false, lookMin: 1.2, lookTime: 0.3, lookMax: 4 };
 
 const clamp = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0);
 const placeOf = (r: Racer): Place => ({ x: r.car.x, y: r.car.y, h: r.car.h, heading: r.car.heading });
@@ -147,6 +165,8 @@ const placeOf = (r: Racer): Place => ({ x: r.car.x, y: r.car.y, h: r.car.h, head
 /** One room's race. */
 export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent> {
   private readonly cars = new Map<string, Car>();
+  /** Which cars were ghosts at each shared snapshot: what the pages drew. */
+  private readonly ghosts = new Ghosts(RACE.maxRewind + 0.5);
   readonly race = new Phases<RacePhase>("waiting");
   /** The finishers this race, in order. */
   private readonly order: string[] = [];
@@ -186,6 +206,7 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
   }
 
   protected removed(id: string): void {
+    this.ghosts.delete(id);
     if (this.cars.delete(id) && !this.isBot(id)) this.fillBots();
   }
 
@@ -228,9 +249,11 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
     const r = car.r;
     // the others where this driver saw them (a bot: where they were as this tick began), never where they moved this
     // tick, so the order cars are stepped in doesn't matter; at `seen` itself, the very time the page's smoothing drew
+    // and with the ghosts as they were then (a bot, as they are now)
     const t = seen === null ? this.time : Math.max(this.time - RACE.maxRewind, Math.min(this.time, seen));
-    w.contacts = contacts(
-      [...this.cars].filter(([o, c]) => o !== id && !this.isGhost(o, c)).map(([, c]) => c.history.at(t, c.last) as Required<Place>),
+    const ghost = (o: string, c: Car) => (seen === null ? this.isGhost(o, c) : this.ghosts.at(o, t, this.isGhost(o, c)));
+    w.contacts = car.passing ? null : contacts(
+      [...this.cars].filter(([o, c]) => o !== id && !ghost(o, c)).map(([, c]) => c.history.at(t, c.last) as Required<Place>),
       w.params,
     );
     const laps = r.laps.length;
@@ -244,7 +267,13 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
     this.ensureAhead(car);
   }
 
-  /** A bot: the course's line from where it is, at its share of the road's top speed; stuck a second and a half, back to its last checkpoint. Past the flag it stops. */
+  /**
+   * A bot: the course's line from where it is, at its share of the road's top
+   * speed. A slower car ahead on a straight, it takes a lane beside the line
+   * that is clear and passes, back on the line once past or before the bend;
+   * where it can't pass, it keeps behind rather than ram. Stuck a second and a
+   * half, back to its last checkpoint. Past the flag it stops.
+   */
   private botInput(id: string): RaceInput {
     const w = this.world;
     const car = this.cars.get(id)!;
@@ -257,17 +286,64 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
       car.pilot = null;
       return { throttle: 0, brake: 0, steer: 0, reset: true };
     }
+    const c = w.course;
+    const rest = (RACE.laps + 1) * c.length;
     if (!car.pilot) {
-      const from = car.r.cps === 0 && car.r.steps === 0 ? gridDistance(car.slot) : resetPoint(w.course, car.r).d;
-      car.pilot = new CarPilot(courseLine(w.course, from, (RACE.laps + 1) * w.course.length), BOT_PILOT);
+      const from = car.r.cps === 0 && car.r.steps === 0 ? gridDistance(car.slot) : resetPoint(c, car.r).d;
+      Object.assign(car, { d: from, passing: null, pilot: new CarPilot(courseLine(c, from, rest), BOT_PILOT) });
     }
-    const top = w.drive.topSpeedAt(s.x, s.y, s.h) * w.params.pace * (car.pace ?? 1);
-    return { ...car.pilot.input(s, w.params.pace, top), reset: false };
+    // its share of the pace in the corners and braking too, as if its car were that much slower
+    const pace = w.params.pace * (car.pace ?? 1);
+    const top = w.drive.topSpeedAt(s.x, s.y, s.h) * pace;
+    // the others near it along the course: how far ahead, how far across the course where each is, how fast
+    const d = (car.d = courseDistance(c, s.x, s.y, car.d!));
+    const across = courseRelative(c, d, s.x, s.y).across;
+    const others = [...this.cars]
+      .filter(([o, k]) => o !== id && !this.isGhost(o, k) && Math.hypot(k.r.car.x - s.x, k.r.car.y - s.y) < PASS.follow + 2)
+      .map(([o, k]) => {
+        const at = courseDistance(c, k.r.car.x, k.r.car.y, d);
+        return { id: o, along: at - d, across: courseRelative(c, at, k.r.car.x, k.r.car.y).across, v: k.r.car.speed };
+      });
+    const now = this.time;
+    if (car.passing) {
+      // passing: until clear ahead of the other, or given up; and not inside any car when it is solid again
+      const them = this.cars.get(car.passing.id);
+      const gap = them && courseDistance(c, them.r.car.x, them.r.car.y, d) - d;
+      const over = gap === undefined || gap < -PASS.clear || gap > PASS.drop || now - car.passing.since > PASS.give;
+      if (over && !this.overlapping(id)) {
+        car.passing = null;
+        // off the line still: eased back to it
+        if (Math.abs(across) > 0.05) car.pilot = new CarPilot(sideLine(c, d, across, 0, rest, across), BOT_PILOT);
+      }
+    } else {
+      // held up behind a slower car: pass it, to the side away from it where there's room
+      const ahead = others.filter((o) => o.along > 0 && o.along < PASS.follow && Math.abs(o.across - across) < PASS.width).sort((a, b) => a.along - b.along)[0];
+      if (ahead && ahead.v < top - 0.5) {
+        const side = ahead.across > across ? -1 : 1;
+        const most = 2 * PASS.ramp + PASS.hold[1];
+        const hold = Math.min(straightFor(c, d, most), roomFor(w.room[side < 0 ? 0 : 1]!, c, d, most)) - 2 * PASS.ramp;
+        if (hold >= PASS.hold[0]) car.pilot = new CarPilot(sideLine(c, d, side * PASS.lane, hold, rest, across), BOT_PILOT);
+        car.passing = { id: ahead.id, since: now };
+      }
+    }
+    const input = car.pilot!.input(s, pace, top);
+    // still behind a slower car where it is, and not passing: keep back rather than ram
+    const ahead = car.passing ? undefined : others.filter((o) => o.along > 0 && o.along < PASS.follow && Math.abs(o.across - across) < PASS.width).sort((a, b) => a.along - b.along)[0];
+    if (ahead && s.speed > ahead.v) return { throttle: 0, brake: Math.max(0.1, Math.min(1, (s.speed - ahead.v) / 3)), steer: input.steer, reset: false };
+    return { ...input, reset: false };
   }
 
-  /** The others drive through a car that isn't racing: finished, stalled (its page went quiet), or waiting for the next race. */
+  /** Whether a car overlaps any car the others bump into. */
+  private overlapping(id: string): boolean {
+    const p = this.world.params;
+    const box = (k: Car) => ({ x: k.r.car.x, y: k.r.car.y, heading: k.r.car.heading, length: p.length, width: p.width });
+    const me = box(this.cars.get(id)!);
+    return [...this.cars].some(([o, k]) => o !== id && !this.isGhost(o, k) && boxesOverlap(me, box(k)));
+  }
+
+  /** The others drive through a car that isn't racing (finished, stalled: its page went quiet, or waiting for the next race), or a bot passing. */
   private isGhost(id: string, c: Car): boolean {
-    return !c.racing || finished(c.r) || this.idleFor(id) > RACE.stall;
+    return !c.racing || finished(c.r) || this.idleFor(id) > RACE.stall || !!c.passing;
   }
 
   /** Load the ground around and ahead of a car off the course (the course is loaded): the car stands still on ground still loading. */
@@ -326,10 +402,11 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
     this.emit({ kind: "phase", phase });
   }
 
-  /** Everyone back on the grid, in the order they came (bots at the back), held for the countdown. */
+  /** Everyone back on the grid, in the order they came, the bots at the back slowest first; held for the countdown. */
   private grid(): void {
     this.fillBots();
-    const ids = [...this.cars.keys()].sort((a, b) => Number(this.isBot(a)) - Number(this.isBot(b)));
+    const pace = (id: string) => this.cars.get(id)!.pace ?? 0;
+    const ids = [...this.cars.keys()].sort((a, b) => Number(this.isBot(a)) - Number(this.isBot(b)) || pace(a) - pace(b));
     ids.forEach((id, slot) => {
       const c = this.cars.get(id)!;
       Object.assign(c, { r: gridRacer(this.world.course, this.world.drive, slot), slot, racing: true, pilot: null, stuck: 0 });
@@ -380,7 +457,10 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
 
   protected override shared(): RaceWorldNet {
     // where each car is in what the pages get: what a driver's bumps are judged against
-    for (const c of this.cars.values()) c.history.record(this.time, c.last);
+    for (const [id, c] of this.cars) {
+      c.history.record(this.time, c.last);
+      this.ghosts.record(id, this.time, this.isGhost(id, c));
+    }
     const places = new Map(this.ranked([...this.cars].filter(([, c]) => c.racing)).map(([id], i) => [id, i + 1]));
     return {
       cars: [...this.cars].map(([id, c]): CarNet => ({
@@ -396,6 +476,7 @@ export class RaceRoom extends TickRoom<RaceInput, RaceJoin, RaceWorld, RaceEvent
         place: places.get(id) ?? 0,
         done: finished(c.r),
         ...(this.isGhost(id, c) ? { ghost: true } : {}),
+        ...(c.passing ? { passing: true } : {}),
         ...(this.isBot(id) ? { bot: true } : {}),
       })),
       race: { ...this.race.net(), laps: RACE.laps, results: this.results },

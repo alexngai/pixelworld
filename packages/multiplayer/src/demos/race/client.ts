@@ -5,6 +5,7 @@ import { CAR } from "@pixelworlds/game/src/tuning";
 import type { Entity } from "pixelworld/engine";
 import { Correction, RemotePlayers, TickClient, joinRoom, type Pose, type Room } from "../../index";
 import {
+  Ghosts,
   RACE,
   TICK,
   contacts,
@@ -13,6 +14,7 @@ import {
   lapOf,
   nextCheckpoint,
   planCourse,
+  raceCar,
   raceClock,
   raceTick,
   type CarNet,
@@ -62,7 +64,7 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
   }
   const watching = opts.watch === true;
   const w = view.world;
-  const params = car.params;
+  const params = raceCar(car.params); // as the server's
   const course = planCourse(routes, view.query);
   // the course loaded, as the server loads it: the prediction reads the same ground
   const xs = course.path.points.map((p) => p.x);
@@ -81,6 +83,7 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
   let corrected = 0;
 
   let cars: CarNet[] = [];
+  const ghosts = new Ghosts(); // which cars the others drove through when, as the server judges it
   let race: RaceNet | null = null;
   let watched: string | null = null;
   const tags = new Map<string, HTMLElement>();
@@ -155,10 +158,16 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
 
   // ---------------------------------------------------------------- the server's word
 
+  /** The page's place last snapshot, to say when it changes in the race. */
+  let place = 0;
   function world(m: RaceWorldNet & { t: number }): void {
     if (race?.phase !== m.race.phase && m.race.phase === "countdown") hud?.say("On the grid: get ready", 2.5);
+    const now = m.cars.find((c) => c.id === room.id)?.place ?? 0;
+    if (m.race.phase === "racing" && place && now && now !== place && !watching) hud?.say(now < place ? `Up to ${ord(now)}` : `Down to ${ord(now)}`, 1.5);
+    place = now;
     race = m.race;
     cars = m.cars;
+    for (const c of cars) ghosts.record(c.id, m.t, !!c.ghost);
     const others = cars.filter((c) => c.id !== room.id);
     for (const c of others) remotes.push(c.id, m.t, { x: c.x, y: c.y, h: c.h, heading: c.hd, life: c.life });
     const here = new Set(others.map((c) => c.id));
@@ -211,7 +220,8 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
     const t = performance.now() / 1000;
     // the others where the page draws them now: what this frame's inputs bump into
     remotes.update(t);
-    const solid = cars.filter((c) => c.id !== room.id && !c.ghost).flatMap((c) => remotes.pose(c.id) ?? []);
+    const seen = client.seen(t);
+    const solid = cars.filter((c) => c.id !== room.id && !(seen === null ? c.ghost : ghosts.at(c.id, seen, c.ghost))).flatMap((c) => remotes.pose(c.id) ?? []);
     const bumps = contacts(solid, params);
     if (!watching && car.paused)
       client.advance(dt, () => {
@@ -261,7 +271,7 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
       const at = view.camera.project(p.x, p.y, p.h);
       tag.style.display = at.onScreen ? "" : "none";
       // names come from other players: text, never markup
-      tag.textContent = `${c.place ? ord(c.place) + " " : ""}${c.name}${c.bot ? " (bot)" : ""}${c.ghost && !c.done && c.place ? " · stalled" : ""}`;
+      tag.textContent = `${c.place ? ord(c.place) + " " : ""}${c.name}${c.bot ? " (bot)" : ""}${c.ghost && !c.done && c.place && !c.passing ? " · stalled" : ""}`;
       tag.style.color = c.id === watched ? "#ffffff" : "#ffb38a";
       tag.style.left = `${canvas.left + at.x}px`;
       tag.style.top = `${canvas.top + at.y - 12}px`;

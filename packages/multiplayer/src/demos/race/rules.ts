@@ -57,7 +57,17 @@ export const RACE = {
   maxRewind: 0.3,
   /** A player whose inputs stopped this long ago (s) is stalled: the others drive through its car. */
   stall: 0.5,
+  /**
+   * Cars bump at this share of their drawn width (`raceCar`): at this level a
+   * car is drawn 0.31 cells wide on roads a quarter cell wide, and at its
+   * drawn width no car could pass another. Nose to tail, they bump at their
+   * whole length.
+   */
+  width: 0.5,
 };
+
+/** The car's parameters in the race: the game's (`carParams`), bumping at `RACE.width` of its width. The server and the page step with the same. */
+export const raceCar = (p: CarParams): CarParams => ({ ...p, width: p.width * RACE.width });
 
 /**
  * The grid behind the line, staggered single file (the roads are a quarter
@@ -67,12 +77,26 @@ export const RACE = {
  */
 export const GRID = { first: 1.5, gap: 0.9, side: 0.1 };
 
-/** Bots: their names, and the share of each road's top speed they keep to (beatable). */
+/** Bots: their names, and the share of each road's top speed they keep to (beatable). The grid puts the slowest first: the others come through. */
 export const BOTS = [
-  { id: "bot1", name: "Bot Ace", pace: 0.9 },
-  { id: "bot2", name: "Bot Blue", pace: 0.85 },
-  { id: "bot3", name: "Bot Cobalt", pace: 0.8 },
+  { id: "bot1", name: "Bot Ace", pace: 1 },
+  { id: "bot2", name: "Bot Blue", pace: 0.8 },
+  { id: "bot3", name: "Bot Cobalt", pace: 0.62 },
 ];
+
+/**
+ * Overtaking, for the bots. The roads are about a car wide, so a bot held up
+ * behind a slower car (within `follow` cells ahead, within `width` across:
+ * in its way) passes it as a ghost: nothing bumps it and it bumps nothing,
+ * until it is `clear` cells ahead of that car (its length and a little), or
+ * gives up (`drop` cells behind it, or `give` seconds). So that it reads as a
+ * pass, its path eases `lane` cells to the side away from the other over
+ * `ramp` cells, where the course runs straight (strays at most `stray` from
+ * its chord, so the roads' one-cell jogs count) and that side has room
+ * (`passingRoom`, `room` cells off the line), and eases back. A bot that
+ * can't pass keeps back rather than ram.
+ */
+export const PASS = { lane: 0.15, follow: 1.3, width: 0.17, clear: 0.9, drop: 1.5, give: 4, ramp: 1.5, hold: [2, 14] as const, stray: 0.6, room: 0.3 };
 
 // ---------------------------------------------------------------- the course
 
@@ -131,7 +155,11 @@ export function courseHeading(c: Course, d: number): number {
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
 
-/** The course's line from `from` cells along, for `length` cells, round the loop as often as it takes: a path for a bot. */
+/**
+ * The course's line from `from` cells along, for `length` cells, round the
+ * loop as often as it takes, `offset` cells to its right (a passing lane): a
+ * path for a bot.
+ */
 export function courseLine(c: Course, from: number, length: number): Point[] {
   const pts = c.path.points;
   const out: Point[] = [courseAt(c, from)];
@@ -143,6 +171,97 @@ export function courseLine(c: Course, from: number, length: number): Point[] {
     }
   out.push(courseAt(c, end));
   return out;
+}
+
+/** A point `across` cells to the right of the course's line, `d` cells along. */
+export function courseOffset(c: Course, d: number, across: number): Point {
+  const p = courseAt(c, d);
+  const h = courseHeading(c, d);
+  return { x: p.x - Math.sin(h) * across, y: p.y + Math.cos(h) * across };
+}
+
+/** How far the course runs straight from `d` (cells, up to `max`): nowhere more than `PASS.stray` off the chord. */
+export function straightFor(c: Course, d: number, max: number): number {
+  const a = courseAt(c, d);
+  let run = 0;
+  for (let n = 1; n <= max; n++) {
+    const b = courseAt(c, d + n);
+    const chord = Math.hypot(b.x - a.x, b.y - a.y);
+    if (chord < n * 0.9) break; // it turns back on itself
+    let ok = true;
+    for (let k = 1; k < n && ok; k++) {
+      const p = courseAt(c, d + k);
+      ok = Math.abs((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) / chord <= PASS.stray;
+    }
+    if (!ok) break;
+    run = n;
+  }
+  return run;
+}
+
+/**
+ * Where each side of the course (left, right) has room to pass, every half
+ * cell round it: `PASS.room` off the line, on the road's top speed and clear
+ * of buildings. Worked out once, from the world.
+ */
+export function passingRoom(c: Course, world: CarWorld, p: CarParams): boolean[][] {
+  return [-PASS.room, PASS.room].map((off) =>
+    Array.from({ length: Math.ceil(c.length * 2) }, (_, k) => {
+      const at = courseAt(c, k / 2);
+      const heading = courseHeading(c, k / 2);
+      const { x, y } = courseOffset(c, k / 2, off);
+      const [h, h0] = [groundOn(world, x, y), groundOn(world, at.x, at.y)];
+      return h !== null && h0 !== null && world.topSpeedAt(x, y, h) >= world.topSpeedAt(at.x, at.y, h0) && !world.obstacle({ x, y, heading, length: p.length, width: p.width, dir: 1 });
+    }),
+  );
+}
+
+/** How far from `d` (cells, up to `max`) a side of the course (`passingRoom`'s) has room to pass. */
+export function roomFor(room: readonly boolean[], c: Course, d: number, max: number): number {
+  for (let k = 0; k <= max * 2; k++) if (!room[Math.floor(((((d + k / 2) % c.length) + c.length) % c.length) * 2) % room.length]) return k / 2;
+  return max;
+}
+
+/**
+ * A bot's path to the side of the course's line, from `from` cells along:
+ * from `start` cells across, eased to `lane` over `PASS.ramp` cells, along it
+ * for `hold`, eased back to the line over `PASS.ramp`, then the line for
+ * `rest` cells.
+ */
+export function sideLine(c: Course, from: number, lane: number, hold: number, rest: number, start = 0): Point[] {
+  const ease = (u: number) => u * u * (3 - 2 * u);
+  const back = from + PASS.ramp + hold;
+  const end = back + PASS.ramp;
+  const across = (d: number) => (d < from + PASS.ramp ? start + (lane - start) * ease((d - from) / PASS.ramp) : d < back ? lane : lane * (1 - ease((d - back) / PASS.ramp)));
+  const out: Point[] = [];
+  for (let d = from; d < end; d += 0.5) out.push(courseOffset(c, d, across(d)));
+  return [...out, ...courseLine(c, end, rest)];
+}
+
+/** How far along the course a point is, near `near` cells along (a few cells either way, unwrapped round the loop as `near` is). */
+export function courseDistance(c: Course, x: number, y: number, near: number): number {
+  const base = Math.floor(near / c.length) * c.length;
+  const m = near - base;
+  let best = near;
+  let bestGap = Infinity;
+  // the window round `near`, and where it runs over either end of the loop
+  for (const off of [-c.length, 0, c.length]) {
+    const [s0, s1] = [Math.max(0, m + off - 4), Math.min(c.length, m + off + 4)];
+    if (s0 >= s1) continue;
+    const s = c.path.project(x, y, s0, s1);
+    const p = c.path.at(s);
+    const gap = Math.hypot(p.x - x, p.y - y);
+    if (gap < bestGap) [best, bestGap] = [base + s - off, gap];
+  }
+  return best;
+}
+
+/** Where a point is from the course `d` cells along: how far ahead along it, and how far to its right (cells). */
+export function courseRelative(c: Course, d: number, x: number, y: number): { along: number; across: number } {
+  const p = courseAt(c, d);
+  const h = courseHeading(c, d);
+  const [dx, dy] = [x - p.x, y - p.y];
+  return { along: dx * Math.cos(h) + dy * Math.sin(h), across: -dx * Math.sin(h) + dy * Math.cos(h) };
 }
 
 /** How far along the course a grid slot is (cells; behind the line, so negative). */
@@ -251,6 +370,41 @@ export function contacts(cars: readonly { x: number; y: number; h: number; headi
   return { vehiclesNear: (x, y, radius) => list.filter((v) => Math.hypot(v.x - x, v.y - y) <= radius + p.length) };
 }
 
+/**
+ * Which cars were ghosts when (`CarNet.ghost`), recorded at each shared
+ * snapshot's time on both sides: a bump is judged with the flags as of the
+ * time the driver saw, as the page's own prediction used them, so a car
+ * turning ghost (a bot passing, a page stalling, a finish) doesn't make the
+ * page and the server disagree.
+ */
+export class Ghosts {
+  private readonly flags = new Map<string, { t: number; ghost: boolean }[]>();
+
+  /** @param keep Seconds kept. */
+  constructor(private readonly keep = 2) {}
+
+  record(id: string, t: number, ghost: boolean): void {
+    let list = this.flags.get(id);
+    if (!list) this.flags.set(id, (list = []));
+    if (list.length && t <= list[list.length - 1]!.t) return; // late or repeated
+    list.push({ t, ghost });
+    while (list.length > 1 && t - list[0]!.t > this.keep) list.shift();
+  }
+
+  /** Whether a car was a ghost at `t`: the newest record at or before it (the oldest kept, before them all); `now` without any. */
+  at(id: string, t: number, now = false): boolean {
+    const list = this.flags.get(id);
+    if (!list?.length) return now;
+    let i = list.length - 1;
+    while (i > 0 && list[i]!.t > t) i--;
+    return list[i]!.ghost;
+  }
+
+  delete(id: string): void {
+    this.flags.delete(id);
+  }
+}
+
 /** Seconds as m:ss.s. */
 export const raceClock = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
 
@@ -280,8 +434,9 @@ export interface CarNet {
   /** Its place (1 first), or 0 when it isn't in this race (it joined during it). */
   place: number;
   done: boolean;
-  /** The others drive through it: stalled, finished, or waiting for the next race. */
+  /** The others drive through it: stalled, finished, waiting for the next race, or passing (a bot). */
   ghost?: boolean;
+  passing?: boolean;
   bot?: boolean;
 }
 

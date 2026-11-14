@@ -5,11 +5,13 @@ import { RaceRoom, openRaceWorld, type RaceWorld } from "../../src/demos/race/se
 import {
   BOTS,
   COURSE,
+  Ghosts,
   RACE,
   TICK,
   contacts,
   courseLine,
   gridSlot,
+  progress,
   raceTick,
   type CarNet,
   type RaceEvent,
@@ -198,11 +200,12 @@ describe("the race demo's server (D-119)", () => {
     for (let t = 0; t < 2 / TICK; t++) game.tick();
     expect(a.r.car).toMatchObject(gridSlot(world.course, 0));
     const shared = worlds("a").at(-1)!;
+    // the bots slowest first: the quick ones have to come through
     expect(shared.cars.map((c) => [c.id, c.place, c.lap])).toEqual([
       ["a", 1, 1],
-      ["bot1", 2, 1],
+      ["bot1", 4, 1],
       ["bot2", 3, 1],
-      ["bot3", 4, 1],
+      ["bot3", 2, 1],
     ]);
     expect(shared.race).toMatchObject({ phase: "countdown", laps: RACE.laps, results: [] });
     // a second driver before the start takes a bot's place; a watcher doesn't count
@@ -218,7 +221,7 @@ describe("the race demo's server (D-119)", () => {
     expect(game.race.phase).toBe("results");
     for (let t = 0; t < 3; t++) game.tick(); // a shared snapshot
     const results = worlds("a").at(-1)!.race.results;
-    expect(results.map((r) => r.id).slice(0, 2)).toEqual(["bot1", "bot2"]);
+    expect(results.map((r) => r.id).slice(0, 2)).toEqual(["bot1", "bot2"]); // the quicker one came through
     expect(results.slice(0, 2).every((r) => r.time !== null && r.best !== null && r.bot)).toBe(true);
     expect(results.slice(2).map((r) => [r.time, r.best])).toEqual([
       [null, null],
@@ -244,6 +247,27 @@ describe("the race demo's server (D-119)", () => {
     expect(BOTS.map((b) => b.id)).toContain(lap.who);
     expect(lap.time).toBeGreaterThan(15);
     expect(lap.time).toBeLessThan(35);
+  });
+
+  it("has the bots pass a slower car as ghosts, the quickest first, each solid again once clear ahead of it", async () => {
+    const { game, join, worlds, send, go } = room();
+    await join("a");
+    go();
+    // a on the pole, on the course's line at 3 cells/s: the bots come up behind it
+    const pilot = new CarPilot(courseLine(world.course, -2, 2 * world.course.length), { stop: false, maxSpeed: 3, lookMin: 1.2, lookTime: 0.3, lookMax: 4 });
+    const passing = new Set<string>();
+    for (let seq = 1; seq <= 25 / TICK; seq++) {
+      const s = game.car("a")!.r.car;
+      send("a", seq, { ...pilot.input(s, world.params.pace, world.drive.topSpeedAt(s.x, s.y, s.h)) });
+      game.tick();
+      for (const c of worlds("a").at(-1)?.cars ?? []) if (c.passing) passing.add(c.id);
+    }
+    expect([...passing].sort()).toEqual(BOTS.map((b) => b.id));
+    const ahead = (id: string) => progress(world.course, game.car(id)!.r) > progress(world.course, game.car("a")!.r);
+    expect(BOTS.every((b) => ahead(b.id))).toBe(true);
+    expect(BOTS.map((b) => game.car(b.id)!.life)).toEqual([2, 2, 2]); // nobody stuck and reset
+    for (let t = 0; t < 3; t++) game.tick();
+    expect(worlds("a").at(-1)!.cars.filter((c) => c.passing)).toEqual([]);
   });
 
   it("judges a bump against where the driver saw the others, never where they moved this tick: the order cars are stepped in doesn't matter", async () => {
@@ -324,11 +348,13 @@ describe("the race through the loopback (D-119)", () => {
     const me: Racer = { car: { x: 0, y: 0, h: 0, heading: 0, speed: 0, steer: 0 }, steps: 0, cps: 0, laps: [], held: true };
     const saw = new WeakMap<RaceInput, ReturnType<typeof contacts>>();
     let cars: CarNet[] = [];
+    const ghosts = new Ghosts();
     let before = { x: 0, y: 0 };
     let worst = 0;
     let started = false;
     let pilot: CarPilot | null = null;
     let bumped = 0;
+    const passes = new Set<string>();
     const client: TickClient<RaceInput, RaceSnap, RaceWorldNet, RaceEvent> = new TickClient(page.room, {
       tick: TICK,
       step: (i) => {
@@ -346,6 +372,8 @@ describe("the race through the loopback (D-119)", () => {
       },
       onWorld: (m) => {
         cars = m.cars;
+        for (const c of cars) ghosts.record(c.id, m.t, !!c.ghost);
+        for (const c of cars) if (c.passing) passes.add(c.id);
         for (const c of cars) if (c.id !== page.room.id) smoothing.push(c.id, m.t, { x: c.x, y: c.y, h: c.h, heading: c.hd, life: c.life }, lb.now());
       },
       now: lb.now,
@@ -355,7 +383,8 @@ describe("the race through the loopback (D-119)", () => {
     await new Promise((r) => setTimeout(r, 0)); // the world arrives
     const drive = () => {
       // the others where the page draws them now: this frame's inputs bump into them
-      const solid = cars.filter((c) => c.id !== page.room.id && !c.ghost).flatMap((c) => smoothing.at(c.id, lb.now()) ?? []);
+      const seen = client.seen(lb.now());
+      const solid = cars.filter((c) => c.id !== page.room.id && !(seen === null ? c.ghost : ghosts.at(c.id, seen, c.ghost))).flatMap((c) => smoothing.at(c.id, lb.now()) ?? []);
       const bumps = contacts(solid, world.params);
       client.advance(1 / 60, () => {
         if (!me.held && !pilot) pilot = new CarPilot(courseLine(world.course, -2, 2 * world.course.length), { stop: false, lookMin: 0.8, lookTime: 0.25, lookMax: 3 });
@@ -367,9 +396,9 @@ describe("the race through the loopback (D-119)", () => {
     };
     lb.run(0.5, drive); // the first snapshots: the page takes its car from them
     expect(lb.host.race.phase).toBe("countdown");
-    // the page's car to the back of the grid: quicker than the bots, it comes up behind them
+    // the page's car to the back of the grid: quicker than the bots, it comes up behind them, and they pass one another
     const mine = lb.host.car(page.room.id)!.r.car;
-    const last = lb.host.car(BOTS[2]!.id)!.r.car;
+    const last = lb.host.car(BOTS[0]!.id)!.r.car;
     const [a, b] = [{ ...mine }, { ...last }];
     Object.assign(mine, b);
     Object.assign(last, a);
@@ -381,5 +410,6 @@ describe("the race through the loopback (D-119)", () => {
     expect(worst).toBe(0);
     expect(client.ping).toBeCloseTo(100, 6);
     expect(bumped).toBeGreaterThan(0); // the page met the others on the way
+    expect(passes.size).toBeGreaterThan(0); // and bots passed, turning ghost and back
   });
 });
