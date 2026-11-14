@@ -1,3 +1,4 @@
+import { landmarkName } from "@pixelworlds/game/src/places";
 import {
   CELL_ROAD,
   CELL_TREES,
@@ -36,7 +37,7 @@ import {
 /** The driving level the match is on. */
 export const RTS_WORLD = "/sf/";
 /** The play area (cells of the level): the Presidio, from Baker Beach's bluffs to Crissy Field. */
-export const MAP = { x0: 118, y0: 168, w: 132, h: 82 };
+export const MAP = { x0: 118, y0: 140, w: 144, h: 110 };
 /** The server's fixed step (s): orders, movement and fights. */
 export const TICK = 1 / 20;
 /** A snapshot every this many ticks (10 a second). */
@@ -221,6 +222,19 @@ export interface RtsWorldNet {
   players: PlayerNet[];
   /** The level's buildings knocked down this match (objects, as they fell): every page takes them out of its world (D-124). */
   razed: number[];
+  /** The landmarks to hold, and who holds them (D-125): famous, so no fog hides them. */
+  marks: MarkNet[];
+}
+
+/** A landmark held: who holds it, and who is taking it and how far (0–1). */
+export interface MarkNet {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  owner: Team | null;
+  taker: Team | null;
+  p: number;
 }
 
 /** Events, at server time; each to the pages whose side sees it. */
@@ -229,7 +243,9 @@ export type RtsEvent =
   | { kind: "hit"; by: number; to: number; obj?: 1; x: number; y: number }
   | { kind: "die"; id: number; x: number; y: number }
   | { kind: "refused"; why: string }
-  | { kind: "phase"; phase: MatchPhase; winner: Team | null };
+  | { kind: "phase"; phase: MatchPhase; winner: Team | null }
+  /** A side took a landmark (D-125). */
+  | { kind: "taken"; id: string; name: string; side: Team };
 
 /** What the lobby lists. */
 export interface RtsInfo {
@@ -274,6 +290,8 @@ export interface MapGrid extends Cells {
   building: Int32Array;
   /** The level's buildings, by object (D-124). */
   structures?: Map<number, Structure>;
+  /** The level's landmarks reaching into the play area, as objectives (D-125). */
+  objectives?: Objective[];
   /** How quick going is on each cell over open ground's, from its road's class or its surface and its trees (D-125); without it, roads 1.4. */
   pace?: Float32Array;
 }
@@ -285,8 +303,10 @@ const isBuilding = (group: string) => group === "building" || group.startsWith("
 export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP): MapGrid {
   const structures = new Map<number, Structure>();
   const heights = new Map<number, number>();
+  const landmarks = new Map<string, number[]>();
   const cells = readCells(query, map, {
     onObject: (o, i) => {
+      if (o.id) landmarks.set(o.id, [...(landmarks.get(o.id) ?? []), i]);
       if (!isBuilding(o.group)) return;
       let s = structures.get(o.index);
       if (!s) {
@@ -312,7 +332,19 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
     const base = road ? (ROAD_PACE[road.class ?? ""] ?? ROAD_PACE.residential!) : (SURFACE_PACE[query.surfaceAt(x, y)?.name ?? ""] ?? 1);
     pace[i] = base * (cells.flags[i]! & WOODS && !road ? WOODS_SPEED : 1);
   }
-  return { ...cells, building: new Int32Array(cells.flags.length), structures, pace };
+  const g: MapGrid = { ...cells, building: new Int32Array(cells.flags.length), structures, pace };
+  // each landmark reaching in: the cell units can get to nearest its part nearest the middle of the area (a bridge's shore end)
+  const mx = map.x0 + map.w / 2;
+  const my = map.y0 + map.h / 2;
+  const [hx, hy] = LAYOUT.hearths.kiln;
+  const reach = reachable(g, hx - 1, hy + 1);
+  g.objectives = [...landmarks].flatMap(([id, list]) => {
+    const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
+    const part = list.map(at).reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
+    const spot = nearestOpen(g, part.x, part.y, 15, (x, y) => reach[cellIndex(g, x, y)] === 1);
+    return spot ? [{ id, name: landmarkName(id), x: spot.x + 0.5, y: spot.y + 0.5 }] : [];
+  });
+  return g;
 }
 
 /**
@@ -355,6 +387,31 @@ export class Razed {
 }
 
 export { cellIndex };
+
+/** The cells a unit can walk to from a cell (1 each), steps and corners as paths take them. */
+export function reachable(g: MapGrid, cx: number, cy: number): Uint8Array {
+  const seen = new Uint8Array(g.flags.length);
+  const start = cellIndex(g, cx, cy);
+  if (start < 0 || !passable(g, cx, cy)) return seen;
+  seen[start] = 1;
+  const queue = [start];
+  while (queue.length) {
+    const i = queue.pop()!;
+    const x = (i % g.w) + g.x0;
+    const y = Math.floor(i / g.w) + g.y0;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if ((!dx && !dy) || !canStep(g, x, y, x + dx, y + dy)) continue;
+        if (dx && dy && !(passable(g, x + dx, y) && passable(g, x, y + dy))) continue;
+        const j = cellIndex(g, x + dx, y + dy);
+        if (!seen[j]) {
+          seen[j] = 1;
+          queue.push(j);
+        }
+      }
+  }
+  return seen;
+}
 
 /** Whether a unit may stand on a cell: in the area, not water, no wall or match building. */
 export function passable(g: MapGrid, cx: number, cy: number): boolean {
@@ -435,6 +492,22 @@ export const SIGHT = {
 export const GARRISON = { perCell: 2, most: 8, sight: 2, fall: 15, reach: 1 };
 /** How many a level building holds. */
 export const holds = (s: Pick<Structure, "cells">): number => Math.min(GARRISON.most, s.cells.length * GARRISON.perCell);
+/**
+ * Landmarks as objectives (D-125): a side whose units alone stand within
+ * `radius` of one for `hold` seconds takes it; it pays `income` glim a
+ * second and gives an eye `eye` steps over it seeing `sight` cells.
+ * Contested, it stands still; left alone, the taking fades.
+ */
+export const OBJECTIVE = { radius: 3, hold: 10, income: 0.5, eye: 4, sight: 9 };
+
+/** A landmark to hold: its registry id, its name, and the open cell to stand at by it. */
+export interface Objective {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+}
+
 /** A blow struck from a step or more above its target lands this much harder. */
 export const HIGH_GROUND_DAMAGE = 1.3;
 /** How high each building's eye stands over its ground (steps): from its roof. */

@@ -223,6 +223,8 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   /** An event to the players whose side sees where it happened (its own side's always). */
   private tell(e: GameEvent): void {
     const game = this.game!;
+    // a landmark taken: everyone hears it
+    if (e.kind === "taken") return this.emit(e);
     const out: RtsEvent = e.kind === "hit" ? e : { kind: "die", id: e.id, x: e.x, y: e.y };
     for (const [id, side] of this.sides)
       if (id !== BOT && (e.kind === "die" ? side === e.team || game.seesPoint(side, e) : game.seesPoint(side, e))) this.emit(out, id);
@@ -235,6 +237,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       match: { ...this.match.net(), winner: this.winner },
       players: [...this.sides].map(([id, side]) => ({ id, name: this.joinOf(id)?.name ?? TEAM_NAMES[side], side, ...(id === BOT ? { bot: true as const } : {}) })),
       razed: this.game?.razed ?? [],
+      marks: this.game?.marksNet() ?? [],
     };
   }
 

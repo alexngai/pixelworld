@@ -19,6 +19,7 @@ import {
   WOODS,
   GARRISON,
   HIGH_GROUND_DAMAGE,
+  OBJECTIVE,
   Razed,
   SIGHT,
   SURFACE_PACE,
@@ -537,6 +538,57 @@ describe("Fogfront's garrisons in the level's buildings (D-125)", () => {
   });
 });
 
+describe("Fogfront's landmarks to hold (D-125)", () => {
+  const held = () => {
+    const g = open(40, 16);
+    g.objectives = [{ id: "rock", name: "the Rock", x: 20.5, y: 8.5 }];
+    return new RtsGame(g, { hearths: { kiln: [2, 6], tide: [35, 6] }, seeps: [] });
+  };
+  const send = (game: RtsGame, team: Team, x: number, y: number) =>
+    game.order(team, { t: "move", u: unitsOf(game, team).map((u) => u.id), x, y });
+
+  it("a side alone by one long enough takes it: it pays glim and sees from it", () => {
+    const game = held();
+    send(game, "kiln", 20.5, 8.5);
+    const events: RtsEvent[] = [];
+    for (let n = 0; n < 40 / TICK && !game.marks[0]!.owner; n++) {
+      game.step(TICK);
+      events.push(...(game.events as RtsEvent[]));
+      game.events = [];
+    }
+    expect(game.marks[0]!.owner).toBe("kiln");
+    expect(events.filter((e) => e.kind === "taken")).toEqual([{ kind: "taken", id: "rock", name: "the Rock", side: "kiln" }]);
+    const glim = game.glim.kiln;
+    send(game, "kiln", 3.5, 12.5); // walk away: it stays theirs, and pays
+    run(game, 20);
+    expect(game.marks[0]!.owner).toBe("kiln");
+    expect(game.glim.kiln - glim).toBeGreaterThanOrEqual(Math.floor(20 * OBJECTIVE.income) - 1);
+    // its eye: the Kiln sees a Tide runner walking up to it with none of its own near
+    const scout = unitsOf(game, "tide")[0]!;
+    game.order("tide", { t: "move", u: [scout.id], x: 25.5, y: 8.5 });
+    run(game, 12);
+    expect(game.view("kiln").units.some((u) => u.i === scout.id)).toBe(true);
+    expect(game.marksNet()[0]).toMatchObject({ id: "rock", owner: "kiln" });
+  });
+
+  it("contested, it stands still; left, the taking fades", () => {
+    const game = held();
+    send(game, "kiln", 20.5, 8.5);
+    send(game, "tide", 21.5, 8.5);
+    run(game, 30);
+    // runners both (they don't fight): while both sides stand by it, nobody takes it
+    expect(game.marks[0]!.owner).toBeNull();
+    const m = held();
+    send(m, "kiln", 20.5, 8.5);
+    run(m, 9); // most of the way: a few seconds' walk and some holding
+    const before = m.marks[0]!.hold;
+    send(m, "kiln", 3.5, 3.5);
+    run(m, 8);
+    expect(m.marks[0]!.owner).toBeNull();
+    expect(m.marks[0]!.hold).toBeLessThan(before);
+  });
+});
+
 describe("Fogfront's sight from the level (D-125)", () => {
   const eye = (x: number, y: number, radius = 6) => ({ x, y, up: SIGHT.eye, radius });
 
@@ -624,6 +676,16 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     // the Kiln's runners walk the beach at its pace
     const [kx, ky] = LAYOUT.hearths.kiln;
     expect(pace[cellIndex(g, kx - 1, ky + 1)]).toBeCloseTo(SURFACE_PACE.desert!, 5);
+  });
+
+  it("takes in the Presidio's landmarks as objectives, each reachable from both hearths (D-125)", () => {
+    const g = world.grid;
+    expect(g.objectives!.map((o) => o.id).sort()).toEqual(["golden-gate-bridge", "palace-of-fine-arts"]);
+    expect(g.objectives!.every((o) => o.name.length > 0 && o.name !== o.id)).toBe(true); // named as the example game names them
+    for (const o of g.objectives!) {
+      expect(passable(g, Math.floor(o.x), Math.floor(o.y))).toBe(true);
+      for (const [hx, hy] of Object.values(LAYOUT.hearths)) expect(findPath(g, { x: hx - 0.5, y: hy + 1.5 }, o).at(-1)).toEqual({ x: o.x, y: o.y });
+    }
   });
 
   it("the Golden Gate's fog comes over the Presidio and goes, and hides what stands in it (D-125)", () => {

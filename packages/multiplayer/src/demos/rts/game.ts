@@ -38,6 +38,9 @@ import {
   type Eye,
   GARRISON,
   holds,
+  OBJECTIVE,
+  type MarkNet,
+  type Objective,
 } from "./rules";
 
 /**
@@ -109,7 +112,17 @@ export interface Seep {
 }
 
 /** What happened in a step, for the room to tell the pages that see it (`obj`: a blow to one of the level's buildings). */
-export type GameEvent = { kind: "hit"; by: number; to: number; obj?: 1; x: number; y: number } | { kind: "die"; id: number; team: Team; x: number; y: number };
+export type GameEvent =
+  | { kind: "hit"; by: number; to: number; obj?: 1; x: number; y: number }
+  | { kind: "die"; id: number; team: Team; x: number; y: number }
+  | { kind: "taken"; id: string; name: string; side: Team };
+
+/** A landmark held (D-125): who holds it, who is taking it, and for how long so far. */
+export interface Mark extends Objective {
+  owner: Team | null;
+  taker: Team | null;
+  hold: number;
+}
 
 /**
  * Paths found a tick at most: a page re-sending orders for many units can't
@@ -136,6 +149,9 @@ export class RtsGame {
   readonly structures = new Map<number, Structure>();
   /** The level's buildings knocked down this match, as they fell. */
   razed: number[] = [];
+  /** The landmarks to hold (D-125), and each side's glim from them not yet whole. */
+  marks: Mark[] = [];
+  private earned: Record<Team, number> = { kiln: 0, tide: 0 };
   private nextId = 1;
   /** Each side's enemies in sight now (units and buildings), and the enemy buildings it has ever seen. */
   private readonly sight: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
@@ -164,6 +180,8 @@ export class RtsGame {
     this.grid.building.fill(0);
     setRemoved(this.grid, () => false); // the level's buildings all standing again
     this.razed = [];
+    this.marks = (this.grid.objectives ?? []).map((o) => ({ ...o, owner: null, taker: null, hold: 0 }));
+    this.earned = { kiln: 0, tide: 0 };
     this.structures.clear();
     for (const s of this.grid.structures?.values() ?? []) this.structures.set(s.obj, { ...s });
     this.units.clear();
@@ -318,6 +336,7 @@ export class RtsGame {
         this.fall(b);
         if (b.kind === "hearth" && !this.winner) this.winner = other(b.team);
       }
+    this.hold(dt);
     for (const s of [...this.structures.values()])
       if (s.hp <= 0) {
         this.structures.delete(s.obj);
@@ -329,6 +348,37 @@ export class RtsGame {
           u.hp -= GARRISON.fall;
         }
       }
+  }
+
+  /** The landmarks: taken by a side alone near one long enough, paying who holds them. */
+  private hold(dt: number): void {
+    for (const m of this.marks) {
+      const near = new Set<Team>();
+      for (const u of this.units.values()) if (u.inside === null && Math.hypot(u.x - m.x, u.y - m.y) <= OBJECTIVE.radius) near.add(u.team);
+      const [only] = near;
+      if (near.size === 1 && only !== m.owner) {
+        if (m.taker !== only) [m.taker, m.hold] = [only!, 0];
+        m.hold += dt;
+        if (m.hold >= OBJECTIVE.hold) {
+          [m.owner, m.taker, m.hold] = [only!, null, 0];
+          this.events.push({ kind: "taken", id: m.id, name: m.name, side: only! });
+        }
+      } else if (near.size === 0 && m.taker) {
+        m.hold = Math.max(0, m.hold - dt / 2);
+        if (m.hold === 0) m.taker = null;
+      }
+      if (m.owner) this.earned[m.owner] += OBJECTIVE.income * dt;
+    }
+    for (const t of TEAMS) {
+      const whole = Math.floor(this.earned[t]);
+      this.glim[t] += whole;
+      this.earned[t] -= whole;
+    }
+  }
+
+  /** The landmarks as the pages see them. */
+  marksNet(): MarkNet[] {
+    return this.marks.map((m) => ({ id: m.id, name: m.name, x: m.x, y: m.y, owner: m.owner, taker: m.taker, p: Math.round((m.hold / OBJECTIVE.hold) * 100) / 100 }));
   }
 
   /** The units in one of the level's buildings. */
@@ -408,6 +458,7 @@ export class RtsGame {
       else out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight });
     }
     for (const b of this.buildings.values()) if (b.team === team) out.push({ ...mid(b), up: BUILDING_EYE[b.kind] * Math.max(0.3, b.built), radius: BUILDINGS[b.kind].sight });
+    for (const m of this.marks) if (m.owner === team) out.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });
     return out;
   }
 

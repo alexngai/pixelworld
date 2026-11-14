@@ -621,6 +621,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (e.kind === "hit") effect(hitBoxes, "rts.hit", e.x, e.y, 0.2);
     else if (e.kind === "die") effect(puffBoxes, "rts.puff", e.x, e.y, 0.6);
     else if (e.kind === "refused") hud.say(`Can't: ${e.why}`, 2);
+    else if (e.kind === "taken") hud.say(e.side === side ? `You hold ${e.name}` : `${nameOf(e.side)} took ${e.name}`, 3);
     else if (e.phase === "playing") hud.say("The match is on: gather glim, raise a lodge, take their hearth", 4);
     else hud.say(e.winner ? (e.winner === side ? "Their hearth has fallen: you win!" : `Your hearth has fallen: ${nameOf(e.winner)} wins`) : "The match ran out of time", 8);
   };
@@ -753,6 +754,19 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       if (obj === pickedStructure) ring(s.x, s.y, view.query.heightAt(s.x, s.y) ?? 0, r * 14, "#fd6");
       bar(view.camera.project(s.x, s.y, s.top + 0.6), (hurt.get(obj) ?? s.hp) / s.hp, Math.max(18, r * 12));
     }
+    // the landmarks to hold: a diamond in the holder's colour, the taking as a ring filling (D-125)
+    const colour = (t: Team | null) => (t === "kiln" ? "#e6553a" : t === "tide" ? "#8aa4d6" : "#c4c3c3");
+    for (const m of world?.marks ?? []) {
+      const p = view.camera.project(m.x, m.y, (view.query.heightAt(m.x, m.y) ?? 0) + 2);
+      if (!p.onScreen) continue;
+      const [x, y] = [p.x.toFixed(1), p.y.toFixed(1)];
+      out.push(`<path d="M${x} ${p.y - 9}L${p.x + 7} ${y}L${x} ${p.y + 9}L${p.x - 7} ${y}Z" fill="${colour(m.owner)}" stroke="#222" stroke-width="1"/>`);
+      if (m.taker && m.p > 0) {
+        const r = 12;
+        const len = 2 * Math.PI * r;
+        out.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${colour(m.taker)}" stroke-width="2.5" stroke-dasharray="${(len * m.p).toFixed(1)} ${len.toFixed(1)}" transform="rotate(-90 ${x} ${y})"/>`);
+      }
+    }
     // the side's units in the level's buildings: a count over each
     const inside = new Map<number, number>();
     for (const u of units.values()) if (u.in !== undefined && u.s === side) inside.set(u.in, (inside.get(u.in) ?? 0) + 1);
@@ -808,6 +822,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       `FOGFRONT · room ${room.name} · ${phase}`,
       side ? `you: ${TEAM_NAMES[side]} (${side === "kiln" ? "red" : "blue"}) · vs ${foe ? `${foe.name}${foe.bot ? " (bot)" : ""}` : "nobody yet"}` : "",
       snap ? `glim ${snap.glim} · runners ${count("runner", mineNow)} · wardens ${count("warden", mineNow)} · lodges ${own("lodge").length}` : "",
+      world?.marks.length ? `landmarks: ${world.marks.map((m) => `${m.name} (${m.owner ? (m.owner === side ? "yours" : TEAM_NAMES[m.owner]) : "nobody's"})`).join(", ")}` : "",
       sel,
       `ping ${client.ping === null ? "–" : Math.round(client.ping)} ms · invite: ${location.origin}${location.pathname}?room=${room.name}`,
     ]
