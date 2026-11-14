@@ -1,0 +1,50 @@
+name: PyPI
+
+# pixelworld-pipeline's releases (docs/npm.md §9, D-129). Pushing a tag
+# `pipeline-v<version>`, naming pipeline/pyproject.toml's version, builds the
+# sdist and the wheel, checks the wheel on its own, and publishes both through
+# PyPI's trusted publishing (OIDC). No PyPI token is stored anywhere; the
+# project's trusted publisher on pypi.org names this file. id-token only on
+# publish.
+
+on:
+  push:
+    tags: ["pipeline-v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: The tag names the version being released
+        run: test "pipeline-v$(uv version --short)" = "$GITHUB_REF_NAME"
+      - run: uv build --out-dir dist
+      - name: The wheel alone lists every built-in source by role
+        run: uv run --no-project --isolated --with dist/pixelworld_pipeline-*.whl pixelworld plugins
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: pipeline/dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # PyPI trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: astral-sh/setup-uv@v6
+      - run: uv publish --trusted-publishing always dist/*

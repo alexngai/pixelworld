@@ -128,6 +128,7 @@ Status values:
 | D-119 | The race demo: cars round the Strip run by the server, bumps judged where each driver saw the others, race times in a car's own steps, bots that overtake, and no traffic | Accepted |
 | D-120 | Rooms the server runs on worlds too big to load whole, with more players: a chunk budget, loading around each player, a step that waits, and interest | Accepted |
 | D-123 | Big worlds made lighter: lean chunks, objects by chunk, coarse heights, compact binary snapshots, chunks by number, and a server reading its world from disk | Accepted |
+| D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
 
 ---
 
@@ -1719,3 +1720,14 @@ The point is more room for visual interest; both halves are wanted.
   - Snapshots by type (several schemas in a room).
   - A deadline on a chunk fetch (D-120).
   - The rover bench's own snapshot in binary.
+
+### D-129: `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag (accepted)
+- **Why:** the owner asked for trusted publishing on PyPI too. The pipeline was uploaded by hand with an API token (D-110), a long-lived credential; PyPI's trusted publishing (OIDC) needs none, and unlike npm's (D-105) it can be set up before the project exists (a pending publisher), so even the first release needs no token.
+- **What:**
+  - **`.github/workflows/pypi.yml`:** a tag `pipeline-v<version>` builds the sdist and the wheel, fails if the tag doesn't name `pipeline/pyproject.toml`'s version, checks that the wheel alone lists every built-in source (`pixelworld plugins`), and publishes with `uv publish`. Only the publish job gets `id-token: write`.
+  - **docs/npm.md §9:** the pending publisher on pypi.org (workflow `pypi.yml`, no environment), the tag, and the upload by hand kept for when CI can't run.
+- **Rejected alternatives:**
+  - **In `release.yml`, with changesets:** changesets versions npm packages; the pipeline has its own version and a release a few times a year. A tag is the whole trigger.
+  - **`pypa/gh-action-pypi-publish`:** it adds attestations, but `uv publish` is the tool the manual upload already uses, and attestations name the repository in Sigstore's public log while it is private.
+  - **A GitHub environment (`pypi`):** the free plan has none for a private repository.
+- **Later:** an environment with required reviewers and attestations once the repository is public.
