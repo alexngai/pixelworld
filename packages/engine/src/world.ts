@@ -5,10 +5,12 @@ import {
   INCOMPLETE_PACKAGE,
   TileCache,
   hashString,
+  loadCoarse,
   loadManifest,
   loadObjectLandmarks,
   loadObjects,
   tileKey,
+  type CoarseHeights,
   type HeroPaint,
   type InitMessage,
   type TerrainSlice,
@@ -57,6 +59,8 @@ export interface LoadedWorld {
   /** The placed objects; with `chunkedObjects`, only the landmarks (the rest come with their chunks). */
   objects: ObjectsFile | null;
   chunkedObjects: boolean;
+  /** The coarse heights (`headless`, where the package has them). */
+  coarse: CoarseHeights | null;
   /** The style pack as given (its hash keys the tile cache) and validated. */
   styleJson: object;
   style: StylePack;
@@ -112,8 +116,12 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
 export async function loadWorld(
   opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB"> & {
     dropLayers?: readonly DroppableLayer[];
-    /** Objects by chunk where the package has them (D-123): the landmarks whole, the rest with their terrain. A view's bake needs them whole. */
-    chunkedObjects?: boolean;
+    /**
+     * `openWorld`'s (D-123): objects by chunk where the package has them (the
+     * landmarks whole, the rest with their terrain), and its coarse heights.
+     * A view's bake needs the objects whole.
+     */
+    headless?: boolean;
   },
 ): Promise<LoadedWorld> {
   const url = opts.worldUrl;
@@ -132,7 +140,8 @@ export async function loadWorld(
   const renderScale = opts.renderScale ?? packageScale;
   const tileSize = manifest.render?.tileSize ?? TILE_SIZE;
   const margin = manifest.micro ? MICRO_MARGIN : Math.ceil(MARGIN / renderScale);
-  const chunkedObjects = opts.objects !== false && !!opts.chunkedObjects && !!manifest.objectChunks;
+  const chunkedObjects = opts.objects !== false && !!opts.headless && !!manifest.objectChunks;
+  const coarse = opts.headless ? await loadCoarse(url, manifest) : null;
   store.objectChunks = chunkedObjects;
   const objects = opts.objects === false ? null : chunkedObjects ? await loadObjectLandmarks(url, manifest) : await loadObjects(url, manifest);
 
@@ -155,6 +164,7 @@ export async function loadWorld(
     geo,
     objects,
     chunkedObjects,
+    coarse,
     styleJson,
     style,
     palette,
@@ -209,7 +219,7 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): World
   const noView = (): PickView => {
     throw new Error("pick needs a world view: openWorld's queries have no screen");
   };
-  const query = createQuery(w.store, w, w.geo, view ?? noView, objects);
+  const query = createQuery(w.store, w, w.geo, view ?? noView, objects, w.coarse);
   return query;
 }
 
@@ -227,7 +237,7 @@ export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
   } catch {
     throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
   }
-  const w = await loadWorld({ ...opts, worldUrl, chunkedObjects: true });
+  const w = await loadWorld({ ...opts, worldUrl, headless: true });
   return { world: worldInfo(w), query: worldQuery(w, null), stats: () => chunkStats(w.store) };
 }
 

@@ -2832,7 +2832,7 @@
     ],
     "sha256": "b1ff4e45e94b03cd9b55769569b2eb204e2446407c278a38ae6638077c461a59"
   },
-  "packageHash": "27a4751796427d1d987b48973dac1f4e864b512123d598616200998a49d25828",
+  "packageHash": "7e06f16637ae61180cff8b9a9dfaaa8200191d4ca1b301d83bd6b0a671b99e13",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "cd3fec225d37f6933b369026167bebb686d3086119d3759103df15b98acd1f74",
@@ -2885,5 +2885,11 @@
         "count": 9
       }
     ]
+  },
+  "coarse": {
+    "version": 1,
+    "path": "coarse.i16.gz",
+    "sha256": "e2a46de136d8496f9463bb996bab67303c88c54339fcb7ea64957ca517feb223",
+    "block": 8
   }
 }

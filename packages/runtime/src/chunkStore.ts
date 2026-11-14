@@ -47,6 +47,52 @@ export async function loadObjects(baseUrl: string, manifest: WorldManifest): Pro
   return parseWorldFile(url, "world objects", () => parseObjects(json));
 }
 
+/**
+ * A world's coarse heights (D-123): each block of cells' lowest ground and
+ * highest drawn top (ground or water), in steps, from the whole package
+ * whether its chunks are loaded or not.
+ */
+export class CoarseHeights {
+  private readonly cols: number;
+
+  constructor(
+    readonly block: number,
+    private readonly cellsX: number,
+    private readonly cellsY: number,
+    /** Pairs (lowest, highest) in 1/16 step, a block at a time, rows from the north-west; -32768 for none. */
+    private readonly data: Int16Array,
+  ) {
+    this.cols = Math.ceil(cellsX / block);
+  }
+
+  /** The block holding a cell: its lowest ground and highest top (steps), or null (outside, or no data). */
+  at(x: number, y: number): { lo: number; hi: number } | null {
+    if (!(x >= 0 && y >= 0 && x < this.cellsX && y < this.cellsY)) return null;
+    const i = 2 * (Math.floor(y / this.block) * this.cols + Math.floor(x / this.block));
+    const lo = this.data[i]!;
+    return lo === -32768 ? null : { lo: lo / 16, hi: this.data[i + 1]! / 16 };
+  }
+}
+
+/** A package's coarse heights, if it has them (D-123). */
+export async function loadCoarse(baseUrl: string, manifest: WorldManifest): Promise<CoarseHeights | null> {
+  const c = manifest.coarse;
+  if (!c) return null;
+  const url = withSlash(baseUrl) + c.path + version(c.sha256);
+  const label = "coarse heights";
+  const bytes = await fetchWorldFile(url, { label, expected: "the coarse heights the manifest names", hint: INCOMPLETE_PACKAGE });
+  return parseWorldFile(url, label, async () => {
+    const raw = await maybeGunzip(bytes);
+    const rows = Math.ceil(manifest.cellsY / c.block);
+    const cols = Math.ceil(manifest.cellsX / c.block);
+    if (raw.byteLength !== rows * cols * 4) throw new Error(`${raw.byteLength} bytes, not ${rows} × ${cols} blocks of two int16`);
+    const view = new DataView(raw);
+    const data = new Int16Array(rows * cols * 2);
+    for (let i = 0; i < data.length; i++) data[i] = view.getInt16(i * 2, true);
+    return new CoarseHeights(c.block, manifest.cellsX, manifest.cellsY, data);
+  });
+}
+
 /** A package's landmarks for clients that load its objects by chunk (D-123): every instance with a landmark id. */
 export async function loadObjectLandmarks(baseUrl: string, manifest: WorldManifest): Promise<ObjectsFile | null> {
   const lm = manifest.objectChunks?.landmarks;

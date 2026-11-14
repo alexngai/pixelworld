@@ -81,5 +81,26 @@ describe("openWorld: a world's queries without a view (D-111)", () => {
     }
     expect(hits).toBeGreaterThan(3000);
   });
+
+  it("gives coarse heights everywhere, loaded or not, which hold the drawn ground and water between them (D-123)", async () => {
+    serveFixtures();
+    const { world, query } = await openWorld({ worldUrl: "https://pixelworld.test/southwest-fly/", style });
+    const far = query.coarseHeightAt(world.cellsX - 3, world.cellsY - 3)!;
+    expect(query.heightAt(world.cellsX - 3, world.cellsY - 3)).toBeNull(); // not loaded, but the coarse heights are there
+    expect(far.lo).toBeLessThanOrEqual(far.hi);
+    await query.ensure(0, 0, world.cellsX, world.cellsY);
+    let n = 0;
+    for (let y = 0.25; y < world.cellsY; y += 1.7)
+      for (let x = 0.25; x < world.cellsX; x += 1.3) {
+        const c = query.coarseHeightAt(x, y)!;
+        const g = query.heightAt(x, y)!;
+        const w = query.surfaceAt(x, y)!.waterLevel;
+        expect(g).toBeGreaterThanOrEqual(c.lo - 1e-9);
+        expect(Math.max(g, w ?? -Infinity)).toBeLessThanOrEqual(c.hi + 1e-9);
+        n++;
+      }
+    expect(n).toBeGreaterThan(30_000);
+    expect(query.coarseHeightAt(-1, 0)).toBeNull();
+  });
 });
 

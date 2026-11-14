@@ -210,7 +210,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     // somewhere not loaded yet
     const far = Array.from({ length: 24 }, (_, n) => [(n % 6) * 64 + 32, Math.floor(n / 6) * 64 + 32] as const).find(([x, y]) => x < info.cellsX && y < info.cellsY && !query.isLoaded(x - 2, y - 2, x + 2, y + 2))!;
     const p = game.plane("a")!;
-    Object.assign(p.s, { x: far[0], y: far[1], h: fresh.params.ceiling - 1 });
+    Object.assign(p.s, { x: far[0], y: far[1], h: query.coarseHeightAt(far[0], far[1])!.lo }); // low: it can't fly on by the coarse heights
     send("a", 1, {});
     game.tick(); // it waits, and its area is asked for
     expect([game.ackOf("a"), p.s.x]).toEqual([0, far[0]]);
@@ -232,7 +232,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     let seq = 0;
     // a far corner at a time: the plane waits there for its ground, which loads and pushes older chunks out
     for (const [x, y] of [[20, 20], [info.cellsX - 20, 20], [20, info.cellsY - 20], [info.cellsX - 20, info.cellsY - 20]] as const) {
-      Object.assign(p.s, { x, y, h: tight.params.ceiling - 1 });
+      Object.assign(p.s, { x, y, h: query.coarseHeightAt(x, y)!.lo });
       send("a", ++seq, {});
       game.tick();
       for (let n = 0; n < 100 && game.ackOf("a") < seq; n++) {
@@ -244,6 +244,20 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(stats().chunksEvicted).toBeGreaterThan(0);
     expect(stats().chunksMB).toBeLessThanOrEqual(2);
     expect(startArea()).toBe(true);
+  });
+
+  it("flies a plane on over ground not loaded yet when it is clear above the coarse heights there (D-123)", async () => {
+    const fresh = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
+    const { query, world: info } = fresh.opened;
+    const { game, join, send } = room(fresh);
+    await join("a");
+    const far = Array.from({ length: 24 }, (_, n) => [(n % 6) * 64 + 32, Math.floor(n / 6) * 64 + 32] as const).find(([x, y]) => x < info.cellsX && y < info.cellsY && !query.isLoaded(x - 2, y - 2, x + 2, y + 2))!;
+    const p = game.plane("a")!;
+    Object.assign(p.s, { x: far[0], y: far[1], h: fresh.params.ceiling - 1 });
+    send("a", 1, {});
+    game.tick();
+    expect(game.ackOf("a")).toBe(1); // no wait
+    expect(p.s.x).not.toBe(far[0]);
   });
 
   it("clamps a page's stick and trigger to what they can be", async () => {

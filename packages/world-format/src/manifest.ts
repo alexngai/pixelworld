@@ -96,6 +96,12 @@ export interface WorldManifest {
     chunks: { x: number; y: number; sha256?: string; count: number }[];
   };
   /**
+   * Coarse heights (D-123, `pixelworld coarse-heights`): each `block` × `block`
+   * cells' lowest ground and highest drawn top, for a game server stepping a
+   * player over ground it hasn't loaded yet.
+   */
+  coarse?: { version: number; path: string; sha256?: string; block: number };
+  /**
    * How objects are drawn at this scale level; overrides the style pack (D-047).
    * `vehicleScale`: the most traffic vehicles are enlarged over their real size (D-060).
    */

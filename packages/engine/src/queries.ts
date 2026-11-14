@@ -66,6 +66,7 @@ export function createQuery(
   geo: GeoSource | null,
   view: () => PickView,
   objects: ObjectSource | null = null,
+  coarse: { at(x: number, y: number): { lo: number; hi: number } | null } | null = null,
 ): WorldQuery {
   const rs = world.renderScale;
   const { metersPerStep, elevationDatumMeters } = world.manifest.scale;
@@ -176,6 +177,7 @@ export function createQuery(
 
     ensure: (x0, y0, x1, y1) => src.ensureRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1)),
     isLoaded: (x0, y0, x1, y1) => src.isLoadedRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1)),
+    coarseHeightAt: (x, y) => coarse?.at(x, y) ?? null,
 
     objectsAt: (x, y) => (objects ? objects.at(x, y) : []),
     landmarks: () => (objects ? objects.landmarks() : []),

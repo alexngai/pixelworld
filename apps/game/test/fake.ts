@@ -83,6 +83,7 @@ export class FakeWorld {
       metersPerCellAt: () => 400,
       ensure: async () => {},
       isLoaded: () => true,
+      coarseHeightAt: () => null,
       objectsAt: (x, y) =>
         this.objects.filter((o) => x >= o.bounds[0] && y >= o.bounds[1] && x <= o.bounds[2] && y <= o.bounds[3]),
       landmarks: () => [],

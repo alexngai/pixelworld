@@ -316,6 +316,8 @@ interface Mode {
   budgetMB?: number;
   /** Leave out the layers only drawing reads (D-123). */
   lean?: boolean;
+  /** Drive on over ground not loaded yet by the coarse heights, halfway up each block, instead of waiting (D-123). */
+  coarse?: boolean;
   /** Interest squares (cells), or every page gets everyone. */
   interest: number | null;
 }
@@ -326,6 +328,7 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
   readonly areas: Areas | null = null;
   readonly interest: Interest | null;
   waits = 0;
+  coarseSteps = 0;
   tickMs: number[] = [];
 
   constructor(room: HostedRoom, world: Awaited<ReturnType<typeof openWorld>>, readonly mode: Mode) {
@@ -346,9 +349,11 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
   protected input = (d: unknown) => (typeof d === "number" ? Math.max(-1, Math.min(1, d)) : null);
   protected step(id: string, turn: RoverIn): boolean {
     const r = this.rovers.get(id)!;
-    if (this.areas && !this.areas.ready(r.x, r.y)) return (this.waits++, false);
+    const c = this.areas && !this.areas.ready(r.x, r.y) ? (this.mode.coarse ? this.world.query.coarseHeightAt(r.x, r.y) : null) : undefined;
+    if (c === null) return (this.waits++, false);
     drive(r, turn, this.tickLength, this.world.world.cellsX, this.world.world.cellsY);
-    r.h = this.world.query.heightAt(r.x, r.y) ?? r.h;
+    if (c) this.coarseSteps++;
+    r.h = c ? (c.lo + c.hi) / 2 : (this.world.query.heightAt(r.x, r.y) ?? r.h);
     return true;
   }
   protected override update() {
@@ -432,6 +437,7 @@ async function rovers(mode: Mode, seconds: number) {
     /** Steps that waited for their ground: in the first second (everyone on ground not loaded), and after. */
     waits: game.waits,
     waitsAtStart,
+    coarseSteps: game.coarseSteps,
     slowest: Math.min(...moved),
     others: Math.max(...pages.flatMap((p) => [...p.others])),
     /** What the room and its world hold (more than when it opened). */

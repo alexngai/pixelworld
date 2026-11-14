@@ -237,7 +237,7 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
   protected step(id: string, input: DogfightInput, seen: number | null, seq: number): boolean | void {
     const w = this.world;
     const p = this.planes.get(id)!;
-    if (!this.areas.planes.ready(p.s.x, p.s.y)) return false; // over ground still loading: the input waits (D-120)
+    if (!this.areas.planes.ready(p.s.x, p.s.y) && !this.clearOver(p.s)) return false; // low over ground still loading: the input waits (D-120)
     const r = flyTick(p.s, input, w.fly, w.params);
     p.cooldown = Math.max(0, p.cooldown - TICK);
     if (r.crashed) return this.down(id, p.lastHit && this.time - p.lastHit.at < CREDIT_S ? p.lastHit.by : null);
@@ -250,6 +250,24 @@ export class DogfightRoom extends TickRoom<DogfightInput, DogfightJoin, Dogfight
     const round = fireRound(p.s, w.params, targets);
     this.rounds.push({ ...round, by: id, seq, lag, life: GUN.life });
     this.emit({ kind: "fire", by: id, seq, ...round });
+  }
+
+  /**
+   * Whether a plane is clear above the highest top of the ground under it and
+   * its nose by the coarse heights (D-123): then it flies on over ground not
+   * loaded yet, which can't be in its way. Towers there aren't known until it
+   * loads, a moment later (it loads 2 s ahead).
+   */
+  private clearOver(s: PlaneState): boolean {
+    const q = this.world.opened.query;
+    const reach = this.world.params.length;
+    let top = -Infinity;
+    for (const [x, y] of [[s.x, s.y], [s.x + Math.cos(s.yaw) * reach, s.y + Math.sin(s.yaw) * reach]] as const) {
+      const c = q.coarseHeightAt(x, y);
+      if (!c) return false;
+      top = Math.max(top, c.hi);
+    }
+    return s.h > top + PLANE.resetAgl;
   }
 
   protected override update(): void {

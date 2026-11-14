@@ -147,6 +147,12 @@ def parser() -> argparse.ArgumentParser:
     )
     obc.add_argument("package", type=Path, help="a built world package (its directory)")
 
+    coa = add(
+        "coarse-heights",
+        "add a built package's heights by block of 8 × 8 cells, for game servers (D-123)",
+    )
+    coa.add_argument("package", type=Path, help="a built world package (its directory)")
+
     her = add(
         "heroes",
         "re-package the offline bakes and paint-overs of hero landmarks into a built package",
@@ -260,6 +266,12 @@ def run(args: argparse.Namespace) -> int:
 
         summary = write_object_chunks(args.package)
         print(json.dumps(summary, indent=2))
+        return OK
+
+    if args.command == "coarse-heights":
+        from .coarse import write_coarse
+
+        print(json.dumps(write_coarse(args.package), indent=2))
         return OK
 
     if args.command == "heroes":

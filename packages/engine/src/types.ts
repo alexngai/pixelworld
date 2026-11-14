@@ -447,6 +447,13 @@ export interface WorldQuery {
   /** Whether the terrain under a rectangle of cells is loaded now (D-120): a game server's step can wait until it is. */
   isLoaded(x0: number, y0: number, x1: number, y1: number): boolean;
   /**
+   * The coarse heights around a place, loaded or not (D-123, `openWorld` on a
+   * package with them): its block's lowest ground and highest drawn top
+   * (steps). A server can step a player clear above `hi` over ground it hasn't
+   * loaded. Null without them, or outside.
+   */
+  coarseHeightAt(x: number, y: number): { lo: number; hi: number } | null;
+  /**
    * Placed objects standing at a point (occupancy): those whose footprint
    * contains it; landmarks drawn from an anchor (City Hall, a tower) where
    * their model stands, in plan; and other footprint-less objects (trees,
