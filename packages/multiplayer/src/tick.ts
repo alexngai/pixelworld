@@ -229,7 +229,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     const m: TickEvent<E> = { k: "ev", t: this.time, e };
     if (to === undefined) this.room.broadcast(m);
     else if (typeof to === "string") this.room.send(to, m);
-    else this.room.broadcast(m, this.allBut(to));
+    else this.multicast(to, m);
   }
 
   /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
@@ -357,7 +357,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
         if (ids) ids.push(id);
         else groups.set(g, [id]);
       }
-      return this.replicator.send(this.ticks, groups, (g) => this.shared(g), (data, to) => this.room.broadcast(data, this.allBut(to)));
+      return this.replicator.send(this.ticks, groups, (g) => this.shared(g), (data, to) => this.multicast(to, data));
     }
     const world = (group?: string) => ({ k: "world", t: this.time, ...this.shared(group) }) satisfies TickShared;
     const groups = new Map<string, string[]>();
@@ -371,7 +371,13 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     if (!groups.size) return this.room.broadcast(world(), skip);
     const grouped = new Set([...groups.values()].flat());
     if (this.room.players().some((id) => !grouped.has(id) && !skip.has(id))) this.room.broadcast(world(), new Set([...skip, ...grouped]));
-    for (const [g, ids] of groups) this.room.broadcast(world(g), this.allBut(ids));
+    for (const [g, ids] of groups) this.multicast(ids, world(g));
+  }
+
+  /** To some pages, serialized once: the room's `sendTo`, or a broadcast with the rest excepted. */
+  private multicast(ids: readonly string[], data: unknown): void {
+    if (this.room.sendTo) this.room.sendTo(ids, data);
+    else this.room.broadcast(data, this.allBut(ids));
   }
 
   private rosterText: string | null = null;

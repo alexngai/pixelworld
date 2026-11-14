@@ -83,6 +83,13 @@ export function loopback<R extends Ticking>(make: (room: HostedRoom) => R, opts:
       const sent = copy(data);
       if (p?.open) later(p.latency, () => p.room.deliver(sent));
     },
+    sendTo: (ids, data) => {
+      const sent = copy(data);
+      for (const id of ids) {
+        const p = pages.get(id);
+        if (p?.open) later(p.latency, () => p.room.deliver(copy(sent)));
+      }
+    },
     broadcast: (data, except) => {
       const sent = copy(data);
       for (const [id, p] of pages) if (p.open && !except?.has(id)) later(p.latency, () => p.room.deliver(copy(sent)));

@@ -37,6 +37,8 @@ export interface HostedRoom {
   readonly isPublic: boolean;
   /** To one player: JSON, or binary (a `Uint8Array`, sent as it is: D-123). */
   send(to: string, data: unknown): void;
+  /** To some players, serialized once (D-123); without it, `TickRoom` broadcasts with the rest excepted. */
+  sendTo?(ids: readonly string[], data: unknown): void;
   /** To every player in the room but `except` (serialized once; binary as it is). */
   broadcast(data: unknown, except?: ReadonlySet<string>): void;
   players(): string[];
@@ -193,6 +195,13 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
           send: (to, data) => {
             const ws = r.members.get(to);
             if (ws) sendText(ws, data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage));
+          },
+          sendTo: (ids, data) => {
+            const text = data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);
+            for (const id of ids) {
+              const ws = r.members.get(id);
+              if (ws) sendText(ws, text);
+            }
           },
           broadcast: (data, except) => {
             const text = data instanceof Uint8Array ? data : JSON.stringify({ t: "msg", from: SERVER, data } satisfies ServerMessage);

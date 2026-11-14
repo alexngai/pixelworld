@@ -240,16 +240,17 @@ export class ChunkStore {
 
   /** Over the budget: the least recently used chunks go, but not those an `ensureRect` holds. */
   private trim(): void {
-    if (this.held <= this.maxBytes) return;
-    // ponytail: a sort per load over budget, fine for hundreds of chunks; a heap if worlds hold thousands
-    const old: [number, Held][] = [];
-    this.chunks.forEach((h, k) => h && !this.pins.has(k) && old.push([k, h]));
-    old.sort((a, b) => a[1].used - b[1].used);
-    for (const [k, h] of old) {
-      if (this.held <= this.maxBytes) break;
-      this.chunks[k] = undefined;
+    // the least recently used unheld one at a time, by a scan (D-123): a load over budget usually lets one go
+    while (this.held > this.maxBytes) {
+      let oldest = -1;
+      for (let k = 0; k < this.chunks.length; k++) {
+        const h = this.chunks[k];
+        if (h && !this.pins.has(k) && (oldest < 0 || h.used < this.chunks[oldest]!.used)) oldest = k;
+      }
+      if (oldest < 0) return; // all held
+      this.held -= this.chunks[oldest]!.bytes;
+      this.chunks[oldest] = undefined;
       this.count--;
-      this.held -= h.bytes;
       this.evicted++;
     }
   }

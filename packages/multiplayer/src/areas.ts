@@ -25,7 +25,8 @@ export interface AreasOptions {
  *   protected override update() { for (const [id, c] of this.cars) this.areas.track(id, c.x, c.y, c.vx, c.vy); }
  */
 export class Areas {
-  private readonly loading = new Map<string, string>();
+  /** The area asked for each that is still loading (its corners). */
+  private readonly loading = new Map<string, readonly number[]>();
   private readonly radius: number;
   private readonly ahead: number;
   private readonly reach: number;
@@ -47,14 +48,18 @@ export class Areas {
     const ay = y + vy * this.ahead;
     const r = this.radius;
     // snapped to 8 cells, so a load already asked for is asked for again only when the area moves on
-    const rect = [Math.min(x, ax) - r, Math.min(y, ay) - r, Math.max(x, ax) + r, Math.max(y, ay) + r].map((v, i) => (i < 2 ? Math.floor(v / 8) : Math.ceil(v / 8)) * 8) as [number, number, number, number];
-    const k = rect.join();
-    if (this.loading.get(id) === k || this.world.isLoaded(...rect)) return;
-    this.loading.set(id, k);
+    const x0 = Math.floor((Math.min(x, ax) - r) / 8) * 8;
+    const y0 = Math.floor((Math.min(y, ay) - r) / 8) * 8;
+    const x1 = Math.ceil((Math.max(x, ax) + r) / 8) * 8;
+    const y1 = Math.ceil((Math.max(y, ay) + r) / 8) * 8;
+    const was = this.loading.get(id);
+    if ((was && was[0] === x0 && was[1] === y0 && was[2] === x1 && was[3] === y1) || this.world.isLoaded(x0, y0, x1, y1)) return;
+    const rect = [x0, y0, x1, y1] as const;
+    this.loading.set(id, rect);
     const done = () => {
-      if (this.loading.get(id) === k) this.loading.delete(id);
+      if (this.loading.get(id) === rect) this.loading.delete(id);
     };
-    this.world.ensure(...rect).then(done, (e: unknown) => {
+    this.world.ensure(x0, y0, x1, y1).then(done, (e: unknown) => {
       this.failed = e;
       done();
     });
