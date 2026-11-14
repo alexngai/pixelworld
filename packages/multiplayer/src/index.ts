@@ -41,6 +41,17 @@ export interface TickShared {
   t: number;
 }
 
+/**
+ * A team's snapshot (D-127): server time and what the team sees (the game's
+ * fields), serialized once for its players and the spectators watching it.
+ * Each of them gets its own `TickSnapshot` with the same `t` right after;
+ * `TickClient` puts the two together.
+ */
+export interface TickTeam {
+  k: "team";
+  t: number;
+}
+
 /** A `TickRoom`'s event (`emit`): the game's own, at server time `t`; a page shows it when it shows that time of the others (`TickClient.due`). */
 export interface TickEvent<E> {
   k: "ev";
@@ -403,6 +414,10 @@ export interface TickClientOptions<I, S, W> {
  * inputs: it calls `sync` each frame instead of `advance`, and its numbered
  * commands come back acknowledged (`TickSnapshot.cmd`), so it can show an
  * order at once and know which snapshot has it.
+ *
+ * In a room with teams (D-127), a page's own snapshot is its team's
+ * (`TickTeam`) with its own `ack` and `cmd` put in: `restore` gets them
+ * together. A spectator watching a team gets the same, with no inputs.
  */
 export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   readonly prediction: Prediction<I>;
@@ -412,6 +427,8 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   ping: number | null = null;
   private acc = 0;
   private latest: (TickSnapshot & S) | null = null;
+  /** The newest team snapshot (D-127): the page's own with its `t` comes next, and has it put in. */
+  private team: TickTeam | null = null;
   private readonly sentAt = new Map<number, number>();
   private cmdSeq = 0;
   private readonly cmdSentAt = new Map<number, number>();
@@ -427,9 +444,10 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
       if (from !== SERVER) return;
       const m = data as { k?: unknown; t?: unknown };
       const t = typeof m?.t === "number" ? m.t : null;
-      if (t !== null && (m.k === "world" || m.k === "snap" || m.k === "ev")) this.clock.sample(t, this.now());
+      if (t !== null && (m.k === "world" || m.k === "snap" || m.k === "ev" || m.k === "team")) this.clock.sample(t, this.now());
       if (m.k === "world") opts.onWorld?.(data as TickShared & W);
-      else if (m.k === "snap") this.snapshot(data as TickSnapshot & S);
+      else if (m.k === "team") this.team = data as TickTeam;
+      else if (m.k === "snap") this.snapshot(this.team?.t === t ? ({ ...this.team, ...(data as object), k: "snap" } as TickSnapshot & S) : (data as TickSnapshot & S));
       else if (m.k === "ev") this.events.push((data as TickEvent<E>).t, (data as TickEvent<E>).e);
       else opts.onMessage?.(data);
     };
@@ -444,7 +462,7 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
   command(c: unknown): number {
     const n = ++this.cmdSeq;
     this.cmdSentAt.set(n, this.now());
-    if (this.cmdSentAt.size > 100) this.cmdSentAt.delete(this.cmdSentAt.keys().next().value!); // a spectator's: no snapshot of its own acknowledges them
+    if (this.cmdSentAt.size > 100) this.cmdSentAt.delete(this.cmdSentAt.keys().next().value!); // a spectator's watching no team: no snapshot of its own acknowledges them
     this.room.send({ k: "cmd", c, n } satisfies TickMessage<I>);
     return n;
   }

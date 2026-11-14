@@ -919,4 +919,91 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect(passable(worlds[0]!.grid, cx, cy)).toBe(false);
     expect(lb.failed).toBeUndefined();
   });
+
+  it("two against two, and spectators: a side's snapshot serialized once for its two players and its watchers, shared orders and glim (D-127)", async () => {
+    const teams: { t: number; to: string[] }[] = [];
+    const lb = loopback(
+      (room) => {
+        const broadcast = room.broadcast;
+        room.broadcast = (data, except) => {
+          if ((data as { k: string }).k === "team") teams.push({ t: (data as { t: number }).t, to: room.players().filter((id) => !except?.has(id)) });
+          broadcast(data, except);
+        };
+        return new RtsRoom(room, Promise.resolve(world), false);
+      },
+      { fps: 20 },
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    const joins = [
+      { name: "A", vs: "any", size: 2 },
+      { name: "B", vs: "any", side: "tide" },
+      { name: "C", vs: "any" },
+      { name: "Kw", vs: "any", watch: "kiln" },
+      { name: "All", vs: "any", watch: "all" },
+      { name: "D", vs: "any" },
+    ];
+    const pages = joins.map(() => lb.join(0.05));
+    const snaps: (RtsSnap & { t: number; cmd?: number })[][] = pages.map(() => []);
+    const events: RtsEvent[][] = pages.map(() => []);
+    const clients = pages.map((p, n) => new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(p.room, { tick: TICK, now: lb.now, restore: (s) => void snaps[n]!.push(s) }));
+    const frame = () => clients.forEach((c, n) => (c.sync(), events[n]!.push(...c.due())));
+    // three players: the room waits for the fourth (two a side, from the first page's size)
+    clients.slice(0, 5).forEach((c, n) => c.hello(joins[n]));
+    lb.run(1, frame);
+    expect(lb.host.size).toBe(2);
+    expect(lb.host.match.phase).toBe("waiting");
+    clients[5]!.hello(joins[5]);
+    lb.run(1, frame);
+    expect(lb.host.match.phase).toBe("playing");
+    const ids = pages.map((p) => p.room.id);
+    expect(ids.slice(0, 4).map((id) => lb.host.sideOf(id))).toEqual(["kiln", "tide", "kiln", null]);
+    expect(lb.host.sideOf(ids[5]!)).toBe("tide");
+    expect([lb.host.watchOf(ids[3]!), lb.host.watchOf(ids[4]!)]).toEqual(["kiln", "all"]);
+
+    // each snapshot: one serialization a side and one for all, to its players and watchers alone
+    const t = teams.at(-1)!.t;
+    const now = teams.filter((m) => m.t === t).map((m) => m.to.sort());
+    expect(now).toHaveLength(3);
+    expect(now).toContainEqual([ids[0]!, ids[2]!, ids[3]!].sort());
+    expect(now).toContainEqual([ids[1]!, ids[5]!].sort());
+    expect(now).toContainEqual([ids[4]!]);
+
+    // teammates and the side's watcher restore the same view; the other side's runners at home are hidden from it, and not from all
+    const last = () => snaps.map((s) => s.at(-1)!);
+    expect(last()[0]!.t).toBe(last()[3]!.t);
+    expect([last()[2]!.units, last()[3]!.units]).toEqual([last()[0]!.units, last()[0]!.units]);
+    expect(last()[3]!.side).toBe("kiln");
+    expect(last()[0]!.units.every((u) => u.s === "kiln")).toBe(true);
+    expect(new Set(last()[4]!.units.map((u) => u.s))).toEqual(new Set(["kiln", "tide"]));
+    expect(last()[4]!.glims).toEqual({ kiln: START.glim, tide: START.glim });
+
+    // shared control: A trains a runner from the side's glim; C sends one of the side's runners off; each acknowledged on its own page
+    const kiln = last()[0]!;
+    const hearth = kiln.buildings.find((b) => b.s === "kiln" && b.k === "hearth")!;
+    const runner = kiln.units[0]!;
+    const n1 = clients[0]!.command({ t: "train", b: hearth.i });
+    const n2 = clients[2]!.command({ t: "move", u: [runner.i], x: 160, y: 215 });
+    lb.run(0.5, frame);
+    expect(snaps[0]!.find((s) => (s.cmd ?? 0) >= n1)!.glim).toBe(START.glim - UNITS.runner.cost);
+    expect(snaps[2]!.find((s) => (s.cmd ?? 0) >= n2)!.units.find((u) => u.i === runner.i)!.g).toEqual([160, 215]);
+    expect(last()[0]!.cmd).toBe(n1); // C's command doesn't acknowledge A's numbers
+    expect([last()[0]!.glim, last()[2]!.glim]).toEqual([START.glim - UNITS.runner.cost, START.glim - UNITS.runner.cost]);
+    expect(last()[0]!.units.find((u) => u.i === runner.i)!.g).toEqual([160, 215]); // A sees its teammate's order
+    // a watcher orders nothing, and the other side's players can't order this side's runner
+    clients[3]!.command({ t: "move", u: [runner.i], x: 200, y: 180 });
+    clients[1]!.command({ t: "move", u: [runner.i], x: 200, y: 180 });
+    lb.run(0.5, frame);
+    expect(last()[0]!.units.find((u) => u.i === runner.i)!.g).toEqual([160, 215]);
+    expect(events[1]!.filter((e) => e.kind === "refused")).toEqual([{ kind: "refused", why: "no units of yours" }]);
+
+    // one of the Kiln's two leaves: the match goes on; the second: the Tide wins
+    pages[0]!.room.close();
+    lb.run(0.5, frame);
+    expect(lb.host.match.phase).toBe("playing");
+    pages[2]!.room.close();
+    lb.run(0.5, frame);
+    expect(lb.host.match.phase).toBe("ended");
+    expect(events[4]!.find((e) => e.kind === "phase" && e.phase === "ended")).toEqual({ kind: "phase", phase: "ended", winner: "tide" });
+    expect(lb.failed).toBeUndefined();
+  });
 });

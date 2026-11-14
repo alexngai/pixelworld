@@ -1,7 +1,7 @@
-import type { TickEvent, TickMessage, TickShared, TickSnapshot } from "./index";
+import type { TickEvent, TickMessage, TickShared, TickSnapshot, TickTeam } from "./index";
 import type { HostedRoom, RoomHost } from "./server";
 
-/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
+/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, and a team's if it watches one, D-127; sends no inputs). */
 export type TickRole = "player" | "spectator";
 
 export interface TickRoomOptions<W> {
@@ -78,6 +78,11 @@ const LAG_CREEP = 0.0005;
  *   page (`shared`, serialized once), and to each player its own (`snapshot`,
  *   with `t` and its `ack`). A player whose connection is backed up gets
  *   fewer until it catches up.
+ * - **Teams** (D-127): a game whose players see by team (a fog of war) puts
+ *   them in teams (`teamOf`), and its spectators too, watching one (or a
+ *   view of everything); each team's snapshot (`teamSnapshot`) is serialized
+ *   once and sent to its pages just before their own (`cmd`, `ack`), which a
+ *   `TickClient` puts together by `t`.
  * - **Events** (`emit`): stamped with the server time, for pages to show when
  *   they show that time of the others (`TickClient.due`).
  * - **Errors:** a throw in the game closes this room (`HostedRoom.fail`), not
@@ -146,6 +151,18 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   }
   /** What one player's own snapshot carries besides `t` and `ack` (its own state, for its prediction). */
   protected snapshot(_id: string): object {
+    return {};
+  }
+  /**
+   * The team a player plays on, or the one a spectator watches (a game with
+   * a view of everything gives it a name of its own, `"all"` say): its pages
+   * get `teamSnapshot(team)` (D-127). Null (the default): no team, as before.
+   */
+  protected teamOf(_id: string): string | null {
+    return null;
+  }
+  /** What a team sees (a side's fog of war): serialized once a snapshot for its players and the spectators watching it. */
+  protected teamSnapshot(_team: string): object {
     return {};
   }
   /** A command from a player or spectator (untrusted): a team pick, a ready, a build. */
@@ -301,9 +318,19 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     const everyone = ++this.snapshots % (this.opts.behindEvery ?? 10) === 0;
     const skip = new Set([...this.seats].filter(([, s]) => s.behind && !everyone).map(([id]) => id));
     this.room.broadcast({ k: "world", t: this.time, ...this.shared() } satisfies TickShared, skip);
+    // each team's snapshot once, to its players and the spectators watching it, before their own (D-127)
+    const teams = new Map<string, Set<string>>();
+    for (const [id, seat] of this.seats) {
+      const team = seat.drive || skip.has(id) ? null : this.teamOf(id);
+      if (team !== null) (teams.get(team) ?? teams.set(team, new Set()).get(team)!).add(id);
+    }
+    const pages = [...this.seats.keys(), ...this.pending.keys()];
+    for (const [team, ids] of teams) this.room.broadcast({ k: "team", t: this.time, ...this.teamSnapshot(team) } satisfies TickTeam, new Set(pages.filter((id) => !ids.has(id))));
+    // each player's own (a spectator watching a team: its `cmd`, to pair with the team's)
+    const teamed = new Set([...teams.values()].flatMap((ids) => [...ids]));
     for (const [id, seat] of this.seats)
-      if (seat.role === "player" && !seat.drive && !skip.has(id))
-        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id), ...(seat.cmd ? { cmd: seat.cmd } : {}) } satisfies TickSnapshot);
+      if ((seat.role === "player" && !seat.drive && !skip.has(id)) || teamed.has(id))
+        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...(seat.role === "player" ? this.snapshot(id) : {}), ...(seat.cmd ? { cmd: seat.cmd } : {}) } satisfies TickSnapshot);
   }
 
   private admit(id: string, join: J): void {

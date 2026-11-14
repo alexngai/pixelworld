@@ -27,6 +27,7 @@ import {
   type Team,
   type UnitKind,
   type UnitNet,
+  type Watch,
   BUILDING_EYE,
   HIGH_GROUND_DAMAGE,
   SIGHT,
@@ -171,8 +172,8 @@ export class RtsGame {
   private readonly known: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
   /** Paths found this tick (`walk`). */
   private searches = 0;
-  /** Each side's view, built once a step at most. */
-  private readonly views = new Map<Team, { time: number; snap: RtsSnap }>();
+  /** Each side's view (and everything, for spectators), built once a step at most. */
+  private readonly views = new Map<Watch, { time: number; snap: RtsSnap }>();
 
   constructor(
     readonly grid: MapGrid,
@@ -746,14 +747,19 @@ export class RtsGame {
 
   // ---------------------------------------------------------------- what a side sees
 
-  /** A side's snapshot: its own, the other's in sight (units) or known (buildings), the seeps; built once a step. */
-  view(team: Team): RtsSnap {
-    const cached = this.views.get(team);
+  /**
+   * A side's snapshot: its own, the other's in sight (units) or known
+   * (buildings), the seeps; or, for spectators watching everything (`all`,
+   * D-127), every unit and building as its own side sees it. Built once a step.
+   */
+  view(watch: Watch): RtsSnap {
+    const cached = this.views.get(watch);
     if (cached?.time === this.time) return cached.snap;
+    const team = watch === "all" ? null : watch;
     const units: UnitNet[] = [];
     for (const u of this.units.values()) {
-      const own = u.team === team;
-      if (!own && !this.sight[team].has(u.id)) continue;
+      const own = !team || u.team === team;
+      if (!own && !this.sight[team!].has(u.id)) continue;
       const goal = u.order.k === "move" ? u.order : u.pathTo && u.path.length ? u.pathTo : null;
       units.push({
         i: u.id,
@@ -771,8 +777,8 @@ export class RtsGame {
     }
     const buildings: BuildingNet[] = [];
     for (const b of this.buildings.values()) {
-      const own = b.team === team;
-      if (!own && !this.canSee(team, b.id)) continue;
+      const own = !team || b.team === team;
+      if (!own && !this.canSee(team!, b.id)) continue;
       buildings.push({
         i: b.id,
         k: b.kind,
@@ -788,9 +794,10 @@ export class RtsGame {
     // the level's buildings it sees knocked about
     const hurt: [number, number][] = [];
     for (const s of this.structures.values())
-      if (s.hp < this.grid.structures!.get(s.obj)!.hp && this.seesPoint(team, s, Math.sqrt(s.cells.length))) hurt.push([s.obj, Math.ceil(s.hp)]);
-    const snap: RtsSnap = { side: team, glim: this.glim[team], units, buildings, seeps, ...(hurt.length ? { hurt } : {}) };
-    this.views.set(team, { time: this.time, snap });
+      if (s.hp < this.grid.structures!.get(s.obj)!.hp && (!team || this.seesPoint(team, s, Math.sqrt(s.cells.length)))) hurt.push([s.obj, Math.ceil(s.hp)]);
+    const glim = team ? { glim: this.glim[team] } : { glim: 0, glims: { ...this.glim } };
+    const snap: RtsSnap = { side: watch, ...glim, units, buildings, seeps, ...(hurt.length ? { hurt } : {}) };
+    this.views.set(watch, { time: this.time, snap });
     return snap;
   }
 
