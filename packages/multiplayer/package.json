@@ -57,7 +57,10 @@
     "prepack": "node build.mjs",
     "demo:dogfight": "vite --config src/demos/dogfight/vite.config.ts",
     "demo:dogfight:build": "vite build --config src/demos/dogfight/vite.config.ts && vite build --config src/demos/dogfight/vite.config.ts --ssr serve.ts",
-    "demo:dogfight:start": "node src/demos/dogfight/dist/server/serve.js"
+    "demo:dogfight:start": "node src/demos/dogfight/dist/server/serve.js",
+    "demo:race": "vite --config src/demos/race/vite.config.ts",
+    "demo:race:build": "vite build --config src/demos/race/vite.config.ts && vite build --config src/demos/race/vite.config.ts --ssr serve.ts",
+    "demo:race:start": "node src/demos/race/dist/server/serve.js"
   },
   "dependencies": {
     "ws": "8.18.3"

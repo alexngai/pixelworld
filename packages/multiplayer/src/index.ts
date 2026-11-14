@@ -367,6 +367,60 @@ export class Prediction<I> {
   }
 }
 
+/**
+ * A prediction's corrections, drawn smoothly (D-119). When a snapshot moves
+ * the page's own vehicle (a bump the server judged otherwise), it is drawn
+ * where it was and eases to where it is, so neither it nor the camera
+ * following it snaps; its state, which the next inputs step from, is the
+ * server's at once. A jump past `snap` cells (a respawn, the grid) is drawn
+ * there at once.
+ *
+ *   restore: (snap) => { before = { ...me }; Object.assign(me, snap.you) },
+ *   reconciled: () => correction.moved(before, me),
+ *   each frame: correction.update(dt); draw at me + correction.offset
+ */
+export class Correction {
+  /** Draw the vehicle this far off its state: cells, steps, radians. */
+  readonly offset = { x: 0, y: 0, h: 0, heading: 0 };
+
+  /**
+   * @param halfLife Seconds for an offset to halve (default 0.1).
+   * @param snap Cells past which a correction is drawn at once (default 3).
+   */
+  constructor(
+    readonly halfLife = 0.1,
+    readonly snap = 3,
+  ) {}
+
+  /** A reconcile moved the vehicle from `before` to `after`: it is drawn on from where it was. */
+  moved(before: Pose, after: Pose): void {
+    const o = this.offset;
+    const x = o.x + before.x - after.x;
+    const y = o.y + before.y - after.y;
+    if (Math.hypot(x, y) > this.snap) return this.reset();
+    o.x = x;
+    o.y = y;
+    o.h += before.h - after.h;
+    o.heading += Math.atan2(Math.sin(before.heading - after.heading), Math.cos(before.heading - after.heading));
+  }
+
+  /** Ease out over a frame of `dt` seconds. */
+  update(dt: number): void {
+    const k = 0.5 ** (dt / this.halfLife);
+    const o = this.offset;
+    for (const key of ["x", "y", "h", "heading"] as const) o[key] = Math.abs(o[key] * k) < 1e-4 ? 0 : o[key] * k;
+  }
+
+  reset(): void {
+    Object.assign(this.offset, { x: 0, y: 0, h: 0, heading: 0 });
+  }
+
+  /** How far off it is drawn now (cells across). */
+  get size(): number {
+    return Math.hypot(this.offset.x, this.offset.y);
+  }
+}
+
 // ---------------------------------------------------------------- events at their time
 
 /**
