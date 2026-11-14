@@ -878,7 +878,7 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     lb.run(20, frame);
     expect(lb.host.match.phase).toBe("playing");
     expect(lb.failed).toBeUndefined();
-  });
+  }, 60_000); // minutes of play: 2–4 s alone, past 5 s on a busy machine
 
   it("a snapshot stays small with forty units", () => {
     const game = new RtsGame({ ...world.grid, building: new Int32Array(world.grid.building.length) });

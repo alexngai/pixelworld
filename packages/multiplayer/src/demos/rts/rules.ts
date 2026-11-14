@@ -307,7 +307,7 @@ export interface MapGrid extends Cells {
 const isBuilding = (group: string) => group === "building" || group.startsWith("building.");
 
 /** Read the play area's cells from a world's queries (the terrain and objects there loaded: `query.ensure`). */
-export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP): MapGrid {
+export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt" | "landmarks">, map = MAP): MapGrid {
   const structures = new Map<number, Structure>();
   const heights = new Map<number, number>();
   const landmarks = new Map<string, number[]>();
@@ -345,12 +345,19 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
   const my = map.y0 + map.h / 2;
   // reachable from both hearths: in the map's largest walkable region, where they stand (D-128)
   const reach = mainRegion(g);
-  g.objectives = [...landmarks].flatMap(([id, list]) => {
-    const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
-    const part = list.map(at).reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
+  const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
+  const parts = [...landmarks].map(([id, list]) => ({ id, list: list.map(at) }));
+  // a landmark no cell's middle meets (a wheel's thin rim): its anchor, where that is in the area (D-128)
+  for (const l of query.landmarks())
+    if (!landmarks.has(l.id) && cellAt(g, l.x, l.y) >= 0) parts.push({ id: l.id, list: [{ x: Math.floor(l.x), y: Math.floor(l.y) }] });
+  g.objectives = [];
+  for (const { id, list } of parts) {
+    const part = list.reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
     const spot = nearestOpen(g, part.x, part.y, 15, (x, y) => reach[cellIndex(g, x, y)] === 1);
-    return spot ? [{ id, name: landmarkName(id), x: spot.x + 0.5, y: spot.y + 0.5 }] : [];
-  });
+    // one held from where another is (a pair of torii): the first only (D-128)
+    if (spot && !g.objectives.some((o) => Math.hypot(o.x - spot.x - 0.5, o.y - spot.y - 0.5) < 2 * OBJECTIVE.radius))
+      g.objectives.push({ id, name: landmarkName(id), x: spot.x + 0.5, y: spot.y + 0.5 });
+  }
   return g;
 }
 

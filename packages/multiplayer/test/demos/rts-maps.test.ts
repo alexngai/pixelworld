@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TickClient, joinRoom } from "../../src/index";
 import { serveStatic, type Relay } from "../../src/server";
 import { DEFAULT_MAP, MAPS, planMap, type Layout } from "../../src/demos/rts/maps";
-import { BUILDINGS, MAX_RISE, WOODS, cellIndex, findPath, passable, walkFrom, type MapGrid, type RtsEvent, type RtsSnap, type RtsWorldNet } from "../../src/demos/rts/rules";
+import { BUILDINGS, MAX_RISE, OBJECTIVE, WOODS, cellIndex, findPath, passable, walkFrom, type MapGrid, type RtsEvent, type RtsSnap, type RtsWorldNet } from "../../src/demos/rts/rules";
 import { BOT, RtsRoom, attachRts, openRtsWorld, rtsLobby, type RtsWorld } from "../../src/demos/rts/server";
 import { WORLDS } from "../../src/demos/rts/vite.config";
 import { loopback } from "../../src/testing";
@@ -83,8 +83,12 @@ describe("Fogfront's maps from a level's cells (D-128)", () => {
     const ids = async (id: string) => (await worldOf(id)).grid.objectives!.map((o) => o.id).sort();
     expect(await ids("midtown")).toEqual(["chrysler-building", "empire-state-building", "flatiron-building", "grand-central-terminal"]);
     expect(await ids("kowloon")).toEqual(["hong-kong-cultural-centre", "the-peninsula", "tsim-sha-tsui-clock-tower"]);
-    expect((await ids("higashiyama")).length).toBeGreaterThanOrEqual(6); // the temples, shrines and torii of Higashiyama
-    expect(await ids("strip")).toContain("eiffel-replica");
+    // the temples, shrines and torii of Higashiyama: a pair held from one spot counts once
+    const kyoto = (await worldOf("higashiyama")).grid.objectives!;
+    expect(kyoto.length).toBeGreaterThanOrEqual(4);
+    for (const a of kyoto) for (const b of kyoto) if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(2 * OBJECTIVE.radius);
+    // the High Roller, which no cell's middle meets, from its anchor
+    expect(await ids("strip")).toEqual(["eiffel-replica", "high-roller"]);
   }, 30_000);
 });
 
