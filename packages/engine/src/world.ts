@@ -29,6 +29,7 @@ import {
   decodePng,
   fetchWorldFile,
   parseWorldFile,
+  type DroppableLayer,
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
@@ -105,11 +106,12 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
   return pack;
 }
 
-export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB">): Promise<LoadedWorld> {
+export async function loadWorld(opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB"> & { dropLayers?: readonly DroppableLayer[] }): Promise<LoadedWorld> {
   const url = opts.worldUrl;
   const manifest = await loadManifest(url);
   const store = new ChunkStore(manifest, url);
   if (opts.chunkBudgetMB !== undefined) store.maxBytes = opts.chunkBudgetMB * 2 ** 20;
+  if (opts.dropLayers) store.dropLayers = new Set(opts.dropLayers);
   const base = new URL(url, globalThis.location?.href); // openWorld outside a browser passes an absolute URL
   // Lon/lat of cell corners: places between scale levels (D-046), fog areas, queries.
   const geo = await GeoGrid.load(manifest, base).catch((e: unknown) => {

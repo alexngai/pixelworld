@@ -9,6 +9,7 @@ import {
   parseWorldFile,
   type Chunk,
   type ChunkRef,
+  type DroppableLayer,
   type ObjectsFile,
   type WorldManifest,
 } from "@pixelworlds/world-format";
@@ -82,6 +83,8 @@ export class ChunkStore {
   maxBytes = Infinity;
   /** Chunks let go so far to stay within `maxBytes`. */
   evicted = 0;
+  /** Layers left out of every chunk loaded from now on (D-123): they read as empty. */
+  dropLayers: ReadonlySet<DroppableLayer> = new Set();
 
   constructor(
     readonly manifest: WorldManifest,
@@ -125,11 +128,11 @@ export class ChunkStore {
     const what = `world chunk ${cx},${cy}`;
     const load = async (): Promise<Chunk> => {
       const bytes = await this.fetcher(url, what);
-      return parseWorldFile(url, what, async () => decodeChunk(await maybeGunzip(bytes)));
+      return parseWorldFile(url, what, async () => decodeChunk(await maybeGunzip(bytes), { drop: this.dropLayers }));
     };
     const p = load()
       .then((chunk) => {
-        const bytes = chunkBytes(chunk);
+        const bytes = chunkBytes(chunk, this.dropLayers);
         this.chunks.set(k, { chunk, bytes, used: ++this.uses });
         this.held += bytes;
         this.trim();
@@ -285,10 +288,10 @@ export class ChunkStore {
   }
 }
 
-/** A decoded chunk's size: its layers and micro-terrain. */
-function chunkBytes(chunk: Chunk): number {
+/** A decoded chunk's size: its layers (but the dropped, which it shares) and micro-terrain. */
+function chunkBytes(chunk: Chunk, dropped: ReadonlySet<string>): number {
   let n = chunk.terrain.micro?.corners.byteLength ?? 0;
-  for (const a of Object.values(chunk.terrain.layers())) n += a.byteLength;
+  for (const [k, a] of Object.entries(chunk.terrain.layers())) if (!dropped.has(k)) n += a.byteLength;
   return n;
 }
 

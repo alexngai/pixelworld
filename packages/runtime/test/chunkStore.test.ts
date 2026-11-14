@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TerrainGrid } from "@pixelworlds/grid";
-import { encodeChunk, type WorldManifest } from "@pixelworlds/world-format";
+import { DRAW_ONLY_LAYERS, encodeChunk, type WorldManifest } from "@pixelworlds/world-format";
 import { ChunkStore, loadManifest, loadObjects } from "../src/chunkStore";
 import { loadWorld } from "../src/world";
 
@@ -153,6 +153,17 @@ describe("a chunk store's memory budget (D-120)", () => {
     await tick();
     await tick();
     expect([store.loadedCount, store.loadedBytes]).toEqual([1, 16 * 94]); // both let go: trimmed to the budget
+  });
+
+  it("leaves out the layers only drawing reads when asked, which read as empty and cost nothing (D-123)", async () => {
+    const { store } = strip();
+    store.dropLayers = new Set(DRAW_ONLY_LAYERS);
+    await store.ensureRect(0, 0, 8, 4);
+    expect(store.loadedBytes).toBe(2 * 16 * 19); // 94 bytes a cell less 72 of pieces, 1 of geology, 2 of rails
+    const [a, b] = [store.get(0, 0)!.terrain, store.get(1, 0)!.terrain];
+    expect(a.roadSeg).toBe(b.roadSeg); // one empty array for all
+    expect([a.roadSeg.length, a.roadSeg.some(Boolean), a.rail.length]).toEqual([16 * 6, false, 16]);
+    expect(store.surfaceHeightAt(4.5, 0.5)).toBe(1); // what queries read is all there
   });
 
   it("takes a chunk the package lacks as loaded: there is nothing to wait for", async () => {

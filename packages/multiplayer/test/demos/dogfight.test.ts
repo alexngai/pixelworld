@@ -220,8 +220,8 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(game.plane("a")!.s.x).not.toBe(far[0]);
   });
 
-  it("keeps the ground respawns read loaded under a tight budget, while planes far off load and let go of theirs (D-120)", async () => {
-    const tight = await openDogfightWorld("https://pixelworld.test/southwest-fly/", { chunkBudgetMB: 5 });
+  it("keeps the ground respawns read loaded under a tight budget (2 MB: about 9 lean chunks of 24), while planes far off load and let go of theirs (D-120)", async () => {
+    const tight = await openDogfightWorld("https://pixelworld.test/southwest-fly/", { chunkBudgetMB: 2 });
     const { query, world: info, stats } = tight.opened;
     const { game, join, send } = room(tight);
     await join("a");
@@ -242,7 +242,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
       expect(game.ackOf("a")).toBe(seq);
     }
     expect(stats().chunksEvicted).toBeGreaterThan(0);
-    expect(stats().chunksMB).toBeLessThanOrEqual(5);
+    expect(stats().chunksMB).toBeLessThanOrEqual(2);
     expect(startArea()).toBe(true);
   });
 

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { stylePack } from "@pixelworlds/game/src/styles";
-import { openWorld, type Entity, type EntityList, type EntitySpec } from "pixelworld/engine";
+import { DRAW_ONLY_LAYERS, openWorld, type Entity, type EntityList, type EntitySpec } from "pixelworld/engine";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RemotePlayers, TickClient, type TickEvent, type TickMessage, type TickShared } from "../src/index";
 import { Areas, Interest, TickRoom, type AreaWorld, type HostedRoom, type TickRole } from "../src/server";
@@ -314,6 +314,8 @@ interface Mode {
   /** Load around the players (with a budget), or the whole world as the dogfight did. */
   areas: boolean;
   budgetMB?: number;
+  /** Leave out the layers only drawing reads (D-123). */
+  lean?: boolean;
   /** Interest squares (cells), or every page gets everyone. */
   interest: number | null;
 }
@@ -383,7 +385,7 @@ async function rovers(mode: Mode, seconds: number) {
     return { heapMB: m.heapUsed / 2 ** 20, arrayBuffersMB: m.arrayBuffers / 2 ** 20 };
   };
   const m0 = mem();
-  const opened = await openWorld({ worldUrl: "https://pixelworld.test/southwest/", style: stylePack, chunkBudgetMB: mode.budgetMB });
+  const opened = await openWorld({ worldUrl: "https://pixelworld.test/southwest/", style: stylePack, chunkBudgetMB: mode.budgetMB, dropLayers: mode.lean ? DRAW_ONLY_LAYERS : undefined });
   const { cellsX, cellsY } = opened.world;
   if (!mode.areas) await opened.query.ensure(0, 0, cellsX, cellsY); // the whole world, as the dogfight did
   // everyone on a grid over the world, where (with areas) nothing is loaded yet: they wait for their ground first

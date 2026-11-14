@@ -3,7 +3,7 @@ import type { Box, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
-import type { WorldManifest } from "@pixelworlds/world-format";
+import type { DroppableLayer, WorldManifest } from "@pixelworlds/world-format";
 
 /**
  * The engine's public types (docs/library.md §3.2–3.3). Units, unless said
@@ -64,6 +64,13 @@ export interface OpenWorldOptions {
    * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
    */
   chunkBudgetMB?: number;
+  /**
+   * Terrain layers to leave out (D-123), of those only drawing reads
+   * (`DRAW_ONLY_LAYERS`: the road, path and rail pieces, geology, rails):
+   * they read as empty. All of them make a chunk with micro-terrain about
+   * 0.22 MB instead of 0.5.
+   */
+  dropLayers?: readonly DroppableLayer[];
 }
 
 /** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */

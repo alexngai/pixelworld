@@ -5,7 +5,7 @@ import { FlightPilot } from "@pixelworlds/game/src/pilot";
 import { LEVEL_FLIGHT, axes, drawnPitch, flightParams, spawnPlane, type PlaneParams, type PlaneState } from "@pixelworlds/game/src/plane";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { PLANE } from "@pixelworlds/game/src/tuning";
-import { openWorld, type OpenedWorld } from "pixelworld/engine";
+import { DRAW_ONLY_LAYERS, openWorld, type OpenedWorld } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
 import { Areas, History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import {
@@ -67,7 +67,8 @@ const AREAS = { radius: 16, ahead: 2, reach: 2 };
  * at most `chunkBudgetMB` of it (D-120).
  */
 export async function openDogfightWorld(worldUrl: string, opts: { chunkBudgetMB?: number } = {}): Promise<DogfightWorld> {
-  const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64 });
+  // the layers only drawing reads left out: about half of each chunk (D-123)
+  const opened = await openWorld({ worldUrl, style: stylePack, chunkBudgetMB: opts.chunkBudgetMB ?? 64, dropLayers: DRAW_ONLY_LAYERS });
   const { world, query } = opened;
   // each read just after its own load, which a budget can't let go of before then; the objects keep a top once read
   const tops = (
