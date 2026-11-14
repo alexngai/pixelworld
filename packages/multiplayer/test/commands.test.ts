@@ -84,7 +84,7 @@ describe("commands acknowledged, for a page with no vehicle (D-121)", () => {
     const lb = loopback((room) => new Binary(room, { clock: false, snapshotEvery: 3 }));
     const page = lb.join(0.05);
     const restored: Snap[] = [];
-    const client = new TickClient<never, Snap>(page.room, { tick: 1 / 60, now: lb.now, snapSchema: TALLY, restore: (s) => void restored.push(s) });
+    const client = new TickClient<never, { tally: number }>(page.room, { tick: 1 / 60, now: lb.now, snapSchema: TALLY, restore: (s) => void restored.push(s) });
     client.hello("me");
     lb.run(0.2, () => client.sync());
     expect(restored.at(-1)!.cmd).toBeUndefined();
