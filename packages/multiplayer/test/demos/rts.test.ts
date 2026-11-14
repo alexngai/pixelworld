@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { stylePack } from "@pixelworlds/game/src/styles";
-import { openWorld, type WorldEdit } from "pixelworld/engine";
+import { openWorld, setRemoved, type WorldEdit } from "pixelworld/engine";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RtsGame, parseCommand } from "../../src/demos/rts/game";
 import {
@@ -17,8 +17,14 @@ import {
   UNITS,
   WATER,
   WOODS,
+  HIGH_GROUND_DAMAGE,
   Razed,
+  SIGHT,
   buildGrid,
+  fogCells,
+  razeCells,
+  seesUnit,
+  sideSight,
   cellIndex,
   findPath,
   lineClear,
@@ -475,6 +481,62 @@ describe("Fogfront's match (D-121)", () => {
   });
 });
 
+describe("Fogfront's sight from the level (D-125)", () => {
+  const eye = (x: number, y: number, radius = 6) => ({ x, y, up: SIGHT.eye, radius });
+
+  it("a level's building hides what stands behind it, until it falls", () => {
+    const g = standing(
+      gridOf([
+        "..........", //
+        "....#.....",
+        "..........",
+      ]),
+      [{ obj: 7, cells: [[4, 1]] }],
+    );
+    setRemoved(g, () => false);
+    const sight = sideSight(g, [eye(1.5, 1.5)], null);
+    expect(seesUnit(g, sight, 6.5, 1.5)).toBe(false);
+    expect(seesUnit(g, sight, 6.5, 0.2)).toBe(true); // beside its shadow
+    razeCells(g, 7, new Set([7]));
+    expect(seesUnit(g, sideSight(g, [eye(1.5, 1.5)], null), 6.5, 1.5)).toBe(true);
+  });
+
+  it("sees further from high ground, and a unit in woods only from near", () => {
+    const flat = open(20, 3);
+    const hill = gridOf(["00000000000000000000", "00330000000000000000", "00000000000000000000"]);
+    const far = { x: 10.5, y: 1.5 };
+    expect(seesUnit(flat, sideSight(flat, [eye(2.5, 1.5)], null), far.x, far.y)).toBe(false); // 8 cells off, 6 of sight
+    expect(seesUnit(hill, sideSight(hill, [eye(2.5, 1.5)], null), far.x, far.y)).toBe(true); // 3 steps up: further
+    const woods = gridOf(["..........", "....ttt...", ".........."]);
+    setRemoved(woods, () => false);
+    const sight = sideSight(woods, [eye(1.5, 1.5)], null);
+    expect(seesUnit(woods, sight, 4.5, 0.5)).toBe(true); // in the open beside them
+    expect(seesUnit(woods, sight, 3.5, 1.5)).toBe(true); // into the woods' edge, two cells off
+    expect(seesUnit(woods, sight, 5.5, 1.5)).toBe(false); // deeper in
+  });
+
+  it("fog shortens sight, where the eye or what it looks at stands in it", () => {
+    const g = open(20, 3);
+    const clear = sideSight(g, [eye(1.5, 1.5)], null);
+    const thick = sideSight(g, [eye(1.5, 1.5)], fogCells(g, () => 1));
+    expect(seesUnit(g, clear, 6.5, 1.5)).toBe(true);
+    expect(seesUnit(g, thick, 6.5, 1.5)).toBe(false);
+    expect(seesUnit(g, thick, 3.5, 1.5)).toBe(true); // 6 × 0.4 cells still
+  });
+
+  it("a blow from a step or more above lands harder", () => {
+    const game = new RtsGame(gridOf(["2222200000000000", "2222200000000000", "2222200000000000", "0000000000000000"]), { hearths: { kiln: [0, 0], tide: [12, 0] }, seeps: [] });
+    const [a, b] = [...game.units.values()].filter((u) => u.team === "kiln");
+    const foe = [...game.units.values()].find((u) => u.team === "tide")!;
+    Object.assign(a!, { kind: "warden", x: 4.5, y: 2.5, order: { k: "idle" } });
+    Object.assign(foe, { x: 5.6, y: 2.5, hp: 100 });
+    Object.assign(b!, { x: 0.5, y: 0.5 });
+    game.step(TICK);
+    game.step(TICK);
+    expect(foe.hp).toBeCloseTo(100 - UNITS.warden.damage * HIGH_GROUND_DAMAGE, 5);
+  });
+});
+
 // ---------------------------------------------------------------- over the real level
 
 const ROOT = new URL("../../../../", import.meta.url);
@@ -493,6 +555,16 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
   });
   afterAll(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("the Golden Gate's fog comes over the Presidio and goes, and hides what stands in it (D-125)", () => {
+    const fog = world.fog!;
+    expect(fog).not.toBeNull();
+    const cover = (t: number) => fogCells(world.grid, (x, y, h) => fog.at(x, y, h, t));
+    const shares = [0, 120, 240, 360, 480].map((t) => cover(t).filter((v) => v > 0.3).length / world.grid.flags.length);
+    expect(Math.max(...shares)).toBeGreaterThan(0.05); // part of the map lies in it
+    expect(Math.max(...shares)).toBeLessThan(0.9); // not all of it
+    expect(new Set(shares.map((v) => v.toFixed(3))).size).toBeGreaterThan(1); // it drifts
   });
 
   it("reads the play area: water, woods, roads and the level's buildings, and a way from one hearth to the other", () => {

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openWorld } from "../src/index";
+import { fogSampler, openWorld } from "../src/index";
 
 /**
  * `openWorld` (D-111): a committed package's queries in Node, with no page,
@@ -77,5 +77,25 @@ describe("openWorld: a world's queries without a view (D-111)", () => {
 
   it("asks for an absolute URL or a base where there is no page", async () => {
     await expect(openWorld({ worldUrl: "/southwest-fly/", style })).rejects.toThrow(/"\/southwest-fly\/" is relative, and there is no page/);
+  });
+
+  it("gives the style's fog as a number, as the fog layer draws it: in its areas, under its ceiling, drifting (D-125)", async () => {
+    serveFixtures();
+    const { world, query } = await openWorld({ worldUrl: "sf/", base: "https://pixelworld.test/", style });
+    const fog = fogSampler(world, query)!;
+    expect(fog).not.toBeNull();
+    // the Golden Gate, low: fog; the same place over the ceiling, and downtown: none
+    const [gx, gy] = query.lonLatToCell(-122.478, 37.81)!;
+    const [dx, dy] = query.lonLatToCell(-122.4, 37.788)!;
+    const at = (t: number) => fog.at(gx, gy, 0, t);
+    expect(at(0)).toBeGreaterThan(0.1);
+    expect(fog.at(gx, gy, fog.ceiling + 1, 0)).toBe(0);
+    expect(fog.at(dx, dy, 0, 0)).toBe(0);
+    // the patches drift: the same place thickens and thins over a few minutes
+    const over = Array.from({ length: 60 }, (_, k) => at(k * 10));
+    expect(Math.max(...over) - Math.min(...over)).toBeGreaterThan(0.1);
+    // no fog in a world whose style has none
+    const desert = await openWorld({ worldUrl: "southwest-fly/", base: "https://pixelworld.test/", style });
+    expect(fogSampler(desert.world, desert.query)).toBeNull();
   });
 });

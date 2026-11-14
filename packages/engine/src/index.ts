@@ -15,7 +15,7 @@
 export { createWorldView } from "./view";
 export { openWorld } from "./world";
 export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";
-export { fogLayer, FogLayer, type FogLayerOptions } from "./fog";
+export { fogLayer, FogLayer, fogSampler, type FogLayerOptions, type FogSampler } from "./fog";
 export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";

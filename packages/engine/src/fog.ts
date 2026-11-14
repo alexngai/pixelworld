@@ -1,6 +1,6 @@
 import { unprojectAtHeight, type Rotation } from "@pixelworlds/grid";
-import { fogInView, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
-import type { FrameInfo, Layer, LayerContext, ScreenPass } from "./types";
+import { fogInView, fogNoise, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
+import type { FrameInfo, Layer, LayerContext, ScreenPass, WorldInfo, WorldQuery } from "./types";
 
 /**
  * Fog (D-063), an atmosphere layer: where the style pack has fog over the
@@ -157,4 +157,61 @@ export class FogLayer implements Layer {
 /** Fog from the style pack's atmosphere (D-063), where it reaches the world. */
 export function fogLayer(opts: FogLayerOptions = {}): FogLayer {
   return new FogLayer(opts);
+}
+
+/**
+ * The style's fog as a number (D-125): how thick it is at a place, a height
+ * and a time, as the fog layer draws it there then (its areas, its drift and
+ * patches, and its ceiling), for a game in which fog hides things. A server
+ * reads it through `openWorld` as a page does through its view; both give it
+ * the same clock (`FogLayer.set({ time })` on the page).
+ */
+export interface FogSampler {
+  /** Fog (0–1) at a point (cells) and a height (steps), at `seconds` on the fog's clock; `night` as the layer takes it. */
+  at(x: number, y: number, h: number, seconds: number, night?: boolean): number;
+  /** Where the fog's top is (steps): nothing higher stands in it. */
+  readonly ceiling: number;
+}
+
+/** A world's fog as a number, or null where its style draws none there (as `fogLayer`). */
+export function fogSampler(world: Pick<WorldInfo, "style" | "palette" | "manifest" | "hasGeo">, query: Pick<WorldQuery, "cellToLonLat">): FogSampler | null {
+  const s = setupFog(world.style, world.palette, world.manifest, world.hasGeo ? (x, y) => query.cellToLonLat(x, y)! : null);
+  return s ? new Sampler(s) : null;
+}
+
+class Sampler implements FogSampler {
+  readonly ceiling: number;
+  constructor(private readonly s: FogSetup) {
+    this.ceiling = s.ceiling;
+  }
+
+  at(x: number, y: number, h: number, seconds: number, night = false): number {
+    const s = this.s;
+    const strength = s.strength * (night ? s.nightStrength : 1);
+    const vertical = Math.max(0, Math.min(1, (s.ceiling - h) / s.fade));
+    if (!(strength > 0) || vertical <= 0) return 0;
+    const area = this.area(x, y);
+    if (area <= 0) return 0;
+    // the patches, as the pass puts them (on their plane, drifting); here under the point itself
+    const [ox, oy] = fogPatchOffset(s, seconds);
+    const n = fogNoise(x / s.patchCells - ox, y / s.patchCells - oy);
+    const t = Math.max(0, Math.min(1, (n - 0.25) / 0.5));
+    const patchiness = 1 + (t * t * (3 - 2 * t) - 1) * s.contrast;
+    return Math.min(1, area * vertical * patchiness * strength);
+  }
+
+  /** The areas' coverage at a point, between the field's texels as the pass filters it. */
+  private area(x: number, y: number): number {
+    const f = this.s.field;
+    const u = x / f.cellsPerTexel - 0.5;
+    const v = y / f.cellsPerTexel - 0.5;
+    const i = Math.floor(u);
+    const j = Math.floor(v);
+    const at = (a: number, b: number) => f.data[Math.min(f.height - 1, Math.max(0, b)) * f.width + Math.min(f.width - 1, Math.max(0, a))]! / 255;
+    const fx = u - i;
+    const fy = v - j;
+    const top = at(i, j) + (at(i + 1, j) - at(i, j)) * fx;
+    const bottom = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * fx;
+    return top + (bottom - top) * fy;
+  }
 }

@@ -7,9 +7,11 @@ import {
   cellIndex,
   findPath as cellsFindPath,
   lineClear as cellsLineClear,
+  cellAt,
   nearestWalkable,
   readCells,
   setRemoved,
+  viewshed,
   type CellPoint,
   type Cells,
   type PathOptions,
@@ -384,6 +386,97 @@ export const lineClear = (g: MapGrid, a: Point, b: Point): boolean => cellsLineC
 /** The open cell nearest a cell, within `radius` rings; null if none. */
 export const nearestOpen = (g: MapGrid, cx: number, cy: number, radius: number, ok: (x: number, y: number) => boolean = () => true): Point | null =>
   nearestWalkable(g, cx, cy, radius, walking(g), ok);
+
+// ---------------------------------------------------------------- seeing (D-125)
+
+/** Sight from the level's geography: what stands in the way, the high ground, woods, the fog. */
+export const SIGHT = {
+  /** A unit's eye over its ground, and what an eye looks at over a cell's ground (steps). */
+  eye: 1.2,
+  look: 0.8,
+  /** A unit standing in woods is seen only this near (cells). */
+  woods: 2,
+  /** Fog takes up to this share of sight away, at its thickest (where the eye or what it looks at stands in it). */
+  fog: 0.6,
+  /** Each step an eye stands over the ground around it adds this much sight (cells), up to `highMost`. */
+  highPerStep: 0.75,
+  highMost: 3,
+  /** Sides' sight is worked out again every this many ticks, the fog over the cells every `fogEvery`. */
+  every: 5,
+  fogEvery: 40,
+};
+/** A blow struck from a step or more above its target lands this much harder. */
+export const HIGH_GROUND_DAMAGE = 1.3;
+/** How high each building's eye stands over its ground (steps): from its roof. */
+export const BUILDING_EYE: Record<BuildingKind, number> = { hearth: 6, lodge: 4 };
+
+/** One of a side's eyes: a unit, or a building. */
+export interface Eye {
+  x: number;
+  y: number;
+  /** Over its ground (steps). */
+  up: number;
+  radius: number;
+}
+
+/** How much higher a point stands than the ground three cells round it (steps, at least 0). */
+export function rise(g: MapGrid, x: number, y: number): number {
+  let sum = 0;
+  let n = 0;
+  for (let k = 0; k < 8; k++) {
+    const i = cellAt(g, x + 3 * Math.cos((k * Math.PI) / 4), y + 3 * Math.sin((k * Math.PI) / 4));
+    if (i < 0) continue;
+    sum += g.height[i]!;
+    n++;
+  }
+  return n ? Math.max(0, groundAt(g, x, y) - sum / n) : 0;
+}
+
+/** The fog over each cell (0–1), at what an eye looks at there: from the world's fog and its clock (`fogSampler`). */
+export function fogCells(g: MapGrid, at: (x: number, y: number, h: number) => number, out: Float32Array = new Float32Array(g.flags.length)): Float32Array {
+  for (let i = 0; i < out.length; i++) out[i] = at(g.x0 + (i % g.w) + 0.5, g.y0 + Math.floor(i / g.w) + 0.5, g.height[i]! + SIGHT.look);
+  return out;
+}
+
+/**
+ * What a side sees (D-125): each cell's distance to the nearest of its eyes
+ * that sees it, Infinity where none does. Lines of sight run over the
+ * ground, the level's buildings and the woods' canopies (the engine's
+ * viewshed); an eye on high ground sees further; fog where the eye or the
+ * cell stands shortens it.
+ */
+export function sideSight(g: MapGrid, eyes: readonly Eye[], fog: Float32Array | null, out: Float32Array = new Float32Array(g.flags.length)): Float32Array {
+  out.fill(Infinity);
+  for (const e of eyes) {
+    const radius = e.radius + Math.min(SIGHT.highMost, rise(g, e.x, e.y) * SIGHT.highPerStep);
+    const at = cellAt(g, e.x, e.y);
+    const own = fog && at >= 0 ? fog[at]! : 0;
+    viewshed(g, { x: e.x, y: e.y, h: groundAt(g, e.x, e.y) + e.up }, radius, out, {
+      targetHeight: SIGHT.look,
+      reach: fog ? (i, d) => d <= radius * (1 - SIGHT.fog * Math.max(own, fog[i]!)) : undefined,
+    });
+  }
+  return out;
+}
+
+/** Whether a side's sight takes in a unit standing at a point: its cell seen, and from near enough if it stands in woods. */
+export function seesUnit(g: MapGrid, sight: Float32Array, x: number, y: number): boolean {
+  const i = cellAt(g, x, y);
+  if (i < 0) return false;
+  const d = sight[i]!;
+  return g.flags[i]! & WOODS ? d <= SIGHT.woods : d < Infinity;
+}
+
+/** Whether a side's sight takes in any cell within `pad` cells of a point (a building, an event). */
+export function seesArea(g: MapGrid, sight: Float32Array, x: number, y: number, pad = 0): boolean {
+  const r = Math.ceil(pad);
+  for (let dy = -r; dy <= r; dy++)
+    for (let dx = -r; dx <= r; dx++) {
+      const i = cellAt(g, x + dx, y + dy);
+      if (i >= 0 && sight[i]! < Infinity) return true;
+    }
+  return false;
+}
 
 // ---------------------------------------------------------------- placing a building
 

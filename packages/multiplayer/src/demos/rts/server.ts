@@ -1,7 +1,7 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { stylePack } from "@pixelworlds/game/src/styles";
-import { openWorld } from "pixelworld/engine";
+import { fogSampler, openWorld, type FogSampler } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
 import { Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import { Bot } from "./bot";
@@ -46,13 +46,15 @@ export const BOT = "bot";
 export interface RtsWorld {
   /** The play area's cells and buildings, as the level has them: each room's match gets its own copy of the cells. */
   grid: MapGrid;
+  /** The level's fog as a number (D-125), or null where its style has none: each room reads it on its own clock. */
+  fog: FogSampler | null;
 }
 
 /** Open the driving level over HTTP and read the play area's cells. */
 export async function openRtsWorld(worldUrl: string): Promise<RtsWorld> {
-  const { query } = await openWorld({ worldUrl, style: stylePack });
+  const { world, query } = await openWorld({ worldUrl, style: stylePack });
   await query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
-  return { grid: buildGrid(query) };
+  return { grid: buildGrid(query), fog: fogSampler(world, query) };
 }
 
 export function logLine(l: RelayLog): void {
@@ -116,7 +118,14 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   }
 
   protected added(id: string, join: RtsJoin): TickRole | null {
-    this.game ??= new RtsGame({ ...this.world.grid, flags: this.world.grid.flags.slice(), building: new Int32Array(this.world.grid.building.length) });
+    if (!this.game) {
+      const g = this.world.grid;
+      // the cells a match changes are its own: what walls them, their tops, its buildings
+      this.game = new RtsGame({ ...g, flags: g.flags.slice(), top: g.top.slice(), building: new Int32Array(g.building.length) });
+      const fog = this.world.fog;
+      // the fog on the room's clock: the pages draw it at the server time they show
+      if (fog) this.game.fogAt = (x, y, h) => fog.at(x, y, h, this.time);
+    }
     const free = TEAMS.find((t) => ![...this.sides.values()].includes(t));
     if (!free || (this.bot && id !== BOT)) {
       this.kick(id, "this match has both its sides: open another room");

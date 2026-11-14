@@ -27,6 +27,15 @@ import {
   type Team,
   type UnitKind,
   type UnitNet,
+  BUILDING_EYE,
+  HIGH_GROUND_DAMAGE,
+  SIGHT,
+  fogCells,
+  groundAt,
+  seesArea,
+  seesUnit,
+  sideSight,
+  type Eye,
 } from "./rules";
 
 /**
@@ -125,6 +134,12 @@ export class RtsGame {
   private nextId = 1;
   /** Each side's enemies in sight now (units and buildings), and the enemy buildings it has ever seen. */
   private readonly sight: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
+  /** What each side sees, cell by cell (`sideSight`), worked out every `SIGHT.every` ticks; the fog over the cells. */
+  readonly sees: Record<Team, Float32Array>;
+  private fog: Float32Array | null = null;
+  private ticks = 0;
+  /** The world's fog now, at a point and a height (the room gives it its clock), or null where there is none. */
+  fogAt: ((x: number, y: number, h: number) => number) | null = null;
   private readonly known: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
   /** Paths found this tick (`walk`). */
   private searches = 0;
@@ -135,6 +150,7 @@ export class RtsGame {
     readonly grid: MapGrid,
     readonly layout = LAYOUT,
   ) {
+    this.sees = { kiln: new Float32Array(grid.flags.length), tide: new Float32Array(grid.flags.length) };
     this.reset();
   }
 
@@ -151,6 +167,7 @@ export class RtsGame {
     this.events = [];
     this.views.clear();
     this.time = 0;
+    this.ticks = 0;
     this.winner = null;
     for (const [x, y] of this.layout.seeps) {
       const id = this.nextId++;
@@ -310,17 +327,29 @@ export class RtsGame {
 
   /** Who sees what: each side's units and buildings, within their sight. */
   private see(): void {
-    // ponytail: every pair, each step; a grid of who stands where if sides field hundreds
+    const tick = this.ticks++;
+    if (this.fogAt && tick % SIGHT.fogEvery === 0) this.fog = fogCells(this.grid, this.fogAt, this.fog ?? undefined);
+    if (!this.fogAt) this.fog = null;
+    if (tick % SIGHT.every === 0) for (const team of TEAMS) sideSight(this.grid, this.eyes(team), this.fog, this.sees[team]);
     for (const team of TEAMS) {
       const sight = this.sight[team];
+      const field = this.sees[team];
       sight.clear();
-      for (const u of this.units.values()) if (u.team !== team && this.seesPoint(team, u)) sight.add(u.id);
+      for (const u of this.units.values()) if (u.team !== team && seesUnit(this.grid, field, u.x, u.y)) sight.add(u.id);
       for (const b of this.buildings.values())
-        if (b.team !== team && this.seesPoint(team, mid(b), b.size / 2)) {
+        if (b.team !== team && seesArea(this.grid, field, b.x + b.size / 2, b.y + b.size / 2, b.size / 2)) {
           sight.add(b.id);
           this.known[team].add(b.id);
         }
     }
+  }
+
+  /** A side's eyes: its units', and its buildings' from their roofs. */
+  eyes(team: Team): Eye[] {
+    const out: Eye[] = [];
+    for (const u of this.units.values()) if (u.team === team) out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight });
+    for (const b of this.buildings.values()) if (b.team === team) out.push({ ...mid(b), up: BUILDING_EYE[b.kind] * Math.max(0.3, b.built), radius: BUILDINGS[b.kind].sight });
+    return out;
   }
 
   private think(u: Unit, dt: number): void {
@@ -365,7 +394,7 @@ export class RtsGame {
     u.hd = Math.atan2(at.y - u.y, at.x - u.x);
     if (u.cooldown > 0) return;
     u.cooldown = rule.cooldown;
-    t.hp -= rule.damage;
+    t.hp -= rule.damage * this.edge(u, at);
     this.events.push({ kind: "hit", by: u.id, to: id, x: at.x, y: at.y });
   }
 
@@ -638,11 +667,14 @@ export class RtsGame {
     return snap;
   }
 
+  /** A blow's weight from where it is struck: harder from a step or more above (D-125). */
+  private edge(u: Point, at: Point): number {
+    return groundAt(this.grid, u.x, u.y) >= groundAt(this.grid, at.x, at.y) + 1 ? HIGH_GROUND_DAMAGE : 1;
+  }
+
   /** Whether a side sees a point (`pad` cells round it): within sight of one of its units or buildings. */
   seesPoint(team: Team, p: Point, pad = 0): boolean {
-    for (const u of this.units.values()) if (u.team === team && Math.hypot(u.x - p.x, u.y - p.y) <= UNITS[u.kind].sight + pad) return true;
-    for (const b of this.buildings.values()) if (b.team === team && distToBuilding(p, b) <= BUILDINGS[b.kind].sight + pad) return true;
-    return false;
+    return seesArea(this.grid, this.sees[team], p.x, p.y, pad);
   }
 }
 
