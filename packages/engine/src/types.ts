@@ -3,7 +3,7 @@ import type { Box, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
-import type { WorldManifest } from "@pixelworlds/world-format";
+import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
 
 /**
  * The engine's public types (docs/library.md §3.2–3.3). Units, unless said
@@ -58,12 +58,37 @@ export interface OpenWorldOptions {
   renderScale?: number;
   /** Load the placed objects, for `objectsAt` and `landmarks` (default true). */
   objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
+  /**
+   * Terrain layers to leave out (D-123), of those only drawing reads
+   * (`DRAW_ONLY_LAYERS`: the road, path and rail pieces, geology, rails):
+   * they read as empty. All of them make a chunk with micro-terrain about
+   * 0.22 MB instead of 0.5.
+   */
+  dropLayers?: readonly DroppableLayer[];
+  /** How the package's files are fetched (D-123; default `fetch`): a server reads them from disk (`fileFetch` in `@pixelworlds/multiplayer/server`). */
+  fetch?: WorldFetch;
 }
 
 /** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
+  /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
+  stats(): WorldStats;
+}
+
+/** `OpenedWorld.stats` (D-120). */
+export interface WorldStats {
+  chunksLoaded: number;
+  chunksTotal: number;
+  chunksMB: number;
+  chunksEvicted: number;
 }
 
 export interface WorldViewOptions {
@@ -84,12 +109,19 @@ export interface WorldViewOptions {
   cache?: boolean | TileStore;
   /**
    * The world's start tiles (tools/prebake.mjs), read before baking so a
-   * first visit shows its first view at once: default `start-tiles.bin` in
-   * the world package, where there is one; false for none.
+   * first visit shows its first view at once: true for `start-tiles.bin` in
+   * the world package, or the file's URL. None by default: a world without
+   * the file would log its 404.
    */
-  startTiles?: string | URL | false;
+  startTiles?: boolean | string | URL;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
   /** Decorative scatter where the level asks for it (default true). */
   scatter?: boolean;
   /** Stamp painted-over hero landmarks into tiles (default true). */
@@ -237,6 +269,9 @@ export interface ViewStats {
   tilesPending: number;
   chunksLoaded: number;
   chunksTotal: number;
+  /** Megabytes of the chunks loaded, and how many `chunkBudgetMB` let go (D-120). */
+  chunksMB: number;
+  chunksEvicted: number;
   gpuTiles: number;
   gpuMB: number;
   avgMeshMs: number;
@@ -412,6 +447,15 @@ export interface WorldQuery {
   metersPerCellAt(x: number, y: number): number;
   /** Load the terrain under a rectangle of cells, so queries answer there. */
   ensure(x0: number, y0: number, x1: number, y1: number): Promise<void>;
+  /** Whether the terrain under a rectangle of cells is loaded now (D-120): a game server's step can wait until it is. */
+  isLoaded(x0: number, y0: number, x1: number, y1: number): boolean;
+  /**
+   * The coarse heights around a place, loaded or not (D-123, `openWorld` on a
+   * package with them): its block's lowest ground and highest drawn top
+   * (steps). A server can step a player clear above `hi` over ground it hasn't
+   * loaded. Null without them, or outside.
+   */
+  coarseHeightAt(x: number, y: number): { lo: number; hi: number } | null;
   /**
    * Placed objects standing at a point (occupancy): those whose footprint
    * contains it; landmarks drawn from an anchor (City Hall, a tower) where

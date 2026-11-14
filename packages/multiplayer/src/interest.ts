@@ -1,0 +1,103 @@
+/**
+ * Who is near whom (D-120), for a `TickRoom` whose pages should get only
+ * what is near them: things filed in squares `cell` cells across. A page's
+ * group is its square, and what it gets is what is in the squares within
+ * `reach` of it. Pages in one square share a group, so the room builds and
+ * serializes a snapshot once per square with a page in it, not per page.
+ *
+ * - **Square** (default): everything within `cell × reach` cells of a page
+ *   across and down (and some up to `cell × (reach + 1)`).
+ * - **Diamond** (`diamond`, D-123): an isometric view is a diamond on the
+ *   cell grid, as wide along x − y as along x + y. Squares whose offsets add up
+ *   to at most `reach + 1`: everything within `cell × reach` cells of a page
+ *   counted across plus down. With squares finer than the view (reach 4 and
+ *   more), about three quarters of the area the square holds.
+ * - **Slack** (`slack`, D-123): a thing stays in its square until it is more
+ *   than `slack` cells past its edge, so a page on an edge doesn't change
+ *   group (and get a keyframe) back and forth. It takes `2 × slack` off what
+ *   a page is sure to see each way: across and down for a square, so
+ *   `4 × slack` counted across plus down for a diamond.
+ *
+ *   protected override update() { for (const [id, p] of this.cars) this.interest.place(id, p.x, p.y); }
+ *   protected override groupOf(id: string) { return this.interest.groupOf(id); }
+ *   protected override shared(group?: string) { return { cars: (group ? this.interest.near(group) : [...this.cars.keys()]).map(net) }; }
+ *   this.emit(crash, this.interest.around(x, y));
+ */
+export class Interest {
+  private readonly at = new Map<string, { g: string; i: number; j: number }>();
+  private readonly squares = new Map<string, Set<string>>();
+  private readonly slack: number;
+  private readonly diamond: boolean;
+
+  /**
+   * @param cell A square's side (cells): what a page sees at least, with `reach` 1.
+   * @param reach Squares around a page's own that it sees (default 1).
+   */
+  constructor(
+    readonly cell: number,
+    readonly reach = 1,
+    opts: { slack?: number; diamond?: boolean } = {},
+  ) {
+    this.slack = opts.slack ?? 0;
+    this.diamond = opts.diamond ?? false;
+  }
+
+  /** Where something is now: call it for everything that moves, each tick or before each snapshot. */
+  place(id: string, x: number, y: number): void {
+    const was = this.at.get(id);
+    const c = this.cell;
+    const s = this.slack;
+    if (was && x >= was.i * c - s && x < (was.i + 1) * c + s && y >= was.j * c - s && y < (was.j + 1) * c + s) return;
+    const i = Math.floor(x / c);
+    const j = Math.floor(y / c);
+    const g = `${i},${j}`;
+    if (was?.g === g) return;
+    if (was) this.leave(id, was.g);
+    this.at.set(id, { g, i, j });
+    let sq = this.squares.get(g);
+    if (!sq) this.squares.set(g, (sq = new Set()));
+    sq.add(id);
+  }
+
+  remove(id: string): void {
+    const was = this.at.get(id);
+    if (!was) return;
+    this.at.delete(id);
+    this.leave(id, was.g);
+  }
+
+  /** The group of a place: its square. */
+  groupAt(x: number, y: number): string {
+    return `${Math.floor(x / this.cell)},${Math.floor(y / this.cell)}`;
+  }
+
+  /** The group something was last placed in, or undefined (never placed, or removed). */
+  groupOf(id: string): string | undefined {
+    return this.at.get(id)?.g;
+  }
+
+  /** What is within reach of a group: in its square and the squares around it (`reach` of them, default the instance's: a farther ring for things sent less often, D-123). */
+  near(group: string, reach = this.reach): string[] {
+    const [i, j] = group.split(",").map(Number) as [number, number];
+    const r = this.diamond ? reach + 1 : reach;
+    const out: string[] = [];
+    for (let dj = -r; dj <= r; dj++)
+      for (let di = -r; di <= r; di++) {
+        if (this.diamond && Math.abs(di) + Math.abs(dj) > r) continue;
+        const s = this.squares.get(`${i + di},${j + dj}`);
+        if (s) out.push(...s);
+      }
+    return out;
+  }
+
+  /** What is within reach of a place: who should hear of an event there (with `TickRoom.emit`). */
+  around(x: number, y: number): string[] {
+    return this.near(this.groupAt(x, y));
+  }
+
+  private leave(id: string, g: string): void {
+    const s = this.squares.get(g)!;
+    s.delete(id);
+    if (!s.size) this.squares.delete(g);
+  }
+}

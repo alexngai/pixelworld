@@ -181,6 +181,7 @@ Each of these is a section of the spec; the reference (§10) lists their keys.
 - **Building types** (`objects.typology`): rules that retype buildings by shape, street and public records, as San Francisco's rowhouses are. Records come from a facts source (`sources.facts`; [plugins.md](plugins.md) §3).
 - **Ground** (`ground:`): park lawns and yards from land use.
 - **Traffic** (`routes:`): every build writes ambient traffic routes along its roads, and along Overture's rail and ferry lines. `--no-routes` skips them; `pixelworld routes` adds them later without a rebuild.
+- **Objects by chunk** (D-123): `pixelworld object-chunks <package>` adds a built package's placed objects by chunk beside the whole file, for a game server that loads part of the world at a time (`openWorld`). `pixelworld coarse-heights <package>` adds heights by block of 8 × 8 cells, which such a server reads where it hasn't loaded the ground. The `southwest` and `southwest-fly` fixtures have both.
 
 ## 8. Bigger worlds: levels, the warp and the editor
 

@@ -1,9 +1,25 @@
 [project]
 name = "pixelworld-pipeline"
 license = "MIT OR Apache-2.0"
-version = "0.0.0"
+# copies of the repository's own, which a test keeps the same (a wheel only holds files in here)
+license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
+version = "0.1.0"
 description = "Offline geo pipeline for Pixelworld: real data -> gridded world packages."
+readme = "README.md"
+authors = [{ name = "The pixelworld contributors" }]
 requires-python = ">=3.12"
+keywords = ["pixel-art", "isometric", "gis", "openstreetmap", "overture-maps", "dem", "world-generator", "procedural"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Games/Entertainment",
+  "Topic :: Scientific/Engineering :: GIS",
+]
 dependencies = [
   "certifi>=2024.2.2",
   "laspy>=2.7.0",
@@ -18,6 +34,12 @@ dependencies = [
 
 [project.scripts]
 pixelworld = "pixelworld_pipeline.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/alexngai/pixelworld"
+Documentation = "https://github.com/alexngai/pixelworld/blob/main/docs/worlds.md"
+Repository = "https://github.com/alexngai/pixelworld"
+Issues = "https://github.com/alexngai/pixelworld/issues"
 
 [dependency-groups]
 dev = [

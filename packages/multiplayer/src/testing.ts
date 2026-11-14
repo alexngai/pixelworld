@@ -56,7 +56,7 @@ export function loopback<R extends Ticking>(make: (room: HostedRoom) => R, opts:
     due.push({ at: t + delay, n: order++, f });
     due.sort((a, b) => a.at - b.at || a.n - b.n);
   };
-  const copy = (data: unknown) => JSON.parse(JSON.stringify(data)) as unknown;
+  const copy = (data: unknown) => (data instanceof Uint8Array ? data.slice() : (JSON.parse(JSON.stringify(data)) as unknown));
 
   interface Page extends LoopbackPage {
     room: Room & { deliver(data: unknown): void; gone(why: string | null): void };
@@ -82,6 +82,13 @@ export function loopback<R extends Ticking>(make: (room: HostedRoom) => R, opts:
       const p = pages.get(to);
       const sent = copy(data);
       if (p?.open) later(p.latency, () => p.room.deliver(sent));
+    },
+    sendTo: (ids, data) => {
+      const sent = copy(data);
+      for (const id of ids) {
+        const p = pages.get(id);
+        if (p?.open) later(p.latency, () => p.room.deliver(copy(sent)));
+      }
     },
     broadcast: (data, except) => {
       const sent = copy(data);
