@@ -226,7 +226,7 @@ interface WorldViewOptions {
   size?: { width: number; height: number };           // device px; default: follow the canvas on the page
   renderScale?: number;                               // default the package's
   cache?: boolean | TileStore;                        // IndexedDB by default
-  startTiles?: string | URL | false;                  // the first view baked ahead (tools/prebake.mjs); default start-tiles.bin in the package
+  startTiles?: boolean | string | URL;               // the first view baked ahead (tools/prebake.mjs): true for start-tiles.bin in the package; default none
   objects?: boolean; scatter?: boolean; heroes?: boolean;
   palette?: "day" | "night";
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };

@@ -219,7 +219,7 @@ export class Game {
       style: opts.style,
       size: opts.size,
       cache: opts.cache ?? true,
-      ...(opts.startTiles === false ? { startTiles: false as const } : {}),
+      startTiles: opts.startTiles !== false,
       ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
       ...(opts.groundFirst === false ? { groundFirst: false } : {}),
       ...(opts.idleBake === false ? { idleBake: false } : {}),

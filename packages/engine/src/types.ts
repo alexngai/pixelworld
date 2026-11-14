@@ -84,10 +84,11 @@ export interface WorldViewOptions {
   cache?: boolean | TileStore;
   /**
    * The world's start tiles (tools/prebake.mjs), read before baking so a
-   * first visit shows its first view at once: default `start-tiles.bin` in
-   * the world package, where there is one; false for none.
+   * first visit shows its first view at once: true for `start-tiles.bin` in
+   * the world package, or the file's URL. None by default: a world without
+   * the file would log its 404.
    */
-  startTiles?: string | URL | false;
+  startTiles?: boolean | string | URL;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
   /** Decorative scatter where the level asks for it (default true). */
