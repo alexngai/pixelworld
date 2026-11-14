@@ -1,10 +1,29 @@
 import { readFileSync } from "node:fs";
 import { LEVEL_FLIGHT, flyPlane, type PlaneState } from "@pixelworlds/game/src/plane";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { DogfightRoom, openDogfightWorld, type DogfightWorld } from "../../src/demos/dogfight/server";
-import { BOT, GUN, HP, MATCH, TICK, flyTick, type DogfightEvent, type DogfightInput, type DogfightSnap, type DogfightWorldNet } from "../../src/demos/dogfight/rules";
-import { TickClient, type TickEvent, type TickShared, type TickSnapshot } from "../../src/index";
-import type { HostedRoom } from "../../src/server";
+import {
+  BOT,
+  GUN,
+  HP,
+  MATCH,
+  PLANE_STATE,
+  PLANE_WIRE,
+  TICK,
+  flyTick,
+  planeOf,
+  planesOf,
+  type DogfightEvent,
+  type DogfightInput,
+  type DogfightRoster,
+  type DogfightSnap,
+  type DogfightWorldNet,
+  type PlaneNet,
+  type PlaneWire,
+} from "../../src/demos/dogfight/rules";
+import { Replica, SNAP_BYTE, TickClient, WORLD_BYTE, readSnap, type TickEvent, type TickRoster, type TickShared, type TickSnapshot } from "../../src/index";
+import { fileFetch, type HostedRoom } from "../../src/server";
+import { fileURLToPath } from "node:url";
 import { loopback } from "../../src/testing";
 
 /**
@@ -16,7 +35,8 @@ import { loopback } from "../../src/testing";
 const ROOT = new URL("../../../../", import.meta.url);
 let world: DogfightWorld;
 
-beforeAll(async () => {
+/** fixtures/ at https://pixelworld.test/, read from disk (Node's fetch can't read file: URLs). */
+const stubFixtures = () =>
   vi.stubGlobal("fetch", async (url: string | URL) => {
     try {
       return new Response(readFileSync(new URL(`fixtures${new URL(String(url)).pathname}`, ROOT)));
@@ -24,16 +44,26 @@ beforeAll(async () => {
       return new Response("not found", { status: 404 });
     }
   });
+beforeAll(async () => {
+  stubFixtures();
   world = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
 });
 afterAll(() => {
   vi.unstubAllGlobals();
 });
+// respawns are random: the same ones each run, or a plane may spawn where a test's terrain doesn't do what it expects
+beforeEach(() => {
+  let seed = 1;
+  vi.spyOn(Math, "random").mockImplementation(() => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-type Msg = (TickShared & DogfightWorldNet) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
+type Msg = Uint8Array | (TickRoster & DogfightRoster) | (TickSnapshot & DogfightSnap) | TickEvent<DogfightEvent>;
 
 /** A room over a transport that keeps what it sends, by page. */
-function room() {
+function room(w = world) {
   const inbox = new Map<string, Msg[]>();
   const all: Msg[] = [];
   const hosted: HostedRoom = {
@@ -53,16 +83,40 @@ function room() {
     },
     log: () => {},
   };
-  const game = new DogfightRoom(hosted, Promise.resolve(world), false);
+  const game = new DogfightRoom(hosted, Promise.resolve(w), false);
   const join = async (id: string, name = id, watch = false) => {
     inbox.set(id, []);
     game.join(id);
     game.message(id, { k: "hello", join: { name, watch } });
     await new Promise((r) => setTimeout(r, 0)); // the world arrives
   };
-  const worlds = (id: string) => inbox.get(id)!.filter((m): m is TickShared & DogfightWorldNet => m.k === "world");
-  const snaps = (id: string) => inbox.get(id)!.filter((m): m is TickSnapshot & DogfightSnap => m.k === "snap");
-  const events = (kind?: DogfightEvent["kind"]) => all.filter((m): m is TickEvent<DogfightEvent> => m.k === "ev" && (!kind || m.e.kind === kind)).map((m) => ({ ...m.e, t: m.t }));
+  /** The shared snapshots a page got, as its page puts them together: the planes replicated in binary (D-123), with the roster's names and scores. */
+  const worlds = (id: string) => {
+    const replica = new Replica(PLANE_WIRE);
+    const states = new Map<string, PlaneWire>();
+    let pilots: DogfightRoster["pilots"] = {};
+    const out: (TickShared & DogfightWorldNet & { planes: PlaneNet[] })[] = [];
+    for (const m of inbox.get(id)!) {
+      if (!(m instanceof Uint8Array)) {
+        if (m.k === "roster") pilots = (m as DogfightRoster).pilots;
+        continue;
+      }
+      if (m[0] !== WORLD_BYTE) continue;
+      const u = replica.read(m);
+      for (const [i, s] of u.states) states.set(i, s);
+      for (const i of u.gone) states.delete(i);
+      out.push({ ...(u.extras as DogfightWorldNet), k: "world", t: u.tick * TICK, planes: planesOf(states, pilots) });
+    }
+    return out;
+  };
+  /** A page's own snapshots, in binary (D-123), read back. */
+  const snaps = (id: string): (TickSnapshot & DogfightSnap)[] =>
+    inbox
+      .get(id)!
+      .filter((m): m is Uint8Array => m instanceof Uint8Array && m[0] === SNAP_BYTE)
+      .map((m) => readSnap(m, PLANE_STATE, TICK));
+  const events = (kind?: DogfightEvent["kind"]) =>
+    all.filter((m): m is TickEvent<DogfightEvent> => !(m instanceof Uint8Array) && m.k === "ev" && (!kind || (m as TickEvent<DogfightEvent>).e.kind === kind)).map((m) => ({ ...m.e, t: m.t }));
   const send = (id: string, seq: number, i: Partial<DogfightInput>, seen: number | null = null) =>
     game.message(id, { k: "in", seq, i: { ...LEVEL_FLIGHT, fire: false, ...i }, seen });
   const play = () => game.match.set("playing", game.time, MATCH.seconds);
@@ -85,7 +139,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(last.ack).toBe(30);
     const predicted = { ...start };
     for (const i of inputs) flyPlane(predicted, i, world.fly, world.params, TICK);
-    expect(last.you).toEqual(predicted);
+    expect(planeOf(last)).toEqual(predicted);
     expect(predicted.x).not.toBe(start.x);
     // the shared snapshot: Alex, the bot a pilot alone gets, and the match
     const w = worlds("a").at(-1)!;
@@ -193,6 +247,77 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect(events("hit").filter((e) => e.kind === "hit" && e.by === BOT && e.to === "a").length).toBeGreaterThan(0);
   });
 
+  it("loads the level around the start and the planes, not whole: a plane over ground still loading waits, then flies on (D-120)", async () => {
+    const fresh = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
+    const { query, world: info, stats } = fresh.opened;
+    expect(stats().chunksLoaded).toBeLessThan(stats().chunksTotal);
+    const { game, join, send } = room(fresh);
+    await join("a");
+    // somewhere not loaded yet
+    const far = Array.from({ length: 24 }, (_, n) => [(n % 6) * 64 + 32, Math.floor(n / 6) * 64 + 32] as const).find(([x, y]) => x < info.cellsX && y < info.cellsY && !query.isLoaded(x - 2, y - 2, x + 2, y + 2))!;
+    const p = game.plane("a")!;
+    Object.assign(p.s, { x: far[0], y: far[1], h: query.coarseHeightAt(far[0], far[1])!.lo }); // low: it can't fly on by the coarse heights
+    send("a", 1, {});
+    game.tick(); // it waits, and its area is asked for
+    expect([game.ackOf("a"), p.s.x]).toEqual([0, far[0]]);
+    for (let n = 0; n < 100 && !query.isLoaded(far[0] - 2, far[1] - 2, far[0] + 2, far[1] + 2); n++) await new Promise((r) => setTimeout(r, 5));
+    game.tick();
+    expect(game.ackOf("a")).toBe(1);
+    expect(game.plane("a")!.s.x).not.toBe(far[0]);
+  });
+
+  it("keeps the ground respawns read loaded under a tight budget (2 MB: about 9 lean chunks of 24), while planes far off load and let go of theirs (D-120)", async () => {
+    const tight = await openDogfightWorld("https://pixelworld.test/southwest-fly/", { chunkBudgetMB: 2 });
+    const { query, world: info, stats } = tight.opened;
+    const { game, join, send } = room(tight);
+    await join("a");
+    const p = game.plane("a")!;
+    const [sx, sy] = tight.start;
+    const startArea = () => query.isLoaded(sx - 32, sy - 32, sx + 32, sy + 32);
+    expect(startArea()).toBe(true);
+    let seq = 0;
+    // a far corner at a time: the plane waits there for its ground, which loads and pushes older chunks out
+    for (const [x, y] of [[20, 20], [info.cellsX - 20, 20], [20, info.cellsY - 20], [info.cellsX - 20, info.cellsY - 20]] as const) {
+      Object.assign(p.s, { x, y, h: query.coarseHeightAt(x, y)!.lo });
+      send("a", ++seq, {});
+      game.tick();
+      for (let n = 0; n < 100 && game.ackOf("a") < seq; n++) {
+        await new Promise((r) => setTimeout(r, 5));
+        game.tick();
+      }
+      expect(game.ackOf("a")).toBe(seq);
+    }
+    expect(stats().chunksEvicted).toBeGreaterThan(0);
+    expect(stats().chunksMB).toBeLessThanOrEqual(2);
+    expect(startArea()).toBe(true);
+  });
+
+  it("flies a plane on over ground not loaded yet when it is clear above the coarse heights there (D-123)", async () => {
+    const fresh = await openDogfightWorld("https://pixelworld.test/southwest-fly/");
+    const { query, world: info } = fresh.opened;
+    const { game, join, send } = room(fresh);
+    await join("a");
+    const far = Array.from({ length: 24 }, (_, n) => [(n % 6) * 64 + 32, Math.floor(n / 6) * 64 + 32] as const).find(([x, y]) => x < info.cellsX && y < info.cellsY && !query.isLoaded(x - 2, y - 2, x + 2, y + 2))!;
+    const p = game.plane("a")!;
+    Object.assign(p.s, { x: far[0], y: far[1], h: fresh.params.ceiling - 1 });
+    send("a", 1, {});
+    game.tick();
+    expect(game.ackOf("a")).toBe(1); // no wait
+    expect(p.s.x).not.toBe(far[0]);
+  });
+
+  it("opens its level from disk, with no HTTP, and reads nothing outside the directory (D-123)", async () => {
+    vi.unstubAllGlobals(); // no fetch stub: fileFetch reads the files
+    const disk = fileFetch(fileURLToPath(new URL("fixtures/", ROOT)));
+    const w = await openDogfightWorld("http://worlds/southwest-fly/", { fetch: disk }).finally(stubFixtures);
+    expect(w.opened.stats().chunksLoaded).toBeGreaterThan(0);
+    expect(w.opened.query.coarseHeightAt(...w.start)).not.toBeNull();
+    expect((await disk("http://worlds/../package.json")).status).toBe(404);
+    expect((await disk("http://worlds/%2e%2e/package.json")).status).toBe(404);
+    expect((await disk("http://worlds/southwest-fly/nothing.json")).status).toBe(404);
+    expect((await fileFetch("fixtures")("http://worlds/southwest-fly/manifest.json")).status).toBe(200); // a root relative to the working directory
+  });
+
   it("clamps a page's stick and trigger to what they can be", async () => {
     const { game, join } = room();
     await join("a");
@@ -210,12 +335,13 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     const plane = { s: null as PlaneState | null, corr: 0, before: { x: 0, y: 0, h: 0 } };
     const client = new TickClient<DogfightInput, DogfightSnap, DogfightWorldNet, DogfightEvent>(page.room, {
       tick: TICK,
+      snapSchema: PLANE_STATE,
       step: (i) => plane.s && void flyTick(plane.s, i, world.fly, world.params),
       restore: (snap) => {
         if (plane.s) plane.before = { x: plane.s.x, y: plane.s.y, h: plane.s.h };
         const first = !plane.s;
-        plane.s = { ...snap.you };
-        if (first) plane.before = { x: snap.you.x, y: snap.you.y, h: snap.you.h };
+        plane.s = planeOf(snap);
+        if (first) plane.before = { x: snap.x, y: snap.y, h: snap.h };
       },
       reconciled: () => {
         const s = plane.s!;

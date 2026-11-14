@@ -12,7 +12,7 @@ async function open(page: Page, query: string, width = 640, height = 360) {
   await page.setViewportSize({ width, height });
   const traffic = /(^|&)traffic=/.test(query) ? "" : "&traffic=0";
   const fog = /(^|&)fog=/.test(query) ? "" : "&fog=0";
-  await page.goto(`/?hud=0&cache=0&w=${width}&h=${height}&${query}${traffic}${fog}`);
+  await page.goto(`/?hud=0&cache=0&ground=0&w=${width}&h=${height}&${query}${traffic}${fog}`);
   await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => window.__pixelworld!.ready());
   // every model generated: none drawn as a missing-model marker (D-072)
@@ -171,7 +171,7 @@ test.describe("US Southwest (M1)", () => {
 
   test("the sources screen lists every attribution from the manifest", { tag: "@smoke" }, async ({ page }) => {
     await page.setViewportSize({ width: 960, height: 540 });
-    await page.goto("/?cache=0&w=960&h=540&zoom=2&traffic=0");
+    await page.goto("/?cache=0&ground=0&w=960&h=540&zoom=2&traffic=0");
     await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
     await expect(page.locator("#sources")).toBeHidden();
     await page.keyboard.press("i");
@@ -477,7 +477,7 @@ test.describe("Ambient traffic (D-060)", () => {
     expect([...(await kinds())].sort()).toEqual(["cablecar"]);
     // the panel shows with the HUD; ticking road vehicles adds the cars
     await page.goto(
-      "/?cache=0&w=640&h=360&world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail",
+      "/?cache=0&ground=0&w=640&h=360&world=/sf/&marker=0&zoom=2&rot=0&at=-122.4195,37.8000&traffic=1&trafficPause=1&trafficTime=5&trafficLayers=rail",
     );
     await page.waitForFunction(() => window.__pixelworld !== undefined, null, { timeout: 60_000 });
     await expect(page.locator("#layers")).toBeVisible();

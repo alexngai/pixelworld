@@ -99,6 +99,7 @@ describe("object occupancy", () => {
       realHeightAt: (_x, _y, h) => h,
       metersPerCellAt: () => 100,
       ensureRect: async () => {},
+      isLoadedRect: () => true,
     };
     const w = {
       manifest: { surfaces: {}, scale: { metersPerCell: 100, metersPerStep: 10, elevationDatumMeters: 0 } },

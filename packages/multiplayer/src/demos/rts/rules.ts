@@ -306,7 +306,7 @@ export interface MapGrid extends Cells {
 const isBuilding = (group: string) => group === "building" || group.startsWith("building.");
 
 /** Read the play area's cells from a world's queries (the terrain and objects there loaded: `query.ensure`). */
-export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP): MapGrid {
+export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP, layout: Pick<typeof LAYOUT, "hearths"> = LAYOUT): MapGrid {
   const structures = new Map<number, Structure>();
   const heights = new Map<number, number>();
   const landmarks = new Map<string, number[]>();
@@ -342,8 +342,10 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
   // each landmark reaching in: the cell units can get to nearest its part nearest the middle of the area (a bridge's shore end)
   const mx = map.x0 + map.w / 2;
   const my = map.y0 + map.h / 2;
-  const [hx, hy] = LAYOUT.hearths.kiln;
-  const reach = reachable(g, hx - 1, hy + 1);
+  // the cells units can get to: from beside the first hearth (the open cell nearest it)
+  const [hx, hy] = layout.hearths.kiln;
+  const from = nearestOpen(g, hx + 1, hy + 1, 6);
+  const reach = from ? reachable(g, from.x, from.y) : new Uint8Array(g.flags.length);
   g.objectives = [...landmarks].flatMap(([id, list]) => {
     const at = (i: number) => ({ x: map.x0 + (i % map.w), y: map.y0 + Math.floor(i / map.w) });
     const part = list.map(at).reduce((a, b) => (Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b));
@@ -537,6 +539,13 @@ export interface Eye {
   /** Over its ground (steps). */
   up: number;
   radius: number;
+  /** The cells of the building it looks out from (a garrison's): its own roof doesn't hide anything from it. */
+  roof?: readonly number[];
+}
+
+/** A garrison's eye: from the building's roof, over the ground at its middle, its own cells not in the way (D-125). */
+export function roofEye(g: MapGrid, s: Pick<Structure, "x" | "y" | "top" | "cells">, radius: number): Eye {
+  return { x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(g, s.x, s.y) + 0.5), radius, roof: s.cells };
 }
 
 /** How much higher a point stands than the ground three cells round it (steps, at least 0). */
@@ -571,9 +580,11 @@ export function sideSight(g: MapGrid, eyes: readonly Eye[], fog: Float32Array | 
     const radius = e.radius + Math.min(SIGHT.highMost, rise(g, e.x, e.y) * SIGHT.highPerStep);
     const at = cellAt(g, e.x, e.y);
     const own = fog && at >= 0 ? fog[at]! : 0;
+    const roof = e.roof && new Set(e.roof);
     viewshed(g, { x: e.x, y: e.y, h: groundAt(g, e.x, e.y) + e.up }, radius, out, {
       targetHeight: SIGHT.look,
       reach: fog ? (i, d) => d <= radius * (1 - SIGHT.fog * Math.max(own, fog[i]!)) : undefined,
+      ignore: roof ? (i) => roof.has(i) : undefined,
     });
   }
   return out;

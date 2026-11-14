@@ -26,7 +26,7 @@ const rooms: Plugin = {
     s.middlewares.use((req, res, next) => void (lobby?.(req, res) || next()));
     http?.once("listening", async () => {
       const { attachDogfight, dogfightLobby } = (await s.ssrLoadModule("/server.ts")) as typeof import("./server");
-      lobby = dogfightLobby(attachDogfight(http, { lag: Number(process.env.DOGFIGHT_LAG ?? 0) }));
+      lobby = dogfightLobby(attachDogfight(http, { lag: Number(process.env.DOGFIGHT_LAG ?? 0), worlds: FIXTURES }));
     });
   },
 };

@@ -44,6 +44,7 @@ import {
   DAY,
   isNight,
   MAX_CLIMB,
+  roofEye,
 } from "./rules";
 
 /**
@@ -86,8 +87,9 @@ export interface Unit {
   /** Glim carried, and seconds mined so far. */
   carry: number;
   mined: number;
-  /** The level's building it is in (its object), or null (D-125). */
+  /** The level's building it is in (its object), or null (D-125), and where it went in. */
   inside: number | null;
+  door: Point | null;
 }
 
 export interface Building {
@@ -161,6 +163,7 @@ export class RtsGame {
   /** What each side sees, cell by cell (`sideSight`), worked out every `SIGHT.every` ticks; the fog over the cells. */
   readonly sees: Record<Team, Float32Array>;
   private fog: Float32Array | null = null;
+  private fogNight = false;
   private ticks = 0;
   /** The world's fog now, at a point and a height, by night or day (the room gives it its clock), or null where there is none. */
   fogAt: ((x: number, y: number, h: number, night: boolean) => number) | null = null;
@@ -261,10 +264,10 @@ export class RtsGame {
     else if (c.t === "enter") {
       const s = this.structures.get(c.obj);
       if (!s) return "nothing there to go into";
-      const theirs = this.garrison(c.obj);
-      if (theirs.some((u) => u.team !== team)) return "the other side holds it";
+      // only its own already inside count here: whether the other side holds it shows on arrival, not from across the map
+      const ours = this.garrison(c.obj).filter((u) => u.team === team);
       const outside = units.filter((u) => u.inside === null);
-      if (theirs.length + outside.length > holds(s)) return `it holds ${holds(s)}`;
+      if (ours.length + outside.length > holds(s)) return `it holds ${holds(s)}`;
       for (const u of outside) this.give(u, { k: "enter", obj: c.obj });
     } else if (c.t === "raze") {
       if (!this.structures.has(c.obj)) return "nothing there to knock down";
@@ -278,8 +281,9 @@ export class RtsGame {
       units.forEach((u, n) => {
         const ox = ((n % side) - (side - 1) / 2) * 0.8;
         const oy = (Math.floor(n / side) - (side - 1) / 2) * 0.8;
-        let x = c.x + ox;
-        let y = c.y + oy;
+        const g = this.grid;
+        let x = Math.min(g.x0 + g.w - 0.5, Math.max(g.x0 + 0.5, c.x + ox));
+        let y = Math.min(g.y0 + g.h - 0.5, Math.max(g.y0 + 0.5, c.y + oy));
         if (!passable(this.grid, Math.floor(x), Math.floor(y))) [x, y] = [c.x, c.y];
         this.give(u, { k: "move", x, y, attack: c.attack === true });
       });
@@ -336,6 +340,7 @@ export class RtsGame {
     this.see();
     for (const u of this.units.values()) this.think(u, dt);
     this.separate();
+    this.topple();
     for (const u of [...this.units.values()])
       if (u.hp <= 0) {
         this.units.delete(u.id);
@@ -347,12 +352,15 @@ export class RtsGame {
         if (b.kind === "hearth" && !this.winner) this.winner = other(b.team);
       }
     this.hold(dt);
+  }
+
+  /** The level's buildings knocked down this step fall: their cells open, and those inside come out of the rubble, hurt (before the dead are taken away). */
+  private topple(): void {
     for (const s of [...this.structures.values()])
       if (s.hp <= 0) {
         this.structures.delete(s.obj);
         this.razed.push(s.obj);
         razeCells(this.grid, s.obj, new Set(this.razed));
-        // those inside come out of the rubble, hurt
         for (const u of this.garrison(s.obj)) {
           this.out(u, s);
           u.hp -= GARRISON.fall;
@@ -373,7 +381,7 @@ export class RtsGame {
           [m.owner, m.taker, m.hold] = [only!, null, 0];
           this.events.push({ kind: "taken", id: m.id, name: m.name, side: only! });
         }
-      } else if (near.size === 0 && m.taker) {
+      } else if ((near.size === 0 || (near.size === 1 && only === m.owner)) && m.taker) {
         m.hold = Math.max(0, m.hold - dt / 2);
         if (m.hold === 0) m.taker = null;
       }
@@ -396,10 +404,16 @@ export class RtsGame {
     return [...this.units.values()].filter((u) => u.inside === obj);
   }
 
-  /** A unit out of a building, on the open cell nearest it. */
+  /**
+   * A unit out of a building, where it went in (its door), or the open cell
+   * nearest that: not the middle, which may be a courtyard shut in by the
+   * building's own walls.
+   */
   private out(u: Unit, s: Structure): void {
-    const at = nearestOpen(this.grid, Math.floor(s.x), Math.floor(s.y), 6);
+    const door = u.door ?? this.nearestWall(u, s);
+    const at = passable(this.grid, Math.floor(door.x), Math.floor(door.y)) ? { x: Math.floor(door.x), y: Math.floor(door.y) } : nearestOpen(this.grid, Math.floor(door.x), Math.floor(door.y), 8);
     u.inside = null;
+    u.door = null;
     if (at) [u.x, u.y] = [at.x + 0.5, at.y + 0.5];
     this.give(u, { k: "idle" });
   }
@@ -415,6 +429,7 @@ export class RtsGame {
     if (theirs.length >= holds(s) || theirs.some((o) => o.team !== u.team)) return this.give(u, { k: "idle" });
     this.give(u, { k: "idle" });
     u.inside = s.obj;
+    u.door = { x: u.x, y: u.y };
     [u.x, u.y] = [s.x, s.y];
     u.target = null;
   }
@@ -443,7 +458,11 @@ export class RtsGame {
     const tick = this.ticks++;
     const fogAt = this.fogAt;
     const night = this.night;
-    if (fogAt && tick % SIGHT.fogEvery === 0) this.fog = fogCells(this.grid, (x, y, h) => fogAt(x, y, h, night), this.fog ?? undefined);
+    // the fog every few seconds, and at once when night falls or day breaks
+    if (fogAt && (tick % SIGHT.fogEvery === 0 || night !== this.fogNight)) {
+      this.fog = fogCells(this.grid, (x, y, h) => fogAt(x, y, h, night), this.fog ?? undefined);
+      this.fogNight = night;
+    }
     if (!this.fogAt) this.fog = null;
     if (tick % SIGHT.every === 0) for (const team of TEAMS) sideSight(this.grid, this.eyes(team), this.fog, this.sees[team]);
     for (const team of TEAMS) {
@@ -467,7 +486,7 @@ export class RtsGame {
       if (u.team !== team) continue;
       const s = u.inside === null ? undefined : this.structures.get(u.inside);
       // from a building's roof: higher, and further
-      if (s) out.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(this.grid, s.x, s.y) + 0.5), radius: (UNITS[u.kind].sight + GARRISON.sight) * dark });
+      if (s) out.push(roofEye(this.grid, s, (UNITS[u.kind].sight + GARRISON.sight) * dark));
       else out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight * dark });
     }
     for (const b of this.buildings.values()) if (b.team === team) out.push({ ...mid(b), up: BUILDING_EYE[b.kind] * Math.max(0.3, b.built), radius: BUILDINGS[b.kind].sight });
@@ -749,6 +768,7 @@ export class RtsGame {
       carry: 0,
       mined: 0,
       inside: null,
+      door: null,
     };
     this.units.set(u.id, u);
     // a new runner goes to the nearest seep with glim

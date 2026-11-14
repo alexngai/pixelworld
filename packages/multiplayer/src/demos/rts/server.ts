@@ -134,10 +134,9 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   /** When the first page began waiting (server time), and whether one asked for the bot. */
   private waitingSince: number | null = null;
   private wantsBot = false;
-  /** The level's cars (D-126): the room's own, run in every phase; where they are now; shared snapshots so far. */
+  /** The level's cars (D-126): the room's own, run in every phase; where they are now. */
   traffic: TrafficSim | null = null;
   private cars: Pose[] = [];
-  private shares = 0;
 
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<RtsWorld>, clock = true) {
@@ -284,9 +283,9 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     };
   }
 
-  /** The cars round the map, in every `TRAFFIC.every`th shared snapshot (D-126). */
+  /** The cars round the map, in every `TRAFFIC.every`th shared snapshot by the server's clock (D-126): the same for every group, were there any. */
   private carsNet(): { cars?: VehicleNet[] } {
-    if (!this.traffic || this.shares++ % TRAFFIC.every) return {};
+    if (!this.traffic || Math.round(this.time / (TICK * SNAPSHOT_EVERY)) % TRAFFIC.every) return {};
     return { cars: vehiclesNet(this.cars, trafficArea()) };
   }
 

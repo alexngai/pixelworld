@@ -341,7 +341,8 @@ export function findPath(c: Cells, from: CellPoint, to: CellPoint, opts: PathOpt
   cells.reverse();
   const pts = cells.map((i) => ({ x: (i % c.w) + c.x0 + 0.5, y: Math.floor(i / c.w) + c.y0 + 0.5 }));
   const costs = cells.map((i) => g[i]!);
-  if (best === goal) pts[pts.length - 1] = { x: to.x, y: to.y }; // the goal itself, within its cell
+  // the goal itself, within its cell (not a goal off the rectangle, clamped to its edge)
+  if (best === goal && cellAt(c, to.x, to.y) === goal) pts[pts.length - 1] = { x: to.x, y: to.y };
   pts[0] = { x: from.x, y: from.y };
   // straighten: from each point, on to the furthest one a straight line reaches as quickly
   const out: CellPoint[] = [];
@@ -397,15 +398,16 @@ function lineCost(c: Cells, a: CellPoint, b: CellPoint, cost: (i: number) => num
  * Whether an eye sees a point: nothing between them (the ground, a
  * building's top, a canopy: `top`) rises above the straight line from one to
  * the other. The cells the eye and the point are on don't hide (one sees out
- * of woods and into them, and a roof's edge is seen). Heights are absolute
+ * of woods and into them, and a roof's edge is seen), nor those `ignore`
+ * names (the rest of the roof an eye stands on). Heights are absolute
  * (steps), sampled a quarter of a cell apart.
  */
-export function lineOfSight(c: Cells, from: CellEye, to: CellEye): boolean {
+export function lineOfSight(c: Cells, from: CellEye, to: CellEye, ignore?: (i: number) => boolean): boolean {
   const a = cellAt(c, from.x, from.y);
   const b = cellAt(c, to.x, to.y);
   for (const p of along(from, to, 4)) {
     const i = cellAt(c, p.x, p.y);
-    if (i < 0 || i === a || i === b) continue;
+    if (i < 0 || i === a || i === b || ignore?.(i)) continue;
     if (c.top[i]! > from.h + (to.h - from.h) * p.t) return false;
   }
   return true;
@@ -416,6 +418,8 @@ export interface ViewshedOptions {
   targetHeight?: number;
   /** Whether the eye can see as far as `dist` cells to cell `i` at all (fog, dark): checked before the line of sight. */
   reach?: (i: number, dist: number) => boolean;
+  /** Cells that don't hide what is beyond them from this eye: the roof it stands on, say (every cell of a building it looks out of). */
+  ignore?: (i: number) => boolean;
 }
 
 /**
@@ -440,6 +444,6 @@ export function viewshed(c: Cells, eye: CellEye, radius: number, out: Float32Arr
       const d = Math.hypot(x - eye.x, y - eye.y);
       if (d > radius || d >= out[i]!) continue;
       if (opts.reach && !opts.reach(i, d)) continue;
-      if (lineOfSight(c, eye, { x, y, h: c.height[i]! + lift })) out[i] = d;
+      if (lineOfSight(c, eye, { x, y, h: c.height[i]! + lift }, opts.ignore)) out[i] = d;
     }
 }

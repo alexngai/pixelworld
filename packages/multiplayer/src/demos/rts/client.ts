@@ -39,6 +39,7 @@ import {
   GARRISON,
   OBJECTIVE,
   TRAFFIC,
+  roofEye,
 } from "./rules";
 
 /**
@@ -652,6 +653,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   let fogCover: Float32Array | null = null;
   let sightAt = -Infinity;
   let fogAt = -Infinity;
+  let fogNight = false;
   let matchSeen: number | null = null;
 
   /** The fog on the server's clock each frame; the side's sight, as the server works it out, four times a second; the veil from it. */
@@ -668,16 +670,17 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       matchSeen = world.match.until;
       explored.fill(0);
     }
-    if (fog && shown !== null && t - fogAt > 2) {
+    if (fog && shown !== null && (t - fogAt > 2 || night !== fogNight)) {
       fogCover = fogCells(grid, (x, y, h) => fog.at(x, y, h, shown, night), fogCover ?? undefined);
       fogAt = t;
+      fogNight = night;
     }
     const dark = night ? DAY.sight : 1;
     const eyes: Eye[] = [];
     for (const u of snap.units) {
       if (u.s !== side) continue;
       const s = u.in === undefined ? undefined : structures.get(u.in);
-      if (s) eyes.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - (view.query.heightAt(s.x, s.y) ?? 0) + 0.5), radius: (UNITS[u.k].sight + GARRISON.sight) * dark });
+      if (s) eyes.push(roofEye(grid, s, (UNITS[u.k].sight + GARRISON.sight) * dark));
       else eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight * dark });
     }
     for (const m of world?.marks ?? []) if (m.owner === side) eyes.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });

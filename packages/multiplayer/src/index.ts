@@ -1,5 +1,10 @@
 import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
 import type { Pose as VehiclePose, VehicleKind } from "pixelworld/traffic";
+import { Reader, type Schema } from "./codec";
+import { Replica, SNAP_BYTE, WORLD_BYTE, type ReplicaUpdate } from "./replica";
+
+export * from "./codec";
+export * from "./replica";
 
 /**
  * @pixelworlds/multiplayer: what a pixelworld game needs to put several
@@ -41,6 +46,12 @@ export interface TickSnapshot {
 /** A `TickRoom`'s shared snapshot, to every page at once: server time and the game's fields (the others, the score). */
 export interface TickShared {
   k: "world";
+  t: number;
+}
+
+/** A `TickRoom`'s roster (D-123): the game's fields (`roster()`), sent when they change. */
+export interface TickRoster {
+  k: "roster";
   t: number;
 }
 
@@ -89,7 +100,9 @@ export interface Room {
 
 class RoomImpl implements Room {
   readonly peers: Set<string>;
-  onMessage: Room["onMessage"] = null;
+  /** What came before there was a handler: a keyframe the page then diffs from (D-123) mustn't be lost. */
+  private held: [string, unknown][] = [];
+  private handler: Room["onMessage"] = null;
   onJoin: Room["onJoin"] = null;
   onLeave: Room["onLeave"] = null;
   onClose: Room["onClose"] = null;
@@ -108,8 +121,26 @@ class RoomImpl implements Room {
     if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(data));
   }
 
+  get onMessage(): Room["onMessage"] {
+    return this.handler;
+  }
+
+  set onMessage(f: Room["onMessage"]) {
+    this.handler = f;
+    if (!f) return;
+    const held = this.held;
+    this.held = [];
+    for (const [from, data] of held) f(from, data);
+  }
+
+  /** A message for the page: to its handler, or held until it has one. */
+  deliver(from: string, data: unknown): void {
+    if (this.handler) this.handler(from, data);
+    else this.held.push([from, data]);
+  }
+
   receive(m: ServerMessage): void {
-    if (m.t === "msg") this.onMessage?.(m.from, m.data);
+    if (m.t === "msg") this.deliver(m.from, m.data);
     else if (m.t === "join") {
       this.peers.add(m.id);
       this.onJoin?.(m.id);
@@ -134,10 +165,13 @@ export function joinRoom(url: string | URL, room: string): Promise<Room> {
   u.protocol = u.protocol.replace(/^http/, "ws");
   u.searchParams.set("room", room);
   const ws = new WebSocket(u);
+  ws.binaryType = "arraybuffer";
   return new Promise((resolve, reject) => {
     let joined: RoomImpl | null = null;
     let why: string | null = null;
     ws.onmessage = (e) => {
+      // binary: a hosted game's (D-123)
+      if (typeof e.data !== "string") return joined?.deliver(SERVER, new Uint8Array(e.data as ArrayBuffer));
       const m = JSON.parse(String(e.data)) as ServerMessage;
       if (m.t === "welcome") resolve((joined = new RoomImpl(ws, m.id, room, m.peers)));
       else if (m.t === "full") why = `room "${room}" is full`;
@@ -338,6 +372,60 @@ export class Prediction<I> {
   }
 }
 
+/**
+ * A prediction's corrections, drawn smoothly (D-119). When a snapshot moves
+ * the page's own vehicle (a bump the server judged otherwise), it is drawn
+ * where it was and eases to where it is, so neither it nor the camera
+ * following it snaps; its state, which the next inputs step from, is the
+ * server's at once. A jump past `snap` cells (a respawn, the grid) is drawn
+ * there at once.
+ *
+ *   restore: (snap) => { before = { ...me }; Object.assign(me, snap.you) },
+ *   reconciled: () => correction.moved(before, me),
+ *   each frame: correction.update(dt); draw at me + correction.offset
+ */
+export class Correction {
+  /** Draw the vehicle this far off its state: cells, steps, radians. */
+  readonly offset = { x: 0, y: 0, h: 0, heading: 0 };
+
+  /**
+   * @param halfLife Seconds for an offset to halve (default 0.1).
+   * @param snap Cells past which a correction is drawn at once (default 3).
+   */
+  constructor(
+    readonly halfLife = 0.1,
+    readonly snap = 3,
+  ) {}
+
+  /** A reconcile moved the vehicle from `before` to `after`: it is drawn on from where it was. */
+  moved(before: Pose, after: Pose): void {
+    const o = this.offset;
+    const x = o.x + before.x - after.x;
+    const y = o.y + before.y - after.y;
+    if (Math.hypot(x, y) > this.snap) return this.reset();
+    o.x = x;
+    o.y = y;
+    o.h += before.h - after.h;
+    o.heading += Math.atan2(Math.sin(before.heading - after.heading), Math.cos(before.heading - after.heading));
+  }
+
+  /** Ease out over a frame of `dt` seconds. */
+  update(dt: number): void {
+    const k = 0.5 ** (dt / this.halfLife);
+    const o = this.offset;
+    for (const key of ["x", "y", "h", "heading"] as const) o[key] = Math.abs(o[key] * k) < 1e-4 ? 0 : o[key] * k;
+  }
+
+  reset(): void {
+    Object.assign(this.offset, { x: 0, y: 0, h: 0, heading: 0 });
+  }
+
+  /** How far off it is drawn now (cells across). */
+  get size(): number {
+    return Math.hypot(this.offset.x, this.offset.y);
+  }
+}
+
 // ---------------------------------------------------------------- events at their time
 
 /**
@@ -370,7 +458,7 @@ export class EventQueue<E> {
 
 // ---------------------------------------------------------------- a page in a room the server runs
 
-export interface TickClientOptions<I, S, W> {
+export interface TickClientOptions<I, S, W, R extends object = object> {
   /** The room's fixed step (s): the server's `TickRoom` steps at the same. */
   tick: number;
   /** One fixed step of the page's own vehicle with an input (none for a spectator). */
@@ -379,8 +467,14 @@ export interface TickClientOptions<I, S, W> {
   restore?: (snap: TickSnapshot & S) => void;
   /** After a snapshot is put in place and the inputs stepped again: to see how far the prediction was off. */
   reconciled?: (snap: TickSnapshot & S) => void;
-  /** The shared snapshot (the others, the score), as it arrives. */
-  onWorld?: (world: TickShared & W) => void;
+  /** The shared snapshot (the others, the score), as it arrives; with `schema`, the replicated things in `entities` (D-123). */
+  onWorld?: (world: TickShared & W & { entities?: ReplicaUpdate<R> }) => void;
+  /** The schema of what the room replicates in binary (its `Replicator`'s), D-123. */
+  schema?: Schema<R>;
+  /** The schema of the page's own snapshot in binary (its `TickRoom.snapSchema`), D-123. */
+  snapSchema?: Schema<S & object>;
+  /** The roster (names, scores), when it changes (D-123). */
+  onRoster?: (roster: TickRoster & Record<string, unknown>) => void;
   /** Anything else the room's game sends. */
   onMessage?: (data: unknown) => void;
   /** How far behind the page draws the others (s; default 0.1, `Smoothing`'s): `seen` is the server time it shows, and events wait for it. */
@@ -389,6 +483,16 @@ export interface TickClientOptions<I, S, W> {
   maxTicksPerFrame?: number;
   /** The page's clock (s; default `performance.now()`): tests pass their own. */
   now?: () => number;
+}
+
+/** A player's own snapshot in binary (`TickRoom.snapSchema`, D-123), read back: `t` from its tick and the room's tick length. */
+export function readSnap<S extends object>(data: Uint8Array, schema: Schema<S>, tick: number): TickSnapshot & S {
+  const r = new Reader(data);
+  if (r.byte() !== SNAP_BYTE) throw new Error("not a binary snapshot");
+  const t = r.uint() * tick;
+  const ack = r.uint();
+  const cmd = r.uint();
+  return { ...schema.value(schema.readFull(r)), k: "snap", t, ack, ...(cmd ? { cmd } : {}) };
 }
 
 /**
@@ -407,8 +511,10 @@ export interface TickClientOptions<I, S, W> {
  * commands come back acknowledged (`TickSnapshot.cmd`), so it can show an
  * order at once and know which snapshot has it.
  */
-export class TickClient<I, S = unknown, W = unknown, E = unknown> {
+export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends object = object> {
   readonly prediction: Prediction<I>;
+  /** What the room replicates to this page, with `schema` (D-123). */
+  readonly replica: Replica<R> | null;
   readonly clock = new ServerClock();
   readonly events = new EventQueue<E>();
   /** The round trip from an input or a command to the snapshot that has it (ms, recent average), or null before one. */
@@ -422,18 +528,35 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown> {
 
   constructor(
     readonly room: Room,
-    private readonly opts: TickClientOptions<I, S, W>,
+    private readonly opts: TickClientOptions<I, S, W, R>,
   ) {
     this.prediction = new Prediction(opts.step ?? (() => {}));
     this.now = opts.now ?? (() => performance.now() / 1000);
+    this.replica = opts.schema ? new Replica(opts.schema) : null;
     room.onMessage = (from, data) => {
       if (from !== SERVER) return;
+      if (data instanceof Uint8Array) {
+        if (data[0] === SNAP_BYTE) {
+          if (!opts.snapSchema) return;
+          const snap = readSnap(data, opts.snapSchema, opts.tick);
+          this.clock.sample(snap.t, this.now());
+          this.snapshot(snap);
+          return;
+        }
+        if (data[0] !== WORLD_BYTE || !this.replica) return opts.onMessage?.(data);
+        const u = this.replica.read(data);
+        const t = u.tick * opts.tick;
+        this.clock.sample(t, this.now());
+        opts.onWorld?.({ ...(u.extras as W), k: "world", t, entities: u });
+        return;
+      }
       const m = data as { k?: unknown; t?: unknown };
       const t = typeof m?.t === "number" ? m.t : null;
       if (t !== null && (m.k === "world" || m.k === "snap" || m.k === "ev")) this.clock.sample(t, this.now());
       if (m.k === "world") opts.onWorld?.(data as TickShared & W);
       else if (m.k === "snap") this.snapshot(data as TickSnapshot & S);
       else if (m.k === "ev") this.events.push((data as TickEvent<E>).t, (data as TickEvent<E>).e);
+      else if (m.k === "roster") opts.onRoster?.(data as TickRoster & Record<string, unknown>);
       else opts.onMessage?.(data);
     };
   }
