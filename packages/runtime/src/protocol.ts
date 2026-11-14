@@ -1,7 +1,7 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworlds/grid";
 import type { BakedImage, StyleParams } from "@pixelworlds/bake";
 import type { HeroPaint } from "./heroPaint";
-import type { AssetCatalog, Box, ModelFailure, ObjectInstance, ScatterRules } from "@pixelworlds/generators";
+import { BIG_FOOTPRINT_CELLS, footprintBounds, type AssetCatalog, type Box, type ModelFailure, type ObjectInstance, type ScatterRules } from "@pixelworlds/generators";
 
 /** Messages between the main thread and the bake worker. */
 
@@ -63,6 +63,12 @@ export interface BakeTileMessage {
   ground?: boolean;
   /** The tile's cells plus a context margin, clipped to the world. */
   slice: TerrainSlice;
+  /**
+   * Placed objects taken out of the world (indices into the init's
+   * instances, D-124), left out of the tile: its kept scene is meshed again
+   * when they differ from the ones it was meshed without.
+   */
+  removed?: number[];
 }
 
 export interface BakeSpriteMessage {
@@ -135,6 +141,18 @@ export interface PluginsLoadedMessage {
 }
 
 export type FromWorker = BakedMessage | ReadyMessage | ErrorMessage | PluginsLoadedMessage;
+
+/**
+ * Whether a tile's bake builds an object, its slice the cells [x0, x1) ×
+ * [y0, y1): its anchor in the slice, or a big footprint (a bridge) reaching
+ * into it. The tiles an edit to the object touches are the ones this holds for.
+ */
+export function objectInSlice(o: ObjectInstance, x0: number, y0: number, x1: number, y1: number): boolean {
+  if (o.x >= x0 && o.y >= y0 && o.x < x1 && o.y < y1) return true;
+  if (!o.fp) return false;
+  const [bx0, by0, bx1, by1] = footprintBounds(o.fp);
+  return bx1 - bx0 > BIG_FOOTPRINT_CELLS / 2 || by1 - by0 > BIG_FOOTPRINT_CELLS / 2 ? bx1 >= x0 && by1 >= y0 && bx0 < x1 && by0 < y1 : false;
+}
 
 /** Typed arrays of a slice, for transferring to the worker without copying. */
 export function sliceTransferables(slice: TerrainSlice): Transferable[] {

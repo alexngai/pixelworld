@@ -2,10 +2,8 @@ import { TerrainGrid } from "@pixelworlds/grid";
 import { Baker, type BakeScene } from "@pixelworlds/bake";
 import { applyHeroPaint } from "./heroPaint";
 import {
-  BIG_FOOTPRINT_CELLS,
   buildBoxesMesh,
   buildObjects,
-  footprintBounds,
   occupiedCells,
   scatterInstances,
   buildTerrainField,
@@ -16,7 +14,7 @@ import {
   type ModelFailure,
   type ObjectInstance,
 } from "@pixelworlds/generators";
-import type { BakeTileMessage, FromWorker, InitMessage, TerrainSlice, ToWorker, WorldObjects } from "./protocol";
+import { objectInSlice, type BakeTileMessage, type FromWorker, type InitMessage, type TerrainSlice, type ToWorker, type WorldObjects } from "./protocol";
 
 /**
  * Executes bake requests against a WebGL2 context. Used inside the bake
@@ -30,6 +28,8 @@ export class BakeHost {
   private readonly sceneFailures = new WeakMap<BakeScene, ModelFailure[]>();
   /** A cached scene's placed-objects mesh, left out of its bare variant. */
   private readonly sceneObjects = new WeakMap<BakeScene, MeshData[]>();
+  /** The removed objects a cached scene was meshed without (`BakeTileMessage.removed`, joined). */
+  private readonly sceneEdits = new WeakMap<BakeScene, string>();
   private static readonly MESH_CACHE = 6;
 
   constructor(
@@ -104,6 +104,13 @@ export class BakeHost {
     const t0 = performance.now();
     // the ground alone is quick: no objects, and nothing kept (the whole tile's scene has them)
     let scene = msg.ground ? undefined : this.meshCache.get(key);
+    const edits = msg.removed?.join(",") ?? "";
+    if (scene && this.sceneEdits.get(scene) !== edits) {
+      // objects taken out or put back since it was meshed (D-124): meshed again
+      this.baker.releaseScene(scene);
+      this.meshCache.delete(key);
+      scene = undefined;
+    }
     if (!scene) {
       const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
       const world = { width: init.worldWidth, height: init.worldHeight };
@@ -120,7 +127,7 @@ export class BakeHost {
         scene = { meshes: [terrain], batches: [] };
       }
       if (init.objects && !msg.ground) {
-        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned);
+        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned, new Set(msg.removed));
         scene.meshes.push(objects.merged, objects.lines);
         scene.batches.push(...objects.batches);
         this.sceneObjects.set(scene, [objects.merged, objects.lines]);
@@ -136,6 +143,7 @@ export class BakeHost {
       }
       if (!msg.ground) {
         this.meshCache.set(key, scene);
+        this.sceneEdits.set(scene, edits);
         if (this.meshCache.size > (init.meshScenes ?? BakeHost.MESH_CACHE)) {
           const oldest = this.meshCache.keys().next().value!;
           this.baker.releaseScene(this.meshCache.get(oldest)!);
@@ -159,9 +167,11 @@ export class BakeHost {
   }
 
   /**
-   * Objects whose base point lies in the slice, built in world units, plus the
+   * Objects whose base point lies in the slice (or whose big footprint reaches
+   * into it), but those removed (D-124), built in world units, plus the
    * decorative scatter (M3) of the tile's cells and a two-cell ring around them
-   * (enough for anything that leans into the tile).
+   * (enough for anything that leans into the tile). A removed object's cells
+   * still keep the scatter off, so the scatter is the same in every tile.
    */
   private objectsFor(
     objects: WorldObjects,
@@ -169,20 +179,18 @@ export class BakeHost {
     grid: TerrainGrid,
     renderScale: number,
     owned: { x0: number; y0: number; x1: number; y1: number },
+    removed: ReadonlySet<number>,
   ) {
     const sx1 = slice.x0 + slice.width;
     const sy1 = slice.y0 + slice.height;
-    // big footprints (bridges) reach into slices far from their anchor
-    const inSlice = (o: ObjectInstance) => {
-      if (o.x >= slice.x0 && o.y >= slice.y0 && o.x < sx1 && o.y < sy1) return true;
-      if (!o.fp) return false;
-      const [x0, y0, x1, y1] = footprintBounds(o.fp);
-      return x1 - x0 > BIG_FOOTPRINT_CELLS / 2 || y1 - y0 > BIG_FOOTPRINT_CELLS / 2
-        ? x1 >= slice.x0 && y1 >= slice.y0 && x0 < sx1 && y0 < sy1
-        : false;
-    };
-    const placed = objects.instances.filter(inSlice);
-    let instances = placed;
+    const placed: ObjectInstance[] = [];
+    const standing: ObjectInstance[] = [];
+    objects.instances.forEach((o, i) => {
+      if (!objectInSlice(o, slice.x0, slice.y0, sx1, sy1)) return;
+      placed.push(o);
+      if (!removed.has(i)) standing.push(o);
+    });
+    let instances = standing;
     if (objects.scatter && objects.scatter.density > 0) {
       const origin: [number, number] = [slice.x0, slice.y0];
       const occupied = occupiedCells(placed, origin, slice.width, slice.height);
@@ -193,7 +201,7 @@ export class BakeHost {
         x1: owned.x1 + ring - slice.x0,
         y1: owned.y1 + ring - slice.y0,
       };
-      instances = placed.concat(scatterInstances(grid, origin, rect, objects.scatter, occupied));
+      instances = standing.concat(scatterInstances(grid, origin, rect, objects.scatter, occupied));
     }
     const voxel = objectVoxelScale(renderScale);
     return buildObjects(instances, {

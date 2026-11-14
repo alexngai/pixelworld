@@ -51,6 +51,30 @@ describe("openWorld: a world's queries without a view (D-111)", () => {
     expect(() => query.pick(0, 0)).toThrow("pick needs a world view");
   });
 
+  it("takes a Presidio building out of San Francisco's level, freeing its cells, and puts it back (D-124)", async () => {
+    serveFixtures();
+    const { query, edits } = await openWorld({ worldUrl: "sf/", base: "https://pixelworld.test/", style });
+    // the Presidio, from Baker Beach to Crissy Field (Fogfront's play area)
+    await query.ensure(118, 168, 250, 250);
+    const cells = (index: number) => {
+      const out: string[] = [];
+      for (let y = 168; y < 250; y++) for (let x = 118; x < 250; x++) if (query.objectsAt(x + 0.5, y + 0.5).some((o) => o.index === index)) out.push(`${x},${y}`);
+      return out;
+    };
+    let building = null;
+    for (let y = 168; y < 250 && !building; y++)
+      for (let x = 118; x < 250 && !building; x++) building = query.objectsAt(x + 0.5, y + 0.5).find((o) => o.group.startsWith("building") && o.footprint) ?? null;
+    expect(building).not.toBeNull();
+    const at = cells(building!.index);
+    expect(at.length).toBeGreaterThan(0);
+    expect(edits.remove([building!.index])).toEqual({ op: "remove", objects: [building!.index] });
+    expect(cells(building!.index)).toEqual([]);
+    const [x, y] = at[0]!.split(",").map(Number);
+    expect(query.objectsAt(x! + 0.5, y! + 0.5).some((o) => o.index === building!.index)).toBe(false);
+    edits.restore();
+    expect(cells(building!.index)).toEqual(at);
+  });
+
   it("asks for an absolute URL or a base where there is no page", async () => {
     await expect(openWorld({ worldUrl: "/southwest-fly/", style })).rejects.toThrow(/"\/southwest-fly\/" is relative, and there is no page/);
   });

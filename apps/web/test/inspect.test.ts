@@ -49,6 +49,7 @@ describe("the pixel inspector", () => {
 
   it("lists the objects the ray passes through, nearest the viewer first", () => {
     const hit = (group: string, bounds: [number, number, number, number], top: number | null): ObjectHit => ({
+      index: 0,
       group,
       id: group === "landmark.tower" ? "the-tower" : null,
       x: (bounds[0] + bounds[2]) / 2,

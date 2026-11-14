@@ -54,10 +54,14 @@ export interface QueryWorld {
 export interface ObjectSource {
   at(x: number, y: number): ObjectHit[];
   landmarks(): LandmarkInfo[];
+  /** The highest an object reaches over ground no higher than this (steps). */
+  highest(ground: number): number;
 }
 
 /** Height resolution of `pick`'s march along the view ray (steps). */
 const PICK_STEP = 1 / 8;
+/** How high a placed object without an estimated top (a tree, a prop) is taken to reach, at render scale 1 (steps). */
+const POINT_TOP = 3;
 
 export function createQuery(
   src: QuerySource,
@@ -85,6 +89,48 @@ export function createQuery(
     if (g === null) return null;
     const w = waterAt(x, y);
     return w === null ? g : Math.max(g, w);
+  };
+
+  /** The view ray through a canvas point (CSS px): where it is (cells) at a height (steps). */
+  const ray = (screenX: number, screenY: number) => {
+    const v = view();
+    // canvas CSS px → device px → render px (the palette pass: floor(device / zoom + frac))
+    const sx = v.left + (screenX * v.pixelRatio) / v.zoom + v.fracX;
+    const sy = v.top + (screenY * v.pixelRatio) / v.zoom + v.fracY;
+    return (h: number): [number, number] => {
+      const [ux, uy] = unprojectAtHeight(sx, sy, h * rs, v.rotation);
+      return [ux / rs, uy / rs];
+    };
+  };
+
+  /** Where a view ray meets the drawn ground. */
+  const pickGround = (at: (h: number) => [number, number]): PickResult | null => {
+    // March down the view ray from the highest ground: the first point under the drawn top is the hit.
+    const [lo, hi] = world.heightRange;
+    const above = (h: number) => {
+      const [x, y] = at(h);
+      const top = drawnTop(x, y);
+      return top === null ? null : top < h;
+    };
+    let prev = hi + 1;
+    for (let h = hi + 1 - PICK_STEP; h >= lo - 2; h -= PICK_STEP) {
+      const a = above(h);
+      if (a === false) {
+        // refine between the last point above and this one
+        let up = prev;
+        let down = h;
+        for (let k = 0; k < 24; k++) {
+          const mid = (up + down) / 2;
+          if (above(mid) === false) down = mid;
+          else up = mid;
+        }
+        const [x, y] = at(down);
+        const top = drawnTop(x, y) ?? down;
+        return { x, y, h: top, cellX: Math.floor(x), cellY: Math.floor(y) };
+      }
+      prev = h;
+    }
+    return null;
   };
 
   return {
@@ -125,39 +171,16 @@ export function createQuery(
       };
     },
 
-    pick(screenX, screenY): PickResult | null {
-      const v = view();
-      // canvas CSS px → device px → render px (the palette pass: floor(device / zoom + frac))
-      const sx = v.left + (screenX * v.pixelRatio) / v.zoom + v.fracX;
-      const sy = v.top + (screenY * v.pixelRatio) / v.zoom + v.fracY;
-      const at = (h: number): [number, number] => {
-        const [ux, uy] = unprojectAtHeight(sx, sy, h * rs, v.rotation);
-        return [ux / rs, uy / rs];
-      };
-      // March down the view ray from the highest ground: the first point under the drawn top is the hit.
-      const [lo, hi] = world.heightRange;
-      const above = (h: number) => {
+    pick: (screenX, screenY) => pickGround(ray(screenX, screenY)),
+
+    pickObject(screenX, screenY): ObjectHit | null {
+      const at = ray(screenX, screenY);
+      const ground = pickGround(at);
+      if (!ground || !objects) return null;
+      // March down the view ray from the highest object top to the ground: the first object it is inside is drawn there.
+      for (let h = objects.highest(world.heightRange[1]); h >= ground.h; h -= PICK_STEP) {
         const [x, y] = at(h);
-        const top = drawnTop(x, y);
-        return top === null ? null : top < h;
-      };
-      let prev = hi + 1;
-      for (let h = hi + 1 - PICK_STEP; h >= lo - 2; h -= PICK_STEP) {
-        const a = above(h);
-        if (a === false) {
-          // refine between the last point above and this one
-          let up = prev;
-          let down = h;
-          for (let k = 0; k < 24; k++) {
-            const mid = (up + down) / 2;
-            if (above(mid) === false) down = mid;
-            else up = mid;
-          }
-          const [x, y] = at(down);
-          const top = drawnTop(x, y) ?? down;
-          return { x, y, h: top, cellX: Math.floor(x), cellY: Math.floor(y) };
-        }
-        prev = h;
+        for (const o of objects.at(x, y)) if (o.base !== null && h >= o.base && h <= (o.top ?? o.base + POINT_TOP / rs)) return o;
       }
       return null;
     },

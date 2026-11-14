@@ -38,9 +38,11 @@ const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, 
 
 /**
  * What `prepare` hands back: a cached image, or a terrain slice to bake.
- * `whole`: a ground request answered with the whole tile, kept.
+ * `whole`: a ground request answered with the whole tile, kept. `removed`:
+ * the placed objects taken out of the world that the tile's bake leaves out
+ * (D-124), echoed in its result.
  */
-export type PreparedTile = { cached: BakedImage | null; whole?: boolean } | { slice: TerrainSlice };
+export type PreparedTile = ({ cached: BakedImage | null; whole?: boolean } | { slice: TerrainSlice }) & { removed?: number[] };
 
 export interface TileResult extends TileRequest {
   key: TileKey;
@@ -49,6 +51,8 @@ export interface TileResult extends TileRequest {
   fromCache: boolean;
   /** Models of the tile that failed to generate and are drawn as markers (D-072): such a tile isn't worth keeping. */
   modelsFailed: number;
+  /** The removed objects its image was made without (`PreparedTile.removed`), if any. */
+  removed?: number[];
 }
 
 export interface BakeTotals {
@@ -91,7 +95,7 @@ interface Baker {
   transport: Transport;
   worker: Worker | null;
   /** A sprite or object bake, or a tile being prepared or baked; null while idle. */
-  job: { id: number; tile: (TileRequest & { key: TileKey }) | null } | null;
+  job: { id: number; tile: (TileRequest & { key: TileKey; removed?: number[] }) | null } | null;
   /** Tiles (tx,ty) whose meshes its BakeHost keeps, oldest first, as the host evicts them. */
   meshes: string[];
 }
@@ -340,17 +344,20 @@ export class BakeService {
   private startTile(b: Baker, t: TileRequest): void {
     const id = this.nextId++;
     const key = requestKey(t);
-    b.job = { id, tile: { ...t, key } };
+    const tile = { ...t, key, removed: undefined as number[] | undefined };
+    b.job = { id, tile };
     this.inFlight.add(key);
     this.prepare(t).then(
       (prepared) => {
+        tile.removed = prepared.removed?.length ? prepared.removed : undefined;
         if ("cached" in prepared) {
           this.finish(b, id, prepared.cached, null, true, 0, prepared.whole);
         } else {
           if (!t.ground) this.keepMeshes(b, t); // a ground bake keeps no meshes
           const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
+          const removed = tile.removed ? { removed: tile.removed } : {};
           b.transport.send(
-            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, slice: prepared.slice },
+            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, slice: prepared.slice, ...removed },
             sliceTransferables(prepared.slice),
           );
         }
@@ -418,7 +425,8 @@ export class BakeService {
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
       const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
-      this.onTile({ key, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, image, stats, fromCache, modelsFailed });
+      const removed = p.removed ? { removed: p.removed } : {};
+      this.onTile({ key, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, image, stats, fromCache, modelsFailed, ...removed });
     }
     this.pump();
   }

@@ -22,6 +22,7 @@ import { buildPalette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
 import { GameClock } from "./clock";
 import { Controllers } from "./controller";
+import { EditLog, TileEdits } from "./edits";
 import { Entities } from "./entities";
 import { Layers } from "./layers";
 import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
@@ -38,6 +39,7 @@ import type {
   ViewCamera,
   ViewState,
   ViewStats,
+  WorldEdits,
   WorldInfo,
   WorldQuery,
   WorldView,
@@ -47,6 +49,7 @@ import {
   bakeInit,
   loadHeroes,
   loadWorld,
+  objectTiles,
   openTileCache,
   tileCacheKey,
   tileSlice,
@@ -115,14 +118,18 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
+  // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them
+  const edits = new EditLog(w.objects?.instances.length ?? 0);
+  const tileEdits = new TileEdits((i) => objectTiles(w, i));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
+    const removed = tileEdits.removedFor(t.tx, t.ty);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
-      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t);
+      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed);
       const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
-      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}) };
+      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed };
     }
-    return { slice: await tileSlice(w, t) };
+    return { slice: await tileSlice(w, t), removed };
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
@@ -135,7 +142,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
     service.dispose();
     throw e;
   });
-  const view = new View(opts, w, compositor, service, cache, await cacheKeyReady);
+  const view = new View(opts, w, compositor, service, cache, await cacheKeyReady, edits, tileEdits);
   await view.start(opts);
   return view;
 }
@@ -148,6 +155,7 @@ class View implements WorldView {
   readonly entities: EntityList;
   readonly layers: LayerRegistry;
   readonly controllers: ControllerHost;
+  readonly edits: WorldEdits;
   private readonly cam = new Camera(1, 1);
   private readonly viewCamera: ViewCameraImpl;
   private readonly entityList: Entities;
@@ -200,6 +208,8 @@ class View implements WorldView {
   private readonly prefetches = new Prefetches();
   /** Where a revealing entity cleared the world last frame (absolute screen px), or null. */
   private revealBox: ScreenBox | null = null;
+  /** Tile images on the GPU from before an edit that touches them (D-124): drawn until their new bake is ready. */
+  private readonly stale = new Set<TileKey>();
 
   constructor(
     opts: WorldViewOptions,
@@ -207,7 +217,9 @@ class View implements WorldView {
     private readonly compositor: Compositor,
     private readonly service: BakeService,
     private readonly cache: TileStore | null,
-    private readonly cacheKey: (t: TileRequest) => string,
+    private readonly cacheKey: (t: TileRequest, removed?: readonly number[]) => string,
+    editLog: EditLog,
+    private readonly tileEdits: TileEdits,
   ) {
     this.canvas = opts.canvas;
     this.world = worldInfo(w);
@@ -221,10 +233,16 @@ class View implements WorldView {
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
-    this.query = worldQuery(w, () => {
-      const snap = this.cam.snapped();
-      return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
-    });
+    this.query = worldQuery(
+      w,
+      () => {
+        const snap = this.cam.snapped();
+        return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
+      },
+      editLog,
+    );
+    this.edits = editLog;
+    editLog.onChange((e) => this.edited(this.tileEdits.apply(e)));
     this.viewCamera = new ViewCameraImpl(this.cam, this.rs, invalidate, {
       ensure: (x, y) => store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1),
       heightAt: (x, y) => this.query.heightAt(x, y),
@@ -284,19 +302,33 @@ class View implements WorldView {
       const whole = !res.bare && !res.ground;
       // the ground came after the whole tile: not needed
       if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
+      // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
+      const outdated = !res.ground && (res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",");
+      if (outdated) this.service.forget(res.key);
+      // kept under the objects it was made without, so it is right for the cache whenever it was made
+      const put = (img: typeof res.image) => {
+        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed), img);
+      };
       // baked while idle, for later (another rotation, around the view): into the cache, not onto the GPU
       if (this.idleAsked.delete(res.key) && !(res.rotation === this.cam.rotation && this.near.some((t) => t.tx === res.tx && t.ty === res.ty))) {
-        if (res.image && !res.fromCache && !res.modelsFailed) void this.cache?.put(this.cacheKey(res), res.image);
-        this.idleDone.add(res.key); // done for the bake service until the view wants it (then from the cache)
+        put(res.image);
+        if (!outdated) this.idleDone.add(res.key); // done for the bake service until the view wants it (then from the cache)
         return;
       }
+      // a tile with missing-model markers isn't kept: a reload bakes it again and reports why (D-072)
+      put(res.image);
+      if (outdated && this.gpu.has(res.key)) return;
+      // a new image in place of one from before an edit: the old one goes now
+      const old = this.gpu.get(res.key);
+      if (old?.img) this.compositor.release(old.img);
+      this.gpuBytes -= old?.bytes ?? 0;
+      if (outdated) this.stale.add(res.key);
+      else this.stale.delete(res.key);
       if (res.image) {
         const img = this.compositor.upload(res.image);
         const bytes = res.image.width * res.image.height * 4;
         this.gpuBytes += bytes;
         this.gpu.set(res.key, { img, bytes, lastDrawn: this.frameNo, ...at });
-        // a tile with missing-model markers isn't kept: a reload bakes it again and reports why (D-072)
-        if (!res.fromCache && !res.modelsFailed && !res.ground && this.cache) void this.cache.put(this.cacheKey(res), res.image);
       } else {
         this.gpu.set(res.key, { img: null, bytes: 0, lastDrawn: this.frameNo, ...at });
       }
@@ -380,8 +412,37 @@ class View implements WorldView {
    */
   private settled(): boolean {
     if (this.service.spritesPending - this.entityList.unwaitedBakes > 0) return false;
-    for (const t of this.near) if (!this.gpu.has(tileKey(t.rotation, t.tx, t.ty))) return false;
+    for (const t of this.near) if (!this.has(tileKey(t.rotation, t.tx, t.ty))) return false;
     return true;
+  }
+
+  /** Whether a tile's image is on the GPU and up to date (not from before an edit). */
+  private has(key: TileKey): boolean {
+    return this.gpu.has(key) && !this.stale.has(key);
+  }
+
+  /**
+   * Objects taken out or put back (D-124): the tiles whose bake reaches them
+   * bake again. In the rotation shown, each image stays on screen until its
+   * new one is ready; in the others, and kept in the cache, they are let go.
+   */
+  private edited(tiles: [number, number][]): void {
+    const r = this.cam.rotation;
+    for (const [tx, ty] of tiles)
+      for (const rot of [0, 1, 2, 3] as const)
+        for (const bare of [false, true]) {
+          const key = tileKey(rot, tx, ty, bare);
+          this.idleDone.delete(key);
+          if (rot === r && this.gpu.has(key)) {
+            this.stale.add(key);
+            this.service.forget(key);
+          } else {
+            this.drop(key);
+            this.service.forget(key);
+            if (!bare) this.baked.set(rot, tx, ty, false);
+          }
+        }
+    this.invalidate();
   }
 
   // ---------------------------------------------------------------- game time, baking ahead
@@ -521,11 +582,11 @@ class View implements WorldView {
     // nothing else waiting and the camera still: one tile at a time for later (another rotation, around
     // the view); while it moves, the look-ahead has the tiles that matter
     const still = Math.hypot(this.motion.vx, this.motion.vy) < IDLE_SPEED;
-    const busy = !still || this.wanted.some((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground)));
+    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground)));
     const idle = this.idleBake && !busy ? this.nextIdle(r, info) : null;
     if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty));
     this.service.want(idle ? [...this.wanted, idle] : this.wanted);
-    if (this.prefetches.size) this.prefetches.settle((t) => this.gpu.has(tileKey(t.rotation, t.tx, t.ty)));
+    if (this.prefetches.size) this.prefetches.settle((t) => this.has(tileKey(t.rotation, t.tx, t.ty)));
 
     const drawTiles: GpuImage[] = [];
     // tiles' ground alone, under everything while they bake (a whole tile leaves holes where its neighbours' buildings stand)
@@ -671,6 +732,7 @@ class View implements WorldView {
     if (e.img) this.compositor.release(e.img);
     this.gpuBytes -= e.bytes;
     this.gpu.delete(key);
+    this.stale.delete(key);
     this.service.forget(key);
   }
 
@@ -684,6 +746,7 @@ class View implements WorldView {
       this.compositor.release(e.img!);
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
+      this.stale.delete(key);
       if (!e.bare && !e.ground) this.baked.set(e.rotation, e.tx, e.ty, false);
       this.service.forget(key);
     }
@@ -737,7 +800,7 @@ class View implements WorldView {
       groundTiles: t.ground,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
-      tilesPending: this.wanted.filter((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
+      tilesPending: this.wanted.filter((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
       chunksLoaded: this.w.store.loadedCount,
       chunksTotal: this.w.manifest.chunks.length,
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,

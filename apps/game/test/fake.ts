@@ -85,13 +85,14 @@ export class FakeWorld {
       objectsAt: (x, y) =>
         this.objects.filter((o) => x >= o.bounds[0] && y >= o.bounds[1] && x <= o.bounds[2] && y <= o.bounds[3]),
       landmarks: () => [],
+      pickObject: () => null,
     };
   }
 }
 
 /** A building occupying a rectangle of cells. */
 export function building(x0: number, y0: number, x1: number, y1: number, group = "building.house", top = 3): ObjectHit {
-  return { group, id: null, x: (x0 + x1) / 2, y: (y0 + y1) / 2, bounds: [x0, y0, x1, y1], footprint: true, base: 0, top };
+  return { index: 0, group, id: null, x: (x0 + x1) / 2, y: (y0 + y1) / 2, bounds: [x0, y0, x1, y1], footprint: true, base: 0, top };
 }
 
 class FakeEntity implements Entity {
