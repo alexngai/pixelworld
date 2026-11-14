@@ -6,10 +6,9 @@ import { cleanName, type RoomInfo } from "../../index";
 import { Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import { Bot } from "./bot";
 import { RtsGame, parseCommand, type GameEvent } from "./game";
+import { DEFAULT_MAP, MAPS, mapOf, planMap, type Layout, type RtsMap } from "./maps";
 import {
-  MAP,
   MATCH,
-  RTS_WORLD,
   SNAPSHOT_EVERY,
   TEAMS,
   TICK,
@@ -49,14 +48,27 @@ export interface RtsWorld {
   grid: MapGrid;
   /** The level's fog as a number (D-125), or null where its style has none: each room reads it on its own clock. */
   fog: FogSampler | null;
+  /** The map (D-128), and where each side starts and the glim lies on it: by hand, or chosen from its cells. */
+  map: RtsMap;
+  layout: Layout;
 }
 
-/** Open the driving level over HTTP and read the play area's cells. */
-export async function openRtsWorld(worldUrl: string): Promise<RtsWorld> {
+/** Open a map's level over HTTP (`worldUrl`, its package) and read the play area's cells (default the Presidio). */
+export async function openRtsWorld(worldUrl: string, map: RtsMap = MAPS[DEFAULT_MAP]!): Promise<RtsWorld> {
   const { world, query } = await openWorld({ worldUrl, style: stylePack });
-  await query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
-  return { grid: buildGrid(query), fog: fogSampler(world, query) };
+  const r = map.rect;
+  await query.ensure(r.x0, r.y0, r.x0 + r.w, r.y0 + r.h);
+  const grid = buildGrid(query, r);
+  return { grid, fog: fogSampler(world, query), map, layout: map.layout ?? planMap(grid) };
 }
+
+/** A room's settings from the lobby (D-128): its map. */
+export interface RtsSettings {
+  map: string;
+}
+
+/** A room's map, from its settings (untrusted): the Presidio for none, or a room a page opened by naming it. */
+export const roomMap = (settings: unknown): RtsMap => mapOf((settings as Partial<RtsSettings> | null)?.map) ?? MAPS[DEFAULT_MAP]!;
 
 export function logLine(l: RelayLog): void {
   const what = l.kind === "error" ? `the game hit an error: ${l.error instanceof Error ? (l.error.stack ?? l.error.message) : String(l.error)}` : [l.kind, l.id, l.message].filter(Boolean).join(" ");
@@ -65,17 +77,19 @@ export function logLine(l: RelayLog): void {
 
 /** Fogfront on an HTTP server that also serves the page and the world package: `/rts?room=`. */
 export function attachRts(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void } = {}): Relay {
-  let opened: Promise<RtsWorld> | null = null;
-  const world = () => {
-    if (!opened) {
+  /** Each map's world, opened when a room first plays it (D-128). */
+  const opened = new Map<string, Promise<RtsWorld>>();
+  const world = (map: RtsMap) => {
+    let w = opened.get(map.id);
+    if (!w) {
       const { port } = server.address() as AddressInfo;
-      opened = openRtsWorld(`http://localhost:${port}${RTS_WORLD}`);
-      opened.catch((e: unknown) => {
-        console.error("rts: the world didn't open:", e);
-        opened = null;
+      opened.set(map.id, (w = openRtsWorld(`http://localhost:${port}/${map.world}/`, map)));
+      w.catch((e: unknown) => {
+        console.error(`rts: ${map.name} didn't open:`, e);
+        opened.delete(map.id);
       });
     }
-    return opened;
+    return w;
   };
   return attachRelay(server, {
     path: "/rts",
@@ -84,13 +98,19 @@ export function attachRts(server: Server, opts: { lag?: number; maxRooms?: numbe
     maxPlayers: 8,
     idle: { named: 60_000 },
     log: opts.log ?? logLine,
-    host: (room) => new RtsRoom(room, world()),
+    host: (room) => new RtsRoom(room, world(roomMap(room.settings))),
   });
 }
 
-/** The lobby: quick play puts a page in a room waiting for a second side. */
+/** The lobby: quick play puts a page in a room on the map it asked for (D-128), waiting for a second side. */
 export function rtsLobby(relay: Relay): (req: IncomingMessage, res: ServerResponse) => boolean {
-  return lobbyHandler(relay, { fits: (r: RoomInfo) => (r.info as Partial<RtsInfo>).open === true });
+  return lobbyHandler(relay, {
+    settings: (body) => {
+      const map = mapOf((body as Partial<RtsSettings> | null)?.map);
+      return map ? ({ map: map.id } satisfies RtsSettings) : null;
+    },
+    fits: (r: RoomInfo, settings) => (r.info as Partial<RtsInfo>).open === true && (r.info as Partial<RtsInfo>).map === roomMap(settings).id,
+  });
 }
 
 /** One room's match. */
@@ -101,6 +121,8 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   /** Each player's side. */
   private readonly sides = new Map<string, Team>();
   private bot: Bot | null = null;
+  /** Its map (D-128), from its settings: `world` must be this map's. */
+  readonly map: RtsMap;
   /** When the first page began waiting (server time), and whether one asked for the bot. */
   private waitingSince: number | null = null;
   private wantsBot = false;
@@ -108,6 +130,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<RtsWorld>, clock = true) {
     super(room, { tick: TICK, snapshotEvery: SNAPSHOT_EVERY, ready: world, clock });
+    this.map = roomMap(room.settings);
   }
 
   // ---------------------------------------------------------------- joining
@@ -122,7 +145,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     if (!this.game) {
       const g = this.world.grid;
       // the cells a match changes are its own: what walls them, their tops, its buildings
-      this.game = new RtsGame({ ...g, flags: g.flags.slice(), top: g.top.slice(), building: new Int32Array(g.building.length) });
+      this.game = new RtsGame({ ...g, flags: g.flags.slice(), top: g.top.slice(), building: new Int32Array(g.building.length) }, this.world.layout);
       const fog = this.world.fog;
       // the fog on the room's clock: the pages draw it at the server time they show
       if (fog) this.game.fogAt = (x, y, h, night) => fog.at(x, y, h, this.time, night);
@@ -240,6 +263,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       razed: this.game?.razed ?? [],
       marks: this.game?.marksNet() ?? [],
       ...this.light(),
+      map: this.map.id,
     };
   }
 
@@ -256,7 +280,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   }
 
   protected override describe(): RtsInfo {
-    return { phase: this.match.phase, open: this.sides.size < 2 && this.match.phase === "waiting" };
+    return { phase: this.match.phase, open: this.sides.size < 2 && this.match.phase === "waiting", map: this.map.id };
   }
 
   sideOf(id: string): Team | null {

@@ -7,7 +7,7 @@ import { bakeCode } from "../../../../../tools/bake-code.mjs";
 /**
  * Fogfront (D-121): `pnpm --filter @pixelworlds/multiplayer demo:rts` serves
  * the page with the rooms on the same port (ws://…/rts?room=); `demo:rts:build`
- * builds the page (dist/client, with San Francisco's driving level) and the
+ * builds the page (dist/client, with the maps' levels) and the
  * production server (dist/server/serve.js, one file), which `demo:rts:start`
  * runs. As the dogfight's (D-114).
  */
@@ -27,8 +27,8 @@ const rooms: Plugin = {
 };
 
 const FIXTURES = fileURLToPath(new URL("../../../../../fixtures", import.meta.url));
-/** The world packages the match is on (rules.ts's RTS_WORLD): the only ones a build copies. */
-const WORLDS = ["sf"];
+/** The world packages the maps are on (maps.ts's MAPS, D-128): the only ones a build copies. */
+export const WORLDS = ["sf", "nyc-walk", "kyoto-walk", "hongkong-walk", "southwest-walk"];
 
 const worlds: Plugin = {
   name: "rts-worlds",

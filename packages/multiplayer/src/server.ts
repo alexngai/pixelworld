@@ -333,8 +333,8 @@ export interface LobbyOptions {
   base?: string;
   /** A room's settings from a page, when it gives some (untrusted JSON): checked, or null to refuse. Default: none taken. */
   settings?: (body: unknown) => unknown | null;
-  /** Quick play: which listed rooms a page may be put in (default any with space). */
-  fits?: (room: RoomInfo) => boolean;
+  /** Quick play: which listed rooms a page may be put in, given the settings it asked for as `settings` checked them (default any with space). */
+  fits?: (room: RoomInfo, settings: unknown) => boolean;
 }
 
 /**
@@ -380,7 +380,8 @@ export function lobbyHandler(relay: Relay, opts: LobbyOptions = {}): (req: Incom
         // settings are checked when a page gives some; none, and the game's defaults
         const settings = asked.settings !== undefined && opts.settings ? opts.settings(asked.settings) : undefined;
         if (asked.settings !== undefined && (!opts.settings || settings === null)) return json(res, 400, { error: "those settings won't do" });
-        const room = path.endsWith("/quick") ? relay.quick(opts.fits, settings) : relay.open({ public: asked.public === true, settings });
+        const fits = opts.fits && ((r: RoomInfo) => opts.fits!(r, settings));
+        const room = path.endsWith("/quick") ? relay.quick(fits, settings) : relay.open({ public: asked.public === true, settings });
         if (room === null) return json(res, 503, { error: "the server has all the rooms it can take" });
         json(res, 200, { room });
       });
