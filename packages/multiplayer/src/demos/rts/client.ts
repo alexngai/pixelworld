@@ -322,7 +322,11 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       let d = unitsDrawn.get(id);
       if (d?.key !== key) {
         d?.e.remove();
-        d = { e: view.entities.add({ model: { boxes: unitBoxes(u.k, u.s, !!u.c, ramp), key }, x: p.x, y: p.y, h: p.h, heading: p.heading, wait: false }), key };
+        // through woods and behind buildings: a silhouette in its side's colour
+        d = {
+          e: view.entities.add({ model: { boxes: unitBoxes(u.k, u.s, !!u.c, ramp), key }, x: p.x, y: p.y, h: p.h, heading: p.heading, silhouette: true, silhouetteRamp: ramp(SIDE_RAMP[u.s]), wait: false }),
+          key,
+        };
         unitsDrawn.set(id, d);
       }
       d.e.moveTo(p.x, p.y, p.h);
@@ -569,7 +573,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     const key = `rts.ghost.${placing}.${side}.${why === null}`;
     if (ghost?.key !== key) {
       ghost?.e.remove();
-      ghost = { e: view.entities.add({ model: { boxes: buildingBoxes(placing!, side, true, ramp, why === null), key }, x: x + size / 2, y: y + size / 2, headings: 1, wait: false }), key };
+      ghost = { e: view.entities.add({ model: { boxes: buildingBoxes(placing!, side, true, ramp, why === null), key }, x: x + size / 2, y: y + size / 2, headings: 1, silhouette: true, wait: false }), key };
     }
     ghost.e.moveTo(x + size / 2, y + size / 2);
   }

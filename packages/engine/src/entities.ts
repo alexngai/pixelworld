@@ -1,4 +1,5 @@
 import type { Box } from "@pixelworlds/generators";
+import { SHADES, paletteIndex } from "@pixelworlds/style";
 import type { Rotation } from "@pixelworlds/grid";
 import type { Entity, EntityList, EntityModel, EntityReveal, EntitySpec, Sprite, SpriteDraw } from "./types";
 
@@ -76,6 +77,8 @@ class EntityImpl implements Entity {
   private _visible: boolean;
   private _silhouette: boolean;
   private _reveal: EntityReveal | null;
+  /** The palette index of its silhouette, where it has a ramp of its own (`silhouetteRamp`). */
+  readonly silhouetteIndex: number | undefined;
   readonly headings: number;
   readonly lift: number;
   readonly wait: boolean;
@@ -96,6 +99,7 @@ class EntityImpl implements Entity {
     this._roll = spec.roll ?? 0;
     this._visible = spec.visible ?? true;
     this._silhouette = spec.silhouette ?? false;
+    this.silhouetteIndex = spec.silhouetteRamp === undefined ? undefined : paletteIndex(spec.silhouetteRamp, SHADES - 1);
     this._reveal = withRevealDefaults(spec.reveal);
     this.headings = Math.max(1, Math.round(spec.headings ?? DEFAULT_HEADINGS));
     this.lift = spec.lift ?? 0;
@@ -302,7 +306,7 @@ export class Entities implements EntityList {
       e.shownRotation = rotation;
       const p = project(e.x, e.y, e.h + e.lift);
       // not rounded: the compositor places sprites between art pixels, so they glide
-      list.push({ sprite, sx: p.sx, sy: p.sy, depth: p.depth, silhouette: e.silhouette, reveal: e.reveal });
+      list.push({ sprite, sx: p.sx, sy: p.sy, depth: p.depth, silhouette: e.silhouette, silhouetteIndex: e.silhouetteIndex, reveal: e.reveal });
     }
     return { list, complete };
   }

@@ -10,6 +10,8 @@ A small real-time strategy game on [`@pixelworlds/multiplayer`](../../../README.
 - **Orders:** move, fight-move (taking on whatever comes into sight on the way), attack, gather, stop. Idle wardens take on foes that come into sight.
 - **A match:** two pages play each other; a page alone gets the bot after 20 s, or at once with `?vs=bot`. A side whose hearth falls, or whose player leaves, loses; after 15 s of the result the next match starts with whoever is there. A third page is told the match is full.
 
+Units in woods or behind a building show through it as a silhouette in their side's colour.
+
 The server runs the game (a `TickRoom` at 20 ticks a second, 10 snapshots a second). Pages send orders, never per-tick inputs, and draw what their side sees a little behind on the server's clock. An order shows at once (a marker and lines to where the units go) and holds until a snapshot says it was taken.
 
 | File | |

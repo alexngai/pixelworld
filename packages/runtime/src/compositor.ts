@@ -135,6 +135,8 @@ export interface SpriteInstance {
   /** Depth of the object's origin. */
   depth: number;
   silhouette: boolean;
+  /** The palette index its silhouette is drawn in (default the style's silhouette colour): a side's colour, say. */
+  silhouetteIndex?: number;
   /**
    * Show what this sprite stands behind (D-079): within `margin` px of it,
    * world pixels in front of it are dithered away (`density` of them, 0–1)
@@ -355,6 +357,7 @@ export class Compositor {
     for (const s of sprites) {
       if (!s.silhouette) continue;
       const [l, tp, d] = spriteAt(s);
+      gl.uniform1f(u.loc("uSilhouette"), (s.silhouetteIndex ?? INDEX_SILHOUETTE) / 255);
       draw(s.sprite, l, tp, d, 1);
     }
     gl.depthMask(true);

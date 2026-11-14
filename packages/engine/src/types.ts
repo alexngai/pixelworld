@@ -496,6 +496,13 @@ export interface EntitySpec {
   /** Draw a dithered silhouette where the world hides it (default false). */
   silhouette?: boolean;
   /**
+   * The ramp the silhouette is drawn in, by its id (`world.palette.rampIds`),
+   * at its lightest shade: a side's or a player's colour, so units behind a
+   * building or in woods can still be told apart. Default the style's
+   * silhouette colour.
+   */
+  silhouetteRamp?: number;
+  /**
    * See through what stands in front of it (D-079), for a player among tall
    * buildings: within `margin` render px of its sprite (default 24),
    * buildings and landmarks in front of it are dithered away (`density` of
