@@ -12,7 +12,9 @@ A small real-time strategy game on [`@pixelworlds/multiplayer`](../../../README.
 - **Landmarks:** the Palace of Fine Arts and the Golden Gate Bridge's shore end are objectives: a side alone by one for 10 s takes it, and it pays half a glim a second and sees from it.
 - **Night** falls every 4 minutes for a minute and a half: units see less, and the page takes the style's night palette, windows lit.
 - **Orders:** move, fight-move (taking on whatever comes into sight on the way), attack, gather, stop. Idle wardens take on foes that come into sight.
-- **A match:** two pages play each other; a page alone gets the bot after 20 s, or at once with `?vs=bot`. A side whose hearth falls, or whose player leaves, loses; after 15 s of the result the next match starts with whoever is there. A third page is told the match is full.
+- **A match:** two pages play each other; a page alone gets the bot after 20 s, or at once with `?vs=bot`. A side whose hearth falls, or whose last player leaves, loses; after 15 s of the result the next match starts with whoever is there. A page past the match's seats is told it is full.
+- **Two against two (D-127):** the room's first page with `&size=2` makes it two a side (`&side=kiln|tide` to pick one). Teammates share their side's glim and both order any of its units and buildings; each sees the other's orders. The match starts when both sides are full, or after 20 s with someone on each; a side with no one gets the bot.
+- **Watching (D-127):** `&watch=kiln|tide|all` seats a spectator: it sees what that side sees, under the same fog of war, or everything, unveiled, with both sides' glim. It orders nothing.
 
 Units in woods or behind a building show through it as a silhouette in their side's colour.
 
@@ -23,9 +25,9 @@ The server runs the game (a `TickRoom` at 20 ticks a second, 10 snapshots a seco
 | `rules.ts` | the rules and messages both sides share; the map's cells from the world's queries, A* paths, placing a building |
 | `game.ts` | the match itself, with no network in it: orders, walking, gathering, fights, training, sight |
 | `bot.ts` | the bot: a side the server plays through the same orders |
-| `server.ts` | the room: a `TickRoom` per room on `/rts?room=`, the match's phases, per-side snapshots; `attachRts(server)` |
+| `server.ts` | the room: a `TickRoom` per room on `/rts?room=`, the match's phases, each side's view to its group (its players and watchers); `attachRts(server)` |
 | `client.ts` | the page: the view and its camera, units and buildings as entities, selecting and ordering, the HUD |
-| `main.ts`, `index.html` | the page's entry: quick play or `?room=`, `&name=`, `&vs=bot` |
+| `main.ts`, `index.html` | the page's entry: quick play or `?room=`, `&name=`, `&vs=bot`, `&size=2`, `&side=`, `&watch=` |
 | `serve.ts` | the production server: the built page and its level, the lobby, and the rooms, on one port |
 | `vite.config.ts` | the dev server (the rooms beside it) and both builds |
 

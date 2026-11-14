@@ -3,7 +3,7 @@ import { Writer, type Schema } from "./codec";
 import { SNAP_BYTE, type Replicator } from "./replica";
 import type { HostedRoom, RoomHost } from "./server";
 
-/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
+/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, its group's if it has one: a team it watches, D-127; sends no inputs). */
 export type TickRole = "player" | "spectator";
 
 export interface TickRoomOptions<W> {
@@ -165,7 +165,8 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   /**
    * Interest (D-120): the group whose shared snapshot a page gets (the
    * others near it: `Interest.groupOf`), or undefined for the whole one.
-   * Pages in one group share one serialization.
+   * Pages in one group share one serialization. For teams (D-127): a
+   * player's team, or the team a spectator watches (a fog of war's view).
    */
   protected groupOf(_id: string): string | undefined {
     return undefined;

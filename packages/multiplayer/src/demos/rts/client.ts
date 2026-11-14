@@ -7,6 +7,7 @@ import {
   DELAY,
   LAYOUT,
   MAP,
+  TEAMS,
   TEAM_NAMES,
   TICK,
   UNITS,
@@ -29,6 +30,7 @@ import {
   type Team,
   type UnitKind,
   type UnitNet,
+  type Watch,
   BUILDING_EYE,
   SIGHT,
   fogCells,
@@ -44,7 +46,8 @@ import {
  * Fogfront in the page (D-121): San Francisco's driving level at the
  * Presidio, a room on `/rts?room=` run by the server (server.ts). The page
  * predicts nothing and sends no inputs: it sends orders (`TickClient.command`,
- * numbered) and puts the newest snapshot of what its side sees in place each
+ * numbered) and takes what its side sees from the shared snapshot as it comes
+ * (its side's group's, D-127), and which orders were taken from its own each
  * frame (`sync`). Units are entities drawn a little behind on the server's
  * clock (`Smoothing`), buildings and seeps entities where they stand, all
  * built from boxes in the side's colours. An order shows at once (a marker,
@@ -52,6 +55,13 @@ import {
  * taken (`cmd`). The level's buildings knocked down in the match (the shared
  * snapshot's `razed`) are taken out of the view (`view.edits`, D-124), which
  * bakes their tiles again, and rubble is left where each stood.
+ *
+ * Two to a side (D-127), the side's view comes in its group's shared
+ * snapshot, the same for a teammate who orders the same units from the same
+ * glim; the board names them. The page's own snapshot says which of its
+ * orders were taken (`cmd`). A page
+ * that watches (`watch`) orders nothing and draws what the side it watches
+ * sees, veiled as that side's own page would, or everything, unveiled.
  *
  * Mouse: left click or drag selects (`query.pick` for the ground, the units
  * where they are drawn, `query.pickObject` for the level's buildings), right
@@ -210,6 +220,10 @@ export interface RtsOptions {
   room: string;
   name?: string | null;
   vs?: "any" | "bot";
+  /** Players a side, 1 or 2, and the side to play (D-127); or to watch rather than play: a side, as it sees, or all. */
+  size?: 1 | 2;
+  side?: Team;
+  watch?: Watch;
   /** The rooms' WebSocket path (default /rts). */
   path?: string;
   /** Where the level is served (default `RTS_WORLD`). */
@@ -235,6 +249,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     layers: [veil, weather],
   });
   const hud = makeHud();
+  // a watcher builds and trains nothing: no buttons for it
+  if (opts.watch) document.querySelector<HTMLElement>(".rts-bar")?.style.setProperty("display", "none");
   hud.status("joining…");
   let room: Room;
   try {
@@ -255,20 +271,33 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const ramp: Ramps = (name) => view.world.palette.rampIds.get(name) ?? 0;
   const now = () => performance.now() / 1000;
 
-  let snap: (RtsSnap & { t: number; cmd?: number }) | null = null;
+  let snap: (RtsSnap & { t: number }) | null = null;
   let world: (RtsWorldNet & { t: number }) | null = null;
+  /** The side this page plays (null for a spectator), and the side its snapshot is of: its own, the one it watches, or `all`. */
   let side: Team | null = null;
+  let shows: Watch | null = null;
   const units = new Map<number, UnitNet>();
+  /**
+   * The newest shared snapshot not taken yet: the next frame takes it, and
+   * what the side sees in it (its group's, D-127), before the page's own,
+   * which says which orders that has. The room gives what came before the
+   * page listened at once, inside `TickClient`'s constructor, before the
+   * rest of this function has run.
+   */
+  let incoming: (RtsWorldNet & { t: number }) | null = null;
 
-  const client: TickClient<never, RtsSnap, RtsWorldNet, RtsEvent> = new TickClient(room, {
+  const client: TickClient<never, object, RtsWorldNet, RtsEvent> = new TickClient(room, {
     tick: TICK,
     delay: DELAY,
-    restore: (s) => takeSnap(s),
-    onWorld: (w) => takeWorld(w),
+    // the side's view comes with the shared snapshot (its group's, D-127); the page's own says which orders were taken, and comes after it
+    restore: (s) => {
+      for (const n of [...pending.keys()]) if ((s.cmd ?? 0) >= n) pending.delete(n);
+    },
+    onWorld: (w) => void (incoming = w),
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
-  client.hello({ name: (opts.name || "Commander").slice(0, 20), vs: opts.vs ?? "any" } satisfies RtsJoin);
+  client.hello({ name: (opts.name || "Commander").slice(0, 20), vs: opts.vs ?? "any", size: opts.size ?? 1, ...(opts.side ? { side: opts.side } : {}), ...(opts.watch ? { watch: opts.watch } : {}) } satisfies RtsJoin);
 
   // ---------------------------------------------------------------- what the side sees
 
@@ -305,15 +334,15 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (pickedStructure !== null && now.has(pickedStructure)) pickedStructure = null;
   }
 
-  function takeSnap(s: RtsSnap & { t: number; cmd?: number }): void {
-    const first = side === null;
+  function takeSnap(s: RtsSnap & { t: number }): void {
+    const first = shows === null;
     snap = s;
-    side = s.side;
+    shows = s.side;
+    if (!opts.watch) side = s.side as Team;
     if (first) {
-      const [x, y] = LAYOUT.hearths[side];
+      const [x, y] = shows === "all" ? [MAP.x0 + MAP.w / 2 - 1.5, MAP.y0 + MAP.h / 2 - 1.5] : LAYOUT.hearths[shows];
       void view.camera.lookAt({ x: x + 1.5, y: y + 1.5 });
     }
-    for (const n of [...pending.keys()]) if ((s.cmd ?? 0) >= n) pending.delete(n);
     const seen = new Set<number>();
     for (const u of s.units) {
       seen.add(u.i);
@@ -504,6 +533,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   const own = (kind: BuildingKind) => (snap?.buildings ?? []).filter((b) => b.s === side && b.k === kind);
   const train = (kind: BuildingKind) => {
+    if (!side) return;
     const at = own(kind)
       .filter((b) => b.b >= 1)
       .sort((a, b) => (a.q ?? 0) - (b.q ?? 0))[0];
@@ -511,6 +541,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     order({ t: "train", b: at.i });
   };
   const startPlacing = () => {
+    if (!side) return;
     placing = "lodge";
     fightMove = false;
     hud.say("Click to place a lodge · Esc to cancel", 2);
@@ -620,13 +651,20 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const hitBoxes = [cube(-0.08, -0.08, 0, 0.08, 0.08, 0.3, ramp("tower-gold"))];
   const puffBoxes = [cube(-0.3, -0.3, 0, 0.3, 0.3, 1.0, ramp("marker")), cube(-0.2, -0.2, 1.0, 0.25, 0.2, 1.8, ramp("concrete"))];
   const dustBoxes = [cube(-0.8, -0.8, 0, 0.8, 0.8, 1.2, ramp("concrete")), cube(-0.5, -0.6, 1.2, 0.6, 0.5, 2.4, ramp("concrete"))];
-  const nameOf = (s: Team | null) => (s ? (world?.players.find((p) => p.side === s)?.name ?? TEAM_NAMES[s]) : "nobody");
+  const nameOf = (s: Team | null) =>
+    s
+      ? world?.players
+          .filter((p) => p.side === s)
+          .map((p) => p.name)
+          .join(" & ") || TEAM_NAMES[s]
+      : "nobody";
   const play = (e: RtsEvent) => {
     if (e.kind === "hit") effect(hitBoxes, "rts.hit", e.x, e.y, 0.2);
     else if (e.kind === "die") effect(puffBoxes, "rts.puff", e.x, e.y, 0.6);
     else if (e.kind === "refused") hud.say(`Can't: ${e.why}`, 2);
     else if (e.kind === "taken") hud.say(e.side === side ? `You hold ${e.name}` : `${nameOf(e.side)} took ${e.name}`, 3);
     else if (e.phase === "playing") hud.say("The match is on: gather glim, raise a lodge, take their hearth", 4);
+    else if (!side) hud.say(e.winner ? `${nameOf(e.winner)} win` : "The match ran out of time", 8);
     else hud.say(e.winner ? (e.winner === side ? "Their hearth has fallen: you win!" : `Your hearth has fallen: ${nameOf(e.winner)} wins`) : "The match ran out of time", 8);
   };
   /** Why the room let the page go (sent away, the room closed, the server gone): the board says it from then on. */
@@ -654,8 +692,11 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     // night falls (the style's night palette: lit windows), and day breaks
     const night = world?.night ?? false;
     if (view.palette !== (night ? "night" : "day")) view.palette = night ? "night" : "day";
-    if (!snap || !side || t - sightAt < 0.25) return;
+    if (!snap || !shows || t - sightAt < 0.25) return;
     sightAt = t;
+    // watching all: nothing veiled
+    if (shows === "all") return veil.set(MAP, veiled.fill(0));
+    const who = shows;
     // a new match: nothing seen yet
     if (world && world.match.phase === "playing" && matchSeen !== world.match.until) {
       matchSeen = world.match.until;
@@ -669,14 +710,14 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     const dark = night ? DAY.sight : 1;
     const eyes: Eye[] = [];
     for (const u of snap.units) {
-      if (u.s !== side) continue;
+      if (u.s !== who) continue;
       const s = u.in === undefined ? undefined : structures.get(u.in);
       if (s) eyes.push(roofEye(grid, s, (UNITS[u.k].sight + GARRISON.sight) * dark));
       else eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight * dark });
     }
-    for (const m of world?.marks ?? []) if (m.owner === side) eyes.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });
+    for (const m of world?.marks ?? []) if (m.owner === who) eyes.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });
     for (const b of snap.buildings)
-      if (b.s === side) eyes.push({ x: b.x + BUILDINGS[b.k].size / 2, y: b.y + BUILDINGS[b.k].size / 2, up: BUILDING_EYE[b.k] * Math.max(0.3, b.b), radius: BUILDINGS[b.k].sight });
+      if (b.s === who) eyes.push({ x: b.x + BUILDINGS[b.k].size / 2, y: b.y + BUILDINGS[b.k].size / 2, up: BUILDING_EYE[b.k] * Math.max(0.3, b.b), radius: BUILDINGS[b.k].sight });
     sideSight(grid, eyes, fogCover, sight);
     for (let i = 0; i < sight.length; i++) {
       if (sight[i]! < Infinity) explored[i] = 1;
@@ -687,6 +728,12 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   view.onFrame(({ realDt }) => {
     const t = now();
+    if (incoming) {
+      const w = incoming;
+      incoming = null;
+      takeWorld(w);
+      if (w.view) takeSnap({ ...w.view, t: w.t });
+    }
     client.sync();
     see(t);
     drawUnits(t);
@@ -783,15 +830,15 @@ export async function startRts(opts: RtsOptions): Promise<void> {
         out.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${colour(m.taker)}" stroke-width="2.5" stroke-dasharray="${(len * m.p).toFixed(1)} ${len.toFixed(1)}" transform="rotate(-90 ${x} ${y})"/>`);
       }
     }
-    // the side's units in the level's buildings: a count over each
-    const inside = new Map<number, number>();
-    for (const u of units.values()) if (u.in !== undefined && u.s === side) inside.set(u.in, (inside.get(u.in) ?? 0) + 1);
-    for (const [obj, n] of inside) {
+    // the units in the level's buildings that the snapshot has (its side's; watching all, both): a count over each, in their side's colour
+    const inside = new Map<number, { n: number; s: Team }>();
+    for (const u of units.values()) if (u.in !== undefined) inside.set(u.in, { n: (inside.get(u.in)?.n ?? 0) + 1, s: u.s });
+    for (const [obj, { n, s: by }] of inside) {
       const s = structures.get(obj);
       if (!s) continue;
       const p = view.camera.project(s.x, s.y, s.top + 1);
       if (!p.onScreen) continue;
-      out.push(`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="8" fill="${side === "kiln" ? "#c0302d" : "#3e5c9a"}" stroke="#fff" stroke-width="1"/><text x="${p.x.toFixed(1)}" y="${(p.y + 4).toFixed(1)}" text-anchor="middle" fill="#fff">${n}</text>`);
+      out.push(`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="8" fill="${by === "kiln" ? "#c0302d" : "#3e5c9a"}" stroke="#fff" stroke-width="1"/><text x="${p.x.toFixed(1)}" y="${(p.y + 4).toFixed(1)}" text-anchor="middle" fill="#fff">${n}</text>`);
     }
     for (const m of markers) {
       const p = view.camera.project(m.at.x, m.at.y);
@@ -818,9 +865,24 @@ export async function startRts(opts: RtsOptions): Promise<void> {
         : m.phase === "playing"
           ? `playing · ${left === null ? "" : clock(left)}${world?.light != null && shown !== null ? ` · ${world.night ? "night" : "day"}, ${world.night ? "dawn" : "dusk"} in ${clock(Math.max(0, world.light - shown))}` : ""}`
           : `${m.winner ? `${nameOf(m.winner)} won` : "over"} · next in ${Math.ceil(left ?? 0)}`;
-    const foe: PlayerNet | undefined = world?.players.find((p) => p.side !== side);
+    const names = (list: PlayerNet[]) => list.map((p) => `${p.name}${p.bot ? " (bot)" : ""}`).join(" & ");
+    const foes = world?.players.filter((p) => p.side !== side) ?? [];
+    const mates = world?.players.filter((p) => p.side === side && p.id !== room.id) ?? [];
     const mineNow = [...units.values()].filter((u) => u.s === side);
     const count = (k: UnitKind, list: UnitNet[]) => list.filter((u) => u.k === k).length;
+    /** A side's line: glim, units and lodges, as the snapshot has them. */
+    const tally = (t: Team, glim: number) => {
+      const list = [...units.values()].filter((u) => u.s === t);
+      const lodges = (snap?.buildings ?? []).filter((b) => b.s === t && b.k === "lodge").length;
+      return `${TEAM_NAMES[t]}: glim ${glim} · runners ${count("runner", list)} · wardens ${count("warden", list)} · lodges ${lodges}`;
+    };
+    const watching =
+      !side && shows
+        ? [
+            `watching ${shows === "all" ? "both sides" : TEAM_NAMES[shows]} · ${TEAMS.map((t) => `${TEAM_NAMES[t]}: ${nameOf(t)}`).join(" vs ")}`,
+            ...(snap?.glims ? TEAMS.map((t) => tally(t, snap!.glims![t])) : shows !== "all" && snap ? [tally(shows, snap.glim)] : []),
+          ].join("\n")
+        : "";
     const chosen = [...selection].map((id) => units.get(id)).filter((u): u is UnitNet => !!u);
     const pickedB = picked !== null ? buildingsDrawn.get(picked)?.net : undefined;
     const pickedU = picked !== null ? units.get(picked) : undefined;
@@ -836,8 +898,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
             : "nothing selected";
     return [
       `FOGFRONT · room ${room.name} · ${phase}`,
-      side ? `you: ${TEAM_NAMES[side]} (${side === "kiln" ? "red" : "blue"}) · vs ${foe ? `${foe.name}${foe.bot ? " (bot)" : ""}` : "nobody yet"}` : "",
-      snap ? `glim ${snap.glim} · runners ${count("runner", mineNow)} · wardens ${count("warden", mineNow)} · lodges ${own("lodge").length}` : "",
+      side ? `you: ${TEAM_NAMES[side]} (${side === "kiln" ? "red" : "blue"})${mates.length ? ` with ${names(mates)}` : ""} · vs ${foes.length ? names(foes) : "nobody yet"}` : watching,
+      side && snap ? `glim ${snap.glim} · runners ${count("runner", mineNow)} · wardens ${count("warden", mineNow)} · lodges ${own("lodge").length}` : "",
       world?.marks.length ? `landmarks: ${world.marks.map((m) => `${m.name} (${m.owner ? (m.owner === side ? "yours" : TEAM_NAMES[m.owner]) : "nobody's"})`).join(", ")}` : "",
       sel,
       `ping ${client.ping === null ? "–" : Math.round(client.ping)} ms · invite: ${location.origin}${location.pathname}?room=${room.name}`,
@@ -848,7 +910,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   function buttons(): Record<"runner" | "lodge" | "warden", boolean> {
     const g = snap?.glim ?? 0;
-    const playing = world?.match.phase === "playing";
+    const playing = world?.match.phase === "playing" && !!side;
     return {
       runner: playing && g >= UNITS.runner.cost && own("hearth").length > 0,
       lodge: playing && g >= BUILDINGS.lodge.cost,
@@ -862,6 +924,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     room,
     client,
     side: () => side,
+    shows: () => shows,
     snap: () => snap,
     world: () => world,
     selected: () => [...selection],
@@ -937,8 +1000,9 @@ declare global {
     __rts?: {
       view: WorldView;
       room: Room;
-      client: TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>;
+      client: TickClient<never, object, RtsWorldNet, RtsEvent>;
       side: () => Team | null;
+      shows: () => Watch | null;
       snap: () => RtsSnap | null;
       world: () => RtsWorldNet | null;
       selected: () => number[];

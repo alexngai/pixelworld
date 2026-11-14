@@ -136,10 +136,20 @@ export const LAYOUT = {
 
 // ---------------------------------------------------------------- messages
 
+/** What a spectator watches (D-127): a side, as it sees (its fog of war), or everything. */
+export type Watch = Team | "all";
+export const WATCHES: readonly Watch[] = [...TEAMS, "all"];
+
 /** Who a page is: its name, and whether it wants the bot now rather than wait for a second player. */
 export interface RtsJoin {
   name: string;
   vs: "any" | "bot";
+  /** Players a side, 1 or 2 (D-127): the first page in a room with no one playing sets it for the room. */
+  size?: 1 | 2;
+  /** The side it would rather play, if that has room. */
+  side?: Team;
+  /** To watch rather than play (D-127): a side, as it sees, or all. */
+  watch?: Watch;
 }
 
 /** A page's orders (`TickClient.command`), checked on the server. Units are ids of the page's own. */
@@ -198,10 +208,15 @@ export interface SeepNet {
   left: number;
 }
 
-/** One player's own snapshot: what its side sees (the fog of war), its glim. */
+/**
+ * What a side sees (the fog of war) and its glim: its players' snapshot, and
+ * its spectators' (D-127). Watching all, `side` is `all`: every unit and
+ * building, and both sides' glim (`glims`).
+ */
 export interface RtsSnap {
-  side: Team;
+  side: Watch;
   glim: number;
+  glims?: Record<Team, number>;
   units: UnitNet[];
   buildings: BuildingNet[];
   seeps: SeepNet[];
@@ -216,7 +231,7 @@ export interface PlayerNet {
   bot?: true;
 }
 
-/** What every page shares: the match and who plays. */
+/** What every page shares: the match and who plays; and per side, what it sees (`view`). */
 export interface RtsWorldNet {
   match: { phase: MatchPhase; until: number | null; winner: Team | null };
   players: PlayerNet[];
@@ -227,6 +242,8 @@ export interface RtsWorldNet {
   /** Night now, and when the light next changes (server time) (D-125). */
   night: boolean;
   light: number | null;
+  /** What the page's side sees (D-127): to its players and the spectators watching it, or everything for those watching all. Absent for a page not yet in the match. */
+  view?: RtsSnap;
 }
 
 /** A landmark held: who holds it, and who is taking it and how far (0–1). */
@@ -250,10 +267,11 @@ export type RtsEvent =
   /** A side took a landmark (D-125). */
   | { kind: "taken"; id: string; name: string; side: Team };
 
-/** What the lobby lists. */
+/** What the lobby lists: open while a side has room; `size` players a side (D-127). */
 export interface RtsInfo {
   phase: MatchPhase;
   open: boolean;
+  size: number;
 }
 
 // ---------------------------------------------------------------- the map's cells

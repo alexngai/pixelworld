@@ -21,9 +21,10 @@ import {
   type RtsEvent,
   type RtsInfo,
   type RtsJoin,
-  type RtsSnap,
   type RtsWorldNet,
   type Team,
+  type Watch,
+  WATCHES,
   nextLight,
 } from "./rules";
 
@@ -31,14 +32,19 @@ import {
  * Fogfront's server (D-121): a `TickRoom` per room on `/rts?room=`, run by
  * commands. Pages send orders (`TickClient.command`), never per-tick inputs;
  * the room checks each and carries it out in the match (game.ts), and says
- * why when it can't. Each player's snapshot is what its side sees (the fog
- * of war); the shared one has the match and who plays. Two pages play each
- * other; a page alone gets the bot after `MATCH.wait` seconds (at once with
- * `vs: "bot"`), which plays through the same orders. A side whose hearth
- * falls, or whose player leaves, loses; after the result the next match
- * starts with whoever is there. The level's buildings knocked down this
- * match are in the shared snapshot, so a page that comes late takes them out
- * of its world too (D-124).
+ * why when it can't. A side is a team of one or two players (D-127: the
+ * room's `size`, from its first page), who share its glim and order any of
+ * its units and buildings. The shared snapshot has the match and who plays,
+ * and, per side (`groupOf`, D-120's interest groups), what that side sees (the
+ * fog of war): serialized once for its players and the spectators watching it
+ * (a side, or all). A player's own snapshot says which of its orders were
+ * taken (`cmd`). The match starts when
+ * both sides are full, or after `MATCH.wait` seconds with someone on each; a
+ * side with no one gets the bot then (at once with `vs: "bot"`), which plays
+ * through the same orders. A side whose hearth falls, or whose last player
+ * leaves, loses; after the result the next match starts with whoever is
+ * there. The level's buildings knocked down this match are in the shared
+ * snapshot, so a page that comes late takes them out of its world too (D-124).
  */
 
 /** The bot's id. */
@@ -98,8 +104,11 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   game: RtsGame | null = null;
   readonly match = new Phases<MatchPhase>("waiting");
   private winner: Team | null = null;
-  /** Each player's side. */
+  /** Each player's side, and what each spectator watches (D-127). */
   private readonly sides = new Map<string, Team>();
+  private readonly watchers = new Map<string, Watch>();
+  /** Players a side (D-127): the first page in a room with no one playing sets it. */
+  size: 1 | 2 = 1;
   private bot: Bot | null = null;
   /** When the first page began waiting (server time), and whether one asked for the bot. */
   private waitingSince: number | null = null;
@@ -115,7 +124,13 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   protected parseJoin(data: unknown): RtsJoin | null {
     const j = (data ?? {}) as Partial<RtsJoin>;
     if (typeof j !== "object") return null;
-    return { name: cleanName(j.name) || "Commander", vs: j.vs === "bot" ? "bot" : "any" };
+    return {
+      name: cleanName(j.name) || "Commander",
+      vs: j.vs === "bot" ? "bot" : "any",
+      size: j.size === 2 ? 2 : 1,
+      ...(TEAMS.includes(j.side as Team) ? { side: j.side } : {}),
+      ...(WATCHES.includes(j.watch as Watch) ? { watch: j.watch } : {}),
+    };
   }
 
   protected added(id: string, join: RtsJoin): TickRole | null {
@@ -127,8 +142,15 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       // the fog on the room's clock: the pages draw it at the server time they show
       if (fog) this.game.fogAt = (x, y, h, night) => fog.at(x, y, h, this.time, night);
     }
-    const free = TEAMS.find((t) => ![...this.sides.values()].includes(t));
-    if (!free || (this.bot && id !== BOT)) {
+    if (join.watch) {
+      this.watchers.set(id, join.watch);
+      return "spectator";
+    }
+    if (id !== BOT && !this.humans().length) this.size = join.size ?? 1;
+    // a side with room (not the bot's): the one asked for, else the emptier
+    const room = TEAMS.filter((t) => this.on(t) < this.size && !(this.bot && this.sideOf(BOT) === t)).sort((a, b) => this.on(a) - this.on(b));
+    const free = room.includes(join.side!) ? join.side! : room[0];
+    if (!free) {
       this.kick(id, "this match has both its sides: open another room");
       return null;
     }
@@ -141,10 +163,12 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   }
 
   protected removed(id: string): void {
+    if (this.watchers.delete(id)) return;
     const side = this.sides.get(id);
     this.sides.delete(id);
     if (id === BOT) this.bot = null;
-    if (side && this.match.phase === "playing") this.end(side === "kiln" ? "tide" : "kiln");
+    // its side's last player gone: it loses
+    if (side && this.match.phase === "playing" && !this.on(side)) this.end(side === "kiln" ? "tide" : "kiln");
     if (!this.humans().length) {
       this.waitingSince = null;
       this.wantsBot = false;
@@ -153,6 +177,11 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
 
   private humans(): string[] {
     return [...this.sides.keys()].filter((id) => id !== BOT);
+  }
+
+  /** Players on a side (the bot among them). */
+  private on(side: Team): number {
+    return [...this.sides.values()].filter((s) => s === side).length;
   }
 
   // ---------------------------------------------------------------- orders
@@ -193,14 +222,15 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     else if (m.over(this.time)) this.end(null);
   }
 
-  /** Two sides: play. One page alone: the bot, when it asked or has waited long enough. */
+  /** Both sides full: play; someone on each and waited long enough: play as they are. A side with no one: the bot, when asked for or waited long enough. */
   private waiting(): void {
-    if (this.sides.size === 1 && this.humans().length === 1 && (this.wantsBot || this.time - (this.waitingSince ?? this.time) >= MATCH.wait)) {
-      const side = TEAMS.find((t) => ![...this.sides.values()].includes(t))!;
+    const waited = this.wantsBot || this.time - (this.waitingSince ?? this.time) >= MATCH.wait;
+    const empty = TEAMS.find((t) => !this.on(t));
+    if (empty && waited && this.humans().length && !this.bot) {
       let n = 0;
-      if (this.addBot(BOT, { name: "Bot", vs: "any" }, () => (n++ % 20 === 0 && this.bot ? this.bot.orders() : []))) this.bot = new Bot(this.game!, side);
+      if (this.addBot(BOT, { name: "Bot", vs: "any", side: empty }, () => (n++ % 20 === 0 && this.bot ? this.bot.orders() : []))) this.bot = new Bot(this.game!, empty);
     }
-    if (this.sides.size < 2) return;
+    if (TEAMS.some((t) => !this.on(t)) || (!waited && TEAMS.some((t) => this.on(t) < this.size))) return;
     this.game!.reset();
     this.match.set("playing", this.time, MATCH.seconds);
     this.winner = null;
@@ -221,20 +251,22 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     this.game!.reset();
   }
 
-  /** An event to the players whose side sees where it happened (its own side's always). */
+  /** An event to the players whose side sees where it happened (its own side's always), and the spectators watching that side or all. */
   private tell(e: GameEvent): void {
     const game = this.game!;
     // a landmark taken: everyone hears it
     if (e.kind === "taken") return this.emit(e);
     const out: RtsEvent = e.kind === "hit" ? e : { kind: "die", id: e.id, x: e.x, y: e.y };
-    for (const [id, side] of this.sides)
-      if (id !== BOT && (e.kind === "die" ? side === e.team || game.seesPoint(side, e) : game.seesPoint(side, e))) this.emit(out, id);
+    for (const [id, side] of [...this.sides, ...this.watchers])
+      if (id !== BOT && (side === "all" || (e.kind === "die" && side === e.team) || game.seesPoint(side, e))) this.emit(out, id);
   }
 
   // ---------------------------------------------------------------- snapshots
 
-  protected override shared(): RtsWorldNet {
+  /** The match and who plays; and to a side's group (its players and the spectators watching it, D-127), what it sees. */
+  protected override shared(group?: string): RtsWorldNet {
     return {
+      ...(group ? { view: this.game!.view(group as Watch) } : {}),
       match: { ...this.match.net(), winner: this.winner },
       players: [...this.sides].map(([id, side]) => ({ id, name: this.joinOf(id)?.name ?? TEAM_NAMES[side], side, ...(id === BOT ? { bot: true as const } : {}) })),
       razed: this.game?.razed ?? [],
@@ -250,16 +282,21 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     return { night: g.night, light: this.time + (nextLight(g.time) - g.time) };
   }
 
-  /** What the player's side sees. */
-  protected override snapshot(id: string): RtsSnap {
-    return this.game!.view(this.sides.get(id)!);
+  /** A player's side, or what a spectator watches (D-127): the group whose shared snapshot it gets, serialized once for all in it. */
+  protected override groupOf(id: string): Watch | undefined {
+    return this.sides.get(id) ?? this.watchers.get(id);
   }
 
   protected override describe(): RtsInfo {
-    return { phase: this.match.phase, open: this.sides.size < 2 && this.match.phase === "waiting" };
+    return { phase: this.match.phase, open: this.match.phase === "waiting" && !this.bot && TEAMS.some((t) => this.on(t) < this.size), size: this.size };
   }
 
   sideOf(id: string): Team | null {
     return this.sides.get(id) ?? null;
+  }
+
+  /** What a spectator watches (D-127). */
+  watchOf(id: string): Watch | null {
+    return this.watchers.get(id) ?? null;
   }
 }
