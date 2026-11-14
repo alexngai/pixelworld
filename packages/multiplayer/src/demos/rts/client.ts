@@ -1,7 +1,8 @@
 import { cityPlugin } from "@pixelworlds/city-sf";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { createWorldView, fogLayer, fogSampler, veilLayer, type Controller, type ControllerView, type Entity, type EntityModel, type KeyInput, type WorldView } from "pixelworld/engine";
-import { Smoothing, TickClient, joinRoom, type Room } from "../../index";
+import { trafficLayer, type TrafficLayer } from "pixelworld/traffic";
+import { RemoteTraffic, Smoothing, TickClient, joinRoom, type Room } from "../../index";
 import {
   BUILDINGS,
   DELAY,
@@ -37,6 +38,7 @@ import {
   DAY,
   GARRISON,
   OBJECTIVE,
+  TRAFFIC,
 } from "./rules";
 
 /**
@@ -50,7 +52,9 @@ import {
  * and lines to where the units go) and holds until a snapshot says it was
  * taken (`cmd`). The level's buildings knocked down in the match (the shared
  * snapshot's `razed`) are taken out of the view (`view.edits`, D-124), which
- * bakes their tiles again, and rubble is left where each stood.
+ * bakes their tiles again, and rubble is left where each stood. The
+ * level's cars on the motorway are the server's (D-126): the traffic layer
+ * draws them from the shared snapshot (`RemoteTraffic`), as every page does.
  *
  * Mouse: left click or drag selects (`query.pick` for the ground, the units
  * where they are drawn, `query.pickObject` for the level's buildings), right
@@ -222,6 +226,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const veil = veilLayer({ id: "sight", label: "Fog of war", ramp: "asphalt", shade: 1, levels: [0.3, 0.55, 0.8] });
   // the Golden Gate's fog, on the server's clock: what stands in it is hidden as the server reckons it
   const weather = fogLayer({ paused: true });
+  // the level's cars, as the server runs them (D-126): drawn from the shared snapshot, once in the room
+  let traffic: RemoteTraffic | null = null;
+  const cars = trafficLayer({ feed: () => traffic?.poses(performance.now() / 1000) ?? [] });
   const view: WorldView = await createWorldView({
     canvas: opts.canvas,
     worldUrl: opts.worldUrl,
@@ -231,7 +238,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     startTiles: false, // none baked for this level
     camera: { x: home[0] + 1.5, y: home[1] + 1.5, zoom: 2 },
     controller: camera,
-    layers: [veil, weather],
+    layers: [veil, weather, cars],
   });
   const hud = makeHud();
   hud.status("joining…");
@@ -267,6 +274,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
+  traffic = new RemoteTraffic({ delay: TRAFFIC.delay, clock: client.clock });
   client.hello({ name: (opts.name || "Commander").slice(0, 20), vs: opts.vs ?? "any" } satisfies RtsJoin);
 
   // ---------------------------------------------------------------- what the side sees
@@ -286,6 +294,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   function takeWorld(w: RtsWorldNet & { t: number }): void {
     const first = world === null;
     world = w;
+    if (w.cars) traffic?.push(w.t, w.cars, performance.now() / 1000);
     const list = w.razed ?? [];
     for (const obj of razed.sync(list)) {
       const s = structures.get(obj);
@@ -876,6 +885,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     structures: () => [...structures.values()].filter((s) => !view.edits.isRemoved(s.obj)),
     /** The side's sight now: cells seen, cells ever seen, and the share of the field in fog. */
     sight: () => ({ seen: sight.filter((d) => d < Infinity).length, explored: explored.reduce((a, b) => a + b, 0), cells: sight.length, fog: fogCover ? fogCover.filter((f) => f > 0.3).length / fogCover.length : 0 }),
+    /** The server's cars (D-126): the layer drawing them, and where they are now. */
+    cars,
+    traffic: () => traffic!,
   };
 }
 
@@ -948,6 +960,8 @@ declare global {
       selectBox: (a: Point, b: Point, add: boolean) => void;
       sight: () => { seen: number; explored: number; cells: number; fog: number };
       structures: () => Structure[];
+      cars: TrafficLayer;
+      traffic: () => RemoteTraffic;
     };
   }
 }

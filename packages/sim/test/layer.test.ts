@@ -191,6 +191,31 @@ describe("the traffic layer", () => {
     expect(layer.vehiclesNear(v.x, v.y, 100)).toEqual([]);
   });
 
+  it("draws a server's vehicles from its feed, loading no routes, and tells a game which are near (D-126)", async () => {
+    let poses = [
+      { id: 7, kind: "car" as const, variant: 2, part: 0, x: 14, y: 15, h: 0, heading: 0 },
+      { id: 8, kind: "bus" as const, variant: 1, part: 0, x: 16, y: 15, h: 0, heading: Math.PI },
+    ];
+    const layer = trafficLayer({ feed: () => poses });
+    const { ctx, bakes, frame } = context();
+    (ctx.view.world.manifest as { routes?: unknown }).routes = undefined; // nothing to load
+    expect(await layer.init(ctx)).toBe(true);
+    expect(layer.sim.vehicles).toEqual([]); // none of its own
+    expect(layer.update(1 / 60, frame())).toBe(true); // they move every frame
+    layer.sprites(frame());
+    for (const b of bakes) b.done({ texture: {}, image: {} } as unknown as Sprite);
+    await flush();
+    expect(layer.sprites(frame()).list).toHaveLength(2);
+    expect(layer.drawn.map((d) => [d.id, d.x])).toEqual([
+      [7, 14],
+      [8, 16],
+    ]);
+    expect(layer.vehiclesNear(14, 15, 0.5).map((n) => n.id)).toEqual([7]);
+    poses = [];
+    expect(layer.update(1 / 60, frame())).toBe(false);
+    expect(layer.sprites(frame()).list).toEqual([]);
+  });
+
   it("releases its sprites when it leaves a view", async () => {
     const layer = trafficLayer({ routes: streets(), seed: 3, time: 2, density: 4, paused: true });
     const { ctx, bakes, frame } = context();
