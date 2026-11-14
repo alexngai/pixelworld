@@ -135,6 +135,7 @@ Status values:
 | D-127 | Teams and spectators for fog-of-war games on interest groups: a side's view serialized once for its players and watchers; Fogfront two against two and watching | Accepted |
 | D-128 | Fogfront's maps from any level: hearths and seeps chosen from a level's cells and checked for reach, the map a room's setting, and maps on Manhattan, Kyoto, Kowloon and the Strip | Accepted |
 | D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
+| D-130 | The repository public: the whole CI on every pull request, and PyPI uploads through an environment with attestations | Accepted |
 | D-131 | Bridges come ashore on approaches over land, and the land a deck lands on stays land | Accepted |
 
 ---
@@ -1873,6 +1874,18 @@ The point is more room for visual interest; both halves are wanted.
   - **`pypa/gh-action-pypi-publish`:** it adds attestations, but `uv publish` is the tool the manual upload already uses, and attestations name the repository in Sigstore's public log while it is private.
   - **A GitHub environment (`pypi`):** the free plan has none for a private repository.
 - **Later:** an environment with required reviewers and attestations once the repository is public.
+
+### D-130: The repository public: the whole CI on every pull request, and PyPI uploads through an environment with attestations (accepted)
+- **Why:** the owner is making the repository public. A private repository's Actions minutes were billed, so CI ran in two tiers (the e2e smoke subset on pull requests, the rest on demand) until the minutes ran out; a public repository's standard runners cost nothing and have four cores. Environments, and attestations that name the repository, were the two things D-129 left for a public repository.
+- **What:**
+  - **`ci.yml`, one tier:** every pull request and push to `main` runs lint, typecheck, unit tests, the pipeline, the e2e suite in four shards (still without the `@slow` tests, `pnpm test:e2e:slow`) and the npm packages with their consumers. The smoke job goes: the suite runs its tests. `gh workflow run` remains for pull requests GitHub doesn't check, such as the "Version packages" one.
+  - **`pypi.yml`:** the publish job runs in the environment `pypi` (the trusted publisher on pypi.org names it; a required reviewer on it makes each upload wait for approval) and uploads with `pypa/gh-action-pypi-publish`, which signs attestations.
+  - **npm:** nothing changes; npm adds provenance to a trusted publisher's uploads from a public repository by itself.
+  - **docs/npm.md §9 and CONTRIBUTING.md §3–4** say so; the notes on publishing from a private repository go.
+- **Rejected alternatives:**
+  - **Keeping the smoke tier for pull requests:** it saved minutes that now cost nothing, and left golden images unchecked until someone asked.
+  - **The `@slow` tests in CI:** each change of map still takes minutes in software rendering; they stay local.
+- **Later:** an `npm` environment for release.yml's publish job, if each npm release should wait for approval too.
 
 ### D-131: Bridges come ashore on approaches over land, and the land a deck lands on stays land (accepted)
 - **Why:** the README's screenshots showed the Golden Gate not reaching either shore. Two causes, at the ends of every bridge:

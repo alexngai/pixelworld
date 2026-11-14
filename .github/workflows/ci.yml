@@ -1,12 +1,10 @@
 name: CI
 
-# Two tiers, to keep runner minutes down:
-# - every pull request and push to main: lint, typecheck, unit tests, the
-#   pipeline, and the e2e smoke subset (about 10 minutes of runner time);
-# - on demand (`gh workflow run ci.yml --ref <branch>`): also the full e2e
-#   suite (four shards, about an hour) and the npm package's consumer check
-#   (about 13 minutes), which also runs on the release workflow's "Version
-#   packages" pull request.
+# Every pull request and push to main: lint, typecheck, unit tests, the
+# pipeline, the e2e suite in four shards, and the npm packages with their
+# consumers. A public repository's runners cost nothing (D-130); on demand
+# (`gh workflow run ci.yml --ref <branch>`) for a pull request GitHub didn't
+# check, such as the release workflow's "Version packages".
 on:
   # main on push; any other branch through its pull request, so a branch with
   # an open PR is checked once per push, not twice
@@ -36,34 +34,11 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-  web-e2e-smoke:
-    # The tests tagged @smoke: a quick pass over every app (pnpm test:e2e:smoke)
-    name: Web e2e smoke (@smoke)
-    if: github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e:smoke
-      - if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-smoke
-          path: test-results/
-          retention-days: 7
-
   web-e2e:
     # The Playwright suite (golden images and behaviour, playwright.config.ts) in
-    # shards, on demand; Playwright splits the tests by count, in file order. Each
-    # shard writes a blob report, merged into one HTML report by web-e2e-report.
+    # shards; Playwright splits the tests by count, in file order. Each shard
+    # writes a blob report, merged into one HTML report by web-e2e-report.
     name: Web e2e (golden images, behaviour) ${{ matrix.shard }}/4
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -78,7 +53,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      # @slow tests (the game's changes of map) don't fit a 2-core runner: run them locally (pnpm test:e2e:slow)
+      # @slow tests (the game's changes of map) take minutes each in software rendering: run them locally (pnpm test:e2e:slow)
       - run: pnpm test:e2e --grep-invert @slow --shard=${{ matrix.shard }}/4
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -95,7 +70,7 @@ jobs:
 
   web-e2e-report:
     name: Web e2e report (merged)
-    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
+    if: ${{ !cancelled() }}
     needs: web-e2e
     runs-on: ubuntu-latest
     steps:
@@ -121,10 +96,9 @@ jobs:
   package:
     # The npm packages (docs/npm.md): `pixelworld` and the city packs
     # `@pixelworlds/city-*` (D-074). Builds and packs them and checks the
-    # tarballs, on demand and on the "Version packages" pull request; release.yml
-    # checks the tarballs again before it publishes them (no tokens here).
+    # tarballs; release.yml checks them again before it publishes them (no
+    # tokens here).
     name: npm packages (build, pack, size, consumers)
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'changeset-release/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

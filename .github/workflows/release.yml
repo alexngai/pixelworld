@@ -4,7 +4,7 @@ name: Release
 # pending changesets → the "Version Packages" pull request (versions,
 # changelogs, version pins); merging it → the packages whose versions aren't on
 # npm yet are packed, checked and published through npm trusted publishing
-# (OIDC, with provenance once the repository is public). No npm token is stored
+# (OIDC, with provenance). No npm token is stored
 # anywhere; each package's trusted publisher on npmjs.com names this file.
 # Follows changesets' trusted-publishing workflow: id-token only on publish.
 
@@ -49,8 +49,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          # changelogs name the commit that added each changeset: the whole history,
-          # since without credentials git can't deepen a shallow clone of a private repository
+          # changelogs name the commit that added each changeset: the whole history
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
