@@ -126,6 +126,7 @@ Status values:
 | D-116 | The game the server runs, made sturdier and open to other modes: a join flow, roles, commands, bots, shared snapshots, one server clock | Accepted |
 | D-118 | Multiplayer from a second review: errors kept to their room, a lobby and match phases, a backed-up connection, events and input numbers, diagnostics, limits, and netcode tests run whole | Accepted |
 | D-120 | Rooms the server runs on worlds too big to load whole, with more players: a chunk budget, loading around each player, a step that waits, and interest | Accepted |
+| D-123 | Big worlds made lighter: lean chunks, objects by chunk, coarse heights, compact binary snapshots, chunks by number, and a server reading its world from disk | Accepted |
 
 ---
 
@@ -1593,3 +1594,84 @@ The point is more room for visual interest; both halves are wanted.
   - **Each page's shared snapshot filtered to a radius around it:** serialized per page, which interest is there to avoid. Squares make one group per square, at the cost of seeing up to `cell × (reach + 1)` on one side.
   - **`HostedRoom.sendTo(ids, data)`:** a cleaner multicast, but a change to the interface the relay, the loopback and the parallel branches implement; `broadcast` with the rest excepted is serialized once too.
 - **Later:** a timeout on chunk fetches: one that never answers holds its player for good (and its chunks against the budget); placed objects by chunk in the format, so they load and go with the terrain (the cities' 110 MB of heap); interest with some hysteresis, so a page on a square's edge doesn't see players far off come and go; a roster (names, scores) sent when it changes, so a board can list everyone while positions go by interest; a budget for the bake workers' copies of chunks; traffic around several foci (D-111).
+
+### D-123: Big worlds made lighter: lean chunks, objects by chunk, coarse heights, compact binary snapshots, chunks by number, and a server reading its world from disk (accepted)
+- **Why:** D-120 made big worlds work. The owner then asked for the twelve ways to make it cheaper that a brainstorm over its numbers turned up, all of them, in order.
+- **What:**
+  1. **Lean chunks:** `openWorld({ dropLayers: DRAW_ONLY_LAYERS })` (and `decodeChunk(buf, { drop })`, `ChunkStore.dropLayers`) leaves out the layers only drawing reads: the road, path and rail pieces (72 of a cell's 94 bytes), geology and rails. They read as empty: one zero-filled array, shared. No query reads them. A chunk with micro-terrain goes from about 0.5 MB to about 0.2 MB. The dogfight's server drops them.
+  2. **Placed objects by chunk:** `pixelworld object-chunks <package>` (pipeline `object_chunks.py`) writes `objects/<x>_<y>.json.gz` beside the whole file, plus `objects/landmarks.json.gz` and the manifest's `objectChunks` (docs/world-format.md).
+     - **What a chunk's file holds:** every instance without a landmark id whose bounds touch that chunk, so a point's chunk alone says what stands there. The landmarks have their own file.
+     - **How `openWorld` uses them:** it loads each chunk's objects with its terrain and lets them go together. It indexes each chunk's on its first query (`ChunkedObjects`) and keeps the landmarks whole.
+     - **Views are unchanged:** their bake needs the whole file.
+     - **Checked:** at every object's anchor and inside every footprint corner of `southwest-fly`, the answers equal the whole file's.
+     - **nyc around midtown (16 of 98 chunks):** 25 MB of heap more than before it opened, against 169 MB with the whole file. On a copy; the nyc fixture doesn't carry them.
+  3. **Coarse heights:** `pixelworld coarse-heights <package>` writes `coarse.i16.gz`. For each block of 8 × 8 cells it holds the lowest drawn ground and the highest drawn top (ground or water), in 1/16 step.
+     - **The query:** `query.coarseHeightAt(x, y)` answers whether or not the chunks are loaded.
+     - **The dogfight:** a plane more than `resetAgl` clear of its block's top, under it and under its nose, flies on over ground still loading instead of waiting. Towers there are known a moment later, when the ground loads.
+     - **Checked:** across `southwest-fly`, 30,000 points' ground and water lie between their block's two heights (TypeScript reading the Python writer's file).
+     - **Size:** the southwest's file is 27 KB.
+  4. **Compact binary:** a `Schema` says how each field goes, with `Writer` and `Reader` underneath:
+     - `fixed(step)`: a position to a 64th of a cell is two or three bytes.
+     - `angle(steps)`: read back in [−π, π).
+     - `int`, `bool`, `str`.
+     - `exact`: eight bytes.
+
+     A hosted game's bytes go as binary frames (the relay, `joinRoom`, the loopback). `TickRoom.snapSchema` sends a player's own snapshot in binary, whole and exact, so its prediction still lands exactly where the server says (`readSnap`).
+  5. **Keyframes then diffs:** with `TickRoom.replicator` (a `Replicator`), each group of pages gets one binary message a snapshot. Its `Replica` reads it on the page, through `TickClient`'s `schema`.
+     - **Diffs:** a page that has had every message of its group since it joined gets only the fields that changed. WebSocket is reliable and ordered, so no acks are needed.
+     - **Keyframes:** a page new to its group, or back from being skipped as backed up, gets a keyframe.
+     - **Taken from webhawk:** compact binary for every snapshot, and the roster apart. Webhawk sends whole snapshots; the diffs are this decision's.
+  6. **Nearer more often:** a group's `view` has a near ring, sent every snapshot, and a far one, sent every `farEvery`th (4). `Interest.near(group, reach)` gives the rings.
+  7. **A roster when it changes:** `TickRoom.roster()` (names, teams, scores) goes to every page when its JSON changes, and to each page as it connects (`TickClient.onRoster`). The dogfight's board takes names and scores from it, and its planes go by replication.
+  8. **Each state written once:** each thing is encoded at most twice a snapshot, whole and as a diff, whatever the number of groups and pages. A group's message is those pieces put together. A test spies on the schema to check.
+  9. **Chunks by number:** the store keeps chunks in a flat array by `cy × cols + cx`, and the hottest read (`surfaceHeightAt`) makes no object. 2 million height reads on the southwest went from 199 to about 140 ms, and 200,000 area checks from 13 to 8 ms.
+  10. **Lighter bookkeeping:**
+      - `HostedRoom.sendTo(ids, data)` is optional: the relay and the loopback have it, and `TickRoom` falls back to a broadcast with the rest excepted.
+      - `Areas.track` compares the area's corners rather than building a key.
+      - The budget finds the least recently used chunk by a scan, not a sort.
+      - A throttle on `track` was tried and dropped. It let the dogfight's start area go under a tight budget, and stopped a failed load being asked for again.
+  11. **A world from disk:** `openWorld({ fetch })` replaces `fetch` for every file of the package. `fileFetch(root)` (`/server`) reads them from disk and nothing outside `root`. The dogfight's dev server and production bundle open their world that way instead of over HTTP from themselves. The built server opened `southwest-fly` from `dist/client` and replicated to a Node client in binary.
+  12. **Interest:**
+      - **`slack`:** a thing keeps its square until it is that far past the edge. On the big-world run, 16 cells cut the keyframes from pages changing square from 13 to 4.
+      - **`diamond`:** the shape of an isometric view, everything within `cell × reach` counted across plus down. With 32-cell squares at reach 4, each page got at most 8 others instead of 11, and 3.2 KB/s instead of 3.3. 128-cell squares stay the default, since finer ones change group more often (30 keyframes).
+- **Measured** (`test/bigworld.test.ts`, as in D-120: 32 bots and 8 pages over the whole southwest, 20 s; memory alone in its process):
+
+  | | D-120's before | D-120 | D-123 |
+  |---|---|---|---|
+  | Terrain held | 228 chunks, 112 MB | 81 chunks, 40 MB | 99 chunks, 19.8 MB (lean, a 20 MB budget) |
+  | Server memory, heap + buffers | 26 + 113 MB | 8 to 10 + 41 MB | 6 + 22 MB |
+  | A tick: mean, p99 | 0.033 to 0.043, 0.10 to 0.20 ms | 0.048 to 0.051, 0.19 to 0.22 ms | 0.050 to 0.054, 0.20 to 0.23 ms |
+  | A page gets | 82 KB/s, 39 others | 12.3 KB/s, at most 7 others | 3.6 KB/s, at most 13 others (a far ring) |
+  | Steps held for their ground | 0 | about 2,500 at the start, about 200 after | none: about 2,600 steps on coarse ground instead |
+
+  The dogfight, per page: with 8 pilots, 38.4 KB/s of JSON before and 5.6 KB/s now (planes 2.8 KB/s, own snapshot 2.3 KB/s); with 2 pilots, 17.4 and 4.3 KB/s. Two headless Chromium pages on its dev server saw each other by name, with corrections of 0.0000 cells and a ping of 9 to 14 ms.
+- **API changed:**
+  - `@pixelworlds/world-format`:
+    - `DRAW_ONLY_LAYERS`, `DroppableLayer`, `decodeChunk(buf, { drop })`.
+    - `WorldFetch`, and a `fetcher` argument to `fetchWorldFile`, `fetchWorldJson` and `GeoGrid.load`.
+    - The manifest's `objectChunks` and `coarse`.
+  - `@pixelworlds/runtime`:
+    - `ChunkStore.dropLayers`, `objectChunks`, `worldFetch` and `objectsIn`.
+    - `chunkFetcher`, `loadObjectLandmarks`, `loadCoarse`, `CoarseHeights`.
+    - A `fetcher` argument to `loadManifest` and `loadObjects`.
+  - `@pixelworlds/engine`:
+    - `OpenWorldOptions.dropLayers` and `fetch`; `DRAW_ONLY_LAYERS` re-exported.
+    - `WorldQuery.coarseHeightAt`, a new member: fakes add it.
+  - `@pixelworlds/multiplayer`:
+    - The codec: `Schema`, `Writer`, `Reader`, and the fields `fixed`, `angle`, `int`, `bool`, `str` and `exact`.
+    - Replication: `Replicator`, `Replica`, `ReplicaUpdate`, `WORLD_BYTE`, `SNAP_BYTE`, `readSnap`.
+    - `TickRoom`: `replicator`, `snapSchema`, `roster()`.
+    - `TickClient`: a fifth type parameter `R`, and `schema`, `snapSchema`, `onRoster`, `replica`. `TickRoster`.
+    - The server side: `HostedRoom.sendTo?`; `HostedRoom.send` and `broadcast` take bytes. `Interest(cell, reach, { slack, diamond })`, `Interest.near(group, reach?)`, `fileFetch`.
+    - The dogfight: `PLANE_WIRE`, `PLANE_STATE`, `PlaneWire`, `DogfightRoster`, `planesOf`, `planeOf`. `DogfightSnap` is now the plane's state itself (it was `{ you }`). `openDogfightWorld`'s `fetch`, `attachDogfight`'s `worlds`.
+- **Rejected alternatives:**
+  - **Decoding chunks in worker threads:** a chunk decodes in 0.16 ms on the main thread, and gunzip already runs off it. A pool would need a second bundled entry point and transfers, to save less than a millisecond a chunk.
+  - **Diffs against what each page acknowledged:** a baseline per page means a message per page. On a reliable, ordered connection, a group's previous message is a baseline every page in step with the group has.
+  - **A per-page view rectangle from the page's rotation:** an isometric screen is close to a diamond on the grid in every rotation (1280 × 720 at 32 × 16 px is 40 by 45 tile widths along x − y and x + y), so `diamond` needs nothing from the page.
+  - **Writing objects by chunk and coarse heights on every build:** they serve only clients holding part of a world, so they're optional layers added by their own commands, as the routes are.
+- **Later:**
+  - Committing objects by chunk and coarse heights for the cities' fixtures: about 8 MB for nyc.
+  - The view's bake reading objects by chunk.
+  - Snapshots by type (several schemas in a room).
+  - A deadline on a chunk fetch (D-120).
+  - The rover bench's own snapshot in binary.

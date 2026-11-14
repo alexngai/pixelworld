@@ -134,6 +134,38 @@ describe("interest (D-120)", () => {
     expect(new Interest(10, 2).near("0,0").length).toBe(0);
   });
 
+  it("keeps a thing in its square until it is past the slack, and a diamond holds all within its reach across plus down (D-123)", () => {
+    const i = new Interest(64, 1, { slack: 4 });
+    i.place("a", 63, 10);
+    i.place("a", 66, 10); // within 4 past the edge: still in the first square
+    expect(i.groupOf("a")).toBe("0,0");
+    i.place("a", 70, 10);
+    expect(i.groupOf("a")).toBe("1,0");
+    i.place("a", 61, 10); // back, but within the slack of its new square
+    expect(i.groupOf("a")).toBe("1,0");
+    i.place("a", 59, 10);
+    expect(i.groupOf("a")).toBe("0,0");
+
+    // a diamond of squares: everything within cell × reach across plus down, wherever the page is in its square
+    const d = new Interest(16, 4, { diamond: true });
+    let n = 0;
+    for (let k = 0; k < 3000; k++) {
+      const px = 200 + ((k * 37) % 160) / 10;
+      const py = 200 + ((k * 53) % 160) / 10;
+      const ang = k * 2.399;
+      const dist = ((k * 29) % 64) * (1 / (Math.abs(Math.cos(ang)) + Math.abs(Math.sin(ang))));
+      d.place("page", px, py);
+      d.place("t", px + Math.cos(ang) * dist, py + Math.sin(ang) * dist);
+      expect(d.near(d.groupOf("page")!)).toContain("t");
+      n++;
+    }
+    expect(n).toBe(3000);
+    // its squares: 61 of the 81 a square block of the same reach takes
+    const all = new Interest(16, 4, { diamond: true });
+    for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) all.place(`${x},${y}`, 100 + x * 16, 100 + y * 16);
+    expect(all.near(all.groupAt(100, 100)).length).toBe(61);
+  });
+
   it("builds and sends a shared snapshot once per group, the whole one to pages in none, and events to the pages near them", () => {
     const { hosted, inbox, serialized } = transport(["a", "b", "c", "d", "w"]);
     const game = new Dots(hosted, { clock: false, snapshotEvery: 1 });
@@ -322,6 +354,10 @@ interface Mode {
   interest: number | null;
   /** The rovers in compact binary, keyframes then diffs, the next ring out of squares every 4th snapshot (D-123). */
   binary?: boolean;
+  /** Interest's squares: within `reach` of them, slack past their edges, a diamond (D-123). */
+  reach?: number;
+  slack?: number;
+  diamond?: boolean;
 }
 
 /** Rovers on the ground of a real world: bots and pages spread across it. */
@@ -339,7 +375,7 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
   constructor(room: HostedRoom, world: Awaited<ReturnType<typeof openWorld>>, readonly mode: Mode) {
     super(room, { clock: false, ready: Promise.resolve(world) });
     this.areas = mode.areas ? new Areas(world.query, { radius: 8, ahead: 2, reach: 1 }) : null;
-    this.interest = mode.interest === null ? null : new Interest(mode.interest);
+    this.interest = mode.interest === null ? null : new Interest(mode.interest, mode.reach ?? 1, { slack: mode.slack, diamond: mode.diamond });
     const interest = this.interest;
     if (mode.binary)
       this.replicator = new Replicator(ROVER, {
@@ -347,7 +383,7 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
         view: (g) => {
           if (g === undefined || !interest) return { near: this.rovers.keys() };
           const near = interest.near(g);
-          return { near, far: interest.near(g, 2) };
+          return { near, far: interest.near(g, 2 * (mode.reach ?? 1)) };
         },
       }) as unknown as Replicator<object>;
   }
@@ -388,10 +424,12 @@ class Rovers extends TickRoom<RoverIn, { x: number; y: number }, Awaited<ReturnT
   protected override snapshot(id: string) {
     return { you: this.rovers.get(id) };
   }
+  keyframes = 0;
   override tick() {
     const t0 = performance.now();
     super.tick();
     this.tickMs.push(performance.now() - t0);
+    if (this.stats().ticks % 3 === 0) this.keyframes += this.replicator?.last.keyframes ?? 0;
   }
 }
 
@@ -441,6 +479,7 @@ async function rovers(mode: Mode, seconds: number) {
   const from = pages.map((p) => p.page.received.length);
   const start = new Map([...game.rovers].map(([id, r]) => [id, { ...r }]));
   game.tickMs.length = 0;
+  game.keyframes = 0;
   const waitsAtStart = game.waits;
   await run(seconds);
   const bytes = pages.map((p, n) => p.page.received.slice(from[n]).reduce((sum: number, m) => sum + (m instanceof Uint8Array ? m.length : JSON.stringify(m).length), 0));
@@ -455,6 +494,8 @@ async function rovers(mode: Mode, seconds: number) {
     waits: game.waits,
     waitsAtStart,
     coarseSteps: game.coarseSteps,
+    /** Keyframes sent (a page new to its group): each a page changing square. */
+    keyframes: game.keyframes,
     slowest: Math.min(...moved),
     others: Math.max(...pages.flatMap((p) => [...p.others])),
     /** What the room and its world hold (more than when it opened). */
@@ -469,7 +510,7 @@ describe("dozens of players across the southwest (D-120)", () => {
     const before = await rovers({ areas: false, interest: null }, seconds);
     const after = await rovers({ areas: true, budgetMB: 40, interest: 128 }, seconds);
     // D-123: lean chunks in half the budget, coarse ground instead of waiting, the rovers in binary with a far ring
-    const lean = await rovers({ areas: true, budgetMB: 20, lean: true, coarse: true, interest: 128, binary: true }, seconds);
+    const lean = await rovers({ areas: true, budgetMB: 20, lean: true, coarse: true, interest: 128, slack: 16, binary: true }, seconds);
     if (process.env.BIGWORLD_LOG) console.log(JSON.stringify({ bots: BOTS, pages: PAGES, seconds, before, after, lean }, null, 2));
     expect(lean.world.chunksMB).toBeLessThanOrEqual(20);
     expect(lean.world.chunksLoaded).toBeGreaterThanOrEqual(after.world.chunksLoaded); // as many chunks in half the memory
