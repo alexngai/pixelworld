@@ -325,7 +325,9 @@ export function objectTiles(w: LoadedWorld, object: number): [number, number][] 
   const o = w.objects?.instances[object];
   if (!o) return [];
   const ts = w.tileSize;
-  const [bx0, by0, bx1, by1] = o.fp?.length ? footprintBounds(o.fp) : [o.x, o.y, o.x, o.y];
+  // the anchor as well as the footprint: a small footprint's tiles are its anchor's, which may lie outside it
+  const [fx0, fy0, fx1, fy1] = o.fp?.length ? footprintBounds(o.fp) : [o.x, o.y, o.x, o.y];
+  const [bx0, by0, bx1, by1] = [Math.min(fx0, o.x), Math.min(fy0, o.y), Math.max(fx1, o.x), Math.max(fy1, o.y)];
   const out: [number, number][] = [];
   const last = (cells: number) => Math.ceil(cells / ts) - 1;
   for (let ty = Math.max(0, Math.floor((by0 - w.margin) / ts)); ty <= Math.min(last(w.manifest.cellsY), Math.floor((by1 + w.margin) / ts)); ty++)
@@ -357,7 +359,8 @@ export async function openTileCache(option: WorldViewOptions["cache"], code = BA
  * (D-072), the objects flag, a render scale other than the package's, and the
  * plugins (`pluginsKey`: their names, versions and code). A change to any of
  * them makes old tiles unreachable. A tile whose bake leaves out removed
- * objects (D-124) is kept under their hash as well.
+ * objects (D-124) is kept under them as well (the list itself, not a hash:
+ * one tile's is short, and two lists must never share a key).
  */
 export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[]) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
@@ -371,5 +374,5 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
     ...plugins,
   ];
-  return (t, removed) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${hashString(removed.join(","))}`] : [])].join("|");
+  return (t, removed) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : [])].join("|");
 }

@@ -125,6 +125,8 @@ describe("the tiles an edit bakes again (D-124)", () => {
     { g: "building", x: 63.5, y: 70, s: 2, fp: [[62, 69], [65, 69], [65, 71], [62, 71]] },
     // a bridge: a big footprint reaches into slices far from its anchor
     { g: "landmark.bridge", x: 55, y: 101, s: 3, fp: [[10, 100], [100, 100], [100, 102], [10, 102]] },
+    // a small footprint whose anchor lies outside it: the anchor's tiles build it
+    { g: "building", x: 50, y: 10, s: 4, fp: [[28, 9], [30, 9], [30, 11], [28, 11]] },
   ];
   const w = { tileSize: 32, margin: 16, manifest: { cellsX: 128, cellsY: 128 }, objects: { instances } } as unknown as LoadedWorld;
   const sorted = (t: [number, number][]) => t.map(([x, y]) => `${x},${y}`).sort();
@@ -133,6 +135,7 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect(sorted(objectTiles(w, 0))).toEqual(["0,0", "1,0"]);
     expect(sorted(objectTiles(w, 1))).toEqual(["1,1", "1,2", "2,1", "2,2"]);
     expect(sorted(objectTiles(w, 2))).toEqual(["0,2", "0,3", "1,2", "1,3", "2,2", "2,3", "3,2", "3,3"]);
+    expect(sorted(objectTiles(w, 3))).toEqual(["1,0", "2,0"]);
     expect(objectTiles(w, 9)).toEqual([]);
   });
 
@@ -147,11 +150,11 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect(tiles.removedFor(1, 1)).toEqual([]);
   });
 
-  it("an edited tile is cached under its removed objects, never under the plain key", () => {
+  it("an edited tile is cached under its removed objects themselves, never under the plain key", () => {
     const key = tileCacheKey({ ...w, manifest: { id: "sf", packageHash: "p1" }, styleJson: {}, renderScale: 1 } as unknown as LoadedWorld, [], "c0de");
     const t = { rotation: 0, tx: 1, ty: 2 } as const;
     expect(key(t, [])).toBe(key(t));
-    expect(key(t, [1, 2])).toMatch(/\|0:1,2\|edits:[0-9a-f]{8}$/);
+    expect(key(t, [1, 2])).toMatch(/\|0:1,2\|edits:1,2$/);
     expect(key(t, [1, 2])).toBe(key(t, [1, 2]));
     expect(key(t, [1, 2])).not.toBe(key(t, [2]));
   });

@@ -387,6 +387,35 @@ describe("Fogfront's match (D-121)", () => {
     expect(game.structures.get(7)!.hp).toBe(hp);
   });
 
+  it("a warden goes for the wall nearest it, not a U-shaped building's open middle (D-124)", () => {
+    const rows = [
+      "................",
+      "................",
+      "..#########.....",
+      "..#.......#.....",
+      "..#.......#.....",
+      "..#.......#.....",
+      "..#.......#.....",
+      "..#.......#.....",
+      "..#.......#.....",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+    ];
+    const cells: [number, number][] = [];
+    rows.forEach((r, y) => [...r].forEach((c, x) => c === "#" && cells.push([x, y])));
+    const game = new RtsGame(standing(gridOf(rows), [{ obj: 1, cells }]), { hearths: { kiln: [12, 10], tide: [12, 3] }, seeps: [] });
+    // its middle is open ground 1.5 cells from the nearest wall, out of a warden's reach
+    const s = game.structures.get(1)!;
+    expect([s.x, s.y]).toEqual([6.5, 4.5]);
+    const w = Object.assign(unitsOf(game, "kiln")[0]!, { kind: "warden" as const, hp: UNITS.warden.hp, x: 6.5, y: 11.5, order: { k: "idle" as const } });
+    expect(game.order("kiln", { t: "raze", u: [w.id], obj: 1 })).toBeNull();
+    run(game, 120);
+    expect(game.razed).toEqual([1]);
+  });
+
   it("a page puts the match's fallen buildings into its world's edits and its cells, and puts them back for a new match (D-124)", () => {
     const g = standing(gridOf(["##..", "#..."]), [
       { obj: 3, cells: [[0, 0], [1, 0]] },

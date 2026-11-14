@@ -303,7 +303,9 @@ class View implements WorldView {
       // the ground came after the whole tile: not needed
       if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
       // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
-      const outdated = !res.ground && (res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",");
+      // (a tile that failed to prepare or bake made nothing: it isn't asked for again)
+      const failed = !res.fromCache && !res.stats;
+      const outdated = !res.ground && !failed && (res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",");
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
@@ -439,7 +441,11 @@ class View implements WorldView {
           } else {
             this.drop(key);
             this.service.forget(key);
-            if (!bare) this.baked.set(rot, tx, ty, false);
+            // a ground request answered with the whole tile is done too: its ground shows first again
+            if (!bare) {
+              this.service.forget(tileKey(rot, tx, ty, false, true));
+              this.baked.set(rot, tx, ty, false);
+            }
           }
         }
     this.invalidate();
@@ -747,7 +753,10 @@ class View implements WorldView {
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
       this.stale.delete(key);
-      if (!e.bare && !e.ground) this.baked.set(e.rotation, e.tx, e.ty, false);
+      if (!e.bare && !e.ground) {
+        this.baked.set(e.rotation, e.tx, e.ty, false);
+        this.service.forget(tileKey(e.rotation, e.tx, e.ty, false, true));
+      }
       this.service.forget(key);
     }
   }

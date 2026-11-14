@@ -371,11 +371,16 @@ export class RtsGame {
     this.events.push({ kind: "hit", by: u.id, to: id, x: at.x, y: at.y });
   }
 
-  /** A blow at one of the level's buildings, once within reach of a cell it walls; given up where a path gets no nearer. */
+  /**
+   * A blow at one of the level's buildings, once within reach of a cell it
+   * walls: it walks to the walled cell nearest it (not the middle, which may
+   * be an open courtyard), and gives up where a path gets no nearer.
+   */
   private raze(u: Unit, s: Structure, dt: number): void {
     const rule = UNITS[u.kind];
-    if (this.distToStructure(u, s) > rule.range) {
-      if (this.walk(u, s, dt) && this.distToStructure(u, s) > rule.range) this.give(u, { k: "idle" });
+    const near = this.nearestWall(u, s);
+    if (near.d > rule.range) {
+      if (this.walk(u, near, dt) && this.nearestWall(u, s).d > rule.range) this.give(u, { k: "idle" });
       return;
     }
     u.hd = Math.atan2(s.y - u.y, s.x - u.x);
@@ -491,10 +496,14 @@ export class RtsGame {
     return b ? distToBuilding(u, b) : Infinity;
   }
 
-  /** How far a point is from the nearest cell a level building walls. */
-  private distToStructure(p: Point, s: Structure): number {
-    let best = Infinity;
-    for (const i of s.cells) best = Math.min(best, distToBuilding(p, { x: (i % this.grid.w) + this.grid.x0, y: Math.floor(i / this.grid.w) + this.grid.y0, size: 1 }));
+  /** The cell a level building walls nearest a point: its middle, and how far the point is from the cell. */
+  private nearestWall(p: Point, s: Structure): Point & { d: number } {
+    let best = { x: s.x, y: s.y, d: Infinity };
+    for (const i of s.cells) {
+      const cell = { x: (i % this.grid.w) + this.grid.x0, y: Math.floor(i / this.grid.w) + this.grid.y0, size: 1 };
+      const d = distToBuilding(p, cell);
+      if (d < best.d) best = { x: cell.x + 0.5, y: cell.y + 0.5, d };
+    }
     return best;
   }
 
