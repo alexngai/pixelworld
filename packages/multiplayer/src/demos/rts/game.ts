@@ -44,6 +44,7 @@ import {
   type Objective,
   DAY,
   isNight,
+  MAX_CLIMB,
   roofEye,
 } from "./rules";
 
@@ -167,6 +168,8 @@ export class RtsGame {
   private ticks = 0;
   /** The world's fog now, at a point and a height, by night or day (the room gives it its clock), or null where there is none. */
   fogAt: ((x: number, y: number, h: number, night: boolean) => number) | null = null;
+  /** The cells the level's cars stand on now (D-126): a unit waits to step onto one. */
+  readonly movers = new Set<number>();
 
   /** Whether it is night in the match now (D-125). */
   get night(): boolean {
@@ -625,12 +628,24 @@ export class RtsGame {
         u.repath = 0;
         return false;
       }
+      // a car on the cell ahead: wait for it to pass (D-126)
+      const ahead = cellIndex(this.grid, Math.floor(nx), Math.floor(ny));
+      if (this.movers.has(ahead) && ahead !== cellIndex(this.grid, Math.floor(u.x), Math.floor(u.y))) return false;
       u.x = nx;
       u.y = ny;
       left -= d;
       if (f >= 1) u.path.shift();
     }
     return !u.path.length;
+  }
+
+  /** The level's cars now (the room's traffic, D-126): the cells they stand on, where they drive on the ground (not on a deck over it). */
+  traffic(cars: readonly { x: number; y: number; h: number }[]): void {
+    this.movers.clear();
+    for (const c of cars) {
+      const i = cellIndex(this.grid, Math.floor(c.x), Math.floor(c.y));
+      if (i >= 0 && Math.abs(c.h - this.grid.height[i]!) <= MAX_CLIMB) this.movers.add(i);
+    }
   }
 
   /** Units standing on one another step apart, where there is room. */

@@ -72,6 +72,13 @@ export interface SimOptions {
   density?: number;
   /** Kinds to run (default: all). */
   kinds?: readonly VehicleKind[];
+  /**
+   * Routes vehicles may use (default: all): traffic on a game's big roads
+   * only (D-126). At the end of the ones it may use (a slip road meeting a
+   * street, a stub) a car or a bus leaves rather than turning back; a train
+   * or a ferry leaves where its line goes on, and turns back at a terminus.
+   */
+  routes?: (r: Route) => boolean;
   /** Most vehicles in all. */
   maxVehicles?: number;
   /** The level's object height stretch (manifest depiction.heightStretch). */
@@ -106,6 +113,8 @@ export class TrafficSim {
   private readonly usable: Map<VehicleKind, Uint8Array>;
   private readonly density: number;
   private readonly maxVehicles: number;
+  /** Some routes are left out (`SimOptions.routes`): their ends are ways out. */
+  private readonly filtered: boolean;
   private area: { key: string; spans: Map<VehicleKind, { spans: RouteSpan[]; weights: number[]; length: number }> } | null =
     null;
 
@@ -117,13 +126,14 @@ export class TrafficSim {
     this.scale = levelScale(opts.metersPerCell, opts.level, { heightStretch: opts.heightStretch, maxScale: opts.vehicleScale });
     this.density = opts.density ?? 1;
     this.maxVehicles = opts.maxVehicles ?? 220;
+    this.filtered = !!opts.routes;
     this.usable = new Map();
     const kinds: VehicleKind[] = [];
     for (const k of opts.kinds ?? VEHICLE_KINDS) {
       const u = new Uint8Array(net.routes.length);
       let any = false;
       for (const r of net.routes)
-        if (usesRoute(k, r) && r.length > 0) {
+        if (usesRoute(k, r) && r.length > 0 && (opts.routes?.(r) ?? true)) {
           u[r.id] = 1;
           any = true;
         }
@@ -229,6 +239,7 @@ export class TrafficSim {
       list.sort((a, b) => a.s - b.s || a.id - b.id);
       for (let i = 0; i + 1 < list.length; i++) ahead.set(list[i]!, list[i + 1]!);
     }
+    const left = new Set<Vehicle>();
     for (const v of vs) {
       if (v.dwell > 0) {
         v.dwell -= dt;
@@ -252,6 +263,10 @@ export class TrafficSim {
         const len = this.route(v.cur).length;
         if (v.s < len) break;
         if (!v.next) {
+          if (this.wayOut(v.kind, v.cur)) {
+            left.add(v);
+            break;
+          }
           v.s = len;
           v.speed = 0;
           v.dwell = KINDS[v.kind].dwell;
@@ -264,6 +279,17 @@ export class TrafficSim {
         v.next = this.chooseNext(v.kind, v.cur);
       }
     }
+    if (left.size) this.state.vehicles = vs.filter((v) => !left.has(v));
+  }
+
+  /** Whether the end of a leg is a way out, when some routes are left out (`SimOptions.routes`). */
+  private wayOut(kind: VehicleKind, leg: Leg): boolean {
+    if (!this.filtered) return false;
+    if (kind === "car" || kind === "bus") return true;
+    const r = this.route(leg);
+    const node = leg.dir > 0 ? r.b : r.a;
+    const usable = this.usable.get(kind)!;
+    return node >= 0 && (this.net.nodeRoutes[node] ?? []).some((id) => !usable[id] && this.net.routes[id]!.net === r.net);
   }
 
   /** The leg to take at the end of `leg`, or null at a dead end. */

@@ -48,7 +48,8 @@ import {
   type Team,
 } from "../../src/demos/rts/rules";
 import { BOT, RtsRoom, openRtsWorld, type RtsWorld } from "../../src/demos/rts/server";
-import { TickClient, type Room } from "../../src/index";
+import { TRAFFIC, trafficArea } from "../../src/demos/rts/rules";
+import { RemoteTraffic, TickClient, type Room } from "../../src/index";
 import { loopback } from "../../src/testing";
 
 type Seen = RtsSnap & { t: number; cmd?: number };
@@ -517,6 +518,27 @@ describe("Fogfront's match (D-121)", () => {
   });
 });
 
+describe("Fogfront's traffic (D-126)", () => {
+  it("a unit waits for a car on the cell ahead to pass; a car on a deck over the cell, or on the unit's own, doesn't stop it", () => {
+    const game = new RtsGame(open(40, 16), { hearths: { kiln: [2, 10], tide: [35, 10] }, seeps: [] });
+    const u = unitsOf(game, "kiln", "runner")[0]!;
+    [u.x, u.y] = [10.5, 3.5];
+    expect(game.order("kiln", { t: "move", u: [u.id], x: 30.5, y: 3.5 })).toBeNull();
+    game.traffic([{ x: 20.4, y: 3.6, h: 0 }]);
+    expect([...game.movers]).toEqual([cellIndex(game.grid, 20, 3)]);
+    run(game, 8);
+    expect(u.x).toBeLessThan(20); // waiting by the car's cell
+    expect(u.x).toBeGreaterThan(19.5);
+    game.traffic([{ x: 20.4, y: 3.6, h: MAX_CLIMB + 1 }]); // a deck over it: no car on the ground
+    expect(game.movers.size).toBe(0);
+    run(game, 1);
+    expect(u.x).toBeGreaterThan(20);
+    game.traffic([{ x: u.x, y: u.y, h: 0 }]); // a car comes onto its own cell: it walks on, out of it
+    run(game, 5);
+    expect(u.x).toBeCloseTo(30.5, 1);
+  });
+});
+
 describe("Fogfront's garrisons in the level's buildings (D-125)", () => {
   /** An open field with a two-cell building of the level's in the middle (object 7). */
   const town = () => {
@@ -906,6 +928,61 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     // under 100 bytes a unit as JSON, positions to a hundredth of a cell: about 3.5 KB, ten a second
     expect(JSON.stringify(snap.units).length / snap.units.length).toBeLessThan(100);
   }, 30_000); // minutes of play with forty units on the whole map
+
+  it("runs the motorway's cars in each room: the same for two pages, five times a second, on the map's roads, and in the units' way (D-126)", async () => {
+    const lb = await opened(60);
+    const pages = [lb.join(0.05), lb.join(0.08)];
+    const remotes: RemoteTraffic[] = [];
+    const sent: { t: number; bytes: number; n: number }[][] = [[], []];
+    const clients = pages.map(
+      (p, n) =>
+        new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(p.room, {
+          tick: TICK,
+          now: lb.now,
+          onWorld: (w) => {
+            if (!w.cars) return;
+            sent[n]!.push({ t: w.t, bytes: JSON.stringify(w.cars).length, n: w.cars.length });
+            remotes[n]!.push(w.t, w.cars, lb.now());
+          },
+        }),
+    );
+    clients.forEach((c) => remotes.push(new RemoteTraffic({ delay: TRAFFIC.delay, clock: c.clock })));
+    clients.forEach((c, n) => c.hello({ name: `P${n}`, vs: "any" }));
+    lb.run(3, () => clients.forEach((c) => c.sync()));
+    const room = lb.host;
+    expect(room.traffic).not.toBeNull();
+    // five a second, the same for both pages
+    expect(sent[0]!.length).toBeGreaterThanOrEqual(14);
+    expect(sent[0]!.length).toBeLessThanOrEqual(16);
+    expect(sent[0]!.at(-1)!.t - sent[0]!.at(-2)!.t).toBeCloseTo(TICK * 2 * TRAFFIC.every, 5);
+    expect(sent[1]!.slice(0, 10)).toEqual(sent[0]!.slice(0, 10));
+    expect(Math.min(...sent[0]!.map((s) => s.n))).toBeGreaterThan(25);
+    expect(Math.max(...sent[0]!.map((s) => s.bytes))).toBeLessThan(3000);
+    // each page draws them at the server time it shows: the slower page the same cars a little later
+    const now = lb.now();
+    const shift = clients[0]!.clock.time(now)! - clients[1]!.clock.time(now)!;
+    expect(shift).toBeGreaterThan(0.02);
+    const [a, b] = [remotes[0]!.poses(now), remotes[1]!.poses(now + shift)];
+    expect(a.length).toBeGreaterThan(25);
+    expect(b.map((p) => p.id)).toEqual(a.map((p) => p.id));
+    b.forEach((p, i) => {
+      expect(p.x).toBeCloseTo(a[i]!.x, 6);
+      expect(p.y).toBeCloseTo(a[i]!.y, 6);
+    });
+    // on the map's roads, within the area round it
+    const g = world.grid;
+    const area = trafficArea();
+    const onMap = a.filter((p) => cellIndex(g, Math.floor(p.x), Math.floor(p.y)) >= 0);
+    expect(onMap.length).toBeGreaterThan(20);
+    const onRoad = onMap.filter((p) => g.flags[cellIndex(g, Math.floor(p.x), Math.floor(p.y))]! & ROAD).length;
+    expect(onRoad / onMap.length).toBeGreaterThan(0.9);
+    expect(a.every((p) => p.x >= area.x0 && p.y >= area.y0 && p.x < area.x0 + area.w && p.y < area.y0 + area.h)).toBe(true);
+    // the cells they stand on are in the units' way
+    const movers = [...room.game!.movers];
+    expect(movers.length).toBeGreaterThan(15);
+    expect(movers.filter((i) => g.flags[i]! & ROAD).length / movers.length).toBeGreaterThan(0.9);
+    expect(lb.failed).toBeUndefined();
+  });
 
   it("reads the level's buildings in the play area, with hit points from their size and height (D-124)", () => {
     const list = [...world.grid.structures!.values()];

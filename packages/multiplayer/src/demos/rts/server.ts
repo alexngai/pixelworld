@@ -1,8 +1,9 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { stylePack } from "@pixelworlds/game/src/styles";
-import { fogSampler, openWorld, type FogSampler } from "pixelworld/engine";
-import { cleanName, type RoomInfo } from "../../index";
+import { fogSampler, openWorld, type FogSampler, type WorldInfo } from "pixelworld/engine";
+import { TrafficSim, loadRoutes, type Pose } from "pixelworld/traffic";
+import { cleanName, vehiclesNet, type RoomInfo, type VehicleNet } from "../../index";
 import { Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
 import { Bot } from "./bot";
 import { RtsGame, parseCommand, type GameEvent } from "./game";
@@ -26,6 +27,8 @@ import {
   type Watch,
   WATCHES,
   nextLight,
+  TRAFFIC,
+  trafficArea,
 } from "./rules";
 
 /**
@@ -44,7 +47,10 @@ import {
  * through the same orders. A side whose hearth falls, or whose last player
  * leaves, loses; after the result the next match starts with whoever is
  * there. The level's buildings knocked down this match are in the shared
- * snapshot, so a page that comes late takes them out of its world too (D-124).
+ * snapshot, so a page that comes late takes them out of its world too
+ * (D-124). Each room runs the level's cars on the motorway (D-126): they are
+ * in every side's shared snapshot, the same for all, and units wait for them
+ * to pass.
  */
 
 /** The bot's id. */
@@ -55,13 +61,38 @@ export interface RtsWorld {
   grid: MapGrid;
   /** The level's fog as a number (D-125), or null where its style has none: each room reads it on its own clock. */
   fog: FogSampler | null;
+  /** The level's cars on its big roads, a simulation for each room (D-126); none where the level has no routes. */
+  traffic?: (() => TrafficSim) | null;
+}
+
+/** The level's cars on its big roads over the map (D-126): a new simulation for each room, or null where the level has no routes. */
+export async function rtsTraffic(world: Pick<WorldInfo, "url" | "manifest">, map = MAP): Promise<(() => TrafficSim) | null> {
+  const net = await loadRoutes(world.url, world.manifest);
+  if (!net) return null;
+  const m = world.manifest;
+  const roads = new Set(TRAFFIC.roads);
+  const a = trafficArea(map);
+  return () => {
+    const sim = new TrafficSim(net, {
+      metersPerCell: m.scale.metersPerCell,
+      level: m.level,
+      heightStretch: m.depiction?.heightStretch,
+      vehicleScale: m.depiction?.vehicleScale,
+      kinds: ["car"],
+      density: TRAFFIC.density,
+      routes: (r) => roads.has(r.cls),
+    });
+    // a circle round the area: cars come in at its edge, outside the area
+    sim.setFocus(a.x0 + a.w / 2, a.y0 + a.h / 2, Math.hypot(a.w, a.h) / 2);
+    return sim;
+  };
 }
 
 /** Open the driving level over HTTP and read the play area's cells. */
 export async function openRtsWorld(worldUrl: string): Promise<RtsWorld> {
   const { world, query } = await openWorld({ worldUrl, style: stylePack });
   await query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
-  return { grid: buildGrid(query), fog: fogSampler(world, query) };
+  return { grid: buildGrid(query), fog: fogSampler(world, query), traffic: await rtsTraffic(world) };
 }
 
 export function logLine(l: RelayLog): void {
@@ -113,6 +144,9 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   /** When the first page began waiting (server time), and whether one asked for the bot. */
   private waitingSince: number | null = null;
   private wantsBot = false;
+  /** The level's cars (D-126): the room's own, run in every phase; where they are now. */
+  traffic: TrafficSim | null = null;
+  private cars: Pose[] = [];
 
   /** @param clock Run in real time (default); off for tests, which call `tick`. */
   constructor(room: HostedRoom, world: Promise<RtsWorld>, clock = true) {
@@ -141,6 +175,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       const fog = this.world.fog;
       // the fog on the room's clock: the pages draw it at the server time they show
       if (fog) this.game.fogAt = (x, y, h, night) => fog.at(x, y, h, this.time, night);
+      this.traffic = this.world.traffic?.() ?? null;
     }
     if (join.watch) {
       this.watchers.set(id, join.watch);
@@ -208,6 +243,11 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   // ---------------------------------------------------------------- the match
 
   protected override update(): void {
+    if (this.traffic) {
+      this.traffic.advance(TICK);
+      this.cars = this.traffic.poses(this.traffic.alpha);
+      this.game?.traffic(this.cars);
+    }
     const m = this.match;
     if (m.phase === "waiting") return this.waiting();
     if (m.phase === "ended") {
@@ -272,7 +312,14 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       razed: this.game?.razed ?? [],
       marks: this.game?.marksNet() ?? [],
       ...this.light(),
+      ...this.carsNet(),
     };
+  }
+
+  /** The cars round the map, in every `TRAFFIC.every`th shared snapshot by the server's clock (D-126): the same for every group, were there any. */
+  private carsNet(): { cars?: VehicleNet[] } {
+    if (!this.traffic || Math.round(this.time / (TICK * SNAPSHOT_EVERY)) % TRAFFIC.every) return {};
+    return { cars: vehiclesNet(this.cars, trafficArea()) };
   }
 
   /** Night now, and when the light changes next on the server's clock: by the match's own time, while it is played. */

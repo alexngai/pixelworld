@@ -64,6 +64,8 @@ view.onFrame(() => others.update());
 - **`joinRoom(url, room)`:** `id`, `peers`, `send(data)`, `onMessage(from, data)`, `onJoin`, `onLeave`, `onClose`, `close()`.
 - **`Smoothing`:** poses stamped with the sender's clock (one `ServerClock` for a hosted room, else one per sender), drawn `delay` seconds behind (default 0.1 s) and in between; a pose on a new `life` (a respawn) is drawn there at once, not slid to. `time(id, now)` is when what is drawn happened, on the sender's clock.
 - **`RemotePlayers(view.entities, spec, { delay, clock })`:** an entity per player (`wait: false`), moved by `update()` each frame; `pose(id)` is where it was drawn, to aim and hit at; `retain(ids)` keeps only the players a snapshot has.
+- **`vehiclesNet(poses, area?)`** (server, D-126): a level's traffic, run by the server (`TrafficSim` from `pixelworld/traffic`, in Node over `loadRoutes(world.url, world.manifest)`), for a snapshot. It keeps the cars inside `area` and puts each on the wire as `[id, kind, variant, part, x, y, h, heading]`, in under 45 bytes.
+- **`RemoteTraffic({ delay, clock })`** (page, D-126): the server's cars drawn a little in the past on its clock and in between snapshots, as `RemotePlayers` draws the others. Call `push(t, cars)` with each snapshot that has them. Give `poses()` to the traffic layer as its feed: `trafficLayer({ feed: () => remote.poses() })`. A car a snapshot no longer has is drawn until the page shows the time it was last there, so every page sees the same cars.
 
 ## Demos
 

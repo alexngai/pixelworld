@@ -1,4 +1,5 @@
 import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
+import type { Pose as VehiclePose, VehicleKind } from "pixelworld/traffic";
 import { Reader, type Schema } from "./codec";
 import { Replica, SNAP_BYTE, WORLD_BYTE, type ReplicaUpdate } from "./replica";
 
@@ -16,6 +17,8 @@ export * from "./replica";
  *   (`Prediction`) and put right by each snapshot.
  * - `ServerClock`, `Smoothing`, `RemotePlayers`: the others, drawn a little
  *   in the past and in between, as entities in a world view.
+ * - `vehiclesNet`, `RemoteTraffic`: a level's traffic run by the server, the
+ *   same for every page, drawn by the traffic layer (D-126).
  */
 
 // ---------------------------------------------------------------- protocol
@@ -757,5 +760,73 @@ export class RemotePlayers {
 
   clear(): void {
     this.retain([]);
+  }
+}
+
+// ---------------------------------------------------------------- traffic the server runs
+
+/**
+ * A vehicle's car on the wire (D-126): the vehicle's id, its kind, paint and
+ * car in its consist (0: the head), and where it is: cells to a hundredth,
+ * height in steps to a tenth, heading in radians to a hundredth.
+ */
+export type VehicleNet = [id: number, kind: VehicleKind, variant: number, part: number, x: number, y: number, h: number, heading: number];
+
+const q = (v: number, k: number) => Math.round(v * k) / k;
+
+/** The traffic simulation's poses (`TrafficSim.poses`) for a snapshot: those in `area` (cells), if one is given. */
+export function vehiclesNet(poses: readonly VehiclePose[], area?: { x0: number; y0: number; w: number; h: number }): VehicleNet[] {
+  const out: VehicleNet[] = [];
+  for (const p of poses)
+    if (!area || (p.x >= area.x0 && p.y >= area.y0 && p.x < area.x0 + area.w && p.y < area.y0 + area.h))
+      out.push([p.id, p.kind, p.variant, p.part, q(p.x, 100), q(p.y, 100), q(p.h, 10), q(p.heading, 100)]);
+  return out;
+}
+
+/**
+ * The traffic a room's server runs (D-126), as a page draws it: each car a
+ * little in the past on the server's clock and in between snapshots
+ * (`Smoothing`), as `RemotePlayers` draws the others. Give `poses` to the
+ * traffic layer as its feed (`trafficLayer({ feed })`).
+ */
+export class RemoteTraffic {
+  readonly smoothing: Smoothing;
+  private readonly cars = new Map<string, VehicleNet>();
+  /** Cars the newest snapshot doesn't have, and the last time one did: drawn until the page shows a later time. */
+  private readonly gone = new Map<string, number>();
+  private last = -Infinity;
+
+  constructor(opts: RemotePlayersOptions = {}) {
+    this.smoothing = new Smoothing(opts.delay, opts.clock ?? null);
+  }
+
+  /** The vehicles in a snapshot at `sent` on the server's clock (s): the ones it doesn't have go once the page shows that time. */
+  push(sent: number, list: readonly VehicleNet[], now = performance.now() / 1000): void {
+    const keep = new Set<string>();
+    for (const v of list) {
+      const id = `${v[0]}.${v[3]}`;
+      keep.add(id);
+      this.gone.delete(id);
+      this.cars.set(id, v);
+      this.smoothing.push(id, sent, { x: v[4], y: v[5], h: v[6], heading: v[7] }, now);
+    }
+    for (const id of this.cars.keys()) if (!keep.has(id) && !this.gone.has(id)) this.gone.set(id, this.last);
+    this.last = sent;
+  }
+
+  /** Every car where it is drawn at `now` (our clock, s). */
+  poses(now = performance.now() / 1000): VehiclePose[] {
+    for (const [id, last] of this.gone)
+      if ((this.smoothing.time(id, now) ?? Infinity) > last) {
+        this.cars.delete(id);
+        this.smoothing.delete(id);
+        this.gone.delete(id);
+      }
+    const out: VehiclePose[] = [];
+    for (const [id, [vid, kind, variant, part]] of this.cars) {
+      const p = this.smoothing.at(id, now)!;
+      out.push({ id: vid, kind, variant, part, x: p.x, y: p.y, h: p.h, heading: p.heading });
+    }
+    return out;
   }
 }

@@ -239,6 +239,43 @@ describe("traffic simulation", () => {
   });
 });
 
+describe("traffic on some routes only (D-126)", () => {
+  it("runs on the routes it is given; a car leaves where they end and the road goes on, rather than turning back", () => {
+    const net = new RouteNetwork(parseRoutes(town()));
+    const s = new TrafficSim(net, { seed: 5, metersPerCell: MPC, level: "drive", kinds: ["car"], routes: (r) => r.cls === "primary" });
+    s.setFocus(20, 20, 22); // the street's ends at the circle's edge, where new ones come in
+    const ids = new Set<number>();
+    let left = 0;
+    for (let i = 0; i < 30 * 60; i++) {
+      const before = new Set(s.vehicles.map((v) => v.id));
+      s.tick();
+      for (const v of s.vehicles) {
+        ids.add(v.id);
+        expect(net.routes[v.cur.route]!.cls).toBe("primary");
+        expect(v.dwell).toBe(0); // never standing to turn back
+      }
+      const now = new Set(s.vehicles.map((v) => v.id));
+      for (const id of before) if (!now.has(id)) left++;
+    }
+    expect(left).toBeGreaterThan(3); // off the primary street's ends, onto the residential ones
+    expect(ids.size).toBeGreaterThan(left); // and new ones come in
+    expect(s.vehicles.length).toBeGreaterThan(0);
+  });
+
+  it("turns a train back at a terminus still", () => {
+    const net = new RouteNetwork(parseRoutes(town()));
+    const s = new TrafficSim(net, { seed: 5, metersPerCell: MPC, level: "drive", kinds: ["cablecar"], density: 20, routes: (r) => r.net === "rail" });
+    s.setFocus(25, 20, 40);
+    let stood = 0;
+    for (let i = 0; i < 30 * 60; i++) {
+      s.tick();
+      if (s.vehicles.some((v) => v.dwell > 0)) stood++;
+    }
+    expect(stood).toBeGreaterThan(0);
+    expect(s.vehicles.length).toBeGreaterThan(0);
+  });
+});
+
 describe("vehicle voxel sizes (D-064)", () => {
   it("keep a car legible, buses as wide as cars, and ferries in proportion", () => {
     const drive = levelScale(25, "drive", { heightStretch: 1.5 });

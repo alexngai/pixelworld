@@ -1,4 +1,5 @@
 import { landmarkName } from "@pixelworlds/game/src/places";
+import type { VehicleNet } from "../../index";
 import {
   CELL_ROAD,
   CELL_TREES,
@@ -244,6 +245,8 @@ export interface RtsWorldNet {
   light: number | null;
   /** What the page's side sees (D-127): to its players and the spectators watching it, or everything for those watching all. Absent for a page not yet in the match. */
   view?: RtsSnap;
+  /** The level's cars round the map, in every `TRAFFIC.every`th shared snapshot (D-126). */
+  cars?: VehicleNet[];
 }
 
 /** A landmark held: who holds it, and who is taking it and how far (0–1). */
@@ -670,3 +673,19 @@ export function distToBuilding(p: Point, b: { x: number; y: number; size: number
   const dy = Math.max(b.y - p.y, 0, p.y - (b.y + size));
   return Math.hypot(dx, dy);
 }
+
+// ---------------------------------------------------------------- the level's traffic (D-126)
+
+/**
+ * The level's cars, run by the server (D-126): on its big roads (`roads`: the
+ * motorway up to the Golden Gate Bridge and the trunk road by the bay), at
+ * `density` of a page's own traffic, over the map and `margin` cells round
+ * it, so they come and go out of the way. Every `every`th shared snapshot has
+ * them (five a second), and a page draws them `delay` behind on the server's
+ * clock (a snapshot apart, and a margin). A unit waits to step onto a car's
+ * cell (`RtsGame.traffic`).
+ */
+export const TRAFFIC = { roads: ["motorway", "trunk"], density: 0.5, margin: 10, every: 2, delay: DELAY + 0.1 };
+
+/** Where the server's cars are sent for: the map, and `TRAFFIC.margin` cells round it. */
+export const trafficArea = (map = MAP) => ({ x0: map.x0 - TRAFFIC.margin, y0: map.y0 - TRAFFIC.margin, w: map.w + 2 * TRAFFIC.margin, h: map.h + 2 * TRAFFIC.margin });
