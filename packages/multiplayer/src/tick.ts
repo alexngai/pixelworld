@@ -52,6 +52,8 @@ interface Seat<I, J> {
   /** The page's lag (how much later than now it shows the others), at its smallest lately; and whether it is behind that now. */
   base: number | null;
   behind: boolean;
+  /** Server time of its last step. */
+  stepped: number;
 }
 
 /** How much a player's smallest lag may creep up an input (s): a route that got slower for good becomes its new normal in a few seconds. */
@@ -205,7 +207,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
   addBot(id: string, join: J, drive: () => I): boolean {
     if (this.seats.has(id) || this.pending.has(id)) return false;
-    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, drive, base: null, behind: false };
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, drive, base: null, behind: false, stepped: this.time };
     this.seats.set(id, seat);
     if (this.added(id, join) !== null) return true;
     this.seats.delete(id);
@@ -247,6 +249,17 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     return [...this.seats].filter(([, s]) => s.role === "spectator").map(([id]) => id);
   }
 
+  /**
+   * Seconds since a player's last input was stepped (D-119): its page went
+   * quiet (a hidden tab, a stalled connection) and its vehicle stands where
+   * it was. The game's policy: mark it stalled (the race lets the others
+   * drive through it), or drive it on. 0 for a bot; 0 for an unknown id.
+   */
+  idleFor(id: string): number {
+    const seat = this.seats.get(id);
+    return seat && !seat.drive ? this.time - seat.stepped : 0;
+  }
+
   /** The last of a player's inputs stepped. */
   ackOf(id: string): number {
     return this.seats.get(id)?.ack ?? 0;
@@ -280,6 +293,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
         seat.budget--;
         const next = seat.queue.shift()!;
         seat.ack = next.seq;
+        seat.stepped = this.time;
         if (next.seen !== null) {
           const lag = this.time - next.seen;
           seat.base = seat.base === null ? lag : Math.min(seat.base + LAG_CREEP, lag);
@@ -301,7 +315,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   private admit(id: string, join: J): void {
     this.pending.delete(id);
-    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, base: null, behind: false };
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, base: null, behind: false, stepped: this.time };
     this.seats.set(id, seat);
     const role = this.added(id, join);
     if (role === null) {
@@ -392,14 +406,25 @@ export class Phases<P extends string> {
 
 // ---------------------------------------------------------------- where things were
 
-/** A point: cells across, height in steps (as a `Pose`'s). */
+/** A point: cells across, height in steps (as a `Pose`'s); and which way it faces, where that matters (oriented contact). */
 export interface Place {
   x: number;
   y: number;
   h: number;
+  heading?: number;
 }
 
-/** Where something was, by server time, a few seconds back: to test a shot against where its shooter saw the target (lag compensation). */
+/** Where a place's copy is kept: its heading only when it has one. */
+const placeOf = (p: Place): Place => (p.heading === undefined ? { x: p.x, y: p.y, h: p.h } : { x: p.x, y: p.y, h: p.h, heading: p.heading });
+
+/**
+ * Where something was, by server time, a few seconds back: to test a shot
+ * against where its shooter saw the target (lag compensation), or a car's
+ * bump against where its driver saw the others (D-119). Recorded with what
+ * the pages get (each shared snapshot), a rewind falls between the same
+ * samples their `Smoothing` draws between, and a heading turns the same
+ * short way round.
+ */
 export class History {
   private readonly at_: (Place & { t: number })[] = [];
 
@@ -407,20 +432,23 @@ export class History {
   constructor(private readonly keep: number) {}
 
   record(t: number, p: Place): void {
-    this.at_.push({ t, x: p.x, y: p.y, h: p.h });
+    this.at_.push({ t, ...placeOf(p) });
     while (this.at_.length && t - this.at_[0]!.t > this.keep) this.at_.shift();
   }
 
   /** Where it was at t: between the two records around it; the oldest before them; `now` after the newest. */
   at(t: number, now: Place): Place {
     const hs = this.at_;
-    if (!hs.length || t >= hs[hs.length - 1]!.t) return { x: now.x, y: now.y, h: now.h };
-    if (t <= hs[0]!.t) return hs[0]!;
+    if (!hs.length || t >= hs[hs.length - 1]!.t) return placeOf(now);
+    if (t <= hs[0]!.t) return placeOf(hs[0]!);
     let i = hs.length - 1;
     while (hs[i - 1]!.t > t) i--;
     const [a, b] = [hs[i - 1]!, hs[i]!];
     const f = (t - a.t) / (b.t - a.t);
-    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, h: a.h + (b.h - a.h) * f };
+    const p: Place = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, h: a.h + (b.h - a.h) * f };
+    // the short way round, as Smoothing turns
+    if (a.heading !== undefined && b.heading !== undefined) p.heading = a.heading + Math.atan2(Math.sin(b.heading - a.heading), Math.cos(b.heading - a.heading)) * f;
+    return p;
   }
 
   /** A jump (a respawn): don't rewind across it. */
