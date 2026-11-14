@@ -224,6 +224,9 @@ export interface RtsWorldNet {
   razed: number[];
   /** The landmarks to hold, and who holds them (D-125): famous, so no fog hides them. */
   marks: MarkNet[];
+  /** Night now, and when the light next changes (server time) (D-125). */
+  night: boolean;
+  light: number | null;
 }
 
 /** A landmark held: who holds it, and who is taking it and how far (0–1). */
@@ -507,6 +510,17 @@ export interface Objective {
   x: number;
   y: number;
 }
+
+/** Day and night (D-125): `day` seconds of day, then `night` of night, from the match's start; units see `sight` as far by night (buildings are lit, and see as by day). */
+export const DAY = { day: 240, night: 90, sight: 0.6 };
+/** Whether it is night `t` seconds into a match. */
+export const isNight = (t: number): boolean => t % (DAY.day + DAY.night) >= DAY.day;
+/** When the light next changes, `t` seconds into a match (seconds into it). */
+export const nextLight = (t: number): number => {
+  const cycle = DAY.day + DAY.night;
+  const into = t % cycle;
+  return t - into + (into < DAY.day ? DAY.day : cycle);
+};
 
 /** A blow struck from a step or more above its target lands this much harder. */
 export const HIGH_GROUND_DAMAGE = 1.3;

@@ -34,6 +34,9 @@ import {
   fogCells,
   sideSight,
   type Eye,
+  DAY,
+  GARRISON,
+  OBJECTIVE,
 } from "./rules";
 
 /**
@@ -646,6 +649,9 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   function see(t: number): void {
     const shown = client.seen(t);
     if (shown !== null && Math.abs(shown - weather.time) > 1 / 12) weather.set({ time: shown });
+    // night falls (the style's night palette: lit windows), and day breaks
+    const night = world?.night ?? false;
+    if (view.palette !== (night ? "night" : "day")) view.palette = night ? "night" : "day";
     if (!snap || !side || t - sightAt < 0.25) return;
     sightAt = t;
     // a new match: nothing seen yet
@@ -654,11 +660,18 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       explored.fill(0);
     }
     if (fog && shown !== null && t - fogAt > 2) {
-      fogCover = fogCells(grid, (x, y, h) => fog.at(x, y, h, shown), fogCover ?? undefined);
+      fogCover = fogCells(grid, (x, y, h) => fog.at(x, y, h, shown, night), fogCover ?? undefined);
       fogAt = t;
     }
+    const dark = night ? DAY.sight : 1;
     const eyes: Eye[] = [];
-    for (const u of snap.units) if (u.s === side) eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight });
+    for (const u of snap.units) {
+      if (u.s !== side) continue;
+      const s = u.in === undefined ? undefined : structures.get(u.in);
+      if (s) eyes.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - (view.query.heightAt(s.x, s.y) ?? 0) + 0.5), radius: (UNITS[u.k].sight + GARRISON.sight) * dark });
+      else eyes.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.k].sight * dark });
+    }
+    for (const m of world?.marks ?? []) if (m.owner === side) eyes.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });
     for (const b of snap.buildings)
       if (b.s === side) eyes.push({ x: b.x + BUILDINGS[b.k].size / 2, y: b.y + BUILDINGS[b.k].size / 2, up: BUILDING_EYE[b.k] * Math.max(0.3, b.b), radius: BUILDINGS[b.k].sight });
     sideSight(grid, eyes, fogCover, sight);
@@ -800,7 +813,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
           ? "the bot is coming…"
           : "waiting for a second side (alone, the bot comes in 20 s)"
         : m.phase === "playing"
-          ? `playing · ${left === null ? "" : clock(left)}`
+          ? `playing · ${left === null ? "" : clock(left)}${world?.light != null && shown !== null ? ` · ${world.night ? "night" : "day"}, ${world.night ? "dawn" : "dusk"} in ${clock(Math.max(0, world.light - shown))}` : ""}`
           : `${m.winner ? `${nameOf(m.winner)} won` : "over"} · next in ${Math.ceil(left ?? 0)}`;
     const foe: PlayerNet | undefined = world?.players.find((p) => p.side !== side);
     const mineNow = [...units.values()].filter((u) => u.s === side);

@@ -41,6 +41,8 @@ import {
   OBJECTIVE,
   type MarkNet,
   type Objective,
+  DAY,
+  isNight,
 } from "./rules";
 
 /**
@@ -159,8 +161,13 @@ export class RtsGame {
   readonly sees: Record<Team, Float32Array>;
   private fog: Float32Array | null = null;
   private ticks = 0;
-  /** The world's fog now, at a point and a height (the room gives it its clock), or null where there is none. */
-  fogAt: ((x: number, y: number, h: number) => number) | null = null;
+  /** The world's fog now, at a point and a height, by night or day (the room gives it its clock), or null where there is none. */
+  fogAt: ((x: number, y: number, h: number, night: boolean) => number) | null = null;
+
+  /** Whether it is night in the match now (D-125). */
+  get night(): boolean {
+    return isNight(this.time);
+  }
   private readonly known: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
   /** Paths found this tick (`walk`). */
   private searches = 0;
@@ -431,7 +438,9 @@ export class RtsGame {
   /** Who sees what: each side's units and buildings, within their sight. */
   private see(): void {
     const tick = this.ticks++;
-    if (this.fogAt && tick % SIGHT.fogEvery === 0) this.fog = fogCells(this.grid, this.fogAt, this.fog ?? undefined);
+    const fogAt = this.fogAt;
+    const night = this.night;
+    if (fogAt && tick % SIGHT.fogEvery === 0) this.fog = fogCells(this.grid, (x, y, h) => fogAt(x, y, h, night), this.fog ?? undefined);
     if (!this.fogAt) this.fog = null;
     if (tick % SIGHT.every === 0) for (const team of TEAMS) sideSight(this.grid, this.eyes(team), this.fog, this.sees[team]);
     for (const team of TEAMS) {
@@ -450,12 +459,13 @@ export class RtsGame {
   /** A side's eyes: its units', and its buildings' from their roofs. */
   eyes(team: Team): Eye[] {
     const out: Eye[] = [];
+    const dark = this.night ? DAY.sight : 1;
     for (const u of this.units.values()) {
       if (u.team !== team) continue;
       const s = u.inside === null ? undefined : this.structures.get(u.inside);
       // from a building's roof: higher, and further
-      if (s) out.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(this.grid, s.x, s.y) + 0.5), radius: UNITS[u.kind].sight + GARRISON.sight });
-      else out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight });
+      if (s) out.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(this.grid, s.x, s.y) + 0.5), radius: (UNITS[u.kind].sight + GARRISON.sight) * dark });
+      else out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight * dark });
     }
     for (const b of this.buildings.values()) if (b.team === team) out.push({ ...mid(b), up: BUILDING_EYE[b.kind] * Math.max(0.3, b.built), radius: BUILDINGS[b.kind].sight });
     for (const m of this.marks) if (m.owner === team) out.push({ x: m.x, y: m.y, up: OBJECTIVE.eye, radius: OBJECTIVE.sight });

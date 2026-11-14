@@ -24,6 +24,7 @@ import {
   type RtsSnap,
   type RtsWorldNet,
   type Team,
+  nextLight,
 } from "./rules";
 
 /**
@@ -124,7 +125,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       this.game = new RtsGame({ ...g, flags: g.flags.slice(), top: g.top.slice(), building: new Int32Array(g.building.length) });
       const fog = this.world.fog;
       // the fog on the room's clock: the pages draw it at the server time they show
-      if (fog) this.game.fogAt = (x, y, h) => fog.at(x, y, h, this.time);
+      if (fog) this.game.fogAt = (x, y, h, night) => fog.at(x, y, h, this.time, night);
     }
     const free = TEAMS.find((t) => ![...this.sides.values()].includes(t));
     if (!free || (this.bot && id !== BOT)) {
@@ -238,7 +239,15 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
       players: [...this.sides].map(([id, side]) => ({ id, name: this.joinOf(id)?.name ?? TEAM_NAMES[side], side, ...(id === BOT ? { bot: true as const } : {}) })),
       razed: this.game?.razed ?? [],
       marks: this.game?.marksNet() ?? [],
+      ...this.light(),
     };
+  }
+
+  /** Night now, and when the light changes next on the server's clock: by the match's own time, while it is played. */
+  private light(): { night: boolean; light: number | null } {
+    const g = this.game;
+    if (!g || this.match.phase !== "playing") return { night: false, light: null };
+    return { night: g.night, light: this.time + (nextLight(g.time) - g.time) };
   }
 
   /** What the player's side sees. */

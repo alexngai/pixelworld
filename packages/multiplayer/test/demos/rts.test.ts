@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RtsGame, parseCommand } from "../../src/demos/rts/game";
 import {
   BUILDINGS,
+  DAY,
   GATHER,
   LAYOUT,
   MAP,
@@ -27,6 +28,8 @@ import {
   buildGrid,
   fogCells,
   holds,
+  isNight,
+  nextLight,
   razeCells,
   seesUnit,
   sideSight,
@@ -630,6 +633,24 @@ describe("Fogfront's sight from the level (D-125)", () => {
     expect(seesUnit(g, clear, 6.5, 1.5)).toBe(true);
     expect(seesUnit(g, thick, 6.5, 1.5)).toBe(false);
     expect(seesUnit(g, thick, 3.5, 1.5)).toBe(true); // 6 × 0.4 cells still
+  });
+
+  it("night falls on the match's clock, and units see less by it; buildings, lit, see as by day", () => {
+    expect([isNight(0), isNight(DAY.day - 1), isNight(DAY.day + 1), isNight(DAY.day + DAY.night + 1)]).toEqual([false, false, true, false]);
+    expect([nextLight(10), nextLight(DAY.day + 5)]).toEqual([DAY.day, DAY.day + DAY.night]);
+    const game = new RtsGame(open(40, 16), { hearths: { kiln: [2, 2], tide: [35, 12] }, seeps: [] });
+    const r = unitsOf(game, "kiln")[0]!;
+    const foe = unitsOf(game, "tide")[0]!;
+    Object.assign(r, { x: 20.5, y: 8.5 });
+    Object.assign(foe, { x: 25.5, y: 8.5 }); // 5 cells: in a runner's sight (6) by day, not by night (3.6)
+    run(game, SIGHT.every * TICK);
+    expect(game.view("kiln").units.some((u) => u.i === foe.id)).toBe(true);
+    game.time = DAY.day + 1;
+    expect(game.night).toBe(true);
+    Object.assign(foe, { x: 25.5, y: 8.5 });
+    Object.assign(r, { x: 20.5, y: 8.5 });
+    run(game, SIGHT.every * TICK);
+    expect(game.view("kiln").units.some((u) => u.i === foe.id)).toBe(false);
   });
 
   it("a blow from a step or more above lands harder", () => {
