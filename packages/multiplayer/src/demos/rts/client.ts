@@ -249,6 +249,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     layers: [veil, weather],
   });
   const hud = makeHud();
+  // a watcher builds and trains nothing: no buttons for it
+  if (opts.watch) document.querySelector<HTMLElement>(".rts-bar")?.style.setProperty("display", "none");
   hud.status("joining…");
   let room: Room;
   try {
@@ -275,6 +277,14 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   let side: Team | null = null;
   let shows: Watch | null = null;
   const units = new Map<number, UnitNet>();
+  /**
+   * The newest shared snapshot not taken yet: the next frame takes it, and
+   * what the side sees in it (its group's, D-127), before the page's own,
+   * which says which orders that has. The room gives what came before the
+   * page listened at once, inside `TickClient`'s constructor, before the
+   * rest of this function has run.
+   */
+  let incoming: (RtsWorldNet & { t: number }) | null = null;
 
   const client: TickClient<never, object, RtsWorldNet, RtsEvent> = new TickClient(room, {
     tick: TICK,
@@ -283,10 +293,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     restore: (s) => {
       for (const n of [...pending.keys()]) if ((s.cmd ?? 0) >= n) pending.delete(n);
     },
-    onWorld: (w) => {
-      takeWorld(w);
-      if (w.view) takeSnap({ ...w.view, t: w.t });
-    },
+    onWorld: (w) => void (incoming = w),
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
@@ -721,6 +728,12 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   view.onFrame(({ realDt }) => {
     const t = now();
+    if (incoming) {
+      const w = incoming;
+      incoming = null;
+      takeWorld(w);
+      if (w.view) takeSnap({ ...w.view, t: w.t });
+    }
     client.sync();
     see(t);
     drawUnits(t);
