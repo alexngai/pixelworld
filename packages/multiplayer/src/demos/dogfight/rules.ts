@@ -1,6 +1,7 @@
 import type { PlaneWorld } from "@pixelworlds/game/src/ground";
 import { axes, flyPlane, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "@pixelworlds/game/src/plane";
 import { PLANE } from "@pixelworlds/game/src/tuning";
+import { Schema, angle, exact, fixed, int } from "../../codec";
 
 /**
  * The dogfight's rules and messages, the same on the server (server.ts, a
@@ -122,18 +123,36 @@ export function passes(a: Point, b: Point, p: Point): number {
 // ---------------------------------------------------------------- messages (the page's are `TickMessage<DogfightInput>`)
 
 /** A plane in the shared snapshot: where it is drawn (its nose's yaw, the drawn pitch, its roll), its score, and which life it is on. */
-export interface PlaneNet extends Point {
-  id: string;
-  name: string;
+/** A plane as replicated (D-123): where it is drawn, its heading, pitch and roll, health and life. */
+export interface PlaneWire extends Point {
   hd: number;
   p: number;
   r: number;
   hp: number;
-  kills: number;
-  deaths: number;
   /** Its deaths: a new life is drawn where it respawned at once, not slid there. */
   life: number;
+}
+
+/** A plane on the wire: to a 64th of a cell across, a 32nd of a step up, its angles in 1024ths of a turn. */
+export const PLANE_WIRE = new Schema<PlaneWire>({ x: fixed(1 / 64), y: fixed(1 / 64), h: fixed(1 / 32), hd: angle(1024), p: angle(1024), r: angle(1024), hp: int, life: int });
+
+/** Each pilot's name and score, sent when they change (`TickRoom.roster`, D-123). */
+export interface DogfightRoster {
+  pilots: Record<string, { name: string; kills: number; deaths: number; bot?: boolean }>;
+}
+
+/** A plane as the page has it: its replicated state and its roster entry. */
+export interface PlaneNet extends PlaneWire {
+  id: string;
+  name: string;
+  kills: number;
+  deaths: number;
   bot?: boolean;
+}
+
+/** The planes a page has (their replicated states) with their names and scores. */
+export function planesOf(states: ReadonlyMap<string, PlaneWire>, roster: DogfightRoster["pilots"]): PlaneNet[] {
+  return [...states].map(([id, s]) => ({ id, ...s, name: "Pilot", kills: 0, deaths: 0, ...roster[id] }));
 }
 
 /**
@@ -148,15 +167,35 @@ export type DogfightEvent =
   | { kind: "phase"; phase: MatchPhase; winner: string | null };
 
 /** The shared snapshot: every plane, and the match. */
+/** The shared snapshot's own part, beside the replicated planes. */
 export interface DogfightWorldNet {
-  planes: PlaneNet[];
   match: MatchNet;
 }
 
 /** A player's own snapshot: its plane after its last input stepped. */
-export interface DogfightSnap {
-  you: PlaneState;
-}
+/** A plane's whole state, exactly (D-123): a player's own snapshot, which its prediction puts back as the server has it. */
+export const PLANE_STATE = new Schema<PlaneState>({
+  x: exact,
+  y: exact,
+  h: exact,
+  heading: exact,
+  speed: exact,
+  climb: exact,
+  bank: exact,
+  rollRate: exact,
+  alpha: exact,
+  slip: exact,
+  throttle: exact,
+  yaw: exact,
+  pitch: exact,
+  roll: exact,
+});
+
+/** A player's own snapshot: its plane after its last input stepped (`PLANE_STATE`, in binary). */
+export type DogfightSnap = PlaneState;
+
+/** Only a plane's own fields of a snapshot (not its `k`, `t` and `ack`). */
+export const planeOf = (snap: PlaneState): PlaneState => PLANE_STATE.value(PLANE_STATE.wire(snap));
 
 /** What the lobby lists of a room: the match's phase and the seconds it has left. */
 export interface DogfightInfo {

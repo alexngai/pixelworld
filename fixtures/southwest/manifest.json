@@ -2832,11 +2832,64 @@
     ],
     "sha256": "b1ff4e45e94b03cd9b55769569b2eb204e2446407c278a38ae6638077c461a59"
   },
-  "packageHash": "7370e793c07f308c217e281a08d99740a632e06af68125553bcb40c2ffcdaf69",
+  "packageHash": "7e06f16637ae61180cff8b9a9dfaaa8200191d4ca1b301d83bd6b0a671b99e13",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "cd3fec225d37f6933b369026167bebb686d3086119d3759103df15b98acd1f74",
     "version": 1,
     "count": 5619
+  },
+  "objectChunks": {
+    "version": 1,
+    "path": "objects/{x}_{y}.json.gz",
+    "landmarks": {
+      "path": "objects/landmarks.json.gz",
+      "sha256": "5b214f18390704c6de4d68cf35646274183103fe76e3b38edfbced955598739e",
+      "count": 11
+    },
+    "chunks": [
+      {
+        "x": 2,
+        "y": 5,
+        "sha256": "dd588f1eacf50a8c7bcf1d12f8f686216b034cbd753d1f86cf74400f4c78f3c5",
+        "count": 1411
+      },
+      {
+        "x": 3,
+        "y": 5,
+        "sha256": "e0c6ac3f268034504d77300186fa52b67a41becd161a00e77c1712f376853b7e",
+        "count": 2896
+      },
+      {
+        "x": 2,
+        "y": 6,
+        "sha256": "8342e9015eb0799ed5694985329e19aa4af125eef29f5d32d7cdc8ce66726253",
+        "count": 401
+      },
+      {
+        "x": 3,
+        "y": 6,
+        "sha256": "d453534adab7e11018638304c69d1ee14b30154525047e577491f2db1e3514fb",
+        "count": 1040
+      },
+      {
+        "x": 14,
+        "y": 6,
+        "sha256": "08a558ee54c3f2c7a4dc16d9fbd740df916d17640808fb9a6980f46d261c110b",
+        "count": 164
+      },
+      {
+        "x": 16,
+        "y": 6,
+        "sha256": "41d1a589e4d1b31ce50974eb37758210f19c49472c5c9f29558a31a359928c47",
+        "count": 9
+      }
+    ]
+  },
+  "coarse": {
+    "version": 1,
+    "path": "coarse.i16.gz",
+    "sha256": "e2a46de136d8496f9463bb996bab67303c88c54339fcb7ea64957ca517feb223",
+    "block": 8
   }
 }

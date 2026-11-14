@@ -45,6 +45,7 @@ import type {
 } from "./types";
 import {
   bakeInit,
+  chunkStats,
   loadHeroes,
   loadWorld,
   openTileCache,
@@ -740,8 +741,7 @@ class View implements WorldView {
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
       tilesPending: this.wanted.filter((t) => !this.gpu.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
-      chunksLoaded: this.w.store.loadedCount,
-      chunksTotal: this.w.manifest.chunks.length,
+      ...chunkStats(this.w.store),
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,
       gpuMB: this.gpuBytes / (1024 * 1024),
       avgMeshMs: t.tiles ? t.meshMs / t.tiles : 0,

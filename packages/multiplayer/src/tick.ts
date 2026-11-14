@@ -1,4 +1,6 @@
-import type { TickEvent, TickMessage, TickShared, TickSnapshot } from "./index";
+import type { TickEvent, TickMessage, TickRoster, TickShared, TickSnapshot } from "./index";
+import { Writer, type Schema } from "./codec";
+import { SNAP_BYTE, type Replicator } from "./replica";
 import type { HostedRoom, RoomHost } from "./server";
 
 /** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
@@ -73,7 +75,15 @@ const LAG_CREEP = 0.0005;
  * - **Snapshots,** every `snapshotEvery` ticks: one shared part for every
  *   page (`shared`, serialized once), and to each player its own (`snapshot`,
  *   with `t` and its `ack`). A player whose connection is backed up gets
- *   fewer until it catches up.
+ *   fewer until it catches up. With interest (`groupOf`, D-120), each group
+ *   of pages gets its own shared part, serialized once for the group.
+ * - **Compactly (D-123):** with a `replicator`, the shared snapshot goes in
+ *   binary, keyframes then diffs, near things often and far ones less, and
+ *   `shared(group)` rides along; the `roster` (names, scores) goes when it
+ *   changes.
+ * - **Waiting:** a `step` that returns false hasn't happened (its area is
+ *   loading, D-120): the input stays first in the queue for the next tick,
+ *   spends no credit and isn't acknowledged.
  * - **Events** (`emit`): stamped with the server time, for pages to show when
  *   they show that time of the others (`TickClient.due`).
  * - **Errors:** a throw in the game closes this room (`HostedRoom.fail`), not
@@ -85,6 +95,10 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   readonly tickLength: number;
   /** The game's world, from `ready`: in place before any page is admitted. */
   protected world!: W;
+  /** Set it for the shared snapshot in compact binary (D-123): see `Replicator`. */
+  protected replicator: Replicator<object> | null = null;
+  /** Set it for each player's own snapshot (`snapshot(id)`) in binary, whole (`exact` fields for what its prediction puts back), D-123. */
+  protected snapSchema: Schema<object> | null = null;
   private readonly seats = new Map<string, Seat<I, J>>();
   /** Connected, not admitted: their join (null until their `hello`). */
   private readonly pending = new Map<string, J | null>();
@@ -132,13 +146,27 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
    * One tick of a player with its input: `seen` as its page sent it (`lagOf`
    * makes it a rewind; null for a bot), and `seq` the input's number (its
    * page's, so an effect the page drew at once can be matched to the server's).
+   * False: it can't step yet (its area is loading, D-120), and the input
+   * waits for the next tick.
    */
-  protected abstract step(id: string, input: I, seen: number | null, seq: number): void;
+  protected abstract step(id: string, input: I, seen: number | null, seq: number): void | boolean;
   /** The world's own tick, after the players' steps. */
   protected update(): void {}
-  /** What every page's snapshot shares (the others, the score, the match's phase): serialized once. */
-  protected shared(): object {
+  /** What every page's snapshot shares (the others, the score, the match's phase): serialized once, or once per `group` (D-120). */
+  protected shared(_group?: string): object {
     return {};
+  }
+  /**
+   * Interest (D-120): the group whose shared snapshot a page gets (the
+   * others near it: `Interest.groupOf`), or undefined for the whole one.
+   * Pages in one group share one serialization.
+   */
+  protected groupOf(_id: string): string | undefined {
+    return undefined;
+  }
+  /** Who is in the room and what changes rarely (names, teams, scores), or null: sent to every page when it changes, and to each as it connects (D-123). */
+  protected roster(): object | null {
+    return null;
   }
   /** What one player's own snapshot carries besides `t` and `ack` (its own state, for its prediction). */
   protected snapshot(_id: string): object {
@@ -155,6 +183,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   join(id: string): void {
     this.pending.set(id, null);
+    if (this.rosterText !== null) this.room.send(id, this.rosterMessage!);
   }
 
   leave(id: string): void {
@@ -195,11 +224,12 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   // ---------------------------------------------------------------- for the game
 
-  /** An event to every page (or one), stamped with the server time: pages show it when they show that time of the others. */
-  emit(e: E, to?: string): void {
+  /** An event to every page, one, or some (those near it: `Interest.around`), stamped with the server time: pages show it when they show that time of the others. */
+  emit(e: E, to?: string | readonly string[]): void {
     const m: TickEvent<E> = { k: "ev", t: this.time, e };
     if (to === undefined) this.room.broadcast(m);
-    else this.room.send(to, m);
+    else if (typeof to === "string") this.room.send(to, m);
+    else this.multicast(to, m);
   }
 
   /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
@@ -277,26 +307,97 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
       }
       seat.budget = Math.min(burst, seat.budget + credit);
       while (seat.budget >= 1 && seat.queue.length) {
+        const next = seat.queue[0]!;
+        if (this.step(id, next.i, next.seen, next.seq) === false) break; // it waits, first in line
+        seat.queue.shift();
         seat.budget--;
-        const next = seat.queue.shift()!;
         seat.ack = next.seq;
         if (next.seen !== null) {
           const lag = this.time - next.seen;
           seat.base = seat.base === null ? lag : Math.min(seat.base + LAG_CREEP, lag);
           seat.behind = lag - seat.base > behind;
         }
-        this.step(id, next.i, next.seen, next.seq);
       }
     }
     this.update();
     if (this.ticks % (this.opts.snapshotEvery ?? 3)) return;
+    this.sendRoster();
     // a backed-up player gets every `behindEvery`th snapshot
     const everyone = ++this.snapshots % (this.opts.behindEvery ?? 10) === 0;
     const skip = new Set([...this.seats].filter(([, s]) => s.behind && !everyone).map(([id]) => id));
-    this.room.broadcast({ k: "world", t: this.time, ...this.shared() } satisfies TickShared, skip);
+    this.sendShared(skip);
     for (const [id, seat] of this.seats)
-      if (seat.role === "player" && !seat.drive && !skip.has(id))
-        this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+      if (seat.role === "player" && !seat.drive && !skip.has(id)) {
+        if (!this.snapSchema) {
+          this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+          continue;
+        }
+        const w = new Writer();
+        w.byte(SNAP_BYTE);
+        w.uint(this.ticks);
+        w.uint(seat.ack);
+        this.snapSchema.writeFull(w, this.snapSchema.wire(this.snapshot(id)));
+        this.room.send(id, w.done());
+      }
+  }
+
+  /**
+   * The shared snapshot: once to everyone, or with interest once per group,
+   * and the whole to pages in none (waiting to be admitted, or as the game
+   * says). Not to the `skip`ped.
+   */
+  private sendShared(skip: ReadonlySet<string>): void {
+    if (this.replicator) {
+      const groups = new Map<string | undefined, string[]>();
+      for (const id of this.room.players()) {
+        if (skip.has(id)) continue;
+        const seat = this.seats.get(id);
+        const g = seat && !seat.drive ? this.groupOf(id) : undefined;
+        const ids = groups.get(g);
+        if (ids) ids.push(id);
+        else groups.set(g, [id]);
+      }
+      return this.replicator.send(this.ticks, groups, (g) => this.shared(g), (data, to) => this.multicast(to, data));
+    }
+    const world = (group?: string) => ({ k: "world", t: this.time, ...this.shared(group) }) satisfies TickShared;
+    const groups = new Map<string, string[]>();
+    for (const [id, seat] of this.seats) {
+      const g = seat.drive || skip.has(id) ? undefined : this.groupOf(id);
+      if (g === undefined) continue;
+      const ids = groups.get(g);
+      if (ids) ids.push(id);
+      else groups.set(g, [id]);
+    }
+    if (!groups.size) return this.room.broadcast(world(), skip);
+    const grouped = new Set([...groups.values()].flat());
+    if (this.room.players().some((id) => !grouped.has(id) && !skip.has(id))) this.room.broadcast(world(), new Set([...skip, ...grouped]));
+    for (const [g, ids] of groups) this.multicast(ids, world(g));
+  }
+
+  /** To some pages, serialized once: the room's `sendTo`, or a broadcast with the rest excepted. */
+  private multicast(ids: readonly string[], data: unknown): void {
+    if (this.room.sendTo) this.room.sendTo(ids, data);
+    else this.room.broadcast(data, this.allBut(ids));
+  }
+
+  private rosterText: string | null = null;
+  private rosterMessage: TickRoster | null = null;
+
+  /** The roster, to every page, when it changed. */
+  private sendRoster(): void {
+    const r = this.roster();
+    if (r === null) return;
+    const text = JSON.stringify(r);
+    if (text === this.rosterText) return;
+    this.rosterText = text;
+    this.rosterMessage = { k: "roster", t: this.time, ...r };
+    this.room.broadcast(this.rosterMessage);
+  }
+
+  /** Every page in the room but these. */
+  private allBut(ids: readonly string[]): Set<string> {
+    const keep = new Set(ids);
+    return new Set(this.room.players().filter((id) => !keep.has(id)));
   }
 
   private admit(id: string, join: J): void {
