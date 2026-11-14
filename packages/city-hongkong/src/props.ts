@@ -156,4 +156,69 @@ export const boat: Generator = ({ rand, ramp, ramps, param }) => {
   return m;
 };
 
-export const PROP_GENERATORS: Record<string, Generator> = { neonSign, boat };
+/**
+ * A street market's stalls (D-134), down the middle of a market street (the
+ * Ladies' Market, Temple Street, Chun Yeung Street): two rows back to back,
+ * each stall its own tarpaulin over a table of goods, the aisles either side
+ * left clear. Placed across the road (`streetProps` with `across: true`), so
+ * the model's x runs from one building line (x = 0) to the other (x = span)
+ * and its y along the street; its stalls fill the length, a voxel's gap
+ * between them. Some stalls hang goods (clothes, bags) along a rail under the
+ * canopy's edge; bare bulbs are strung along the tarpaulins' aisle edges, so
+ * the market glows at night.
+ * params: span (voxels between the building lines; 24), length (voxels along
+ * the street; 18), depth (a row's depth; 4), height (the canopy's; 6).
+ * roles: canopy.* (tarpaulins), goods.* (what's on the tables and the rails),
+ * table, frame (posts and rails), lamp (the bulbs, lit at night).
+ */
+export const marketStalls: Generator = ({ rand, ramp, ramps, param }) => {
+  const S = Math.max(10, Math.round(param("span", 24)));
+  const L = Math.max(6, Math.round(param("length", 18)));
+  const D = Math.max(2, Math.min(Math.round(param("depth", 4)), Math.floor(S / 2) - 2));
+  const H = Math.max(4, Math.round(param("height", 6)));
+  const m = new VoxelModel(S, L, H + 1);
+  const pick = (role: string) => {
+    const ids = ramps(role);
+    return m.material(ids.length ? ids[Math.floor(rand() * ids.length)]! : ramp(role));
+  };
+  const table = m.material(ramp("table"));
+  const frame = m.material(ramp("frame"));
+  const lamp = m.material(ramp("lamp"));
+  const mid = Math.floor(S / 2);
+  for (const [x0, x1, out] of [
+    [mid - D, mid, -1],
+    [mid, mid + D, 1],
+  ] as const) {
+    let y = 0;
+    while (y < L) {
+      const len = Math.min(L - y, 4 + Math.floor(rand() * 3));
+      const canopy = pick("canopy");
+      const hangs = rand() < 0.4;
+      for (let yy = y; yy < y + len - 1; yy++) {
+        for (let x = x0; x < x1; x++) {
+          const edge = out < 0 ? x === x0 : x === x1 - 1; // the aisle's side
+          m.set(x, yy, 1, table);
+          if (!edge) m.set(x, yy, 2, rand() < 0.75 ? pick("goods") : table);
+          // the tarpaulin, a voxel lower over the aisle, bare bulbs strung along that edge
+          m.set(x, yy, edge ? H - 1 : H, edge && (yy - y) % 2 === 1 ? lamp : canopy);
+          // goods hung along a rail under the canopy's edge, a post at each end of the stall
+          if (edge) {
+            const post = yy === y || yy === y + len - 2;
+            for (let z = 0; z < H - 1; z++) {
+              if (post) m.set(x, yy, z, frame);
+              else if (hangs && z >= H - 3) m.set(x, yy, z, pick("goods"));
+            }
+          }
+        }
+        // the inner posts hold the tarpaulin's high side up
+        const inner = out < 0 ? x1 - 1 : x0;
+        if (yy === y || yy === y + len - 2) for (let z = 0; z < H; z++) m.set(inner, yy, z, frame);
+        else for (let z = 3; z < H; z++) m.set(inner, yy, z, frame);
+      }
+      y += len;
+    }
+  }
+  return m;
+};
+
+export const PROP_GENERATORS: Record<string, Generator> = { neonSign, boat, marketStalls };

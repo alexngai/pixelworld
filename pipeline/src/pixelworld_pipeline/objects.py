@@ -1246,7 +1246,8 @@ def type_buildings(
 def _ground_features(region: Region, found: list[dict], feats: list[dict], classes: list[str]):
     """The land-use class (Overture's, of `classes`) under each building's
     centroid, as the feature `ground` (`grounds:` rules, D-100): a temple's or
-    a shrine's grounds (OSM's landuse=religious), a cemetery."""
+    a shrine's grounds (OSM's landuse=religious), a cemetery; and the land's
+    name as `groundName` (`groundHas:`, D-134): a housing estate's."""
     from .ground import project_rows
 
     rows = plugins.source(region, "features").land_use(tuple(region.lonlat_envelope()), classes)
@@ -1254,12 +1255,15 @@ def _ground_features(region: Region, found: list[dict], feats: list[dict], class
     if not polys:
         return
     kinds = [str(r.get("class") or "") for r in rows]
+    names = [str((r.get("names") or {}).get("primary") or "") for r in rows]
     tree = shapely.STRtree(polys)
     has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
     pts = shapely.points([found[i]["_c"] for i in has])
     hit, poly = tree.query(pts, predicate="within")
     for k, j in zip(hit.tolist(), poly.tolist(), strict=True):
         feats[has[k]]["ground"] = kinds[j]
+        # the land's name: a housing estate's (`groundHas:` rules, D-134)
+        feats[has[k]]["groundName"] = names[j]
     n = len(set(hit.tolist()))
     progress.log(f"typology grounds: {n} buildings in {len(polys)} areas of {classes}")
 

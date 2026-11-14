@@ -76,6 +76,11 @@ objects:
   # wins. The boxes are sources.facts.
   typology:
     rules:
+      # Hong Kong's public housing: the blocks on an estate's land, which OSM
+      # names for the estate (邨); and the temples, Man Mo, Tin Hau, Hung Shing
+      # and Pak Tai, by name (D-134)
+      - { group: building.estate, from: [building.tower, building.residential, building.commercial], grounds: [residential], groundHas: ["邨"] }
+      - { group: building.temple, from: [building.residential, building.commercial, building.parking], nameHas: ["Temple"], kinds: ["", temple, religious] }
       # towers of 25 storeys and up: flats where OSM says so, and in the old
       # districts and the Mid-Levels every narrow one (the pencil towers);
       # glass elsewhere
@@ -122,6 +127,12 @@ objects:
     - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1400, 22.2840, 114.1560, 22.2885] }
     - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1925, 22.2860, 114.2040, 22.2915] }
     - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.2250, 22.2775, 114.2320, 22.2820] }
+    # market stalls down the middle of the market streets, under tarpaulins
+    # and strung bulbs (D-134)
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Graham Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Chun Yeung Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Marble Road", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Stanley New Street", across: true, spacing: 11 }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks: [two-international-finance-centre, bank-of-china-tower, central-plaza, hong-kong-convention-and-exhibition-centre, hopewell-centre]
   landmarkDepiction: generic

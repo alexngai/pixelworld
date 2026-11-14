@@ -248,7 +248,8 @@ def rivers(
     )
 
 
-AREA_COLUMNS = ["id", "subtype", "class", "geometry"]
+# names: a housing estate's name on its land (typology `groundHas`, D-134)
+AREA_COLUMNS = ["id", "subtype", "class", "names", "geometry"]
 
 
 def _areas(

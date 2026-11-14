@@ -141,6 +141,7 @@ Status values:
 | D-117 | Hong Kong Island's walking level: the whole island on open data, its woods left to the client's scatter | Accepted (M5) |
 | D-132 | Hong Kong's hills smooth: GLO-30's 30 m pixels interpolated onto finer cells, not spread flat | Accepted (M5) |
 | D-133 | Hong Kong's details: double-deckers, boats in the typhoon shelters, open ridges, concrete slopes, more neon and landmarks, and the harbour's driving level | Accepted (M5) |
+| D-134 | Hong Kong's night, cloud, markets, estates, signs and temples | Accepted (M5) |
 
 ---
 
@@ -1996,3 +1997,22 @@ The point is more room for visual interest; both halves are wanted.
   - **The Kowloon walking level in the driving level's list beside the island's:** two walks in one list; the game picks levels by kind.
   - **Cylinder towers from Tokyo's pack (`cylinderTower`):** the hongkong pack would load a second city's generators for one tower; core's `column` draws it.
 - **Later:** towers on podiums; the escalator; the HSBC building, the Peak Tower, Jardine House and The Center; green and red minibuses; a flying level; more junks on routes rather than at anchor.
+
+### D-134: Hong Kong's night, cloud, markets, estates, signs and temples (accepted, M5)
+- **Why:** the owner asked what would make Hong Kong more iconic and unique, chose the night skyline, low cloud and the street markets, then the estates, the vertical signs and rooftop clutter, and the temples.
+- **What:**
+  - **Night:** a ramp `led-white`, steel by day and white light at night, as the structure of the landmark towers (the Bank of China Tower's frame, the ICC's and Two IFC's fins, Central Plaza's) and the Convention Centre's wall joints; Hopewell Centre's ring lit. The engine has no palette cycling, so the lights are still. The pack holds 42 ramps at most (256 colours); cyan and gold LEDs would have needed two more.
+  - **Cloud:** the engine's fog fills from the ground up to a ceiling (D-063); there is no cloud base. One area hugging the island's ridge from High West to Mount Parker, its ceiling over the Peak, puts drifting mist on the hilltops and leaves the Mid-Levels and the town clear.
+  - **Markets** (`marketStalls`, `prop.market`): two rows of stalls back to back down the middle of a market street, under tarpaulins, goods on the tables and hung from rails, bulbs strung along the aisle edges. Street rows pick the streets by name; they may now line `pedestrian` streets too, which is what Overture calls most market streets. Tung Choi Street (the Ladies' Market), Temple Street and Fa Yuen Street in Kowloon; Graham Street, Chun Yeung Street, Marble Road and Stanley New Street on the island.
+  - **Estates** (`estateTower`, `building.estate`): OSM names an estate's blocks "… House"; the estate's name (邨) is on its land. The typology now reads the land-use area's name under a building (`groundName`) and matches text in it (`groundHas`, with `grounds`), and a building's own name (`nameHas`). Land-use rows carry their names (`AREA_COLUMNS`), which changes their cache key.
+  - **Vertical signs and rooftop billboards** (`compositeTower`'s `vertical` and `rooftop`): painted flush up the front, and standing on the roof's front edge over a steel base, every column on the parapet, so the building rules hold.
+  - **Temples** (`chineseTemple`, `building.temple`): by `nameHas: ["Temple"]` and an empty, temple or religious kind, from the generic groups (so building parts are typed: Man Mo Temple's halls are parts). At most 18 voxels tall, as a temple's district may give it a tower's typical height.
+  - The estate and temple generators were written by two helpers in parallel, each only in its own files with its own tests, then wired in.
+- **Measured** (builds of 2026-11-13): the island 428 estate blocks, 10 temple halls, 109 stalls (26 on Graham Street, 72 in North Point, 11 in Stanley), 52,513 objects; Kowloon 77 estate blocks (private 新邨 estates match too), 2 temples, 312 stalls; the driving level 1,770 estate blocks and 17 temple halls. Road reports clean; sizes unchanged (6.6, 1.2 and 3.5 MB).
+- **Looked at:** the models in the preview (the temple by day and night; estates in stripes, bands and panels; stalls with their bulbs at night; signs and billboards at night); the island's mist on the Peak; the harbour at night, its landmark towers lit white over the lit windows and neon; Chai Wan's estates. At street level the viewer shows little of the markets and temples behind the towers in front of them (the game's see-through, D-079, does); their placement was checked in the objects. Two goldens regenerated (signs and billboards on a few buildings).
+- **Rejected alternatives:**
+  - **Estates by their blocks' names:** 69 buildings carry 邨, most of them car parks.
+  - **A landmark file per temple:** a dozen files for one shape the typology can give by name.
+  - **Lights that move:** palette cycling is a feature of its own (D-012 names it, nothing draws it).
+  - **A cloud base in the fog:** an engine change for one world.
+- **Later:** Aberdeen's Tin Hau temple, which the rule misses; palette cycling for the towers' light shows and the neon; a cloud base; vertical signs on the tong lau; Montane Mansion's courtyard (its five blocks are drawn as composites); the driving level's East Kowloon, whose small buildings with no data are typed as village houses.

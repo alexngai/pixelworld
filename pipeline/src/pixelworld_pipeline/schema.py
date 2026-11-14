@@ -444,6 +444,12 @@ def road_classes() -> list[str]:
     return [c for c in reversed(ROAD_ORDER) if c != "brick"]
 
 
+def row_road_classes() -> list[str]:
+    """What street rows may line: the road classes, and pedestrian streets
+    (market streets, D-134), which rules that pick streets by `name` fetch."""
+    return [*all_road_classes(), "pedestrian"]
+
+
 def all_road_classes() -> list[str]:
     from .build import ROAD_ORDER
 
@@ -1077,6 +1083,15 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")),
             "Overture names (a building's primary name; its parts share it), exactly.",
         ),
+        "groundHas": Key(
+            ListOf(AnyValue("string")),
+            "With `grounds`: text the land-use area's name contains (`邨`, a housing estate's; "
+            "D-134).",
+        ),
+        "nameHas": Key(
+            ListOf(AnyValue("string")),
+            "Text a building's name contains, any of these (`邨`, an estate's; D-134).",
+        ),
         "grounds": Key(
             ListOf(AnyValue("string")),
             "Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) "
@@ -1164,7 +1179,9 @@ VEGETATION_RULE = Map(
 ROW_RULE_KEYS = {
     "group": Key(Str(), "The semantic group placed.", required=True),
     "roads": Key(
-        ListOf(Str(all_road_classes), min_items=1), "Road classes it lines.", required=True
+        ListOf(Str(row_road_classes), min_items=1),
+        "Road classes it lines (and `pedestrian` streets, by `name`).",
+        required=True,
     ),
     "spacing": Key(Num(0, lo_open=True, unit="m"), "Distance between them.", "12 with `canopy`"),
     "offset": Key(

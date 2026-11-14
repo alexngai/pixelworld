@@ -1,5 +1,5 @@
 {
-  "packageHash": "58c460c6660a396c25055d537bb236cbebb143c830a243c0848bfa80e602513f",
+  "packageHash": "3c5fd44a7e199392a0cd016e4de8b804da2efcfa43c7e356636783513552f675",
   "cells": [
     660,
     634
@@ -14,17 +14,19 @@
     "riverLines": 37
   },
   "objects": {
-    "building.civic": 907,
-    "building.commercial": 3585,
-    "building.composite": 6900,
+    "building.civic": 866,
+    "building.commercial": 3464,
+    "building.composite": 6501,
+    "building.estate": 1770,
     "building.parking": 84,
-    "building.podium": 870,
-    "building.residential": 4425,
-    "building.tonglau": 5396,
-    "building.tower": 620,
+    "building.podium": 787,
+    "building.residential": 4187,
+    "building.temple": 17,
+    "building.tonglau": 5389,
+    "building.tower": 612,
     "building.tower.hotel": 54,
-    "building.tower.residential": 3543,
-    "building.village": 16268,
+    "building.tower.residential": 3088,
+    "building.village": 15833,
     "landmark.hall.curved": 1,
     "landmark.hall.curved.glass": 1,
     "landmark.hotel": 1,

@@ -53,6 +53,11 @@ objects:
   # the walking levels' rules, both shores' old districts together (D-109, D-117)
   typology:
     rules:
+      # Hong Kong's public housing: the blocks on an estate's land, which OSM
+      # names for the estate (邨); and the temples, Man Mo, Tin Hau, Hung Shing
+      # and Pak Tai, by name (D-134)
+      - { group: building.estate, from: [building.tower, building.residential, building.commercial], grounds: [residential], groundHas: ["邨"] }
+      - { group: building.temple, from: [building.residential, building.commercial, building.parking], nameHas: ["Temple"], kinds: ["", temple, religious] }
       - { group: building.tower.residential, from: [building.tower], kinds: [apartments, residential, house, dormitory] }
       - { group: building.tower.residential, from: [building.tower], hoods: [Jordan, Yau Ma Tei, Mong Kok, Tai Kok Tsui, Prince Edward, King's Park, Sheung Wan, Sai Ying Pun, Kennedy Town, Wan Chai, Causeway Bay, North Point, Happy Valley, Mid-Levels, Quarry Bay, Shau Kei Wan], maxWidth: 35 }
       - { group: building.podium, floors: [1, 7], minWidth: 40 }

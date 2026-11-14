@@ -732,6 +732,8 @@ Other keys here are the source's options.
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `groundHas` | list of strings | — | With `grounds`: text the land-use area's name contains (`邨`, a housing estate's; D-134). |
+| `nameHas` | list of strings | — | Text a building's name contains, any of these (`邨`, an estate's; D-134). |
 | `grounds` | list of strings | — | Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) the building's centroid stands in. |
 | `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
@@ -768,7 +770,7 @@ Other keys here are the source's options.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `group` | string | **required** | The semantic group placed. |
-| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick` | **required** | Road classes it lines. |
+| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick`, `pedestrian` | **required** | Road classes it lines (and `pedestrian` streets, by `name`). |
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
@@ -790,7 +792,7 @@ Other keys here are the source's options.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `group` | string | **required** | The semantic group placed. |
-| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick` | **required** | Road classes it lines. |
+| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick`, `pedestrian` | **required** | Road classes it lines (and `pedestrian` streets, by `name`). |
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |

@@ -4522,7 +4522,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "0aa89af5475331fa",
+      "region": "c9ad9cb93958cd42",
       "features": {
         "kind": "overture",
         "release": "2026-10-21.0"
@@ -4540,8 +4540,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "e569f3f3755212fb0b2521067582c6b1845da8f24fc213f31eb0d8530f931e00",
-    "count": 52404
+    "sha256": "3818b748b5703db45814eeea08f1137389ef65b1088a53362d0a348b14ac9539",
+    "count": 52513
   },
   "depiction": {
     "heightStretch": 1.0,
@@ -4569,7 +4569,7 @@
     ],
     "sha256": "b9b3a28f4ac8c6dfb8b451cd907016a7f68a98a748dc763f3f2527fd769d65a3"
   },
-  "packageHash": "2223d3c4a36f9091590efdf6c9f36a195a183c932b2b9a4222892719d2337046",
+  "packageHash": "af1dc48dadbbce45a796d6fc0fe5864a6e3097ccc9aee96a3df648652e261b6a",
   "routes": {
     "path": "routes.json.gz",
     "sha256": "503d748116c41c71539f8edd2df1a069e8bff6dde9b200b87e8d4cacbd52104e",

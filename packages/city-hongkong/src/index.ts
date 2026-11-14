@@ -40,3 +40,5 @@ export { BUILDING_GENERATORS } from "./buildings";
 export { LANDMARK_GENERATORS } from "./landmarks";
 export { PROP_GENERATORS } from "./props";
 export { VEHICLE_GENERATORS } from "./vehicles";
+export { TEMPLE_GENERATORS } from "./temple";
+export { ESTATE_GENERATORS } from "./estate";

@@ -1,5 +1,5 @@
 {
-  "packageHash": "2223d3c4a36f9091590efdf6c9f36a195a183c932b2b9a4222892719d2337046",
+  "packageHash": "af1dc48dadbbce45a796d6fc0fe5864a6e3097ccc9aee96a3df648652e261b6a",
   "cells": [
     1650,
     1086
@@ -14,17 +14,19 @@
     "riverLines": 5
   },
   "objects": {
-    "building.civic": 315,
-    "building.commercial": 1718,
-    "building.composite": 4488,
+    "building.civic": 306,
+    "building.commercial": 1686,
+    "building.composite": 4354,
+    "building.estate": 428,
     "building.parking": 42,
-    "building.podium": 340,
-    "building.residential": 2733,
-    "building.tonglau": 1670,
-    "building.tower": 352,
+    "building.podium": 317,
+    "building.residential": 2657,
+    "building.temple": 10,
+    "building.tonglau": 1669,
+    "building.tower": 351,
     "building.tower.hotel": 40,
-    "building.tower.residential": 1924,
-    "building.village": 7321,
+    "building.tower.residential": 1825,
+    "building.village": 7258,
     "landmark.hall.curved.glass": 1,
     "landmark.tower.cylinder": 1,
     "landmark.tower.glass": 1,
@@ -32,6 +34,7 @@
     "landmark.tower.pyramid": 1,
     "prop.boat": 1480,
     "prop.boat.junk": 5,
+    "prop.market": 109,
     "prop.neon": 3900,
     "prop.signal": 642,
     "prop.streetlight": 6869,

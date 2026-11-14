@@ -298,3 +298,27 @@ def test_a_sliver_footprint_still_has_its_storeys_for_rules_that_dont_ask():
         [sliver], {"rules": [{"group": "building.civic", "kinds": ["school"]}]}, f
     )
     assert counts == {"building.civic": 1} and sliver["fl"] == 3
+
+
+def test_name_has_picks_buildings_whose_name_contains_a_word():
+    """D-134: Hong Kong's public housing is named for its estate (邨)."""
+    f = {"name": "華富邨 華安樓 Wah On House", "kind": "", "floors": 30, "height": 90.0}
+    assert typology.matches(
+        {"group": "building.estate", "nameHas": ["邨"]}, "building.residential", f
+    )
+    assert not typology.matches(
+        {"group": "building.estate", "nameHas": ["苑"]}, "building.residential", f
+    )
+
+
+def test_ground_has_picks_an_estates_blocks_by_the_land_they_stand_on():
+    """D-134: an estate's blocks are named "… House"; the estate's name is on its land."""
+    block = {
+        "name": "華安樓 Wah On House",
+        "ground": "residential",
+        "groundName": "華富邨 Wah Fu Estate",
+    }
+    rule = {"group": "building.estate", "grounds": ["residential"], "groundHas": ["邨"]}
+    assert typology.matches(rule, "building.residential", block | {"floors": 30})
+    private = block | {"groundName": "太古城 Taikoo Shing"}
+    assert not typology.matches(rule, "building.residential", private)

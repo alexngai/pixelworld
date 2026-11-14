@@ -265,9 +265,15 @@ def matches(rule: dict, group: str, f: dict) -> bool:
         return False
     if "names" in rule and f.get("name", "") not in [str(n) for n in rule["names"]]:
         return False
+    if "nameHas" in rule and not any(str(n) in f.get("name", "") for n in rule["nameHas"]):
+        return False
     if "kinds" in rule and f.get("kind", "") not in [str(k) for k in rule["kinds"]]:
         return False
     if "grounds" in rule and f.get("ground", "") not in [str(g) for g in rule["grounds"]]:
+        return False
+    if "groundHas" in rule and not any(
+        str(n) in f.get("groundName", "") for n in rule["groundHas"]
+    ):
         return False
     for key, feat, cmp in (
         ("minWidth", "width", 1),
