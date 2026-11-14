@@ -93,9 +93,14 @@ export const START = { glim: 150, runners: 3 };
 export const GATHER = { carry: 10, seconds: 2, reach: 1.3 };
 /** Glim in a seep. */
 export const SEEP_GLIM = 800;
-/** Units go this much quicker on a road, and this much as quick in woods. */
-export const ROAD_SPEED = 1.5;
+/** Units go this much as quick in woods (trees on the cell). */
 export const WOODS_SPEED = 0.6;
+/** On roads, by the level's road class (D-125): the bigger the road, the quicker; a class not here goes at `residential`'s. */
+export const ROAD_PACE: Record<string, number> = { motorway: 1.7, trunk: 1.7, primary: 1.6, secondary: 1.5, tertiary: 1.5, residential: 1.4, unclassified: 1.3, living_street: 1.2 };
+/** Off roads, by the level's surface: sand and scrub are slow going; a surface not here goes at 1. */
+export const SURFACE_PACE: Record<string, number> = { sand: 0.7, snow: 0.6, desert: 0.8, scrub: 0.85, rock: 0.85, farmland: 0.9 };
+/** The quickest going anywhere (A*'s guess may not be more than the way is). */
+export const ROAD_SPEED = Math.max(...Object.values(ROAD_PACE));
 /** Most a step to a neighbouring cell may climb (height steps): the bluffs and steep banks are walls. */
 export const MAX_CLIMB = 1.5;
 /** Most a building's footprint may rise across it (steps). */
@@ -264,6 +269,8 @@ export interface MapGrid extends Cells {
   building: Int32Array;
   /** The level's buildings, by object (D-124). */
   structures?: Map<number, Structure>;
+  /** How quick going is on each cell over open ground's, from its road's class or its surface and its trees (D-125); without it, roads 1.4. */
+  pace?: Float32Array;
 }
 
 /** The level's objects wardens can knock down: buildings (not landmarks, walls or bridges). */
@@ -291,7 +298,16 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
     s.y /= s.cells.length;
     s.hp = structureHp(s.cells.length, heights.get(s.obj)!);
   }
-  return { ...cells, building: new Int32Array(cells.flags.length), structures };
+  // the going on each cell: its road's class, else its surface; trees slow either
+  const pace = new Float32Array(cells.flags.length);
+  for (let i = 0; i < pace.length; i++) {
+    const x = map.x0 + (i % map.w) + 0.5;
+    const y = map.y0 + Math.floor(i / map.w) + 0.5;
+    const road = cells.flags[i]! & ROAD ? query.roadAt(x, y) : null;
+    const base = road ? (ROAD_PACE[road.class ?? ""] ?? ROAD_PACE.residential!) : (SURFACE_PACE[query.surfaceAt(x, y)?.name ?? ""] ?? 1);
+    pace[i] = base * (cells.flags[i]! & WOODS && !road ? WOODS_SPEED : 1);
+  }
+  return { ...cells, building: new Int32Array(cells.flags.length), structures, pace };
 }
 
 /**
@@ -341,8 +357,8 @@ export function passable(g: MapGrid, cx: number, cy: number): boolean {
   return i >= 0 && (g.flags[i]! & (WATER | OBJECT)) === 0 && g.building[i] === 0;
 }
 
-/** How quick going is on a cell, over open ground's: roads quicker, woods slower. */
-const paceOf = (g: MapGrid, i: number) => (i < 0 ? 1 : g.flags[i]! & ROAD ? ROAD_SPEED : g.flags[i]! & WOODS ? WOODS_SPEED : 1);
+/** How quick going is on a cell, over open ground's: by its road or surface (`pace`), else roads quicker and woods slower. */
+const paceOf = (g: MapGrid, i: number) => (i < 0 ? 1 : g.pace ? g.pace[i]! : g.flags[i]! & ROAD ? ROAD_PACE.residential! : g.flags[i]! & WOODS ? WOODS_SPEED : 1);
 
 /** How quick going is at a point (`paceOf` its cell). */
 export const paceAt = (g: MapGrid, x: number, y: number): number => paceOf(g, cellIndex(g, Math.floor(x), Math.floor(y)));

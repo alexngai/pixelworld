@@ -20,6 +20,8 @@ import {
   HIGH_GROUND_DAMAGE,
   Razed,
   SIGHT,
+  SURFACE_PACE,
+  WOODS_SPEED,
   buildGrid,
   fogCells,
   razeCells,
@@ -555,6 +557,19 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
   });
   afterAll(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("goes by the level's ground: quicker on bigger roads, slow on the beach and in woods (D-125)", () => {
+    const g = world.grid;
+    const pace = g.pace!;
+    const by = new Map<number, number>();
+    for (const v of pace) by.set(Math.round(v * 100) / 100, (by.get(Math.round(v * 100) / 100) ?? 0) + 1);
+    expect(by.get(SURFACE_PACE.desert!)).toBeGreaterThan(100); // Baker Beach (the level calls its sand desert)
+    expect(by.get(WOODS_SPEED)).toBeGreaterThan(1000); // the woods
+    expect([...by.keys()].filter((v) => v >= 1.2).length).toBeGreaterThanOrEqual(4); // roads of several classes
+    // the Kiln's runners walk the beach at its pace
+    const [kx, ky] = LAYOUT.hearths.kiln;
+    expect(pace[cellIndex(g, kx - 1, ky + 1)]).toBeCloseTo(SURFACE_PACE.desert!, 5);
   });
 
   it("the Golden Gate's fog comes over the Presidio and goes, and hides what stands in it (D-125)", () => {
