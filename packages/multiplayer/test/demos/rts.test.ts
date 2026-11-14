@@ -17,6 +17,7 @@ import {
   UNITS,
   WATER,
   WOODS,
+  GARRISON,
   HIGH_GROUND_DAMAGE,
   Razed,
   SIGHT,
@@ -24,6 +25,7 @@ import {
   WOODS_SPEED,
   buildGrid,
   fogCells,
+  holds,
   razeCells,
   seesUnit,
   sideSight,
@@ -480,6 +482,58 @@ describe("Fogfront's match (D-121)", () => {
     for (const bad of [null, 7, { t: "move", u: "1", x: 1, y: 1 }, { t: "move", u: [1], x: Infinity, y: 1 }, { t: "build", kind: "tower", x: 1, y: 1 }, { t: "train", b: 1.5 }, { t: "launch" }, { t: "raze", u: [1], obj: "7" }])
       expect(parseCommand(bad)).toBeNull();
     expect(parseCommand({ t: "stop", u: Array.from({ length: 201 }, (_, i) => i) })).toBeNull();
+  });
+});
+
+describe("Fogfront's garrisons in the level's buildings (D-125)", () => {
+  /** An open field with a two-cell building of the level's in the middle (object 7). */
+  const town = () => {
+    const rows = Array.from({ length: 16 }, (_, y) => [...".".repeat(40)].map((c, x) => (y === 7 && (x === 20 || x === 21) ? "#" : c)).join(""));
+    const g = standing(gridOf(rows), [{ obj: 7, cells: [[20, 7], [21, 7]] }]);
+    return new RtsGame(g, { hearths: { kiln: [2, 6], tide: [35, 6] }, seeps: [] });
+  };
+
+  it("units go in, hidden from the other side and watching from its roof; it holds so many, of one side; they come out beside it", () => {
+    const game = town();
+    const runners = unitsOf(game, "kiln", "runner");
+    expect(game.order("kiln", { t: "enter", u: runners.map((u) => u.id), obj: 7 })).toBeNull();
+    run(game, 15);
+    expect(game.garrison(7)).toHaveLength(START.runners);
+    // the other side walks right up: it sees nobody
+    const scout = unitsOf(game, "tide", "runner")[0]!;
+    game.order("tide", { t: "move", u: [scout.id], x: 22.5, y: 8.5 });
+    run(game, 12);
+    expect(game.view("tide").units.some((u) => u.s === "kiln" && runners.some((r) => r.id === u.i))).toBe(false);
+    expect(game.view("kiln").units.filter((u) => u.in === 7)).toHaveLength(START.runners);
+    // its roof: the Kiln sees the scout from inside
+    expect(game.view("kiln").units.some((u) => u.i === scout.id)).toBe(true);
+    // full (2 a cell: 4), and the other side's for the Tide
+    game.glim.kiln = 1000;
+    const hearth = [...game.buildings.values()].find((b) => b.team === "kiln")!;
+    game.order("kiln", { t: "train", b: hearth.id });
+    game.order("kiln", { t: "train", b: hearth.id });
+    run(game, 2 * UNITS.runner.time + 0.5);
+    const more = unitsOf(game, "kiln", "runner").filter((u) => u.inside === null).map((u) => u.id);
+    expect(game.order("kiln", { t: "enter", u: more, obj: 7 })).toBe(`it holds ${holds({ cells: [0, 1] })}`);
+    expect(game.order("tide", { t: "enter", u: [scout.id], obj: 7 })).toBe("the other side holds it");
+    // out, beside it
+    expect(game.order("kiln", { t: "leave", obj: 7 })).toBeNull();
+    expect(game.garrison(7)).toHaveLength(0);
+    for (const r of runners) expect(Math.hypot(r.x - 20.5, r.y - 7.5)).toBeLessThan(3);
+    expect(game.order("kiln", { t: "leave", obj: 7 })).toBe("none of yours in there");
+  });
+
+  it("a building knocked down throws out those inside, hurt", () => {
+    const game = town();
+    const [r] = unitsOf(game, "kiln", "runner");
+    game.order("kiln", { t: "enter", u: [r!.id], obj: 7 });
+    run(game, 15);
+    expect(r!.inside).toBe(7);
+    game.structures.get(7)!.hp = 0;
+    game.step(TICK);
+    expect(r!.inside).toBeNull();
+    expect(r!.hp).toBe(UNITS.runner.hp - GARRISON.fall);
+    expect(game.razed).toEqual([7]);
   });
 });
 

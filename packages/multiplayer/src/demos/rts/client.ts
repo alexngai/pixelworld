@@ -371,6 +371,13 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     for (const [id, u] of units) {
       const p = smoothing.at(String(id), t);
       if (!p) continue;
+      // inside one of the level's buildings: not drawn (a count over it)
+      if (u.in !== undefined) {
+        unitsDrawn.get(id)?.e.remove();
+        unitsDrawn.delete(id);
+        selection.delete(id);
+        continue;
+      }
       const key = `rts.${u.k}.${u.s}${u.c ? ".laden" : ""}`;
       let d = unitsDrawn.get(id);
       if (d?.key !== key) {
@@ -391,6 +398,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
 
   let placing: BuildingKind | null = null;
   let fightMove = false;
+  /** G pressed: the next click names a building to go into. */
+  let garrisoning = false;
   let drag: { x: number; y: number; at: Point } | null = null;
   let pointer: Point = { x: 0, y: 0 };
   let ghost: Drawn | null = null;
@@ -473,10 +482,11 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (!hit) return;
     const b = buildingAt(hit);
     if (b && b.s !== side) return void order({ t: "attack", u: ids, target: b.i }, { at: hit, kind: "attack" });
-    // one of the level's buildings: wardens knock it down
+    // one of the level's buildings: wardens knock it down; runners alone go in (D-125)
     const wardens = ids.filter((id) => units.get(id)?.k === "warden");
-    const structure = wardens.length ? structureAt(sx, sy) : null;
-    if (structure) return void order({ t: "raze", u: wardens, obj: structure.obj }, { at: structure, kind: "attack" });
+    const structure = structureAt(sx, sy);
+    if (structure && wardens.length) return void order({ t: "raze", u: wardens, obj: structure.obj }, { at: structure, kind: "attack" });
+    if (structure) return void order({ t: "enter", u: ids, obj: structure.obj }, { at: structure, kind: "move" });
     const seep = [...seepsDrawn.values()].find((d) => Math.hypot(d.net.x - hit.x, d.net.y - hit.y) < 1.2);
     const runners = ids.filter((id) => units.get(id)?.k === "runner");
     if (seep && runners.length) {
@@ -539,6 +549,14 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       command(at.x, at.y, true);
       return;
     }
+    if (garrisoning) {
+      garrisoning = false;
+      const structure = structureAt(at.x, at.y);
+      const ids = [...selection].filter((id) => mine(units.get(id)));
+      if (structure && ids.length) order({ t: "enter", u: ids, obj: structure.obj }, { at: structure, kind: "move" });
+      else hud.say("Click one of the level's buildings to go in", 1.5);
+      return;
+    }
     drag = { x: at.x, y: at.y, at };
     canvas.setPointerCapture(e.pointerId);
   });
@@ -568,10 +586,18 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (k === "escape") {
       stopPlacing();
       fightMove = false;
+      garrisoning = false;
       selection.clear();
     } else if (k === "f" && selection.size) {
       fightMove = true;
       hud.say("Click where to fight to", 1.5);
+    } else if (k === "g" && selection.size) {
+      garrisoning = true;
+      hud.say("Click a building to go into it", 1.5);
+    } else if (k === "u") {
+      // out of the building under the pointer
+      const structure = structureAt(pointer.x, pointer.y);
+      if (structure) order({ t: "leave", obj: structure.obj });
     } else if (k === "x" && selection.size) order({ t: "stop", u: [...selection] });
     else if (k === "r") train("hearth");
     else if (k === "t") train("lodge");
@@ -726,6 +752,16 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       const r = Math.sqrt(s.cells.length);
       if (obj === pickedStructure) ring(s.x, s.y, view.query.heightAt(s.x, s.y) ?? 0, r * 14, "#fd6");
       bar(view.camera.project(s.x, s.y, s.top + 0.6), (hurt.get(obj) ?? s.hp) / s.hp, Math.max(18, r * 12));
+    }
+    // the side's units in the level's buildings: a count over each
+    const inside = new Map<number, number>();
+    for (const u of units.values()) if (u.in !== undefined && u.s === side) inside.set(u.in, (inside.get(u.in) ?? 0) + 1);
+    for (const [obj, n] of inside) {
+      const s = structures.get(obj);
+      if (!s) continue;
+      const p = view.camera.project(s.x, s.y, s.top + 1);
+      if (!p.onScreen) continue;
+      out.push(`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="8" fill="${side === "kiln" ? "#c0302d" : "#3e5c9a"}" stroke="#fff" stroke-width="1"/><text x="${p.x.toFixed(1)}" y="${(p.y + 4).toFixed(1)}" text-anchor="middle" fill="#fff">${n}</text>`);
     }
     for (const m of markers) {
       const p = view.camera.project(m.at.x, m.at.y);

@@ -36,6 +36,8 @@ import {
   seesUnit,
   sideSight,
   type Eye,
+  GARRISON,
+  holds,
 } from "./rules";
 
 /**
@@ -53,7 +55,8 @@ export type Order =
   | { k: "move"; x: number; y: number; attack: boolean }
   | { k: "attack"; target: number }
   | { k: "gather"; seep: number }
-  | { k: "raze"; obj: number };
+  | { k: "raze"; obj: number }
+  | { k: "enter"; obj: number };
 
 export interface Unit {
   id: number;
@@ -77,6 +80,8 @@ export interface Unit {
   /** Glim carried, and seconds mined so far. */
   carry: number;
   mined: number;
+  /** The level's building it is in (its object), or null (D-125). */
+  inside: number | null;
 }
 
 export interface Building {
@@ -212,13 +217,28 @@ export class RtsGame {
       b.queue.push(kind);
       return null;
     }
+    if (c.t === "leave") {
+      const s = this.structures.get(c.obj);
+      const mine = this.garrison(c.obj).filter((u) => u.team === team);
+      if (!s || !mine.length) return "none of yours in there";
+      for (const u of mine) this.out(u, s);
+      return null;
+    }
     const units = [...new Set(c.u)].slice(0, MAX_ORDER).flatMap((id) => {
       const u = this.units.get(id);
       return u && u.team === team ? [u] : [];
     });
     if (!units.length) return "no units of yours";
     if (c.t === "stop") for (const u of units) this.give(u, { k: "idle" });
-    else if (c.t === "raze") {
+    else if (c.t === "enter") {
+      const s = this.structures.get(c.obj);
+      if (!s) return "nothing there to go into";
+      const theirs = this.garrison(c.obj);
+      if (theirs.some((u) => u.team !== team)) return "the other side holds it";
+      const outside = units.filter((u) => u.inside === null);
+      if (theirs.length + outside.length > holds(s)) return `it holds ${holds(s)}`;
+      for (const u of outside) this.give(u, { k: "enter", obj: c.obj });
+    } else if (c.t === "raze") {
       if (!this.structures.has(c.obj)) return "nothing there to knock down";
       const fighters = units.filter((u) => UNITS[u.kind].damage > 0);
       if (!fighters.length) return "runners don't knock buildings down";
@@ -303,7 +323,40 @@ export class RtsGame {
         this.structures.delete(s.obj);
         this.razed.push(s.obj);
         razeCells(this.grid, s.obj, new Set(this.razed));
+        // those inside come out of the rubble, hurt
+        for (const u of this.garrison(s.obj)) {
+          this.out(u, s);
+          u.hp -= GARRISON.fall;
+        }
       }
+  }
+
+  /** The units in one of the level's buildings. */
+  garrison(obj: number): Unit[] {
+    return [...this.units.values()].filter((u) => u.inside === obj);
+  }
+
+  /** A unit out of a building, on the open cell nearest it. */
+  private out(u: Unit, s: Structure): void {
+    const at = nearestOpen(this.grid, Math.floor(s.x), Math.floor(s.y), 6);
+    u.inside = null;
+    if (at) [u.x, u.y] = [at.x + 0.5, at.y + 0.5];
+    this.give(u, { k: "idle" });
+  }
+
+  /** Into a level building, once at one of its walls; given up where a path gets no nearer, or it's full or the other side's. */
+  private enter(u: Unit, s: Structure, dt: number): void {
+    const near = this.nearestWall(u, s);
+    if (near.d > GARRISON.reach) {
+      if (this.walk(u, near, dt) && this.nearestWall(u, s).d > GARRISON.reach) this.give(u, { k: "idle" });
+      return;
+    }
+    const theirs = this.garrison(s.obj);
+    if (theirs.length >= holds(s) || theirs.some((o) => o.team !== u.team)) return this.give(u, { k: "idle" });
+    this.give(u, { k: "idle" });
+    u.inside = s.obj;
+    [u.x, u.y] = [s.x, s.y];
+    u.target = null;
   }
 
   /** A building goes up, or trains. */
@@ -335,7 +388,7 @@ export class RtsGame {
       const sight = this.sight[team];
       const field = this.sees[team];
       sight.clear();
-      for (const u of this.units.values()) if (u.team !== team && seesUnit(this.grid, field, u.x, u.y)) sight.add(u.id);
+      for (const u of this.units.values()) if (u.team !== team && u.inside === null && seesUnit(this.grid, field, u.x, u.y)) sight.add(u.id);
       for (const b of this.buildings.values())
         if (b.team !== team && seesArea(this.grid, field, b.x + b.size / 2, b.y + b.size / 2, b.size / 2)) {
           sight.add(b.id);
@@ -347,13 +400,24 @@ export class RtsGame {
   /** A side's eyes: its units', and its buildings' from their roofs. */
   eyes(team: Team): Eye[] {
     const out: Eye[] = [];
-    for (const u of this.units.values()) if (u.team === team) out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight });
+    for (const u of this.units.values()) {
+      if (u.team !== team) continue;
+      const s = u.inside === null ? undefined : this.structures.get(u.inside);
+      // from a building's roof: higher, and further
+      if (s) out.push({ x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(this.grid, s.x, s.y) + 0.5), radius: UNITS[u.kind].sight + GARRISON.sight });
+      else out.push({ x: u.x, y: u.y, up: SIGHT.eye, radius: UNITS[u.kind].sight });
+    }
     for (const b of this.buildings.values()) if (b.team === team) out.push({ ...mid(b), up: BUILDING_EYE[b.kind] * Math.max(0.3, b.built), radius: BUILDINGS[b.kind].sight });
     return out;
   }
 
   private think(u: Unit, dt: number): void {
     if (u.hp <= 0) return; // fell this tick
+    if (u.inside !== null) return; // keeping watch
+    if (u.order.k === "enter") {
+      const s = this.structures.get(u.order.obj);
+      return s ? this.enter(u, s, dt) : this.give(u, { k: "idle" });
+    }
     const rule = UNITS[u.kind];
     u.cooldown = Math.max(0, u.cooldown - dt);
     u.repath = Math.max(0, u.repath - dt);
@@ -491,7 +555,7 @@ export class RtsGame {
   /** Units standing on one another step apart, where there is room. */
   private separate(): void {
     // ponytail: every pair; a grid of who stands where past a few hundred units
-    const us = [...this.units.values()];
+    const us = [...this.units.values()].filter((u) => u.inside === null);
     for (let i = 0; i < us.length; i++)
       for (let j = i + 1; j < us.length; j++) {
         const a = us[i]!;
@@ -608,6 +672,7 @@ export class RtsGame {
       repath: 0,
       carry: 0,
       mined: 0,
+      inside: null,
     };
     this.units.set(u.id, u);
     // a new runner goes to the nearest seep with glim
@@ -640,6 +705,7 @@ export class RtsGame {
         ...(u.carry > 0 ? { c: 1 as const } : {}),
         ...(u.target !== null ? { f: 1 as const } : {}),
         ...(own && goal ? { g: [r2(goal.x), r2(goal.y)] as [number, number] } : {}),
+        ...(u.inside !== null ? { in: u.inside } : {}),
       });
     }
     const buildings: BuildingNet[] = [];
@@ -710,6 +776,12 @@ export function parseCommand(data: unknown): RtsCommand | null {
       const u = ids(c.u);
       return u && int(c.obj) ? { t: "raze", u, obj: c.obj as number } : null;
     }
+    case "enter": {
+      const u = ids(c.u);
+      return u && int(c.obj) ? { t: "enter", u, obj: c.obj as number } : null;
+    }
+    case "leave":
+      return int(c.obj) ? { t: "leave", obj: c.obj as number } : null;
     default:
       return null;
   }

@@ -150,7 +150,10 @@ export type RtsCommand =
   | { t: "build"; kind: BuildingKind; x: number; y: number }
   | { t: "train"; b: number }
   /** Knock down one of the level's buildings (its object, `Structure.obj`). */
-  | { t: "raze"; u: number[]; obj: number };
+  | { t: "raze"; u: number[]; obj: number }
+  /** Go into one of the level's buildings, and bring a side's units out of one (D-125). */
+  | { t: "enter"; u: number[]; obj: number }
+  | { t: "leave"; obj: number };
 
 /** A unit as a page sees it: positions in cells to 0.01, its goal for its own side. */
 export interface UnitNet {
@@ -168,6 +171,8 @@ export interface UnitNet {
   f?: 1;
   /** Where it is going (its own side's only). */
   g?: [number, number];
+  /** Inside one of the level's buildings (its object; its own side's only: the other doesn't see it). */
+  in?: number;
 }
 
 export interface BuildingNet {
@@ -421,6 +426,15 @@ export const SIGHT = {
   every: 5,
   fogEvery: 40,
 };
+/**
+ * Garrisons (D-125): units in one of the level's buildings are hidden from
+ * the other side and watch from its roof, `sight` cells further. It holds
+ * `perCell` a cell it covers, at most `most`, of one side. Units in one
+ * that falls come out with `fall` damage.
+ */
+export const GARRISON = { perCell: 2, most: 8, sight: 2, fall: 15, reach: 1 };
+/** How many a level building holds. */
+export const holds = (s: Pick<Structure, "cells">): number => Math.min(GARRISON.most, s.cells.length * GARRISON.perCell);
 /** A blow struck from a step or more above its target lands this much harder. */
 export const HIGH_GROUND_DAMAGE = 1.3;
 /** How high each building's eye stands over its ground (steps): from its roof. */
