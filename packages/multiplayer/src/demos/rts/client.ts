@@ -872,6 +872,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     grid,
     command,
     selectBox,
+    /** The level's buildings in the play area, standing. */
+    structures: () => [...structures.values()].filter((s) => !view.edits.isRemoved(s.obj)),
     /** The side's sight now: cells seen, cells ever seen, and the share of the field in fog. */
     sight: () => ({ seen: sight.filter((d) => d < Infinity).length, explored: explored.reduce((a, b) => a + b, 0), cells: sight.length, fog: fogCover ? fogCover.filter((f) => f > 0.3).length / fogCover.length : 0 }),
   };
@@ -945,6 +947,7 @@ declare global {
       command: (sx: number, sy: number, attack?: boolean) => void;
       selectBox: (a: Point, b: Point, add: boolean) => void;
       sight: () => { seen: number; explored: number; cells: number; fog: number };
+      structures: () => Structure[];
     };
   }
 }

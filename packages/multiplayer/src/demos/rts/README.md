@@ -6,8 +6,11 @@ A small real-time strategy game on [`@pixelworlds/multiplayer`](../../../README.
 - **The hearth** (3×3 cells) trains runners. If it falls, its side loses.
 - **A lodge** (2×2, 120 glim, 15 s to rise) trains **wardens** (80 glim), who fight: 9 a blow, a blow a second, within 1.4 cells. A lodge goes up within 12 cells of one's own buildings, on dry, level ground with no woods, building, unit or seep on it.
 - **The level's buildings** stand in the way until wardens knock them down (D-124): each has hit points from its size and height (130–560 on the Presidio). One that falls is taken out of every page's world (`view.edits`, its tiles baked again) and leaves rubble, and its cells open for paths and lodges. A new match puts them all back.
-- **The map** is read from the level's own queries: water and the level's buildings are walls, a step may climb at most 1.5 height steps (the bluffs are walls), roads are 1.5× quicker and woods 0.6× (and can't be built on). Units walk A* paths over those cells.
-- **The fog of war:** each side sees the other's units only within sight of its own (6–8 cells); the hearths are known from the start, and other buildings once seen.
+- **The map** (144 × 110 cells) is read from the level's own queries into the engine's cells (D-125): water and the level's buildings are walls, a step may climb at most 1.5 height steps (the bluffs are walls), roads are quicker by their class (motorways 1.7×, residential streets 1.4×), the beach and scrub slower, and woods 0.6× (and can't be built on). Units walk the engine's A* paths over those cells.
+- **Sight from the level (D-125):** each side sees what its units, buildings and landmarks have a line of sight to, over the ground, the level's buildings and the woods' canopies: hills and woods hide what is behind them, high ground sees further, a unit in woods is seen only from 2 cells, and the Golden Gate's drifting fog shortens sight where it lies. The page draws the rest as the fog of war: dark where never seen, dimmer where seen before. The hearths are known from the start, and other buildings once seen. A blow from a step or more above lands harder.
+- **Garrisons:** units go into one of the level's buildings (two a cell it covers, at most eight, one side's): hidden from the other side, they watch from its roof, further. Knocked down, it throws them out hurt.
+- **Landmarks:** the Palace of Fine Arts and the Golden Gate Bridge's shore end are objectives: a side alone by one for 10 s takes it, and it pays half a glim a second and sees from it.
+- **Night** falls every 4 minutes for a minute and a half: units see less, and the page takes the style's night palette, windows lit.
 - **Orders:** move, fight-move (taking on whatever comes into sight on the way), attack, gather, stop. Idle wardens take on foes that come into sight.
 - **A match:** two pages play each other; a page alone gets the bot after 20 s, or at once with `?vs=bot`. A side whose hearth falls, or whose player leaves, loses; after 15 s of the result the next match starts with whoever is there. A third page is told the match is full.
 
@@ -33,14 +36,14 @@ pnpm --filter @pixelworlds/multiplayer demo:rts      # http://localhost:5254/?na
 ```
 
 - **Mouse:** left click selects a unit (or shows a building, one of the level's, or a foe), a left drag selects your units in the box; right click orders: on a foe, attack it; on one of the level's buildings, wardens knock it down; on a seep, runners gather there; elsewhere, move. Middle drag pans; the wheel zooms.
-- **Keys:** WASD or the arrows pan, Q/E turn the view, +/− zoom. **R** trains a runner, **B** places a lodge (click to place, Shift-click for more, Esc or right click to stop), **T** trains a warden (at the lodge with the shortest queue). **F** then a click: fight your way there. **X** stops. Esc lets go of the selection. The buttons at the bottom do R, B and T.
+- **Keys:** WASD or the arrows pan, Q/E turn the view, +/− zoom. **R** trains a runner, **B** places a lodge (click to place, Shift-click for more, Esc or right click to stop), **T** trains a warden (at the lodge with the shortest queue). **F** then a click: fight your way there. **G** then a click on one of the level's buildings: go into it (a right click with runners alone does too); **U** with the pointer over it: come out. **X** stops. Esc lets go of the selection. The buttons at the bottom do R, B and T.
 - `RTS_LAG=80` before the command holds every message back 80 ms each way. An edit to the server takes a restart of the dev server.
 
 ## Production
 
 ```sh
 pnpm --filter @pixelworlds/multiplayer demo:rts:build   # dist/client (the page and the sf level) and dist/server/serve.js (one file)
-pnpm --filter @pixelworlds/multiplayer demo:rts:start   # http://localhost:8080/; PORT, RTS_LAG; the lobby on /api
+pnpm --filter @pixelworlds/multiplayer demo:rts:start   # http://localhost:8080/; PORT, RTS_LAG, RTS_DAY=40,20 (seconds of day and night, to see night come); the lobby on /api
 ```
 
 Rooms live in the server's memory, so run one process. The dogfight's `Dockerfile` and `fly.toml` show how to put it in an image.
