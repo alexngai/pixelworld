@@ -30,7 +30,7 @@ export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.met
 export const BUDGETS = {
   tarball: 750 * 1024, // gzipped .tgz, with source maps
   unpacked: 2.75 * 1024 * 1024, // everything, as installed
-  js: 700 * 1024, // dist/*.js without maps: the library chunks and the worker
+  js: 740 * 1024, // dist/*.js without maps: the library chunks and the worker (702.8 KB with D-124/D-125's edits, cells and veil)
   worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
 };
 
