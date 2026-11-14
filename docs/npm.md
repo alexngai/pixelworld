@@ -12,7 +12,7 @@ npm install pixelworld        # or pnpm add, yarn add
 - **No dependencies:** everything the package needs is bundled in.
 - **Browsers** need WebGL2 and module workers: every current desktop and mobile browser has both.
 - **San Francisco** also needs its city pack, which draws its buildings: `npm install @pixelworlds/city-sf` (§6). Without it, San Francisco bakes almost nothing.
-- **Before the first release,** pack both from a checkout of the repository and install the tarballs:
+- **An unreleased change:** pack both from a checkout of the repository and install the tarballs:
 
   ```sh
   pnpm install && pnpm --filter pixelworld --filter @pixelworlds/city-sf pack --pack-destination /tmp/pw

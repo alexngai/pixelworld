@@ -2,6 +2,8 @@
 
 New York's city pack for [pixelworld](https://www.npmjs.com/package/pixelworld): the generators its `new-york` style pack names. They draw brownstones with stoops (`brownstone`), walk-up tenements with fire escapes over shopfronts (`tenement`), cast-iron lofts (`castIronLoft`), and prewar blocks with water tanks on the roof (`prewarBlock`). The `new-york` pack names San Francisco's pack too, `@pixelworlds/city-sf`, for its blocks and towers, so load both.
 
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/nyc-village.png" width="400" alt="Greenwich Village, drawn with this pack">
+
 ```sh
 npm install pixelworld @pixelworlds/city-sf @pixelworlds/city-nyc
 ```

@@ -2,6 +2,8 @@
 
 San Francisco's city pack for [pixelworld](https://www.npmjs.com/package/pixelworld): the generators its `bay-area` style pack names. They draw the Victorian, Edwardian and stucco rows (`rowhouse`), apartment blocks, Chinatown and the piers (`block`), the towers by era (`decoTower`, `sfTower`), and Chinatown's gate and lanterns. Without it, a San Francisco world bakes no tiles that hold those buildings.
 
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/sf-chinatown.png" width="400" alt="San Francisco's Chinatown, drawn with this pack">
+
 ## Install
 
 ```sh

@@ -2,6 +2,8 @@
 
 The offline geo pipeline of [pixelworld](https://github.com/alexngai/pixelworld): real elevation, land cover, roads and buildings in, gridded world packages out. A region spec (YAML) says where, at what scale and with what data; `pixelworld build` turns it into a package the viewer (the npm package `pixelworld`) draws.
 
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/hero-golden-gate-fog.png" width="800" alt="The Golden Gate in fog: San Francisco's flying level, built by this pipeline">
+
 ```sh
 pip install pixelworld-pipeline        # or: uv tool install pixelworld-pipeline
 pixelworld build region.yaml --out my-world

@@ -2,7 +2,9 @@
 
 Pixel-art isometric worlds from open data, in the browser. pixelworld streams a world package (terrain, roads, water, buildings and landmarks built from elevation, land-cover and OpenStreetMap data), bakes it into pixel-art tiles in a WebGL2 worker, and draws it in four rotations. You bring the controls, entities and rules: a map viewer, a driving game, a flight over the Grand Canyon.
 
-![The Grand Canyon's South Rim](https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/m0-south-rim-r1.png)
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/hero-golden-gate-fog.png" width="800" alt="The Golden Gate in fog, from San Francisco's flying level">
+
+San Francisco, New York, Paris, Kyoto, Tokyo and Hong Kong are drawn by city packs, also on npm (`@pixelworlds/city-*`): [more screenshots](https://github.com/alexngai/pixelworld#gallery).
 
 ## Install
 

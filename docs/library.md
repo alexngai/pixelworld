@@ -1,6 +1,6 @@
 # pixelworld as a library (proposal, for discussion)
 
-**Status:** a draft for the M4 pass, its first steps built: the engine is out of the app (§7, as built), generators come from a public registry that plugins add to (§8), and the npm package `pixelworld` builds, packs and is checked in CI, unpublished (§3.5, [npm.md](npm.md)). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
+**Status:** a draft for the M4 pass, its first steps built: the engine is out of the app (§7, as built), generators come from a public registry that plugins add to (§8), and the npm package `pixelworld` is published, with the city packs (§3.5, [npm.md](npm.md)). pixelworld is fully open source. This document proposes how it becomes a set of published packages that other projects can use:
 - as a **world and asset generator**: real places in, pixel-art worlds, tiles, sprites and models out;
 - as an **engine** to build games and other interaction modes on.
 
