@@ -50,6 +50,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | `@pixelworlds/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
 | `@pixelworlds/engine` | world view: streaming, camera, compositor, layers, entities, controllers, queries | `engine` (built, §7) over `runtime` |
 | `@pixelworlds/traffic` | ambient traffic as a layer plugin (deterministic sim) | `sim`, with its layer (`trafficLayer`, §7) |
+| `@pixelworlds/multiplayer` | optional: rooms on a WebSocket server, relayed (D-112) or run by the server at a fixed tick (D-113, D-114), a room client, prediction, other players smoothed into entities, serving a built game; demos in `src/demos/`; never imported by the engine (D-111) | `packages/multiplayer` (private until released) |
 | `@pixelworlds/style-desert-southwest`, `@pixelworlds/style-bay-area` | style packs as data packages | `worlds/_styles/*` |
 | `pixelworld-pipeline` (PyPI) | the pipeline: CLI and a Python API, stages, every built-in source (the city facts and terrain sources too), plugins | `pipeline/` |
 | `@pixelworlds/city-sf` (npm) | San Francisco's city pack, browser half: its generators (facades, towers, Chinatown) as a plugin | `packages/city-sf` (§8) |
@@ -227,6 +228,7 @@ interface WorldViewOptions {
   cache?: boolean | TileStore;                        // IndexedDB by default
   startTiles?: boolean | string | URL;               // the first view baked ahead (tools/prebake.mjs): true for start-tiles.bin in the package; default none
   objects?: boolean; scatter?: boolean; heroes?: boolean;
+  chunkBudgetMB?: number;                             // decoded terrain kept at most, least recently used let go (D-120); default unlimited
   palette?: "day" | "night";
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
   layers?: Layer[];
@@ -307,6 +309,7 @@ view.entities.add({
   heading?, headings?,      // radians; baked headings (16)
   lift?, silhouette?, visible?,
   reveal?: { margin?, density? },  // see through what stands in front of it (D-079)
+  wait?,                    // ready() waits for its sprite (default true; D-111)
 }): Entity                  // x, y, h, heading, visible, silhouette, reveal, moveTo(x, y, h?), remove()
 ```
 
@@ -314,6 +317,7 @@ view.entities.add({
 
 - **Baking:** lazily, per view rotation and heading, shared by every entity with the same model. Heading 0 bakes the model as given, so the rover's sprite is the same as before.
 - **Hidden entities** are baked too, so showing one is instant, but they don't hold up `ready()`. Nor does an entity whose ground isn't baked yet: it isn't drawn until its tile is (§7.2).
+- **Entities that don't wait** (`wait: false`, D-111): other players, effects, anything that comes, goes or turns all the time. Their bakes never hold up `ready()` or a view replacing another (§7.9); each shows once its first sprite is baked, then keeps its last pose while the next one bakes, as every entity does.
 - **Group models** are style assets drawn by their generator at the object voxel scale. Vehicle generators need `size`.
 - **Traffic keeps its own sprites:** it bakes each heading once, in rotation 0, for all four rotations (D-060). Entities bake per rotation, which keeps the rover pixel-identical. Folding traffic into entities, with the rotation-0 trick as an option, is left for later.
 
@@ -346,11 +350,19 @@ view.query.roadAt(x, y)               // { classId, class, width, connections, l
 view.query.pick(screenX, screenY)     // { x, y, h, cellX, cellY } under a canvas point (CSS px)
 view.query.lonLatToCell(lon, lat); view.query.cellToLonLat(x, y)   // through the geo grid (D-048)
 view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.ensure(x0, y0, x1, y1)
+view.query.isLoaded(x0, y0, x1, y1)   // whether the terrain under a rectangle is loaded now (D-120)
+view.query.coarseHeightAt(x, y)       // { lo, hi } of its block of 8 × 8 cells, loaded or not (openWorld, D-123), or null
 view.query.objectsAt(x, y)            // placed objects standing there: { group, id, x, y, bounds, footprint, base, top }[]
 view.query.landmarks()                // registry landmarks, one per id: { id, group, x, y, parts }[]
+
+const { world, query, stats } = await openWorld({ worldUrl, style, base?, renderScale?, objects?, chunkBudgetMB?, dropLayers?, fetch? })   // the same, without a view (D-111)
+stats()                               // { chunksLoaded, chunksTotal, chunksMB, chunksEvicted } (D-120)
 ```
 
-- **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle.
+- **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle; `isLoaded` says whether it is, so a game server's step can wait for its ground (D-120).
+- **A memory budget (`chunkBudgetMB`, D-120):** decoded terrain is about 0.5 MB a 64-cell chunk with micro-terrain (the southwest whole is 112 MB), and nothing is let go by default. With a budget, the chunks least recently read, ensured or checked go once it is passed, to load again when something `ensure`s them; never one an `ensure` is loading or has just loaded, until after the reads that follow its await. Size it over what is in use at once (a view's ring of tiles, the areas around a server's players), or chunks load over and over: `stats().chunksEvicted` (and the view's) counts them.
+- **Less to hold on a server (D-123):** `dropLayers: DRAW_ONLY_LAYERS` leaves out the layers only drawing reads (road, path and rail pieces, geology, rails): a chunk with micro-terrain is about 0.22 MB instead of 0.5. Where the package has its objects by chunk (`pixelworld object-chunks`), `openWorld` loads each chunk's with its terrain and lets them go together, and the landmarks whole: nyc's 282,000 objects took 169 MB of heap loaded whole, against 25 MB around midtown by chunk. A view reads the whole objects file, which its bake needs. `fetch` replaces `fetch` for the package's files: a server reads them from disk (`fileFetch` in `@pixelworlds/multiplayer/server`). Where it has coarse heights (`pixelworld coarse-heights`), `query.coarseHeightAt(x, y)` gives each 8 × 8 cells' lowest ground and highest top, loaded or not: a server steps a plane clear above them over ground still loading instead of holding it.
+- **Without a view (`openWorld`, D-111):** the same queries over the same package and style, with no canvas, GPU or page: for a game server, a bot or a worker that must agree with the players' views on heights and occupancy. `world` is a view's `WorldInfo`; `pick` throws. In Node, `worldUrl` is absolute (or relative to `base`) and served over HTTP, since Node's `fetch` can't read `file:` URLs, and `style` is the pack's JSON or a resolver.
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
 - **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.
 - **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included). A registry landmark drawn from its anchor (City Hall, Coit Tower, the Strat) occupies where its model stands, in plan: the voxel columns of the model the bake generates for it (seed, height, quarter turns), worked out the first time a query comes within 16 cells (D-073); City Hall's wings now block, 5.6 × 7.9 cells, where its anchor's cell did. Where the model can't be generated on the page, and for any other object without a footprint (a tree, a prop), it is the anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.

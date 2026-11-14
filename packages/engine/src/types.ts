@@ -3,7 +3,7 @@ import type { Box, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
-import type { WorldManifest } from "@pixelworlds/world-format";
+import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
 
 /**
  * The engine's public types (docs/library.md §3.2–3.3). Units, unless said
@@ -43,6 +43,54 @@ export interface CameraOptions {
   zoom?: number | "auto";
 }
 
+/**
+ * A world without a view (`openWorld`, D-111): for a game server, a bot or a
+ * worker that must agree with the players' views on heights and occupancy.
+ */
+export interface OpenWorldOptions {
+  /** Base URL of a world package; outside a browser, absolute or with `base` (Node's fetch can't read `file:` URLs). */
+  worldUrl: string;
+  /** What a relative `worldUrl` is relative to (default the page's location). */
+  base?: string | URL;
+  /** The style pack (JSON), or a resolver for the id in the world's manifest: it says which objects stand (as a view draws them) and road widths. */
+  style: StyleSource;
+  /** Render units per cell; default the world's (`manifest.render.scale`), as a view's. */
+  renderScale?: number;
+  /** Load the placed objects, for `objectsAt` and `landmarks` (default true). */
+  objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
+  /**
+   * Terrain layers to leave out (D-123), of those only drawing reads
+   * (`DRAW_ONLY_LAYERS`: the road, path and rail pieces, geology, rails):
+   * they read as empty. All of them make a chunk with micro-terrain about
+   * 0.22 MB instead of 0.5.
+   */
+  dropLayers?: readonly DroppableLayer[];
+  /** How the package's files are fetched (D-123; default `fetch`): a server reads them from disk (`fileFetch` in `@pixelworlds/multiplayer/server`). */
+  fetch?: WorldFetch;
+}
+
+/** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */
+export interface OpenedWorld {
+  readonly world: WorldInfo;
+  readonly query: WorldQuery;
+  /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
+  stats(): WorldStats;
+}
+
+/** `OpenedWorld.stats` (D-120). */
+export interface WorldStats {
+  chunksLoaded: number;
+  chunksTotal: number;
+  chunksMB: number;
+  chunksEvicted: number;
+}
+
 export interface WorldViewOptions {
   /** The canvas to draw into (WebGL2). */
   canvas: HTMLCanvasElement;
@@ -68,6 +116,12 @@ export interface WorldViewOptions {
   startTiles?: boolean | string | URL;
   /** Draw the world's placed objects (default true). */
   objects?: boolean;
+  /**
+   * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
+   * past it, the least recently used go, to load again when something
+   * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
+   */
+  chunkBudgetMB?: number;
   /** Decorative scatter where the level asks for it (default true). */
   scatter?: boolean;
   /** Stamp painted-over hero landmarks into tiles (default true). */
@@ -215,6 +269,9 @@ export interface ViewStats {
   tilesPending: number;
   chunksLoaded: number;
   chunksTotal: number;
+  /** Megabytes of the chunks loaded, and how many `chunkBudgetMB` let go (D-120). */
+  chunksMB: number;
+  chunksEvicted: number;
   gpuTiles: number;
   gpuMB: number;
   avgMeshMs: number;
@@ -390,6 +447,15 @@ export interface WorldQuery {
   metersPerCellAt(x: number, y: number): number;
   /** Load the terrain under a rectangle of cells, so queries answer there. */
   ensure(x0: number, y0: number, x1: number, y1: number): Promise<void>;
+  /** Whether the terrain under a rectangle of cells is loaded now (D-120): a game server's step can wait until it is. */
+  isLoaded(x0: number, y0: number, x1: number, y1: number): boolean;
+  /**
+   * The coarse heights around a place, loaded or not (D-123, `openWorld` on a
+   * package with them): its block's lowest ground and highest drawn top
+   * (steps). A server can step a player clear above `hi` over ground it hasn't
+   * loaded. Null without them, or outside.
+   */
+  coarseHeightAt(x: number, y: number): { lo: number; hi: number } | null;
   /**
    * Placed objects standing at a point (occupancy): those whose footprint
    * contains it; landmarks drawn from an anchor (City Hall, a tower) where
@@ -483,6 +549,13 @@ export interface EntitySpec {
    */
   reveal?: { margin?: number; density?: number };
   visible?: boolean;
+  /**
+   * Whether the view's `ready()`, and a view replacing another, wait for its
+   * sprite (default true). False for what comes, goes and turns all the time,
+   * such as other players and effects (D-111): their pose bakes then never
+   * hold the view up, and each shows once its first sprite is baked.
+   */
+  wait?: boolean;
 }
 
 /** An entity's `reveal`, with its defaults. */

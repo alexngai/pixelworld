@@ -1,0 +1,122 @@
+/* The game's page: the canvas, the HUD, the labels and buttons (the dogfight demo's page uses it too). */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #1e1c2b;
+  color: #e8dcbc;
+  font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace;
+}
+canvas#view {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+}
+canvas#view.fixed {
+  width: auto;
+  height: auto;
+}
+#hud,
+#hint,
+#banner,
+#help,
+#minimap {
+  position: fixed;
+  background: rgba(20, 19, 32, 0.8);
+  border-radius: 4px;
+  pointer-events: none;
+}
+#hud {
+  left: 8px;
+  top: 8px;
+  padding: 6px 10px;
+  white-space: pre;
+}
+#hint {
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  color: #ffe36e;
+}
+#banner {
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  font-size: 14px;
+}
+#minimap {
+  right: 8px;
+  top: 8px;
+  image-rendering: pixelated;
+  border: 1px solid #3b3a4c;
+}
+#help {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 18px;
+  max-width: 560px;
+  pointer-events: auto;
+}
+#help h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+#help th {
+  text-align: left;
+  padding-top: 8px;
+  color: #ffe36e;
+}
+.label {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  padding: 1px 6px;
+  background: rgba(20, 19, 32, 0.7);
+  border-radius: 3px;
+  color: #7fd0c8;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#help td:first-child {
+  padding-right: 14px;
+  white-space: nowrap;
+  color: #c6c2c2;
+}
+#help code {
+  color: #7fd0c8;
+}
+#modes {
+  position: fixed;
+  left: 8px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+}
+#modes button {
+  font: inherit;
+  color: inherit;
+  background: rgba(20, 19, 32, 0.8);
+  border: 1px solid #3b3a4c;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+#modes span {
+  align-self: center;
+  margin: 0 2px 0 8px;
+  color: #c6c2c2;
+}
+#modes button:hover {
+  border-color: #7fd0c8;
+}
+#modes button.on {
+  color: #ffe36e;
+  border-color: #ffe36e;
+}
+.hidden {
+  display: none !important;
+}

@@ -3,9 +3,9 @@ import { Follow } from "./follow";
 import { FlyWorld } from "./ground";
 import { geoToPose, type GeoPose } from "./levels";
 import { FlightPilot, type Waypoint } from "./pilot";
-import { LEVEL_FLIGHT, aoaFor, flyPlane, settleNose, throttleFor, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "./plane";
+import { LEVEL_FLIGHT, clearance, drawnPitch, flightParams, flyPlane, levelOut, throttleFor, type PlaneInput, type PlaneParams, type PlaneState, type PlaneStep } from "./plane";
 import { roadUnder } from "./roads";
-import { FLY_PACE, PLANE, pace } from "./tuning";
+import { PLANE } from "./tuning";
 import type { Place } from "./carController";
 
 /**
@@ -100,11 +100,10 @@ export class PlaneController implements Controller {
     this.view = view;
     const w = view.world;
     const m = w.manifest;
-    const k = pace(m.scale.metersPerCell, FLY_PACE.ref, FLY_PACE.floor) / w.renderScale;
     const vox = PLANE.voxels;
     const size = { length: vox.length * w.renderScale, width: vox.width * w.renderScale, height: vox.height * w.renderScale };
-    const slowest = m.level === "walk" ? PLANE.walkSlowSpeed : PLANE.slowSpeed;
-    this.params = { pace: k, ceiling: w.heightRange[1] + PLANE.ceiling, length: vox.length / 16, slowest };
+    this.params = flightParams(w);
+    const { pace: k, slowest } = this.params;
     this.world = new FlyWorld(view.query, w.cellsX, w.cellsY);
     let start = { x: (m.start?.x ?? w.cellsX / 2) + 0.5, y: (m.start?.y ?? w.cellsY / 2) + 0.5 };
     let heading = this.opts.heading ?? 0;
@@ -121,7 +120,7 @@ export class PlaneController implements Controller {
     const marks = view.query.landmarks();
     await Promise.all([view.query.ensure(start.x - 10, start.y - 10, start.x + 10, start.y + 10), ...marks.map((l) => view.query.ensure(l.x, l.y, l.x, l.y))]);
     const tops = marks.flatMap((l) => view.query.objectsAt(l.x, l.y).map((o) => o.top ?? -Infinity));
-    this.params.ceiling = Math.max(w.heightRange[1], ...tops) + PLANE.ceiling;
+    this.params = flightParams(w, tops);
     const ground = this.world.groundAt(start.x, start.y) ?? 0;
     const speed = Math.max(this.opts.speed ?? 0, PLANE.cruiseSpeed * k);
     // over the ground, and clear of the towers there and just ahead (the Strip's start is among them)
@@ -211,9 +210,7 @@ export class PlaneController implements Controller {
 
   /** Wings level, no roll or slip, and the angle of attack that holds the height at this speed. */
   private level(): void {
-    const s = this.state;
-    Object.assign(s, { bank: 0, slip: 0, rollRate: 0, alpha: Math.min(PLANE.maxAoa, aoaFor(s.speed, s.climb, 0, this.params)) });
-    settleNose(s);
+    levelOut(this.state, this.params);
   }
 
   private remember(): void {
@@ -228,18 +225,7 @@ export class PlaneController implements Controller {
    * way from (x, y) `ahead` cells along `heading`; null where nothing is loaded.
    */
   clearance(x: number, y: number, heading: number, ahead: number, radius: number): number | null {
-    const w = this.world;
-    if (!w) return null;
-    const c = Math.cos(heading);
-    const n = Math.sin(heading);
-    let top: number | null = null;
-    for (let u = -radius; u <= ahead; u += 0.5)
-      for (let v = -radius; v <= radius; v += 0.5) {
-        const px = x + c * u - n * v;
-        const py = y + n * u + c * v;
-        for (const t of [w.groundAt(px, py), w.objectTopAt(px, py)]) if (t !== null) top = Math.max(top ?? -Infinity, t);
-      }
-    return top;
+    return this.world ? clearance(this.world, x, y, heading, ahead, radius) : null;
   }
 
   /**
@@ -344,8 +330,7 @@ export class PlaneController implements Controller {
     plane.moveTo(s.x, s.y, s.h);
     // the nose where it points, and its pitch and bank
     plane.heading = s.yaw;
-    // the path climbs stepsPerCell steps per cell at 45°, where the sprite's cubic voxels climb 2: draw the nose as the path looks
-    plane.pitch = Math.atan((PLANE.stepsPerCell / 2) * Math.tan(s.pitch));
+    plane.pitch = drawnPitch(s.pitch);
     plane.roll = s.roll;
     const ground = this.world.groundAt(s.x, s.y);
     if (ground !== null) this.camGround = this.camGround === null ? ground : ground + (this.camGround - ground) * Math.exp(-dt / PLANE.camGroundEase);

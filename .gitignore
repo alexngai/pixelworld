@@ -42,6 +42,7 @@ packages/city-paris/LICENSE-*
 packages/city-kyoto/LICENSE-*
 packages/city-tokyo/LICENSE-*
 packages/city-hongkong/LICENSE-*
+packages/multiplayer/LICENSE-*
 *.tgz
 docs/api/
 

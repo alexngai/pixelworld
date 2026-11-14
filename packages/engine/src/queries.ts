@@ -22,6 +22,7 @@ export interface QuerySource {
   realHeightAt(x: number, y: number, h: number): number;
   metersPerCellAt(x: number, y: number): number;
   ensureRect(x0: number, y0: number, x1: number, y1: number): Promise<void>;
+  isLoadedRect(x0: number, y0: number, x1: number, y1: number): boolean;
 }
 
 /** Lon/lat ↔ cells (a GeoGrid). */
@@ -65,6 +66,7 @@ export function createQuery(
   geo: GeoSource | null,
   view: () => PickView,
   objects: ObjectSource | null = null,
+  coarse: { at(x: number, y: number): { lo: number; hi: number } | null } | null = null,
 ): WorldQuery {
   const rs = world.renderScale;
   const { metersPerStep, elevationDatumMeters } = world.manifest.scale;
@@ -174,6 +176,8 @@ export function createQuery(
     metersPerCellAt: (x, y) => src.metersPerCellAt(x, y),
 
     ensure: (x0, y0, x1, y1) => src.ensureRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1)),
+    isLoaded: (x0, y0, x1, y1) => src.isLoadedRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1), Math.ceil(y1)),
+    coarseHeightAt: (x, y) => coarse?.at(x, y) ?? null,
 
     objectsAt: (x, y) => (objects ? objects.at(x, y) : []),
     landmarks: () => (objects ? objects.landmarks() : []),

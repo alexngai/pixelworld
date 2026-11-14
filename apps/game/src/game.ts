@@ -146,6 +146,8 @@ export class Game {
   transition: "takeoff" | "landing" | "switch" | null = null;
   /** Scripts step the controllers (`paused` on every controller, now and after level changes). */
   paused = false;
+  /** Keep this map and vehicle: no taking off, landing or switching (the dogfight). */
+  stay = false;
   readonly frames = new FrameStats();
   readonly hud: Hud | null;
   /** Level changes so far: where from and to, and how long the new level took to show (ms). */
@@ -366,7 +368,7 @@ export class Game {
   /** Take off: fast on a straight road, into the flying level at the same place. */
   async takeOff(force = false): Promise<boolean> {
     const car = this.car;
-    if (this.mode !== "car" || !car || this.transition) return false;
+    if (this.mode !== "car" || !car || this.transition || this.stay) return false;
     if (!force && !car.canTakeOff) return false;
     // a walking level's detail is its charm: fly over it rather than switch to the flying level
     const here = this.manifest.level === "walk";
@@ -401,7 +403,7 @@ export class Game {
   /** Land: low and slow over a road, onto the driving level's road at the same place. */
   async land(force = false): Promise<boolean> {
     const plane = this.plane;
-    if (this.mode !== "plane" || !plane || this.transition) return false;
+    if (this.mode !== "plane" || !plane || this.transition || this.stay) return false;
     if (!force && !plane.canLand) return false;
     const here = this.manifest.level === "walk"; // flying over a walking level: land on it
     const url = here ? this.worldUrl : levelUrl(this.worldUrl, this.manifest, "drive", location.href);
@@ -505,7 +507,7 @@ export class Game {
    */
   async goTo(name: string, mode: Mode): Promise<boolean> {
     const vehicle = this.controller;
-    if (this.transition || !vehicle) return false;
+    if (this.transition || !vehicle || this.stay) return false;
     const fly = mode === "plane";
     const same = name === this.map;
     if (same && mode === this.mode) return false; // there already

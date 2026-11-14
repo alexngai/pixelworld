@@ -1,0 +1,16 @@
+# Docker builds from the repository's root (the dogfight demo's Dockerfile, D-114):
+# its workspace and the one world package the demo flies, nothing local
+.git
+**/node_modules
+**/dist
+.claude
+.omc
+.sessionlog
+test-results
+playwright-report
+blob-report
+pipeline
+testdata
+fixtures/*
+!fixtures/southwest-fly
+**/.DS_Store

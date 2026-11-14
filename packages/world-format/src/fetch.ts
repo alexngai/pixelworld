@@ -57,11 +57,14 @@ export function worldFileMessage(url: string, info: WorldFileInfo, problem: stri
  * Fetch a world package's file as bytes. A network failure, an HTTP error or
  * an HTML page where data was expected is a WorldFetchError naming the URL.
  */
-export async function fetchWorldFile(url: string | URL, info: WorldFileInfo): Promise<ArrayBuffer> {
+/** How a world package's files are fetched: `fetch` by default; a server may read them from disk (D-123). */
+export type WorldFetch = (url: string) => Promise<Response>;
+
+export async function fetchWorldFile(url: string | URL, info: WorldFileInfo, fetcher?: WorldFetch): Promise<ArrayBuffer> {
   const href = String(url);
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await (fetcher ? fetcher(href) : fetch(url));
   } catch (e) {
     // no answer at all: the file's advice (an incomplete package…) doesn't apply
     const hint = "is the server up, and does a server on another origin send CORS headers?";
@@ -77,9 +80,9 @@ export async function fetchWorldFile(url: string | URL, info: WorldFileInfo): Pr
 }
 
 /** Fetch a world package's JSON file, plain or gzip: as fetchWorldFile, and JSON that doesn't parse names the URL too. */
-export async function fetchWorldJson(url: string | URL, info: WorldFileInfo): Promise<unknown> {
+export async function fetchWorldJson(url: string | URL, info: WorldFileInfo, fetcher?: WorldFetch): Promise<unknown> {
   const href = String(url);
-  const bytes = await fetchWorldFile(url, info);
+  const bytes = await fetchWorldFile(url, info, fetcher);
   let text: string;
   try {
     text = new TextDecoder().decode(await maybeGunzip(bytes));
