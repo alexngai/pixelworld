@@ -134,6 +134,7 @@ Status values:
 | D-126 | Traffic a server runs: the level's cars the same for every player, and Fogfront's motorway in the units' way | Accepted |
 | D-127 | Teams and spectators for fog-of-war games on interest groups: a side's view serialized once for its players and watchers; Fogfront two against two and watching | Accepted |
 | D-128 | Fogfront's maps from any level: hearths and seeps chosen from a level's cells and checked for reach, the map a room's setting, and maps on Manhattan, Kyoto, Kowloon and the Strip | Accepted |
+| D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
 
 ---
 
@@ -1860,3 +1861,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Choosing each map's rectangle by a search over the whole level:** the rectangle is a designer's choice (what landmarks it takes in); the generator does the placing, which is what has to be checked.
 - **Later:** the bot taking landmarks and using garrisons; a minimap, since the walk levels' maps are larger in metres; more maps (Paris, Tokyo, the Presidio's generated layout as another map); trains and ferries as neutral movers run by the server (the Star Ferry would cross Kowloon's harbour); the map in a room named without the lobby (a page's join could carry it).
 - **Checked:** Node tests over the committed levels, served over HTTP from `fixtures/` (`rts-maps.test.ts`): on each map, the generator's hearths on open, level ground with a way round them; every seep, landmark and the other hearth reached by a path from both hearths (the Presidio's hand-placed layout as well); each side's own seeps as far a walk as the other's, the middle two within a cell; the same plan twice; each map's landmarks (Midtown's four, Kowloon's three, the Strip's two with the High Roller, Higashiyama's at least six apart); the bot taking an idle page's hearth on Midtown and on the Strip through the loopback, the shared snapshot and the lobby's info saying the map; and the lobby over HTTP: quick play on Kowloon twice to one room, the Presidio to another, an unknown map refused, and a page in each room hearing its map once the server has opened that level. Every D-121, D-124 and D-125 test still passing. Live on the built production server in headless Chromium on SwiftShader: on Midtown, a page by quick play waited and a second on its invite link joined in 25 s, a side each, both seeing Midtown's four landmarks and their own hearths; a page with only the room's code loaded itself again on Midtown; on the Strip against the bot, playing in 5 s, the Paris tower and the High Roller on the board, 29 frames a second; no page errors after the fix above (before it, the page joining the running room threw on every shared snapshot). 777 tests in the workspace.
+
+### D-129: `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag (accepted)
+- **Why:** the owner asked for trusted publishing on PyPI too. The pipeline was uploaded by hand with an API token (D-110), a long-lived credential; PyPI's trusted publishing (OIDC) needs none, and unlike npm's (D-105) it can be set up before the project exists (a pending publisher), so even the first release needs no token.
+- **What:**
+  - **`.github/workflows/pypi.yml`:** a tag `pipeline-v<version>` builds the sdist and the wheel, fails if the tag doesn't name `pipeline/pyproject.toml`'s version, checks that the wheel alone lists every built-in source (`pixelworld plugins`), and publishes with `uv publish`. Only the publish job gets `id-token: write`.
+  - **docs/npm.md §9:** the pending publisher on pypi.org (workflow `pypi.yml`, no environment), the tag, and the upload by hand kept for when CI can't run.
+- **Rejected alternatives:**
+  - **In `release.yml`, with changesets:** changesets versions npm packages; the pipeline has its own version and a release a few times a year. A tag is the whole trigger.
+  - **`pypa/gh-action-pypi-publish`:** it adds attestations, but `uv publish` is the tool the manual upload already uses, and attestations name the repository in Sigstore's public log while it is private.
+  - **A GitHub environment (`pypi`):** the free plan has none for a private repository.
+- **Later:** an environment with required reviewers and attestations once the repository is public.

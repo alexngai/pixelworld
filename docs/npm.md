@@ -211,25 +211,36 @@ The npm packages are `pixelworld` and the six city packs, `@pixelworlds/city-sf`
 
 **By hand, if CI can't** (an outage): as step 3, from a clean `main` after merging the version pull request, then tag each package (`git tag -a <name>@<version>`) and `git push --follow-tags`.
 
-**The Python distribution** (`pixelworld-pipeline`, the only one since D-110) is released by hand too.
-- **Bump the version on a branch** (`cd pipeline && uv version --bump minor`) and merge it.
-- **Then, from a clean worktree of `main`,** build, check and upload:
+**The Python distribution** (`pixelworld-pipeline`, the only one since D-110) is released by a tag. CI ([`.github/workflows/pypi.yml`](../.github/workflows/pypi.yml), D-129) publishes it through PyPI's [trusted publishing](https://docs.pypi.org/trusted-publishers/), so no PyPI token is stored anywhere.
 
-```sh
-git fetch origin && git worktree add ../pixelworld-pypi origin/main && cd ../pixelworld-pypi/pipeline
-uv build --out-dir dist                    # the sdist and the wheel
-uv run --no-project --isolated --with dist/pixelworld_pipeline-*.whl \
-  pixelworld plugins                       # the wheel alone: lists every built-in source by role
-uv publish dist/pixelworld_pipeline-*      # asks for a token, or reads UV_PUBLISH_TOKEN
-```
+**One-time setup:** on pypi.org, Account → Publishing → *Add a new pending publisher*, GitHub: project `pixelworld-pipeline`, owner `alexngai`, repository `pixelworld`, workflow `pypi.yml`, no environment (GitHub's free plan has no environments for a private repository). Unlike npm, PyPI trusts a publisher for a project that doesn't exist yet, so the first release goes through CI too. A pending publisher doesn't reserve the name: until the first upload, anyone can take it. After that upload, it is the project's publisher (Settings → Publishing).
 
-- **The first upload** needs a PyPI API token scoped to the whole account, since the project doesn't exist yet. Give it as the password, with `__token__` as the user name. Afterwards, replace it with a token scoped to `pixelworld-pipeline`.
+**A release:**
+1. **Bump the version on a branch** (`cd pipeline && uv version --bump minor`) and merge it.
+2. **Tag `main`** with that version, and push the tag:
+
+   ```sh
+   git fetch origin && git tag pipeline-v0.1.0 origin/main && git push origin pipeline-v0.1.0
+   ```
+
+   The workflow fails a tag that doesn't name `pipeline/pyproject.toml`'s version. It builds the sdist and the wheel, checks that the wheel alone lists every built-in source by role (`pixelworld plugins`), and publishes both. If the publish job fails, re-run it from the run's page.
+
 - **Upload once:** PyPI never takes the same version twice, so a mistake means a new version. A bad release can be yanked.
+- **By hand, if CI can't** (an outage, or no runner minutes): from a clean worktree of `main`, with a PyPI API token (scoped to the whole account for the first upload, since the project doesn't exist yet; to `pixelworld-pipeline` after it). Give it as the password, with `__token__` as the user name, and delete it afterwards.
+
+  ```sh
+  git fetch origin && git worktree add ../pixelworld-pypi origin/main && cd ../pixelworld-pypi/pipeline
+  uv build --out-dir dist                    # the sdist and the wheel
+  uv run --no-project --isolated --with dist/pixelworld_pipeline-*.whl \
+    pixelworld plugins                       # the wheel alone: lists every built-in source by role
+  uv publish dist/pixelworld_pipeline-*      # asks for a token, or reads UV_PUBLISH_TOKEN
+  ```
+
 - **A dry run:** `uv publish --publish-url https://test.pypi.org/legacy/ dist/pixelworld_pipeline-*` uploads to TestPyPI, with a token of its own.
 
 **Before the repository is public:**
 - **Publishing makes the code public:** the npm tarballs' source maps hold the TypeScript sources, and the sdist holds the pipeline's.
 - **Links lead nowhere yet:** the packages' homepage, repository and README links point at the private repository, which others can't open.
-- **No provenance:** npm adds provenance only for a public repository. Trusted publishing works either way.
+- **No provenance:** npm adds provenance only for a public repository, and the PyPI workflow uploads no attestations. Trusted publishing works either way.
 
-Extras (`[lidar]`, `[cityjson]`, library.md §3.5) and a PyPI release job are later work.
+Extras (`[lidar]`, `[cityjson]`, library.md §3.5) are later work.
