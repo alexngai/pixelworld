@@ -41,8 +41,8 @@ const worlds: Plugin = {
 export default defineConfig(({ isSsrBuild }) => ({
   root: fileURLToPath(new URL(".", import.meta.url)),
   publicDir: FIXTURES,
-  server: { port: 5254, strictPort: true },
-  preview: { port: 4254, strictPort: true },
+  server: { port: 5255, strictPort: true },
+  preview: { port: 4255, strictPort: true },
   worker: { format: "es" },
   plugins: [bakeCode(), rooms, worlds],
   ssr: isSsrBuild ? { noExternal: true, target: "node" as const } : undefined,

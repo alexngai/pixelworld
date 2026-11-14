@@ -572,6 +572,13 @@ export interface Eye {
   /** Over its ground (steps). */
   up: number;
   radius: number;
+  /** The cells of the building it looks out from (a garrison's): its own roof doesn't hide anything from it. */
+  roof?: readonly number[];
+}
+
+/** A garrison's eye: from the building's roof, over the ground at its middle, its own cells not in the way (D-125). */
+export function roofEye(g: MapGrid, s: Pick<Structure, "x" | "y" | "top" | "cells">, radius: number): Eye {
+  return { x: s.x, y: s.y, up: Math.max(SIGHT.eye, s.top - groundAt(g, s.x, s.y) + 0.5), radius, roof: s.cells };
 }
 
 /** How much higher a point stands than the ground three cells round it (steps, at least 0). */
@@ -606,9 +613,11 @@ export function sideSight(g: MapGrid, eyes: readonly Eye[], fog: Float32Array | 
     const radius = e.radius + Math.min(SIGHT.highMost, rise(g, e.x, e.y) * SIGHT.highPerStep);
     const at = cellAt(g, e.x, e.y);
     const own = fog && at >= 0 ? fog[at]! : 0;
+    const roof = e.roof && new Set(e.roof);
     viewshed(g, { x: e.x, y: e.y, h: groundAt(g, e.x, e.y) + e.up }, radius, out, {
       targetHeight: SIGHT.look,
       reach: fog ? (i, d) => d <= radius * (1 - SIGHT.fog * Math.max(own, fog[i]!)) : undefined,
+      ignore: roof ? (i) => roof.has(i) : undefined,
     });
   }
   return out;

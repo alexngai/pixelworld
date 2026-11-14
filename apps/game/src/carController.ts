@@ -1,12 +1,12 @@
 import { listenTo, type Controller, type ControllerView, type Entity, type KeyInput } from "@pixelworlds/engine";
-import { levelScale, vehicleVoxels, type RouteNetwork } from "@pixelworlds/sim";
-import { NO_INPUT, driveCar, type CarInput, type CarParams, type CarState, type CarStep } from "./car";
+import type { RouteNetwork } from "@pixelworlds/sim";
+import { NO_INPUT, carParams, carSize, driveCar, type CarInput, type CarParams, type CarState, type CarStep } from "./car";
 import { Bob, Follow } from "./follow";
 import { Decks, DriveWorld, type TrafficSource } from "./ground";
 import { geoToPose, type GeoPose } from "./levels";
 import { CarPilot, steerToward } from "./pilot";
 import { angleBetween, nearestRoad, roadDirection, straightAhead, traceRoad } from "./roads";
-import { CAR, DRIVE_PACE, TAKEOFF, pace } from "./tuning";
+import { CAR, TAKEOFF } from "./tuning";
 
 /**
  * The player's car (M4): a controller on the engine's public API. It owns
@@ -64,6 +64,8 @@ export class CarController implements Controller {
   follow: boolean;
   /** Raise the drawn car (steps): it lifts off at a take-off. */
   lift = 0;
+  /** Draw the car (and the camera with it) this far off its state: cells, steps, radians. A correction easing out (the race demo's prediction). */
+  readonly drawOffset = { x: 0, y: 0, h: 0, heading: 0 };
   /** The last step's report. */
   last: CarStep = { blocked: null, topSpeed: 0, grade: 0 };
   /** The last thing the car bumped into (a reason and what it was), for the HUD. */
@@ -103,21 +105,8 @@ export class CarController implements Controller {
 
   async attach(view: ControllerView): Promise<void> {
     this.view = view;
-    const m = view.world.manifest;
-    const k = pace(m.scale.metersPerCell, DRIVE_PACE.ref, DRIVE_PACE.floor) / view.world.renderScale;
-    // the drawn car: a little larger than a traffic car at this level
-    const scale = levelScale(m.scale.metersPerCell, m.level, {
-      heightStretch: m.depiction?.heightStretch,
-      maxScale: m.depiction?.vehicleScale,
-    });
-    const vox = vehicleVoxels("car", scale, view.world.renderScale);
-    const size = {
-      length: vox.length + CAR.extraVoxels.length,
-      width: vox.width + CAR.extraVoxels.width,
-      height: vox.height + CAR.extraVoxels.height,
-    };
-    const perCell = 16 * view.world.renderScale;
-    this.params = { pace: k, length: size.length / perCell, width: size.width / perCell };
+    const size = carSize(view.world);
+    this.params = carParams(view.world);
     const traffic = this.opts.traffic;
     this.world = new DriveWorld(view.query, view.world.cellsX, view.world.cellsY, new Decks(this.opts.routes ?? null), () =>
       this.collideTraffic && traffic ? traffic() : null,
@@ -329,11 +318,13 @@ export class CarController implements Controller {
     const e = this.entity;
     if (!view || !e) return;
     const s = this.state;
+    const o = this.drawOffset;
+    const [x, y, h, heading] = [s.x + o.x, s.y + o.y, s.h + o.h, s.heading + o.heading];
     const bob = this.bob.update(s.h, dt);
-    e.moveTo(s.x, s.y, s.h + bob + this.lift);
-    e.heading = s.heading;
+    e.moveTo(x, y, h + bob + this.lift);
+    e.heading = heading;
     if (this.follow) {
-      const f = this.cam.update(s.x, s.y, s.h, s.heading, s.speed, dt);
+      const f = this.cam.update(x, y, h, heading, s.speed, dt);
       view.camera.setFocus(f.x, f.y, f.h);
     }
   }

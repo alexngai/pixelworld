@@ -20,7 +20,7 @@
     "limit": "100 KB"
   },
   {
-    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground; 111.8 KB with D-124's runtime edits and D-125's cells for games, fog sampler and veil layer)",
+    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground; 111.8 KB with D-124's runtime edits and D-125's cells for games, fog sampler and veil layer; 113.5 KB with D-120/D-123's big worlds merged in)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js",

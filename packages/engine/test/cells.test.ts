@@ -137,6 +137,14 @@ describe("cells: a world's rectangle for games (D-125)", () => {
     expect(lineOfSight(c, eye(0.5, 0.5, 4), eye(8.5, 0.5, 4))).toBe(true);
     // into the cell the target stands on, and out of the eye's own
     expect(lineOfSight(c, eye(3.5, 0.5), eye(4.5, 0.5))).toBe(true);
+    // cells an eye looks out over (its own roof) don't hide
+    expect(lineOfSight(c, eye(0.5, 0.5), eye(8.5, 0.5), (i) => i === cellIndex(c, 4, 0))).toBe(true);
+  });
+
+  it("goes to the edge for a goal off the rectangle, not past it", () => {
+    const c = cellsOf_(["......", "......"]);
+    const end = findPath(c, { x: 0.5, y: 0.5 }, { x: 1000, y: 1.5 }).at(-1)!;
+    expect(end).toEqual({ x: 5.5, y: 1.5 });
   });
 
   it("a viewshed: what an eye sees around it, nearest eye's distance kept, a wall's shadow left out", () => {
