@@ -31,6 +31,7 @@ describe("the codec (D-123)", () => {
     const one = new Writer();
     one.int(-64);
     expect(one.length).toBe(1);
+    expect(DOT.wire(dot(Infinity, -Infinity, { hp: NaN }))).toEqual([0, 0, 0, 0, 1, "a"]); // never an endless number
     expect(() => new Reader(new Uint8Array([0x80])).uint()).toThrow("cut short");
   });
 
@@ -116,6 +117,19 @@ describe("replicating to groups of pages (D-123)", () => {
     send({}); // skipped (backed up)
     send({ h: ["p1"] });
     expect(lastOf("p1").keyframe).toBe(true);
+  });
+
+  it("doesn't call a thing gone in a keyframe that has it, back under a new number while the page was skipped", () => {
+    const { states, send, lastOf } = setup();
+    states.set("bot", dot(1));
+    send({ g: ["p1"] });
+    send({}); // p1 backed up: skipped
+    states.delete("bot"); // a pilot came: the bot went
+    send({});
+    states.set("bot", dot(2)); // and left: a new bot, a new number
+    send({ g: ["p1"] });
+    expect(lastOf("p1")).toMatchObject({ keyframe: true, gone: [] });
+    expect(lastOf("p1").states.map(([id]) => id)).toEqual(["bot"]);
   });
 });
 
@@ -211,6 +225,20 @@ describe("binary frames through the relay (D-123)", () => {
     expect(got[0]).toBeInstanceOf(Uint8Array);
     expect([...(got[0] as Uint8Array)]).toEqual([1, 2, 3]);
     expect(got[1]).toEqual({ k: "json" });
+    page.close();
+    relay.close();
+    server.close();
+  });
+
+  it("keeps what comes before a page has a handler, and gives a game's other bytes to onMessage", async () => {
+    const server = createServer().listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const relay = attachRelay(server, { host: (room) => ({ join: (id) => room.send(id, new Uint8Array([9])), message: () => {} }) });
+    const page = await joinRoom(`ws://127.0.0.1:${(server.address() as AddressInfo).port}/relay`, "r");
+    await new Promise((r) => setTimeout(r, 50)); // the game's first message came while nothing listened
+    const other: unknown[] = [];
+    new TickClient(page, { tick: 1 / 60, schema: DOT, onMessage: (d) => other.push(d) });
+    expect(other).toEqual([new Uint8Array([9])]);
     page.close();
     relay.close();
     server.close();

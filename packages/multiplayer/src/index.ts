@@ -1,6 +1,6 @@
 import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
 import { Reader, type Schema } from "./codec";
-import { Replica, SNAP_BYTE, type ReplicaUpdate } from "./replica";
+import { Replica, SNAP_BYTE, WORLD_BYTE, type ReplicaUpdate } from "./replica";
 
 export * from "./codec";
 export * from "./replica";
@@ -95,7 +95,9 @@ export interface Room {
 
 class RoomImpl implements Room {
   readonly peers: Set<string>;
-  onMessage: Room["onMessage"] = null;
+  /** What came before there was a handler: a keyframe the page then diffs from (D-123) mustn't be lost. */
+  private held: [string, unknown][] = [];
+  private handler: Room["onMessage"] = null;
   onJoin: Room["onJoin"] = null;
   onLeave: Room["onLeave"] = null;
   onClose: Room["onClose"] = null;
@@ -114,8 +116,26 @@ class RoomImpl implements Room {
     if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(data));
   }
 
+  get onMessage(): Room["onMessage"] {
+    return this.handler;
+  }
+
+  set onMessage(f: Room["onMessage"]) {
+    this.handler = f;
+    if (!f) return;
+    const held = this.held;
+    this.held = [];
+    for (const [from, data] of held) f(from, data);
+  }
+
+  /** A message for the page: to its handler, or held until it has one. */
+  deliver(from: string, data: unknown): void {
+    if (this.handler) this.handler(from, data);
+    else this.held.push([from, data]);
+  }
+
   receive(m: ServerMessage): void {
-    if (m.t === "msg") this.onMessage?.(m.from, m.data);
+    if (m.t === "msg") this.deliver(m.from, m.data);
     else if (m.t === "join") {
       this.peers.add(m.id);
       this.onJoin?.(m.id);
@@ -146,7 +166,7 @@ export function joinRoom(url: string | URL, room: string): Promise<Room> {
     let why: string | null = null;
     ws.onmessage = (e) => {
       // binary: a hosted game's (D-123)
-      if (typeof e.data !== "string") return joined?.onMessage?.(SERVER, new Uint8Array(e.data as ArrayBuffer));
+      if (typeof e.data !== "string") return joined?.deliver(SERVER, new Uint8Array(e.data as ArrayBuffer));
       const m = JSON.parse(String(e.data)) as ServerMessage;
       if (m.t === "welcome") resolve((joined = new RoomImpl(ws, m.id, room, m.peers)));
       else if (m.t === "full") why = `room "${room}" is full`;
@@ -456,7 +476,7 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends obje
           this.snapshot(snap);
           return;
         }
-        if (!this.replica) return;
+        if (data[0] !== WORLD_BYTE || !this.replica) return opts.onMessage?.(data);
         const u = this.replica.read(data);
         const t = u.tick * opts.tick;
         this.clock.sample(t, this.now());

@@ -72,7 +72,9 @@ export class Replica<S extends object> {
       this.known.delete(net);
       gone.push(had.id);
     }
-    if (before) for (const [net, had] of before) if (!this.known.has(net)) gone.push(had.id);
+    // an id back under a new number (gone and returned while the page was out of step) is here, not gone
+    const here = new Set(states.map(([id]) => id));
+    if (before) for (const [net, had] of before) if (!this.known.has(net) && !here.has(had.id)) gone.push(had.id);
     const len = r.uint();
     const extras = len ? (JSON.parse(new TextDecoder().decode(r.bytes(len))) as object) : null;
     return { tick, keyframe, states, gone, extras };

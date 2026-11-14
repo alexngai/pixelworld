@@ -153,7 +153,9 @@ export class Schema<S extends object> {
   /** A state as written: each field on its step. */
   wire(s: S): Wire {
     return this.kinds.map((f, i) => {
-      const v = (s as Record<string, unknown>)[this.names[i]!];
+      const raw = (s as Record<string, unknown>)[this.names[i]!];
+      // an infinite number would never end as a whole one: 0, as NaN is
+      const v = f.kind !== "str" && f.kind !== "exact" && f.kind !== "bool" && !Number.isFinite(Number(raw)) ? 0 : raw;
       switch (f.kind) {
         case "fixed":
           return Math.round(Number(v) / f.step) || 0;

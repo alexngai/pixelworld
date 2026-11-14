@@ -1634,6 +1634,16 @@ The point is more room for visual interest; both halves are wanted.
   12. **Interest:**
       - **`slack`:** a thing keeps its square until it is that far past the edge. On the big-world run, 16 cells cut the keyframes from pages changing square from 13 to 4.
       - **`diamond`:** the shape of an isometric view, everything within `cell × reach` counted across plus down. With 32-cell squares at reach 4, each page got at most 8 others instead of 11, and 3.2 KB/s instead of 3.3. 128-cell squares stay the default, since finer ones change group more often (30 keyframes).
+- **Checked:**
+  - **Tests:** 690 in the workspace, the pipeline's new ones, and the e2e smoke tests.
+  - **Live:** the dogfight in headless Chromium, and its production bundle with a Node client.
+  - **A review:** it ran the replication through 15,000 random runs and found six bugs, now fixed and tested:
+    - A keyframe could list a thing as gone that it also had, back under a new number while the page was skipped. The dogfight's bot vanished for a few snapshots.
+    - The diamond's slack costs `4 × slack` counted across plus down, not `2 ×` (the docs).
+    - A room dropped what came before its page had a handler. Now it holds it, so a first keyframe isn't lost.
+    - An infinite number would never have ended as a whole one on the wire.
+    - `fileFetch` refused everything from a relative root.
+    - A game's other binary messages now reach `onMessage`.
 - **Measured** (`test/bigworld.test.ts`, as in D-120: 32 bots and 8 pages over the whole southwest, 20 s; memory alone in its process):
 
   | | D-120's before | D-120 | D-123 |

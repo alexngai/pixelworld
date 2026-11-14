@@ -15,7 +15,8 @@
  * - **Slack** (`slack`, D-123): a thing stays in its square until it is more
  *   than `slack` cells past its edge, so a page on an edge doesn't change
  *   group (and get a keyframe) back and forth. It takes `2 × slack` off what
- *   a page is sure to see.
+ *   a page is sure to see each way: across and down for a square, so
+ *   `4 × slack` counted across plus down for a diamond.
  *
  *   protected override update() { for (const [id, p] of this.cars) this.interest.place(id, p.x, p.y); }
  *   protected override groupOf(id: string) { return this.interest.groupOf(id); }

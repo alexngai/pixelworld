@@ -315,6 +315,7 @@ describe("the dogfight demo's server (D-113, D-114, D-116, D-118)", () => {
     expect((await disk("http://worlds/../package.json")).status).toBe(404);
     expect((await disk("http://worlds/%2e%2e/package.json")).status).toBe(404);
     expect((await disk("http://worlds/southwest-fly/nothing.json")).status).toBe(404);
+    expect((await fileFetch("fixtures")("http://worlds/southwest-fly/manifest.json")).status).toBe(200); // a root relative to the working directory
   });
 
   it("clamps a page's stick and trigger to what they can be", async () => {

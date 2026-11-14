@@ -1,7 +1,7 @@
 import { createReadStream, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname, join, normalize, sep } from "node:path";
+import { extname, join, normalize, resolve, sep } from "node:path";
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -60,7 +60,8 @@ export function serveStatic(root: string): (req: IncomingMessage, res: ServerRes
  * its world this way rather than over HTTP from itself.
  */
 export function fileFetch(root: string): (url: string) => Promise<Response> {
-  const base = normalize(root.endsWith(sep) ? root : root + sep);
+  const r = resolve(root);
+  const base = r.endsWith(sep) ? r : r + sep;
   const missing = () => new Response("not found", { status: 404, statusText: "Not Found" });
   return async (url) => {
     let path: string;
