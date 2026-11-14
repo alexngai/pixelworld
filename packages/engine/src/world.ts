@@ -1,5 +1,5 @@
 import { BAKE_CODE } from "@pixelworlds/bake";
-import { resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
+import { footprintBounds, resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
 import {
   ChunkStore,
   INCOMPLETE_PACKAGE,
@@ -10,6 +10,7 @@ import {
   loadManifest,
   loadObjectLandmarks,
   loadObjects,
+  objectInSlice,
   tileKey,
   type CoarseHeights,
   type HeroPaint,
@@ -38,6 +39,7 @@ import {
   type WorldFetch,
   type WorldManifest,
 } from "@pixelworlds/world-format";
+import { EditLog } from "./edits";
 import { ChunkedObjects, landmarkPlan, ObjectIndex } from "./objects";
 import { createQuery, type PickView } from "./queries";
 import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
@@ -199,13 +201,14 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
   };
 }
 
-/** A loaded world's queries: a view's (`view` places its picks) or `openWorld`'s (none: `pick` throws). */
-export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): WorldQuery {
+/** A loaded world's queries: a view's (`view` places its picks) or `openWorld`'s (none: `pick` throws); `edits` takes objects out (D-124). */
+export function worldQuery(w: LoadedWorld, view: (() => PickView) | null, edits: EditLog | null = null): WorldQuery {
   const { manifest } = w;
   const heightStretch = manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1;
   // placed objects for occupancy queries: the ones the style draws, as the bake does
   const assets = w.style.assets;
-  const index = (instances: readonly ObjectInstance[]) =>
+  // objects named by their place in the objects file (D-124); a chunk's file doesn't say it (D-123), so those can't be edited yet
+  const index = (instances: readonly ObjectInstance[], named = false) =>
     new ObjectIndex(
       instances,
       { cellsX: manifest.cellsX, cellsY: manifest.cellsY, metersPerCell: manifest.scale.metersPerCell, heightStretch },
@@ -219,8 +222,10 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null): World
           metersPerCell: manifest.scale.metersPerCell,
           heightStretch,
         }),
+      named ? edits : null,
+      named,
     );
-  const objects = !w.objects || !assets ? null : w.chunkedObjects ? new ChunkedObjects(index(w.objects.instances), (x, y) => w.store.objectsIn(x, y), index) : index(w.objects.instances);
+  const objects = !w.objects || !assets ? null : w.chunkedObjects ? new ChunkedObjects(index(w.objects.instances), (x, y) => w.store.objectsIn(x, y), index) : index(w.objects.instances, true);
   const noView = (): PickView => {
     throw new Error("pick needs a world view: openWorld's queries have no screen");
   };
@@ -243,7 +248,8 @@ export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
     throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
   }
   const w = await loadWorld({ ...opts, worldUrl, headless: true });
-  return { world: worldInfo(w), query: worldQuery(w, null), stats: () => chunkStats(w.store) };
+  const edits = new EditLog(w.chunkedObjects ? (w.manifest.objects?.count ?? 0) : (w.objects?.instances.length ?? 0));
+  return { world: worldInfo(w), query: worldQuery(w, null, edits), edits, stats: () => chunkStats(w.store) };
 }
 
 /** What a store holds now (`OpenedWorld.stats`, and a view's). */
@@ -327,17 +333,44 @@ export function bakeInit(w: LoadedWorld, heroes: HeroPaint[], scatter: boolean):
   };
 }
 
+/** The cells [x0, x1) × [y0, y1) a tile's bake reads: its own and a context margin, clipped to the world. */
+function sliceRect(w: LoadedWorld, tx: number, ty: number): [number, number, number, number] {
+  const ts = w.tileSize;
+  return [
+    Math.max(0, tx * ts - w.margin),
+    Math.max(0, ty * ts - w.margin),
+    Math.min(w.manifest.cellsX, (tx + 1) * ts + w.margin),
+    Math.min(w.manifest.cellsY, (ty + 1) * ts + w.margin),
+  ];
+}
+
 /** A tile's cells plus its context margin, clipped to the world, for its bake (loads the chunks it needs). */
 export async function tileSlice(w: LoadedWorld, t: TileRequest): Promise<TerrainSlice> {
-  const { manifest, store } = w;
-  const ts = w.tileSize;
-  const x0 = Math.max(0, t.tx * ts - w.margin);
-  const y0 = Math.max(0, t.ty * ts - w.margin);
-  const x1 = Math.min(manifest.cellsX, (t.tx + 1) * ts + w.margin);
-  const y1 = Math.min(manifest.cellsY, (t.ty + 1) * ts + w.margin);
+  const { store } = w;
+  const [x0, y0, x1, y1] = sliceRect(w, t.tx, t.ty);
   await store.ensureRect(x0, y0, x1, y1);
   const s = store.slice(x0, y0, x1, y1);
   return { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+}
+
+/**
+ * The tiles whose bake builds a placed object (`objectInSlice`), as [tx, ty]:
+ * those its pixels, shadows and ambient occlusion fall in. An edit to it bakes
+ * them again (D-124).
+ */
+export function objectTiles(w: LoadedWorld, object: number): [number, number][] {
+  const o = w.objects?.instances[object];
+  if (!o) return [];
+  const ts = w.tileSize;
+  // the anchor as well as the footprint: a small footprint's tiles are its anchor's, which may lie outside it
+  const [fx0, fy0, fx1, fy1] = o.fp?.length ? footprintBounds(o.fp) : [o.x, o.y, o.x, o.y];
+  const [bx0, by0, bx1, by1] = [Math.min(fx0, o.x), Math.min(fy0, o.y), Math.max(fx1, o.x), Math.max(fy1, o.y)];
+  const out: [number, number][] = [];
+  const last = (cells: number) => Math.ceil(cells / ts) - 1;
+  for (let ty = Math.max(0, Math.floor((by0 - w.margin) / ts)); ty <= Math.min(last(w.manifest.cellsY), Math.floor((by1 + w.margin) / ts)); ty++)
+    for (let tx = Math.max(0, Math.floor((bx0 - w.margin) / ts)); tx <= Math.min(last(w.manifest.cellsX), Math.floor((bx1 + w.margin) / ts)); tx++)
+      if (objectInSlice(o, ...sliceRect(w, tx, ty))) out.push([tx, ty]);
+  return out;
 }
 
 /**
@@ -362,9 +395,11 @@ export async function openTileCache(option: WorldViewOptions["cache"], code = BA
  * The tile cache key: the package, the style, the bake code's identity
  * (D-072), the objects flag, a render scale other than the package's, and the
  * plugins (`pluginsKey`: their names, versions and code). A change to any of
- * them makes old tiles unreachable.
+ * them makes old tiles unreachable. A tile whose bake leaves out removed
+ * objects (D-124) is kept under them as well (the list itself, not a hash:
+ * one tile's is short, and two lists must never share a key).
  */
-export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest) => string {
+export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[]) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
@@ -376,5 +411,5 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
     ...plugins,
   ];
-  return (t) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare)].join("|");
+  return (t, removed) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : [])].join("|");
 }

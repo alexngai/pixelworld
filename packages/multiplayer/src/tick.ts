@@ -3,7 +3,7 @@ import { Writer, type Schema } from "./codec";
 import { SNAP_BYTE, type Replicator } from "./replica";
 import type { HostedRoom, RoomHost } from "./server";
 
-/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, sends no inputs). */
+/** What a page is in a `TickRoom`: one who plays, or one who watches (gets the shared snapshot, its group's if it has one: a team it watches, D-127; sends no inputs). */
 export type TickRole = "player" | "spectator";
 
 export interface TickRoomOptions<W> {
@@ -48,6 +48,8 @@ interface Seat<I, J> {
   join: J;
   queue: { seq: number; i: I; seen: number | null }[];
   ack: number;
+  /** The last numbered command taken (D-121), 0 before one. */
+  cmd: number;
   budget: number;
   /** A bot's driver, and its own count of inputs. */
   drive?: () => I;
@@ -72,7 +74,9 @@ const LAG_CREEP = 0.0005;
  *   `TickClient`) queue and are stepped one a tick, a little credit over so
  *   a backlog after a stall drains; out-of-order, invalid and excess inputs
  *   are dropped. **Commands** (`cmd`: a team pick, a ready, a build) reach
- *   `command` from players and spectators alike, reliably and once.
+ *   `command` from players and spectators alike, reliably and once; a
+ *   player's snapshots say the last one taken (`cmd`, D-121). A game run by
+ *   commands alone (a strategy game) has no inputs: `input` gives null.
  * - **Bots** (`addBot`): players the server drives itself, each tick.
  * - **Snapshots,** every `snapshotEvery` ticks: one shared part for every
  *   page (`shared`, serialized once), and to each player its own (`snapshot`,
@@ -161,7 +165,8 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   /**
    * Interest (D-120): the group whose shared snapshot a page gets (the
    * others near it: `Interest.groupOf`), or undefined for the whole one.
-   * Pages in one group share one serialization.
+   * Pages in one group share one serialization. For teams (D-127): a
+   * player's team, or the team a spectator watches (a fog of war's view).
    */
   protected groupOf(_id: string): string | undefined {
     return undefined;
@@ -211,7 +216,10 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     }
     const seat = this.seats.get(id);
     if (!seat) return;
-    if (m.k === "cmd") return this.command(id, m.c);
+    if (m.k === "cmd") {
+      if (Number.isInteger(m.n) && m.n! > seat.cmd) seat.cmd = m.n!; // taken as it comes: the next snapshot has it
+      return this.command(id, m.c);
+    }
     if (m.k !== "in" || seat.role !== "player" || seat.drive || !Number.isInteger(m.seq) || m.seq! <= (seat.queue.at(-1)?.seq ?? seat.ack)) return;
     const i = this.input(m.i);
     if (i === null) return;
@@ -237,7 +245,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
   /** A bot: a player the server drives itself, with `drive()` each tick (no page, no queue). False if the id is taken or the game turns it away. */
   addBot(id: string, join: J, drive: () => I): boolean {
     if (this.seats.has(id) || this.pending.has(id)) return false;
-    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, drive, base: null, behind: false, stepped: this.time };
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, cmd: 0, budget: 0, drive, base: null, behind: false, stepped: this.time };
     this.seats.set(id, seat);
     if (this.added(id, join) !== null) return true;
     this.seats.delete(id);
@@ -343,13 +351,14 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
     for (const [id, seat] of this.seats)
       if (seat.role === "player" && !seat.drive && !skip.has(id)) {
         if (!this.snapSchema) {
-          this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id) } satisfies TickSnapshot);
+          this.room.send(id, { k: "snap", t: this.time, ack: seat.ack, ...this.snapshot(id), ...(seat.cmd ? { cmd: seat.cmd } : {}) } satisfies TickSnapshot);
           continue;
         }
         const w = new Writer();
         w.byte(SNAP_BYTE);
         w.uint(this.ticks);
         w.uint(seat.ack);
+        w.uint(seat.cmd); // the last numbered command taken (D-121)
         this.snapSchema.writeFull(w, this.snapSchema.wire(this.snapshot(id)));
         this.room.send(id, w.done());
       }
@@ -416,7 +425,7 @@ export abstract class TickRoom<I, J = unknown, W = undefined, E = unknown> imple
 
   private admit(id: string, join: J): void {
     this.pending.delete(id);
-    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, budget: 0, base: null, behind: false, stepped: this.time };
+    const seat: Seat<I, J> = { role: "player", join, queue: [], ack: 0, cmd: 0, budget: 0, base: null, behind: false, stepped: this.time };
     this.seats.set(id, seat);
     const role = this.added(id, join);
     if (role === null) {

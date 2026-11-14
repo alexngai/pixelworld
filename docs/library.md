@@ -287,7 +287,7 @@ interface Layer {
   init(ctx: LayerContext): boolean | Promise<boolean>;      // false: nothing in this world, left out
   update?(dt, frame: FrameInfo, clock: FrameClock): boolean; // every frame while enabled, dt game time; true: redraw
   sprites?(frame): { list: SpriteDraw[]; complete: boolean };
-  screenPass?(frame): ScreenPass | null;                     // fog's, today the one kind
+  screenPass?(frame): ScreenPass | null;                     // a fog pass: the style's fog, a veil (D-125)
   serialize?(): unknown; restore?(state): void; dispose?(): void; // dispose: the layer leaves its view
 }
 interface LayerContext { view; bakeSprite(rotation, boxes): Promise<Sprite | null>; releaseSprite(s); frame(): FrameInfo; invalidate(): void }
@@ -295,9 +295,10 @@ interface FrameInfo { rotation; focus: { x, y, h }; zoom; view: { left, top, wid
 view.layers: list(), get(id), add(layer), remove(id), enable(id, on?, sublayer?)
 ```
 
-- **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. A frame takes the first screen pass any layer offers.
+- **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. Each layer's screen pass runs in turn, in the layers' order, each on what the last made (D-125).
 - **One view at a time (D-073):** a layer may move to another view, as at a level switch. Adding it to a view takes it out of the view it is in (calling its `dispose`) before `init` with the new view's context, so the old view stops drawing it and destroying the old view later leaves it alone. `dispose` drops what belongs to the view (its sprites; bakes still in flight, which resolve null once that view is destroyed); `init` starts that state afresh. Traffic's layer keeps its switches and, until `init`, its simulation (`serialize` after leaving a view works); `init` starts a new simulation on the new world's routes (or the `routes` it was built with), and `restore` puts a saved one back.
-- **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level.
+- **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level. `set({ time })` puts its clock where a game's is (a server's, D-125).
+- **`veilLayer({ ramp, shade?, levels?, id? })`** (engine, D-125): a veil over cells a game sets, `set(rect, values)` (0–255 a cell, row by row; beyond the rectangle as at its edge), dithered into the frame as the fog is, pixel by pixel from where each stands, toward the ramp's shade: a fog of war, an area picked out.
 - **`trafficLayer({ seed, density, enabled, paused, time, sublayers, routes })`** (sim): D-060; left out without routes. Sublayers road, rail and ferry. Its state is the simulation's JSON with its switches.
 
 ### 7.4 Entities
@@ -348,15 +349,19 @@ view.query.heightAt(x, y)             // the drawn ground (steps), as the rover 
 view.query.surfaceAt(x, y)            // { id, name, waterLevel }
 view.query.roadAt(x, y)               // { classId, class, width, connections, lanes, oneWay, divided }
 view.query.pick(screenX, screenY)     // { x, y, h, cellX, cellY } under a canvas point (CSS px)
+view.query.pickObject(screenX, screenY)   // the placed object drawn there (an objectsAt hit), or null (D-124)
 view.query.lonLatToCell(lon, lat); view.query.cellToLonLat(x, y)   // through the geo grid (D-048)
 view.query.elevationAt(x, y, h?); view.query.metersPerCellAt(x, y); view.query.ensure(x0, y0, x1, y1)
 view.query.isLoaded(x0, y0, x1, y1)   // whether the terrain under a rectangle is loaded now (D-120)
 view.query.coarseHeightAt(x, y)       // { lo, hi } of its block of 8 × 8 cells, loaded or not (openWorld, D-123), or null
-view.query.objectsAt(x, y)            // placed objects standing there: { group, id, x, y, bounds, footprint, base, top }[]
+view.query.objectsAt(x, y)            // placed objects standing there: { index, group, id, x, y, bounds, footprint, base, top }[]
 view.query.landmarks()                // registry landmarks, one per id: { id, group, x, y, parts }[]
 
-const { world, query, stats } = await openWorld({ worldUrl, style, base?, renderScale?, objects?, chunkBudgetMB?, dropLayers?, fetch? })   // the same, without a view (D-111)
+const { world, query, edits, stats } = await openWorld({ worldUrl, style, base?, renderScale?, objects?, chunkBudgetMB?, dropLayers?, fetch? })   // the same, without a view (D-111)
 stats()                               // { chunksLoaded, chunksTotal, chunksMB, chunksEvicted } (D-120)
+
+view.edits.remove([hit.index])        // take placed objects out (D-124): { op, objects } or null; restore(objects?), apply(op)
+view.edits.list()                     // the ops that changed something, to send and replay; removed(), isRemoved(i), version, onChange(f)
 ```
 
 - **Null where nothing is loaded:** `ensure` loads the terrain under a rectangle; `isLoaded` says whether it is, so a game server's step can wait for its ground (D-120).
@@ -364,9 +369,29 @@ stats()                               // { chunksLoaded, chunksTotal, chunksMB, 
 - **Less to hold on a server (D-123):** `dropLayers: DRAW_ONLY_LAYERS` leaves out the layers only drawing reads (road, path and rail pieces, geology, rails): a chunk with micro-terrain is about 0.22 MB instead of 0.5. Where the package has its objects by chunk (`pixelworld object-chunks`), `openWorld` loads each chunk's with its terrain and lets them go together, and the landmarks whole: nyc's 282,000 objects took 169 MB of heap loaded whole, against 25 MB around midtown by chunk. A view reads the whole objects file, which its bake needs. `fetch` replaces `fetch` for the package's files: a server reads them from disk (`fileFetch` in `@pixelworlds/multiplayer/server`). Where it has coarse heights (`pixelworld coarse-heights`), `query.coarseHeightAt(x, y)` gives each 8 × 8 cells' lowest ground and highest top, loaded or not: a server steps a plane clear above them over ground still loading instead of holding it.
 - **Without a view (`openWorld`, D-111):** the same queries over the same package and style, with no canvas, GPU or page: for a game server, a bot or a worker that must agree with the players' views on heights and occupancy. `world` is a view's `WorldInfo`; `pick` throws. In Node, `worldUrl` is absolute (or relative to `base`) and served over HTTP, since Node's `fetch` can't read `file:` URLs, and `style` is the pack's JSON or a resolver.
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
-- **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. Objects aren't picked: building tops would come from the depth the tiles write.
+- **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. It goes through objects to the ground behind them.
+- **`pickObject`** (D-124) follows the same ray down from the highest object top to that ground, and answers the first placed object whose footprint (a landmark's plan, a tree's cell) and estimated height it passes through (`objectsAt` at each eighth of a step); an object without a `top` (a tree, a prop) is taken to reach 3 steps over its base at render scale 1. A roof drawn above its estimate (a spire) or a pitched roof's eaves can miss; the tiles keep no object ids to read back.
+- **Edits (`view.edits`, `openWorld(…).edits`, D-124):** placed objects taken out at runtime and put back, named by `ObjectHit.index` (the object's place in the objects file, stable for a package). `objectsAt`, `pickObject` and `landmarks` stop answering for a removed object at once. A view bakes again the tiles whose bake builds it (its anchor in their slice of cells and context margin, or its big footprint reaching into it: where its pixels, shadow and ambient occlusion fall), in the rotation shown first, each old image drawn until its new one is ready (`ready()` waits for them); in the other rotations they are let go, to bake when turned to. An edited tile is cached under the removed objects its bake leaves out, never the plain key, so putting them back finds the old tiles again. `list()` is the ops that changed something, each with only the objects it changed: `apply` them to another world to replay them; an op naming objects the world hasn't is ignored. Terrain (heights, surfaces, water, roads) can't be edited yet. Objects loaded by chunk (an `openWorld` on a package with `objectChunks`, D-123) can't be named yet: a chunk's file doesn't say an object's place in the whole, so their hits have `index` −1 and edits leave them.
 - **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included). A registry landmark drawn from its anchor (City Hall, Coit Tower, the Strat) occupies where its model stands, in plan: the voxel columns of the model the bake generates for it (seed, height, quarter turns), worked out the first time a query comes within 16 cells (D-073); City Hall's wings now block, 5.6 × 7.9 cells, where its anchor's cell did. Where the model can't be generated on the page, and for any other object without a footprint (a tree, a prop), it is the anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.
 - **Landmarks (`landmarks`, M4):** one entry per registry id at the middle of its parts' anchors, named by its largest part's group. Names are for people and stay in the registry (D-051); the game names them for its HUD.
+- **The fog as a number (`fogSampler(world, query)`, D-125):** the style's fog at a point, a height and a time (`at(x, y, h, seconds, night?)`, 0–1), as the fog layer draws it then (its areas, ceiling, drift and patches), or null where the style has none; on a server through `openWorld`, for a game in which fog hides things.
+
+### 7.6.1 Cells for games (D-125)
+
+```ts
+const cells = readCells(query, { x0, y0, w, h }, { wall?, trees?, defaultHeight?, onObject? })  // once, the terrain and objects loaded
+cells.flags[i] & CELL_WATER | CELL_WALL | CELL_ROAD | CELL_TREES; cells.height[i]; cells.top[i]; cells.surface[i]; cells.roadClass[i]
+findPath(cells, from, to, { cost?, minCost?, maxClimb? })   // A*, eight ways, straightened; the nearest reachable cell for a goal out of reach
+lineClear(cells, a, b, opts); canStep(cells, ax, ay, bx, by, opts); walkable(cells, cx, cy, opts); nearestWalkable(…)
+lineOfSight(cells, eye, point)        // nothing on the cells between (`top`) above the line; heights absolute (steps)
+viewshed(cells, eye, radius, out, { targetHeight?, reach? })   // each cell seen: its distance to the nearest eye, into `out`
+setRemoved(cells, isRemoved, objects?); followEdits(cells, view.edits)   // cells open and tops drop as objects go
+```
+
+- **What it is:** a rectangle of a level read once from its queries, as plain arrays (index `(cy − y0) · w + cx − x0`), for what a game works out over cells many times a tick: paths, places, sight. A server keeps a copy per room and applies its own match's edits (`setRemoved`) without the world they share; a page follows its view's (`followEdits`).
+- **Walls and tops:** an object walls the cells it stands on unless it is trees or a prop (`wall`, `trees` to choose otherwise); each cell keeps its objects (`objects`) and its highest top (an object's, or its base and `defaultHeight` where the world gives none, 3 steps), which lines of sight pass over. One reads out of and into the cells the eye and the point stand on, so woods hide what is behind them but not their edge.
+- **Paths:** `cost(i)` is the game's (its roads, woods and own buildings; Infinity where nothing may stand), `minCost` the least it gives (A*'s guess), `maxClimb` the steepest step between neighbours.
+- **Not yet:** shadow casting for many eyes (a ray a cell is O(r³) an eye), cells that follow terrain edits.
 
 ### 7.7 What moved where
 
@@ -384,8 +409,7 @@ stats()                               // { chunksLoaded, chunksTotal, chunksMB, 
 ### 7.8 Not yet
 
 - **Edits** (`view.edits`) and the export CLI (§3.4). Packaging is built (§3.5): the workspace packages stay private TypeScript sources, and `pixelworld` bundles them for npm.
-- **Screen passes:** fog's is the one kind. A general pass (a layer's own shader) comes when a second layer needs one.
-- **`pick`** ignores objects.
+- **Screen passes:** fog's is the one kind, which the veil (D-125) uses too; they chain, one a layer. A general pass (a layer's own shader) comes when a layer needs one.
 - **Traffic sprites** aren't entities yet (§7.4).
 - **Level switching** still reloads the viewer's page; the game switches in place (§7.9). The viewer could do the same with `replace`.
 

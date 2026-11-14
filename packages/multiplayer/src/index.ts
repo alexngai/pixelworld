@@ -1,4 +1,5 @@
 import type { Entity, EntityList, EntitySpec } from "pixelworld/engine";
+import type { Pose as VehiclePose, VehicleKind } from "pixelworld/traffic";
 import { Reader, type Schema } from "./codec";
 import { Replica, SNAP_BYTE, WORLD_BYTE, type ReplicaUpdate } from "./replica";
 
@@ -16,6 +17,8 @@ export * from "./replica";
  *   (`Prediction`) and put right by each snapshot.
  * - `ServerClock`, `Smoothing`, `RemotePlayers`: the others, drawn a little
  *   in the past and in between, as entities in a world view.
+ * - `vehiclesNet`, `RemoteTraffic`: a level's traffic run by the server, the
+ *   same for every page, drawn by the traffic layer (D-126).
  */
 
 // ---------------------------------------------------------------- protocol
@@ -27,15 +30,17 @@ export const SERVER = "server";
  * A page to a `TickRoom` (D-114, D-116): who it is (`hello`, the game's own
  * join data), its inputs, numbered, with `seen` (when what it shows of the
  * others happened, on the server's clock), and commands (a team pick, a
- * ready, a build: reliable, once).
+ * ready, a build: reliable, once), numbered `n` by a `TickClient` (D-121).
  */
-export type TickMessage<I> = { k: "hello"; join: unknown } | { k: "in"; seq: number; i: I; seen: number | null } | { k: "cmd"; c: unknown };
+export type TickMessage<I> = { k: "hello"; join: unknown } | { k: "in"; seq: number; i: I; seen: number | null } | { k: "cmd"; c: unknown; n?: number };
 
 /** A `TickRoom`'s snapshot for one player: server time, the last of its inputs stepped, and its own state (the game's fields). */
 export interface TickSnapshot {
   k: "snap";
   t: number;
   ack: number;
+  /** The last numbered command the game took from this page (D-121): its state here has it. Absent until one. */
+  cmd?: number;
 }
 
 /** A `TickRoom`'s shared snapshot, to every page at once: server time and the game's fields (the others, the score). */
@@ -486,7 +491,8 @@ export function readSnap<S extends object>(data: Uint8Array, schema: Schema<S>, 
   if (r.byte() !== SNAP_BYTE) throw new Error("not a binary snapshot");
   const t = r.uint() * tick;
   const ack = r.uint();
-  return { ...schema.value(schema.readFull(r)), k: "snap", t, ack };
+  const cmd = r.uint();
+  return { ...schema.value(schema.readFull(r)), k: "snap", t, ack, ...(cmd ? { cmd } : {}) };
 }
 
 /**
@@ -497,8 +503,13 @@ export function readSnap<S extends object>(data: Uint8Array, schema: Schema<S>, 
  * time). It says who it is (`hello`), sends commands (`command`), and as a
  * player its inputs at the room's fixed tick, stepped at once (`Prediction`),
  * numbered and sent with `seen`. `clock` is the server's: give it to
- * `RemotePlayers`. `ping` is the round trip from an input to the snapshot
- * that has it.
+ * `RemotePlayers`. `ping` is the round trip from an input (or a command) to
+ * the snapshot that has it.
+ *
+ * A page with no vehicle of its own (a strategy game's, D-121) sends no
+ * inputs: it calls `sync` each frame instead of `advance`, and its numbered
+ * commands come back acknowledged (`TickSnapshot.cmd`), so it can show an
+ * order at once and know which snapshot has it.
  */
 export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends object = object> {
   readonly prediction: Prediction<I>;
@@ -506,11 +517,13 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends obje
   readonly replica: Replica<R> | null;
   readonly clock = new ServerClock();
   readonly events = new EventQueue<E>();
-  /** The round trip from an input to the snapshot that has it (ms, recent average), or null before one. */
+  /** The round trip from an input or a command to the snapshot that has it (ms, recent average), or null before one. */
   ping: number | null = null;
   private acc = 0;
   private latest: (TickSnapshot & S) | null = null;
   private readonly sentAt = new Map<number, number>();
+  private cmdSeq = 0;
+  private readonly cmdSentAt = new Map<number, number>();
   private readonly now: () => number;
 
   constructor(
@@ -553,9 +566,13 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends obje
     this.room.send({ k: "hello", join } satisfies TickMessage<I>);
   }
 
-  /** A command to the room's game: reliable, once (not a tick's input). */
-  command(c: unknown): void {
-    this.room.send({ k: "cmd", c } satisfies TickMessage<I>);
+  /** A command to the room's game: reliable, once (not a tick's input). Its number: the first snapshot whose `cmd` is at least it has it. */
+  command(c: unknown): number {
+    const n = ++this.cmdSeq;
+    this.cmdSentAt.set(n, this.now());
+    if (this.cmdSentAt.size > 100) this.cmdSentAt.delete(this.cmdSentAt.keys().next().value!); // a spectator's: no snapshot of its own acknowledges them
+    this.room.send({ k: "cmd", c, n } satisfies TickMessage<I>);
+    return n;
   }
 
   /** The server time this page shows of the others now (null before any message). */
@@ -576,12 +593,7 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends obje
    * events will name by that number).
    */
   advance(dt: number, input: () => I, after?: (input: I, seq: number) => void): void {
-    const snap = this.latest;
-    if (snap) {
-      this.latest = null;
-      this.prediction.reconcile(snap.ack, () => this.opts.restore?.(snap));
-      this.opts.reconciled?.(snap);
-    }
+    this.sync();
     const tick = this.opts.tick;
     this.acc = Math.min(this.acc + dt, (this.opts.maxTicksPerFrame ?? 6) * tick);
     while (this.acc >= tick) {
@@ -594,15 +606,35 @@ export class TickClient<I, S = unknown, W = unknown, E = unknown, R extends obje
     }
   }
 
+  /**
+   * The newest snapshot of the page's own put in place (`restore`, the inputs
+   * the server hasn't stepped yet stepped again, `reconciled`), if one came
+   * since: what `advance` does first. A page with no vehicle calls it each
+   * frame instead.
+   */
+  sync(): void {
+    const snap = this.latest;
+    if (!snap) return;
+    this.latest = null;
+    this.prediction.reconcile(snap.ack, () => this.opts.restore?.(snap));
+    this.opts.reconciled?.(snap);
+  }
+
   private snapshot(snap: TickSnapshot & S): void {
     if (this.latest && snap.t < this.latest.t) return;
     this.latest = snap;
-    const sent = this.sentAt.get(snap.ack);
+    this.measure(this.sentAt, snap.ack);
+    if (typeof snap.cmd === "number") this.measure(this.cmdSentAt, snap.cmd);
+  }
+
+  /** The round trip to a snapshot that has what was sent as `n`, and what it has let go. */
+  private measure(sentAt: Map<number, number>, n: number): void {
+    const sent = sentAt.get(n);
     if (sent !== undefined) {
       const ms = (this.now() - sent) * 1000;
       this.ping = this.ping === null ? ms : this.ping * 0.8 + ms * 0.2;
     }
-    for (const seq of this.sentAt.keys()) if (seq <= snap.ack) this.sentAt.delete(seq);
+    for (const k of sentAt.keys()) if (k <= n) sentAt.delete(k);
   }
 }
 
@@ -728,5 +760,73 @@ export class RemotePlayers {
 
   clear(): void {
     this.retain([]);
+  }
+}
+
+// ---------------------------------------------------------------- traffic the server runs
+
+/**
+ * A vehicle's car on the wire (D-126): the vehicle's id, its kind, paint and
+ * car in its consist (0: the head), and where it is: cells to a hundredth,
+ * height in steps to a tenth, heading in radians to a hundredth.
+ */
+export type VehicleNet = [id: number, kind: VehicleKind, variant: number, part: number, x: number, y: number, h: number, heading: number];
+
+const q = (v: number, k: number) => Math.round(v * k) / k;
+
+/** The traffic simulation's poses (`TrafficSim.poses`) for a snapshot: those in `area` (cells), if one is given. */
+export function vehiclesNet(poses: readonly VehiclePose[], area?: { x0: number; y0: number; w: number; h: number }): VehicleNet[] {
+  const out: VehicleNet[] = [];
+  for (const p of poses)
+    if (!area || (p.x >= area.x0 && p.y >= area.y0 && p.x < area.x0 + area.w && p.y < area.y0 + area.h))
+      out.push([p.id, p.kind, p.variant, p.part, q(p.x, 100), q(p.y, 100), q(p.h, 10), q(p.heading, 100)]);
+  return out;
+}
+
+/**
+ * The traffic a room's server runs (D-126), as a page draws it: each car a
+ * little in the past on the server's clock and in between snapshots
+ * (`Smoothing`), as `RemotePlayers` draws the others. Give `poses` to the
+ * traffic layer as its feed (`trafficLayer({ feed })`).
+ */
+export class RemoteTraffic {
+  readonly smoothing: Smoothing;
+  private readonly cars = new Map<string, VehicleNet>();
+  /** Cars the newest snapshot doesn't have, and the last time one did: drawn until the page shows a later time. */
+  private readonly gone = new Map<string, number>();
+  private last = -Infinity;
+
+  constructor(opts: RemotePlayersOptions = {}) {
+    this.smoothing = new Smoothing(opts.delay, opts.clock ?? null);
+  }
+
+  /** The vehicles in a snapshot at `sent` on the server's clock (s): the ones it doesn't have go once the page shows that time. */
+  push(sent: number, list: readonly VehicleNet[], now = performance.now() / 1000): void {
+    const keep = new Set<string>();
+    for (const v of list) {
+      const id = `${v[0]}.${v[3]}`;
+      keep.add(id);
+      this.gone.delete(id);
+      this.cars.set(id, v);
+      this.smoothing.push(id, sent, { x: v[4], y: v[5], h: v[6], heading: v[7] }, now);
+    }
+    for (const id of this.cars.keys()) if (!keep.has(id) && !this.gone.has(id)) this.gone.set(id, this.last);
+    this.last = sent;
+  }
+
+  /** Every car where it is drawn at `now` (our clock, s). */
+  poses(now = performance.now() / 1000): VehiclePose[] {
+    for (const [id, last] of this.gone)
+      if ((this.smoothing.time(id, now) ?? Infinity) > last) {
+        this.cars.delete(id);
+        this.smoothing.delete(id);
+        this.gone.delete(id);
+      }
+    const out: VehiclePose[] = [];
+    for (const [id, [vid, kind, variant, part]] of this.cars) {
+      const p = this.smoothing.at(id, now)!;
+      out.push({ id: vid, kind, variant, part, x: p.x, y: p.y, h: p.h, heading: p.heading });
+    }
+    return out;
   }
 }

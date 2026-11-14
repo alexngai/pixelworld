@@ -6,7 +6,7 @@ import {
   type ObjectInstance,
   type VoxelModel,
 } from "@pixelworlds/generators";
-import type { LandmarkInfo, ObjectHit } from "./types";
+import type { LandmarkInfo, ObjectHit, WorldEdits } from "./types";
 
 /**
  * The world's placed objects for gameplay queries (occupancy): which objects
@@ -27,6 +27,8 @@ import type { LandmarkInfo, ObjectHit } from "./types";
  *   at the object voxel scale and the level's height stretch (D-010,
  *   D-047). Objects without a real height (trees, props, city blocks) have
  *   no top.
+ * - **Edits:** an object taken out of the world (`WorldEdits`, D-124) isn't
+ *   there for any query until it is put back.
  */
 
 const BUCKET = 8; // cells per bucket edge
@@ -48,6 +50,8 @@ export interface ObjectIndexWorld {
 const PLAN_REACH = 16;
 
 interface Entry {
+  /** Its place in the objects file. */
+  index: number;
   inst: ObjectInstance;
   bounds: [number, number, number, number];
   /** Where its model stands, for a landmark drawn from its anchor; undefined until a query comes near. */
@@ -180,6 +184,9 @@ export class ObjectIndex {
   private readonly buckets = new Map<number, number[]>();
   private readonly cols: number;
   private landmarkList: LandmarkInfo[] | null = null;
+  /** The edits' version the landmarks were listed at. */
+  private landmarkVersion = 0;
+  private reach: { ground: number; top: number } | null = null;
 
   constructor(
     private readonly instances: readonly ObjectInstance[],
@@ -189,6 +196,10 @@ export class ObjectIndex {
     private readonly heightAt: (x: number, y: number) => number | null,
     /** Where a landmark drawn from its anchor stands (`landmarkPlan`), or null for its anchor's cell. */
     private readonly plan: (inst: ObjectInstance) => ModelPlan | null = () => null,
+    /** Objects taken out of the world (D-124). */
+    private readonly edits: Pick<WorldEdits, "isRemoved" | "version"> | null = null,
+    /** Whether `instances` is the whole objects file, so each one's place in it names it (`ObjectHit.index`); a chunk's file (D-123) isn't, and its hits say −1. */
+    private readonly named = true,
   ) {
     this.cols = Math.ceil(world.cellsX / BUCKET) + 1;
   }
@@ -197,7 +208,7 @@ export class ObjectIndex {
     if (this.entries) return this.entries;
     const entries: Entry[] = [];
     const known = new Map<string, boolean>();
-    for (const inst of this.instances) {
+    for (const [index, inst] of this.instances.entries()) {
       let ok = known.get(inst.g);
       if (ok === undefined) known.set(inst.g, (ok = this.drawn(inst.g)));
       if (!ok) continue;
@@ -206,7 +217,7 @@ export class ObjectIndex {
       const r = PLAN_REACH;
       const bounds: [number, number, number, number] = reaches ? [inst.x - r, inst.y - r, inst.x + r, inst.y + r] : boundsOf(inst);
       const i = entries.length;
-      entries.push({ inst, bounds, plan: reaches ? undefined : null, base: inst.z0 ?? null });
+      entries.push({ index: this.named ? index : -1, inst, bounds, plan: reaches ? undefined : null, base: inst.z0 ?? null });
       const bx0 = Math.max(0, Math.floor(bounds[0] / BUCKET));
       const by0 = Math.max(0, Math.floor(bounds[1] / BUCKET));
       const bx1 = Math.max(bx0, Math.floor(Math.min(bounds[2], this.world.cellsX) / BUCKET));
@@ -248,6 +259,7 @@ export class ObjectIndex {
       top = base + (2 * inst.hm * this.world.heightStretch) / m;
     }
     return {
+      index: e.index,
       group: inst.g,
       id: inst.id ?? null,
       x: inst.x,
@@ -268,6 +280,7 @@ export class ObjectIndex {
     const out: ObjectHit[] = [];
     for (const i of list) {
       const e = entries[i]!;
+      if (this.edits?.isRemoved(e.index)) continue;
       if (e.plan === undefined) {
         const [x0, y0, x1, y1] = e.bounds;
         if (x < x0 || y < y0 || x > x1 || y > y1) continue;
@@ -288,12 +301,13 @@ export class ObjectIndex {
 
   /** Landmarks from the registry (objects with an id), one per id at the middle of its parts' anchors. */
   landmarks(): LandmarkInfo[] {
-    if (this.landmarkList) return this.landmarkList;
+    const version = this.edits?.version ?? 0;
+    if (this.landmarkList && this.landmarkVersion === version) return this.landmarkList;
     // the group is the largest part's (a dam's, not one of its intake towers')
     const byId = new Map<string, { group: string; area: number; sx: number; sy: number; n: number }>();
     for (const e of this.build()) {
       const id = e.inst.id;
-      if (!id) continue;
+      if (!id || this.edits?.isRemoved(e.index)) continue;
       const [x0, y0, x1, y1] = e.bounds;
       const area = e.inst.fp?.length ? (x1 - x0) * (y1 - y0) : 0;
       const l = byId.get(id);
@@ -308,7 +322,24 @@ export class ObjectIndex {
       } else byId.set(id, { group: e.inst.g, area, sx: e.inst.x, sy: e.inst.y, n: 1 });
     }
     this.landmarkList = [...byId].map(([id, l]) => ({ id, group: l.group, x: l.sx / l.n, y: l.sy / l.n, parts: l.n }));
+    this.landmarkVersion = version;
     return this.landmarkList;
+  }
+
+  /**
+   * The highest an object reaches (steps) where the ground is no higher than
+   * `ground`: its crest, or its real height over that ground, as `hit`
+   * estimates them. Where a march down a view ray may start.
+   */
+  highest(ground: number): number {
+    if (this.reach?.ground === ground) return this.reach.top;
+    let top = ground;
+    for (const { inst } of this.build()) {
+      if (inst.top !== undefined) top = Math.max(top, inst.top);
+      else if (inst.hm !== undefined) top = Math.max(top, (inst.z0 ?? ground) + (2 * inst.hm * this.world.heightStretch) / (inst.m ?? this.world.metersPerCell));
+    }
+    this.reach = { ground, top };
+    return top;
   }
 }
 
@@ -340,5 +371,10 @@ export class ChunkedObjects {
 
   landmarks(): LandmarkInfo[] {
     return this.landmarkIndex.landmarks();
+  }
+
+  /** The landmarks' highest only: objects come by chunk only on a server (D-123), where nothing picks along a view ray (D-124). */
+  highest(ground: number): number {
+    return this.landmarkIndex.highest(ground);
   }
 }

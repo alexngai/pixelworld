@@ -40,6 +40,18 @@ describe("entities", () => {
     expect(turnBoxes([{ ...BOX, rot: 0.1 }], 8, 16)[0]!.rot).toBeCloseTo(Math.PI + 0.1, 12);
   });
 
+  it("draws a silhouette in the entity's own ramp, at its lightest shade, where it has one", async () => {
+    const t = entities();
+    t.list.add({ model: { boxes: [BOX], key: "a" }, x: 5, y: 6, silhouette: true });
+    t.list.add({ model: { boxes: [BOX], key: "a" }, x: 7, y: 6, silhouette: true, silhouetteRamp: 3 });
+    t.list.request(0);
+    t.jobs[0]!.done(t.sprite(1));
+    await t.flush();
+    const [a, b] = t.list.draws(0, proj).list;
+    expect(a!.silhouetteIndex).toBeUndefined(); // the style's silhouette colour
+    expect(b!.silhouetteIndex).toBe(1 + 3 * 6 + 5);
+  });
+
   it("bakes each model once per rotation and heading, and draws it when baked", async () => {
     const t = entities();
     const a = t.list.add({ model: { boxes: [BOX] }, x: 5, y: 6, silhouette: true });

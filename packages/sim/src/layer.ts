@@ -3,7 +3,7 @@ import { generateModel, modelBoxes, resolveAsset, type AssetCatalog, type Box, t
 import { fetchWorldJson, parseWorldFile, type WorldManifest } from "@pixelworlds/world-format";
 import type { VehicleKind } from "./catalog";
 import { modelSize, vehicleBoxes, vehicleVoxels, type RampLookup } from "./models";
-import { RouteNetwork, parseRoutes } from "./routes";
+import { ROUTES_VERSION, RouteNetwork, parseRoutes } from "./routes";
 import { TICK, TrafficSim, type Pose, type SimState } from "./sim";
 
 /**
@@ -67,6 +67,12 @@ export interface TrafficLayerOptions {
   sublayers?: readonly TrafficSublayer[];
   /** Routes to run on instead of the world package's. */
   routes?: RouteNetwork;
+  /**
+   * Vehicles someone else runs (a game's server, D-126): the layer draws the
+   * poses this gives each frame and runs no traffic of its own (nor loads the
+   * package's routes).
+   */
+  feed?: () => readonly Pose[];
 }
 
 /** The layer's whole state, for determinism. */
@@ -164,6 +170,7 @@ export class TrafficLayer implements Layer {
     const w = ctx.view.world;
     const net =
       this.opts.routes ??
+      (this.opts.feed ? new RouteNetwork({ version: ROUTES_VERSION, nodes: [], routes: [] }) : null) ??
       (await loadRoutes(w.url, w.manifest).catch((e: unknown) => {
         console.warn("routes:", e);
         return null;
@@ -241,6 +248,7 @@ export class TrafficLayer implements Layer {
   }
 
   update(dt: number, frame: FrameInfo): boolean {
+    if (this.opts.feed) return this.opts.feed().length > 0; // a server's vehicles move every frame
     this.focus(frame);
     if (this.hold) return false;
     const t0 = performance.now();
@@ -319,7 +327,7 @@ export class TrafficLayer implements Layer {
     this.drawn = [];
     const t0 = performance.now();
     let complete = true;
-    for (const p of this.sim.poses(this.hold ? 1 : this.sim.alpha)) {
+    for (const p of this.poses()) {
       if (!this.shown.has(SUBLAYER_OF[p.kind])) continue;
       // heading in this view, as a heading in rotation 0
       const k = Math.round((p.heading / (2 * Math.PI)) * HEADINGS);
@@ -341,6 +349,11 @@ export class TrafficLayer implements Layer {
     return { list, complete: complete && this.pending === 0 };
   }
 
+  /** Every car drawn now: the feed's, else the simulation's between its last two ticks. */
+  private poses(): readonly Pose[] {
+    return this.opts.feed?.() ?? this.sim.poses(this.hold ? 1 : this.sim.alpha);
+  }
+
   /** Vehicle sprites baked or baking. */
   get spriteCount(): number {
     return this.baked.size;
@@ -355,7 +368,7 @@ export class TrafficLayer implements Layer {
     if (!this.on || !this.simulation) return [];
     const out: NearbyVehicle[] = [];
     const sizes = new Map<VehicleKind, { length: number; width: number }>();
-    for (const p of this.sim.poses(this.hold ? 1 : this.sim.alpha)) {
+    for (const p of this.poses()) {
       if (!this.shown.has(SUBLAYER_OF[p.kind])) continue;
       if (Math.hypot(p.x - x, p.y - y) > radius) continue;
       let size = sizes.get(p.kind);

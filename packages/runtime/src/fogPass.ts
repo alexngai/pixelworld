@@ -43,6 +43,7 @@ uniform vec2 uDepthRange;
 uniform mat2 uUnrotate;     // view (u, v) → grid (x, y)
 uniform float uRS;          // render units per cell
 uniform vec2 uFieldSize;    // field extent in cells
+uniform vec2 uFieldOrigin;  // the cell the field starts at
 uniform vec3 uVertical;     // ceiling, fade, patch plane height (render units)
 uniform vec4 uPatch;        // cells per lattice unit, offset (lattice units), contrast
 uniform float uStrength;
@@ -74,7 +75,7 @@ void main() {
   float vertical = clamp((uVertical.x - h) / uVertical.y, 0.0, 1.0);
   if (vertical <= 0.0) return;
   float a = s.x / 16.0;
-  float area = texture(uField, toGrid(a, s.y / 8.0 + h) / uFieldSize).r;
+  float area = texture(uField, (toGrid(a, s.y / 8.0 + h) - uFieldOrigin) / uFieldSize).r;
   if (area <= 0.0) return;
   vec2 q = toGrid(a, s.y / 8.0 + uVertical.z) / uPatch.x - uPatch.yz;
   float n = texture(uNoise, q / ${FOG_NOISE_PERIOD}.0).r;
@@ -83,7 +84,8 @@ void main() {
   float t = (BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0;
   int level = min(int(floor(f * float(uLevels) + t)), uLevels);
   if (level == 0) return;
-  o = vec4(texelFetch(uLut, ivec2(c.r, uLutRow + level - 1), 0).r, 0.0, 0.0, 1.0);
+  // the depth kept: another pass after this one reads it (D-125)
+  o = vec4(texelFetch(uLut, ivec2(c.r, uLutRow + level - 1), 0).r, src.gba);
 }
 `;
 
@@ -111,6 +113,7 @@ export class FogPass {
   private u: Uniforms;
   private fieldTex: WebGLTexture | null = null;
   private fieldSize: [number, number] = [1, 1];
+  private fieldOrigin: [number, number] = [0, 0];
   private noiseTex: WebGLTexture;
   private lutTex: WebGLTexture | null = null;
   private lut: FogLut | null = null;
@@ -145,6 +148,7 @@ export class FogPass {
     this.fieldTex = createTexture(gl, field.width, field.height, gl.R8, gl.RED, gl.UNSIGNED_BYTE, field.data);
     this.filter(gl.LINEAR);
     this.fieldSize = [field.width * field.cellsPerTexel, field.height * field.cellsPerTexel];
+    this.fieldOrigin = [field.x0 ?? 0, field.y0 ?? 0];
   }
 
   /** Let go of the pass's GPU objects. */
@@ -185,6 +189,7 @@ export class FogPass {
     gl.uniformMatrix2fv(u.loc("uUnrotate"), false, rotationMat2(((4 - fog.rotation) % 4) as Rotation));
     gl.uniform1f(u.loc("uRS"), fog.renderScale);
     gl.uniform2fv(u.loc("uFieldSize"), this.fieldSize);
+    gl.uniform2fv(u.loc("uFieldOrigin"), this.fieldOrigin);
     gl.uniform3f(u.loc("uVertical"), fog.ceiling, fog.fade, fog.patchHeight);
     gl.uniform4f(u.loc("uPatch"), fog.patchCells, fog.patchOffset[0], fog.patchOffset[1], fog.contrast);
     gl.uniform1f(u.loc("uStrength"), fog.strength);

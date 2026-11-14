@@ -79,8 +79,43 @@ export interface OpenWorldOptions {
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
+  /** Placed objects taken out and put back (D-124): the queries agree at once; there is nothing to bake. */
+  readonly edits: WorldEdits;
   /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
   stats(): WorldStats;
+}
+
+/** A runtime edit to a world (D-124): placed objects taken out of it, or put back. */
+export interface WorldEdit {
+  op: "remove" | "restore";
+  /** The objects, by `ObjectHit.index`. */
+  objects: number[];
+}
+
+/**
+ * A world's runtime edits (D-124): its placed objects (buildings, trees,
+ * landmarks) taken out and put back, as a log of ops a game can send and
+ * replay. The queries (`objectsAt`, `pickObject`, `landmarks`) stop
+ * answering for a removed object at once; a view bakes again the tiles whose
+ * bake reaches it, the one it shows first, each kept on screen until its new
+ * image is ready.
+ */
+export interface WorldEdits {
+  /** Take objects out (`ObjectHit.index`): the op, with those that were standing, or null when none was. */
+  remove(objects: Iterable<number>): WorldEdit | null;
+  /** Put removed objects back (every one, by default): the op, or null when none was removed. */
+  restore(objects?: Iterable<number>): WorldEdit | null;
+  /** Apply an op (from another page's `list`, or a server's): as `remove` or `restore` does; indices not in the world are left out. */
+  apply(edit: WorldEdit): WorldEdit | null;
+  isRemoved(object: number): boolean;
+  /** The objects removed now. */
+  removed(): number[];
+  /** Every op that changed something, in order: `apply` each to another world to replay them. */
+  list(): WorldEdit[];
+  /** How many ops changed something (`list().length`). */
+  readonly version: number;
+  /** Called after each op that changed something. */
+  onChange(listener: (edit: WorldEdit) => void): () => void;
 }
 
 /** `OpenedWorld.stats` (D-120). */
@@ -342,6 +377,8 @@ export interface ViewState {
 
 export interface WorldView extends ControllerView {
   readonly layers: LayerRegistry;
+  /** Placed objects taken out and put back at runtime (D-124): the queries agree at once, the tiles they touch bake again. */
+  readonly edits: WorldEdits;
   readonly controllers: ControllerHost;
   /** "day" or "night" (where the style has a night palette). */
   palette: "day" | "night";
@@ -438,6 +475,15 @@ export interface WorldQuery {
   roadAt(x: number, y: number): RoadInfo | null;
   /** The ground under a canvas point (CSS pixels from the canvas's top-left). */
   pick(screenX: number, screenY: number): PickResult | null;
+  /**
+   * The placed object drawn under a canvas point, or null where the view ray
+   * meets the ground first (D-124): the first whose footprint (a landmark's
+   * plan, a tree's cell) and estimated height the ray passes through, from
+   * above. An object without an estimated top (trees, props) is taken to
+   * reach 3 steps over its base at render scale 1. Removed objects aren't
+   * there.
+   */
+  pickObject(screenX: number, screenY: number): ObjectHit | null;
   /** Cell position of a lon/lat (worlds with a geo grid; null outside). */
   lonLatToCell(lon: number, lat: number): [number, number] | null;
   cellToLonLat(x: number, y: number): [number, number] | null;
@@ -470,6 +516,8 @@ export interface WorldQuery {
 
 /** A placed object at a point (`WorldQuery.objectsAt`). */
 export interface ObjectHit {
+  /** The object: its place in the world's objects file, stable for a package (what `WorldEdits` names). */
+  index: number;
   /** Semantic group (`building.tower`, `landmark.bridge.arch`, `tree.conifer`). */
   group: string;
   /** Landmark registry id, or null. */
@@ -539,6 +587,13 @@ export interface EntitySpec {
   lift?: number;
   /** Draw a dithered silhouette where the world hides it (default false). */
   silhouette?: boolean;
+  /**
+   * The ramp the silhouette is drawn in, by its id (`world.palette.rampIds`),
+   * at its lightest shade: a side's or a player's colour, so units behind a
+   * building or in woods can still be told apart. Default the style's
+   * silhouette colour.
+   */
+  silhouetteRamp?: number;
   /**
    * See through what stands in front of it (D-079), for a player among tall
    * buildings: within `margin` render px of its sprite (default 24),
