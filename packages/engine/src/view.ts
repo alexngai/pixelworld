@@ -642,6 +642,12 @@ class View implements WorldView {
         }
         fog.push({ id: layer.id, frame: pass.frame });
       }
+      // a layer taken out of the view: its pass goes with it
+      for (const id of [...this.fogFields.keys()])
+        if (!this.layerList.get(id)) {
+          this.compositor.setFogField(null, id);
+          this.fogFields.delete(id);
+        }
       const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
