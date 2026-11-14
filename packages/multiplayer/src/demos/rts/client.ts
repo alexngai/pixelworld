@@ -271,11 +271,18 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   let side: Team | null = null;
   const units = new Map<number, UnitNet>();
 
+  /**
+   * Whether the page is set up; till then the newest shared snapshot waits.
+   * A room already playing holds what came before its handler (D-123), and
+   * gives it to the client as it is made, before what takes it is declared.
+   */
+  let setUp = false;
+  let held: (RtsWorldNet & { t: number }) | null = null;
   const client: TickClient<never, RtsSnap, RtsWorldNet, RtsEvent> = new TickClient(room, {
     tick: TICK,
     delay: DELAY,
     restore: (s) => takeSnap(s),
-    onWorld: (w) => takeWorld(w),
+    onWorld: (w) => (setUp ? takeWorld(w) : void (held = w)),
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
@@ -695,6 +702,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     veil.set(rect, veiled);
   }
 
+  setUp = true;
+  if (held) takeWorld(held);
   view.onFrame(({ realDt }) => {
     const t = now();
     client.sync();
