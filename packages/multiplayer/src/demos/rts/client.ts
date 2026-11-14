@@ -10,6 +10,7 @@ import {
   TEAM_NAMES,
   TICK,
   UNITS,
+  Razed,
   buildGrid,
   cellIndex,
   placementError,
@@ -24,6 +25,7 @@ import {
   type RtsSnap,
   type RtsWorldNet,
   type SeepNet,
+  type Structure,
   type Team,
   type UnitKind,
   type UnitNet,
@@ -38,10 +40,13 @@ import {
  * clock (`Smoothing`), buildings and seeps entities where they stand, all
  * built from boxes in the side's colours. An order shows at once (a marker,
  * and lines to where the units go) and holds until a snapshot says it was
- * taken (`cmd`).
+ * taken (`cmd`). The level's buildings knocked down in the match (the shared
+ * snapshot's `razed`) are taken out of the view (`view.edits`, D-124), which
+ * bakes their tiles again, and rubble is left where each stood.
  *
  * Mouse: left click or drag selects (`query.pick` for the ground, the units
- * where they are drawn), right click orders (move; attack what's under it;
+ * where they are drawn, `query.pickObject` for the level's buildings), right
+ * click orders (move; attack what's under it, or knock down a building;
  * runners to a seep), middle drag pans, the wheel zooms. Keys: WASD or
  * arrows pan, Q/E turn the view, F then a click fights its way there, X
  * stops, R trains a runner, B places a lodge, T trains a warden, Esc cancels.
@@ -170,6 +175,15 @@ function buildingBoxes(kind: BuildingKind, side: Team, built: boolean, r: Ramps,
   ];
 }
 
+/** What is left of one of the level's buildings: a slab and a heap on each cell it walled (cells from its middle). */
+const rubbleBoxes = (s: Structure, g: MapGrid, r: Ramps): Boxes =>
+  s.cells.flatMap((i, n) => {
+    const x = (i % g.w) + g.x0 + 0.5 - s.x;
+    const y = Math.floor(i / g.w) + g.y0 + 0.5 - s.y;
+    const k = ((n * 7) % 5) / 10;
+    return [cube(x - 0.42, y - 0.42, 0, x + 0.42, y + 0.42, 0.15, r("concrete")), cube(x - 0.25 + k * 0.3, y - 0.2, 0.15, x + 0.05 + k * 0.3, y + 0.2, 0.35 + k, r("bark"))];
+  });
+
 const seepBoxes = (r: Ramps): Boxes => {
   const g = r("tower-gold");
   return [cube(-0.32, -0.2, 0, -0.02, 0.1, 1.4, g), cube(0.0, -0.28, 0, 0.26, -0.02, 0.9, g), cube(-0.12, 0.06, 0, 0.2, 0.32, 1.1, g)];
@@ -218,6 +232,10 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   await view.query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
   /** The play area's cells, for placing a lodge: the server's own check, here before sending. */
   const grid: MapGrid = buildGrid(view.query);
+  const structures = grid.structures!;
+  /** The level's buildings knocked down: out of the view's world and the page's cells, rubble where each stood. */
+  const razed = new Razed(view.edits, grid);
+  const rubble = new Map<number, Entity>();
 
   const ramp: Ramps = (name) => view.world.palette.rampIds.get(name) ?? 0;
   const now = () => performance.now() / 1000;
@@ -231,7 +249,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     tick: TICK,
     delay: DELAY,
     restore: (s) => takeSnap(s),
-    onWorld: (w) => (world = w),
+    onWorld: (w) => takeWorld(w),
   });
   /** The units, drawn `DELAY` behind on the server's clock, as the events wait for it. */
   const smoothing = new Smoothing(DELAY, client.clock);
@@ -247,6 +265,30 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   const selection = new Set<number>();
   /** A building or a foe picked: its health (one's own building: its queue) on the HUD. */
   let picked: number | null = null;
+  /** One of the level's buildings picked (its object). */
+  let pickedStructure: number | null = null;
+
+  /** The shared snapshot: the match, who plays, and the level's buildings knocked down (each new one goes in a puff). */
+  function takeWorld(w: RtsWorldNet & { t: number }): void {
+    const first = world === null;
+    world = w;
+    const list = w.razed ?? [];
+    for (const obj of razed.sync(list)) {
+      const s = structures.get(obj);
+      if (s && !first) effect(dustBoxes, "rts.dust", s.x, s.y, 1.2, 0);
+    }
+    const now = new Set(list);
+    for (const [obj, e] of rubble)
+      if (!now.has(obj)) {
+        e.remove();
+        rubble.delete(obj);
+      }
+    for (const obj of list) {
+      const s = structures.get(obj);
+      if (s && !rubble.has(obj)) rubble.set(obj, view.entities.add({ model: { boxes: rubbleBoxes(s, grid, ramp), key: `rts.rubble.${obj}` }, x: s.x, y: s.y, headings: 1, wait: false }));
+    }
+    if (pickedStructure !== null && now.has(pickedStructure)) pickedStructure = null;
+  }
 
   function takeSnap(s: RtsSnap & { t: number; cmd?: number }): void {
     const first = side === null;
@@ -358,6 +400,11 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     }
     return best;
   }
+  /** The level's building drawn under a point on the canvas, standing. */
+  const structureAt = (sx: number, sy: number): Structure | null => {
+    const o = view.query.pickObject(sx, sy);
+    return (o && structures.get(o.index)) ?? null;
+  };
   const buildingAt = (p: Point): BuildingNet | null => {
     for (const d of buildingsDrawn.values()) {
       const b = d.net;
@@ -380,6 +427,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   function select(sx: number, sy: number, add: boolean): void {
     if (!add) selection.clear();
     picked = null;
+    pickedStructure = null;
     const u = unitAt(sx, sy, () => true);
     if (u) {
       if (mine(u)) selection.add(u.i);
@@ -389,6 +437,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     const hit = view.query.pick(sx, sy);
     const b = hit && buildingAt(hit);
     if (b) picked = b.i;
+    else pickedStructure = structureAt(sx, sy)?.obj ?? null;
   }
 
   function selectBox(a: Point, b: Point, add: boolean): void {
@@ -413,6 +462,10 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     if (!hit) return;
     const b = buildingAt(hit);
     if (b && b.s !== side) return void order({ t: "attack", u: ids, target: b.i }, { at: hit, kind: "attack" });
+    // one of the level's buildings: wardens knock it down
+    const wardens = ids.filter((id) => units.get(id)?.k === "warden");
+    const structure = wardens.length ? structureAt(sx, sy) : null;
+    if (structure) return void order({ t: "raze", u: wardens, obj: structure.obj }, { at: structure, kind: "attack" });
     const seep = [...seepsDrawn.values()].find((d) => Math.hypot(d.net.x - hit.x, d.net.y - hit.y) < 1.2);
     const runners = ids.filter((id) => units.get(id)?.k === "runner");
     if (seep && runners.length) {
@@ -520,10 +573,12 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   // ---------------------------------------------------------------- the server's word
 
   const sparks: { e: Entity; life: number }[] = [];
-  const effect = (boxes: Boxes, key: string, x: number, y: number, life: number) =>
-    sparks.push({ e: view.entities.add({ model: { boxes, key }, x, y, h: (view.query.heightAt(x, y) ?? 0) + 0.8, headings: 1, wait: false }), life });
+  function effect(boxes: Boxes, key: string, x: number, y: number, life: number, rise = 0.8): void {
+    sparks.push({ e: view.entities.add({ model: { boxes, key }, x, y, h: (view.query.heightAt(x, y) ?? 0) + rise, headings: 1, wait: false }), life });
+  }
   const hitBoxes = [cube(-0.08, -0.08, 0, 0.08, 0.08, 0.3, ramp("tower-gold"))];
   const puffBoxes = [cube(-0.3, -0.3, 0, 0.3, 0.3, 1.0, ramp("marker")), cube(-0.2, -0.2, 1.0, 0.25, 0.2, 1.8, ramp("concrete"))];
+  const dustBoxes = [cube(-0.8, -0.8, 0, 0.8, 0.8, 1.2, ramp("concrete")), cube(-0.5, -0.6, 1.2, 0.6, 0.5, 2.4, ramp("concrete"))];
   const nameOf = (s: Team | null) => (s ? (world?.players.find((p) => p.side === s)?.name ?? TEAM_NAMES[s]) : "nobody");
   const play = (e: RtsEvent) => {
     if (e.kind === "hit") effect(hitBoxes, "rts.hit", e.x, e.y, 0.2);
@@ -613,6 +668,15 @@ export async function startRts(opts: RtsOptions): Promise<void> {
       if (picked === b.i) ring(b.x + size / 2, b.y + size / 2, view.query.heightAt(b.x + size / 2, b.y + size / 2) ?? 0, size * 14, b.s === side ? "#8f8" : "#f66");
       if (picked === b.i || b.hp < BUILDINGS[b.k].hp || b.b < 1) bar(top, b.hp / BUILDINGS[b.k].hp, size * 12);
     }
+    // the level's buildings knocked about, and the one picked
+    const hurt = new Map(snap?.hurt ?? []);
+    for (const obj of new Set([...hurt.keys(), ...(pickedStructure !== null ? [pickedStructure] : [])])) {
+      const s = structures.get(obj);
+      if (!s) continue;
+      const r = Math.sqrt(s.cells.length);
+      if (obj === pickedStructure) ring(s.x, s.y, view.query.heightAt(s.x, s.y) ?? 0, r * 14, "#fd6");
+      bar(view.camera.project(s.x, s.y, s.top + 0.6), (hurt.get(obj) ?? s.hp) / s.hp, Math.max(18, r * 12));
+    }
     for (const m of markers) {
       const p = view.camera.project(m.at.x, m.at.y);
       if (p) out.push(`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(4 + (0.7 - m.life) * 14).toFixed(1)}" fill="none" stroke="${m.kind === "attack" ? "#f66" : m.kind === "gather" ? "#fd6" : "#8f8"}" stroke-opacity="${(m.life / 0.7).toFixed(2)}" stroke-width="2"/>`);
@@ -644,13 +708,16 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     const chosen = [...selection].map((id) => units.get(id)).filter((u): u is UnitNet => !!u);
     const pickedB = picked !== null ? buildingsDrawn.get(picked)?.net : undefined;
     const pickedU = picked !== null ? units.get(picked) : undefined;
+    const pickedS = pickedStructure !== null ? structures.get(pickedStructure) : undefined;
     const sel = chosen.length
       ? `selected: ${[count("runner", chosen) && `${count("runner", chosen)} runner(s)`, count("warden", chosen) && `${count("warden", chosen)} warden(s)`].filter(Boolean).join(", ")}`
       : pickedB
         ? `${pickedB.s === side ? "your" : `${nameOf(pickedB.s)}'s`} ${pickedB.k} · ${pickedB.hp}/${BUILDINGS[pickedB.k].hp}${pickedB.b < 1 ? ` · rising ${Math.round(pickedB.b * 100)}%` : ""}${pickedB.q ? ` · training ${BUILDINGS[pickedB.k].trains} ${Math.round((pickedB.p ?? 0) * 100)}% (${pickedB.q} queued)` : ""}`
         : pickedU
           ? `${nameOf(pickedU.s)}'s ${pickedU.k} · ${pickedU.hp}/${UNITS[pickedU.k].hp}`
-          : "nothing selected";
+          : pickedS
+            ? `a building of the Presidio · ${new Map(snap?.hurt ?? []).get(pickedS.obj) ?? pickedS.hp}/${pickedS.hp} · wardens knock it down (right click)`
+            : "nothing selected";
     return [
       `FOGFRONT · room ${room.name} · ${phase}`,
       side ? `you: ${TEAM_NAMES[side]} (${side === "kiln" ? "red" : "blue"}) · vs ${foe ? `${foe.name}${foe.bot ? " (bot)" : ""}` : "nobody yet"}` : "",
@@ -687,7 +754,8 @@ export async function startRts(opts: RtsOptions): Promise<void> {
     },
     order: (c: RtsCommand) => order(c, c.t === "move" ? { at: { x: c.x, y: c.y }, kind: "move" } : undefined),
     pending: () => pending.size,
-    drawn: () => ({ units: unitsDrawn.size, buildings: buildingsDrawn.size, seeps: seepsDrawn.size }),
+    drawn: () => ({ units: unitsDrawn.size, buildings: buildingsDrawn.size, seeps: seepsDrawn.size, rubble: rubble.size }),
+    grid,
     command,
     selectBox,
   };
@@ -756,7 +824,8 @@ declare global {
       select: (ids: number[]) => void;
       order: (c: RtsCommand) => number;
       pending: () => number;
-      drawn: () => { units: number; buildings: number; seeps: number };
+      drawn: () => { units: number; buildings: number; seeps: number; rubble: number };
+      grid: MapGrid;
       command: (sx: number, sy: number, attack?: boolean) => void;
       selectBox: (a: Point, b: Point, add: boolean) => void;
     };

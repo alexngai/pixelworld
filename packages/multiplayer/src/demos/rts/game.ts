@@ -15,12 +15,14 @@ import {
   paceAt,
   passable,
   placementError,
+  razeCells,
   type BuildingKind,
   type BuildingNet,
   type MapGrid,
   type Point,
   type RtsCommand,
   type RtsSnap,
+  type Structure,
   type Team,
   type UnitKind,
   type UnitNet,
@@ -32,10 +34,16 @@ import {
  * directly. Units take orders (move, attack-move, attack, gather, stop),
  * walk A* paths over the map's cells, fight what they're told to or what
  * comes into sight, and carry glim; buildings go up and train units; a side
- * whose hearth falls loses.
+ * whose hearth falls loses. Wardens knock down the level's buildings; one
+ * that falls opens its cells, and is in `razed` for every page (D-124).
  */
 
-export type Order = { k: "idle" } | { k: "move"; x: number; y: number; attack: boolean } | { k: "attack"; target: number } | { k: "gather"; seep: number };
+export type Order =
+  | { k: "idle" }
+  | { k: "move"; x: number; y: number; attack: boolean }
+  | { k: "attack"; target: number }
+  | { k: "gather"; seep: number }
+  | { k: "raze"; obj: number };
 
 export interface Unit {
   id: number;
@@ -85,8 +93,8 @@ export interface Seep {
   left: number;
 }
 
-/** What happened in a step, for the room to tell the pages that see it. */
-export type GameEvent = { kind: "hit"; by: number; to: number; x: number; y: number } | { kind: "die"; id: number; team: Team; x: number; y: number };
+/** What happened in a step, for the room to tell the pages that see it (`obj`: a blow to one of the level's buildings). */
+export type GameEvent = { kind: "hit"; by: number; to: number; obj?: 1; x: number; y: number } | { kind: "die"; id: number; team: Team; x: number; y: number };
 
 /**
  * Paths found a tick at most: a page re-sending orders for many units can't
@@ -109,6 +117,12 @@ export class RtsGame {
   winner: Team | null = null;
   /** What happened since the room last took them. */
   events: GameEvent[] = [];
+  /** The level's buildings standing, with their hit points now (by object). */
+  readonly structures = new Map<number, Structure>();
+  /** The level's buildings knocked down this match, as they fell. */
+  razed: number[] = [];
+  /** The cells as the level has them, for a new match. */
+  private readonly pristine: Uint8Array;
   private nextId = 1;
   /** Each side's enemies in sight now (units and buildings), and the enemy buildings it has ever seen. */
   private readonly sight: Record<Team, Set<number>> = { kiln: new Set(), tide: new Set() };
@@ -122,12 +136,17 @@ export class RtsGame {
     readonly grid: MapGrid,
     readonly layout = LAYOUT,
   ) {
+    this.pristine = grid.flags.slice();
     this.reset();
   }
 
-  /** A new match: each side's hearth, runners and glim, and full seeps. */
+  /** A new match: each side's hearth, runners and glim, full seeps, and the level's buildings all standing. */
   reset(): void {
     this.grid.building.fill(0);
+    this.grid.flags.set(this.pristine);
+    this.razed = [];
+    this.structures.clear();
+    for (const s of this.grid.structures?.values() ?? []) this.structures.set(s.obj, { ...s });
     this.units.clear();
     this.buildings.clear();
     this.seeps.clear();
@@ -184,6 +203,12 @@ export class RtsGame {
     });
     if (!units.length) return "no units of yours";
     if (c.t === "stop") for (const u of units) this.give(u, { k: "idle" });
+    else if (c.t === "raze") {
+      if (!this.structures.has(c.obj)) return "nothing there to knock down";
+      const fighters = units.filter((u) => UNITS[u.kind].damage > 0);
+      if (!fighters.length) return "runners don't knock buildings down";
+      for (const u of fighters) this.give(u, { k: "raze", obj: c.obj });
+    }
     else if (c.t === "move") {
       // spread out around the point, a cell apart, each on an open cell
       const side = Math.ceil(Math.sqrt(units.length));
@@ -258,6 +283,12 @@ export class RtsGame {
         this.fall(b);
         if (b.kind === "hearth" && !this.winner) this.winner = other(b.team);
       }
+    for (const s of [...this.structures.values()])
+      if (s.hp <= 0) {
+        this.structures.delete(s.obj);
+        this.razed.push(s.obj);
+        razeCells(this.grid, s.obj, new Set(this.razed));
+      }
   }
 
   /** A building goes up, or trains. */
@@ -301,7 +332,11 @@ export class RtsGame {
     u.repath = Math.max(0, u.repath - dt);
     if (rule.damage > 0) {
       const o = u.order;
-      if (o.k === "attack") {
+      if (o.k === "raze") {
+        const s = this.structures.get(o.obj);
+        if (s) return this.raze(u, s, dt);
+        this.give(u, { k: "idle" }); // it fell
+      } else if (o.k === "attack") {
         if (!this.isEnemy(u.team, o.target)) this.give(u, { k: "idle" });
       } else if (o.k === "idle" || (o.k === "move" && o.attack)) {
         // keep to a foe still in sight, else take on the nearest
@@ -334,6 +369,20 @@ export class RtsGame {
     u.cooldown = rule.cooldown;
     t.hp -= rule.damage;
     this.events.push({ kind: "hit", by: u.id, to: id, x: at.x, y: at.y });
+  }
+
+  /** A blow at one of the level's buildings, once within reach of a cell it walls; given up where a path gets no nearer. */
+  private raze(u: Unit, s: Structure, dt: number): void {
+    const rule = UNITS[u.kind];
+    if (this.distToStructure(u, s) > rule.range) {
+      if (this.walk(u, s, dt) && this.distToStructure(u, s) > rule.range) this.give(u, { k: "idle" });
+      return;
+    }
+    u.hd = Math.atan2(s.y - u.y, s.x - u.x);
+    if (u.cooldown > 0) return;
+    u.cooldown = rule.cooldown;
+    s.hp -= rule.damage;
+    this.events.push({ kind: "hit", by: u.id, to: s.obj, obj: 1, x: s.x, y: s.y });
   }
 
   private gather(u: Unit, seepId: number, dt: number): void {
@@ -440,6 +489,13 @@ export class RtsGame {
     if (t) return Math.hypot(t.x - u.x, t.y - u.y);
     const b = this.buildings.get(id);
     return b ? distToBuilding(u, b) : Infinity;
+  }
+
+  /** How far a point is from the nearest cell a level building walls. */
+  private distToStructure(p: Point, s: Structure): number {
+    let best = Infinity;
+    for (const i of s.cells) best = Math.min(best, distToBuilding(p, { x: (i % this.grid.w) + this.grid.x0, y: Math.floor(i / this.grid.w) + this.grid.y0, size: 1 }));
+    return best;
   }
 
   /** The nearest foe within its sight: units before buildings. */
@@ -566,7 +622,11 @@ export class RtsGame {
       });
     }
     const seeps = [...this.seeps.values()].map((s) => ({ i: s.id, x: s.x, y: s.y, left: s.left }));
-    const snap: RtsSnap = { side: team, glim: this.glim[team], units, buildings, seeps };
+    // the level's buildings it sees knocked about
+    const hurt: [number, number][] = [];
+    for (const s of this.structures.values())
+      if (s.hp < this.grid.structures!.get(s.obj)!.hp && this.seesPoint(team, s, Math.sqrt(s.cells.length))) hurt.push([s.obj, Math.ceil(s.hp)]);
+    const snap: RtsSnap = { side: team, glim: this.glim[team], units, buildings, seeps, ...(hurt.length ? { hurt } : {}) };
     this.views.set(team, { time: this.time, snap });
     return snap;
   }
@@ -607,6 +667,10 @@ export function parseCommand(data: unknown): RtsCommand | null {
       return (c.kind === "lodge" || c.kind === "hearth") && int(c.x) && int(c.y) ? { t: "build", kind: c.kind, x: c.x as number, y: c.y as number } : null;
     case "train":
       return int(c.b) ? { t: "train", b: c.b as number } : null;
+    case "raze": {
+      const u = ids(c.u);
+      return u && int(c.obj) ? { t: "raze", u, obj: c.obj as number } : null;
+    }
     default:
       return null;
   }

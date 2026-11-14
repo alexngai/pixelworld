@@ -1,4 +1,4 @@
-import type { WorldQuery } from "pixelworld/engine";
+import type { WorldEdits, WorldQuery } from "pixelworld/engine";
 
 /**
  * Fogfront's rules, the same on the server (game.ts, server.ts) and in the
@@ -9,7 +9,9 @@ import type { WorldQuery } from "pixelworld/engine";
  * the world's queries (`buildGrid`): water, the level's buildings and the
  * match's block; a step to a neighbour climbs at most `MAX_CLIMB`; roads are
  * quicker and woods slower (and can't be built on). Paths are A* on those
- * cells (`findPath`).
+ * cells (`findPath`). The level's buildings have hit points: wardens knock
+ * them down, the world's edits take them out of every page's view, and their
+ * cells open (D-124).
  */
 
 /** The driving level the match is on. */
@@ -122,7 +124,9 @@ export type RtsCommand =
   | { t: "gather"; u: number[]; seep: number }
   | { t: "stop"; u: number[] }
   | { t: "build"; kind: BuildingKind; x: number; y: number }
-  | { t: "train"; b: number };
+  | { t: "train"; b: number }
+  /** Knock down one of the level's buildings (its object, `Structure.obj`). */
+  | { t: "raze"; u: number[]; obj: number };
 
 /** A unit as a page sees it: positions in cells to 0.01, its goal for its own side. */
 export interface UnitNet {
@@ -171,6 +175,8 @@ export interface RtsSnap {
   units: UnitNet[];
   buildings: BuildingNet[];
   seeps: SeepNet[];
+  /** The level's buildings it sees knocked about, still standing: [object, hit points]. */
+  hurt?: [number, number][];
 }
 
 export interface PlayerNet {
@@ -184,11 +190,14 @@ export interface PlayerNet {
 export interface RtsWorldNet {
   match: { phase: MatchPhase; until: number | null; winner: Team | null };
   players: PlayerNet[];
+  /** The level's buildings knocked down this match (objects, as they fell): every page takes them out of its world (D-124). */
+  razed: number[];
 }
 
 /** Events, at server time; each to the pages whose side sees it. */
 export type RtsEvent =
-  | { kind: "hit"; by: number; to: number; x: number; y: number }
+  /** A blow; `obj`: `to` is one of the level's buildings (its object). */
+  | { kind: "hit"; by: number; to: number; obj?: 1; x: number; y: number }
   | { kind: "die"; id: number; x: number; y: number }
   | { kind: "refused"; why: string }
   | { kind: "phase"; phase: MatchPhase; winner: Team | null };
@@ -208,6 +217,23 @@ export const ROAD = 4;
 /** Trees: slow going, and no building on them. */
 export const WOODS = 8;
 
+/** One of the level's buildings in the play area (D-124): wardens can knock it down. */
+export interface Structure {
+  /** The level's object (`ObjectHit.index`): the edit that takes it out of the world names it. */
+  obj: number;
+  /** The middle of the cells it walls, and its top (steps). */
+  x: number;
+  y: number;
+  top: number;
+  /** The grid cells it walls. */
+  cells: number[];
+  /** Hit points, from the cells it covers and its height (`structureHp`). */
+  hp: number;
+}
+
+/** A level building's hit points: more for each cell it walls and each height step it rises. */
+export const structureHp = (cells: number, height: number): number => Math.min(1000, Math.round((50 + 40 * cells + 60 * Math.max(0, height)) / 10) * 10);
+
 /** The play area's cells, read once from the world: flags, heights, and the buildings standing on them. */
 export interface MapGrid {
   x0: number;
@@ -220,16 +246,25 @@ export interface MapGrid {
   height: Float32Array;
   /** The building on a cell (its id), 0 for none: changes as they go up and fall. */
   building: Int32Array;
+  /** The level's buildings, by object (D-124). */
+  structures?: Map<number, Structure>;
+  /** Every placed object walling a cell (by cell): it opens once all of them have fallen. */
+  walls?: Map<number, number[]>;
 }
 
 const isTree = (group: string) => group === "tree" || group.startsWith("tree.");
+/** The level's objects wardens can knock down: buildings (not landmarks, walls or bridges). */
+const isBuilding = (group: string) => group === "building" || group.startsWith("building.");
 /** What walls a cell besides water: placed objects but trees (woods) and props (street lights, signals). */
 const blocks = (group: string) => !isTree(group) && !group.startsWith("prop.");
 
 /** Read the play area's cells from a world's queries (the terrain and objects there loaded: `query.ensure`). */
 export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, map = MAP): MapGrid {
   const n = map.w * map.h;
-  const g: MapGrid = { ...map, flags: new Uint8Array(n), height: new Float32Array(n), building: new Int32Array(n) };
+  const structures = new Map<number, Structure>();
+  const walls = new Map<number, number[]>();
+  const heights = new Map<number, number>();
+  const g: MapGrid = { ...map, flags: new Uint8Array(n), height: new Float32Array(n), building: new Int32Array(n), structures, walls };
   for (let cy = 0; cy < map.h; cy++)
     for (let cx = 0; cx < map.w; cx++) {
       const x = map.x0 + cx + 0.5;
@@ -239,12 +274,74 @@ export function buildGrid(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
       let f = 0;
       if (query.surfaceAt(x, y)?.waterLevel != null) f |= WATER;
       const objects = query.objectsAt(x, y);
-      if (objects.some((o) => blocks(o.group))) f |= OBJECT;
-      else if (objects.some((o) => isTree(o.group))) f |= WOODS;
+      const walling = objects.filter((o) => blocks(o.group));
+      if (walling.length) {
+        f |= OBJECT;
+        walls.set(i, walling.map((o) => o.index));
+        for (const o of walling) {
+          if (!isBuilding(o.group)) continue;
+          let s = structures.get(o.index);
+          if (!s) {
+            structures.set(o.index, (s = { obj: o.index, x: 0, y: 0, top: o.top ?? 0, cells: [], hp: 0 }));
+            heights.set(o.index, o.top !== null && o.base !== null ? o.top - o.base : 0);
+          }
+          s.cells.push(i);
+          s.x += x;
+          s.y += y;
+        }
+      } else if (objects.some((o) => isTree(o.group))) f |= WOODS;
       if (query.roadAt(x, y)) f |= ROAD;
       g.flags[i] = f;
     }
+  for (const s of structures.values()) {
+    s.x /= s.cells.length;
+    s.y /= s.cells.length;
+    s.hp = structureHp(s.cells.length, heights.get(s.obj)!);
+  }
   return g;
+}
+
+/**
+ * One of the level's buildings has fallen (`razed` has it, D-124): the cells
+ * it walled open, those nothing else standing walls.
+ */
+// ponytail: trees on a fallen building's cells stay out of the woods; read them in `walls` if that shows
+export function razeCells(g: MapGrid, obj: number, razed: ReadonlySet<number>): void {
+  for (const i of g.structures?.get(obj)?.cells ?? []) if (g.walls?.get(i)?.every((o) => razed.has(o)) ?? true) g.flags[i]! &= ~OBJECT;
+}
+
+/**
+ * A page's side of the fallen buildings (D-124): the match's list
+ * (`RtsWorldNet.razed`) put into the world's edits, so the view bakes them
+ * away and the queries agree, and into the page's own cells. A list that
+ * doesn't go on from the last (a new match) puts everything back first.
+ */
+export class Razed {
+  private applied: number[] = [];
+  private readonly pristine: Uint8Array;
+
+  constructor(
+    private readonly edits: Pick<WorldEdits, "remove" | "restore">,
+    private readonly grid: MapGrid,
+  ) {
+    this.pristine = grid.flags.slice();
+  }
+
+  /** The match's list now: the buildings that fell since the last. */
+  sync(razed: readonly number[]): number[] {
+    if (this.applied.length > razed.length || this.applied.some((o, i) => razed[i] !== o)) {
+      this.edits.restore();
+      this.grid.flags.set(this.pristine);
+      this.applied = [];
+    }
+    const fresh = razed.slice(this.applied.length);
+    if (!fresh.length) return [];
+    this.applied = [...razed];
+    this.edits.remove(fresh);
+    const all = new Set(razed);
+    for (const o of fresh) razeCells(this.grid, o, all);
+    return fresh;
+  }
 }
 
 /** A cell's index in the grid, or -1 outside it. */

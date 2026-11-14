@@ -35,14 +35,16 @@ import {
  * other; a page alone gets the bot after `MATCH.wait` seconds (at once with
  * `vs: "bot"`), which plays through the same orders. A side whose hearth
  * falls, or whose player leaves, loses; after the result the next match
- * starts with whoever is there.
+ * starts with whoever is there. The level's buildings knocked down this
+ * match are in the shared snapshot, so a page that comes late takes them out
+ * of its world too (D-124).
  */
 
 /** The bot's id. */
 export const BOT = "bot";
 
 export interface RtsWorld {
-  /** The play area's cells, as the level has them: each room's match gets its own copy. */
+  /** The play area's cells and buildings, as the level has them: each room's match gets its own copy of the cells. */
   grid: MapGrid;
 }
 
@@ -114,7 +116,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
   }
 
   protected added(id: string, join: RtsJoin): TickRole | null {
-    this.game ??= new RtsGame({ ...this.world.grid, building: new Int32Array(this.world.grid.building.length) });
+    this.game ??= new RtsGame({ ...this.world.grid, flags: this.world.grid.flags.slice(), building: new Int32Array(this.world.grid.building.length) });
     const free = TEAMS.find((t) => ![...this.sides.values()].includes(t));
     if (!free || (this.bot && id !== BOT)) {
       this.kick(id, "this match has both its sides: open another room");
@@ -223,6 +225,7 @@ export class RtsRoom extends TickRoom<RtsCommand[], RtsJoin, RtsWorld, RtsEvent>
     return {
       match: { ...this.match.net(), winner: this.winner },
       players: [...this.sides].map(([id, side]) => ({ id, name: this.joinOf(id)?.name ?? TEAM_NAMES[side], side, ...(id === BOT ? { bot: true as const } : {}) })),
+      razed: this.game?.razed ?? [],
     };
   }
 

@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
+import { stylePack } from "@pixelworlds/game/src/styles";
+import { openWorld, type WorldEdit } from "pixelworld/engine";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RtsGame, parseCommand } from "../../src/demos/rts/game";
 import {
   BUILDINGS,
   GATHER,
   LAYOUT,
+  MAP,
+  MATCH,
   MAX_CLIMB,
   OBJECT,
   ROAD,
@@ -13,11 +17,14 @@ import {
   UNITS,
   WATER,
   WOODS,
+  Razed,
+  buildGrid,
   cellIndex,
   findPath,
   lineClear,
   passable,
   placementError,
+  structureHp,
   type MapGrid,
   type Point,
   type RtsEvent,
@@ -51,6 +58,19 @@ function gridOf(rows: string[]): MapGrid {
 }
 
 const open = (w: number, h: number) => gridOf(Array.from({ length: h }, () => ".".repeat(w)));
+
+/** Level buildings on a text map's `#` cells: each its object and cells, the cells' walls every one standing there. */
+function standing(g: MapGrid, list: { obj: number; cells: [number, number][] }[]): MapGrid {
+  g.structures = new Map();
+  g.walls = new Map();
+  for (const { obj, cells } of list) {
+    const ids = cells.map(([x, y]) => cellIndex(g, x, y));
+    for (const i of ids) g.walls.set(i, [...(g.walls.get(i) ?? []), obj]);
+    const mid = (k: 0 | 1) => cells.reduce((sum, c) => sum + c[k] + 0.5, 0) / cells.length;
+    g.structures.set(obj, { obj, x: mid(0), y: mid(1), top: 1, cells: ids, hp: structureHp(cells.length, 1) });
+  }
+  return g;
+}
 /** The cells a path walks through, from its start, every fifth of a cell. */
 function cellsOf(from: Point, path: Point[]): Point[] {
   const out: Point[] = [];
@@ -309,12 +329,99 @@ describe("Fogfront's match (D-121)", () => {
     expect(all.every((u) => Math.hypot(u.x - 40, u.y - 30) < 6)).toBe(true);
   });
 
+  it("wardens knock down one of the level's buildings: its cells open where nothing else stands, and a new match puts it back (D-124)", () => {
+    const g = standing(
+      gridOf([
+        "....................",
+        "....................",
+        "......##............",
+        "......###...........",
+        "....................",
+        "....................",
+        "....................",
+        "....................",
+        "....................",
+        "....................",
+      ]),
+      [
+        { obj: 7, cells: [[6, 2], [7, 2], [6, 3], [7, 3]] },
+        { obj: 8, cells: [[7, 3], [8, 3]] },
+      ],
+    );
+    const game = new RtsGame(g, { hearths: { kiln: [1, 6], tide: [16, 6] }, seeps: [] });
+    game.glim.kiln = 1000;
+    expect(game.order("kiln", { t: "build", kind: "lodge", x: 5, y: 7 })).toBeNull();
+    run(game, BUILDINGS.lodge.time + TICK);
+    const lodge = [...game.buildings.values()].find((b) => b.kind === "lodge")!;
+    game.order("kiln", { t: "train", b: lodge.id });
+    run(game, UNITS.warden.time + TICK);
+    const w = unitsOf(game, "kiln", "warden")[0]!;
+    const runner = unitsOf(game, "kiln", "runner")[0]!;
+    expect(game.order("kiln", { t: "raze", u: [runner.id], obj: 7 })).toBe("runners don't knock buildings down");
+    expect(game.order("kiln", { t: "raze", u: [w.id], obj: 99 })).toBe("nothing there to knock down");
+    expect(game.order("kiln", { t: "raze", u: [w.id], obj: 7 })).toBeNull();
+    const hp = game.structures.get(7)!.hp;
+    const blows: RtsEvent[] = [];
+    for (let n = 0; n < 60 / TICK && game.structures.has(7); n++) {
+      game.step(TICK);
+      blows.push(...(game.events as RtsEvent[]).filter((e) => e.kind === "hit" && e.obj));
+      game.events = [];
+      // the side sees it knocked about
+      if (blows.length === 1) expect(game.view("kiln").hurt).toEqual([[7, hp - UNITS.warden.damage]]);
+    }
+    expect(blows).toHaveLength(Math.ceil(hp / UNITS.warden.damage));
+    expect(game.razed).toEqual([7]);
+    game.step(TICK); // the warden finds it gone
+    expect(w.order.k).toBe("idle");
+    expect([passable(g, 6, 2), passable(g, 7, 2), passable(g, 6, 3)]).toEqual([true, true, true]);
+    expect([passable(g, 7, 3), passable(g, 8, 3)]).toEqual([false, false]); // the other still walls them
+    expect(game.order("kiln", { t: "raze", u: [w.id], obj: 7 })).toBe("nothing there to knock down");
+    game.order("kiln", { t: "raze", u: [w.id], obj: 8 });
+    run(game, 40);
+    expect(game.razed).toEqual([7, 8]);
+    expect(passable(g, 7, 3)).toBe(true);
+    // a new match: every building stands again
+    game.reset();
+    expect(game.razed).toEqual([]);
+    expect([passable(g, 6, 2), passable(g, 7, 3)]).toEqual([false, false]);
+    expect(game.structures.get(7)!.hp).toBe(hp);
+  });
+
+  it("a page puts the match's fallen buildings into its world's edits and its cells, and puts them back for a new match (D-124)", () => {
+    const g = standing(gridOf(["##..", "#..."]), [
+      { obj: 3, cells: [[0, 0], [1, 0]] },
+      { obj: 5, cells: [[0, 0], [0, 1]] },
+    ]);
+    const ops: WorldEdit[] = [];
+    const edits = {
+      remove: (o: Iterable<number>) => (ops.push({ op: "remove", objects: [...o] }), null),
+      restore: () => (ops.push({ op: "restore", objects: [] }), null),
+    };
+    const razed = new Razed(edits, g);
+    expect(razed.sync([])).toEqual([]);
+    expect(razed.sync([3])).toEqual([3]);
+    expect([passable(g, 1, 0), passable(g, 0, 0)]).toEqual([true, false]);
+    expect(razed.sync([3])).toEqual([]);
+    expect(razed.sync([3, 5])).toEqual([5]);
+    expect([passable(g, 0, 0), passable(g, 0, 1)]).toEqual([true, true]);
+    // a new match's list starts over
+    expect(razed.sync([5])).toEqual([5]);
+    expect([passable(g, 1, 0), passable(g, 0, 0), passable(g, 0, 1)]).toEqual([false, false, true]);
+    expect(ops).toEqual([
+      { op: "remove", objects: [3] },
+      { op: "remove", objects: [5] },
+      { op: "restore", objects: [] },
+      { op: "remove", objects: [5] },
+    ]);
+  });
+
   it("takes only its own side's units, and checks a page's command's shape", () => {
     const game = field();
     const theirs = unitsOf(game, "tide")[0]!;
     expect(game.order("kiln", { t: "move", u: [theirs.id], x: 5, y: 5 })).toBe("no units of yours");
     expect(parseCommand({ t: "move", u: [1, 2], x: 3, y: 4 })).toEqual({ t: "move", u: [1, 2], x: 3, y: 4, attack: false });
-    for (const bad of [null, 7, { t: "move", u: "1", x: 1, y: 1 }, { t: "move", u: [1], x: Infinity, y: 1 }, { t: "build", kind: "tower", x: 1, y: 1 }, { t: "train", b: 1.5 }, { t: "launch" }])
+    expect(parseCommand({ t: "raze", u: [1], obj: 40 })).toEqual({ t: "raze", u: [1], obj: 40 });
+    for (const bad of [null, 7, { t: "move", u: "1", x: 1, y: 1 }, { t: "move", u: [1], x: Infinity, y: 1 }, { t: "build", kind: "tower", x: 1, y: 1 }, { t: "train", b: 1.5 }, { t: "launch" }, { t: "raze", u: [1], obj: "7" }])
       expect(parseCommand(bad)).toBeNull();
     expect(parseCommand({ t: "stop", u: Array.from({ length: 201 }, (_, i) => i) })).toBeNull();
   });
@@ -469,5 +576,75 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect(snap.units).toHaveLength(40);
     // under 100 bytes a unit as JSON, positions to a hundredth of a cell: about 3.5 KB, ten a second
     expect(JSON.stringify(snap.units).length / snap.units.length).toBeLessThan(100);
+  });
+
+  it("reads the level's buildings in the play area, with hit points from their size and height (D-124)", () => {
+    const list = [...world.grid.structures!.values()];
+    expect(list.length).toBeGreaterThan(100);
+    for (const s of list) {
+      expect(s.cells.every((i) => (world.grid.flags[i]! & OBJECT) !== 0)).toBe(true);
+      expect(s.hp).toBeGreaterThanOrEqual(structureHp(s.cells.length, 0));
+      expect(s.hp).toBeLessThanOrEqual(1000);
+    }
+  });
+
+  it("a building that falls reaches both pages' worlds, and a page that comes late; a new match puts it back (D-124)", async () => {
+    /** A page's world: the level's queries and edits, its own cells, and the match's fallen buildings put into them. */
+    const pageWorld = async () => {
+      const { query, edits } = await openWorld({ worldUrl: "https://pixelworld.test/sf/", style: stylePack });
+      await query.ensure(MAP.x0, MAP.y0, MAP.x0 + MAP.w, MAP.y0 + MAP.h);
+      const grid = buildGrid(query);
+      return { query, edits, grid, razed: new Razed(edits, grid) };
+    };
+    const worlds = await Promise.all([pageWorld(), pageWorld(), pageWorld()]);
+    // the building nearest the Tide's hearth, and a cell it alone walls
+    const [hx, hy] = LAYOUT.hearths.tide;
+    const target = [...world.grid.structures!.values()].sort((a, b) => Math.hypot(a.x - hx, a.y - hy) - Math.hypot(b.x - hx, b.y - hy))[0]!;
+    const cell = target.cells.find((i) => world.grid.walls!.get(i)!.length === 1)!;
+    const [cx, cy] = [(cell % MAP.w) + MAP.x0, Math.floor(cell / MAP.w) + MAP.y0];
+    const standsIn = (n: number) => worlds[n]!.query.objectsAt(cx + 0.5, cy + 0.5).some((o) => o.index === target.obj);
+    expect([standsIn(0), standsIn(1), standsIn(2)]).toEqual([true, true, true]);
+
+    const lb = loopback((room) => new RtsRoom(room, Promise.resolve(world), false), { fps: 20 });
+    await new Promise((r) => setTimeout(r, 0));
+    const pages = [lb.join(0.05), lb.join(0.08)];
+    const fell: number[][] = [[], [], []];
+    const client = (n: number, p: (typeof pages)[number]) =>
+      new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(p.room, { tick: TICK, now: lb.now, onWorld: (w) => void fell[n]!.push(...worlds[n]!.razed.sync(w.razed)) });
+    const clients = pages.map((p, n) => client(n, p));
+    clients.forEach((c, n) => c.hello({ name: `P${n}`, vs: "any" }));
+    const frame = () => clients.forEach((c) => c.sync());
+    lb.run(1, frame);
+    expect(lb.host.match.phase).toBe("playing");
+    // it falls (knocked down: game.test shows the wardens doing it)
+    lb.host.game!.structures.get(target.obj)!.hp = 0;
+    lb.run(0.5, frame);
+    expect(lb.host.game!.razed).toEqual([target.obj]);
+    expect(fell.slice(0, 2)).toEqual([[target.obj], [target.obj]]);
+    expect([standsIn(0), standsIn(1), standsIn(2)]).toEqual([false, false, true]);
+    expect(worlds[0]!.edits.removed()).toEqual([target.obj]);
+    expect(passable(worlds[0]!.grid, cx, cy)).toBe(true);
+    // the room's cells are its own: the level's stay as they were
+    expect(passable(world.grid, cx, cy)).toBe(false);
+    expect(passable(lb.host.game!.grid, cx, cy)).toBe(true);
+
+    // one leaves (the match ends); a page that comes now takes it out of its world from its first shared snapshot
+    pages[1]!.room.close();
+    lb.run(0.5, frame);
+    expect(lb.host.match.phase).toBe("ended");
+    const late = lb.join(0.05);
+    clients.push(client(2, late));
+    clients[2]!.hello({ name: "Late", vs: "any" });
+    lb.run(0.5, frame);
+    expect(fell[2]).toEqual([target.obj]);
+    expect(standsIn(2)).toBe(false);
+
+    // the next match: it stands again everywhere
+    lb.run(MATCH.ended + 1, frame);
+    expect(lb.host.match.phase).toBe("playing");
+    expect(lb.host.game!.razed).toEqual([]);
+    expect([standsIn(0), standsIn(2)]).toEqual([true, true]);
+    expect(passable(worlds[0]!.grid, cx, cy)).toBe(false);
+    expect(lb.failed).toBeUndefined();
   });
 });
