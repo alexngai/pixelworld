@@ -339,15 +339,31 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
 /**
+ * A tower's window panes: its `window` glass, or, where the asset names `lit`
+ * (lit.* variants: one per tower, by seed), lit by night at `litFraction`
+ * (0.35) of the windows, as a building's are (D-135). Without `lit` it draws
+ * nothing random, so a pack's towers stay as they were.
+ */
+function towerPanes(ctx: Pick<GenContext, "rand" | "ramps" | "param">, m: VoxelModel, glass: number): () => number {
+  const lits = ctx.ramps("lit");
+  if (!lits.length) return () => glass;
+  const lit = m.material(lits[Math.floor(ctx.rand() * lits.length)]!);
+  const share = ctx.param("litFraction", 0.35);
+  return () => (ctx.rand() < share ? lit : glass);
+}
+
+/**
  * A slender four-sided pyramid tower: windowed faces tapering straight up
  * into a clad spire, two vertical wings (lift and stair shafts) on the east
  * and west faces that stand clear of them as the faces slope in, and an open
  * arcade at its foot.
  * params: base (the base's width over the height; 0.2), spire (the clad
  * spire's share of the height; 0.2), wing (where the wings come clear of the
- * faces, over the height; 0.45).
+ * faces, over the height; 0.45), litFraction (with `lit`; 0.35).
+ * roles: structure, window, lit (optional: lit.* variants, windows lit by night).
  */
-const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
+const pyramidTower: Generator = (ctx) => {
+  const { ramp, param, heightVox } = ctx;
   const H = Math.max(20, Math.round(heightVox ?? 120));
   const B = Math.max(4, Math.round(H * param("base", 0.2)));
   const body = Math.round(H * (1 - param("spire", 0.2))); // windowed floors below, the clad spire above
@@ -355,6 +371,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
   const m = new VoxelModel(size, size, H + 1);
   const wall = m.material(ramp("structure"));
   const glass = m.material(ramp("window"));
+  const pane = towerPanes(ctx, m, glass);
   const c = (size - 1) / 2;
   const R = (z: number) => (B / 2) * (1 - z / H); // the faces' half-width: straight to the tip
   const wingOut = R(H * param("wing", 0.45)) + 0.5; // the wings' outer faces are vertical
@@ -371,7 +388,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
         if (dm > r) {
           // a wing beyond the face: solid, a slit of windows down its middle, its top stepped
           if (dx > dy && dx <= wingOut && dy <= wingHalf && z < wingTop - Math.max(0, Math.round(dx - wingOut + 2)))
-            m.set(x, y, z, dx > wingOut - 1 && dy < 0.6 && z % 3 !== 0 ? glass : wall);
+            m.set(x, y, z, dx > wingOut - 1 && dy < 0.6 && z % 3 !== 0 ? pane() : wall);
           continue;
         }
         const skin = dm > r - 1;
@@ -384,7 +401,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
         if (z < arcade - 1 && mod(Math.round(along), 3) !== 0) continue;
         // windows in vertical strips on the skin, solid edges
         const win = z >= arcade && z % 3 !== 0 && mod(Math.round(along), 2) === 0 && Math.abs(dx - dy) > 1;
-        m.set(x, y, z, win ? glass : wall);
+        m.set(x, y, z, win ? pane() : wall);
       }
   }
   return m;
@@ -397,10 +414,12 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
  * params: base (the base's width over the height; 0.12), top (the top's width
  * over the base's; 0.75), corner (corner radius over the half-width at the
  * base; 0.3), crown (the crown's share of the height; 0.1), turn (1 turns the
- * plan 45°, for a diagonal street grid; 0).
- * roles: structure (fins, floor lines, lattice), window (glass).
+ * plan 45°, for a diagonal street grid; 0), litFraction (with `lit`; 0.35).
+ * roles: structure (fins, floor lines, lattice), window (glass), lit
+ * (optional: lit.* variants, windows lit by night).
  */
-const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
+const obeliskTower: Generator = (ctx) => {
+  const { ramp, param, heightVox } = ctx;
   const H = Math.max(24, Math.round(heightVox ?? 150));
   const r0 = Math.max(3, (H * param("base", 0.12)) / 2);
   const r1 = r0 * param("top", 0.75);
@@ -413,6 +432,7 @@ const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
   const m = new VoxelModel(size, size, H + 1);
   const white = m.material(ramp("structure"));
   const glass = m.material(ramp("window"));
+  const pane = towerPanes(ctx, m, glass);
   const core = H - Math.round(crown * 0.6); // the core stops short of the crown's top
   for (let z = 0; z < H; z++) {
     const f = z / H;
@@ -441,7 +461,7 @@ const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
           } else if (sd < -2.2 && z < core) m.set(x, y, z, glass);
           continue;
         }
-        m.set(x, y, z, skin && z % 4 !== 0 && mod(along, 2) !== 0 ? glass : white); // pale fins and floor lines
+        m.set(x, y, z, skin && z % 4 !== 0 && mod(along, 2) !== 0 ? pane() : white); // pale fins and floor lines
       }
   }
   return m;

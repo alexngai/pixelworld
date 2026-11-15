@@ -768,11 +768,13 @@ def build(
         joined = road_stage.joining_segments(road_rows, extra)
         road_rows = sorted(road_rows + joined, key=lambda r: r["id"])
         progress.log(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
+    # harbour crossings and hill tunnels aren't drawn over the water or the hill
+    road_rows = features.without_tunnels(road_rows)
     path_ids: dict[int, str] = {}
     path_rows: list[dict] = []
     if region.sources.get("paths"):
         path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
-        path_rows = feats.paths(bbox, region.sources["paths"]["classes"])
+        path_rows = features.without_tunnels(feats.paths(bbox, region.sources["paths"]["classes"]))
     path_id = {c: i for i, c in path_ids.items()}
     rivers = region.sources.get("rivers") or {}
     river_rows = feats.rivers(bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
@@ -993,6 +995,13 @@ def build(
         )
         surface[lawn] = surface_id["lawn"]
         progress.log(f"ground: {int(lawn.sum())} lawn cells")
+    if ground.get("scrub"):
+        # open hillsides the canopy map shows few trees on (D-133)
+        open_ground = ground_stage.scrub(
+            region, surface, surface_names, ground["scrub"], road_shift
+        )
+        surface[open_ground] = surface_id["scrub"]
+        progress.log(f"ground: {int(open_ground.sum())} scrub cells")
     # a swung street's gardens: the cells its bends sweep take the rule's surface
     for a, b, half, name in gardens:
         band = road_stage.street_band(a, b, half + 0.5, (cy, cx)) & (water == NO_WATER)
@@ -1092,6 +1101,7 @@ def build(
             ground=base,
             open_water=(water_level != NO_WATER) | river,
             on_road=on_road,
+            water_level=water_level,
         )
         progress.log(f"objects: {object_counts}")
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
@@ -1151,9 +1161,13 @@ def build(
     if objects.get("typology"):
         attribution += plugins.attribution(region, "facts")
     canopy_rules = [*(objects.get("vegetation") or []), *(objects.get("streetTrees") or [])]
-    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded")
+    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded") or (region.ground or {}).get(
+        "scrub"
+    )
     if any("canopy" in r for r in canopy_rules) or wooded:
         attribution += plugins.attribution(region, "canopy")
+    # a source may name another's data it reads (GLO-30's ground reads WorldCover): once each
+    attribution = [a for i, a in enumerate(attribution) if a not in attribution[:i]]
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None

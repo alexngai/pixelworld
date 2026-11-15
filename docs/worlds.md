@@ -606,6 +606,7 @@ Other keys here are the source's options.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `lawn` | [mapping](#spec-ground-lawn) | — | Parks, golf courses, pitches and gardens. |
+| `scrub` | [mapping](#spec-ground-scrub) | — | Open hillsides: woods where the canopy map shows few trees. |
 | `yard` | [mapping](#spec-ground-yard) | — | Open ground beside houses. |
 
 <a id="spec-ground-lawn"></a>
@@ -638,6 +639,15 @@ Other keys here are the source's options.
 |---|---|---|---|
 | `over` | list of strings | `[grass]` | Surfaces it spreads into. |
 | `meters` | number, ≥ 0 | 0 | How far. |
+
+<a id="spec-ground-scrub"></a>
+#### `ground.scrub`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `over` | list of strings | `[woodland]` | Tree-covered surfaces that can be scrub. |
+| `maxCover` | number, in [0, 1] | 0.3 | …where the canopy covers less than this share. |
+| `canopy` | number, ≥ 0 (m) | 3 | Trees at least this tall count as cover. |
 
 <a id="spec-ground-yard"></a>
 #### `ground.yard`
@@ -723,6 +733,8 @@ Other keys here are the source's options.
 | `roofs` | list of strings | — | Roof shapes. |
 | `materials` | list of strings | — | Facade materials (from the facts source; any case). |
 | `names` | list of strings | — | Overture names (a building's primary name; its parts share it), exactly. |
+| `groundHas` | list of strings | — | With `grounds`: text the land-use area's name contains (`邨`, a housing estate's; D-134). |
+| `nameHas` | list of strings | — | Text a building's name contains, any of these (`邨`, an estate's; D-134). |
 | `grounds` | list of strings | — | Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) the building's centroid stands in. |
 | `kinds` | list of strings | — | Overture classes (OSM's `building=*`: `temple`, `shrine`, `house` …; its parts share it), exactly. |
 | `minWidth` | number, ≥ 0 (m) | — | Narrowest. |
@@ -748,8 +760,10 @@ Other keys here are the source's options.
 | `spacing` | number, > 0 (m) | **required** | Grid spacing of candidate spots. |
 | `density` | number, in [0, 1] | 1 | Share of spots kept. |
 | `landcover` | list of `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss` | — | ESA WorldCover classes it grows on: `tree`, `shrub`, `grass`, `crop`, `built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss`. |
-| `canopy` | number, ≥ 0 (m) | — | Instead: where the canopy height map is at least this tall. |
+| `canopy` | number, ≥ 0 (m) | — | Where the canopy height map is at least this tall (with `landcover`, on those classes only). |
 | `byLandcover` | mapping of class → groups | — | Pick the group by the land cover it stands on. |
+| `water` | true/false | — | On the water instead, afloat at its level (boats in a harbour); with `bounds`. |
+| `bounds` | a box or a list of boxes | — | Lon/lat boxes the rule keeps to (with `water`). |
 
 <a id="spec-objects-streettrees"></a>
 #### `objects.streetTrees[]`
@@ -757,7 +771,7 @@ Other keys here are the source's options.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `group` | string | **required** | The semantic group placed. |
-| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick` | **required** | Road classes it lines. |
+| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick`, `pedestrian` | **required** | Road classes it lines (and `pedestrian` streets, by `name`). |
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |
@@ -779,7 +793,7 @@ Other keys here are the source's options.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `group` | string | **required** | The semantic group placed. |
-| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick` | **required** | Road classes it lines. |
+| `roads` | list of `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`, `living_street`, `unclassified`, `service`, `brick`, `pedestrian` | **required** | Road classes it lines (and `pedestrian` streets, by `name`). |
 | `spacing` | number, > 0 (m) | 12 with `canopy` | Distance between them. |
 | `offset` | number, ≥ 0 (m) | 12 (0 with `canopy`) | Distance from the road's centre line. |
 | `name` | string | — | Only roads whose name contains this. |

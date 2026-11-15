@@ -43,6 +43,7 @@ from . import plugins
 from .layout import WarpedLayout, WarpSpec
 from .region import Region
 from .sources import rasters
+from .sources.features import without_tunnels
 
 PREVIEW_MESH_KM = 4.0  # the editor solves on a mesh at most this coarse (the Southwest's)
 LATTICE_KM = 10.0  # forward-map lattice spacing, at most
@@ -218,8 +219,10 @@ class Editor:
             has |= m
         rgb = np.where(has[..., None], 0.5 * base + 0.5 * tint, base) * shade[..., None]
         # roads on top
-        rows = plugins.source(self.region, "features").roads(
-            self.region.lonlat_envelope(), self.region.sources["roads"]["classes"]
+        rows = without_tunnels(
+            plugins.source(self.region, "features").roads(
+                self.region.lonlat_envelope(), self.region.sources["roads"]["classes"]
+            )
         )
         for row in rows:
             geom = shapely.segmentize(shapely.from_wkt(row["geometry"]), 0.002)
