@@ -10,7 +10,7 @@
   "ao": { "strength": 2.2 },
   "terrain": { "steepRockSlope": 0.7 },
   "ramps": {
-    "loam": ["#1f1a17", "#382c25", "#544033", "#715742", "#8f7056", "#ad8b6e"],
+    "shotcrete": ["#262624", "#3f3e3b", "#5c5a55", "#7b7972", "#9b9890", "#bab6ac"],
     "grass": ["#18241c", "#253a27", "#355230", "#476b39", "#5c8543", "#76a052"],
     "lawn": ["#13221b", "#1d3624", "#2a4d2b", "#386632", "#4b8039", "#649b45"],
     "scrub": ["#20251f", "#343d30", "#4b5641", "#636f52", "#7d8a66", "#99a67c"],
@@ -52,7 +52,12 @@
     "taxi": ["#22090b", "#3f1013", "#65181b", "#8a2224", "#ad322f", "#ca4a42"],
     "jade": ["#0c1c18", "#133128", "#1b4838", "#246049", "#307a5b", "#40946e"]
   },
-  "strataSets": { "kowloon": [{ "name": "Kowloon granite", "aboveMeters": -100000, "ramp": "loam" }] },
+  "strataSets": {
+    "kowloon": [
+      { "name": "Granite and volcanic tuff", "aboveMeters": 250, "ramp": "granite" },
+      { "name": "Cut slopes in shotcrete", "aboveMeters": -100000, "ramp": "shotcrete" }
+    ]
+  },
   "defaultStrata": "kowloon",
   "provinces": {},
   "surfaces": {
@@ -125,6 +130,27 @@
       },
       "params": { "style": 1, "litFraction": 0.35 }
     },
+    "building.estate": {
+      "generator": "estateTower",
+      "ramps": {
+        "wall": "mosaic-white", "wall.cream": "paint-cream", "trim": "concrete", "trim.cream": "tile-beige",
+        "accent.a": "paint-mint", "accent.b": "paint-sky", "accent.c": "jade", "accent.d": "paint-salmon", "accent.e": "taxi", "accent.f": "paint-yellow",
+        "window": "glass", "lobby": "glass", "lit": "lit", "lit.cool": "lit-cool", "shade": "grime", "ac": "tile-grey", "roof": "roof-flat"
+      },
+      "params": { "accentShare": 0.35, "litFraction": 0.5 }
+    },
+    "building.temple": {
+      "generator": "chineseTemple",
+      "ramps": {
+        "wall": "tile-grey", "base": "granite", "roof": "jade", "door": "taxi", "trim": "bark",
+        "ridge": "paint-yellow", "ridge.b": "paint-sky", "ridge.c": "paint-mint", "ridge.d": "taxi"
+      }
+    },
+    "building.village": {
+      "generator": "building",
+      "ramps": { "wall": "mosaic-white", "wall.b": "paint-cream", "wall.c": "paint-salmon", "trim": "mosaic-white", "roof": "roof-flat", "window": "glass", "lit": "lit" },
+      "params": { "style": 1, "litFraction": 0.35 }
+    },
     "building.civic": {
       "generator": "block",
       "ramps": {
@@ -171,7 +197,7 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "signs": 0.85, "ac": 0.25, "litFraction": 0.5 }
+      "params": { "signs": 0.85, "ac": 0.25, "vertical": 0.6, "rooftop": 0.35, "litFraction": 0.5 }
     },
     "building.composite": {
       "generator": "compositeTower",
@@ -202,7 +228,7 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "litFraction": 0.45 }
+      "params": { "vertical": 0.45, "rooftop": 0.15, "litFraction": 0.45 }
     },
     "building.industrial": {
       "generator": "block",
@@ -243,7 +269,7 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "mall": 1, "signs": 0.75, "litFraction": 0.5 }
+      "params": { "mall": 1, "signs": 0.75, "rooftop": 0.3, "litFraction": 0.5 }
     },
     "building.residential": {
       "generator": "compositeTower",
@@ -274,7 +300,7 @@
         "lit": "lit",
         "lit.cool": "lit-cool"
       },
-      "params": { "signs": 0.35, "ac": 0.45, "litFraction": 0.4 }
+      "params": { "signs": 0.35, "ac": 0.45, "vertical": 0.15, "rooftop": 0.05, "litFraction": 0.4 }
     },
     "building.tonglau": {
       "generator": "tongLau",
@@ -374,6 +400,11 @@
       "ramps": { "wall": "paint-salmon", "trim": "tile-beige", "roof": "paint-salmon" },
       "params": { "low": 0.3, "rise": 6 }
     },
+    "landmark.hall.curved.glass": {
+      "generator": "curvedRoofHall",
+      "ramps": { "wall": "curtain-glass", "trim": "steel", "roof": "steel" },
+      "params": { "low": 0.3, "rise": 6 }
+    },
     "landmark.hotel": {
       "generator": "grandHotel",
       "ramps": { "wall": "paint-cream", "trim": "mosaic-white", "base": "granite", "pad": "marking", "roof": "roof-flat", "window": "glass", "lit": "lit" },
@@ -386,8 +417,45 @@
     },
     "landmark.tower.glass": {
       "generator": "obeliskTower",
-      "ramps": { "structure": "steel", "window": "curtain-glass" },
-      "params": { "base": 0.125, "top": 0.82, "corner": 0.1, "crown": 0.04 }
+      "ramps": { "structure": "steel", "window": "curtain-glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.125, "top": 0.82, "corner": 0.1, "crown": 0.04, "litFraction": 0.5 }
+    },
+    "landmark.tower.obelisk.diagonal": {
+      "generator": "obeliskTower",
+      "ramps": { "structure": "steel", "window": "glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.14, "top": 0.55, "corner": 0.12, "crown": 0.06, "turn": 1, "litFraction": 0.5 }
+    },
+    "landmark.tower.cylinder": {
+      "generator": "column",
+      "ramps": { "stone": "mosaic-white", "detail": "glass", "window": "lit" },
+      "params": { "radius": 0.11 }
+    },
+    "landmark.tower.pyramid": {
+      "generator": "pyramidTower",
+      "ramps": { "structure": "granite", "window": "curtain-glass", "lit": "lit-cool", "lit.warm": "lit" },
+      "params": { "base": 0.16, "spire": 0.18, "wing": 0.45, "litFraction": 0.5 }
+    },
+    "prop.boat": {
+      "generator": "boat",
+      "ramps": {
+        "hull.a": "bark", "hull.b": "rust", "hull.c": "jade", "hull.d": "mosaic-white",
+        "stripe.a": "mosaic-white", "stripe.b": "paint-sky", "stripe.c": "paint-yellow",
+        "canopy.a": "paint-sky", "canopy.b": "bark", "canopy.c": "jade",
+        "cabin": "mosaic-white", "window": "glass", "sail": "taxi", "trim": "bark"
+      }
+    },
+    "prop.boat.junk": {
+      "generator": "boat",
+      "ramps": { "hull": "bark", "stripe": "bark", "canopy": "bark", "cabin": "mosaic-white", "window": "glass", "sail": "taxi", "trim": "grime" },
+      "params": { "kind": 3 }
+    },
+    "prop.market": {
+      "generator": "marketStalls",
+      "ramps": {
+        "canopy.a": "taxi", "canopy.b": "paint-sky", "canopy.c": "paint-yellow", "canopy.d": "jade", "canopy.e": "mosaic-white", "canopy.f": "paint-salmon",
+        "goods.a": "taxi", "goods.b": "paint-mint", "goods.c": "paint-yellow", "goods.d": "paint-sky", "goods.e": "bark", "goods.f": "mosaic-white", "goods.g": "rust",
+        "table": "bark", "frame": "steel", "lamp": "lit"
+      }
     },
     "prop.neon": {
       "generator": "neonSign",
@@ -439,7 +507,8 @@
       "params": { "radius": 2.8, "radiusJitter": 0.5, "height": 2.2, "trunk": 3, "lobes": 6, "holes": 0.08 }
     },
     "vehicle.bus": {
-      "generator": "bus",
+      "generator": "doubleDeckBus",
+      "params": { "height": 1.4 },
       "ramps": {
         "body.a": "paint-cream",
         "body.b": "paint-yellow",
@@ -553,22 +622,28 @@
       }
     },
     "vehicle.streetcar": {
-      "generator": "tram",
+      "generator": "doubleDeckTram",
       "ramps": {
-        "upper.a": "jade",
-        "upper.b": "paint-cream",
-        "upper.c": "jade",
-        "upper.d": "paint-cream",
-        "lower.a": "jade",
-        "lower.b": "jade",
-        "lower.c": "taxi",
-        "lower.d": "paint-sky",
-        "roof": "steel",
+        "classic": "jade",
+        "band": "paint-cream",
+        "ad.a": "taxi",
+        "ad.b": "paint-yellow",
+        "ad.c": "paint-sky",
+        "ad.d": "paint-mint",
+        "ad.e": "paint-salmon",
+        "ad.f": "mosaic-white",
+        "ad.g": "jade",
+        "ad.h": "tile-beige",
         "window": "lit",
+        "door": "glass",
+        "roof": "steel",
         "tyre": "asphalt",
+        "trim": "steel",
         "light": "lit-cool",
-        "tail": "marker"
-      }
+        "tail": "marker",
+        "sign": "lit"
+      },
+      "params": { "length": 0.8, "width": 0.8, "height": 1.45, "classic": 0.35 }
     },
     "vehicle.train": {
       "generator": "train",
@@ -599,6 +674,30 @@
         "roof": "concrete",
         "trim": "asphalt"
       }
+    }
+  },
+  "atmosphere": {
+    "fog": {
+      "ramp": "mosaic-white",
+      "shade": 5,
+      "veil": [0.3, 0.55, 0.8, 1],
+      "ceilingMeters": 900,
+      "fadeMeters": 400,
+      "areas": [
+        {
+          "name": "the island's ridge, High West to Mount Parker",
+          "density": 0.55,
+          "edgeMeters": 350,
+          "polygon": [
+            [114.130, 22.266], [114.138, 22.2745], [114.146, 22.2765], [114.154, 22.2735], [114.163, 22.270],
+            [114.172, 22.2655], [114.183, 22.260], [114.193, 22.2655], [114.205, 22.270], [114.215, 22.271],
+            [114.226, 22.269], [114.228, 22.261], [114.218, 22.256], [114.205, 22.247], [114.192, 22.245],
+            [114.180, 22.250], [114.165, 22.256], [114.150, 22.257], [114.138, 22.259]
+          ]
+        }
+      ],
+      "drift": { "speed": 3, "toward": 100, "sizeMeters": 350, "contrast": 0.85 },
+      "night": { "density": 0.8 }
     }
   },
   "night": {

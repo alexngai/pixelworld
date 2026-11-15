@@ -444,6 +444,12 @@ def road_classes() -> list[str]:
     return [c for c in reversed(ROAD_ORDER) if c != "brick"]
 
 
+def row_road_classes() -> list[str]:
+    """What street rows may line: the road classes, and pedestrian streets
+    (market streets, D-134), which rules that pick streets by `name` fetch."""
+    return [*all_road_classes(), "pedestrian"]
+
+
 def all_road_classes() -> list[str]:
     from .build import ROAD_ORDER
 
@@ -932,6 +938,15 @@ WIDTHS = Map(
     }
 )
 
+SCRUB = Map(
+    {
+        "over": Key(
+            ListOf(Str(surface_names)), "Tree-covered surfaces that can be scrub.", "`[woodland]`"
+        ),
+        "maxCover": Key(Num(0, 1), "…where the canopy covers less than this share.", "0.3"),
+        "canopy": Key(Num(0, unit="m"), "Trees at least this tall count as cover.", "3"),
+    }
+)
 LAWN = Map(
     {
         "landUse": Key(
@@ -1068,6 +1083,15 @@ TYPOLOGY_RULE = Map(
             ListOf(AnyValue("string")),
             "Overture names (a building's primary name; its parts share it), exactly.",
         ),
+        "groundHas": Key(
+            ListOf(AnyValue("string")),
+            "With `grounds`: text the land-use area's name contains (`邨`, a housing estate's; "
+            "D-134).",
+        ),
+        "nameHas": Key(
+            ListOf(AnyValue("string")),
+            "Text a building's name contains, any of these (`邨`, an estate's; D-134).",
+        ),
         "grounds": Key(
             ListOf(AnyValue("string")),
             "Overture land-use classes (OSM's `landuse=religious`: `religious`, `cemetery` …) "
@@ -1112,7 +1136,7 @@ TYPOLOGY = Map(
 
 
 def _scatter_rule(v: dict, path: KeyPath, ctx: Ctx) -> None:
-    if "landcover" not in v and "canopy" not in v:
+    if "landcover" not in v and "canopy" not in v and not v.get("water"):
         ctx.add(path, "needs `landcover` (ESA WorldCover classes) or `canopy` (metres)")
 
 
@@ -1136,19 +1160,28 @@ VEGETATION_RULE = Map(
             "`built`, `bare`, `snow`, `water`, `wetland`, `mangrove`, `moss`.",
         ),
         "canopy": Key(
-            Num(0, unit="m"), "Instead: where the canopy height map is at least this tall."
+            Num(0, unit="m"),
+            "Where the canopy height map is at least this tall (with `landcover`, on those "
+            "classes only).",
         ),
         "byLandcover": Key(
             MapOf(Str(landcover_classes), ListOf(Str()), "mapping of class → groups"),
             "Pick the group by the land cover it stands on.",
         ),
+        "water": Key(
+            Bool(),
+            "On the water instead, afloat at its level (boats in a harbour); with `bounds`.",
+        ),
+        "bounds": Key(BOXES, "Lon/lat boxes the rule keeps to (with `water`)."),
     },
     rule=_scatter_rule,
 )
 ROW_RULE_KEYS = {
     "group": Key(Str(), "The semantic group placed.", required=True),
     "roads": Key(
-        ListOf(Str(all_road_classes), min_items=1), "Road classes it lines.", required=True
+        ListOf(Str(row_road_classes), min_items=1),
+        "Road classes it lines (and `pedestrian` streets, by `name`).",
+        required=True,
     ),
     "spacing": Key(Num(0, lo_open=True, unit="m"), "Distance between them.", "12 with `canopy`"),
     "offset": Key(
@@ -1536,6 +1569,9 @@ REGION = Map(
             Map(
                 {
                     "lawn": Key(LAWN, "Parks, golf courses, pitches and gardens."),
+                    "scrub": Key(
+                        SCRUB, "Open hillsides: woods where the canopy map shows few trees."
+                    ),
                     "yard": Key(YARD, "Open ground beside houses."),
                 }
             ),
