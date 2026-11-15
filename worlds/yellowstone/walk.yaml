@@ -1,0 +1,63 @@
+# Yellowstone's Upper and Midway Geyser Basins, walking level (D-138): the
+# Firehole River from Old Faithful and its Inn north past Castle, Grand and
+# Riverside Geysers, Morning Glory Pool and Biscuit Basin to Grand Prismatic
+# Spring and Excelsior Geyser, at 6 m per cell.
+# Build: cd pipeline && uv run pixelworld build ../worlds/yellowstone/walk.yaml
+id: yellowstone-walk
+name: Yellowstone Geyser Basins (walking)
+bounds: [-110.86, 44.45, -110.80, 44.533] # north edge clear of the Grand Loop Road, which weaves along 44.535
+
+# 6 m rather than 10: a pool is drawn where it holds a cell's centre. 10 m
+# cells hold about 130 of the mapped pools (not Morning Glory, Chromatic or
+# Emerald), 6 m cells 204 (every named one but Crested Pool and Blue Star)
+metersPerCell: 6
+maxSlope: 3
+
+style: yellowstone
+start: { lon: -110.8281, lat: 44.4598 } # Old Faithful's boardwalk
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1, resampling: bilinear }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  roads:
+    classes: [trunk, primary, secondary, tertiary, residential, unclassified, service]
+    excludeSubclasses: [parking_aisle, driveway]
+  # the Firehole and the Little Firehole; the streams are mostly thermal
+  # runoff channels a metre or two wide, which a cell-wide river overdraws
+  rivers: { subtypes: [river] }
+  # the hot pools: OSM maps them as natural=hot_spring areas (Grand
+  # Prismatic as plain water), each levelled as a pool
+  lakes: { classes: [hot_spring, spring, pond, water] }
+  # the boardwalks are footways (the style draws footways as boardwalk)
+  paths: { classes: [footway, path, steps, cycleway, pedestrian] }
+
+geology: { default: yellowstone }
+
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+widths: { scale: 1.0, minCells: 0.1 }
+micro: { k: 4, dem: { overview: 1, resampling: bilinear } }
+
+objects:
+  buildings: { minArea: 30, towerMeters: 45, podiumMeters: 15 }
+  landmarks:
+    # the Old House's ridge is about 28 m over the lobby; Overture has 6 m
+    - { group: building.lodge, lon: -110.831299, lat: 44.459677, hm: 16, replaces: [f9a3289a-1ac3-4dfb-baa1-28a546401788], footprint: true }
+    # sinter cones at the mapped geysers (Overture's points), drawn at the
+    # pack's size: the blob generator takes no height
+    - { group: landmark.geyser.cone, lon: -110.828146, lat: 44.460464 }   # Old Faithful
+    - { group: landmark.geyser.castle, lon: -110.836477, lat: 44.463659 } # Castle Geyser
+    - { group: landmark.geyser.cone, lon: -110.830002, lat: 44.462614 }   # Beehive
+    - { group: landmark.geyser.cone, lon: -110.829022, lat: 44.463518 }   # Giantess
+    - { group: landmark.geyser.cone, lon: -110.830964, lat: 44.464058 }   # Lion group
+    - { group: landmark.geyser.cone, lon: -110.836630, lat: 44.465509 }   # Sawmill
+    - { group: landmark.geyser.cone, lon: -110.837014, lat: 44.466662 }   # Grand and Turban
+    - { group: landmark.geyser.cone, lon: -110.840550, lat: 44.470653 }   # Giant
+    - { group: landmark.geyser.castle, lon: -110.841757, lat: 44.471796 } # Grotto
+    - { group: landmark.geyser.cone, lon: -110.840918, lat: 44.473469 }   # Riverside
+    - { group: landmark.geyser.cone, lon: -110.844187, lat: 44.470183 }   # Daisy
+    - { group: landmark.geyser.cone, lon: -110.842863, lat: 44.474327 }   # Fan and Mortar
+    - { group: landmark.geyser.cone, lon: -110.856194, lat: 44.484904 }   # Jewel (Biscuit Basin)
+  depiction: { heightStretch: 1.0, scatter: 1.0 }

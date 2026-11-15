@@ -278,6 +278,27 @@ Sources and licenses:
 - Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## yellowstone-walk
+
+Yellowstone's Upper and Midway Geyser Basins (D-138), built from [`worlds/yellowstone/walk.yaml`](../worlds/yellowstone/walk.yaml) on the `yellowstone` style pack: the Firehole River from Old Faithful and the Old Faithful Inn to Grand Prismatic Spring and Excelsior Geyser, at 6 m per cell (796 × 1,538 cells) so that small hot pools hold a cell. Heights are true for objects (`heightStretch` 1.0).
+
+- **Terrain:** 3DEP 1/3″ read bilinearly at full resolution, 4 × 4 micro-terrain; 2,241–2,558 m.
+- **Ground:** WorldCover's bare ground drawn as white sinter and its moss and lichen (the basins' mats) as stained sinter; meadows, lodgepole forest with snags (the client's scatter).
+- **Water:** the Firehole and the Little Firehole, and 204 of Overture's hot springs, springs and ponds, each levelled as a pool (2,830 cells).
+- **Objects:** 206 buildings, the Old Faithful Inn on its footprint at 16 m, and 13 geyser cones at Overture's geyser points; 142 traffic routes.
+- **Road report:** clean.
+- **Size:** 5.2 MB. Rebuilt in about 30 s from the download cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/yellowstone/walk.yaml
+```
+
+Sources and licenses:
+- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rivers, hot springs, geyser points and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.

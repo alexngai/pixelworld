@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { generatorIssues, type StylePack } from "@pixelworlds/style";
+import { generatorIssues, resolveStyleExtends, type StylePack } from "@pixelworlds/style";
 import { describe, expect, it } from "vitest";
 import {
   KNOWN_PLUGIN_GENERATORS,
@@ -89,14 +89,15 @@ describe("roles", () => {
     expect(new VoxelModel(1, 1, 1).material(0)).toBe(1);
   });
 
-  it("every committed pack names generators that are built in or come with a plugin it names", () => {
+  it("every committed pack names generators that are built in or come with a plugin it names", async () => {
     const root = fileURLToPath(new URL("../../../worlds/_styles/", import.meta.url));
     const ids = readdirSync(root, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
     expect(ids.length).toBeGreaterThan(1);
     for (const id of ids) {
-      const pack = JSON.parse(readFileSync(`${root}${id}/style.json`, "utf8")) as StylePack;
+      const read = (p: string) => JSON.parse(readFileSync(`${root}${p}/style.json`, "utf8"));
+      const pack = (await resolveStyleExtends(read(id), read)) as StylePack;
       const fromPlugins = Object.entries(KNOWN_PLUGIN_GENERATORS).filter(([, plugin]) => pack.plugins?.includes(plugin));
       const known = [...listGenerators().map((g) => g.name), ...fromPlugins.map(([name]) => name)];
       expect(generatorIssues(pack, known), id).toEqual([]);

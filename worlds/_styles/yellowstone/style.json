@@ -1,0 +1,370 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "extends": "desert-southwest",
+  "id": "yellowstone",
+  "name": "Yellowstone",
+  "ramps": {
+    "kaibab": null,
+    "toroweap": null,
+    "coconino": null,
+    "hermit": null,
+    "supai": null,
+    "redwall": null,
+    "muav": null,
+    "tonto": null,
+    "tapeats": null,
+    "vishnu": null,
+    "conifer": null,
+    "sand": null,
+    "dolomite": null,
+    "water": [
+      "#061a30",
+      "#0a2f52",
+      "#0e4876",
+      "#156797",
+      "#2789b4",
+      "#4fb0cc"
+    ],
+    "scrub": [
+      "#1f2423",
+      "#343b35",
+      "#4b5547",
+      "#636f58",
+      "#7d896a",
+      "#98a27e"
+    ],
+    "grass": [
+      "#2a2a1f",
+      "#45432f",
+      "#64603e",
+      "#857d4d",
+      "#a69a5f",
+      "#c3b679"
+    ],
+    "sinter": [
+      "#34353f",
+      "#5e6068",
+      "#8b8c8e",
+      "#b5b3ab",
+      "#d6d3c8",
+      "#efece2"
+    ],
+    "mat": [
+      "#3a1810",
+      "#682a15",
+      "#99401a",
+      "#c35e22",
+      "#e08232",
+      "#f2a94e"
+    ],
+    "mat-brown": [
+      "#342e2c",
+      "#5a5049",
+      "#83766a",
+      "#a89884",
+      "#c6b79f",
+      "#dfd3bb"
+    ],
+    "lodgepole": [
+      "#0b1718",
+      "#11231f",
+      "#183126",
+      "#20402d",
+      "#2a5034",
+      "#38623c"
+    ],
+    "snag": [
+      "#28272b",
+      "#434146",
+      "#64605d",
+      "#878179",
+      "#a8a196",
+      "#c7c0b3"
+    ],
+    "rhyolite": [
+      "#2c2328",
+      "#4a3a3b",
+      "#6d5650",
+      "#8f7465",
+      "#ad927d",
+      "#c8ae97"
+    ],
+    "log": [
+      "#1c140f",
+      "#33241a",
+      "#4c3524",
+      "#66482f",
+      "#7f5b3c",
+      "#97704b"
+    ],
+    "shingle": [
+      "#1b1a1d",
+      "#2e2a2b",
+      "#433c39",
+      "#594f49",
+      "#6f625a",
+      "#85766c"
+    ],
+    "boardwalk": [
+      "#1f1915",
+      "#382d24",
+      "#544334",
+      "#6f5a45",
+      "#887057",
+      "#9e866a"
+    ]
+  },
+  "strataSets": {
+    "grand-canyon": null,
+    "desert-ranges": null,
+    "yellowstone": [
+      {
+        "name": "Plateau rhyolite",
+        "aboveMeters": -100000,
+        "ramp": "rhyolite"
+      }
+    ]
+  },
+  "defaultStrata": "yellowstone",
+  "provinces": {
+    "colorado-plateau": null,
+    "basin-and-range": null,
+    "yellowstone": "yellowstone"
+  },
+  "surfaces": {
+    "none": {
+      "ramp": "basalt",
+      "pattern": "none"
+    },
+    "woodland": {
+      "ramp": "lodgepole",
+      "pattern": "trees",
+      "density": 0.12
+    },
+    "forest": {
+      "ramp": "lodgepole",
+      "pattern": "trees",
+      "density": 0.2
+    },
+    "sand": {
+      "ramp": "sinter",
+      "pattern": "speckle",
+      "density": 0.05
+    },
+    "desert": {
+      "ramp": "sinter",
+      "pattern": "speckle",
+      "density": 0.06
+    },
+    "scrub": {
+      "ramp": "mat-brown",
+      "pattern": "speckle",
+      "density": 0.06
+    }
+  },
+  "scatter": {
+    "woodland": [
+      {
+        "group": "tree.lodgepole",
+        "perCell": 1.6
+      },
+      {
+        "group": "tree.snag",
+        "perCell": 0.3
+      }
+    ],
+    "forest": [
+      {
+        "group": "tree.lodgepole",
+        "perCell": 2.2
+      },
+      {
+        "group": "tree.snag",
+        "perCell": 0.3
+      }
+    ],
+    "scrub": [
+      {
+        "group": "ground.mat",
+        "perCell": 0.05
+      }
+    ],
+    "grass": [
+      {
+        "group": "shrub",
+        "perCell": 0.08
+      }
+    ],
+    "desert": [
+      {
+        "group": "ground.mat",
+        "perCell": 0.015
+      }
+    ],
+    "sand": [],
+    "urban": [
+      {
+        "group": "tree.lodgepole",
+        "perCell": 0.08
+      }
+    ]
+  },
+  "paths": {
+    "classes": {
+      "footway": {
+        "ramp": "boardwalk"
+      },
+      "path": {
+        "ramp": "grass"
+      },
+      "cycleway": {
+        "ramp": "asphalt"
+      }
+    }
+  },
+  "assets": {
+    "tree": {
+      "generator": "conifer",
+      "ramps": {
+        "crown": "lodgepole",
+        "trunk": "bark"
+      },
+      "params": {
+        "radius": 1,
+        "minHeight": 20,
+        "heightJitter": 12
+      }
+    },
+    "tree.conifer": {
+      "ramps": {
+        "crown": "lodgepole"
+      },
+      "params": {
+        "radius": 1,
+        "minHeight": 20,
+        "heightJitter": 12
+      }
+    },
+    "tree.lodgepole": {
+      "generator": "conifer",
+      "ramps": {
+        "crown": "lodgepole",
+        "trunk": "bark"
+      },
+      "params": {
+        "radius": 1,
+        "minHeight": 20,
+        "heightJitter": 12
+      }
+    },
+    "tree.snag": {
+      "generator": "blob",
+      "ramps": {
+        "body": "snag",
+        "trunk": "snag"
+      },
+      "params": {
+        "radius": 0.3,
+        "radiusJitter": 0,
+        "height": 0.5,
+        "trunk": 16,
+        "holes": 0
+      }
+    },
+    "shrub": {
+      "generator": "blob",
+      "ramps": {
+        "body": "scrub"
+      },
+      "params": {
+        "radius": 0.6,
+        "radiusJitter": 0.4,
+        "height": 0.5,
+        "trunk": 0,
+        "holes": 0.1
+      }
+    },
+    "ground.mat": {
+      "generator": "blob",
+      "ramps": {
+        "body": "mat"
+      },
+      "params": {
+        "radius": 8,
+        "radiusJitter": 5,
+        "height": 0.4,
+        "trunk": -0.3,
+        "holes": 0.35
+      }
+    },
+    "rock.boulder": {
+      "ramps": {
+        "rock": "rhyolite"
+      }
+    },
+    "landmark.tower.lookout": {
+      "ramps": {
+        "stone": "rhyolite",
+        "detail": "basalt"
+      }
+    },
+    "landmark.geyser.cone": {
+      "generator": "blob",
+      "ramps": {
+        "body": "snag"
+      },
+      "params": {
+        "radius": 5,
+        "radiusJitter": 0.5,
+        "height": 4,
+        "trunk": -4,
+        "holes": 0
+      }
+    },
+    "landmark.geyser.castle": {
+      "generator": "blob",
+      "ramps": {
+        "body": "snag"
+      },
+      "params": {
+        "radius": 8,
+        "radiusJitter": 0.3,
+        "height": 10,
+        "trunk": -10,
+        "holes": 0.02
+      }
+    },
+    "building.residential": {
+      "ramps": {
+        "wall": "log",
+        "roof": "shingle",
+        "window": "glass"
+      }
+    },
+    "building.commercial": {
+      "ramps": {
+        "wall": "log",
+        "wall.white": "stucco",
+        "roof": "shingle",
+        "window": "glass",
+        "lit": "lit"
+      },
+      "params": {
+        "style": 0,
+        "litFraction": 0.4
+      }
+    },
+    "building.lodge": {
+      "generator": "building",
+      "ramps": {
+        "wall": "log",
+        "roof": "shingle",
+        "window": "lit"
+      },
+      "params": {
+        "style": 0,
+        "litFraction": 0.6
+      }
+    }
+  }
+}

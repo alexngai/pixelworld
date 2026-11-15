@@ -1,0 +1,50 @@
+{
+  "packageHash": "b245e4da6a1de44932e2fb13bcb0f4f783fd009c41c997188f5b4eb42133db4f",
+  "cells": [
+    796,
+    1538
+  ],
+  "chunks": 325,
+  "heightRange": [
+    2241,
+    2558
+  ],
+  "inputs": {
+    "roadSegments": 106,
+    "riverLines": 6
+  },
+  "objects": {
+    "building.commercial": 198,
+    "building.lodge": 1,
+    "building.residential": 8,
+    "landmark.geyser.castle": 2,
+    "landmark.geyser.cone": 11
+  },
+  "roads": {
+    "cells": 4349,
+    "edges": 4380,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 4,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 209,
+    "cells": 11239
+  },
+  "surfaces": {
+    "woodland": 523412,
+    "forest": 474012,
+    "scrub": 21618,
+    "water": 7485,
+    "desert": 22163,
+    "grass": 161984,
+    "urban": 13571,
+    "snow": 3
+  },
+  "routes": {
+    "road": 142
+  }
+}
