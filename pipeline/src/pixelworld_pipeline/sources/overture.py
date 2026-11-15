@@ -142,7 +142,8 @@ def query(
     return rows
 
 
-ROAD_COLUMNS = ["id", "subtype", "class", "subclass", "connectors", "geometry"]
+# road_flags: tunnels are cut out of what is drawn (features.without_tunnels)
+ROAD_COLUMNS = ["id", "subtype", "class", "subclass", "connectors", "road_flags", "geometry"]
 # what lanes and medians need (M3.5): names pair a divided road's carriageways,
 # access restrictions say which ways are one-way, width rules give mapped widths
 LANE_COLUMNS = ["names", "access_restrictions", "width_rules"]
@@ -247,7 +248,8 @@ def rivers(
     )
 
 
-AREA_COLUMNS = ["id", "subtype", "class", "geometry"]
+# names: a housing estate's name on its land (typology `groundHas`, D-134)
+AREA_COLUMNS = ["id", "subtype", "class", "names", "geometry"]
 
 
 def _areas(
@@ -420,7 +422,7 @@ class Overture(FeatureSource):
             "transportation",
             "segment",
             bbox,
-            ["id", "class", "names", "geometry"],
+            ["id", "class", "names", "road_flags", "geometry"],
             lambda r: r["class"] in classes,
             filter_tag=f"classes:{','.join(sorted(classes))}",
         )

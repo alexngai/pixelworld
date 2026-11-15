@@ -1,0 +1,12 @@
+name: Hong Kong Convention and Exhibition Centre
+# Overture's footprint of the New Wing (新翼, 5 storeys, about 34,600 m²) on
+# its island off Wan Chai's shore; its centroid. Drawn on that footprint.
+anchor: { lon: 114.173001, lat: 22.283368 }
+height: 40          # depicted: the curved roofs' crest (Overture has no height for it)
+footprint: true
+clear: 0
+replaces: [a0445575-e409-4688-82f2-211accbda560]
+depictions:
+  # walls of curtain glass under a steel roof that sweeps up in a concave
+  # curve; no name
+  generic: { group: landmark.hall.curved.glass }

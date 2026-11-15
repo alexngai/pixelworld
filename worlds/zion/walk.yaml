@@ -1,0 +1,68 @@
+# Zion Canyon, Zion National Park, walking level: the main canyon of the
+# North Fork of the Virgin River from Springdale and the visitor centre up to
+# the Temple of Sinawava and the end of the Riverside Walk, with the Court of
+# the Patriarchs, Zion Lodge, Angels Landing and the Great White Throne. One
+# level, no warp (D-137). Zion is inside the southwest region's bounds; making
+# it one of that region's levels is for later.
+# Check: cd pipeline && uv run pixelworld check ../worlds/zion/walk.yaml
+# Build: cd pipeline && uv run pixelworld build ../worlds/zion/walk.yaml
+# View:  pnpm dev, then http://localhost:5173/?world=/zion-walk/
+id: zion-walk
+name: Zion Canyon (walking)
+bounds: [-113.01, 37.19, -112.92, 37.30] # lon/lat: west, south, east, north (~8.0 × 12.2 km)
+
+# 10 m cells: the canyon floor is 30–100 cells wide between walls 600 m high.
+# True relief (1.0): at 1.5 the near wall hides about 1.5 km of floor behind
+# it, so near the lodge the floor showed whole from one rotation in four.
+metersPerCell: 10
+verticalExaggeration: 1.0
+maxSlope: 3
+
+style: zion # worlds/_styles/zion, extends desert-southwest
+start: { lon: -112.9572, lat: 37.2506 } # Zion Lodge
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 } # the 10 m DEM, at full resolution
+  landcover: { kind: esa-worldcover-2021, overview: 1 } # 10 m land cover
+  features: { kind: overture, release: 2026-10-21.0 }
+  roads:
+    classes: [primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+  # the North Fork of the Virgin River; Overture's streams here are dry washes
+  rivers: { subtypes: [river] }
+  # the Pa'rus Trail, Riverside Walk, the West Rim Trail to Angels Landing
+  paths: { classes: [footway, path, steps, cycleway, pedestrian] }
+
+# Cliffs take the pack's Zion strata (its defaultStrata), banded by elevation.
+# Fine-cell terrain rules (as the Desert View experiment's): steep cells are
+# bare rock whatever their cover; WorldCover's "water" in the canyon's shadows
+# is dropped unless it is big and flat; the Virgin River at its real width.
+terrain: { cliffSlope: 0.6, minLakeArea: 15000, maxLakeRelief: 6, riverWidthMeters: 20 }
+
+snap:
+  roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3 }
+widths: { scale: 1.0, minCells: 0.1 }
+
+# 2.5 m micro-cells from the 10 m DEM. Every micro-cell slopes however steep
+# (D-141), so the Navajo's sheer walls draw as smooth faces, not terraces.
+micro: { k: 4, dem: { overview: 1 }, maxSlope: 64 }
+
+objects:
+  # Springdale, the visitor centre, the museum and Zion Lodge
+  buildings: { minArea: 30, towerMeters: 45, podiumMeters: 18, houseMaxArea: 350 }
+  # inside the park (north of the south entrance): the lodge, its cabins and
+  # the museum in the park's rustic brown and stone, not Springdale's stucco
+  typology:
+    rules:
+      - { group: building.park, bounds: [-112.99, 37.203, -112.92, 37.30] }
+  vegetation:
+    # trees where the canopy height map shows them: broadleaf (the river's
+    # cottonwoods) on WorldCover's tree cover, pinyon-juniper on shrub and bare
+    # ground. A rule can't pick by elevation, so the rims' tree cover is drawn
+    # broadleaf too (D-137, Later).
+    - { group: tree.cottonwood, canopy: 4, spacing: 9, density: 0.8, byLandcover: { shrub: [tree.pinyon-juniper], bare: [tree.pinyon-juniper] } }
+    - { group: shrub, landcover: [shrub, grass], spacing: 30, density: 0.25 }
+  # buildings at the terrain's vertical scale: terrain is drawn 1.96 px per
+  # metre times the relief, objects 1.6 px per metre times this (D-137)
+  depiction: { heightStretch: 1.25, scatter: 1.0 }

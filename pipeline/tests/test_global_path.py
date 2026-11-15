@@ -42,8 +42,14 @@ def test_glo30_sources_are_built_in_terrain():
     for kind in ("copernicus-glo30", "copernicus-glo30-ground"):
         src = rasters.source(kind, "terrain")
         assert src.native_m == 30.0
-        assert "Copernicus WorldDEM-30" in src.attribution["name"]
-        assert "do not incur any liability" in src.attribution["name"]
+        first = plugins.entries(src.attribution)[0]
+        assert "Copernicus WorldDEM-30" in first["name"]
+        assert "do not incur any liability" in first["name"]
+    # the ground reads WorldCover's built-up land, and says so (D-115)
+    names = [
+        a["name"] for a in plugins.entries(rasters.source("copernicus-glo30-ground").attribution)
+    ]
+    assert any("ESA WorldCover" in n for n in names)
 
 
 def test_ground_filter_takes_off_blocks_narrower_than_the_window_and_keeps_water():
@@ -60,6 +66,33 @@ def test_ground_filter_takes_off_blocks_narrower_than_the_window_and_keeps_water
     ramp = np.tile(np.arange(40, dtype=float), (40, 1)) + 5.0
     assert np.abs(rasters.ground_filter(ramp, 7) - ramp)[5:-5, 5:-5].max() <= 3.0
     assert rasters.ground_filter(a, 1) is a
+
+
+def test_ground_filter_planes_off_towers_in_town_but_not_summits_in_the_hills():
+    """D-115: with a built-up mask, the opening applies only in town."""
+    a = np.full((60, 60), 10.0)
+    yy, xx = np.mgrid[:60, :60]
+    a += np.maximum(0.0, 200.0 - 20.0 * np.hypot(yy - 15, xx - 45))  # a summit, 200 m up
+    a[40:43, 10:13] = 90.0  # a tower in town
+    built = np.zeros(a.shape, bool)
+    built[34:50, 4:20] = True
+    built[15, 30:60] = True  # a lone road over the hill isn't town
+    built[20:22, 30:60] = True  # nor is a dual carriageway two pixels wide
+    everywhere = rasters.ground_filter(a, 7)
+    g = rasters.ground_filter(a, 7, built=built)
+    assert everywhere[15, 45] < a[15, 45] - 50  # the opening alone planes the summit off
+    assert g[15, 45] == a[15, 45]  # with the mask it stays
+    assert g[21, 45] == a[21, 45]
+    assert abs(g[41, 11] - 10.0) < 1e-6  # the tower still comes off
+    assert np.allclose(g[2:8, 2:30], 10.0)
+    # a wood on a flat park outside town: its canopy comes off, but no more than CANOPY_M
+    park = np.full((30, 30), 10.0)
+    park[13:18, 13:18] += 15.0  # a copse narrower than the window
+    trees = np.zeros(park.shape, bool)
+    trees[13:18, 13:18] = True
+    p = rasters.ground_filter(park, 7, built=np.zeros(park.shape, bool), trees=trees)
+    assert p[15, 15] == pytest.approx(25.0 - rasters.CANOPY_M)
+    assert np.allclose(p[:8], 10.0)
 
 
 def _region():
