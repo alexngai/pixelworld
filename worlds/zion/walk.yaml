@@ -44,8 +44,9 @@ snap:
   buildings: { angle: 12, follow: 3 }
 widths: { scale: 1.0, minCells: 0.1 }
 
-# 2.5 m micro-cells from the 10 m DEM
-micro: { k: 4, dem: { overview: 1 } }
+# 2.5 m micro-cells from the 10 m DEM. Every micro-cell slopes however steep
+# (D-141), so the Navajo's sheer walls draw as smooth faces, not terraces.
+micro: { k: 4, dem: { overview: 1 }, maxSlope: 64 }
 
 objects:
   # Springdale, the visitor centre, the museum and Zion Lodge
