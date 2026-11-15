@@ -8,6 +8,7 @@ Real places, drawn as isometric pixel art in the browser. pixelworld builds worl
 
 <img src="docs/images/readme/hero-golden-gate-fog.png" width="800" alt="The Golden Gate Bridge in fog, from the flying level of San Francisco">
 
+- **[pixelworld.site](https://pixelworld.site):** every world and the example game in your browser, nothing to install.
 - **[The viewer](#run-it):** every world in this repository, in your browser: San Francisco, New York, Kyoto, Paris, Tokyo, Hong Kong and the US Southwest.
 - **[`pixelworld` on npm](#use-it-in-your-project):** the engine as a library: a world in a canvas, with your own controls, entities and rules. Games and demos in this repository are built on it.
 - **[`pixelworld-pipeline` on PyPI](#build-a-world-of-your-own-place):** a world of your own place, from a region spec in YAML.

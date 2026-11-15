@@ -302,6 +302,7 @@ async function main() {
       bakeMode: s.bakeMode,
       tilesBaked: s.tilesBaked,
       tilesFromCache: s.tilesFromCache,
+      tilesPending: s.tilesPending, // tools/prebake.mjs waits for 0
       tilesPerRotation: s.tilesPerRotation,
       chunksLoaded: s.chunksLoaded,
       chunksTotal: s.chunksTotal,

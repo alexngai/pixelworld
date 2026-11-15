@@ -49,6 +49,14 @@ export const SHOTS = [
   { name: "tokyo-shinjuku", world: "tokyo-walk", at: "139.6930,35.6880", zoom: 1 },
   { name: "sw-grand-canyon", world: "southwest-fly", at: "-112.1130,36.0560", zoom: 1 },
   { name: "sw-hoover-dam", world: "southwest", at: "-114.7377,36.0160", zoom: 1 },
+  // the national parks, and the multiplayer demos' places (pixelworld.site, D-142)
+  { name: "park-yosemite", world: "yosemite", at: "-119.6000,37.7350", zoom: 1 },
+  { name: "park-zion", world: "zion-walk", at: "-112.9572,37.2506", zoom: 1 },
+  { name: "park-arches", world: "arches-walk", at: "-109.5640,38.7010", zoom: 2 },
+  { name: "park-glacier", world: "glacier-fly", at: "-113.7300,48.7500", zoom: 1, rot: 1 },
+  { name: "park-yellowstone", world: "yellowstone-walk", at: "-110.8382,44.5251", zoom: 2 },
+  { name: "demo-strip", world: "southwest", at: "-115.1728,36.1147", zoom: 2 },
+  { name: "demo-presidio", world: "sf", at: "-122.4660,37.8000", zoom: 1 },
   // one place in four rotations
   ...[0, 1, 2, 3].map((rot) => ({ name: `rot-${rot}`, world: "kyoto-walk", at: "135.7790,34.9986", zoom: 2, rot })),
   // one place at each scale level

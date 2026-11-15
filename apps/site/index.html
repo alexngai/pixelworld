@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pixelworld</title>
+    <meta name="description" content="Real places, drawn as isometric pixel art in your browser, from open data. An engine on npm, a pipeline for your own place, and games built on them." />
+    <meta property="og:title" content="pixelworld" />
+    <meta property="og:description" content="Real places, drawn as isometric pixel art in your browser, from open data." />
+    <link rel="stylesheet" href="./src/site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="name" href="/">pixelworld</a>
+        <nav>
+          <a href="/worlds/">Worlds</a>
+          <a href="/games/">Games</a>
+          <a href="https://github.com/alexngai/pixelworld/blob/main/docs/README.md">Docs</a>
+          <a href="https://github.com/alexngai/pixelworld">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap">
+          <h1>Real places, drawn as isometric pixel art in your browser.</h1>
+          <p class="lede">
+            pixelworld builds worlds from open data (elevation, land cover, OpenStreetMap and Overture roads and buildings, and cities' own building records) and bakes them
+            into pixel-art tiles as you move: fly over a city, drive its streets or walk its blocks, in four rotations, by day or by night.
+          </p>
+          <div class="buttons">
+            <a class="button primary" href="/worlds/">Explore the worlds</a>
+            <a class="button" href="/view/">Open the viewer</a>
+            <a class="button" href="/games/">Play the games</a>
+          </div>
+          <img src="../../docs/images/readme/hero-golden-gate-fog.png" width="1600" height="900" alt="The Golden Gate Bridge in fog, from the flying level of San Francisco" />
+          <p class="muted">A desktop browser with WebGL2 works best. Tiles are baked on your machine as you move, so a new place can take a few seconds to draw.</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap grid three">
+          <div>
+            <h3>The worlds</h3>
+            <p>San Francisco, New York, Kyoto, Tokyo, Paris, Hong Kong, the US Southwest and five national parks, each built at up to three scales.</p>
+            <a href="/worlds/">Pick a place →</a>
+          </div>
+          <div>
+            <h3><code>pixelworld</code> on npm</h3>
+            <p>The engine as a library: a world in a canvas, with your own controls, entities and rules. The games here are built on it.</p>
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/npm.md">Use it in your project →</a>
+          </div>
+          <div>
+            <h3>Your own place</h3>
+            <p>The pipeline, <code>pixelworld-pipeline</code> on PyPI, builds a world of anywhere from a region spec in YAML.</p>
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/worlds.md">Make your own world →</a>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>How it draws</h2>
+          <p class="lede">
+            The pipeline reads elevation, land cover, the map's roads, water and buildings, and where a city publishes them, its building records (heights, ages, uses,
+            materials). It lays them on a grid, compresses the geography between landmarks so a region stays small enough to cross, and writes a world package of static
+            files. The browser bakes that package into pixel-art tiles in a WebGL2 worker. A style pack sets the palette, the materials and which generator draws each kind of
+            building, tree and landmark.
+          </p>
+          <h3 style="margin-top: 32px">Three scales of the same place</h3>
+          <p class="muted">Each a world of its own. <code>L</code> switches between them where you stand.</p>
+          <div class="grid three">
+            <figure><img src="../../docs/images/readme/level-fly.png" width="800" height="450" alt="San Francisco's flying level" loading="lazy" /><figcaption>Flying</figcaption></figure>
+            <figure><img src="../../docs/images/readme/level-drive.png" width="800" height="450" alt="San Francisco's driving level" loading="lazy" /><figcaption>Driving</figcaption></figure>
+            <figure><img src="../../docs/images/readme/level-walk.png" width="800" height="450" alt="San Francisco's walking level" loading="lazy" /><figcaption>Walking</figcaption></figure>
+          </div>
+          <h3 style="margin-top: 32px">Four rotations</h3>
+          <p class="muted">Each baked, not a turned image: <code>Q</code> and <code>E</code> turn the view. Yasaka Pagoda, Kyoto.</p>
+          <div class="grid three">
+            <img src="../../docs/images/readme/rot-0.png" width="800" height="450" alt="Yasaka Pagoda, rotation 0" loading="lazy" />
+            <img src="../../docs/images/readme/rot-1.png" width="800" height="450" alt="Yasaka Pagoda, rotation 1" loading="lazy" />
+            <img src="../../docs/images/readme/rot-2.png" width="800" height="450" alt="Yasaka Pagoda, rotation 2" loading="lazy" />
+            <img src="../../docs/images/readme/rot-3.png" width="800" height="450" alt="Yasaka Pagoda, rotation 3" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Gallery</h2>
+          <p class="muted">Every image is a screenshot of the viewer.</p>
+          <div class="grid">
+            <figure><img src="../../docs/images/readme/sf-painted-ladies.png" width="800" height="450" alt="The Painted Ladies" loading="lazy" /><figcaption><b>The Painted Ladies</b> on Steiner Street, San Francisco, walking.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/sf-downtown-night.png" width="800" height="450" alt="Downtown San Francisco at night" loading="lazy" /><figcaption><b>Downtown San Francisco at night:</b> the Salesforce Tower, lit windows, and the Bay Bridge.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/nyc-village.png" width="800" height="450" alt="Greenwich Village" loading="lazy" /><figcaption><b>Greenwich Village</b>, walking: brick walk-ups, brownstones and water towers, from the city's lot records.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/nyc-bridges.png" width="800" height="450" alt="The Brooklyn and Manhattan bridges" loading="lazy" /><figcaption><b>The Brooklyn and Manhattan bridges</b> over the East River, driving.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/kyoto-yasaka-shrine.png" width="800" height="450" alt="Yasaka Shrine" loading="lazy" /><figcaption><b>Yasaka Shrine</b>'s vermilion halls under the trees, Kyoto.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/kyoto-gion-night.png" width="800" height="450" alt="Gion at night" loading="lazy" /><figcaption><b>Gion</b>'s tiled roofs at night, Kyoto.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/hk-central-night.png" width="800" height="450" alt="Central, Hong Kong, at night" loading="lazy" /><figcaption><b>Central, Hong Kong,</b> at night.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/hk-aberdeen.png" width="800" height="450" alt="Aberdeen" loading="lazy" /><figcaption><b>Aberdeen</b>'s typhoon shelter and its boats, Hong Kong, walking.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/paris-cite.png" width="800" height="700" alt="Notre-Dame" loading="lazy" /><figcaption><b>Paris:</b> Notre-Dame on the Île de la Cité.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/tokyo-shinjuku.png" width="800" height="450" alt="Shinjuku" loading="lazy" /><figcaption><b>Tokyo:</b> Shinjuku's towers.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/sw-hoover-dam.png" width="800" height="450" alt="Hoover Dam" loading="lazy" /><figcaption><b>Hoover Dam</b> between Lake Mead and the Colorado, driving.</figcaption></figure>
+            <figure><img src="../../docs/images/readme/park-yellowstone.png" width="800" height="450" alt="Grand Prismatic Spring" loading="lazy" /><figcaption><b>Grand Prismatic Spring</b>, Yellowstone, in rings of colour.</figcaption></figure>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Use it in your project</h2>
+          <p class="lede">The engine, the world format, the generators and traffic are one npm package, <code>pixelworld</code>, ESM with types. Worlds and style packs are data you host.</p>
+          <pre><code>npm install pixelworld</code></pre>
+          <pre><code>import { createWorldView, roverController } from "pixelworld/engine";
+
+const canvas = document.querySelector("#world");
+const view = await createWorldView({
+  canvas,
+  worldUrl: "/worlds/grand-canyon-m0/",
+  style: (id) => fetch(`/styles/${id}/style.json`).then((r) => r.json()),
+  controller: roverController({ listen: { keys: window, pointer: canvas } }),
+});</code></pre>
+          <p>
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/npm.md">Using pixelworld from npm</a> ·
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/library.md">The engine API</a> ·
+            <a href="https://github.com/alexngai/pixelworld/tree/main/examples/consumers">Example projects</a> ·
+            <a href="https://github.com/alexngai/pixelworld/blob/main/packages/multiplayer/README.md">Multiplayer</a>
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Build a world of your own place</h2>
+          <p class="lede">A region spec says where, at what scale and from which data. The pipeline downloads only what the area needs and writes a world package the viewer opens.</p>
+          <pre><code>pip install pixelworld-pipeline
+pixelworld build region.yaml --out my-world
+pixelworld view my-world</code></pre>
+          <p>
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/worlds.md">Make your own world</a> (Jerome, Arizona, worked through) ·
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/plugins.md">Pipeline plugins</a> ·
+            <a href="https://github.com/alexngai/pixelworld/blob/main/docs/cities.md">Places built and proposed</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          Maps and buildings © OpenStreetMap contributors and the Overture Maps Foundation, ODbL 1.0. Elevation and land cover: USGS 3DEP; Copernicus WorldDEM-30, © DLR e.V.
+          2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA; ESA WorldCover 2021; WRI and Meta canopy heights.
+          City records: DataSF, NYC Open Data, Apur and IGN, MLIT (PLATEAU) and GSI. Each world lists its sources in the viewer (press <code>I</code>);
+          <a href="https://github.com/alexngai/pixelworld/blob/main/docs/data-sources.md">every source and its licence</a>.
+        </p>
+        <p>Code MIT or Apache-2.0 · style packs CC BY 4.0 · world packages ODbL 1.0 · <a href="https://github.com/alexngai/pixelworld">source on GitHub</a></p>
+      </div>
+    </footer>
+  </body>
+</html>

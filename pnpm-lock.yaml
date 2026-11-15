@@ -71,6 +71,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/style
 
+  apps/site: {}
+
   apps/web:
     dependencies:
       '@pixelworlds/bake':

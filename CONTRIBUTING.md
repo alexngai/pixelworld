@@ -35,6 +35,7 @@ The committed world packages in `fixtures/` are served as they are, so the viewe
 | `apps/web` | The viewer (URL parameters, HUD, the `__pixelworld` debug API), the model preview (`model.html`), the bench (`bench.html`) |
 | `apps/editor` | Editor v0: focus areas and pins against `pixelworld serve` |
 | `apps/game` | M4's example game: a car and a plane on the engine's public API |
+| `apps/site` | [pixelworld.site](https://pixelworld.site)'s pages; `pnpm site:build` adds the viewer, the game and the worlds, and `.github/workflows/site.yml` deploys it to GitHub Pages (D-142) |
 | `examples/` | The minimal viewer, and the npm package's consumers (Vite, webpack 5, plain ESM) |
 | `pipeline/` | The Python geo pipeline and its CLI (`pixelworld build`, `serve`, `routes`); `pipeline/src/pixelworld_pipeline/sources/` holds every data source, the city ones too (D-110) |
 | `worlds/` | Region specs, style packs (`worlds/_styles/<pack>/style.json`), the landmark registry with hero bakes and paint-overs |
