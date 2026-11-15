@@ -2,6 +2,8 @@
 
 Kyoto's city pack for [pixelworld](https://www.npmjs.com/package/pixelworld): the generators its `kyoto` style pack names. They draw the machiya, narrow and deep under a gabled roof of grey tile, with its lattice front, the pent roof over the ground floor and the slit windows (mushiko-mado) of its low upper storey, and the wooden town houses after it (`machiya`); the white storehouses with their namako skirts (`kura`); concrete utility poles, their wires spans of Tokyo's pack's `wireSpan` (`utilityPole`); stretches of stone wall (`stoneWall`); the modest modern blocks of the wide streets, flats with balconies or offices and shops with flush signs, some with a rim of tile (`midrise`); temple and shrine halls on stone platforms under hip-and-gable roofs with deep eaves, and Kiyomizu-dera's main hall on its stage (`templeHall`); two-storey gates, a shrine's vermilion rōmon and a temple's sanmon (`towerGate`); pagodas of three or five storeys with their finials (`pagoda`); vermilion torii with stone lanterns (`torii`); a gilded three-storey pavilion by its pond, Kinkaku-ji's type (`goldenPavilion`); and a slender observation tower on its building, Kyoto Tower's type (`candleTower`). The `kyoto` pack names Tokyo's pack too, `@pixelworlds/city-tokyo`, for the wires between its poles (`wireSpan`), so load both.
 
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/kyoto-yasaka.png" width="400" alt="Yasaka Pagoda in Kyoto, drawn with this pack">
+
 ```sh
 npm install pixelworld @pixelworlds/city-tokyo @pixelworlds/city-kyoto
 ```

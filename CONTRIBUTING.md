@@ -114,6 +114,7 @@ The viewer keeps baked tiles in IndexedDB between visits, keyed by what they are
 - **What is this pixel?** `__pixelworld.inspect(x, y)` (or Alt+click) gives the pixel's ramp and shade, where the style pack uses that ramp, the ground under it, and the placed object drawn there with its asset group, generator, plugin and landmark id.
 - **One model alone:** `pnpm models` opens the model preview: an asset group's models from a style pack, any seeds, footprints and heights, in four rotations, by day and night, re-baked on every save ([docs/viewer.md §4](docs/viewer.md#4-the-model-preview-pnpm-models)).
 - **Repeatable views:** `hud=0&cache=0&ground=0&w=640&h=360&traffic=0&fog=0` and a place (`rover=`, `at=`, `fx=`/`fy=`) fix a scene; `objects=0`, `paint=0`, `palette=night` isolate a change.
+- **The README's screenshots:** `node tools/readme-shots.mjs [name ...]` takes them again from the viewer (`pnpm dev`; `VIEWER=` for another port) into `docs/images/readme/`. Retake those a change to a city's look touches, and look at them before committing.
 - **Performance:** `pnpm bench` (your GPU) or `pnpm bench:headless` ([docs/architecture.md, Benchmarks](docs/architecture.md#benchmarks)).
 
 ## 8. Decisions and the roadmap
