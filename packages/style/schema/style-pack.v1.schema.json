@@ -441,6 +441,10 @@
             "fog": {
               "$ref": "#/definitions/fog",
               "description": "A fog layer (docs/style-guide.md §16)."
+            },
+            "steam": {
+              "$ref": "#/definitions/steam",
+              "description": "Steam rising from placed objects: hot pools, geysers (D-138)."
             }
           },
           "additionalProperties": false,
@@ -1297,6 +1301,17 @@
                       "type": "null"
                     }
                   ]
+                },
+                "steam": {
+                  "anyOf": [
+                    {
+                      "description": "Steam rising from placed objects: hot pools, geysers (D-138).",
+                      "$ref": "#/definitions/steamVariant"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "additionalProperties": false,
@@ -1541,6 +1556,113 @@
       ],
       "additionalProperties": false,
       "description": "A fog layer (docs/style-guide.md §16)."
+    },
+    "steam": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The steam's own colour: a ramp…"
+        },
+        "shade": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "…and one of its shades (0–5)."
+        },
+        "veil": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 1,
+          "description": "Veil levels, thin to thick: how far each moves a colour toward the steam's (increasing, 0–1)."
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "heightMeters": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "How high a plume rises (metres, at the objects' scale); a footprint's rises higher with its size."
+              },
+              "radiusMeters": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Its radius at the vent (metres); a footprint's is at least two-thirds of its outline's."
+              },
+              "density": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "How thick it is at its thickest, 0–1."
+              },
+              "minAreaMeters": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Footprints smaller than this (m²) don't steam."
+              }
+            },
+            "required": [
+              "heightMeters",
+              "radiusMeters",
+              "density"
+            ],
+            "additionalProperties": false,
+            "description": "A group's plumes."
+          },
+          "minProperties": 1,
+          "description": "The placed objects that steam, by group: the longest dotted prefix wins, as for assets."
+        },
+        "wind": {
+          "type": "object",
+          "properties": {
+            "toward": {
+              "type": "number",
+              "description": "Compass bearing the steam drifts toward, in degrees (90 = east)."
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Wind speed in real metres per second."
+            }
+          },
+          "required": [
+            "toward",
+            "speed"
+          ],
+          "additionalProperties": false,
+          "description": "The wind the plumes lean and drift with; without it they rise straight."
+        },
+        "night": {
+          "type": "object",
+          "properties": {
+            "density": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Thickness multiplier by night (0 = none)."
+            }
+          },
+          "required": [
+            "density"
+          ],
+          "additionalProperties": false,
+          "description": "By night; without it, no steam at night."
+        }
+      },
+      "required": [
+        "ramp",
+        "shade",
+        "veil",
+        "sources"
+      ],
+      "additionalProperties": false,
+      "description": "Steam rising from placed objects, dithered over the frame as fog is (D-138)."
     },
     "surfaceVariant": {
       "type": "object",
@@ -1839,6 +1961,192 @@
       },
       "additionalProperties": false,
       "description": "A fog layer (docs/style-guide.md §16)."
+    },
+    "steamVariant": {
+      "type": "object",
+      "properties": {
+        "ramp": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "The steam's own colour: a ramp…"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shade": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "…and one of its shades (0–5)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "veil": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minItems": 1,
+              "description": "Veil levels, thin to thick: how far each moves a colour toward the steam's (increasing, 0–1)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sources": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "heightMeters": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "How high a plume rises (metres, at the objects' scale); a footprint's rises higher with its size."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "radiusMeters": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Its radius at the vent (metres); a footprint's is at least two-thirds of its outline's."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "density": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1,
+                            "description": "How thick it is at its thickest, 0–1."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "minAreaMeters": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Footprints smaller than this (m²) don't steam."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "A group's plumes."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "The placed objects that steam, by group: the longest dotted prefix wins, as for assets."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wind": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "toward": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "description": "Compass bearing the steam drifts toward, in degrees (90 = east)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "speed": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Wind speed in real metres per second."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "The wind the plumes lean and drift with; without it they rise straight."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "night": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "density": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Thickness multiplier by night (0 = none)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "By night; without it, no steam at night."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "Steam rising from placed objects, dithered over the frame as fog is (D-138)."
     }
   }
 }

@@ -112,6 +112,30 @@
       "#6f5a45",
       "#887057",
       "#9e866a"
+    ],
+    "pool-deep": [
+      "#020c24",
+      "#041a4a",
+      "#072c78",
+      "#0c40a2",
+      "#1656c2",
+      "#2470da"
+    ],
+    "pool-green": [
+      "#0e2410",
+      "#1a3e18",
+      "#2a5e20",
+      "#3e8028",
+      "#56a032",
+      "#76be44"
+    ],
+    "pool-yellow": [
+      "#3a2a06",
+      "#6a4a0a",
+      "#9a700e",
+      "#c89816",
+      "#e6bc28",
+      "#f6da50"
     ]
   },
   "strataSets": {
@@ -364,6 +388,50 @@
       "params": {
         "style": 0,
         "litFraction": 0.6
+      }
+    },
+    "landmark.pool": {
+      "generator": "hotPool",
+      "ramps": {
+        "edge": "mat",
+        "rim": "pool-yellow",
+        "shallow": "pool-green",
+        "pool": "water",
+        "deep": "pool-deep"
+      },
+      "params": {
+        "thick": 2
+      }
+    }
+  },
+  "atmosphere": {
+    "steam": {
+      "ramp": "snow",
+      "shade": 5,
+      "veil": [
+        0.4,
+        0.65,
+        0.9
+      ],
+      "sources": {
+        "landmark.pool": {
+          "heightMeters": 14,
+          "radiusMeters": 2.5,
+          "density": 0.9,
+          "minAreaMeters": 20
+        },
+        "landmark.geyser": {
+          "heightMeters": 22,
+          "radiusMeters": 2.5,
+          "density": 1
+        }
+      },
+      "wind": {
+        "toward": 60,
+        "speed": 3
+      },
+      "night": {
+        "density": 0.6
       }
     }
   }

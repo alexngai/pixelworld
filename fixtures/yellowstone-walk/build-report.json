@@ -1,5 +1,5 @@
 {
-  "packageHash": "b245e4da6a1de44932e2fb13bcb0f4f783fd009c41c997188f5b4eb42133db4f",
+  "packageHash": "bf2ea1da4ff7389beca2e117961213349ab745ccf38067aa47654c25c53b5e92",
   "cells": [
     796,
     1538
@@ -18,7 +18,8 @@
     "building.lodge": 1,
     "building.residential": 8,
     "landmark.geyser.castle": 2,
-    "landmark.geyser.cone": 11
+    "landmark.geyser.cone": 11,
+    "landmark.pool": 465
   },
   "roads": {
     "cells": 4349,

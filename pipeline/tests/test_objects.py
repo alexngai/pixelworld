@@ -706,3 +706,80 @@ def test_street_rows_keep_to_a_name_or_keep_off_one(monkeypatch):
     off = objects.street_trees(p, rule | {"notName": "Nathan Road"}, rows, _none, "t")
     assert on and off and len(on) + len(off) == len(every)
     assert {i["r"] for i in on} == {0} and {i["r"] for i in off} == {1}
+
+
+def test_pools_stand_on_their_outlines_at_their_water_level(monkeypatch):
+    """D-138: `objects.pools` makes each water area of the classes an object on
+    its own outline: at the level of the water cells it holds (`z0`), on the
+    ground where it holds none; an area takes the first rule it matches."""
+    from pixelworld_pipeline.sources import overture
+
+    def square(lon, lat, d):
+        ring = [(lon, lat), (lon + d, lat), (lon + d, lat + d), (lon, lat + d)]
+        return shapely.Polygon(ring).wkt
+
+    areas = [
+        {"id": "big", "class": "hot_spring", "geometry": square(-115.197, 36.003, 0.0006)},  # ~54 m
+        {
+            "id": "speck",
+            "class": "hot_spring",
+            "geometry": square(-115.193, 36.007, 0.00002),
+        },  # ~2 m
+        {"id": "lake", "class": "water", "geometry": square(-115.195, 36.001, 0.0005)},
+    ]
+    monkeypatch.setattr(
+        overture,
+        "water_areas",
+        lambda release, bbox, classes: [a for a in areas if a["class"] in classes],
+    )
+    spec = {
+        **SPEC,
+        "sources": {**SPEC["sources"], "features": {"kind": "overture", "release": "2026-10-21.0"}},
+    }
+    spec["objects"] = {
+        "pools": [
+            {"group": "landmark.pool", "classes": ["hot_spring"], "minArea": 10},
+            {
+                "group": "landmark.pool.big",
+                "classes": ["hot_spring", "water"],
+                "ids": ["big", "lake"],
+            },
+        ]
+    }
+    region = Region.from_dict(spec)
+    cx, cy = region.cells
+    level = np.full((cy, cx), objects.NO_WATER, dtype=np.int64)
+    p = objects.Placement(region, np.zeros((cy, cx), dtype=bool))
+    big_x, big_y = p.to_cells(
+        *objects.transform_points("EPSG:4326", region.crs, [-115.1967], [36.0033])
+    )
+    level[int(big_y[0]), int(big_x[0])] = 7  # the big pool holds a water cell at 7 steps
+    out, counts = objects.place(region, np.zeros((cy, cx), dtype=bool), [], water_level=level)
+    pools = {i["g"]: i for i in out if i["g"].startswith("landmark.pool")}
+    # the speck is under minArea; the big pool took the first rule, the lake the second
+    assert counts == {"landmark.pool": 1, "landmark.pool.big": 1}
+    big, lake = pools["landmark.pool"], pools["landmark.pool.big"]
+    assert big["z0"] == 7.0 and "z0" not in lake  # the lake holds no water cell: on the ground
+    ring = shapely.Polygon(big["fp"])
+    assert ring.is_valid and 4 <= ring.area <= 12  # ~54 m square in 20 m cells: ~7 cells²
+    assert ring.contains(shapely.Point(big["x"], big["y"]))
+    assert big["s"] == objects._stable_int("big") & 0x7FFFFFFF
+
+
+def test_pool_beds_sink_the_micro_terrain_under_a_pool_to_its_level():
+    """D-138: the micro-corners under a pool's outline sink to its bed: a micro-step
+    under its water's level, or on dry ground to its lowest corner, which
+    becomes its level; ground outside the outline and other groups are left."""
+    k = 4
+    q = np.full((4 * k + 1, 4 * k + 1), 40, dtype=np.int16)
+    q[6, 6] = 37  # a dip under the dry pool
+    square = [[1.2, 1.2], [2.8, 1.2], [2.8, 2.8], [1.2, 2.8]]  # cells
+    wet = {"g": "pool", "x": 2, "y": 2, "s": 1, "fp": square, "z0": 9.0}
+    dry = {"g": "pool", "x": 2, "y": 2, "s": 2, "fp": square}
+    tree = {"g": "tree", "x": 2, "y": 2, "s": 3, "fp": square}
+    out = objects.bed_pools([wet], {"pool"}, q, k)
+    inside = out[5:12, 5:12]  # corners 5..11 (1.25..2.75 cells)
+    assert (inside == 9 * k - 1).all() and out[0, 0] == 40 and out[4, 4] == 40
+    out = objects.bed_pools([dry, tree], {"pool"}, q, k)
+    assert dry["z0"] == 37 / k and (out[5:12, 5:12] == 37).all() and out[0, 0] == 40
+    assert "z0" not in tree

@@ -1,10 +1,10 @@
 [
   {
-    "name": "pixelworld/engine: createWorldView, as an app bundles it (85.1 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground, ground surfaces per pixel and one-pixel lines)",
+    "name": "pixelworld/engine: createWorldView, as an app bundles it (85.1 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground, ground surfaces per pixel and one-pixel lines; 90.9 KB with D-138's steam pass)",
     "path": "dist/engine.js",
     "import": "{ createWorldView }",
     "gzip": true,
-    "limit": "90 KB"
+    "limit": "92 KB"
   },
   {
     "name": "pixelworld/engine and pixelworld/traffic: a view with traffic (93.2 KB, as above)",
@@ -20,7 +20,7 @@
     "limit": "100 KB"
   },
   {
-    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground; 111.8 KB with D-124's runtime edits and D-125's cells for games, fog sampler and veil layer; 113.5 KB with D-120/D-123's big worlds merged in)",
+    "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground; 111.8 KB with D-124's runtime edits and D-125's cells for games, fog sampler and veil layer; 113.5 KB with D-120/D-123's big worlds merged in; 116.8 KB with D-138's steam layer and pass and hot pools)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js",
@@ -30,7 +30,7 @@
       "dist/generators.js"
     ],
     "gzip": true,
-    "limit": "115 KB"
+    "limit": "118 KB"
   },
   {
     "name": "pixelworld/format: reading a manifest and chunks (tree-shaken)",

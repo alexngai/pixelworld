@@ -1092,8 +1092,14 @@ def build(
             ground=base,
             open_water=(water_level != NO_WATER) | river,
             on_road=on_road,
+            water_level=water_level,
         )
         progress.log(f"objects: {object_counts}")
+        # pools lie flat on beds sunk to their level (D-138)
+        if micro is not None and region.objects.get("pools"):
+            mc, k_micro = micro
+            groups = {rule["group"] for rule in region.objects["pools"]}
+            micro = (object_stage.bed_pools(instances, groups, mc, k_micro), k_micro)
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
         under = bridge_decks_over_water(
             instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road

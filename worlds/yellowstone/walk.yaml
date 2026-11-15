@@ -60,4 +60,12 @@ objects:
     - { group: landmark.geyser.cone, lon: -110.844187, lat: 44.470183 }   # Daisy
     - { group: landmark.geyser.cone, lon: -110.842863, lat: 44.474327 }   # Fan and Mortar
     - { group: landmark.geyser.cone, lon: -110.856194, lat: 44.484904 }   # Jewel (Biscuit Basin)
+  # the hot pools again, as objects on their outlines at their water's level,
+  # drawn in rings of colour (D-138): every hot spring, and Grand Prismatic
+  # and Opalescent Pool, which OSM maps as plain water
+  pools:
+    - { group: landmark.pool, classes: [hot_spring, spring], minArea: 3 }
+    - group: landmark.pool
+      classes: [water]
+      ids: [44c0890f-7534-335a-a270-e3f40291a1cf, f8f89bdb-21a6-31fe-b5b0-a3e2bdebca87]
   depiction: { heightStretch: 1.0, scatter: 1.0 }

@@ -75,7 +75,7 @@ export class VeilLayer implements Layer {
     this.ctx?.invalidate();
   }
 
-  screenPass(frame: FrameInfo): ScreenPass | null {
+  screenPass(frame: FrameInfo): Extract<ScreenPass, { type: "fog" }> | null {
     if (!this.on || !this.field || !this.lut) return null;
     const rs = this.renderScale;
     const params: FogFrame = {

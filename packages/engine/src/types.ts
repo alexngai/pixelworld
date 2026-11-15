@@ -1,7 +1,7 @@
 import type { BakedImage } from "@pixelworlds/bake";
 import type { Box, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
-import type { FogField, FogFrame, GpuImage, SpriteInstance } from "@pixelworlds/runtime";
+import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
 import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
 
@@ -665,8 +665,8 @@ export interface FrameInfo {
   isDrawn(x: number, y: number): boolean;
 }
 
-/** A pass over the drawn frame before the palette. Fog's (D-063) is the one kind today. */
-export type ScreenPass = { type: "fog"; field: FogField; frame: FogFrame };
+/** A pass over the drawn frame before the palette: fog's (D-063), or steam's (D-138). */
+export type ScreenPass = { type: "fog"; field: FogField; frame: FogFrame } | { type: "steam"; frame: SteamFrame };
 
 /** What a layer gets when it joins a view. */
 export interface LayerContext {
