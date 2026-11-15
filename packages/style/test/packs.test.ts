@@ -6,6 +6,7 @@ import {
   STYLE_SCHEMA_FILE,
   buildPalette,
   paletteIndex,
+  resolveStyleExtends,
   styleIssues,
   validateStyle,
   type StylePack,
@@ -17,21 +18,23 @@ const SCHEMA = resolve(__dirname, "../schema", STYLE_SCHEMA_FILE);
 const packs = readdirSync(ROOT, { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => [e.name, JSON.parse(readFileSync(join(ROOT, e.name, "style.json"), "utf8"))] as const);
+// a pack that extends another (D-139's `arches`) is checked with its parents merged in, as a viewer loads it
+const merged = (json: unknown) => resolveStyleExtends(json, (id) => packs.find(([p]) => p === id)?.[1]);
 
 describe("every style pack", () => {
   it("is found", () => expect(packs.map(([id]) => id)).toEqual(expect.arrayContaining(["bay-area", "desert-southwest"])));
 
   for (const [id, json] of packs)
-    it(`${id}: names the schema, for editors, and has no problems against it`, () => {
+    it(`${id}: names the schema, for editors, and has no problems against it`, async () => {
       expect(typeof json.$schema).toBe("string");
       expect(resolve(ROOT, id, json.$schema as string)).toBe(SCHEMA);
       expect(existsSync(SCHEMA)).toBe(true);
-      expect(styleIssues(json)).toEqual([]);
+      expect(styleIssues(await merged(json))).toEqual([]);
     });
 
   for (const [id, json] of packs)
-    it(`${id}: validates, fits the palette and has its id, the marker ramp and a night palette`, () => {
-      const style = validateStyle(json as StylePack);
+    it(`${id}: validates, fits the palette and has its id, the marker ramp and a night palette`, async () => {
+      const style = validateStyle((await merged(json)) as StylePack);
       expect(style.id).toBe(id);
       const day = buildPalette(style);
       expect(paletteIndex(day.rampIds.size - 1, 5)).toBeLessThan(INDEX_SILHOUETTE);

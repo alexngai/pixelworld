@@ -1,0 +1,11 @@
+name: South Window
+wikidata: Q62026549
+# an opening about 20 m high and 32 m wide (NPS), in the same fin as the North
+# Window, 90 m to its southeast; anchor from Overture.
+anchor: { lon: -109.53234, lat: 38.68500 }
+height: 33          # sill to the fin's top (1641 m)
+base: 1608
+cut: 28
+clear: 20
+depictions:
+  generic: { group: landmark.arch.window }

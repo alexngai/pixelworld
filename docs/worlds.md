@@ -827,6 +827,7 @@ Other keys here are the source's options.
 | `segmentCells` | number, > 0 | — | A line landmark's pieces are at most this long. |
 | `snap` | true/false | — | A bridge turns to its road's grid direction. |
 | `clear` | number, ≥ 0 (m) | 0 | Other buildings are kept this far away. |
+| `cut` | number, ≥ 0 (m) | — | An anchored landmark with `baseMeters`: the ground this close is lowered to its foot (an arch's fin or a balanced rock's spike, which the elevation holds; D-139). |
 | `orient` | integer | 0 | Quarter turns. |
 | `scale` | number, > 0 | `depiction.landmarks.scale` | Drawn this many times its size. |
 | `replaces` | list of strings | — | Overture building names or ids it stands in for. |

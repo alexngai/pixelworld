@@ -1224,6 +1224,11 @@ LANDMARK = Map(
         ),
         "snap": Key(Bool(), "A bridge turns to its road's grid direction."),
         "clear": Key(Num(0, unit="m"), "Other buildings are kept this far away.", "0"),
+        "cut": Key(
+            Num(0, unit="m"),
+            "An anchored landmark with `baseMeters`: the ground this close is lowered to its foot "
+            "(an arch's fin or a balanced rock's spike, which the elevation holds; D-139).",
+        ),
         "orient": Key(Num(integer=True), "Quarter turns.", "0"),
         "scale": Key(
             Num(0, lo_open=True), "Drawn this many times its size.", "`depiction.landmarks.scale`"

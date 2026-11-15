@@ -12,6 +12,8 @@ objects.place uses. A landmark file holds:
     reservoir: 10                   # a dam's lake stands this many metres below its crest
     base: 0                         # metres: a long landmark's foot (a bridge's water level),
                                     # or an anchored one's below its anchor (a stage on a slope)
+    cut: 20                         # metres: an anchored one's ground this close is lowered
+                                    # to its base (an arch's fin, a balanced rock's spike; D-139)
     snap: true                      # a bridge turns to the grid direction of its road (D-049)
     thickness: 45                   # metres across a line landmark
     bulge: 0.15                     # how far a line landmark bows to the left of its direction
@@ -98,6 +100,7 @@ def resolve(entry: Any, root: Path | None, variant: str) -> dict[str, Any]:
         ("base", "baseMeters"),
         ("snap", "snap"),
         ("reservoir", "reservoir"),
+        ("cut", "cut"),
     ):
         if src in raw:
             out[dst] = raw[src]

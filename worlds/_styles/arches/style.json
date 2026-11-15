@@ -1,0 +1,115 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "extends": "desert-southwest",
+  "id": "arches",
+  "name": "Arches",
+  "ramps": {
+    "kaibab": null,
+    "hermit": null,
+    "muav": null,
+    "tonto": null,
+    "tapeats": null,
+    "dolomite": null,
+    "desert": ["#3b2a30", "#644541", "#906551", "#b98866", "#d8aa80", "#eec8a0"],
+    "scrub": ["#33292b", "#584841", "#7d6a55", "#a08b6b", "#bba67f", "#d0bd95"],
+    "entrada": ["#2c1420", "#57212a", "#8a3a30", "#b8573a", "#d97b4a", "#f0a468"],
+    "dewey-bridge": ["#22111d", "#3f1824", "#62232a", "#843431", "#a1483a", "#b9604a"],
+    "moab-tongue": ["#3d2c2e", "#6a5049", "#9a7a63", "#c4a382", "#e0c49f", "#f4dfbd"],
+    "navajo": ["#382833", "#634640", "#91684f", "#b98c66", "#d6ae80", "#ecca9c"],
+    "grass": ["#30292b", "#51473f", "#766a55", "#988c6b", "#b6aa83", "#cdc29b"]
+  },
+  "strataSets": {
+    "grand-canyon": null,
+    "desert-ranges": null,
+    "arches": [
+      { "name": "Moab tongue", "aboveMeters": 1640, "ramp": "moab-tongue" },
+      { "name": "Entrada, Slick Rock member", "aboveMeters": 1555, "ramp": "entrada" },
+      { "name": "Dewey Bridge member", "aboveMeters": 1525, "ramp": "dewey-bridge" },
+      { "name": "Navajo sandstone", "aboveMeters": -100000, "ramp": "navajo" }
+    ],
+    "salt-wash": [
+      { "name": "Moab tongue", "aboveMeters": 1478, "ramp": "moab-tongue" },
+      { "name": "Entrada, Slick Rock member", "aboveMeters": 1395, "ramp": "entrada" },
+      { "name": "Dewey Bridge member", "aboveMeters": 1365, "ramp": "dewey-bridge" },
+      { "name": "Navajo sandstone", "aboveMeters": -100000, "ramp": "navajo" }
+    ]
+  },
+  "defaultStrata": "arches",
+  "provinces": {
+    "colorado-plateau": null,
+    "basin-and-range": null,
+    "windows": "arches",
+    "salt-wash": "salt-wash"
+  },
+  "scatter": {
+    "desert": [
+      { "group": "shrub.desert", "perCell": 0.25 },
+      { "group": "tree.pinyon-juniper", "perCell": 0.03 },
+      { "group": "rock.boulder", "perCell": 0.03 }
+    ],
+    "sand": [
+      { "group": "shrub.desert", "perCell": 0.15 }
+    ],
+    "rock": [
+      { "group": "rock.boulder", "perCell": 0.04 }
+    ]
+  },
+  "assets": {
+    "rock.boulder": {
+      "generator": "boulder",
+      "ramps": {
+        "rock": "entrada"
+      }
+    },
+    "landmark.arch": {
+      "generator": "stoneArch",
+      "ramps": {
+        "rock": "entrada",
+        "base": "dewey-bridge",
+        "cap": "moab-tongue"
+      },
+      "params": { "span": 0.8, "depth": 0.18, "round": 2.2, "opening": 0.49, "clear": 0.86, "waist": 0.35, "skew": 0.25, "foot": 0.1 }
+    },
+    "landmark.arch.window": {
+      "generator": "stoneArch",
+      "ramps": {
+        "rock": "entrada",
+        "base": "dewey-bridge",
+        "cap": "moab-tongue"
+      },
+      "params": { "span": 1.55, "depth": 0.33, "round": 3, "opening": 0.76, "clear": 0.57, "foot": 0, "diagonal": 1 }
+    },
+    "landmark.arch.turret": {
+      "generator": "stoneArch",
+      "ramps": {
+        "rock": "entrada",
+        "base": "dewey-bridge",
+        "cap": "moab-tongue"
+      },
+      "params": { "span": 1.15, "depth": 0.23, "round": 3.5, "opening": 0.34, "clear": 0.7, "turret": 1.7, "foot": 0 }
+    },
+    "landmark.arch.double": {
+      "generator": "stoneArch",
+      "ramps": {
+        "rock": "entrada",
+        "base": "dewey-bridge",
+        "cap": "moab-tongue"
+      },
+      "params": { "span": 1.0, "depth": 0.25, "round": 2.8, "opening": 0.64, "clear": 0.62, "double": 1, "foot": 0.1 }
+    },
+    "landmark.rock.balanced": {
+      "generator": "balancedRock",
+      "ramps": {
+        "rock": "entrada",
+        "base": "dewey-bridge"
+      },
+      "params": { "cap": 0.44, "capWidth": 0.25, "neck": 0.11, "base": 0.4 }
+    }
+  },
+  "paths": {
+    "classes": {
+      "footway": { "ramp": "sand" },
+      "steps": { "ramp": "sand" }
+    }
+  }
+}

@@ -18,7 +18,7 @@
 import { Baker, type BakedImage } from "@pixelworlds/bake";
 import { listGenerators, resolveAsset, type PluginReport } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
-import { buildPalette, materialTables, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
+import { buildPalette, materialTables, mergeStylePacks, validateStyle, type Palette, type StylePack } from "@pixelworlds/style";
 import {
   DEFAULT_SPEC,
   defaultGroundRamp,
@@ -85,10 +85,16 @@ let drawing: Promise<void> = Promise.resolve();
 /** The style and group the form was built for (it is rebuilt when either changes). */
 let built = "";
 
-function styleOf(id: string): StylePack {
+/** A pack with the packs it `extends` merged in (D-139's `arches` extends `desert-southwest`). */
+function packOf(id: string): object {
   const json = STYLES[id];
   if (!json) throw new Error(`no style pack ${id} (worlds/_styles/${id}/style.json)`);
-  return validateStyle(json as StylePack);
+  const parent = (json as { extends?: unknown }).extends;
+  return typeof parent === "string" ? mergeStylePacks(packOf(parent), json) : json;
+}
+
+function styleOf(id: string): StylePack {
+  return validateStyle(packOf(id) as StylePack);
 }
 
 // ---------------------------------------------------------------- controls
