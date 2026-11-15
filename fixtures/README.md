@@ -125,14 +125,14 @@ New York at two scale levels (D-078, D-083), built from [`worlds/nyc/`](../world
 - **nyc (driving):** Manhattan at 25 m per cell, from the Battery to Inwood, with what the box takes in across the rivers: Brooklyn from the Heights to Greenpoint and Bushwick, Long Island City and Astoria, the South Bronx along the Harlem River, and Jersey City, Hoboken and the Palisades to Fort Lee.
   - **Buildings:** 185,581 from Overture footprints and heights; 129,188 have facts (New Jersey has none and keeps the generic groups).
   - **Types:** tenements (26,185), brownstones (16,981), houses (16,526), historic commercial blocks (14,378), prewar apartment blocks (5,497), warehouses (4,145), cast-iron lofts (301), pier sheds (65), and towers by era: deco (2,871), slabs (2,442), postmodern (901) and glass (1,640), with 354 left to a kind by seed.
-  - **Also:** 64,837 canopy trees and 31,534 sidewalk trees (one every 16 m), 23,971 lawn and 26,771 yard cells, 8,287 rail cells (the elevated lines, Metro-North's viaduct), 120,442 road cells with centre-line pieces, 25,808 traffic routes.
+  - **Also:** 64,911 canopy trees and 31,522 sidewalk trees (one every 16 m), 23,971 lawn and 26,771 yard cells, 8,287 rail cells (the elevated lines, Metro-North's viaduct), 120,442 road cells with centre-line pieces, 25,482 traffic routes.
   - **Landmarks (generic depictions):** One World Trade Center, the Woolworth Building, the Empire State Building, the Chrysler Building, the Flatiron Building and Grand Central Terminal (the last two on their own footprints), and the Brooklyn, Manhattan, Williamsburg, Queensboro and George Washington Bridges (in pieces, D-056).
   - **Size:** 10 MB, of which `objects.json.gz` is 8.3 MB. Built in 477 s with the download cache (431 s the first time, downloads included, by the pipeline's clock).
 - **nyc-walk:** Manhattan at 10 m per cell from the Battery to 86th Street (Lower Manhattan, Midtown, and the Upper West and East Sides' south halves across Central Park), with Brooklyn Heights, DUMBO, Williamsburg, Greenpoint, Long Island City and Astoria's south end across the East River.
   - **Buildings:** 67,370; 60,549 have facts.
   - **Types:** tenements (13,623), brownstones (8,250), historic commercial blocks (7,219), prewar apartment blocks (3,364), warehouses (1,032), houses (805), cast-iron lofts (297), pier sheds (30), and towers by era: deco (3,261), slabs (2,403), postmodern (988) and glass (1,678), with 288 left to a kind by seed.
   - **Centre lines:** 124,169 road cells and 218,684 path cells carry pieces; 33 and 641 have more than six, and drop their narrowest.
-  - **Also:** 62,094 canopy trees and 14,764 sidewalk trees, 45,606 lawn and 49,393 yard cells, 12,366 street lights and 438 signals, 2,880 rail cells, 13,073 traffic routes.
+  - **Also:** 62,218 canopy trees and 14,802 sidewalk trees, 45,606 lawn and 49,393 yard cells, 12,377 street lights and 448 signals, 2,880 rail cells, 12,509 traffic routes.
   - **Landmarks:** the driving level's, but for the George Washington Bridge.
   - **Size:** 7.4 MB, of which `objects.json.gz` is 4.1 MB and the chunks 3.0 MB. Built in 511 s, the first fetch of its NYC Open Data included.
 - **Road reports:** clean on both levels (no discontinuous or steep edges, no disconnected junctions).
@@ -158,7 +158,7 @@ Paris's walking level (D-078, D-086), built from [`worlds/paris/walk.yaml`](../w
 - **Types:** Haussmann blocks (5,783), faubourg houses (2,475), post-war blocks (1,412), civic stone buildings (452), HBM blocks (388), palaces by name (33 pieces: the Louvre and the Hôtel des Invalides, D-088) and warehouses (12); the rest keep the stone default (`haussmann`: 9,820 residential, 3,711 commercial), and 28 towers.
 - **Courtyards:** kept open (`courtyards: true`, D-088): 2,791 buildings carry theirs.
 - **Centre lines:** 45,185 road cells and 82,732 path cells carry pieces; 14 and 990 have more than six, and drop their narrowest.
-- **Also:** 16,347 canopy trees and 7,776 street trees, 13,096 lawn cells, 3,554 street lights and 296 signals, 327 rail cells, 5,856 traffic routes.
+- **Also:** 16,409 canopy trees and 7,711 street trees, 13,096 lawn cells, 3,548 street lights and 298 signals, 327 rail cells, 5,762 traffic routes.
 - **Landmarks (generic depictions, drawn on their own proportions, D-087, D-088):** the Eiffel Tower (unlit), Notre-Dame, the Arc de Triomphe, the Palais Garnier, the Pont Alexandre III, the Dôme des Invalides, the Grand Palais and the Pont Neuf's two arms.
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
 - **Size:** 2.9 MB. Built in about 70 s with the download cache.
@@ -207,7 +207,7 @@ Kyoto's driving level (D-101), built from [`worlds/kyoto/region.yaml`](../worlds
 - **Buildings:** 182,019 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
 - **Types:** wooden houses under gabled (72,608) and hipped (1,538) roofs, mid-rises (38,479), machiya (28,162), temple halls and pavilions (1,138; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (145), Nijō Castle's palace halls and gates (33) and the Imperial Palace's halls, gates and corridors (64 pieces), by name and shape (D-102, D-103, D-104); the defaults 36,535 houses, 2,765 low blocks, 76 taller blocks, 65 car parks.
 - **Walls:** 1,944 stretches of stone wall along OSM's retaining walls (814 pieces of line), Nijō Castle's ishigaki round its moats among them (D-104).
-- **Also:** 42,128 canopy trees and 3,224 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,329 traffic routes.
+- **Also:** 42,395 canopy trees and 3,223 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,281 traffic routes.
 - **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m), Heian Shrine's great torii (24.4 m) and Kinkaku-ji's Golden Pavilion (D-102).
 - **Road report:** clean (29 components).
 - **Size:** 7.5 MB. Built in about 170 s with the download cache (about 380 s the first time).
