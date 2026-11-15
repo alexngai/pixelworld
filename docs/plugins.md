@@ -452,7 +452,7 @@ Then, in `package.json`:
   },
   "files": ["dist"],
   "scripts": { "build": "tsup", "prepack": "tsup" },
-  "peerDependencies": { "pixelworld": "^0.0.0" }
+  "peerDependencies": { "pixelworld": "^0.1.0" }
 }
 ```
 

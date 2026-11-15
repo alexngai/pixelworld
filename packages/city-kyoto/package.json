@@ -1,6 +1,6 @@
 {
   "name": "@pixelworlds/city-kyoto",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Kyoto's city pack for pixelworld: the machiya, mid-rise, temple hall, two-storey gate, pagoda and observation tower generators its style pack names",
   "license": "MIT OR Apache-2.0",
   "type": "module",

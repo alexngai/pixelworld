@@ -1,6 +1,6 @@
 {
   "name": "@pixelworlds/city-paris",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Paris's city pack for pixelworld: the Haussmann, faubourg and HBM building generators and the Gothic cathedral and triumphal arch its style pack names",
   "license": "MIT OR Apache-2.0",
   "type": "module",

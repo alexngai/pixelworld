@@ -8,8 +8,8 @@
     "build": "webpack"
   },
   "dependencies": {
-    "@pixelworlds/city-sf": "^0.0.0",
-    "pixelworld": "^0.0.0"
+    "@pixelworlds/city-sf": "^0.1.0",
+    "pixelworld": "^0.1.0"
   },
   "devDependencies": {
     "webpack": "^5.112.2",
