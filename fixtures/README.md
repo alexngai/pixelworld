@@ -282,7 +282,7 @@ Sources and licenses:
 
 Yellowstone's Upper and Midway Geyser Basins (D-138), built from [`worlds/yellowstone/walk.yaml`](../worlds/yellowstone/walk.yaml) on the `yellowstone` style pack: the Firehole River from Old Faithful and the Old Faithful Inn to Grand Prismatic Spring and Excelsior Geyser, at 6 m per cell (796 × 1,538 cells) so that small hot pools hold a cell. Heights are true for objects (`heightStretch` 1.0).
 
-- **Terrain:** 3DEP 1/3″ read bilinearly at full resolution, 4 × 4 micro-terrain in which every micro-cell slopes (`maxSlope: 64`, D-141); 2,241–2,558 m.
+- **Terrain:** 3DEP 1/3″ read bilinearly at full resolution, 4 × 4 micro-terrain in which every micro-cell slopes (`maxSlope: 64`, D-141); shores shaped round the hot springs too (D-094); 2,241–2,558 m.
 - **Ground:** WorldCover's bare ground drawn as white sinter and its moss and lichen (the basins' mats) as stained sinter; meadows, lodgepole forest with snags (the client's scatter).
 - **Water:** the Firehole and the Little Firehole, and 204 of Overture's hot springs, springs and ponds, each levelled as a pool (2,830 cells).
 - **Objects:** 206 buildings, the Old Faithful Inn on its footprint at 16 m, 13 geyser cones at Overture's geyser points, and 465 hot pools on their outlines, drawn in rings of colour (`objects.pools`); 142 traffic routes. The style's steam rises over the pools and cones (`atmosphere.steam`).

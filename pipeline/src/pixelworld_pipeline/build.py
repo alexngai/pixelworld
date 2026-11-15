@@ -1039,8 +1039,11 @@ def build(
             on_bed = [i for i, c in path_ids.items() if c in PATHS_ON_ROAD_BEDS]
             path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
         # shorelines (D-094): the map's water polygons and river lines shape the
-        # ground under the water planes, at micro-cell resolution
-        areas = _areas_in_cells(layout, feats.water_areas(bbox, WATER_AREA_CLASSES), bbox)
+        # ground under the water planes, at micro-cell resolution; the classes the
+        # spec takes as lakes too (hot springs, moats), whose cells are water
+        lake_classes = (region.sources.get("lakes") or {}).get("classes", [])
+        shore_classes = sorted(set(WATER_AREA_CLASSES) | set(lake_classes))
+        areas = _areas_in_cells(layout, feats.water_areas(bbox, shore_classes), bbox)
         river_hw = (
             terrain.get("riverWidthMeters", region.meters_per_cell) / 2 / region.meters_per_cell
         )
