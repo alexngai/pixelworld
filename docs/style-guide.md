@@ -661,3 +661,12 @@ A variant of `desert-southwest` (§18) for the geyser basins, without the Grand 
   - The plumes lean with a 3 m/s wind toward 60° and are veiled toward `snow`'s lightest shade, at levels 0.4, 0.65 and 0.9.
   - Each plume widens and thins as it rises, breaks into puffs that climb 1.5 m a second, and stays behind what stands in front of it.
   - By night it is drawn at 0.6.
+
+## 25. Sierra Nevada (the `sierra` pack, D-136)
+
+A full pack (`worlds/_styles/sierra/style.json`): `desert-southwest`'s, less the Grand Canyon's strata ramps, with Yosemite's granite and greens. It names no plugins.
+
+- **Strata:** one set, `yosemite` (the `sierra-nevada` province and the default): `granite` above 1,800 m, `granite-warm` below.
+- **Surfaces:** `desert` (WorldCover's bare ground) is granite slab; `sand` is `granite-sand`; `grass` and `lawn` are `meadow`; `woodland` is `conifer` and `forest` (above 2,300 m) `fir`.
+- **Scatter:** `tree.conifer` (mixed conifer, 9–15 voxels), `tree.cedar` (a narrow cone) and `tree.oak` (`roundTree`) in the woods; `tree.fir` above; shrubs in `oak`; granite boulders on slab, rock and sand.
+- **Buildings:** `building.residential` and `.commercial` in `timber` with `shake` roofs.

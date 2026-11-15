@@ -364,6 +364,22 @@ uv run pixelworld build ../worlds/yellowstone/walk.yaml
 
 - Roads, paths, rivers, hot springs, geyser points and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 
+## yosemite, yosemite-valley
+
+Yosemite's driving and walking levels (D-136), built from [`worlds/yosemite/region.yaml`](../worlds/yosemite/region.yaml) and [`worlds/yosemite/valley.yaml`](../worlds/yosemite/valley.yaml) on the `sierra` style pack, each other's levels.
+
+- **yosemite:** El Portal's canyon to Tenaya Lake at 50 m per cell (636 × 445 cells), the valley a screen across between its walls. 176 buildings, 111 traffic routes. 1.7 MB.
+- **yosemite-valley:** Tunnel View to Half Dome and Nevada Fall at 10 m (1456 × 667 cells): the valley floor, its meadows, the Merced, the village and the lodges. 738 buildings, 227 traffic routes, 7,062 trees from the canopy map outside WorldCover's woods; the woods are the client's scatter. 5.0 MB.
+- **Terrain:** USGS 3DEP 1/3″, interpolated (`resampling: bilinear`), drawn true; micro-terrain at K=4 with `micro.maxSlope: 64` (D-141), so the walls are smooth faces rather than terraces.
+- **Road reports:** clean. Built in about 25 s and 33 s with the download cache (the walking level 6½ minutes the first time, fetching the canopy map).
+
+uv run pixelworld build ../worlds/yosemite/region.yaml
+uv run pixelworld build ../worlds/yosemite/valley.yaml
+
+- Elevation: USGS 3D Elevation Program. Public domain.
+- Roads, paths, rivers, land use and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Tree canopy (the walking level): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.
