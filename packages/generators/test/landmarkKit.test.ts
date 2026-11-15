@@ -153,6 +153,32 @@ describe("landmark kit", () => {
     for (let y = 157; y < 190; y += 4) expect(cable(y)).toBeGreaterThanOrEqual(cable(y + 4));
   });
 
+  it("brings a bridge's deck down its approaches to the ground", () => {
+    // 25 cells of line at 1/16 cell a voxel: 3 of approach at a, landing on the ground (0
+    // voxels up), none at b; the suspension spans between the anchorages
+    const v = 1 / 16;
+    const line = {
+      a: [4.5 * v, 0] as [number, number],
+      b: [4.5 * v, 400 * v] as [number, number],
+      half: 4.5 * v,
+      rise: [0, 0] as [number, number],
+      approach: [3, 0] as [number, number],
+    };
+    const m = generateModel(style.assets, rampIds, "landmark.bridge.suspension", {
+      seed: 1,
+      mask: band(9, 400),
+      heightVox: 40,
+      frame: { x0: 0, y0: 0, voxel: v, line },
+    });
+    // down the middle of the road: on the ground at the approach's foot, up to the deck at the
+    // anchorage (48 voxels on), level from there over the water, and level to b
+    expect(topOf(m, 4, 1)).toBeLessThanOrEqual(1);
+    for (let y = 1; y < 44; y += 4) expect(topOf(m, 4, y + 4)).toBeGreaterThanOrEqual(topOf(m, 4, y));
+    expect(topOf(m, 4, 60)).toBe(40);
+    expect(topOf(m, 4, 200)).toBe(40);
+    expect(topOf(m, 4, 398)).toBe(40);
+  });
+
   it("draws a long bridge in pieces that join up", () => {
     // the whole band: 9 × 400 voxels at 1/16 cell, from (0, 0); its line runs down the middle
     const v = 1 / 16;

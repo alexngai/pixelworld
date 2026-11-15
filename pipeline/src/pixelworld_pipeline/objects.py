@@ -1625,6 +1625,74 @@ def reservoirs(
 SEGMENT_CELLS = 12.0
 
 
+# a bridge approach's grade: real metres down per metre along (D-131)
+APPROACH_GRADE = 0.06
+
+
+def bridge_approaches(
+    fp: list,
+    ground: np.ndarray,
+    water: np.ndarray,
+    top: float,
+    slope: float,
+    road: np.ndarray | None = None,
+) -> tuple[list[list[float]], list[float], list[float]]:
+    """A bridge's approaches (D-131): beyond each end of its line, over land, the
+    deck comes down `slope` steps a cell until it meets the ground, as a viaduct
+    carries a deck from its anchorage to the road on the bank (the Golden Gate's
+    over Fort Point). With `road` (the road mask) it lands sooner where its road
+    leaves the line (no road on the line or a cell either side), coming down
+    steeper, so the road's traffic stays on it. Returns the footprint grown by
+    them, each end's approach length (cells) and the ground where it lands
+    (steps). An end with water or the grid's edge before the deck lands has none:
+    it stays where it was.
+    """
+    ring = np.asarray(fp, dtype=np.float64)
+    m = len(ring) // 2
+    outer, inner = ring[:m], ring[m:][::-1]
+    centre = 0.5 * (outer + inner)
+    a, b = centre[0], centre[-1]
+    half = float(np.hypot(*(outer[0] - centre[0])))
+    length = float(np.hypot(*(b - a)))
+    if length == 0 or slope <= 0:
+        return fp, [0.0, 0.0], [0.0, 0.0]
+    u = (b - a) / length
+    h, w = ground.shape
+
+    across = np.array([-u[1], u[0]])
+
+    def on_road(p: np.ndarray) -> bool:
+        for k in (0.0, -1.0, 1.0):
+            x, y = math.floor(p[0] + across[0] * k), math.floor(p[1] + across[1] * k)
+            if 0 <= x < w and 0 <= y < h and road[y, x]:
+                return True
+        return False
+
+    def walk(end: np.ndarray, d: np.ndarray) -> tuple[float, float]:
+        last = None  # the last step still on the road: (s, ground there)
+        for s in np.arange(0.5, top / slope + 2.0, 0.5):
+            p = end + d * s
+            x, y = math.floor(p[0]), math.floor(p[1])
+            if not (0 <= x < w and 0 <= y < h) or water[y, x]:
+                break
+            if road is not None and not on_road(p):
+                return last if last is not None else (0.0, 0.0)
+            last = (float(s), float(ground[y, x]))
+            if top - slope * s <= float(ground[y, x]) + 0.5:
+                return last
+        return 0.0, 0.0
+
+    (la, za), (lb, zb) = walk(a, -u), walk(b, u)
+    if la == 0 and lb == 0:
+        return fp, [0.0, 0.0], [0.0, 0.0]
+    a2, b2 = a - u * la, b + u * lb
+    nrm = np.array([u[1], -u[0]])
+    t = np.linspace(0, 1, m)
+    line = a2[None, :] + t[:, None] * (b2 - a2)[None, :]
+    grown = np.concatenate([line + half * nrm, (line - half * nrm)[::-1]])
+    return [[round(float(x), 2), round(float(y), 2)] for x, y in grown], [la, lb], [za, zb]
+
+
 def line_segments(inst: dict, seg_cells: float) -> list[dict]:
     """A straight band landmark cut into pieces of at most seg_cells along its
     line (D-056). Every piece carries the whole line (`ln`: its ends, `lw`: its
@@ -1700,13 +1768,18 @@ def place(
     streets: list | None = None,
     water: np.ndarray | None = None,
     roads: tuple[np.ndarray, np.ndarray] | None = None,
+    ground: np.ndarray | None = None,
+    open_water: np.ndarray | None = None,
+    on_road: np.ndarray | None = None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
     streets (the straightened road lines in cells) and water (a cell mask) feed
     the building typology (D-055). roads (the road mask and half-widths in
-    cells) are what `snap.buildings.clearRoads` keeps buildings off.
+    cells) are what `snap.buildings.clearRoads` keeps buildings off. ground
+    (cell heights, steps) and open_water (the water mask with the roads that cross
+    it) and on_road (the road mask) shape bridges' approaches (`bridge_approaches`).
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
@@ -1911,6 +1984,21 @@ def place(
                 inst["top"] = round(float(heights(lx, ly, float(lm["crestMeters"]))), 2)
             if heights is not None and "baseMeters" in lm:
                 inst["z0"] = round(float(heights(lx, ly, float(lm["baseMeters"]))), 2)
+            approaches = snap_deg is not None and ground is not None and open_water is not None
+            if approaches and "top" in inst:
+                # the deck comes down over land at its approach grade (real metres per metre)
+                crest = float(lm["crestMeters"])
+                drop = float(lm.get("approachGrade", APPROACH_GRADE)) * p.scale_at(lx, ly)
+                slope = float(heights(lx, ly, crest)) - float(heights(lx, ly, crest - drop))
+                fp, ap, az = bridge_approaches(
+                    inst["fp"], ground, open_water, inst["top"], slope, on_road
+                )
+                if ap != [0.0, 0.0]:
+                    inst["fp"] = fp
+                    inst["ap"] = [round(v, 2) for v in ap]
+                    inst["az"] = [round(v, 2) for v in az]
+                    pts = np.asarray(fp)
+                    inst["x"], inst["y"] = float(pts[:, 0].mean()), float(pts[:, 1].mean())
             instances += line_parts(p, lm, k, heights, (lx, ly))
             if snap_deg is not None:
                 # long straight landmarks (bridges) go in pieces along their line

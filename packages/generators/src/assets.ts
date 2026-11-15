@@ -52,6 +52,10 @@ export interface ObjectInstance {
   /** A piece of a long landmark: the whole line's ends [ax, ay, bx, by] and half-width, in cells. */
   ln?: [number, number, number, number];
   lw?: number;
+  /** A bridge's approaches (D-131): how far its line runs on past each anchorage over land, in cells, at a and at b. */
+  ap?: [number, number];
+  /** The ground (steps) where each approach lands, at a and at b. */
+  az?: [number, number];
 }
 
 /** Footprints wider than this (cells) are owned per voxel column (see meshVoxels). */
@@ -118,7 +122,15 @@ export interface GenContext {
     y0: number;
     voxel: number;
     /** A line object's ends and half-width (cells), and the ground's height at its ends above its base (voxels; D-098). */
-    line?: { a: [number, number]; b: [number, number]; half: number; rise?: [number, number] };
+    line?: {
+      a: [number, number];
+      b: [number, number];
+      half: number;
+      /** the ground at a and at b, in voxels above the model's base */
+      rise?: [number, number];
+      /** a bridge's approaches at a and at b (cells): the line beyond its anchorages, over land (D-131) */
+      approach?: [number, number];
+    };
   };
   /** Target size in voxels (traffic vehicles, D-064): along, across, up. */
   size?: { length: number; width: number; height: number };
@@ -371,7 +383,11 @@ export function buildObjects(instances: ObjectInstance[], opts: ObjectBuildOptio
             a: [inst.ln[0], inst.ln[1]],
             b: [inst.ln[2], inst.ln[3]],
             half: inst.lw,
-            rise: [rise(inst.ln[0], inst.ln[1]), rise(inst.ln[2], inst.ln[3])],
+            // where a bridge's approaches land, as the pipeline found it (its routes follow the same)
+            rise: inst.az
+              ? [(inst.az[0] - base) / opts.voxel.v, (inst.az[1] - base) / opts.voxel.v]
+              : [rise(inst.ln[0], inst.ln[1]), rise(inst.ln[2], inst.ln[3])],
+            ...(inst.ap ? { approach: inst.ap } : {}),
           };
         }
         const [bx0, by0, bx1, by1] = footprintBounds(inst.fp);

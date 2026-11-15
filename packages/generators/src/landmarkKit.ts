@@ -122,12 +122,44 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
   const pier = m.material(ramp("pier"));
   const plateRamp = ramps("plate")[0];
   const plate = plateRamp !== undefined ? m.material(plateRamp) : 0;
-  const b = bandAxis(mask, frame);
-  if (!b.cells.length) return m;
+  const whole = bandAxis(mask, frame);
+  if (!whole.cells.length) return m;
+  // the approaches (D-131): beyond each anchorage the line runs on over land, where the
+  // deck comes down to the ground it lands on (the frame's rise at the line's ends)
+  const line = frame?.line;
+  const lineLen = line ? Math.hypot(line.b[0] - line.a[0], line.b[1] - line.a[1]) : 0;
+  const [apA, apB] = line?.approach && lineLen > 0 ? line.approach : [0, 0];
+  const f0 = Math.min(0.45, Math.max(0, apA) / Math.max(lineLen, 1e-9));
+  const f1 = Math.min(0.45, Math.max(0, apB) / Math.max(lineLen, 1e-9));
+  const span = 1 - f0 - f1;
+  // the suspension bridge, anchorage to anchorage: t 0..1 between them (outside on the approaches)
+  const b = {
+    ...whole,
+    t: whole.t.map((t) => (t - f0) / span),
+    along: whole.along.map((al) => al - f0 * whole.length),
+    length: whole.length * span,
+  };
   // across the band: legs at its edges, the cable plane through their middles at ±cp
   const legW = Math.max(1, b.half * param("leg", 0.3));
   const legD = Math.max(1, b.half * param("legDepth", 0.4));
   const cp = Math.max(0.5, b.half - legW / 2);
+  const [riseA, riseB] = line?.rise ?? [0, 0];
+  const landA = Math.max(0, Math.min(H, Math.round(riseA)));
+  const landB = Math.max(0, Math.min(H, Math.round(riseB)));
+  /** An approach's column: its deck sloping from the ground at the line's end up to the
+   * anchorage, railings and a girder along its edges, piers under it. */
+  const approach = (x: number, y: number, i: number, ac: number) => {
+    if (ac > cp + 0.6) return;
+    const t = whole.t[i]!;
+    const h = t < f0 ? Math.round(landA + ((H - landA) * t) / f0) : Math.round(landB + ((H - landB) * (1 - t)) / f1);
+    m.set(x, y, h, deck);
+    if (ac >= cp - 0.6) {
+      m.set(x, y, h + 1, truss); // railing
+      for (let z = Math.max(0, h - 2); z < h; z++) m.set(x, y, z, truss); // girder
+    } else if (((Math.round(whole.along[i]!) % 16) + 16) % 16 < 2) {
+      for (let z = 0; z < h - 2; z++) m.set(x, y, z, pier);
+    }
+  };
   // towers and anchorages along the line (fractions of its length)
   const towers: number[] = [];
   const anchors: number[] = [0, 1];
@@ -167,9 +199,10 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
   const P = 2 * (D - 1); // a Warren truss panel
   b.cells.forEach(([x, y], i) => {
     const ac = Math.abs(b.across[i]!);
+    const t = b.t[i]!;
+    if (t < 0 || t > 1) return approach(x, y, i, ac);
     if (ac > cp + 0.6) return; // beyond the cable planes: only towers and anchorages
     const al = b.along[i]!;
-    const t = b.t[i]!;
     m.set(x, y, H, deck);
     if (ac < cp - 0.6) {
       if (decks === 2) m.set(x, y, zb, deck);

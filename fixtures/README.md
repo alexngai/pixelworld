@@ -92,12 +92,12 @@ San Francisco at three scale levels, built from [`worlds/sf/`](../worlds/sf/) on
 
 - **sf (driving):** the whole city at a uniform 25 m per cell, from Ocean Beach to the Embarcadero and from the Golden Gate to the county line, with 1.5× vertical exaggeration and 4×4 micro-cells.
   - **Buildings:** 168,878. They come from Overture footprints and heights; DataSF's assessor roll supplies year built, storeys, use and neighbourhood (160,794 matched to a lot).
-  - **Types:** stucco row houses (82,002), Edwardian rows (26,961), houses (20,100), Victorian rows (17,632), apartment blocks with bays (3,245) and without (5,297), historic commercial blocks (5,150), warehouses (2,884), Chinatown (924), pier sheds (123), and towers by era: deco (107), slabs (129), postmodern (66) and glass (107), with 73 left to a kind by seed.
-  - **Trees:** 81,627: 62,295 where the WRI/Meta canopy height map shows 3 m or more (cypress and eucalyptus on tree-covered land), and 19,332 sidewalk trees along the avenues.
+  - **Types:** stucco row houses (82,007), Edwardian rows (26,959), houses (20,100), Victorian rows (17,632), apartment blocks with bays (3,245) and without (5,291), historic commercial blocks (5,150), warehouses (2,882), Chinatown (924), pier sheds (122), and towers by era: deco (108), slabs (129), postmodern (65) and glass (107), with 73 left to a kind by seed.
+  - **Trees:** 81,633: 62,300 where the WRI/Meta canopy height map shows 3 m or more (cypress and eucalyptus on tree-covered land), and 19,333 sidewalk trees along the avenues.
   - **Ground (D-062):** 25,121 lawn cells (parks, golf courses, pitches, gardens and cemeteries from Overture land use) and 43,558 yard cells beside houses.
   - **Rails in the street (D-061):** 3,709 cells: cable-car tracks over Nob Hill and Russian Hill, the streetcar and light-rail lines, Caltrain.
   - **Landmarks (generic depictions):** the Golden Gate Bridge, the Bay Bridge's west span (both in pieces, D-056), the Transamerica Pyramid, Salesforce Tower, Coit Tower, the Ferry Building, City Hall, the Palace of Fine Arts, Sutro Tower, the Dutch and Murphy windmills, and Alcatraz's cellhouse and lighthouse.
-  - **Traffic routes (D-060):** 16,428.
+  - **Traffic routes (D-060):** 16,426.
   - **Size:** 8.6 MB, of which `objects.json.gz` (version 2, D-057) is 7.3 MB and `routes.json.gz` 0.3 MB.
 - **sf-walk:** the northeast of the city at 10 m per cell, from the Haight and Alamo Square to the Embarcadero and from Dolores Park to North Beach, with hills at 2× and Lombard Street's hairpins kept from snapping.
   - **Contents:** 43,650 buildings at 1.4× height, 20,225 canopy trees and 9,181 sidewalk trees, 22,175 lawn and 92,652 yard cells, 8,008 street lights and 458 signals, 114 lantern strings over Grant Avenue and Stockton Street, 3,816 rail cells, and the landmarks within it, including the Dragon Gate (not the Palace of Fine Arts: its colonnade would reach past a tile's margin at 10 m cells).

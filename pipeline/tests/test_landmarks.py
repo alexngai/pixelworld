@@ -434,3 +434,68 @@ def test_a_footprint_landmark_stands_on_the_building_it_replaces(registry, monke
     assert len(fp) == 3 and lm["hm"] == 90  # its triangle, at its own height
     assert lm["x"] == pytest.approx(fp[:, 0].mean(), abs=0.01)
     assert lm["y"] == pytest.approx(fp[:, 1].mean(), abs=0.01)
+
+
+def test_the_land_a_deck_comes_ashore_on_stays_land():
+    # a strait (x 2..7) with a one-cell spit at the south shore (x 4, y 7..8) that the
+    # bridge's end rests on, as Fort Point under the Golden Gate; land from y 9 down
+    from pixelworld_pipeline.build import bridge_decks_over_water
+
+    wet = np.zeros((12, 12), dtype=bool)
+    wet[0:9, 2:8] = True
+    wet[7:9, 4] = False  # the spit
+    wet[3, 4] = False  # land cover taking the deck for land, mid-span
+    deck = {
+        "g": "landmark.bridge.suspension",
+        "fp": [[4.2, 0.0], [4.8, 0.0], [4.8, 7.8], [4.2, 7.8]],
+        "ln": [4.5, 0.0, 4.5, 7.8],
+    }
+    road = np.zeros((12, 12), dtype=bool)
+    road[7:11, 4] = True  # the road the bridge carries, onto the spit and inland
+    under = bridge_decks_over_water([deck], wet, (12, 12), road)
+    assert under[3, 4]  # mid-span, the gap still counts as water
+    assert not under[7:9, 4].any()  # the spit the deck lands on stays land, its road too
+    # without a line, the deck is as before: the spit's cells under it go to water
+    under = bridge_decks_over_water([{k: v for k, v in deck.items() if k != "ln"}], wet, (12, 12))
+    assert under[7, 4]
+
+
+def test_a_bridge_comes_down_its_approaches_over_land():
+    # a strait from x 10 to 30 on a 45 × 20 grid; the east bank level at 0, then a bluff at 5
+    from pixelworld_pipeline import objects
+    from pixelworld_pipeline.routes import Deck
+
+    water = np.zeros((20, 45), dtype=bool)
+    water[:, 10:30] = True
+    ground = np.zeros((20, 45))
+    ground[:, 35:] = 5
+    fp = [[10.0, 9.5], [30.0, 9.5], [30.0, 10.5], [10.0, 10.5]]  # the deck across it, 8 steps up
+    grown, ap, az = objects.bridge_approaches(fp, ground, water, top=8.0, slope=1.0)
+    # west: down to the level bank at 1 step a cell; east: it meets the bluff sooner
+    assert ap == [7.5, 5.0] and az == [0.0, 5.0]
+    xs = [x for x, _ in grown]
+    assert min(xs) == pytest.approx(2.5) and max(xs) == pytest.approx(35.0)
+    # water beyond an end: no approach there, the footprint as it was
+    sea = np.ones((20, 45), dtype=bool)
+    assert objects.bridge_approaches(fp, ground, sea, 8.0, 1.0) == (fp, [0.0, 0.0], [0.0, 0.0])
+    # routes take the same profile: level between the anchorages, down each approach
+    deck = Deck(
+        "d", np.array([2.5, 10.0]), np.array([35.0, 10.0]), 0.5, 8.0, None, (7.5, 5.0), (0.0, 5.0)
+    )
+    assert deck.height(np.array([0.0, 3.75, 7.5, 20.0, 32.5])).tolist() == [0.0, 4.0, 8.0, 8.0, 5.0]
+
+
+def test_a_bridge_approach_lands_where_its_road_leaves_the_line():
+    from pixelworld_pipeline import objects
+
+    water = np.zeros((20, 45), dtype=bool)
+    water[:, 10:30] = True
+    ground = np.zeros((20, 45))
+    fp = [[10.0, 9.5], [30.0, 9.5], [30.0, 10.5], [10.0, 10.5]]
+    road = np.zeros((20, 45), dtype=bool)
+    road[10, 30:34] = True  # east: the road runs on the line 4 cells, then turns away
+    road[10, 0:10] = True  # west: it runs on past where the deck meets the ground
+    _, ap, az = objects.bridge_approaches(fp, ground, water, 8.0, 1.0, road)
+    assert ap == [7.5, 3.5] and az == [0.0, 0.0]  # east comes down steeper, onto its road
+    road[:, :] = False  # no road beyond either end: no approach
+    assert objects.bridge_approaches(fp, ground, water, 8.0, 1.0, road)[1] == [0.0, 0.0]
