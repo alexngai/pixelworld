@@ -1,0 +1,112 @@
+name: Site
+
+# pixelworld.site on GitHub Pages (D-142): the site's pages, the viewer (/view/),
+# the example game (/play/) and the world packages, built by `pnpm site:build`.
+# Each place's first view in the viewer is then baked ahead (tools/prebake.mjs)
+# on its own runner, against the built viewer (the tiles' keys hash the code the
+# page runs), so a first visit draws at once; a world whose start tiles fail
+# still deploys, and bakes its first view in the browser. The custom domain is
+# set in the repository's Pages settings (source: GitHub Actions), not by a
+# CNAME file.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm site:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+          retention-days: 1
+
+  start-tiles:
+    name: Start tiles ${{ matrix.world }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        # the viewer's default and each place's main level on the site's worlds page
+        world: [southwest, sf-walk, nyc-walk, kyoto-walk, hongkong-island, paris-walk, tokyo-walk, yosemite-valley, zion-walk, arches-walk, glacier-walk, yellowstone-walk]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
+      - name: Serve the built site
+        run: |
+          pnpm site:preview > /dev/null 2>&1 &
+          for i in $(seq 60); do curl -sf http://localhost:4190/ > /dev/null && exit 0; sleep 1; done
+          echo "::error::the site's preview server did not start"; exit 1
+      # one desktop view: the pack is fetched whole before the first frame, so larger views (12.8 MB for sf-walk at 1920x1080 and a phone) cost more than they save
+      - run: node tools/prebake.mjs --world ${{ matrix.world }} --url http://localhost:4190/view --sizes 1440x900
+      - uses: actions/upload-artifact@v4
+        with:
+          name: start-tiles-${{ matrix.world }}
+          path: fixtures/${{ matrix.world }}/start-tiles.bin
+          retention-days: 1
+
+  deploy:
+    needs: [build, start-tiles]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
+      # start-tiles-<world>/start-tiles.bin → _site/<world>/start-tiles.bin
+      - uses: actions/download-artifact@v4
+        continue-on-error: true # none when every prebake failed
+        with:
+          path: start-tiles
+          pattern: start-tiles-*
+      - name: Start tiles into their worlds
+        run: |
+          for d in start-tiles/start-tiles-*/; do
+            [ -f "$d/start-tiles.bin" ] || continue
+            world=$(basename "$d"); world=${world#start-tiles-}
+            cp "$d/start-tiles.bin" "_site/$world/"
+          done
+          ls -l _site/*/start-tiles.bin || echo "::warning::no start tiles: every first view bakes in the browser"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

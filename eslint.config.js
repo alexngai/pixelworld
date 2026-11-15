@@ -12,6 +12,7 @@ export default tseslint.config(
       ".claude/**", // agents' git worktrees: other copies of the repo
       "test-results/**",
       "playwright-report/**",
+      "_site/**", // pnpm site:build
     ],
   },
   js.configs.recommended,

@@ -18,6 +18,13 @@
  *   node tools/prebake.mjs --world nyc-walk --check       exit 1 unless the pack covers the start view
  *   options: --sizes 1920x1080,390x844 (the views to cover, CSS px: a desktop's and a
  *   phone's, each sees a few tiles the other doesn't), --url <running dev server of apps/game>
+ *
+ * The plugins' part of the key hashes their code as the page has it, so tiles
+ * baked by a dev server don't match a build, nor one app's build another's:
+ * bake against the page that will read them. --url also takes a built
+ * viewer or game, e.g. the site's (pixelworld.site, D-142):
+ *
+ *   node tools/prebake.mjs --world sf-walk --url http://localhost:4190/view
  */
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -85,15 +92,16 @@ export function decodePackKeys(file) {
   return JSON.parse(file.subarray(8, 8 + n).toString()).tiles.map((t) => t.key);
 }
 
-/** The game at the world's start; resolves with the view's stats once everything it asked for is baked. */
+/** The game (or the viewer) at the world's start; resolves with the view's stats once everything it asked for is baked. */
 async function view(page, url, opt) {
   // with --check, the pack in place and no IndexedDB: everything the view needs should come from it
   const query = `world=/${opt.world}/&traffic=0&fog=0&paused=1&hud=0${opt.check ? "&cache=0" : "&startTiles=0"}`;
   await page.goto(`${url}/?${query}`);
-  await page.waitForFunction(() => window.__game !== undefined, null, { timeout: 1_800_000, polling: 500 });
+  await page.waitForFunction(() => window.__game !== undefined || window.__pixelworld !== undefined, null, { timeout: 1_200_000, polling: 500 });
   // ready() covers the view; also wait for what it asked for around it (look-ahead, the car's reveal) and the cache writes
   return page.evaluate(async () => {
-    const view = window.__game.game.view;
+    const view = window.__game?.game.view ?? window.__pixelworld;
+    await view.ready();
     let still = 0;
     for (;;) {
       const s = view.stats();
@@ -112,7 +120,8 @@ async function main() {
   if (!existsSync(join(REPO, "fixtures", opt.world, "manifest.json"))) throw new Error(`no world package fixtures/${opt.world}`);
   const server = await devServer(opt.url);
   // the platform's GPU (headless Chromium would use SwiftShader, many times slower at baking)
-  const gpu = process.platform === "darwin" ? ["--use-angle=metal"] : [];
+  // elsewhere SwiftShader, as the e2e tests and the other tools run on CI's runners (no GPU)
+  const gpu = process.platform === "darwin" ? ["--use-angle=metal"] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
   const browser = await chromium.launch({ args: [...gpu, "--ignore-gpu-blocklist"] });
   try {
     // one context: each size's view bakes only what the ones before it didn't (the tile cache is shared)
@@ -121,7 +130,8 @@ async function main() {
     let stats;
     const t0 = Date.now();
     for (const [w, h] of sizes) {
-      page = await context.newPage({ viewport: { width: w, height: h } });
+      page = await context.newPage(); // a context's newPage takes no options: size it after
+      await page.setViewportSize({ width: w, height: h });
       stats = await view(page, server.url, opt);
       if (opt.check) {
         const label = `${opt.world} at ${w}×${h}: ${stats.tilesFromCache} tiles from the pack, ${stats.tilesBaked} baked`;

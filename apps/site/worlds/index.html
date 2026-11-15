@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Worlds · pixelworld</title>
+    <meta name="description" content="Every pixelworld world: cities and national parks, at flying, driving and walking scale, in your browser." />
+    <link rel="stylesheet" href="../src/site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="name" href="/">pixelworld</a>
+        <nav>
+          <a href="/worlds/" aria-current="page">Worlds</a>
+          <a href="/games/">Games</a>
+          <a href="https://github.com/alexngai/pixelworld/blob/main/docs/README.md">Docs</a>
+          <a href="https://github.com/alexngai/pixelworld">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="wrap">
+          <h1>Worlds</h1>
+          <p class="lede">
+            Each place is built at up to three scales, each a world of its own: flying over it, driving its roads, walking its blocks. Pick one to open it in the viewer.
+          </p>
+          <p class="muted">
+            WASD or drag to pan · arrows drive the rover · <code>Q</code>/<code>E</code> rotate · <code>1</code>–<code>6</code> zoom · <code>L</code> next scale, where you stand ·
+            <code>T</code> day and night · <code>I</code> data sources · <code>H</code> hide the help
+          </p>
+        </div>
+      </section>
+
+      <section style="padding-top: 0">
+        <div class="wrap">
+          <h2>Cities</h2>
+          <div class="grid">
+            <article class="card">
+              <img src="../../../docs/images/readme/sw-grand-canyon.png" width="800" height="450" alt="The Grand Canyon from the Southwest's flying level" loading="lazy" />
+              <div class="body">
+                <h3>US Southwest</h3>
+                <p>Las Vegas, Hoover Dam and the Grand Canyon, about 410 × 280 km, compressed between its landmarks so you can drive from the Strip to the canyon in minutes.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/southwest-fly/" title="Flying">Fly</a>
+                  <a class="button primary" href="/view/?world=/southwest/" title="Driving">Drive</a>
+                  <a class="button" href="/view/?world=/southwest-walk/" title="Walking the Strip">Walk the Strip</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/sf-golden-gate.png" width="800" height="450" alt="The Golden Gate Bridge from San Francisco's flying level" loading="lazy" />
+              <div class="body">
+                <h3>San Francisco</h3>
+                <p>The city block by block from its own building records: Victorians and rowhouses on the hills, Chinatown, Lombard Street, the bridges and the fog.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/sf-fly/" title="Flying over the Bay">Fly</a>
+                  <a class="button" href="/view/?world=/sf/" title="Driving">Drive</a>
+                  <a class="button primary" href="/view/?world=/sf-walk/" title="Walking the hills">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/nyc-central-park.png" width="800" height="450" alt="Central Park's Pond under the towers of Central Park South" loading="lazy" />
+              <div class="body">
+                <h3>New York</h3>
+                <p>Manhattan from the city's lot records: brownstones and water towers in the Village, Midtown's towers, Central Park and the East River bridges.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/nyc/" title="Driving Manhattan">Drive</a>
+                  <a class="button primary" href="/view/?world=/nyc-walk/" title="Walking Lower Manhattan and Midtown">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/kyoto-yasaka.png" width="800" height="450" alt="Yasaka Pagoda over Higashiyama's machiya" loading="lazy" />
+              <div class="body">
+                <h3>Kyoto</h3>
+                <p>Gion and Higashiyama's machiya and temples under the wooded hills, the Kamo River, and the basin from the air.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/kyoto-fly/" title="Flying over the Kyoto basin">Fly</a>
+                  <a class="button" href="/view/?world=/kyoto/" title="Driving central Kyoto">Drive</a>
+                  <a class="button primary" href="/view/?world=/kyoto-walk/" title="Walking Gion and Higashiyama">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/hk-waterfront.png" width="800" height="450" alt="Central's waterfront on Victoria Harbour" loading="lazy" />
+              <div class="body">
+                <h3>Hong Kong</h3>
+                <p>Victoria Harbour, Kowloon's tenements and neon, and the whole of Hong Kong Island, from Central's towers to the Peak and Aberdeen.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/hongkong/" title="Driving round Victoria Harbour">Drive</a>
+                  <a class="button" href="/view/?world=/hongkong-walk/" title="Walking Kowloon">Walk Kowloon</a>
+                  <a class="button primary" href="/view/?world=/hongkong-island/" title="Walking Hong Kong Island">Walk the Island</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/paris-eiffel.png" width="800" height="700" alt="The Eiffel Tower over the Champ de Mars" loading="lazy" />
+              <div class="body">
+                <h3>Paris</h3>
+                <p>Central Paris on foot: the Eiffel Tower, Notre-Dame, the Opéra and the Seine's quays between Haussmann's blocks.</p>
+                <div class="buttons">
+                  <a class="button primary" href="/view/?world=/paris-walk/" title="Walking central Paris">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/tokyo-shinjuku.png" width="800" height="450" alt="Shinjuku's towers" loading="lazy" />
+              <div class="body">
+                <h3>Tokyo</h3>
+                <p>Shibuya to Shinjuku on foot, along the Yamanote line: Shinjuku's towers and the signs that light up at night.</p>
+                <div class="buttons">
+                  <a class="button primary" href="/view/?world=/tokyo-walk/" title="Walking Shibuya to Shinjuku">Walk</a>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>National parks</h2>
+          <div class="grid">
+            <article class="card">
+              <img src="../../../docs/images/readme/park-yosemite.png" width="800" height="450" alt="Yosemite Valley between El Capitan and Half Dome" loading="lazy" />
+              <div class="body">
+                <h3>Yosemite</h3>
+                <p>The valley between El Capitan and Half Dome, its granite walls drawn as sheer faces, and Cook's Meadow under Yosemite Falls.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/yosemite/" title="Driving Yosemite">Drive</a>
+                  <a class="button primary" href="/view/?world=/yosemite-valley/" title="Walking Yosemite Valley">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/park-zion.png" width="800" height="450" alt="Zion Canyon" loading="lazy" />
+              <div class="body">
+                <h3>Zion Canyon</h3>
+                <p>The canyon from Zion Lodge, its walls in the strata they are cut through, by elevation.</p>
+                <div class="buttons">
+                  <a class="button primary" href="/view/?world=/zion-walk/" title="Walking Zion Canyon">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/park-arches.png" width="800" height="450" alt="Balanced Rock, Arches National Park" loading="lazy" />
+              <div class="body">
+                <h3>Arches</h3>
+                <p>Stone arches and Balanced Rock standing over the desert, the ground cut away under them.</p>
+                <div class="buttons">
+                  <a class="button primary" href="/view/?world=/arches-walk/" title="Walking Arches National Park">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/park-glacier.png" width="800" height="450" alt="Grinnell Glacier and its lake under the Garden Wall" loading="lazy" />
+              <div class="body">
+                <h3>Glacier</h3>
+                <p>The high country from Logan Pass to Many Glacier, and the Garden Wall from the air.</p>
+                <div class="buttons">
+                  <a class="button" href="/view/?world=/glacier-fly/" title="Flying over the Garden Wall">Fly</a>
+                  <a class="button primary" href="/view/?world=/glacier-walk/" title="Walking Logan Pass to Many Glacier">Walk</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/park-yellowstone.png" width="800" height="450" alt="Grand Prismatic Spring, Yellowstone" loading="lazy" />
+              <div class="body">
+                <h3>Yellowstone</h3>
+                <p>The Upper and Midway Geyser Basins: hot pools in rings of colour, steam rising over them, and Old Faithful's boardwalk.</p>
+                <div class="buttons">
+                  <a class="button primary" href="/view/?world=/yellowstone-walk/" title="Walking the geyser basins">Walk</a>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          Maps and buildings © OpenStreetMap contributors and the Overture Maps Foundation, ODbL 1.0. Each world lists every source and its licence in the viewer (press
+          <code>I</code>); <a href="https://github.com/alexngai/pixelworld/blob/main/docs/data-sources.md">data sources and licensing</a>.
+        </p>
+        <p>Code MIT or Apache-2.0 · style packs CC BY 4.0 · world packages ODbL 1.0 · <a href="https://github.com/alexngai/pixelworld">source on GitHub</a></p>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Games · pixelworld</title>
+    <meta name="description" content="Games built on the pixelworld engine: drive and fly the Southwest, and multiplayer demos." />
+    <link rel="stylesheet" href="../src/site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="name" href="/">pixelworld</a>
+        <nav>
+          <a href="/worlds/">Worlds</a>
+          <a href="/games/" aria-current="page">Games</a>
+          <a href="https://github.com/alexngai/pixelworld/blob/main/docs/README.md">Docs</a>
+          <a href="https://github.com/alexngai/pixelworld">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="wrap">
+          <h1>Games</h1>
+          <p class="lede">
+            Games built only on the engine's public API, the same <code>pixelworld</code> package you can install: its world view, entities, roads and traffic, with each game's
+            own vehicles and rules.
+          </p>
+        </div>
+      </section>
+
+      <section style="padding-top: 0">
+        <div class="wrap grid">
+          <article class="card">
+            <img src="../../../docs/images/readme/sw-hoover-dam.png" width="800" height="450" alt="Hoover Dam between Lake Mead and the Colorado" loading="lazy" />
+            <div class="body">
+              <h3>Drive and fly</h3>
+              <p>
+                Drive Las Vegas Boulevard to Hoover Dam and the Grand Canyon, take off from a long straight road and fly the canyon, then land on a road and drive on. Press
+                <code>H</code> for the keys.
+              </p>
+              <div class="buttons">
+                <a class="button primary" href="/play/">Play</a>
+                <a class="button" href="/play/?world=/sf/">Start in San Francisco</a>
+                <a class="button" href="/play/?run=1">Watch it play itself</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Multiplayer <span class="tag">coming soon</span></h2>
+          <p class="lede">
+            Demos of <a href="https://github.com/alexngai/pixelworld/blob/main/packages/multiplayer/README.md"><code>@pixelworlds/multiplayer</code></a>: the server runs the
+            game, and each page predicts its own vehicle and draws the others a little behind. They need a game server, which is on its way.
+          </p>
+          <div class="grid">
+            <article class="card">
+              <img src="../../../docs/images/readme/sw-grand-canyon.png" width="800" height="450" alt="The Grand Canyon from the air" loading="lazy" />
+              <div class="body">
+                <h3>Dogfight</h3>
+                <p>Planes over the Grand Canyon on the example game's flight model. A pilot alone gets a bot.</p>
+                <div class="buttons">
+                  <a class="button" href="https://github.com/alexngai/pixelworld/blob/main/packages/multiplayer/src/demos/dogfight/README.md">How it works</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/demo-strip.png" width="800" height="450" alt="The Las Vegas Strip" loading="lazy" />
+              <div class="body">
+                <h3>Race</h3>
+                <p>Three laps round the Las Vegas Strip against other drivers, with bots making up the field to four.</p>
+                <div class="buttons">
+                  <a class="button" href="https://github.com/alexngai/pixelworld/blob/main/packages/multiplayer/src/demos/race/README.md">How it works</a>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <img src="../../../docs/images/readme/demo-presidio.png" width="800" height="450" alt="San Francisco's Presidio" loading="lazy" />
+              <div class="body">
+                <h3>Fogfront</h3>
+                <p>
+                  A small real-time strategy game on San Francisco's Presidio and four other maps: gather glim, raise lodges, train wardens, and fight through the fog of war
+                  over the level's own hills, woods and buildings.
+                </p>
+                <div class="buttons">
+                  <a class="button" href="https://github.com/alexngai/pixelworld/blob/main/packages/multiplayer/src/demos/rts/README.md">How it works</a>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          Maps and buildings © OpenStreetMap contributors and the Overture Maps Foundation, ODbL 1.0;
+          <a href="https://github.com/alexngai/pixelworld/blob/main/docs/data-sources.md">data sources and licensing</a>.
+        </p>
+        <p>Code MIT or Apache-2.0 · style packs CC BY 4.0 · world packages ODbL 1.0 · <a href="https://github.com/alexngai/pixelworld">source on GitHub</a></p>
+      </div>
+    </footer>
+  </body>
+</html>

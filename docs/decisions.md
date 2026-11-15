@@ -149,6 +149,7 @@ Status values:
 | D-139 | Arches National Park's walking level: stone arches and a balanced rock as landmarks, the ground cut under them, and terrain and objects at one vertical scale | Accepted |
 | D-140 | Glacier National Park's high country, walking and flying levels, on the existing pipeline: a `glacier` pack with the Belt strata in four strips along their strike | Accepted |
 | D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
+| D-142 | pixelworld.site: the viewer, the example game and every world on GitHub Pages, with start tiles baked against the built viewer | Accepted |
 
 ---
 
@@ -2205,3 +2206,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Smoothing heights (`micro.smooth`):** it rounds them before they are drawn, but a micro-cell steeper than the cap is still a terrace.
   - **A lower vertical exaggeration,** so walls fall under the cap: they lose their height.
 - **Later:** road beds still look for terraces under the pavement with the default cap (`micro.py`), so a bed may be cut under ground drawn as a slope; no road climbs a wall in the parks.
+
+### D-142: pixelworld.site: the viewer, the example game and every world on GitHub Pages, with start tiles baked against the built viewer (accepted)
+- **Why:** the owner asked for a demo site: what the engine is, showcase images, a world browser, and a place for the demo games. Everything so far ran from a checkout.
+- **What:**
+  - **Hosting:** GitHub Pages at `pixelworld.site` (the owner's domain, DNS on Cloudflare), deployed by `.github/workflows/site.yml` on every push to main. At the domain's root the worlds' root-relative URLs (`?world=/sf/`) work as they are.
+  - **Layout:** `apps/site`'s pages (`/`, `/worlds/`, `/games/`), the viewer at `/view/`, the game at `/play/`, and each world package once at `/<world>/`, where both look for it. `pnpm site:build` (`apps/site/build.mjs`) builds the apps with their `base` and without their `publicDir`, which would copy every world into each: about 95 MB, 3,457 files, every world but the experiments.
+  - **Images:** the README's screenshots, plus the five parks and the two multiplayer demos' places, added to `tools/readme-shots.mjs`.
+  - **Start tiles:** after the build, each place's main level and the viewer's default are prebaked on their own runner against the built viewer (`tools/prebake.mjs --url`), and copied into the site before it deploys. A world whose prebake fails deploys without, and bakes its first view in the browser.
+- **Found:** a pack baked against a dev server matched nothing on the built site, and one baked against the built game matched nothing in the built viewer. The tile key's plugins part (D-072) hashes each plugin's module and its main-thread generators' source as the page has them, and each app's build minifies them differently. So `prebake.mjs` now drives the viewer too (it waits for `window.__pixelworld`, whose `stats()` now has `tilesPending`), and runs on SwiftShader off macOS, as the other tools do on CI's runners. Its `--sizes` had never applied (a context's `newPage` takes no viewport, so every pass was 1280×720); it now sizes each page.
+- **Measured:** `sf-walk`'s pack is 12.8 MB at the default sizes (1920×1080 and a phone) and 4.5 MB at 1440×900. A page fetches its pack whole before its first frame, so the site bakes 1440×900 alone: a 1280×800 viewer then takes all 17 of its first tiles from the pack, none baked; a larger one bakes its edges. `nyc-walk` prebaked on SwiftShader in 23 s on a 14-core laptop.
+- **Later:** one key for every build of the same code, so one pack serves the viewer, the game and the demos; the multiplayer demos on one server at `play.pixelworld.site` (Fly.io), their lobbies on their own paths and allowing the site's origin; the full tile set on R2 (`tiles.pixelworld.site`).
