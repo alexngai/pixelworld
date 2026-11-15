@@ -89,7 +89,7 @@ export class FogLayer implements Layer {
     return this.inView && Math.floor(this.clock * DRIFT_FPS) !== before;
   }
 
-  screenPass(frame: FrameInfo): ScreenPass | null {
+  screenPass(frame: FrameInfo): Extract<ScreenPass, { type: "fog" }> | null {
     if (!this.setup) return null;
     // fog over the target (one pixel wider than the view, for the sub-pixel offset)
     const v = frame.view;

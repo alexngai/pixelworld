@@ -209,7 +209,7 @@ The engine is out of the app (refactors 1–4 of §4). `apps/web` is now a clien
 
 ### 7.1 Packages
 
-- **`@pixelworlds/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `listenTo` and the types. It is built on `@pixelworlds/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
+- **`@pixelworlds/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `steamLayer`, `listenTo` and the types. It is built on `@pixelworlds/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
 - **`@pixelworlds/sim`**: the traffic simulation and its layer, `trafficLayer`. It imports the engine's types only, so the engine knows nothing of traffic. It becomes `pixelworld/traffic` when packaged.
 - **`apps/web`**: the reference viewer.
 - **`examples/minimal-viewer`**: `pnpm example:minimal` (port 5180).
@@ -298,6 +298,7 @@ view.layers: list(), get(id), add(layer), remove(id), enable(id, on?, sublayer?)
 - **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. Each layer's screen pass runs in turn, in the layers' order, each on what the last made (D-125).
 - **One view at a time (D-073):** a layer may move to another view, as at a level switch. Adding it to a view takes it out of the view it is in (calling its `dispose`) before `init` with the new view's context, so the old view stops drawing it and destroying the old view later leaves it alone. `dispose` drops what belongs to the view (its sprites; bakes still in flight, which resolve null once that view is destroyed); `init` starts that state afresh. Traffic's layer keeps its switches and, until `init`, its simulation (`serialize` after leaving a view works); `init` starts a new simulation on the new world's routes (or the `routes` it was built with), and `restore` puts a saved one back.
 - **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level. `set({ time })` puts its clock where a game's is (a server's, D-125).
+- **`steamLayer({ enabled, time, paused })`** (engine): plumes over the placed objects the style's `atmosphere.steam` names (D-138), rising on the layer's clock; left out where the style has no steam or the world no such objects. `set({ time, paused })` as the fog's.
 - **`veilLayer({ ramp, shade?, levels?, id? })`** (engine, D-125): a veil over cells a game sets, `set(rect, values)` (0–255 a cell, row by row; beyond the rectangle as at its edge), dithered into the frame as the fog is, pixel by pixel from where each stands, toward the ramp's shade: a fog of war, an area picked out.
 - **`trafficLayer({ seed, density, enabled, paused, time, sublayers, routes })`** (sim): D-060; left out without routes. Sublayers road, rail and ferry. Its state is the simulation's JSON with its switches.
 

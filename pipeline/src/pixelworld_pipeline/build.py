@@ -1089,8 +1089,11 @@ def build(
             on_bed = [i for i, c in path_ids.items() if c in PATHS_ON_ROAD_BEDS]
             path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
         # shorelines (D-094): the map's water polygons and river lines shape the
-        # ground under the water planes, at micro-cell resolution
-        areas = _areas_in_cells(layout, feats.water_areas(bbox, WATER_AREA_CLASSES), bbox)
+        # ground under the water planes, at micro-cell resolution; the classes the
+        # spec takes as lakes too (hot springs, moats), whose cells are water
+        lake_classes = (region.sources.get("lakes") or {}).get("classes", [])
+        shore_classes = sorted(set(WATER_AREA_CLASSES) | set(lake_classes))
+        areas = _areas_in_cells(layout, feats.water_areas(bbox, shore_classes), bbox)
         river_hw = (
             terrain.get("riverWidthMeters", region.meters_per_cell) / 2 / region.meters_per_cell
         )
@@ -1145,6 +1148,11 @@ def build(
             water_level=water_level,
         )
         progress.log(f"objects: {object_counts}")
+        # pools lie flat on beds sunk to their level (D-138)
+        if micro is not None and region.objects.get("pools"):
+            mc, k_micro = micro
+            groups = {rule["group"] for rule in region.objects["pools"]}
+            micro = (object_stage.bed_pools(instances, groups, mc, k_micro), k_micro)
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
         under = bridge_decks_over_water(
             instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road

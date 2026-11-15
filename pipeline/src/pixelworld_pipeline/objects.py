@@ -32,6 +32,8 @@ Region spec (all sections optional):
             spacing: 14, bounds: [-122.4075, 37.7900, -122.4040, 37.7985] }
       landmarks:
         - { group: landmark.tower.lookout, lon: -111.8261, lat: 36.0441, hm: 60, clear: 20 }
+      pools:        # the map's water areas as objects on their own outlines (D-138)
+        - { group: landmark.pool, classes: [hot_spring, spring], minArea: 4 }
       depiction:    # how big things are drawn at this scale level (D-047)
         heightStretch: 2.5                          # overrides the style pack's
         buildings: { scale: 2, minHeightMeters: 60 } # oversize; keep only tall ones
@@ -65,6 +67,7 @@ from . import plugins, progress
 from .region import Region
 from .sources import rasters
 from .sources.features import without_tunnels
+from .world_format import NO_WATER
 
 LANDCOVER_CODES = {name: code for code, name in rasters.WORLDCOVER.items()}
 RESIDENTIAL = {
@@ -98,6 +101,109 @@ PARK_LAND_USE = [
 ]
 # the implausible-footprint rule's defaults (see the module docstring)
 IMPLAUSIBLE = {"maxArea": 200.0, "minHeight": 8.0, "minAspect": 2.5}
+
+
+# a pool's outline is simplified this much (metres): voxels are a sixteenth of a cell
+POOL_SIMPLIFY_M = 0.25
+
+
+def pools(
+    p: Placement, rule: dict[str, Any], water_level: np.ndarray | None, seen: set[str]
+) -> list[dict]:
+    """Hot pools and springs as objects (D-138): every water area of the map
+    of the rule's classes (and ids), at least `minArea` m², becomes an object
+    of the rule's group on its own outline (its largest part), so a generator
+    can draw what water can't: a hot pool's rings of colour. One that holds
+    water cells stands at their level (`z0`), over the water plane; a smaller
+    one stands on the ground as a footprint does. An area takes the first rule
+    it matches (`seen`)."""
+    rows = plugins.source(p.region, "features").water_areas(
+        p.region.lonlat_envelope(), list(rule["classes"])
+    )
+    ids = set(rule.get("ids") or [])
+    min_area = float(rule.get("minArea", 0.0))
+    out: list[dict] = []
+    for r in rows:
+        if r["id"] in seen or (ids and r["id"] not in ids):
+            continue
+        geom = p.project(shapely.from_wkt(r["geometry"]))
+        parts = [g for g in getattr(geom, "geoms", [geom]) if g.geom_type == "Polygon"]
+        if not parts:
+            continue
+        poly = max(parts, key=lambda g: g.area)
+        if poly.area < min_area:
+            continue
+        fp = _footprint(p, poly, POOL_SIMPLIFY_M)
+        if len(fp) < 3:
+            continue
+        seen.add(r["id"])
+        cx, cy = p.to_cells(np.array([poly.centroid.x]), np.array([poly.centroid.y]))
+        inst = {
+            "g": rule["group"],
+            "x": float(cx[0]),
+            "y": float(cy[0]),
+            "s": _stable_int(r["id"]) & 0x7FFFFFFF,
+            "fp": fp,
+        }
+        level = pool_level(fp, water_level)
+        if level is not None:
+            inst["z0"] = float(level)
+        out.append(inst)
+    return out
+
+
+def pool_level(fp: list[list[float]], water_level: np.ndarray | None) -> int | None:
+    """The water level (steps) of the cells whose centres a pool's outline
+    (cells) holds: the highest, where they stand in more than one body of
+    water; None where it holds none."""
+    if water_level is None:
+        return None
+    ring = shapely.Polygon(fp)
+    x0, y0, x1, y1 = ring.bounds
+    h, w = water_level.shape
+    xs = np.arange(max(0, math.floor(x0)), min(w, math.ceil(x1)))
+    ys = np.arange(max(0, math.floor(y0)), min(h, math.ceil(y1)))
+    if not len(xs) or not len(ys):
+        return None
+    gx, gy = np.meshgrid(xs, ys)
+    inside = shapely.contains_xy(ring, gx.ravel() + 0.5, gy.ravel() + 0.5)
+    levels = water_level[gy.ravel()[inside], gx.ravel()[inside]]
+    levels = levels[levels != NO_WATER]
+    return int(levels.max()) if len(levels) else None
+
+
+def bed_pools(
+    instances: list[dict], groups: set[str], micro_corners: np.ndarray, k: int
+) -> np.ndarray:
+    """Pools lie flat (D-138): the micro-corners (micro-steps, 1/k step) under
+    a pool's outline sink to a bed at its level, so its rings show whole
+    rather than half under the finer ground than its cells'. A pool on water
+    keeps its level (`z0`, steps), its bed a micro-step under it; one on dry
+    ground takes the lowest micro-corner under its outline as its level.
+    Returns the new micro-corners; the pools' `z0` are set in place."""
+    q = micro_corners.copy()
+    h, w = q.shape
+    for inst in instances:
+        if inst["g"] not in groups or "fp" not in inst:
+            continue
+        ring = shapely.Polygon(inst["fp"])
+        x0, y0, x1, y1 = ring.bounds
+        cols = np.arange(max(0, math.ceil(x0 * k)), min(w, math.floor(x1 * k) + 1))
+        rows = np.arange(max(0, math.ceil(y0 * k)), min(h, math.floor(y1 * k) + 1))
+        if not len(cols) or not len(rows):
+            continue
+        gi, gj = np.meshgrid(cols, rows)
+        inside = shapely.contains_xy(ring, gi.ravel() / k, gj.ravel() / k)
+        if not inside.any():
+            continue  # smaller than a micro-cell: it stands as a footprint does
+        ii, jj = gi.ravel()[inside], gj.ravel()[inside]
+        if "z0" in inst:
+            bed = round(inst["z0"] * k) - 1
+        else:
+            bed = int(q[jj, ii].min())
+            inst["z0"] = round(bed / k, 3)
+        q[jj, ii] = np.minimum(q[jj, ii], bed)
+    return q
 
 
 def _seed(region: Region, name: str) -> int:
@@ -1822,6 +1928,7 @@ def place(
     cells) are what `snap.buildings.clearRoads` keeps buildings off. ground
     (cell heights, steps) and open_water (the water mask with the roads that cross
     it) and on_road (the road mask) shape bridges' approaches (`bridge_approaches`).
+    water_level (steps per cell, NO_WATER where dry) puts pools on their water.
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
@@ -2048,6 +2155,9 @@ def place(
                 instances += line_segments(inst, float(lm.get("segmentCells", SEGMENT_CELLS)))
                 continue
         instances.append(inst)
+    seen_pools: set[str] = set()
+    for rule in spec.get("pools") or []:
+        instances += pools(p, rule, water_level, seen_pools)
 
     for inst in instances:
         inst["x"] = round(inst["x"], 3)

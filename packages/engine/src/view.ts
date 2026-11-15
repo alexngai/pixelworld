@@ -12,6 +12,7 @@ import {
   worldDepthRange,
   type FogField,
   type FogDraw,
+  type SteamDraw,
   type GpuImage,
   type PreparedTile,
   type SpriteInstance,
@@ -635,10 +636,14 @@ class View implements WorldView {
       }
       const t0 = performance.now();
       // every layer's pass in the layers' order (the style's fog, a game's veil: D-125)
-      const fog: FogDraw[] = [];
+      const fog: (FogDraw | SteamDraw)[] = [];
       for (const layer of layers) {
         const pass = layer.screenPass?.(info);
         if (!pass) continue;
+        if (pass.type === "steam") {
+          fog.push({ id: layer.id, steam: pass.frame });
+          continue;
+        }
         if (pass.field !== this.fogFields.get(layer.id)) {
           this.compositor.setFogField(pass.field, layer.id);
           this.fogFields.set(layer.id, pass.field);

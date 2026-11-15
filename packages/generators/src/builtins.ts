@@ -206,6 +206,70 @@ const GENERATORS: Record<string, Generator> = {
   },
 
   /**
+   * A hot pool (D-138) on its outline (`mask`): rings of colour by distance
+   * from its edge, as a hot spring's bacteria colour it by temperature: the
+   * edge's mats (`edge`), a yellow `rim`, green `shallow`s, then turquoise
+   * `pool` water and a `deep` blue centre. Rings are a ninth of the pool's
+   * depth into its middle (`ring`, at least a voxel), so a small pool keeps
+   * its rim and centre; a role the asset lacks gives its ring to the next one
+   * in. Some pools (by seed, `greenOdds`) have no green. Borders are ragged by
+   * a voxel and the deep water glints. `thick` voxels: on its water's level
+   * (`z0`) one is enough; a pool standing on the ground wants two.
+   */
+  hotPool: ({ rand, ramps, param, mask }) => {
+    if (!mask) throw new Error("hotPool generator needs a footprint");
+    const { sx, sy, on } = mask;
+    // distance (voxels) to the nearest voxel outside: an 8-neighbour chamfer
+    const dist = new Float32Array(sx * sy);
+    const D2 = Math.SQRT2;
+    const at = (x: number, y: number) => (x < 0 || y < 0 || x >= sx || y >= sy ? 0 : dist[y * sx + x]!);
+    for (let i = 0; i < dist.length; i++) dist[i] = on[i] ? 1e9 : 0;
+    for (let y = 0; y < sy; y++)
+      for (let x = 0; x < sx; x++) {
+        const i = y * sx + x;
+        if (dist[i]) dist[i] = Math.min(dist[i]!, at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + D2, at(x + 1, y - 1) + D2);
+      }
+    let deepest = 0;
+    for (let y = sy - 1; y >= 0; y--)
+      for (let x = sx - 1; x >= 0; x--) {
+        const i = y * sx + x;
+        if (dist[i]) dist[i] = Math.min(dist[i]!, at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + D2, at(x - 1, y + 1) + D2);
+        deepest = Math.max(deepest, dist[i]!);
+      }
+    const m = new VoxelModel(sx, sy, Math.max(1, Math.round(param("thick", 1))));
+    // rings from the edge in; a missing role's ring goes to the next role in
+    const green = rand() >= param("greenOdds", 0.35);
+    const roles = ["edge", "rim", ...(green ? ["shallow"] : []), "pool", "deep"]
+      .map((role) => ramps(role)[0])
+      .filter((id): id is number => id !== undefined)
+      .map((id) => m.material(id));
+    if (!roles.length) throw new Error("hotPool needs a ramp for at least one of edge, rim, shallow, pool, deep");
+    const ring = Math.max(1, (deepest / 9) * param("ring", 1) * (0.8 + 0.4 * rand()));
+    // a ring's width: the pool's water two rings wide, its deep the rest
+    const widths = roles.map((_, k) => (k === roles.length - 2 ? 2 * ring : ring));
+    const glint = param("glint", 0.03);
+    const seed = Math.floor(rand() * 0x7fffffff);
+    const noise = (x: number, y: number) => {
+      let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + seed;
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 0x100000000;
+    };
+    for (let y = 0; y < sy; y++)
+      for (let x = 0; x < sx; x++) {
+        const d = dist[y * sx + x]!;
+        if (!d) continue;
+        // ragged by up to half a voxel either way, so rings dither into each other
+        let r = d - 1 + (noise(x, y) - 0.5);
+        let k = 0;
+        while (k < roles.length - 1 && r >= widths[k]!) r -= widths[k++]!;
+        // glints: the deep water a ring lighter, here and there
+        if (k === roles.length - 1 && roles.length > 1 && noise(y, x) < glint) k--;
+        for (let z = 0; z < m.sz; z++) m.set(x, y, z, roles[k]!);
+      }
+    return m;
+  },
+
+  /**
    * Building v2 (M3): an extruded footprint with a roof, a facade pattern and
    * rooftop details. `style` 0 residential, 1 low-rise, 2 tower. The roof comes
    * from the data where Overture has one (pyramidal, dome, hipped, gabled),

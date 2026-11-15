@@ -1339,6 +1339,24 @@ OBJECTS = Map(
             ),
             "Walls along Overture's barrier lines, in segments turned with them (D-104).",
         ),
+        "pools": Key(
+            ListOf(
+                Map(
+                    {
+                        "group": Key(Str(), "The group a pool takes.", required=True),
+                        "classes": Key(
+                            ListOf(Str(), min_items=1),
+                            "Overture water area classes (`hot_spring`, `spring`, `water` …).",
+                            required=True,
+                        ),
+                        "ids": Key(ListOf(Str()), "Only these Overture water areas (by id)."),
+                        "minArea": Key(Num(0, unit="m²"), "Smaller areas are left out.", "0"),
+                    }
+                )
+            ),
+            "The map's water areas as objects on their own outlines, at their water's level: "
+            "hot pools drawn in rings of colour (D-138). An area takes the first rule it matches.",
+        ),
         "landmarks": Key(
             ListOf(
                 OneOf(

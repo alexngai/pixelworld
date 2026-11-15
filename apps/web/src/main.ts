@@ -2,6 +2,7 @@ import {
   createWorldView,
   fogLayer,
   roverController,
+  steamLayer,
   type RoverOptions,
   type TileBake,
 } from "@pixelworlds/engine";
@@ -167,6 +168,8 @@ async function main() {
         });
   // Fog (an atmosphere layer): where the style has fog over this world and level; fog=0 starts it off
   const fog = fogLayer({ enabled: params.get("fog") !== "0", time: num("fogTime", 0), paused: params.get("fogPause") === "1" });
+  // Steam (D-138): plumes over the objects the style says steam; steam=0 starts it off
+  const steam = steamLayer({ enabled: params.get("steam") !== "0", time: num("steamTime", 0), paused: params.get("steamPause") === "1" });
 
   const worldUrl = params.get("world") ?? "/southwest/";
   const worldBase = new URL(worldUrl, location.href);
@@ -190,7 +193,7 @@ async function main() {
       x: maybeNum("fx"),
       y: maybeNum("fy"),
     },
-    layers: [...(traffic ? [traffic] : []), fog],
+    layers: [...(traffic ? [traffic] : []), fog, steam],
     controller: rover,
     // the city packs the world's style pack names, from the viewer's list (src/plugins.ts);
     // plugins=0 loads none, to see a style's models fail as markers (e2e, D-072)

@@ -9,11 +9,18 @@ import {
 } from "@pixelworlds/bake";
 import type { FogField } from "./fog";
 import { FogPass, type FogFrame } from "./fogPass";
+import { SteamPass, type SteamFrame } from "./steamPass";
 
 /** A fog pass to draw over a frame: the layer's id (its field, `setFogField`) and its parameters. */
 export interface FogDraw {
   id: string;
   frame: FogFrame;
+}
+
+/** A steam layer's pass (D-138), drawn in the layers' order with the fogs'. */
+export interface SteamDraw {
+  id: string;
+  steam: SteamFrame;
 }
 
 /** How far back (depth units) `behind` tiles are drawn: beyond a depth's 1/256 quantisation, short of anything standing in front. */
@@ -195,6 +202,7 @@ export class Compositor {
   } | null = null;
   /** A fog pass per layer that has one (the style's fog, a game's veil: D-125), by its id. */
   private readonly fogPasses = new Map<string, FogPass>();
+  private steamPass: SteamPass | null = null;
   lut = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
@@ -252,6 +260,8 @@ export class Compositor {
     this.paletteTex = null;
     for (const p of this.fogPasses.values()) p.dispose();
     this.fogPasses.clear();
+    this.steamPass?.dispose();
+    this.steamPass = null;
     gl.deleteProgram(this.quadProg);
     gl.deleteProgram(this.palProg);
     gl.deleteVertexArray(this.vao);
@@ -293,7 +303,7 @@ export class Compositor {
     frame: FrameParams,
     tiles: GpuImage[],
     sprites: SpriteInstance[],
-    fogs: readonly FogDraw[] = [],
+    fogs: readonly (FogDraw | SteamDraw)[] = [],
     bare: GpuImage[] = [],
     behind: GpuImage[] = [],
   ): void {
@@ -379,16 +389,17 @@ export class Compositor {
     // Atmosphere: fog dithered into the indices, from the depth beside them; each pass after the last, taking turns between two targets.
     let shown = t.color;
     let turn = 0;
-    for (const { id, frame: fog } of fogs) {
-      const pass = this.fogPasses.get(id);
-      if (!pass?.hasField) continue;
+    for (const item of fogs) {
+      const fog = "frame" in item ? this.fogPasses.get(item.id) : null;
+      if (fog !== null && !fog?.hasField) continue;
       if (!t.fogFb[turn]) {
         t.fogColor[turn] = rgba8Texture(gl, w, h);
         t.fogFb[turn] = framebuffer(gl, t.fogColor[turn]!, null);
       }
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fogFb[turn]!);
       gl.viewport(0, 0, w, h);
-      pass.draw(fog, shown, [ox, oy], k, frame.depthRange);
+      if ("steam" in item) (this.steamPass ??= new SteamPass(gl)).draw(item.steam, shown, [ox, oy], k, frame.depthRange);
+      else fog!.draw(item.frame, shown, [ox, oy], k, frame.depthRange);
       shown = t.fogColor[turn]!;
       turn = 1 - turn;
     }

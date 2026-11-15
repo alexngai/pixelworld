@@ -144,6 +144,7 @@ Status values:
 | D-134 | Hong Kong's night, cloud, markets, estates, signs and temples | Accepted (M5) |
 | D-135 | Hong Kong's landmark towers lit at night like the buildings round them | Accepted (M5) |
 | D-137 | Zion Canyon's walking level on the pipeline as it is: a `zion` pack of Zion's strata by elevation, true relief, and what a deep canyon still needs from the engine | Accepted |
+| D-138 | Yellowstone's Upper and Midway Geyser Basins: a walking level, a `yellowstone` pack, hot pools in rings of colour and steam rising over them | Accepted |
 | D-139 | Arches National Park's walking level: stone arches and a balanced rock as landmarks, the ground cut under them, and terrain and objects at one vertical scale | Accepted |
 | D-140 | Glacier National Park's high country, walking and flying levels, on the existing pipeline: a `glacier` pack with the Belt strata in four strips along their strike | Accepted |
 | D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
@@ -2038,6 +2039,77 @@ The point is more room for visual interest; both halves are wanted.
   5. **The shuttle and the tunnel:** the Scenic Drive is shuttle-only most of the year, but the ambient routes run cars on it. SR-9's tunnel is drawn as a road cut up the slope (no portals or galleries).
   6. **Ledges where the rock is ledgy:** `micro.maxSlope` is one cap for the whole world. A cap per strata band (or per surface) would keep the Kayenta's and the Moenave's ledges while the Navajo's walls stay smooth.
   7. **Zion as a level of the southwest region:** a focus area in its warp and a `levels` entry.
+
+### D-138: Yellowstone's Upper and Midway Geyser Basins: a walking level, a `yellowstone` pack, hot pools in rings of colour and steam rising over them (accepted)
+- **Why:** the owner wants levels of natural scenery beyond the Grand Canyon. Each park is built on the existing pipeline first, looked at, fixed where a spec or a pack can fix it, and its missing engine work listed rather than written up front. Yellowstone's geyser basins are the park whose look depends most on things the engine has never drawn: hot pools, sinter, microbial mats and steam.
+- **What:** `worlds/yellowstone/walk.yaml` (`yellowstone-walk`): the Firehole River from Old Faithful and the Old Faithful Inn north past Castle, Grand, Giant and Riverside Geysers, Morning Glory Pool and Biscuit Basin to Grand Prismatic Spring and Excelsior Geyser, `[-110.86, 44.45, -110.80, 44.533]` at 6 m per cell (796 × 1,538 cells), on 3DEP 1/3″ (overview 1, bilinear: the cells are finer than its 10 m), 4 × 4 micro-terrain (1.5 m), ESA WorldCover and Overture 2026-10-21.0.
+  - **The pools are already in Overture:** OpenStreetMap maps them as `natural=hot_spring` areas (Grand Prismatic as plain water), with the geysers as points. In the box: 322 hot-spring areas and 35 points, 490 geyser points (337 named), 195 stream lines, 24 boardwalk lines. `sources.lakes` (D-103) draws the `hot_spring`, `spring`, `pond` and `water` areas as still water, each levelled as a pool, so no new source was needed.
+  - **6 m, not 10:** a pool is drawn where it holds a cell's centre, and the median hot-spring area is 19 m². At 10 m about 130 pools hold a cell, and Morning Glory, Chromatic and Emerald Pools aren't among them; at 6 m, 204 do (177 hot springs, 14 ponds, 7 water areas, 6 springs), every named pool but Crested Pool and Blue Star Spring. 5 m would add about 35 more for 1.45 times the cells. The package is still 5.2 MB, since forest compresses well.
+  - **Rivers:** the Firehole and the Little Firehole only (`[river]`). Of the streams, 137 of 195 are unnamed thermal runoff channels a metre or two wide; drawn a cell wide, they cut the basins into canals.
+  - **Ground from WorldCover:** it classes the basins as bare (60) and moss and lichen (100), centred on Castle, Grand, Old Faithful and Excelsior. Bare becomes the `desert` surface and moss the `scrub` surface (the pipeline's `classify`), and in the box `scrub` is almost nothing else (2 shrub cells, 37 wetland). So the pack draws `desert` as white sinter and `scrub` as mat-stained sinter: the basins come out white, grey and buff without a new surface. WorldCover's grass is the Firehole's meadows (olive). Its water also covers Grand Prismatic's apron, so the spring stands in a wider sheet of water.
+  - **The `yellowstone` style pack** extends `desert-southwest`, the parks' pack, rather than `bay-area`, which is a city pack with all 42 ramps used. It drops the ten Grand Canyon strata ramps and their strata sets and provinces to make room, and has 37 ramps (the inherited `conifer`, `sand` and `dolomite` dropped too, once nothing used them): `sinter`, `mat` (orange), `mat-brown` (stained sinter), `lodgepole`, `snag` (silver-grey), `rhyolite`, `log`, `shingle`, `boardwalk`, plus a deep-blue `water`, a grey-green `scrub` and dry-meadow `grass`.
+    - **Strata:** one rhyolite band. A sinter band below 2,265 m striped the forested slopes' terrace risers white.
+    - **Scatter:** woodland and forest get lodgepoles (`conifer` with radius 1 and 20–32 voxels tall, which is 8–12 m at 6 m cells) and silver snags (a one-voxel `blob` column 16 voxels tall) at 0.3 per cell, for the 1988 fires' dead trees. Mat-stained sinter gets orange mat patches (a `blob` with a negative trunk, so its centre sits at the ground and it draws as a one-voxel disc, ragged with holes) at 0.05 per cell, and white sinter 0.015.
+    - **Paths:** footways are drawn as boardwalk (dark weathered wood), cycleways as asphalt (the paved Old Faithful to Morning Glory trail; `concrete` drew it lavender), and paths as meadow.
+  - **Objects:** the Old Faithful Inn is an inline landmark on its Overture footprint at 16 m (Overture gives 6 m), drawn by the `building` generator in log and shingle with a hipped roof. Thirteen geyser cones are inline landmarks at Overture's points (Old Faithful, Castle and Grotto larger, Beehive, Giantess, Lion, Sawmill, Grand, Giant, Riverside, Daisy, Fan and Mortar, Jewel): `blob` domes in snag grey, since white cones vanished on white sinter. Canopy trees from the WRI/Meta map are left out: at 10 m they placed 250,760 objects and took 107 s, for a forest the client's scatter draws as well.
+  - **Hot pools as objects** (`objects.pools`, pipeline): every water area of a rule's classes (and `ids`), at least `minArea` m², becomes an object of the rule's group on its own outline (its largest part), seeded by its Overture id; an area takes the first rule it matches. It stands at the level of the water cells it holds (`z0`), over the water plane. `bed_pools` then sinks the micro-terrain under its outline to a bed at that level, a micro-step under the water; on dry ground it sinks to the outline's lowest micro-corner, which becomes the pool's level. Without the beds, ground finer than the pool's cells buried most of Morning Glory. Yellowstone's rules take every `hot_spring` and `spring` area of 3 m² or more, and Grand Prismatic and Opalescent Pool by id (OSM maps them as plain water): 465 pools, 305 of them with a level, the rest smaller than a micro-cell and standing on their lowest corner as a footprint does.
+  - **`hotPool`** (a built-in generator): rings by distance from the outline's edge (an 8-neighbour chamfer): `edge` (mats), `rim` (yellow), `shallow` (green), `pool` (turquoise) and `deep` (blue).
+    - **Widths:** each ring is a ninth of the way to the deepest point (at least a voxel), the pool water two rings wide and the deep the rest.
+    - **Variety:** a role the asset lacks gives its ring to the next one in, and a third of the pools (`greenOdds`) have no green.
+    - **Texture:** borders are ragged by half a voxel either way, and 3% of the deep water glints a ring lighter.
+    - **Pack:** `thick` voxels (Yellowstone: 2). The pack adds `pool-deep`, `pool-green` and `pool-yellow` (40 ramps), with `water` for the turquoise and `mat` for the edge.
+  - **Steam** (`atmosphere.steam` in the style pack, `steamLayer` in the engine, `SteamPass` in the runtime's compositor):
+    - **Sources:** a plume over every placed object whose group has a source (the longest dotted prefix). A source gives a height and radius (metres at the objects' scale; a footprint's plume is at least two-thirds as wide as its outline and rises higher with its size), a density and the least footprint that steams. The pack adds a wind the plumes lean with and a night density.
+    - **The pass** is the fog's kind of screen pass. Each frame the layer projects the vents in view, at most 48 (the nearest the middle). The shader dithers a veil toward the steam's colour wherever the column over a vent crosses a pixel.
+    - **The column** widens and thins as it rises and leans downwind toward its top. Noise scrolling upward on the layer's clock cuts it into puffs; it redraws 12 times a second while in view. It stays behind anything nearer the eye than the plume is where it crosses (its vent's depth, raised by its climb).
+    - **Yellowstone:** pools of 20 m² or more steam 14 m high (density 0.9) and geyser cones 22 m (density 1), with a 3 m/s wind toward 60°, veiled toward `snow`'s lightest shade. The viewer adds the layer: `steam=0` starts it off, and `steamTime` and `steamPause` set its clock.
+  - **Smooth walls** (`micro.maxSlope: 64`, D-141): every micro-cell slopes. Steep ground here is short (the Firehole's banks, the pools' beds, the plateau's forested slopes), so it changes little. Compared at six views: at most 2.6% of pixels changed (Morning Glory, whose river banks became smooth slopes instead of a terrace ledge); the forested slopes, Castle and Excelsior's rim under 0.5%, mostly hidden by lodgepoles. By Castle, a terrace drop that a boardwalk crossed on a short railed deck became a slope, so the path now runs down it. Kept: it does no harm, and the banks read better.
+  - **Hot springs' waterlines** (D-094): the shore field read only its own water classes, so the 322 hot springs the spec takes as lakes (`hot_spring`, `spring`) were water cells it knew only by their cells, rounded by a Gaussian into aprons of water plane round the pools' rings. The shore field now reads the spec's `lakes` classes as well (599 water areas, up from the map's own). The aprons at Biscuit Basin and round Excelsior are gone; Morning Glory keeps a sliver at its edge. Kyoto's moats (`moat`) take shaped shores the same way when it is next rebuilt.
+  - **Size:** the `createWorldView` bundle is 90.9 KB (limit raised from 90 to 92 KB), every entry point 116.8 KB (limit raised from 115 to 118 KB).
+  - **Bounds:** the north edge is 44.533, not 44.535: the Grand Loop Road weaves along 44.535, and one of its segments left and re-entered the box (`split_segments: 1`).
+  - **Tests:**
+    - The style and generator tests that check every committed pack now merge `extends` first (`resolveStyleExtends`); `yellowstone` is the first committed pack that extends another.
+    - New tests cover:
+      - pools on their outlines at their water level or on the ground, `minArea`, `ids` and the first rule winning;
+      - the beds sinking only under a pool's outline;
+      - the rings' order from edge to centre, a small pool's edge and centre, a missing role's ring going inward, and `thick`;
+      - the plumes, by longest prefix and footprint size, with the least area and the height stretch.
+- **Measured** (build of 2026-11-14): 796 × 1,538 cells, 325 chunks, 5.2 MB; heights 2,241–2,558 m. Surfaces in cells: woodland 523,412, forest 474,012, grass 161,984, sinter (`desert`) 22,163, mats (`scrub`) 21,618, built-up 13,571, water 7,485, of which 2,830 are Overture's pools and ponds. 685 objects: 198 commercial and 8 residential buildings, the Inn, 13 cones and 465 pools. 209 path segments (11,239 cells), 142 traffic routes. Road report clean. Rebuilt in 22 s from the download cache (72 s for the first 6 m build). 234 plumes; two were in view at Castle Geyser and at Grand Prismatic.
+- **Looked at** (zooms 1–2, with the viewer on port 5402):
+  - **Reads well:**
+    - Grand Prismatic in rings of deep blue, turquoise, green, yellow and orange, steam rising off its middle.
+    - Morning Glory: a blue centre and a yellow and orange rim among the lodgepoles.
+    - Steam: Castle's cone and Old Faithful send leaning plumes, Sapphire's pools and Grand Prismatic steam, and the puffs rise from one frame to the next.
+    - Biscuit Basin: Sapphire's pools in white sinter beside the Firehole, a railed boardwalk bridge.
+    - Excelsior's crater pool on its sinter rim, with the boardwalk crossing the river.
+    - Morning Glory: the river between sinter banks and lodgepole forest, with grey snags.
+    - Upper Geyser Basin: white and stained sinter, orange mats, olive meadows, Castle's grey cone, small ringed pools.
+    - The basin's edge against a dark wall of lodgepoles, and the Firehole winding through forest and meadow between Biscuit and Midway.
+  - **Reads half:**
+    - Grand Prismatic stands in a wider sheet of WorldCover water.
+    - Steam is faint over pale sinter by day, as real steam is; over water and forest it shows clearly.
+    - The Inn: a large log building with a shingle roof, but its roof is one broad hip with no gables or dormers, and the Old House's 28 m ridge isn't there.
+    - The mats: scattered patches rather than aprons and channels running off the pools.
+  - **The USGS geologic map database of the Upper Geyser Basin (DS 911) as a built-in source:** public domain, and its `Hydrothermal_Features` points type every vent. But Overture already has the pools as areas and the geysers as named points, and nothing in the engine draws a point feature as an object by its class. The points become useful together with such a rule (Later).
+  - **10 m cells:** loses most small pools, Morning Glory among them. **5 m:** 1.45 times the cells for about 35 more pools.
+  - **Streams as rivers, canopy trees, a sinter strata band:** above.
+  - **Mat patches at higher density, or two colours of disc:** they read as polka dots, and the brown discs as cookies.
+  - **Rings from the water's depth, in the terrain shader:** every body of water would take them, the Firehole too, and it would need a water surface for each kind of water.
+  - **Mats outside the outline, in the pool's model:** the model is flat at the pool's level, so the bank would bury the apron or the apron would float over it.
+  - **Steam as baked voxel objects:** still, outlined, opaque white blobs. **As entities:** depth-tested and moving, but opaque. Steam reads as a veil, which the fog's dithered lookup already draws.
+  1. **Mat aprons and runoff channels:** ground surfaces round the pools and along their channels, from the water polygons buffered or from DS 911. That means a ground rule from water areas and more surface ids (a world has 16), and channels drawn narrower than a cell.
+  2. **Eruptions:** Old Faithful (and Castle, Grand, Riverside) erupting on a schedule. That means a jet of water over the vent and a burst of the steam pass's plume, on the layer's clock.
+  3. **Hydrothermal features from data:** a rule that places objects at point features by class, such as cones and vents at Overture's 490 geyser points or DS 911's typed features, instead of 13 hand-placed cones, so that those vents steam too.
+  4. **Boardwalks on posts with railings everywhere:** only footways mapped as bridges are decks today; the rest are flat bands on the ground.
+  5. **The Old Faithful Inn's own generator:** steep gabled roofs with dormers, the Old House's ridge over the wings, and the Lodge and Snow Lodge too.
+  6. **Fire history:** snags and young lodgepole where the 1988 fires burned (MTBS perimeters, public domain), not a uniform scatter.
+  7. **Smaller:**
+     - Scatter drawn on water where shores are shaped inside a land cell (trees stand in the Firehole's edge).
+     - Scatter models are capped at about a cell, which limits mat patches.
+     - Pools smaller than a micro-cell (160 of 465) stand on their lowest corner and can be half buried on a slope.
+     - Steam has one wind for the world. Beyond 48 plumes in view only the nearest the middle are drawn. With `chunkedObjects` (D-123) the layer sees only the landmarks.
+     - Grand Prismatic's apron is WorldCover water.
+     - A driving level for the whole park, and Norris, West Thumb and the Lower Falls as walking levels of their own.
 
 ### D-139: Arches National Park's walking level: stone arches and a balanced rock as landmarks, the ground cut under them, and terrain and objects at one vertical scale (accepted)
 - **Why:** the owner wants natural scenery beyond the Grand Canyon, built on the existing pipeline first, with what's missing listed rather than written up front. Arches is the hardest case for a DEM: what makes it Arches is openings under spans, which no 2.5D elevation can hold.

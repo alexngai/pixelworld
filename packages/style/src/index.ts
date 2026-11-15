@@ -156,6 +156,37 @@ export interface StylePack {
 
 export interface AtmosphereStyle {
   fog?: FogStyle;
+  steam?: SteamStyle;
+}
+
+/**
+ * Steam rising from placed objects (D-138): a plume over every object of a
+ * source group, dithered over the frame as fog is (a veil toward the steam's
+ * colour), rising, widening and thinning as it goes, leaning with the wind.
+ */
+export interface SteamStyle {
+  /** The steam's own colour: a ramp and one of its shades. */
+  ramp: string;
+  shade: number;
+  /** Veil levels, thin → thick (as fog's). */
+  veil: number[];
+  /** The placed objects that steam, by group (the longest dotted prefix wins, as for assets). */
+  sources: Record<string, SteamSource>;
+  /** The wind the plumes lean and drift with; without it they rise straight. */
+  wind?: { toward: number; speed: number };
+  /** By night: thickness multiplier. Without it: no steam at night. */
+  night?: { density: number };
+}
+
+export interface SteamSource {
+  /** How high a plume rises (metres, at the objects' scale); a footprint's rises higher with its size. */
+  heightMeters: number;
+  /** Its radius at the vent (metres); a footprint's is at least two-thirds of its outline's. */
+  radiusMeters: number;
+  /** How thick it is at its thickest, 0–1. */
+  density: number;
+  /** Footprints smaller than this (m²) don't steam. */
+  minAreaMeters?: number;
 }
 
 /**
@@ -344,6 +375,13 @@ function referenceIssues(style: StylePack): StyleIssue[] {
           add(["atmosphere", "fog", "areas", i, "polygon", j], `points are [lon, lat], not ${JSON.stringify(p)}`);
       }),
     );
+  }
+  const steam = style.atmosphere?.steam;
+  if (steam) {
+    ramp(steam.ramp, ["atmosphere", "steam", "ramp"]);
+    steam.veil.forEach((k, i) => {
+      if (i > 0 && !(k > steam.veil[i - 1]!)) add(["atmosphere", "steam", "veil", i], `veil levels increase, so want > ${steam.veil[i - 1]}, not ${k}`);
+    });
   }
   return issues;
 }
