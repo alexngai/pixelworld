@@ -38,7 +38,9 @@ snap:
   roads: { angle: 16, simplify: 0.75, deviation: 1.0, maxShift: 2.0 }
   buildings: { angle: 12, follow: 3 }
 widths: { scale: 1.0, minCells: 0.1 }
-micro: { k: 4, dem: { overview: 1, resampling: bilinear } }
+# every micro-cell slopes (D-141): the Firehole's banks and the pools' beds
+# as slopes rather than terraces
+micro: { k: 4, dem: { overview: 1, resampling: bilinear }, maxSlope: 64 }
 
 objects:
   buildings: { minArea: 30, towerMeters: 45, podiumMeters: 15 }
