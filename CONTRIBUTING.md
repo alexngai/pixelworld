@@ -53,21 +53,18 @@ The committed world packages in `fixtures/` are served as they are, so the viewe
 
 ## 3. The checks, as CI runs them
 
-`.github/workflows/ci.yml` is the source of truth; these are its jobs' steps. Every pull request and push to `main` runs `web`, `pipeline` and the e2e smoke subset, about 10 minutes of runner time. The full e2e suite and the npm package's consumers run on demand, about 75 minutes: `gh workflow run ci.yml --ref <branch>`, for a change to rendering, the game or what a package ships, and before a release.
+`.github/workflows/ci.yml` is the source of truth; these are its jobs' steps. Every pull request and push to `main` runs them all, the e2e suite in four shards. `gh workflow run ci.yml --ref <branch>` runs them on a branch without a pull request.
 
 ```sh
 # web: lint, typecheck, unit tests (together: pnpm check)
 pnpm install --frozen-lockfile
 pnpm lint && pnpm typecheck && pnpm test
 
-# web-e2e-smoke: the tests tagged @smoke
+# web-e2e: the whole Playwright suite but the @slow tests (on CI in four shards, --shard=1/4 … 4/4)
 pnpm exec playwright install --with-deps chromium
-pnpm test:e2e:smoke
+pnpm test:e2e --grep-invert @slow
 
-# web-e2e (on demand): the whole Playwright suite (on CI in four shards, --shard=1/4 … 4/4)
-pnpm test:e2e
-
-# package (on demand, and on the "Version packages" pull request): the npm packages (pack, tarball contents and size budgets, API docs, consumers)
+# package: the npm packages (pack, tarball contents and size budgets, API docs, consumers)
 pnpm package:check && pnpm package:size && pnpm docs:api && pnpm package:consumers
 
 # pipeline
@@ -81,7 +78,7 @@ cd pipeline && uv sync && uv run ruff check . && uv run ruff format --check . &&
 - **One unit-test package or file:** `pnpm test packages/generators`, `pnpm test packages/generators/test/buildings.test.ts`; one test by name: `pnpm test -t "steps tall towers back"`; watch mode: `pnpm exec vitest packages/generators`.
 - **One pipeline test:** `cd pipeline && uv run pytest tests/test_objects.py -k footprint`.
 - **One e2e test:** `pnpm test:e2e -g "Las Vegas at 2"` (a title's part), or a file: `pnpm test:e2e e2e/model.spec.ts`. `--last-failed` re-runs the failures.
-- **The slow tests:** `pnpm test:e2e:slow`, the tests tagged `@slow`: the game's changes of map (take-off and landing, any vehicle on any map). CI leaves them out, since a 2-core runner takes eight to nine times as long as a desktop; run them when you change the game, its levels or how a view replaces another.
+- **The slow tests:** `pnpm test:e2e:slow`, the tests tagged `@slow`: the game's changes of map (take-off and landing, any vehicle on any map). CI leaves them out, since its runners take several times as long as a desktop; run them when you change the game, its levels or how a view replaces another.
 - **The smoke subset:** `pnpm test:e2e:smoke`, the tests tagged `@smoke` (2 to 3 minutes): the M0 and Las Vegas goldens, San Francisco's walking level, the sources screen, the pixel inspector, the model preview, the editor and the game.
 - **Which spec covers what:** `render.spec.ts`, the viewer's goldens and behaviour (terrain and rotations, the Southwest, scale levels, hero landmarks, San Francisco, traffic, fog); `inspect.spec.ts`, the pixel inspector; `model.spec.ts`, the model preview; `editor.spec.ts`, the editor against a mocked pipeline server; `game.spec.ts`, the example game.
 - **Reports:** a run writes `playwright-report/`; `pnpm exec playwright show-report` opens it, with each failed golden's expected, actual and diff images.
