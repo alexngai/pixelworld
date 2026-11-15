@@ -1,0 +1,31 @@
+# @pixelworlds/city-hongkong
+
+## 0.1.0
+
+### Minor Changes
+
+- 23b06b8: The first npm release of Hong Kong's city pack: `cityPlugin` (its worker module beside it, `dist/worker.js`, self-contained), `register()` and the generators, with types. `pixelworld` is a peer dependency.
+
+### Patch Changes
+
+- Updated dependencies [a1af2a6]
+- Updated dependencies [1a64af7]
+- Updated dependencies [3cb79a2]
+- Updated dependencies [bd7ff4c]
+- Updated dependencies [51cbbc2]
+- Updated dependencies [74015f3]
+- Updated dependencies [23b06b8]
+- Updated dependencies [5b403b9]
+- Updated dependencies [5e9ae5b]
+- Updated dependencies [b4dd761]
+- Updated dependencies [2386f48]
+- Updated dependencies [c73bd61]
+- Updated dependencies [d231145]
+- Updated dependencies [f547bbc]
+- Updated dependencies [3dcd417]
+- Updated dependencies [1418bcf]
+- Updated dependencies [127734a]
+- Updated dependencies [6b6758a]
+- Updated dependencies [e8b53f2]
+- Updated dependencies [148dce2]
+  - pixelworld@0.1.0

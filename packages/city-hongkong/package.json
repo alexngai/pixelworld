@@ -1,6 +1,6 @@
 {
   "name": "@pixelworlds/city-hongkong",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Hong Kong's city pack for pixelworld: the tong lau, composite building and pencil tower generators its style pack names, its neon signs and landmarks",
   "license": "MIT OR Apache-2.0",
   "type": "module",

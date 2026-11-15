@@ -5,7 +5,7 @@
   "license": "MIT OR Apache-2.0",
   "description": "No bundler: serve this directory (with node_modules/) as static files.",
   "dependencies": {
-    "@pixelworlds/city-sf": "^0.0.0",
-    "pixelworld": "^0.0.0"
+    "@pixelworlds/city-sf": "^0.1.0",
+    "pixelworld": "^0.1.0"
   }
 }
