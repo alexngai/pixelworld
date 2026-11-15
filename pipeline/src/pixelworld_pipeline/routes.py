@@ -420,6 +420,22 @@ class Deck:
     half: float  # half-width (cells)
     top: float  # deck height (steps)
     band: shapely.Geometry
+    ap: tuple[float, float] = (0.0, 0.0)  # approaches at a and at b (cells, D-131)
+    az: tuple[float, float] = (0.0, 0.0)  # the ground where they land (steps)
+
+    def height(self, s: np.ndarray) -> np.ndarray:
+        """The deck's height at distances s along it from a: level between its
+        anchorages, coming down each approach to the ground it lands on."""
+        s = np.asarray(s, np.float64)
+        out = np.full(s.shape, self.top)
+        (la, lb), (za, zb), L = self.ap, self.az, self.length
+        if la > 0:
+            sel = s < la
+            out[sel] = za + (self.top - za) * np.clip(s[sel], 0, la) / la
+        if lb > 0:
+            sel = s > L - lb
+            out[sel] = zb + (self.top - zb) * np.clip(L - s[sel], 0, lb) / lb
+        return out
 
     def along(self, xy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """(distance along the axis from a, signed distance across) of points."""
@@ -464,7 +480,9 @@ def bridge_decks(instances: list[dict]) -> list[Deck]:
         if band is None:
             band = shapely.LineString([a, b]).buffer(half, cap_style="flat")
         top = max(float(p["top"]) for p in parts)
-        decks.append(Deck(key, a, b, half, top, band))
+        ap = tuple(parts[0].get("ap") or (0.0, 0.0))
+        az = tuple(parts[0].get("az") or (0.0, 0.0))
+        decks.append(Deck(key, a, b, half, top, band, ap, az))
     return decks
 
 
@@ -514,9 +532,16 @@ def deck_heights(
             continue
         d = deck.b - deck.a
         axis = math.atan2(d[1], d[0])
-        diff = np.abs(((heading - axis + math.pi / 2) % math.pi) - math.pi / 2)
+        # along the deck by the segment leaving a vertex or the one arriving at it,
+        # so the vertex where a road turns off the deck stays on it
+        arriving = np.concatenate([heading[:1], heading[:-1]])
+        diff = np.minimum(
+            np.abs(((heading - axis + math.pi / 2) % math.pi) - math.pi / 2),
+            np.abs(((arriving - axis + math.pi / 2) % math.pi) - math.pi / 2),
+        )
         sel = inside & (diff < math.radians(30))
-        out[sel] = np.maximum(out[sel], deck.top)
+        s, _ = deck.along(xy[sel])
+        out[sel] = np.maximum(out[sel], deck.height(s))
         on |= sel
     return out, on
 

@@ -135,6 +135,7 @@ Status values:
 | D-127 | Teams and spectators for fog-of-war games on interest groups: a side's view serialized once for its players and watchers; Fogfront two against two and watching | Accepted |
 | D-128 | Fogfront's maps from any level: hearths and seeps chosen from a level's cells and checked for reach, the map a room's setting, and maps on Manhattan, Kyoto, Kowloon and the Strip | Accepted |
 | D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
+| D-131 | Bridges come ashore on approaches over land, and the land a deck lands on stays land | Accepted |
 
 ---
 
@@ -1872,3 +1873,19 @@ The point is more room for visual interest; both halves are wanted.
   - **`pypa/gh-action-pypi-publish`:** it adds attestations, but `uv publish` is the tool the manual upload already uses, and attestations name the repository in Sigstore's public log while it is private.
   - **A GitHub environment (`pypi`):** the free plan has none for a private repository.
 - **Later:** an environment with required reviewers and attestations once the repository is public.
+
+### D-131: Bridges come ashore on approaches over land, and the land a deck lands on stays land (accepted)
+- **Why:** the README's screenshots showed the Golden Gate not reaching either shore. Two causes, at the ends of every bridge:
+  - **The deck stopped in the air.** A suspension bridge's deck ran level at its full height to the line's ends, its anchorages, and stopped there, while the roads at its ends are on the ground: the Golden Gate's deck at 9.85 steps against its south road at 0–1 (driving level), New York's at 6 against 0–2. Real bridges come ashore on approach viaducts that carry the deck over the bank to where it meets its road; the Golden Gate's crosses Fort Point to the bluff.
+  - **Its south end stood in open water.** D-056 turns the cells under a deck back into water, closing thin gaps in the water mask since land cover sees a deck over water as built-up. Fort Point, the narrow point under the south anchorage, is such a gap: it was filled, with the approach road on it. The north end lost a cell at 100 m the same way.
+- **What:**
+  - **Approaches (`bridge_approaches`):** beyond each end of a snapped bridge's line, over land, the deck comes down at a real grade (`approachGrade`, 6%) until it meets the ground, or lands sooner where its road leaves the line (coming down steeper, so the road's traffic stays on it). The line and footprint grow by them; each piece carries `ap` (the approach at each end, cells) and `az` (the ground where it lands, steps). An end with water before it lands has none.
+  - **`suspensionBridge`:** the suspension spans stay level between the anchorages; on the approaches the deck slopes from the ground at the line's end up to the anchorage, on piers, with railings and a girder along its edges.
+  - **Routes:** a deck's height follows the same profile (`Deck.height`), so cars ride the approaches.
+  - **`bridge_decks_over_water`:** the closing stops where a deck comes ashore (`deck_landings`: from inside each anchorage, over its approach, to `reach` + 1 beyond the line's end). Land there stays land, with its road.
+  - **sf and sf-fly rebuilt.** Their packages predated D-094, D-095 and D-097, so the rebuild brings those in too: water as a plane over shaped shores, and Overture's water areas (the Embarcadero's piers stand in the water instead of on a paved apron).
+- **Rejected alternatives:**
+  - **The outer side spans sloping down to the ground** (tried first): the deck came down over the water and met the shore near sea level, unlike any real suspension bridge.
+  - **Moving a bridge's ends onto land when it is placed:** at placement the end was on land; the deck pass flooded it afterwards.
+  - **Patching only the objects in the committed packages:** the flooding is in the terrain, and the packages were stale anyway.
+- **Later:** New York's packages need rebuilding for their bridges' approaches (until then they draw as before). The arch and stone bridge generators have no approaches yet. sf-walk and the other cities' packages may be as stale as San Francisco's were.

@@ -9,6 +9,7 @@ cached inputs always give the same package hash.
 from __future__ import annotations
 
 import json
+import math
 from collections import deque
 from dataclasses import asdict
 from pathlib import Path
@@ -188,6 +189,38 @@ def refresh_heroes(region_path: Path, out_dir: Path) -> list[dict]:
     return heroes or []
 
 
+def deck_landings(instances: list[dict], shape: tuple[int, int], reach: int) -> np.ndarray:
+    """Cells where each bridge comes ashore: from a cell inside each anchorage
+    (an end of its line, `ln`, or where its approach starts, `ap`) to `reach` + 1
+    cells beyond the line's end, and as far to either side."""
+    out = np.zeros(shape, dtype=bool)
+    h, w = shape
+    r = reach + 1
+    lines = {
+        (*inst["ln"], *(inst.get("ap") or (0.0, 0.0)))
+        for inst in instances
+        if inst.get("ln") and inst["g"].startswith("landmark.bridge")
+    }
+    for ax, ay, bx, by, apa, apb in lines:
+        a, b = np.array([ax, ay]), np.array([bx, by])
+        length = float(np.hypot(*(b - a)))
+        if length == 0:
+            continue
+        for end, other, ap in ((a, b, apa), (b, a, apb)):
+            u = (end - other) / length
+            k = r + math.ceil(ap)
+            x0, x1 = max(0, math.floor(end[0]) - k - 1), min(w, math.floor(end[0]) + k + 2)
+            y0, y1 = max(0, math.floor(end[1]) - k - 1), min(h, math.floor(end[1]) + k + 2)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            ys, xs = np.mgrid[y0:y1, x0:x1]
+            dx, dy = xs + 0.5 - end[0], ys + 0.5 - end[1]
+            along = dx * u[0] + dy * u[1]
+            across = np.abs(dx * u[1] - dy * u[0])
+            out[y0:y1, x0:x1] |= (along >= -1.0 - ap) & (along <= r) & (across <= r)
+    return out
+
+
 def bridge_decks_over_water(
     instances: list[dict],
     wet: np.ndarray,
@@ -197,7 +230,8 @@ def bridge_decks_over_water(
 ) -> np.ndarray:
     """Cells under bridge landmarks (their footprints) that are water, and the
     road cells over water within `reach` cells of a deck: the road the bridge
-    carries, drawn in steps where its line isn't a grid direction."""
+    carries, drawn in steps where its line isn't a grid direction. The land a
+    deck comes ashore on stays land (`deck_landings`)."""
     from rasterio import features
     from rasterio.transform import Affine
 
@@ -217,6 +251,10 @@ def bridge_decks_over_water(
     closed = ndimage.binary_closing(np.pad(wet, reach), iterations=reach)[
         reach:-reach, reach:-reach
     ]
+    # but not where a deck comes ashore: a narrow point under its end (Fort Point,
+    # under the Golden Gate's south anchorage) is its bank, not a gap in the water,
+    # and filling it left the deck ending over open water, its road cut short
+    closed &= ~(deck_landings(instances, shape, reach) & ~wet)
     out = mask & closed
     if on_road is not None and reach > 0:
         near = ndimage.binary_dilation(mask, iterations=reach)
@@ -1051,6 +1089,9 @@ def build(
             streets=road_lines,
             water=is_water,
             roads=None if road_hw is None else (road_layer.mask, road_hw / 32.0),
+            ground=base,
+            open_water=(water_level != NO_WATER) | river,
+            on_road=on_road,
         )
         progress.log(f"objects: {object_counts}")
         # over water, a bridge's deck is the road: the water under it stays water (D-056)

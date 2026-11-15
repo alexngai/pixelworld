@@ -177,6 +177,10 @@ export interface ObjectsFile {
     /** A piece of a long landmark: the whole line's ends and half-width, in cells. */
     ln?: [number, number, number, number];
     lw?: number;
+    /** A bridge's approaches (D-131): how far its line runs on past each anchorage over land, in cells, at a and at b. */
+    ap?: [number, number];
+    /** The ground (steps) where each approach lands, at a and at b. */
+    az?: [number, number];
   }[];
 }
 

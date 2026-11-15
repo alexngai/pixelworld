@@ -44,7 +44,7 @@ describe("the traffic simulation on a server (D-126)", () => {
   });
 
   it("loads the level's routes in Node, as openWorld opens its package", () => {
-    expect(net.routes.length).toBe(16428);
+    expect(net.routes.length).toBe(16426);
     const nets = new Map<string, number>();
     for (const r of net.routes) nets.set(r.net, (nets.get(r.net) ?? 0) + 1);
     expect(Object.fromEntries(nets)).toMatchObject({ rail: 134, ferry: 20 }); // trains and ferries, for maps that cross them
