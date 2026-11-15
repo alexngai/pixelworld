@@ -1,32 +1,32 @@
 {
-  "packageHash": "3bba15d0dc9c4f60fdbf3661bc90de3c236c214f749ed70ea96297913fa30a0c",
+  "packageHash": "46ee6302eaa532b753975696aabdb93dcc38837b55217d163226796fe23b570f",
   "cells": [
     618,
     590
   ],
   "chunks": 100,
   "heightRange": [
-    -1,
+    -3,
     128
   ],
   "inputs": {
-    "roadSegments": 12729,
+    "roadSegments": 12737,
     "riverLines": 3
   },
   "objects": {
-    "building.apartment.bay": 2543,
-    "building.apartment.modern": 2438,
+    "building.apartment.bay": 2549,
+    "building.apartment.modern": 2437,
     "building.chinatown": 922,
-    "building.commercial": 1780,
+    "building.commercial": 1783,
     "building.commercial.historic": 3103,
-    "building.house": 3704,
+    "building.house": 3706,
     "building.industrial": 1427,
     "building.parking": 43,
     "building.pier": 10,
-    "building.residential": 368,
-    "building.rowhouse.edwardian": 4618,
-    "building.rowhouse.edwardian.painted": 4821,
-    "building.rowhouse.stucco": 7766,
+    "building.residential": 366,
+    "building.rowhouse.edwardian": 4614,
+    "building.rowhouse.edwardian.painted": 4819,
+    "building.rowhouse.stucco": 7764,
     "building.rowhouse.victorian": 6353,
     "building.rowhouse.victorian.pale": 3227,
     "building.tower": 61,
@@ -35,7 +35,7 @@
     "building.tower.hotel": 1,
     "building.tower.postmodern": 118,
     "building.tower.slab": 129,
-    "landmark.bridge.suspension.double": 25,
+    "landmark.bridge.suspension.double": 27,
     "landmark.gate": 1,
     "landmark.hall.clock": 2,
     "landmark.hall.domed": 1,
@@ -44,16 +44,16 @@
     "landmark.tower.pyramid": 1,
     "prop.lanterns": 79,
     "prop.lanterns.wide": 35,
-    "prop.signal": 450,
-    "prop.streetlight": 7929,
-    "tree": 7807,
+    "prop.signal": 448,
+    "prop.streetlight": 7903,
+    "tree": 7811,
     "tree.cypress": 8256,
     "tree.eucalyptus": 4163,
-    "tree.street": 9209
+    "tree.street": 9208
   },
   "roads": {
-    "cells": 63154,
-    "edges": 66072,
+    "cells": 63048,
+    "edges": 65928,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 21,
@@ -63,7 +63,7 @@
   },
   "paths": {
     "segments": 20882,
-    "cells": 103535
+    "cells": 103433
   },
   "rails": {
     "street": 1981,
@@ -71,26 +71,26 @@
     "train": 689
   },
   "lanes": {
-    "counted": 82950,
-    "oneway": 32969,
-    "divided": 12082
+    "counted": 82798,
+    "oneway": 32880,
+    "divided": 12063
   },
   "surfaces": {
     "woodland": 23735,
     "scrub": 39,
-    "water": 26426,
+    "water": 26427,
     "desert": 2048,
     "grass": 1158,
     "farmland": 67,
-    "urban": 196431,
-    "lawn": 22178,
-    "yard": 92538
+    "urban": 196430,
+    "lawn": 22179,
+    "yard": 92537
   },
   "routes": {
     "cablecar": 28,
     "ferry": 15,
     "lightrail": 11,
-    "road": 9761,
+    "road": 9693,
     "streetcar": 29,
     "train": 63
   }
