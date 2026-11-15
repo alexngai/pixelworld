@@ -108,6 +108,16 @@ describe("micro-terrain", () => {
     expect(microCellCorners(0, 1, 9, 12)).toEqual([6, 6, 6, 6]); // mean 5.5 rounds half up
   });
 
+  it("keeps steeper micro-cells as slopes up to a world's maxSlope", () => {
+    expect(microCellCorners(1, 9, 9, 1, 8)).toEqual([1, 9, 9, 1]);
+    expect(microCellCorners(1, 10, 10, 1, 8)).toEqual([6, 6, 6, 6]);
+    const grid = new TerrainGrid(1, 1, { micro: emptyMicro(2, 1, 1, 8) });
+    grid.micro!.corners.set([0, 4, 8, 0, 4, 8, 0, 4, 8]);
+    expect(grid.microCorners(1, 0)).toEqual([4, 8, 8, 4]);
+    expect(grid.slice(0, 0, 1, 1).micro!.maxSlope).toBe(8);
+    expect(new TerrainGrid(1, 1, { micro: emptyMicro(2, 1, 1) }).micro!.maxSlope).toBeUndefined();
+  });
+
   it("samples heights from micro-terrain when present, in steps", () => {
     const k = 4;
     const g = new TerrainGrid(1, 1, { micro: emptyMicro(k, 1, 1) });

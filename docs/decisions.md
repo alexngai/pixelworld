@@ -137,6 +137,7 @@ Status values:
 | D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
 | D-130 | The repository public: the whole CI on every pull request, and PyPI uploads through an environment with attestations | Accepted |
 | D-131 | Bridges come ashore on approaches over land, and the land a deck lands on stays land | Accepted |
+| D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
 
 ---
 
@@ -1902,3 +1903,17 @@ The point is more room for visual interest; both halves are wanted.
   - **Moving a bridge's ends onto land when it is placed:** at placement the end was on land; the deck pass flooded it afterwards.
   - **Patching only the objects in the committed packages:** the flooding is in the terrain, and the packages were stale anyway.
 - **Later:** New York's packages need rebuilding for their bridges' approaches (until then they draw as before). The arch and stone bridge generators have no approaches yet. sf-walk and the other cities' packages may be as stale as San Francisco's were.
+
+### D-141: Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) (accepted, M5)
+- **Why:** the national parks (Yosemite, D-136; Zion, Yellowstone, Arches and Glacier, D-137–D-140) are walls hundreds of metres tall drawn true. A micro-cell is a plane through its four corners only while they span at most 3 micro-steps (D-038); a steeper one is flat at their mean, so every wall came out as a stack of terraces with a riser between each, read as layer lines across Yosemite's granite. The cap suits the Grand Canyon, whose ledges are stepped strata, and keeps rising edges on clean pixel angles (D-023), so it stays the default.
+- **What:**
+  - **Spec:** `micro.maxSlope`, a whole number of micro-steps, 3 or more (default 3): the steepest micro-cell drawn as a slope.
+  - **Package:** the manifest's `micro.maxSlope`, written only when the spec sets it, so every other package is unchanged byte for byte.
+  - **Client:** `MicroLayers.maxSlope`, set by `emptyMicro` from the manifest (the chunk store, `assembleTerrain`) and kept by `TerrainGrid.slice`; `microCellCorners` takes it, so drawing, heights, the bake worker and queries all derive micro-cells the same way.
+  - **Pipeline:** traffic routes take the ground's height under the same rule (`routes.Package.surface_height`).
+- **Looked at:** Yosemite's driving and walking levels at 64 (every micro-cell slopes): El Capitan, Half Dome and the valley's walls as smooth faces lit by their slope, where they were terraced; the valley floor as before.
+- **Rejected alternatives:**
+  - **A higher cap everywhere:** the Grand Canyon's ledges and every golden would change.
+  - **Smoothing heights (`micro.smooth`):** it rounds them before they are drawn, but a micro-cell steeper than the cap is still a terrace.
+  - **A lower vertical exaggeration,** so walls fall under the cap: they lose their height.
+- **Later:** road beds still look for terraces under the pavement with the default cap (`micro.py`), so a bed may be cut under ground drawn as a slope; no road climbs a wall in the parks.

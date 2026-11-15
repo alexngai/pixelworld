@@ -135,7 +135,8 @@ class Package:
             )
             lo, hi = c.min(axis=0), c.max(axis=0)
             flat = np.floor(c.sum(axis=0) / 4 + 0.5)
-            c = np.where(hi - lo > MICRO_MAX_OFFSET, flat, c)
+            cap = (self.manifest.get("micro") or {}).get("maxSlope", MICRO_MAX_OFFSET)
+            c = np.where(hi - lo > cap, flat, c)
             fx = np.clip(px - mx, 0, 1)
             fy = np.clip(py - my, 0, 1)
             return _triangle_height(c, fx, fy) / k

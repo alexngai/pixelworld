@@ -262,24 +262,34 @@ export const VFAC_ONE = 4096;
 export interface MicroLayers {
   k: number;
   corners: Int16Array;
+  /** Steepest micro-cell drawn as a slope, in micro-steps (MICRO_MAX_OFFSET when absent; manifest micro.maxSlope). */
+  maxSlope?: number;
 }
 
 /** Steepest micro-cell that stays a slope tile; steeper ones become flat terraces. */
 export const MICRO_MAX_OFFSET = 3;
 
-export function emptyMicro(k: number, width: number, height: number): MicroLayers {
-  return { k, corners: new Int16Array((k * width + 1) * (k * height + 1)) };
+export function emptyMicro(k: number, width: number, height: number, maxSlope?: number): MicroLayers {
+  const corners = new Int16Array((k * width + 1) * (k * height + 1));
+  return maxSlope === undefined ? { k, corners } : { k, corners, maxSlope };
 }
 
 /**
  * A micro-cell's drawn corner heights from its micro-corner heights (c0..c3):
- * the corners themselves when they span at most MICRO_MAX_OFFSET, otherwise
- * flat at their rounded-half-up mean. Mirrors world_format.micro_cells.
+ * the corners themselves when they span at most `maxSlope` (MICRO_MAX_OFFSET by
+ * default), otherwise flat at their rounded-half-up mean. Mirrors
+ * world_format.micro_cells.
  */
-export function microCellCorners(c0: number, c1: number, c2: number, c3: number): Corners {
+export function microCellCorners(
+  c0: number,
+  c1: number,
+  c2: number,
+  c3: number,
+  maxSlope: number = MICRO_MAX_OFFSET,
+): Corners {
   const lo = Math.min(c0, c1, c2, c3);
   const hi = Math.max(c0, c1, c2, c3);
-  if (hi - lo <= MICRO_MAX_OFFSET) return [c0, c1, c2, c3];
+  if (hi - lo <= maxSlope) return [c0, c1, c2, c3];
   const flat = Math.floor((c0 + c1 + c2 + c3) / 4 + 0.5);
   return [flat, flat, flat, flat];
 }
@@ -420,7 +430,7 @@ export class TerrainGrid {
     const w = this.width * m.k + 1;
     const i = my * w + mx;
     const c = m.corners;
-    return microCellCorners(c[i]!, c[i + 1]!, c[i + w + 1]!, c[i + w]!);
+    return microCellCorners(c[i]!, c[i + 1]!, c[i + w + 1]!, c[i + w]!, m.maxSlope);
   }
 
   layers(): TerrainLayers {
@@ -530,7 +540,7 @@ export class TerrainGrid {
 
   /** Copy a sub-rectangle (clipped to bounds) into a new grid. */
   slice(x0: number, y0: number, w: number, h: number): TerrainGrid {
-    const out = new TerrainGrid(w, h, this.micro ? { micro: emptyMicro(this.micro.k, w, h) } : undefined);
+    const out = new TerrainGrid(w, h, this.micro ? { micro: emptyMicro(this.micro.k, w, h, this.micro.maxSlope) } : undefined);
     copyCells(this, x0, y0, out, 0, 0, w, h);
     return out;
   }

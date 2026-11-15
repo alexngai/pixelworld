@@ -440,6 +440,7 @@ def write_package(
     render: dict[str, Any] | None = None,
     objects: list[dict[str, Any]] | None = None,
     micro: tuple[np.ndarray, int] | None = None,
+    micro_max_slope: int | None = None,
     geo: tuple[np.ndarray, np.ndarray, int] | None = None,
     level: str | None = None,
     levels: list[dict[str, Any]] | None = None,
@@ -579,6 +580,9 @@ def write_package(
     if micro is not None:
         # shores: water is a plane over shaped shores (D-094); older packages lack it
         manifest["micro"] = {"k": int(micro[1]), "shores": True}
+        if micro_max_slope is not None:
+            # micro-cells this steep still slope (D-136); absent, MICRO_MAX_OFFSET
+            manifest["micro"]["maxSlope"] = int(micro_max_slope)
     if warp_info is not None:
         manifest["warp"] = warp_info
     objects_path = out_dir / OBJECTS_FILE

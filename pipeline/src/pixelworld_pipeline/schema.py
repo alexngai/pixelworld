@@ -1501,6 +1501,13 @@ REGION = Map(
                         MapOf(Str(surface_names), Num(0, unit="m"), "mapping of surface → metres"),
                         "Smooth these surfaces' micro-terrain over this many metres.",
                     ),
+                    "maxSlope": Key(
+                        Num(3, integer=True),
+                        "The steepest micro-cell drawn as a slope, in micro-steps; steeper ones "
+                        "are flat terraces with walls between. Raise it to draw sheer walls "
+                        "as faces.",
+                        "`3`",
+                    ),
                 },
                 rule=lambda v, p, c: (
                     c.add((*p, "k"), f"must be 2, 4 or 8, not {v['k']}")

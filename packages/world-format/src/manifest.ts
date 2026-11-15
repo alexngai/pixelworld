@@ -71,8 +71,10 @@ export interface WorldManifest {
    * Micro-terrain (M1.6): every chunk carries K×K micro-cells per cell (MHGT).
    * shores: the micro-terrain sinks under the water (D-094), which is drawn as
    * a plane at its level; packages without it keep water cells flat at it.
+   * maxSlope: the steepest micro-cell drawn as a slope, in micro-steps
+   * (default 3); steeper ones are flat terraces (D-136).
    */
-  micro?: { k: number; shores?: boolean };
+  micro?: { k: number; shores?: boolean; maxSlope?: number };
   /** Elastic map (M2): how the world was laid out (informational). */
   warp?: {
     method: string;
@@ -202,6 +204,9 @@ export function parseManifest(json: unknown): WorldManifest {
     throw new ManifestError("missing scale");
   if (m.micro !== undefined && ![2, 4, 8].includes(m.micro.k))
     throw new ManifestError("micro.k must be 2, 4 or 8");
+  const ms = m.micro?.maxSlope;
+  if (ms !== undefined && !(Number.isInteger(ms) && ms >= 3))
+    throw new ManifestError("micro.maxSlope must be a whole number of micro-steps, 3 or more");
   if (m.render !== undefined) {
     const sc = m.render.scale;
     if (!(typeof sc === "number" && sc > 0 && sc <= 1)) throw new ManifestError("render.scale must be in (0, 1]");
@@ -225,7 +230,7 @@ export function surfaceIds(manifest: WorldManifest): Map<string, number> {
 
 /** Assemble decoded chunks into one TerrainGrid covering the whole world. */
 export function assembleTerrain(manifest: WorldManifest, chunks: Chunk[]): TerrainGrid {
-  const micro = manifest.micro ? emptyMicro(manifest.micro.k, manifest.cellsX, manifest.cellsY) : null;
+  const micro = manifest.micro ? emptyMicro(manifest.micro.k, manifest.cellsX, manifest.cellsY, manifest.micro.maxSlope) : null;
   const grid = new TerrainGrid(manifest.cellsX, manifest.cellsY, { micro });
   for (const c of chunks) {
     const t = c.terrain;

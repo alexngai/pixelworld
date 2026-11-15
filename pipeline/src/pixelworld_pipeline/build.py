@@ -1230,6 +1230,7 @@ def build(
         render=region.render,
         objects=instances,
         micro=micro,
+        micro_max_slope=(region.micro or {}).get("maxSlope"),
         geo=geo,
         level=region.level,
         levels=region.levels,

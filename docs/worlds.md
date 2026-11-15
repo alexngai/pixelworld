@@ -431,6 +431,7 @@ Other keys here are the source's options.
 | `k` | integer, 2–8 | **required** | Micro-cells per cell side: 2, 4 or 8. |
 | `dem` | [mapping](#spec-micro-dem) | — | Overrides `sources.dem` for the micro-terrain (usually a finer overview). |
 | `smooth` | mapping of surface → metres | — | Smooth these surfaces' micro-terrain over this many metres. |
+| `maxSlope` | integer, ≥ 3 | `3` | The steepest micro-cell drawn as a slope, in micro-steps; steeper ones are flat terraces with walls between. Raise it to draw sheer walls as faces. |
 
 <a id="spec-micro-dem"></a>
 #### `micro.dem`
