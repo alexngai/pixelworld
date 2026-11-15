@@ -1,0 +1,13 @@
+name: Turret Arch
+wikidata: Q62027398
+# an opening about 20 m high and 12 m wide (NPS) in a north–south fin 28 m tall,
+# with its turret, a tower 48 m tall, at the fin's south end (USGS 3DEP 1 m
+# lidar); anchor from Overture.
+anchor: { lon: -109.53490, lat: 38.68430 }
+height: 28
+base: 1600
+cut: 22
+orient: 3           # the slab along y, its turret to the south
+clear: 15
+depictions:
+  generic: { group: landmark.arch.turret }

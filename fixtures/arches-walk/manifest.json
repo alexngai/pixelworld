@@ -1,0 +1,1824 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "arches-walk",
+  "name": "Arches National Park (walking)",
+  "chunkSize": 64,
+  "cellsX": 784,
+  "cellsY": 778,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "af74b6974b3a41287dc9c66e8c1aa283e2db3598a47e2ae790bcaf2cfbb5f165",
+      "heightRange": [
+        349,
+        372
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "1c2b57bdc810c5e88b8ee3f69315cb557b1f9a933d056f2eccc814cd0040ea58",
+      "heightRange": [
+        350,
+        383
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "ace3487f3a06432d8db6b8e1061c8fae4faf6f74ededacc0807711fbe11a277d",
+      "heightRange": [
+        352,
+        378
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "d890be199460010fd156c84d8b1b99adc7269155ee0c2f52d7bbbd5ce7994938",
+      "heightRange": [
+        356,
+        370
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "32b01ad1ada2b0944ffd39f5627a2316d38d03e2075f7b05f8f2f63e94bad44f",
+      "heightRange": [
+        349,
+        363
+      ]
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "path": "chunks/5_0.pxwc.gz",
+      "sha256": "9c612d5937d6439eb4d6b773d916dd37a06b0d0191ee275af4bec5fbf04a2c53",
+      "heightRange": [
+        336,
+        359
+      ]
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "path": "chunks/6_0.pxwc.gz",
+      "sha256": "123f9a750d65cb5e8a90ae758580621d2685fbbf0ec1f91260744a5663ac1b7c",
+      "heightRange": [
+        321,
+        355
+      ]
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "path": "chunks/7_0.pxwc.gz",
+      "sha256": "a0c9f0c163a5263698a01bed9168823f3d22b1fc07f014bf9c043a8e82e22c62",
+      "heightRange": [
+        322,
+        358
+      ]
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "path": "chunks/8_0.pxwc.gz",
+      "sha256": "befe2967ac34178e422eb80a85fb0dfabdc0dd116da1d886c7b26bc9b8e6e0ef",
+      "heightRange": [
+        344,
+        360
+      ]
+    },
+    {
+      "x": 9,
+      "y": 0,
+      "path": "chunks/9_0.pxwc.gz",
+      "sha256": "dc88965e589ff2cc4308991fe8ed2b4e0ab4c0c2ebc9137b764cddfdcf75d03c",
+      "heightRange": [
+        351,
+        362
+      ]
+    },
+    {
+      "x": 10,
+      "y": 0,
+      "path": "chunks/10_0.pxwc.gz",
+      "sha256": "21dd1aaeb6fd88100cc2146a6f4dfe41d258d82cdcb53c59c17e52663a251278",
+      "heightRange": [
+        346,
+        365
+      ]
+    },
+    {
+      "x": 11,
+      "y": 0,
+      "path": "chunks/11_0.pxwc.gz",
+      "sha256": "99e61d1198f81f9afba956145d98e807e9e6cac2ebb87feb7839f4ab5cfae809",
+      "heightRange": [
+        330,
+        358
+      ]
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "path": "chunks/12_0.pxwc.gz",
+      "sha256": "17952c534ca2fd9801be234b0777b5ca4605932d906227ce2a60baff08b496aa",
+      "heightRange": [
+        348,
+        358
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "1d6f5fc55a2e2dcd5947e8aabb0c5a5d29eddcf548d6692f621eae11dd60ac5b",
+      "heightRange": [
+        339,
+        358
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "3eff3cfb78cf23dda37c3a9a95ae6ea9d02eafcb3a50f7d9c6cafb3f54715fc5",
+      "heightRange": [
+        334,
+        364
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "42bfe3cf9d1bf313cdfae8107c80e8b1ca5049f94a701c9a29f7a7e3c1fb5dda",
+      "heightRange": [
+        334,
+        371
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "c66d3669d6707ce60925af4bbf0758c92db73d5a403135f40cbe51f9aa30416d",
+      "heightRange": [
+        335,
+        366
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "a8cf97f4727246f654f9b2e7ca60825237a3f844a4d3b006aa710bbccc3197c1",
+      "heightRange": [
+        337,
+        357
+      ]
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "path": "chunks/5_1.pxwc.gz",
+      "sha256": "4021ddcd0f56eb4e4a8fdf8db4c2b400d95fa96c2270f9c55ee718124fdf6807",
+      "heightRange": [
+        328,
+        352
+      ]
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "path": "chunks/6_1.pxwc.gz",
+      "sha256": "87e293c49a7706a7375ccd8032e1a352a0bc9c0f0fab1bb9148de4b96a3a45a8",
+      "heightRange": [
+        320,
+        346
+      ]
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "path": "chunks/7_1.pxwc.gz",
+      "sha256": "daaaf92c2b74705bd68eb955dde63c1a11e2881cc2390f38eb83049c932ba9f5",
+      "heightRange": [
+        320,
+        347
+      ]
+    },
+    {
+      "x": 8,
+      "y": 1,
+      "path": "chunks/8_1.pxwc.gz",
+      "sha256": "9a67cf8bd9d022064bfb73b3dc5a3ca823def8d0a3cbf0ab72661d7d7c9eb705",
+      "heightRange": [
+        322,
+        352
+      ]
+    },
+    {
+      "x": 9,
+      "y": 1,
+      "path": "chunks/9_1.pxwc.gz",
+      "sha256": "1ac157d74043b1d5eb9042b673c183998fc0cc16ecc61c30447234b0499b6d79",
+      "heightRange": [
+        322,
+        362
+      ]
+    },
+    {
+      "x": 10,
+      "y": 1,
+      "path": "chunks/10_1.pxwc.gz",
+      "sha256": "a4dc843cd1d092a0266579189c1a59fa44f3f020e573818f036ca1b54bcd6355",
+      "heightRange": [
+        325,
+        367
+      ]
+    },
+    {
+      "x": 11,
+      "y": 1,
+      "path": "chunks/11_1.pxwc.gz",
+      "sha256": "c44e6b41c5a56ec0076e8c168c38d3ec565392e842ac4c5ee425dc4430e3aefa",
+      "heightRange": [
+        327,
+        357
+      ]
+    },
+    {
+      "x": 12,
+      "y": 1,
+      "path": "chunks/12_1.pxwc.gz",
+      "sha256": "0d3226aa707d1e14ea9c3053ac44c03196662900c0dcfdccff01a97fe09bc2be",
+      "heightRange": [
+        346,
+        356
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "ab12e4ddc28fa69018b59936a3c38f46012993d24a5ca14e6a065ff4ca6876f3",
+      "heightRange": [
+        333,
+        345
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "82d5b7eb76ac08b5d6ee67258c5a5cd57fd1712ce92f3763ef93d9ef78fb01e0",
+      "heightRange": [
+        331,
+        343
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "209ebfc1b6886468ef0655dba352c8a913a9ce2cd050bc34995880b7eebbeea7",
+      "heightRange": [
+        329,
+        344
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "a38379c6d862df911c59b11a3af9830ea58ab8eb24609efacea19e4cb235d3ff",
+      "heightRange": [
+        327,
+        347
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "2ee0f59a0d55b8592ad58bfa7a4c07779bb6a1f5cbed3a2e0a278453d27462f8",
+      "heightRange": [
+        325,
+        360
+      ]
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "path": "chunks/5_2.pxwc.gz",
+      "sha256": "0c415c46a9ccae62bc57e3cdc7ea904c024dea354214109469910b9d09330fcc",
+      "heightRange": [
+        322,
+        360
+      ]
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "path": "chunks/6_2.pxwc.gz",
+      "sha256": "239aa84896d1ad46d4513e648ac5008ab31f99a8be8c1a403658c6cf31c3384c",
+      "heightRange": [
+        319,
+        335
+      ]
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "path": "chunks/7_2.pxwc.gz",
+      "sha256": "9c49337f68dca218a31f8d5e2d471f7b1dc0af782c49934586792c44dffc4e3f",
+      "heightRange": [
+        319,
+        331
+      ]
+    },
+    {
+      "x": 8,
+      "y": 2,
+      "path": "chunks/8_2.pxwc.gz",
+      "sha256": "5a6c2fc112748c0827c016711d32b8e969e96e86832bbced13e1a60d5d8b5204",
+      "heightRange": [
+        320,
+        338
+      ]
+    },
+    {
+      "x": 9,
+      "y": 2,
+      "path": "chunks/9_2.pxwc.gz",
+      "sha256": "e6d84b6da6005efd66d11db96d37869ebbf85a2b5e81edad6f613f8b0ed7f230",
+      "heightRange": [
+        321,
+        338
+      ]
+    },
+    {
+      "x": 10,
+      "y": 2,
+      "path": "chunks/10_2.pxwc.gz",
+      "sha256": "c8a73984db53aca2672b55f1da22f0325a57b4f46e72f2b6bcd3e326a5270bb9",
+      "heightRange": [
+        324,
+        357
+      ]
+    },
+    {
+      "x": 11,
+      "y": 2,
+      "path": "chunks/11_2.pxwc.gz",
+      "sha256": "f20d425efca96c70088e9f88584297e17681bdf90d9fcfc347641c8ed8b3720b",
+      "heightRange": [
+        327,
+        362
+      ]
+    },
+    {
+      "x": 12,
+      "y": 2,
+      "path": "chunks/12_2.pxwc.gz",
+      "sha256": "adc438aef25d33291a9e2b290eae1919a3c96054e1767c86c570cf0f932a931f",
+      "heightRange": [
+        336,
+        360
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "1a43ed35950292a65aad07aa562218f9060c3bced2ee84902b71e818922cd749",
+      "heightRange": [
+        333,
+        344
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "4d32dde87e65b5f5374e5a41e38b2257a9cfa8d9cd44e8efb04086f4c4416f91",
+      "heightRange": [
+        333,
+        341
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "0b14e569c0dcfcdbf8df9c486517ab130c4adb430c98617900a05cee1e41184e",
+      "heightRange": [
+        329,
+        340
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "dcb68fb7f550da66587ecd2e707eb0a513b74eb25a556ba22070f35e01c5044b",
+      "heightRange": [
+        327,
+        339
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "6a5c1011bbf19618e6e931b21f71de11df8734bdfe85301bbb38a221b785b424",
+      "heightRange": [
+        324,
+        336
+      ]
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "path": "chunks/5_3.pxwc.gz",
+      "sha256": "73f9bd185d6eeb5cfd0cc2669ee2c8730bfa17426be015200fa2fa3345f4bab2",
+      "heightRange": [
+        322,
+        335
+      ]
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "path": "chunks/6_3.pxwc.gz",
+      "sha256": "20880ce7a083ebb4057113e0e1918d7bbb2c77ba4e15ec097a9fbadce4eaa4e9",
+      "heightRange": [
+        318,
+        331
+      ]
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "path": "chunks/7_3.pxwc.gz",
+      "sha256": "c74498b0bb6bd8b40ceed77217fc93e36a1ab977bc97b5dfd29dc0ca81f671b3",
+      "heightRange": [
+        318,
+        323
+      ]
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "path": "chunks/8_3.pxwc.gz",
+      "sha256": "993bf3b1875c78b813d93a339b76e5b48072949380706c4f093de263c4772422",
+      "heightRange": [
+        320,
+        338
+      ]
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "path": "chunks/9_3.pxwc.gz",
+      "sha256": "f8e90bbb4a8fea54c8ac17d274962d22d30054d8dc0d2aa6706ca8162035b71a",
+      "heightRange": [
+        322,
+        337
+      ]
+    },
+    {
+      "x": 10,
+      "y": 3,
+      "path": "chunks/10_3.pxwc.gz",
+      "sha256": "19e6cf29f340ad561040cfb4125fc7974c6445f53328a5a86d845495f96babad",
+      "heightRange": [
+        324,
+        350
+      ]
+    },
+    {
+      "x": 11,
+      "y": 3,
+      "path": "chunks/11_3.pxwc.gz",
+      "sha256": "a9f7e2942ce8e133c703fac2d5e5229db7f1a67d1d5629d66e32a3d2b81fab81",
+      "heightRange": [
+        327,
+        359
+      ]
+    },
+    {
+      "x": 12,
+      "y": 3,
+      "path": "chunks/12_3.pxwc.gz",
+      "sha256": "fa44d902a4bca83fd6521a5a15ffebebac61fc891ceb723d32df93a0f840042e",
+      "heightRange": [
+        329,
+        343
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "3e02168df7ad32739d65005337f3371d807364d03739ea33ea2469395ec70f6f",
+      "heightRange": [
+        338,
+        354
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "08291143916503cbf79d8dbf96ede959757db0094f5b0148b08b6b7d78a6cb5c",
+      "heightRange": [
+        336,
+        358
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "ed7b07a9d82d1a8f1ade123946133c52d56f3c46fb8d9170063a018d8b2441aa",
+      "heightRange": [
+        335,
+        361
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "e818851187b00dd3a293e126f66f491888ba8fd50776ee2cdd2fdd9d775ca359",
+      "heightRange": [
+        333,
+        362
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "7139b7ceecae84c5418c4d8d3ca7a7a1475c5de12a5eac5a4efc9bb5fa2929d3",
+      "heightRange": [
+        331,
+        362
+      ]
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "path": "chunks/5_4.pxwc.gz",
+      "sha256": "bc9797eb93964601d2e72abe8abea0191616c89e4d890ba3276fa08ed05f093b",
+      "heightRange": [
+        326,
+        367
+      ]
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "path": "chunks/6_4.pxwc.gz",
+      "sha256": "1f92e2c7884b0102c54b521db1148111558082746c6cd67c870c244fcfc381a4",
+      "heightRange": [
+        317,
+        368
+      ]
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "path": "chunks/7_4.pxwc.gz",
+      "sha256": "83c02f93b40ee12933149c20a9a066d5eceaad691c2a186a68ce826cb2d48d6b",
+      "heightRange": [
+        317,
+        371
+      ]
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "path": "chunks/8_4.pxwc.gz",
+      "sha256": "71d0a1a75ba98a0acddb94c415d14f25827d3c28a54a2f4c6bb2f6ad274abeeb",
+      "heightRange": [
+        321,
+        375
+      ]
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "path": "chunks/9_4.pxwc.gz",
+      "sha256": "bcfbeec98e87b8a6d46d8c80279251b205964ba4439beb85c087516ee6a31ea7",
+      "heightRange": [
+        330,
+        379
+      ]
+    },
+    {
+      "x": 10,
+      "y": 4,
+      "path": "chunks/10_4.pxwc.gz",
+      "sha256": "e36413c6fadc71be36b566349f77e35640553ee5e18db5c168442ed81954bed7",
+      "heightRange": [
+        335,
+        386
+      ]
+    },
+    {
+      "x": 11,
+      "y": 4,
+      "path": "chunks/11_4.pxwc.gz",
+      "sha256": "4c25e27907f41f977c4374d4ce80d35e523418591a9a97f8fe7ffc8f17d0ff2e",
+      "heightRange": [
+        342,
+        387
+      ]
+    },
+    {
+      "x": 12,
+      "y": 4,
+      "path": "chunks/12_4.pxwc.gz",
+      "sha256": "9428e97ab6e648c56f31857125591c75b881d3943646c97b9bd8dcf793d2c65f",
+      "heightRange": [
+        334,
+        377
+      ]
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "path": "chunks/0_5.pxwc.gz",
+      "sha256": "40aa9b386627e7b4709209d83ca883b12141c32c7df751c620bb902f491ed2f4",
+      "heightRange": [
+        341,
+        361
+      ]
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "path": "chunks/1_5.pxwc.gz",
+      "sha256": "33436ba772e5c98a09b276c1ce79fa3a8f2a5ccb0ad15953d4e80b60c23a19b6",
+      "heightRange": [
+        345,
+        364
+      ]
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "path": "chunks/2_5.pxwc.gz",
+      "sha256": "a0e5380975339d98242005d06bee828810f1aa916ff3c5bedcf40290b364894e",
+      "heightRange": [
+        357,
+        368
+      ]
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "path": "chunks/3_5.pxwc.gz",
+      "sha256": "9536624aea684e883ce587ccca3be185efb1496db4f82f42158145f1b3541420",
+      "heightRange": [
+        358,
+        367
+      ]
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "path": "chunks/4_5.pxwc.gz",
+      "sha256": "4fc37f60d963e2386ec8624e562b4cc2ad7bc5cbe1e81c2f4d346d13dadc9038",
+      "heightRange": [
+        352,
+        370
+      ]
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "path": "chunks/5_5.pxwc.gz",
+      "sha256": "ba3a13368aff7ffbba7979f5c63622ff8696fc58e41acfb54cbc8c45d5e403af",
+      "heightRange": [
+        342,
+        372
+      ]
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "path": "chunks/6_5.pxwc.gz",
+      "sha256": "cfd4bd709ffa02535d1aaef0835d9cc79794c2b34b7a5077930a34a3d927a4eb",
+      "heightRange": [
+        317,
+        368
+      ]
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "path": "chunks/7_5.pxwc.gz",
+      "sha256": "7223edce8051240c510a11e7c21a5ff448a1e9e326eec8927fdc22ca6bed62ab",
+      "heightRange": [
+        316,
+        361
+      ]
+    },
+    {
+      "x": 8,
+      "y": 5,
+      "path": "chunks/8_5.pxwc.gz",
+      "sha256": "b6ec4a174fafefe8ac3228219214d1f50c9ad006aa33026c9bbc0560d92938f7",
+      "heightRange": [
+        316,
+        360
+      ]
+    },
+    {
+      "x": 9,
+      "y": 5,
+      "path": "chunks/9_5.pxwc.gz",
+      "sha256": "1cf328dd67140dd9bef0c34a7990b9d97fe1c53d2c039b4d2dcb8b7d067228f7",
+      "heightRange": [
+        336,
+        365
+      ]
+    },
+    {
+      "x": 10,
+      "y": 5,
+      "path": "chunks/10_5.pxwc.gz",
+      "sha256": "88db64263d226116f3c53df7d58a23de7c2bde933f78988f77ce295e390e4ea6",
+      "heightRange": [
+        351,
+        374
+      ]
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "path": "chunks/11_5.pxwc.gz",
+      "sha256": "4304410fd7229353e39d4eca9f7989408139ad22ce645a1214d93a3f3831a556",
+      "heightRange": [
+        358,
+        375
+      ]
+    },
+    {
+      "x": 12,
+      "y": 5,
+      "path": "chunks/12_5.pxwc.gz",
+      "sha256": "1227bf4b0879989a8fb5ae07704d14b707c602a7c063d490d46fd6de8f50be05",
+      "heightRange": [
+        367,
+        378
+      ]
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "path": "chunks/0_6.pxwc.gz",
+      "sha256": "82d6acb1396957e4d723e16ee1c311c43dfb95e69740f96c06cfaec26e668cb7",
+      "heightRange": [
+        353,
+        372
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "path": "chunks/1_6.pxwc.gz",
+      "sha256": "ec6a5bbe96911c7188f4f09c04565bbc7f8198ceb73eb952a78c1aea4a1d5e47",
+      "heightRange": [
+        355,
+        369
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "path": "chunks/2_6.pxwc.gz",
+      "sha256": "75c6831481eecee896f5be2839baf4032b9800a8c69023fb1a069121d0e405af",
+      "heightRange": [
+        354,
+        367
+      ]
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "path": "chunks/3_6.pxwc.gz",
+      "sha256": "70fe3d116669341027cab9b878485a287ea58bcb73ada0c8fcae210cac11dea7",
+      "heightRange": [
+        350,
+        365
+      ]
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "path": "chunks/4_6.pxwc.gz",
+      "sha256": "61bc9bafd1580400ada16425fa502bd69309b247897d94ea510e2237392d7b9a",
+      "heightRange": [
+        345,
+        362
+      ]
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "path": "chunks/5_6.pxwc.gz",
+      "sha256": "ccdd16d6e160c2331ae9b5fdf624cc2f76e86a170f7983bc1b725e2168b555d8",
+      "heightRange": [
+        342,
+        356
+      ]
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "path": "chunks/6_6.pxwc.gz",
+      "sha256": "427b7b56130b9eed4679f052419d4ba87125e9ebc0733b2b2495c6fb9fc2ef74",
+      "heightRange": [
+        338,
+        349
+      ]
+    },
+    {
+      "x": 7,
+      "y": 6,
+      "path": "chunks/7_6.pxwc.gz",
+      "sha256": "6cbf6df6dbbf3d4c64d9da54288bdadb1553398d4e03ae9703ba61c0f4af912d",
+      "heightRange": [
+        314,
+        347
+      ]
+    },
+    {
+      "x": 8,
+      "y": 6,
+      "path": "chunks/8_6.pxwc.gz",
+      "sha256": "70ec2f522c381b7c2400116a0bf30ca41933cbee86b9b1e57655e7280edd28b1",
+      "heightRange": [
+        314,
+        348
+      ]
+    },
+    {
+      "x": 9,
+      "y": 6,
+      "path": "chunks/9_6.pxwc.gz",
+      "sha256": "1ff4eba671cf3ad5f79f658d0240fd26582b2a28c32e4b26519a28bc7e5b4e01",
+      "heightRange": [
+        335,
+        360
+      ]
+    },
+    {
+      "x": 10,
+      "y": 6,
+      "path": "chunks/10_6.pxwc.gz",
+      "sha256": "e2c5c9800c007c3119787ff317130d5368e5bdf4dcce06a7bef8cc7698607030",
+      "heightRange": [
+        348,
+        361
+      ]
+    },
+    {
+      "x": 11,
+      "y": 6,
+      "path": "chunks/11_6.pxwc.gz",
+      "sha256": "e654a7b95136f77a73eecdfa3cafac627ec5c34ba86b682c3f290d3d0180c087",
+      "heightRange": [
+        353,
+        372
+      ]
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "path": "chunks/12_6.pxwc.gz",
+      "sha256": "ed7365756e4a3e7e9fd321c391b7c634d0b37f8fab70210447e142f5506f2387",
+      "heightRange": [
+        357,
+        370
+      ]
+    },
+    {
+      "x": 0,
+      "y": 7,
+      "path": "chunks/0_7.pxwc.gz",
+      "sha256": "a4264a7fb5cb841e570d21a72f813ac224ab73fb59cd9926cb79df18a5e94210",
+      "heightRange": [
+        365,
+        383
+      ]
+    },
+    {
+      "x": 1,
+      "y": 7,
+      "path": "chunks/1_7.pxwc.gz",
+      "sha256": "5416d8f9c230fa71de7216af9d60d92f22fb183faeaaa1493618c87a44c520d2",
+      "heightRange": [
+        360,
+        375
+      ]
+    },
+    {
+      "x": 2,
+      "y": 7,
+      "path": "chunks/2_7.pxwc.gz",
+      "sha256": "2e65dc1bd5f33e3ec536dbc5d2996e3e8c44be38dfa0b75ab588668867cebffd",
+      "heightRange": [
+        354,
+        371
+      ]
+    },
+    {
+      "x": 3,
+      "y": 7,
+      "path": "chunks/3_7.pxwc.gz",
+      "sha256": "085c805fe4e6fdf1abcd252fab23f2fb27e56b059ef2ab853c0d69996f5badb5",
+      "heightRange": [
+        350,
+        368
+      ]
+    },
+    {
+      "x": 4,
+      "y": 7,
+      "path": "chunks/4_7.pxwc.gz",
+      "sha256": "557b3daa14b170af433df0fa5cca560d03ecf1de220f99643da36041c12ef00f",
+      "heightRange": [
+        345,
+        359
+      ]
+    },
+    {
+      "x": 5,
+      "y": 7,
+      "path": "chunks/5_7.pxwc.gz",
+      "sha256": "8d1bf03089f24ca438f4490573586e764b8edf691aa61aff258a0072f0a842a7",
+      "heightRange": [
+        345,
+        361
+      ]
+    },
+    {
+      "x": 6,
+      "y": 7,
+      "path": "chunks/6_7.pxwc.gz",
+      "sha256": "ee34fd806ded4d1453b2b49013a5e777bd1eb4b697ba1f3e4cc97076c760c57f",
+      "heightRange": [
+        345,
+        361
+      ]
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "path": "chunks/7_7.pxwc.gz",
+      "sha256": "b0fdb884925504f59bb4905788a56a551385afaecc0c31451252ef43f6bf7845",
+      "heightRange": [
+        312,
+        359
+      ]
+    },
+    {
+      "x": 8,
+      "y": 7,
+      "path": "chunks/8_7.pxwc.gz",
+      "sha256": "a085043761ee0ec2bbdb93d6f5aa597fa23e3db5d00e7c5b885b17cfa8ff1b55",
+      "heightRange": [
+        313,
+        350
+      ]
+    },
+    {
+      "x": 9,
+      "y": 7,
+      "path": "chunks/9_7.pxwc.gz",
+      "sha256": "cfe586b6cf7c73cd9ef06a4dca16611088277ff77005627ecd694b02e7981105",
+      "heightRange": [
+        337,
+        356
+      ]
+    },
+    {
+      "x": 10,
+      "y": 7,
+      "path": "chunks/10_7.pxwc.gz",
+      "sha256": "080c332dafe2fa7a292cb180536822def390e87e4f8aae8455b6394f9db0e965",
+      "heightRange": [
+        342,
+        356
+      ]
+    },
+    {
+      "x": 11,
+      "y": 7,
+      "path": "chunks/11_7.pxwc.gz",
+      "sha256": "398c32b07805f2b1aa206b94da4b28f55cf28eb731a648361950bef6ed68bb80",
+      "heightRange": [
+        346,
+        362
+      ]
+    },
+    {
+      "x": 12,
+      "y": 7,
+      "path": "chunks/12_7.pxwc.gz",
+      "sha256": "1f12c23a2b76a8f9edf8a01443acec80a27c58c0c77002c3d323ee61fe2792bc",
+      "heightRange": [
+        350,
+        361
+      ]
+    },
+    {
+      "x": 0,
+      "y": 8,
+      "path": "chunks/0_8.pxwc.gz",
+      "sha256": "f649c505472982155a95149a5c43c4571a61839b6f36313b829cd45da3f12a27",
+      "heightRange": [
+        371,
+        383
+      ]
+    },
+    {
+      "x": 1,
+      "y": 8,
+      "path": "chunks/1_8.pxwc.gz",
+      "sha256": "492113f22001f093496b524e9157aa259e613667aa11a8e980b662226184fabb",
+      "heightRange": [
+        370,
+        390
+      ]
+    },
+    {
+      "x": 2,
+      "y": 8,
+      "path": "chunks/2_8.pxwc.gz",
+      "sha256": "6023d8a4bf7e8283ec15ff0b313373a0f9a74e83f1111f185767d5bc941c2067",
+      "heightRange": [
+        366,
+        405
+      ]
+    },
+    {
+      "x": 3,
+      "y": 8,
+      "path": "chunks/3_8.pxwc.gz",
+      "sha256": "afc166467482cc838f85831ea544662f984344ac67846758fe8449385a8ddcaa",
+      "heightRange": [
+        354,
+        408
+      ]
+    },
+    {
+      "x": 4,
+      "y": 8,
+      "path": "chunks/4_8.pxwc.gz",
+      "sha256": "2cadcd7ab2bb4111da0b7adb7e6132c6e9b023203017c5ca91287e2c7470b0a9",
+      "heightRange": [
+        354,
+        400
+      ]
+    },
+    {
+      "x": 5,
+      "y": 8,
+      "path": "chunks/5_8.pxwc.gz",
+      "sha256": "2cc77a6d18ce0ae241ddc7f5020bf3b45f8a16cf90b06f8a1561ed02e8cee66d",
+      "heightRange": [
+        357,
+        384
+      ]
+    },
+    {
+      "x": 6,
+      "y": 8,
+      "path": "chunks/6_8.pxwc.gz",
+      "sha256": "f0ced2b17b400589098fa0c2aef1a4671ce995391bdc21cf1048c20191589db2",
+      "heightRange": [
+        333,
+        362
+      ]
+    },
+    {
+      "x": 7,
+      "y": 8,
+      "path": "chunks/7_8.pxwc.gz",
+      "sha256": "03f76c8fe1d2d75eee9bd14ec4444d9c0e13da63b8051b3b1ccaa3bb7339752f",
+      "heightRange": [
+        310,
+        353
+      ]
+    },
+    {
+      "x": 8,
+      "y": 8,
+      "path": "chunks/8_8.pxwc.gz",
+      "sha256": "465fd7d38413bb6b33af386ca5ae384a5fb2cb18a98cd158ff0fcc4f2bec21f3",
+      "heightRange": [
+        310,
+        354
+      ]
+    },
+    {
+      "x": 9,
+      "y": 8,
+      "path": "chunks/9_8.pxwc.gz",
+      "sha256": "fc10fcc774ca396fc712689142034a2356a391314f39a9ea4ce582b5cd171595",
+      "heightRange": [
+        332,
+        351
+      ]
+    },
+    {
+      "x": 10,
+      "y": 8,
+      "path": "chunks/10_8.pxwc.gz",
+      "sha256": "410e15a63385a58d14f00b9f25bac595c2bb97238aa5f4179b51d3d0ea756285",
+      "heightRange": [
+        345,
+        356
+      ]
+    },
+    {
+      "x": 11,
+      "y": 8,
+      "path": "chunks/11_8.pxwc.gz",
+      "sha256": "99859f6b4095828999f2f043074be69a98c066c1541902733a000256f2ca1967",
+      "heightRange": [
+        347,
+        360
+      ]
+    },
+    {
+      "x": 12,
+      "y": 8,
+      "path": "chunks/12_8.pxwc.gz",
+      "sha256": "e49c57d72d045c6911bc6ae5e95fd8f42faa4c30b25da6fac85295e83f6500c6",
+      "heightRange": [
+        348,
+        361
+      ]
+    },
+    {
+      "x": 0,
+      "y": 9,
+      "path": "chunks/0_9.pxwc.gz",
+      "sha256": "7a25da1e39a087b759c078089cd546e38ee55d4029e3a913f93805ead8c87f5b",
+      "heightRange": [
+        366,
+        381
+      ]
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "path": "chunks/1_9.pxwc.gz",
+      "sha256": "2fbb5b3678a28d6f812739693d5c1787ca391beafdd248988f40046f0ae9e166",
+      "heightRange": [
+        366,
+        378
+      ]
+    },
+    {
+      "x": 2,
+      "y": 9,
+      "path": "chunks/2_9.pxwc.gz",
+      "sha256": "4b172da9f2eaef59c38b828db686603f41637a795e9be0ddc8fb5957c75fd5ee",
+      "heightRange": [
+        366,
+        382
+      ]
+    },
+    {
+      "x": 3,
+      "y": 9,
+      "path": "chunks/3_9.pxwc.gz",
+      "sha256": "59a067433cd108f681087a019d97cea1d416a4519a505a4b55b70ea3d58b961c",
+      "heightRange": [
+        373,
+        404
+      ]
+    },
+    {
+      "x": 4,
+      "y": 9,
+      "path": "chunks/4_9.pxwc.gz",
+      "sha256": "1c19dace5405dd2830e2cea0e003da2b1a4516e6ca0518badddd742420e8e165",
+      "heightRange": [
+        378,
+        422
+      ]
+    },
+    {
+      "x": 5,
+      "y": 9,
+      "path": "chunks/5_9.pxwc.gz",
+      "sha256": "2c99da95b21aa6def88c017d3eca12b4d4f420e1d22c0ee77d3c1e4bc60c2bf7",
+      "heightRange": [
+        352,
+        409
+      ]
+    },
+    {
+      "x": 6,
+      "y": 9,
+      "path": "chunks/6_9.pxwc.gz",
+      "sha256": "a319001d5308270931f970b3e81eb0fa4467d46350fd23a6b78d758d85f40b46",
+      "heightRange": [
+        335,
+        366
+      ]
+    },
+    {
+      "x": 7,
+      "y": 9,
+      "path": "chunks/7_9.pxwc.gz",
+      "sha256": "d76336f5dba7c82c42ae0b31113d045f6d262c5417c1bc6089975a67aaf3e123",
+      "heightRange": [
+        310,
+        364
+      ]
+    },
+    {
+      "x": 8,
+      "y": 9,
+      "path": "chunks/8_9.pxwc.gz",
+      "sha256": "f4a870073479ed246585f42b796372c5064b356e46f1b5e4f82de666005a4be4",
+      "heightRange": [
+        307,
+        360
+      ]
+    },
+    {
+      "x": 9,
+      "y": 9,
+      "path": "chunks/9_9.pxwc.gz",
+      "sha256": "fc2335cd7614459f38c2194cb2331797187574c13698a4cdf0fc6188016ad30c",
+      "heightRange": [
+        307,
+        357
+      ]
+    },
+    {
+      "x": 10,
+      "y": 9,
+      "path": "chunks/10_9.pxwc.gz",
+      "sha256": "22ad371e4cdc16abeb1127c88b1aae29409534839f403f5e914435651d892b92",
+      "heightRange": [
+        344,
+        360
+      ]
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "path": "chunks/11_9.pxwc.gz",
+      "sha256": "1326061a19c1344090ae8718c20c368ca8b0dffbf50a68b450df2b772a5967b8",
+      "heightRange": [
+        352,
+        361
+      ]
+    },
+    {
+      "x": 12,
+      "y": 9,
+      "path": "chunks/12_9.pxwc.gz",
+      "sha256": "0b39a2739bc82bc6084d25724e0fa2447ac8682f41a839ae11126801a7ca628d",
+      "heightRange": [
+        355,
+        363
+      ]
+    },
+    {
+      "x": 0,
+      "y": 10,
+      "path": "chunks/0_10.pxwc.gz",
+      "sha256": "f2e7975b787f58cc8cb8c095da90399f0ca6a0d69a831c1e2e2dd83e797fea1a",
+      "heightRange": [
+        359,
+        371
+      ]
+    },
+    {
+      "x": 1,
+      "y": 10,
+      "path": "chunks/1_10.pxwc.gz",
+      "sha256": "874297cfb202a16a13b3134f41501594e401d2818ebf5f3a17dd95b7085e15c7",
+      "heightRange": [
+        358,
+        372
+      ]
+    },
+    {
+      "x": 2,
+      "y": 10,
+      "path": "chunks/2_10.pxwc.gz",
+      "sha256": "ff899e9f162318d5241e5b21d01254e9c9be77cf1b824dbc099aeec374d78fff",
+      "heightRange": [
+        363,
+        383
+      ]
+    },
+    {
+      "x": 3,
+      "y": 10,
+      "path": "chunks/3_10.pxwc.gz",
+      "sha256": "b1ff4681bcda8a0b65be4c15e83bd0aaa8ecd33215e0b5a4d4d99a2f7427fa79",
+      "heightRange": [
+        366,
+        381
+      ]
+    },
+    {
+      "x": 4,
+      "y": 10,
+      "path": "chunks/4_10.pxwc.gz",
+      "sha256": "7fb4c204971f5b5eaecc1e718d2de8cc874e5ca8008da8d0d3448fd4c2e6a5cd",
+      "heightRange": [
+        370,
+        409
+      ]
+    },
+    {
+      "x": 5,
+      "y": 10,
+      "path": "chunks/5_10.pxwc.gz",
+      "sha256": "cac429dac6272aefea20bf4be7fa757360e52d4026bc4d512bd70fc297b45bfd",
+      "heightRange": [
+        358,
+        406
+      ]
+    },
+    {
+      "x": 6,
+      "y": 10,
+      "path": "chunks/6_10.pxwc.gz",
+      "sha256": "c6391ee29c0fa2ec9f95a81f1e3fa7cce766e9e8bebc20999d5db4923e88f581",
+      "heightRange": [
+        351,
+        388
+      ]
+    },
+    {
+      "x": 7,
+      "y": 10,
+      "path": "chunks/7_10.pxwc.gz",
+      "sha256": "a475bdae56446e80c3a6ed48593ae013339f6e78dd007fd45391f57a22b11632",
+      "heightRange": [
+        348,
+        384
+      ]
+    },
+    {
+      "x": 8,
+      "y": 10,
+      "path": "chunks/8_10.pxwc.gz",
+      "sha256": "78870b170f36751918bbfa2f38143e8810fcd7f99b6a06e02f4d53b0f62fe275",
+      "heightRange": [
+        303,
+        374
+      ]
+    },
+    {
+      "x": 9,
+      "y": 10,
+      "path": "chunks/9_10.pxwc.gz",
+      "sha256": "81087b8aeee9183f9bf3efcb948b215c72f04ed1d92bbd3b7d19e2e712875e13",
+      "heightRange": [
+        303,
+        368
+      ]
+    },
+    {
+      "x": 10,
+      "y": 10,
+      "path": "chunks/10_10.pxwc.gz",
+      "sha256": "575b01a9170058a0e87726ec9dcf42d6c5f35ebbfcff3beadd9b29ab9c42807c",
+      "heightRange": [
+        344,
+        377
+      ]
+    },
+    {
+      "x": 11,
+      "y": 10,
+      "path": "chunks/11_10.pxwc.gz",
+      "sha256": "1f53c44d075e360ae0bf5c6e03c3401769c80ca0bccc53275420a2e24c9447ab",
+      "heightRange": [
+        354,
+        378
+      ]
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "path": "chunks/12_10.pxwc.gz",
+      "sha256": "4a909093ee5a4b5c7f6c375cac42056f1d76ce8237311a7f53a7fd14ca141501",
+      "heightRange": [
+        358,
+        373
+      ]
+    },
+    {
+      "x": 0,
+      "y": 11,
+      "path": "chunks/0_11.pxwc.gz",
+      "sha256": "73c17a6fc1a09f861974e7b95b43b6c968cec8d037764aa651de99c35b92a698",
+      "heightRange": [
+        348,
+        364
+      ]
+    },
+    {
+      "x": 1,
+      "y": 11,
+      "path": "chunks/1_11.pxwc.gz",
+      "sha256": "e44d2f3d98f84548cc47fe1c86a361080dcdc850552e10bd0cce6fb7e6c7e950",
+      "heightRange": [
+        352,
+        364
+      ]
+    },
+    {
+      "x": 2,
+      "y": 11,
+      "path": "chunks/2_11.pxwc.gz",
+      "sha256": "c2434505935842c51a5f76bae3277c7c613ed3ab43988d0de0652c32eb4a7107",
+      "heightRange": [
+        355,
+        377
+      ]
+    },
+    {
+      "x": 3,
+      "y": 11,
+      "path": "chunks/3_11.pxwc.gz",
+      "sha256": "6aaefbcc230375f0ab0f39bd0e014ae41ff96472e5cadd77b20fedcb6ba1e813",
+      "heightRange": [
+        363,
+        382
+      ]
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "path": "chunks/4_11.pxwc.gz",
+      "sha256": "b3586f318f7a7c98b77a959ddd01034ff3047423eb6d4b367ac3465e2a536a34",
+      "heightRange": [
+        372,
+        394
+      ]
+    },
+    {
+      "x": 5,
+      "y": 11,
+      "path": "chunks/5_11.pxwc.gz",
+      "sha256": "7867ded4f8427f26dc0185fdaa432e69094a2691438fa7dd403630334be7b774",
+      "heightRange": [
+        384,
+        406
+      ]
+    },
+    {
+      "x": 6,
+      "y": 11,
+      "path": "chunks/6_11.pxwc.gz",
+      "sha256": "5bbe335bfb783e3bb35bd23277c5786149af321e1aafce8a91549a584aca9685",
+      "heightRange": [
+        380,
+        414
+      ]
+    },
+    {
+      "x": 7,
+      "y": 11,
+      "path": "chunks/7_11.pxwc.gz",
+      "sha256": "0a2ecfeaafd65bf2d8745d7a9e33fa99c8c44ae303a3b1ea9379c54ff4f70e67",
+      "heightRange": [
+        372,
+        414
+      ]
+    },
+    {
+      "x": 8,
+      "y": 11,
+      "path": "chunks/8_11.pxwc.gz",
+      "sha256": "83ffd9fe65cf48b561443a08b08db26ef044968c3fda2f1045ae8ebba3c5d108",
+      "heightRange": [
+        301,
+        386
+      ]
+    },
+    {
+      "x": 9,
+      "y": 11,
+      "path": "chunks/9_11.pxwc.gz",
+      "sha256": "5b69b3c2d983a027b8fd40f755a00f040e49b6dccb1df1819b27fb13d779dab2",
+      "heightRange": [
+        300,
+        375
+      ]
+    },
+    {
+      "x": 10,
+      "y": 11,
+      "path": "chunks/10_11.pxwc.gz",
+      "sha256": "d3bccb9650c53b769c9411185228d673d7ebbe40ee18936baf189cf04aa6d9f9",
+      "heightRange": [
+        327,
+        389
+      ]
+    },
+    {
+      "x": 11,
+      "y": 11,
+      "path": "chunks/11_11.pxwc.gz",
+      "sha256": "188b479bc1b0d0b6e4c5e2dafbc8460050d67c82ad1501f168cb9748e8b77d86",
+      "heightRange": [
+        325,
+        389
+      ]
+    },
+    {
+      "x": 12,
+      "y": 11,
+      "path": "chunks/12_11.pxwc.gz",
+      "sha256": "77fa9cd1a25bdffca409c3b1990f40bac862bcf97eff10d30274a425417efc4c",
+      "heightRange": [
+        307,
+        381
+      ]
+    },
+    {
+      "x": 0,
+      "y": 12,
+      "path": "chunks/0_12.pxwc.gz",
+      "sha256": "90837b66bdef09f68d668fa148032af5142c68e9e2bf4698f27a51adf261e231",
+      "heightRange": [
+        346,
+        356
+      ]
+    },
+    {
+      "x": 1,
+      "y": 12,
+      "path": "chunks/1_12.pxwc.gz",
+      "sha256": "147927b0527d560efa49b1194d73d053ecc63b3a3cf3a5117b54c7ccc3a21278",
+      "heightRange": [
+        351,
+        369
+      ]
+    },
+    {
+      "x": 2,
+      "y": 12,
+      "path": "chunks/2_12.pxwc.gz",
+      "sha256": "b0afc73536bb6720fcd3b219771ab62936a4dfd1a7f6194de77c7680a55904c2",
+      "heightRange": [
+        357,
+        375
+      ]
+    },
+    {
+      "x": 3,
+      "y": 12,
+      "path": "chunks/3_12.pxwc.gz",
+      "sha256": "92c7f7707926dc0a0712ac57f03c0dbd52c75715e9c2aa892db0003ad04337e8",
+      "heightRange": [
+        369,
+        376
+      ]
+    },
+    {
+      "x": 4,
+      "y": 12,
+      "path": "chunks/4_12.pxwc.gz",
+      "sha256": "99e6d15f18726de870ed3bdc656f4d26b174e22abe6cb3b57caf9d1ad9034349",
+      "heightRange": [
+        372,
+        387
+      ]
+    },
+    {
+      "x": 5,
+      "y": 12,
+      "path": "chunks/5_12.pxwc.gz",
+      "sha256": "f6778a6aa9e45621e120105ac0e768ee36818ec84fb4316edcdc9554878a7257",
+      "heightRange": [
+        384,
+        392
+      ]
+    },
+    {
+      "x": 6,
+      "y": 12,
+      "path": "chunks/6_12.pxwc.gz",
+      "sha256": "bfc5966de47584bca6ab2cc0ec015c393e5de29366e10472b5e48bec2a8dccc1",
+      "heightRange": [
+        389,
+        419
+      ]
+    },
+    {
+      "x": 7,
+      "y": 12,
+      "path": "chunks/7_12.pxwc.gz",
+      "sha256": "8ae18c1bf45e0c742c8d3e60865944c2aa175394fff1d03913fd5c7753b6615f",
+      "heightRange": [
+        381,
+        411
+      ]
+    },
+    {
+      "x": 8,
+      "y": 12,
+      "path": "chunks/8_12.pxwc.gz",
+      "sha256": "9f2401982ec9efe1ebfc9802218e758d10b07b1b4ad132f4b86a38922e916390",
+      "heightRange": [
+        320,
+        388
+      ]
+    },
+    {
+      "x": 9,
+      "y": 12,
+      "path": "chunks/9_12.pxwc.gz",
+      "sha256": "12bf2a340470df10a0918f3c63f4a6b18ecd1acbee259d10306b2f5f259bec69",
+      "heightRange": [
+        300,
+        333
+      ]
+    },
+    {
+      "x": 10,
+      "y": 12,
+      "path": "chunks/10_12.pxwc.gz",
+      "sha256": "5fa5e26e3b77fb8ae86fcc4d429f2e2b133c91f3aa4df30c246e558168102b6b",
+      "heightRange": [
+        313,
+        389
+      ]
+    },
+    {
+      "x": 11,
+      "y": 12,
+      "path": "chunks/11_12.pxwc.gz",
+      "sha256": "dc231f26761fc5331e7a24607c1d14449091e05c6e5b6cb98945137eebd1a782",
+      "heightRange": [
+        314,
+        389
+      ]
+    },
+    {
+      "x": 12,
+      "y": 12,
+      "path": "chunks/12_12.pxwc.gz",
+      "sha256": "38e308945d31c493389353876f72fc24efa09f6046aebb61b8d542e769863f59",
+      "heightRange": [
+        298,
+        326
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 10.0,
+    "metersPerStep": 4.082483,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.0
+  },
+  "heightRange": [
+    298,
+    422
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "arches",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    },
+    {
+      "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
+      "license": "ODbL 1.0",
+      "url": "https://docs.overturemaps.org/attribution/"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "residential",
+    "4": "tertiary",
+    "5": "secondary",
+    "6": "primary"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "steps",
+    "3": "footway"
+  },
+  "geology": {
+    "0": "windows",
+    "1": "salt-wash"
+  },
+  "start": {
+    "x": 96,
+    "y": 544
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=38.715 +lon_0=-109.53 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -109.575,
+      38.68,
+      -109.485,
+      38.75
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "ab373532242f5121",
+      "features": {
+        "kind": "overture",
+        "release": "2026-10-21.0"
+      },
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4,
+    "shores": true,
+    "maxSlope": 64
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "4e2ad7c98f59f24e722f38e72062daee52fcdcb71cafe706ce9f98992ae013d5",
+    "count": 32498
+  },
+  "depiction": {
+    "heightStretch": 1.25,
+    "scatter": 1.0
+  },
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      50,
+      50
+    ],
+    "sha256": "490724674b669cde2bab298374fccb2cb9885e7290f0701a4610a613710db9cf"
+  },
+  "packageHash": "6d01e819e143fbb8746859bcd3056cf27be6868d4b6a338776e3a33ae39a7779",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "f6dda277bbd52cd50ee95530f7d5d3dc6c954b28d58330f9d320f12b557bfa3d",
+    "version": 1,
+    "count": 36
+  }
+}

@@ -401,6 +401,41 @@ def drop_small(mask: np.ndarray, min_cells: int) -> np.ndarray:
     return keep[labels]
 
 
+def cut_corners(
+    corners: np.ndarray, k: int, cuts: list[tuple[float, float, float, float]]
+) -> np.ndarray:
+    """Corner elevations (metres, k corners per cell) with the ground within each
+    cut's radius lowered to its foot: cuts are (x, y in cells, radius in cells,
+    foot in metres). A DEM holds an arch's fin and a balanced rock's spike, which
+    would fill the opening under a span or hide the neck under a boulder (D-139)."""
+    out = corners.copy()
+    for x, y, r, foot in cuts:
+        x0, x1 = max(0, int((x - r) * k)), min(out.shape[1], int((x + r) * k) + 2)
+        y0, y1 = max(0, int((y - r) * k)), min(out.shape[0], int((y + r) * k) + 2)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        win = out[y0:y1, x0:x1]
+        inside = np.hypot(xx / k - x, yy / k - y) <= r
+        win[inside] = np.minimum(win[inside], foot)
+    return out
+
+
+def landmark_cuts(region: Region) -> list[tuple[float, float, float, float]]:
+    """The cuts of a region's anchored landmarks that have `cut` and `baseMeters` (D-139)."""
+    lms = [
+        lm
+        for lm in (region.objects or {}).get("landmarks") or []
+        if lm.get("cut") and "baseMeters" in lm and "lon" in lm
+    ]
+    if not lms:
+        return []
+    xs, ys = region.lonlat_to_cell([lm["lon"] for lm in lms], [lm["lat"] for lm in lms])
+    m = region.meters_per_cell
+    return [
+        (float(x), float(y), float(lm["cut"]) / m, float(lm["baseMeters"]))
+        for x, y, lm in zip(xs, ys, lms, strict=True)
+    ]
+
+
 def drop_sloped(mask: np.ndarray, corner_m: np.ndarray, max_relief: float) -> np.ndarray:
     """Remove water bodies whose ground spans more than max_relief metres.
 
@@ -733,6 +768,10 @@ def build(
     # fetch (cached)
     progress.stage("terrain", "elevation and land cover (downloads are cached)")
     dem = layout.corner_elevation(region.sources["dem"])
+    # ponytail: uniform grids only; a warped layout's cells aren't lonlat_to_cell's
+    cuts = [] if layout.warped else landmark_cuts(region)
+    if cuts:
+        dem = cut_corners(dem, 1, cuts)
     dem_real = dem
     vref = vfac = None
     if layout.warped and layout.spec.vertical:
@@ -1033,6 +1072,8 @@ def build(
         k = int(region.micro["k"])
         dem_spec = region.sources["dem"] | (region.micro.get("dem") or {})
         micro_m = layout.corner_elevation(dem_spec, k)
+        if cuts:
+            micro_m = cut_corners(micro_m, k, cuts)
         if layout.warped and layout.spec.vertical:
             micro_m = layout.relief(micro_m, k)[0]
         # smoothed surfaces (M3.5): {surface: metres}, a Gaussian over each surface's own ground
@@ -1048,8 +1089,11 @@ def build(
             on_bed = [i for i, c in path_ids.items() if c in PATHS_ON_ROAD_BEDS]
             path_bed = np.where(np.isin(path_layer.cls, on_bed), path_layer.mask, 0)
         # shorelines (D-094): the map's water polygons and river lines shape the
-        # ground under the water planes, at micro-cell resolution
-        areas = _areas_in_cells(layout, feats.water_areas(bbox, WATER_AREA_CLASSES), bbox)
+        # ground under the water planes, at micro-cell resolution; the classes the
+        # spec takes as lakes too (hot springs, moats), whose cells are water
+        lake_classes = (region.sources.get("lakes") or {}).get("classes", [])
+        shore_classes = sorted(set(WATER_AREA_CLASSES) | set(lake_classes))
+        areas = _areas_in_cells(layout, feats.water_areas(bbox, shore_classes), bbox)
         river_hw = (
             terrain.get("riverWidthMeters", region.meters_per_cell) / 2 / region.meters_per_cell
         )
@@ -1104,6 +1148,11 @@ def build(
             water_level=water_level,
         )
         progress.log(f"objects: {object_counts}")
+        # pools lie flat on beds sunk to their level (D-138)
+        if micro is not None and region.objects.get("pools"):
+            mc, k_micro = micro
+            groups = {rule["group"] for rule in region.objects["pools"]}
+            micro = (object_stage.bed_pools(instances, groups, mc, k_micro), k_micro)
         # over water, a bridge's deck is the road: the water under it stays water (D-056)
         under = bridge_decks_over_water(
             instances, (water_level != NO_WATER) | river, road_layer.mask.shape, on_road

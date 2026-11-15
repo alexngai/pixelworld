@@ -177,7 +177,7 @@ function packSchema(): JsonSchema {
           },
           ["background", "saturation", "multiply", "add", "emissive"],
         ),
-        atmosphere: obj({ fog: ref("fog") }),
+        atmosphere: obj({ fog: ref("fog"), steam: ref("steam") }),
       },
       ["id", "name", "shades", "background", "silhouette", "outline", "ao", "ramps", "strataSets", "defaultStrata", "surfaces"],
     ),
@@ -229,6 +229,28 @@ function packSchema(): JsonSchema {
           night: obj({ density: num({ minimum: 0 }) }, ["density"]),
         },
         ["ramp", "shade", "veil", "ceilingMeters", "fadeMeters", "areas"],
+      ),
+      steam: obj(
+        {
+          ramp: str,
+          shade: { type: "integer", minimum: 0, maximum: SHADES - 1 },
+          veil: { type: "array", items: unit, minItems: 1 },
+          sources: map(
+            obj(
+              {
+                heightMeters: num({ exclusiveMinimum: 0 }),
+                radiusMeters: num({ exclusiveMinimum: 0 }),
+                density: unit,
+                minAreaMeters: num({ minimum: 0 }),
+              },
+              ["heightMeters", "radiusMeters", "density"],
+            ),
+            { minProperties: 1 },
+          ),
+          wind: obj({ toward: num(), speed: num({ minimum: 0 }) }, ["toward", "speed"]),
+          night: obj({ density: num({ minimum: 0 }) }, ["density"]),
+        },
+        ["ramp", "shade", "veil", "sources"],
       ),
     },
   };

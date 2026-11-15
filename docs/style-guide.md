@@ -643,7 +643,26 @@ A full pack (`worlds/_styles/hongkong/style.json`), laid out like `tokyo` with i
 | `landmark.tower.cylinder` | `column` (core's kit) | Hopewell Centre (D-133): a white cylinder striped with its windows, a glazed ring at the top for the revolving restaurant |
 | `landmark.hotel` | `grandHotel` (Hong Kong's) | The Peninsula, on the old hotel's footprint: cream wings round the forecourt over a granite ground storey, paired windows, a cornice and a balustrade; across the back of its main block, the 1994 tower to the full height, its windows in bands, its top storey glazed and a helipad's ring on its roof |
 
-## 24. Sierra Nevada (the `sierra` pack, D-136)
+## 24. Yellowstone (the `yellowstone` pack, D-138)
+
+A variant of `desert-southwest` (§18) for the geyser basins, without the Grand Canyon's strata.
+
+- **Ground:**
+  - WorldCover's bare ground (`desert`) is white `sinter`, and its moss and lichen (`scrub`), the basins' mats, is stained `mat-brown`.
+  - Meadows are a dry olive `grass`, and cliffs one `rhyolite` band.
+  - Footways are drawn as dark `boardwalk`, the paved trail (cycleway) as asphalt.
+- **Trees:** narrow `lodgepole` conifers 20–32 voxels tall, with silver `snag` columns among them for the 1988 fires.
+  - Orange `ground.mat` discs (a `blob` with a negative trunk, one voxel thick) dot the mats and the sinter.
+- **Hot pools** (`landmark.pool`, `hotPool`): the map's hot springs on their own outlines, a pipeline rule (`objects.pools`), at their water's level.
+  - **Rings, from the edge in:** `mat` orange, `pool-yellow`, `pool-green` (not on a third of them), `water` turquoise, `pool-deep` blue.
+  - Each ring is a ninth of the way to the middle; borders are ragged by a voxel and the deep glints.
+- **Geyser cones** (`landmark.geyser.cone`, `.castle`): `blob` domes in `snag` grey, so they show on white sinter.
+- **Steam** (`atmosphere.steam`, a screen pass like fog's, §16): a plume over every pool of 20 m² or more (14 m high) and every cone (22 m).
+  - The plumes lean with a 3 m/s wind toward 60° and are veiled toward `snow`'s lightest shade, at levels 0.4, 0.65 and 0.9.
+  - Each plume widens and thins as it rises, breaks into puffs that climb 1.5 m a second, and stays behind what stands in front of it.
+  - By night it is drawn at 0.6.
+
+## 25. Sierra Nevada (the `sierra` pack, D-136)
 
 A full pack (`worlds/_styles/sierra/style.json`): `desert-southwest`'s, less the Grand Canyon's strata ramps, with Yosemite's granite and greens. It names no plugins.
 

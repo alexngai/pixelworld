@@ -670,6 +670,7 @@ Other keys here are the source's options.
 | `streetTrees` | [list of mappings](#spec-objects-streettrees) | — | Rows of trees along roads. |
 | `streetProps` | [list of mappings](#spec-objects-streetprops) | — | Street lights and signals: rows, or at junctions. |
 | `walls` | [list of mappings](#spec-objects-walls) | — | Walls along Overture's barrier lines, in segments turned with them (D-104). |
+| `pools` | [list of mappings](#spec-objects-pools) | — | The map's water areas as objects on their own outlines, at their water's level: hot pools drawn in rings of colour (D-138). An area takes the first rule it matches. |
 | `landmarks` | list of ids or mappings | — | Landmarks: registry ids (`worlds/_landmarks/`), `{ id, …overrides }`, or inline mappings. |
 | `landmarkDepiction` | string | `generic` | Which registry depiction to draw. |
 | `depiction` | [mapping](#spec-objects-depiction) | — | How big things are drawn at this scale level. |
@@ -822,6 +823,16 @@ Other keys here are the source's options.
 | `diagonal` | string | — | The group on diagonal lines. |
 | `slants` | list of strings | — | The groups on the 2:1 lines. |
 
+<a id="spec-objects-pools"></a>
+#### `objects.pools[]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `group` | string | **required** | The group a pool takes. |
+| `classes` | list of strings | **required** | Overture water area classes (`hot_spring`, `spring`, `water` …). |
+| `ids` | list of strings | — | Only these Overture water areas (by id). |
+| `minArea` | number, ≥ 0 (m²) | 0 | Smaller areas are left out. |
+
 <a id="spec-objects-landmarks"></a>
 #### `objects.landmarks[]`
 
@@ -841,6 +852,7 @@ Other keys here are the source's options.
 | `segmentCells` | number, > 0 | — | A line landmark's pieces are at most this long. |
 | `snap` | true/false | — | A bridge turns to its road's grid direction. |
 | `clear` | number, ≥ 0 (m) | 0 | Other buildings are kept this far away. |
+| `cut` | number, ≥ 0 (m) | — | An anchored landmark with `baseMeters`: the ground this close is lowered to its foot (an arch's fin or a balanced rock's spike, which the elevation holds; D-139). |
 | `orient` | integer | 0 | Quarter turns. |
 | `scale` | number, > 0 | `depiction.landmarks.scale` | Drawn this many times its size. |
 | `replaces` | list of strings | — | Overture building names or ids it stands in for. |

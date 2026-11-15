@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { generatorIssues, type StylePack } from "@pixelworlds/style";
+import { generatorIssues, mergeStylePacks, type StylePack } from "@pixelworlds/style";
 import { describe, expect, it } from "vitest";
 import {
   KNOWN_PLUGIN_GENERATORS,
@@ -95,8 +95,12 @@ describe("roles", () => {
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
     expect(ids.length).toBeGreaterThan(1);
+    // a pack that extends another is checked with its parents merged in, as the viewer loads it
+    const raw = new Map(ids.map((id) => [id, JSON.parse(readFileSync(`${root}${id}/style.json`, "utf8")) as Record<string, unknown>]));
+    const merged = (json: Record<string, unknown>): Record<string, unknown> =>
+      typeof json.extends === "string" ? mergeStylePacks(merged(raw.get(json.extends)!), json) : json;
     for (const id of ids) {
-      const pack = JSON.parse(readFileSync(`${root}${id}/style.json`, "utf8")) as StylePack;
+      const pack = merged(raw.get(id)!) as unknown as StylePack;
       const fromPlugins = Object.entries(KNOWN_PLUGIN_GENERATORS).filter(([, plugin]) => pack.plugins?.includes(plugin));
       const known = [...listGenerators().map((g) => g.name), ...fromPlugins.map(([name]) => name)];
       expect(generatorIssues(pack, known), id).toEqual([]);

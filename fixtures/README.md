@@ -321,6 +321,49 @@ uv run pixelworld build ../worlds/hongkong/region.yaml
 
 Sources and licenses: as `hongkong-island`'s.
 
+## zion-walk
+
+Zion Canyon's walking level (D-137), built from [`worlds/zion/walk.yaml`](../worlds/zion/walk.yaml) on the `zion` style pack (it extends `desert-southwest`): the canyon of the North Fork of the Virgin River from Springdale and the visitor centre to the Temple of Sinawava and the end of the Riverside Walk, at 10 m per cell (800 × 1222 cells), in true relief (vertical ×1.0).
+
+- **Terrain:** USGS 3DEP 1/3″ at full resolution with 4 × 4 micro-cells (2.5 m) that slope however steep, so walls are smooth faces (`micro.maxSlope`, D-141), from 1,178 m on the river at Springdale to 2,274 m on the rims. Cliffs take the pack's Zion strata by elevation: Chinle, Moenave, Kayenta, the Navajo sandstone's red base, salmon middle and white top, and the Carmel on the highest rims.
+- **Water:** the Virgin River only, 20 m wide (3,577 water cells); Overture's streams here are dry washes.
+- **Objects:** 44,879 broadleaf trees and 10,452 pinyon-juniper where the canopy height map has trees 4 m or taller, 10,037 shrubs, and 423 buildings: Springdale's (84 commercial, 230 residential) and 109 in the park drawn rustic (`building.park`: the lodge, its cabins, the museum). 331 traffic routes.
+- **Size:** 5.7 MB (chunks 4.7 MB, objects 0.95 MB). Built in 190 s on a first build (the canopy downloads), 18 s from the download cache.
+
+uv run pixelworld build ../worlds/zion/walk.yaml
+
+- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rivers and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+
+## glacier-walk, glacier-fly
+
+Glacier National Park's high country (D-140), built from [`worlds/glacier/walk.yaml`](../worlds/glacier/walk.yaml) and [`fly.yaml`](../worlds/glacier/fly.yaml) on the `glacier` style pack: Logan Pass and the Going-to-the-Sun Road along the Garden Wall, Grinnell Glacier and Upper Grinnell Lake, and Many Glacier's lakes, in `[-113.83, 48.68, -113.63, 48.81]`.
+
+- **Walking (`glacier-walk`):** 10 m per cell (1,474 × 1,447 cells, 552 chunks), true relief, objects 1.25× (`heightStretch`), micro-terrain K=2 from the 1/3″ DEM with walls drawn as faces (`micro.maxSlope: 64`, D-141); roads, trails and streams along their centre lines; Overture's lakes levelled. Heights about 1,030–3,050 m in 4.08 m steps. 96 buildings at Many Glacier and Logan Pass, 55 traffic routes (two of them the tour boats on Swiftcurrent Lake and Lake Josephine). Road report clean. 5.7 MB, built in about 23 s from the download cache.
+- **Flying (`glacier-fly`):** the same box at 50 m (296 × 290 cells, 25 chunks), micro-terrain K=4 with walls as faces, rivers only, no buildings. 624 KB, about 6 s.
+- **Strata:** the Belt Supergroup's formations by elevation, in four strips along the strike, each its own `geology` province and strata set, fitted to the USGS geologic map (D-140).
+
+uv run pixelworld build ../worlds/glacier/walk.yaml
+uv run pixelworld build ../worlds/glacier/fly.yaml
+
+- Roads, paths, water, rivers and buildings: Overture Maps (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints). ODbL 1.0.
+
+## yellowstone-walk
+
+Yellowstone's Upper and Midway Geyser Basins (D-138), built from [`worlds/yellowstone/walk.yaml`](../worlds/yellowstone/walk.yaml) on the `yellowstone` style pack: the Firehole River from Old Faithful and the Old Faithful Inn to Grand Prismatic Spring and Excelsior Geyser, at 6 m per cell (796 × 1,538 cells) so that small hot pools hold a cell. Heights are true for objects (`heightStretch` 1.0).
+
+- **Terrain:** 3DEP 1/3″ read bilinearly at full resolution, 4 × 4 micro-terrain in which every micro-cell slopes (`maxSlope: 64`, D-141); shores shaped round the hot springs too (D-094); 2,241–2,558 m.
+- **Ground:** WorldCover's bare ground drawn as white sinter and its moss and lichen (the basins' mats) as stained sinter; meadows, lodgepole forest with snags (the client's scatter).
+- **Water:** the Firehole and the Little Firehole, and 204 of Overture's hot springs, springs and ponds, each levelled as a pool (2,830 cells).
+- **Objects:** 206 buildings, the Old Faithful Inn on its footprint at 16 m, 13 geyser cones at Overture's geyser points, and 465 hot pools on their outlines, drawn in rings of colour (`objects.pools`); 142 traffic routes. The style's steam rises over the pools and cones (`atmosphere.steam`).
+- **Road report:** clean.
+- **Size:** 5.2 MB. Rebuilt in about 25 s from the download cache.
+
+uv run pixelworld build ../worlds/yellowstone/walk.yaml
+
+- Roads, paths, rivers, hot springs, geyser points and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+
 ## yosemite, yosemite-valley
 
 Yosemite's driving and walking levels (D-136), built from [`worlds/yosemite/region.yaml`](../worlds/yosemite/region.yaml) and [`worlds/yosemite/valley.yaml`](../worlds/yosemite/valley.yaml) on the `sierra` style pack, each other's levels.
@@ -334,7 +377,6 @@ uv run pixelworld build ../worlds/yosemite/region.yaml
 uv run pixelworld build ../worlds/yosemite/valley.yaml
 
 - Elevation: USGS 3D Elevation Program. Public domain.
-- Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads, paths, rivers, land use and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Tree canopy (the walking level): High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 

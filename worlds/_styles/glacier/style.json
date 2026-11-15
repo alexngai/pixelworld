@@ -1,0 +1,554 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "id": "glacier",
+  "name": "Glacier",
+  "extends": "desert-southwest",
+  "terrain": {
+    "steepRockSlope": 1.2
+  },
+  "ramps": {
+    "kaibab": null,
+    "toroweap": null,
+    "coconino": null,
+    "hermit": null,
+    "supai": null,
+    "redwall": null,
+    "muav": null,
+    "tonto": null,
+    "tapeats": null,
+    "vishnu": null,
+    "dolomite": null,
+    "pine": null,
+    "palm": null,
+    "sand": null,
+    "conifer": null,
+    "scrub": null,
+    "grass": null,
+    "altyn": ["#2c2a31", "#4a453f", "#716750", "#988a65", "#bba97f", "#d8c89e"],
+    "appekunny": [
+      "#1b2229",
+      "#2a3838",
+      "#3d5249",
+      "#536b58",
+      "#6c8567",
+      "#8aa07c"
+    ],
+    "grinnell": [
+      "#23131e",
+      "#401b26",
+      "#62262b",
+      "#843531",
+      "#a1473a",
+      "#bb624a"
+    ],
+    "empire": [
+      "#1f232a",
+      "#333b3d",
+      "#4b5753",
+      "#64726a",
+      "#7f8e82",
+      "#9eab9b"
+    ],
+    "helena": [
+      "#2b2a32",
+      "#48464c",
+      "#6a6765",
+      "#8d877c",
+      "#aea694",
+      "#c8bfaa"
+    ],
+    "purcell": [
+      "#111118",
+      "#1a1a22",
+      "#24242d",
+      "#302f38",
+      "#3d3c45",
+      "#4e4d55"
+    ],
+    "snowslip": [
+      "#24181f",
+      "#3d2629",
+      "#5a3734",
+      "#764a40",
+      "#8f604f",
+      "#a67a64"
+    ],
+    "subalpine": [
+      "#0c1820",
+      "#122620",
+      "#193526",
+      "#22452c",
+      "#2d5733",
+      "#3b6a3b"
+    ],
+    "spruce": [
+      "#0d1722",
+      "#132424",
+      "#1a322b",
+      "#224131",
+      "#2c5139",
+      "#3a6243"
+    ],
+    "meadow": [
+      "#1d2a23",
+      "#2d402e",
+      "#435937",
+      "#5b7341",
+      "#768d4c",
+      "#94a85c"
+    ],
+    "krummholz": [
+      "#14201f",
+      "#1f3029",
+      "#2c4232",
+      "#3b553a",
+      "#4d6944",
+      "#637e50"
+    ],
+    "heath": ["#1f2422", "#323a32", "#4a523f", "#636a4c", "#7d835c", "#999d6f"],
+    "water": ["#0d2530", "#114049", "#16605f", "#227f78", "#3a9d8f", "#62bba6"],
+    "snow": ["#3e4a5e", "#5f6e86", "#8496ad", "#aabbcd", "#cfdde8", "#f0f6fa"],
+    "trail": ["#2a2629", "#433b38", "#625547", "#827159", "#a18e70", "#bcaa8b"],
+    "stucco": [
+      "#1e1513",
+      "#33221b",
+      "#4c3224",
+      "#66442e",
+      "#80583a",
+      "#9a6d48"
+    ],
+    "roof-tile": [
+      "#16191b",
+      "#222a29",
+      "#2f3a36",
+      "#3e4b43",
+      "#4f5e51",
+      "#637262"
+    ],
+    "marble": [
+      "#3a3c45",
+      "#5f626b",
+      "#8a8d93",
+      "#b3b5b8",
+      "#d6d6d6",
+      "#f1f0ec"
+    ],
+    "talus": ["#25252c", "#3b3a40", "#55524f", "#6f6a62", "#8a8376", "#a49c8b"]
+  },
+  "strataSets": {
+    "grand-canyon": null,
+    "desert-ranges": null,
+    "belt-west": [
+      {
+        "name": "Snowslip formation",
+        "aboveMeters": 2125,
+        "ramp": "snowslip"
+      },
+      {
+        "name": "Helena formation, upper",
+        "aboveMeters": 1955,
+        "ramp": "helena"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 1950,
+        "ramp": "marble"
+      },
+      {
+        "name": "Purcell sill (diorite)",
+        "aboveMeters": 1920,
+        "ramp": "purcell"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 1915,
+        "ramp": "marble"
+      },
+      {
+        "name": "Helena formation",
+        "aboveMeters": 1275,
+        "ramp": "helena"
+      },
+      {
+        "name": "Empire formation",
+        "aboveMeters": 1195,
+        "ramp": "empire"
+      },
+      {
+        "name": "Grinnell formation",
+        "aboveMeters": 733,
+        "ramp": "grinnell"
+      },
+      {
+        "name": "Appekunny formation",
+        "aboveMeters": 96,
+        "ramp": "appekunny"
+      },
+      {
+        "name": "Altyn formation",
+        "aboveMeters": -100000,
+        "ramp": "altyn"
+      }
+    ],
+    "belt-garden": [
+      {
+        "name": "Snowslip formation",
+        "aboveMeters": 2505,
+        "ramp": "snowslip"
+      },
+      {
+        "name": "Helena formation, upper",
+        "aboveMeters": 2335,
+        "ramp": "helena"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 2330,
+        "ramp": "marble"
+      },
+      {
+        "name": "Purcell sill (diorite)",
+        "aboveMeters": 2300,
+        "ramp": "purcell"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 2295,
+        "ramp": "marble"
+      },
+      {
+        "name": "Helena formation",
+        "aboveMeters": 1655,
+        "ramp": "helena"
+      },
+      {
+        "name": "Empire formation",
+        "aboveMeters": 1575,
+        "ramp": "empire"
+      },
+      {
+        "name": "Grinnell formation",
+        "aboveMeters": 1113,
+        "ramp": "grinnell"
+      },
+      {
+        "name": "Appekunny formation",
+        "aboveMeters": 476,
+        "ramp": "appekunny"
+      },
+      {
+        "name": "Altyn formation",
+        "aboveMeters": -100000,
+        "ramp": "altyn"
+      }
+    ],
+    "belt-grinnell": [
+      {
+        "name": "Snowslip formation",
+        "aboveMeters": 2915,
+        "ramp": "snowslip"
+      },
+      {
+        "name": "Helena formation, upper",
+        "aboveMeters": 2745,
+        "ramp": "helena"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 2740,
+        "ramp": "marble"
+      },
+      {
+        "name": "Purcell sill (diorite)",
+        "aboveMeters": 2710,
+        "ramp": "purcell"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 2705,
+        "ramp": "marble"
+      },
+      {
+        "name": "Helena formation",
+        "aboveMeters": 2065,
+        "ramp": "helena"
+      },
+      {
+        "name": "Empire formation",
+        "aboveMeters": 1985,
+        "ramp": "empire"
+      },
+      {
+        "name": "Grinnell formation",
+        "aboveMeters": 1523,
+        "ramp": "grinnell"
+      },
+      {
+        "name": "Appekunny formation",
+        "aboveMeters": 886,
+        "ramp": "appekunny"
+      },
+      {
+        "name": "Altyn formation",
+        "aboveMeters": -100000,
+        "ramp": "altyn"
+      }
+    ],
+    "belt-many": [
+      {
+        "name": "Snowslip formation",
+        "aboveMeters": 3615,
+        "ramp": "snowslip"
+      },
+      {
+        "name": "Helena formation, upper",
+        "aboveMeters": 3445,
+        "ramp": "helena"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 3440,
+        "ramp": "marble"
+      },
+      {
+        "name": "Purcell sill (diorite)",
+        "aboveMeters": 3410,
+        "ramp": "purcell"
+      },
+      {
+        "name": "Marble (sill contact)",
+        "aboveMeters": 3405,
+        "ramp": "marble"
+      },
+      {
+        "name": "Helena formation",
+        "aboveMeters": 2765,
+        "ramp": "helena"
+      },
+      {
+        "name": "Empire formation",
+        "aboveMeters": 2685,
+        "ramp": "empire"
+      },
+      {
+        "name": "Grinnell formation",
+        "aboveMeters": 2223,
+        "ramp": "grinnell"
+      },
+      {
+        "name": "Appekunny formation",
+        "aboveMeters": 1586,
+        "ramp": "appekunny"
+      },
+      {
+        "name": "Altyn formation",
+        "aboveMeters": -100000,
+        "ramp": "altyn"
+      }
+    ]
+  },
+  "defaultStrata": "belt-garden",
+  "provinces": {
+    "colorado-plateau": null,
+    "basin-and-range": null,
+    "belt-west": "belt-west",
+    "belt-garden": "belt-garden",
+    "belt-grinnell": "belt-grinnell",
+    "belt-many": "belt-many"
+  },
+  "surfaces": {
+    "woodland": {
+      "ramp": "subalpine",
+      "pattern": "trees",
+      "density": 0.12
+    },
+    "forest": {
+      "ramp": "subalpine",
+      "pattern": "trees",
+      "density": 0.2
+    },
+    "scrub": {
+      "ramp": "krummholz",
+      "pattern": "speckle",
+      "density": 0.08
+    },
+    "grass": {
+      "ramp": "meadow",
+      "pattern": "speckle",
+      "density": 0.06
+    },
+    "desert": {
+      "ramp": "talus",
+      "pattern": "speckle",
+      "density": 0.08
+    },
+    "snow": {
+      "ramp": "snow",
+      "pattern": "sparkle",
+      "density": 0.015
+    },
+    "none": {
+      "ramp": "purcell",
+      "pattern": "none"
+    },
+    "sand": {
+      "ramp": "trail",
+      "pattern": "speckle",
+      "density": 0.05
+    }
+  },
+  "scatter": {
+    "woodland": [
+      {
+        "group": "tree.fir",
+        "perCell": 1.6
+      },
+      {
+        "group": "tree.spruce",
+        "perCell": 0.9
+      }
+    ],
+    "forest": [
+      {
+        "group": "tree.fir",
+        "perCell": 2.2
+      },
+      {
+        "group": "tree.spruce",
+        "perCell": 0.6
+      }
+    ],
+    "scrub": [
+      {
+        "group": "shrub.krummholz",
+        "perCell": 0.8
+      },
+      {
+        "group": "tree.fir",
+        "perCell": 0.15
+      }
+    ],
+    "grass": [
+      {
+        "group": "shrub.heath",
+        "perCell": 0.18
+      },
+      {
+        "group": "tree.fir",
+        "perCell": 0.04
+      }
+    ],
+    "desert": [
+      {
+        "group": "rock.boulder",
+        "perCell": 0.1
+      }
+    ],
+    "rock": [
+      {
+        "group": "rock.boulder",
+        "perCell": 0.04
+      }
+    ],
+    "urban": [
+      {
+        "group": "tree.fir",
+        "perCell": 0.1
+      }
+    ]
+  },
+  "paths": {
+    "classes": {
+      "path": {
+        "ramp": "trail"
+      },
+      "footway": {
+        "ramp": "trail"
+      },
+      "steps": {
+        "ramp": "trail"
+      }
+    }
+  },
+  "assets": {
+    "tree.fir": {
+      "generator": "conifer",
+      "ramps": {
+        "crown": "subalpine",
+        "trunk": "bark"
+      },
+      "params": {
+        "radius": 1,
+        "minHeight": 7,
+        "heightJitter": 5
+      }
+    },
+    "tree.spruce": {
+      "generator": "conifer",
+      "ramps": {
+        "crown": "spruce",
+        "trunk": "bark"
+      },
+      "params": {
+        "radius": 2,
+        "minHeight": 8,
+        "heightJitter": 4
+      }
+    },
+    "tree.conifer": {
+      "ramps": {
+        "crown": "spruce"
+      }
+    },
+    "tree.pinyon-juniper": null,
+    "tree.palm": null,
+    "shrub.krummholz": {
+      "generator": "blob",
+      "ramps": {
+        "body": "krummholz"
+      },
+      "params": {
+        "radius": 0.8,
+        "radiusJitter": 0.5,
+        "height": 0.5,
+        "trunk": 0,
+        "holes": 0.1
+      }
+    },
+    "shrub.heath": {
+      "generator": "blob",
+      "ramps": {
+        "body": "heath"
+      },
+      "params": {
+        "radius": 0.5,
+        "radiusJitter": 0.3,
+        "height": 0.35,
+        "trunk": 0,
+        "holes": 0.2
+      }
+    },
+    "shrub": {
+      "ramps": {
+        "body": "krummholz"
+      }
+    },
+    "rock.boulder": {
+      "generator": "boulder",
+      "ramps": {
+        "rock": "helena"
+      }
+    },
+    "city.blocks": {
+      "ramps": {
+        "green": "meadow"
+      }
+    },
+    "landmark.tower.lookout": {
+      "ramps": {
+        "stone": "helena",
+        "detail": "purcell"
+      }
+    }
+  }
+}
