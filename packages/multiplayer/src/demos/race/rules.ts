@@ -14,6 +14,8 @@ import type { RouteNetwork } from "pixelworld/traffic";
 
 /** The driving level the race is on (100 m cells at the Strip). */
 export const RACE_WORLD = "/southwest/";
+/** The lobby's paths (D-143): the game's own, beside the other demos' on one server. */
+export const RACE_LOBBY = "/race/api";
 /** The fixed step both sides drive at (s): one input each, and a race's clock counts them. */
 export const TICK = 1 / 60;
 

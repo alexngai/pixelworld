@@ -1,15 +1,13 @@
-import { cpSync } from "node:fs";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { bakeCode } from "../../../../../tools/bake-code.mjs";
 
 /**
- * The dogfight demo (D-114): `pnpm --filter @pixelworlds/multiplayer demo:dogfight`
- * serves the page with the dogfight's rooms on the same port (ws://…/dogfight?room=);
- * `demo:dogfight:build` builds the page (dist/client, the world packages in it)
- * and the production server (dist/server/serve.js, one file, everything
- * bundled), which `demo:dogfight:start` runs.
+ * The dogfight demo's dev server (D-114): `pnpm --filter @pixelworlds/multiplayer demo:dogfight`
+ * serves the page with the dogfight's rooms and lobby on the same port
+ * (ws://…/dogfight?room=, /dogfight/api). The production build is the three
+ * demos' together (../vite.config.ts, D-143).
  */
 
 /**
@@ -32,26 +30,12 @@ const rooms: Plugin = {
 };
 
 const FIXTURES = fileURLToPath(new URL("../../../../../fixtures", import.meta.url));
-/** The world packages the demo flies (rules.ts's DOGFIGHT_WORLD): the only ones a build copies. */
-const WORLDS = ["southwest-fly"];
 
-/** A build of the page: only the demo's world packages beside it, not every one in fixtures/. */
-const worlds: Plugin = {
-  name: "dogfight-worlds",
-  apply: (_, env) => env.command === "build" && !env.isSsrBuild,
-  writeBundle(out) {
-    for (const w of WORLDS) cpSync(`${FIXTURES}/${w}`, `${out.dir}/${w}`, { recursive: true });
-  },
-};
-
-export default defineConfig(({ isSsrBuild }) => ({
+export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   // the committed world packages, served as static files by the dev server (/southwest-fly/ and the rest)
   publicDir: FIXTURES,
   server: { port: 5253, strictPort: true },
-  preview: { port: 4253, strictPort: true },
   worker: { format: "es" },
-  plugins: [bakeCode(), rooms, worlds], // the bake code's identity keys the tile cache (D-072)
-  ssr: isSsrBuild ? { noExternal: true, target: "node" as const } : undefined,
-  build: { outDir: isSsrBuild ? "dist/server" : "dist/client", emptyOutDir: true, copyPublicDir: false },
-}));
+  plugins: [bakeCode(), rooms], // the bake code's identity keys the tile cache (D-072)
+});

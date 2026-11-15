@@ -7,11 +7,12 @@ import { stylePack } from "@pixelworlds/game/src/styles";
 import { PLANE } from "@pixelworlds/game/src/tuning";
 import { DRAW_ONLY_LAYERS, openWorld, type OpenedWorld, type OpenWorldOptions } from "pixelworld/engine";
 import { cleanName, type RoomInfo } from "../../index";
-import { Areas, History, Phases, Replicator, TickRoom, attachRelay, fileFetch, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
+import { Areas, History, Phases, Replicator, TickRoom, attachRelay, fileFetch, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type RelayOptions, type TickRole } from "../../server";
 import {
   BOT,
   CREDIT_S,
   DOGFIGHT_START,
+  DOGFIGHT_LOBBY,
   DOGFIGHT_WORLD,
   GUN,
   HP,
@@ -109,7 +110,7 @@ export function attachDogfight(
     chunkBudgetMB?: number;
     /** The directory holding the world packages, read from disk (D-123); without it, over HTTP from the server itself. */
     worlds?: string;
-  } = {},
+  } & Pick<RelayOptions, "version" | "sameOrigin"> = {},
 ): Relay {
   let opened: Promise<DogfightWorld> | null = null;
   const world = () => {
@@ -127,6 +128,8 @@ export function attachDogfight(
   return attachRelay(server, {
     path: "/dogfight",
     lag: opts.lag,
+    version: opts.version,
+    sameOrigin: opts.sameOrigin,
     maxRooms: opts.maxRooms,
     idle: { named: 60_000 },
     log: opts.log ?? logLine,
@@ -137,6 +140,7 @@ export function attachDogfight(
 /** The lobby for the dogfight's rooms: quick play puts a page in a room that isn't nearly over. */
 export function dogfightLobby(relay: Relay): (req: IncomingMessage, res: ServerResponse) => boolean {
   return lobbyHandler(relay, {
+    base: DOGFIGHT_LOBBY,
     fits: (r: RoomInfo) => {
       const i = r.info as Partial<DogfightInfo>;
       return i.phase !== "ended" && (i.left === null || i.left === undefined || i.left > 60);

@@ -1,5 +1,5 @@
-# Docker builds from the repository's root (the dogfight demo's Dockerfile, D-114):
-# its workspace and the one world package the demo flies, nothing local
+# Docker builds from the repository's root (the multiplayer demos' Dockerfile, D-114, D-143):
+# its workspace and the world packages the demos are on (src/demos/vite.config.ts's WORLDS), nothing local
 .git
 **/node_modules
 **/dist
@@ -13,4 +13,10 @@ pipeline
 testdata
 fixtures/*
 !fixtures/southwest-fly
+!fixtures/southwest
+!fixtures/sf
+!fixtures/nyc-walk
+!fixtures/kyoto-walk
+!fixtures/hongkong-walk
+!fixtures/southwest-walk
 **/.DS_Store

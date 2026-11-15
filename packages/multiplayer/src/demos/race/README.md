@@ -14,9 +14,7 @@ Cars round the Las Vegas Strip, on [`@pixelworlds/multiplayer`](../../../README.
 | `server.ts` | the game: a `RaceRoom` (a `TickRoom`) per room on `/race?room=`, the bots, and `attachRace(server)` |
 | `client.ts` | the page's part: a `TickClient` driving the example game's car, the others as `RemotePlayers`, the gates, tags, the board |
 | `main.ts`, `index.html` | the page: the example game in the car at the Strip, without traffic |
-| `serve.ts` | the production server: the built page and its world, and the rooms, on one port |
-| `vite.config.ts` | the dev server (the rooms beside it) and both builds |
-| `Dockerfile` | the image |
+| `vite.config.ts` | the dev server, with the rooms and the lobby beside it (the production build is the three demos', `../vite.config.ts`) |
 
 ## Play
 
@@ -28,16 +26,4 @@ The example game's car keys (W/↑ throttle, S/↓ brake and reverse, A/D or ←
 
 ## Production
 
-```sh
-pnpm --filter @pixelworlds/multiplayer demo:race:build   # dist/client (the page and the southwest package) and dist/server/serve.js (one file)
-pnpm --filter @pixelworlds/multiplayer demo:race:start   # http://localhost:8080/; PORT, RACE_LAG; the lobby on /api, a log line per room event, and a reason to every page when stopped
-```
-
-Docker, from the repository's root:
-
-```sh
-docker build -f packages/multiplayer/src/demos/race/Dockerfile -t pixelworld-race .
-docker run --rm -p 8080:8080 pixelworld-race
-```
-
-Rooms live in the server's memory, so run exactly one instance (the dogfight's `fly.toml` works for it with the names changed).
+Built and served with the other demos on one server, at https://play.pixelworld.site/race/ (D-143): the page at `/race/`, its lobby on `/race/api`, its rooms on `/race`. `demos:build`, `demos:start` and the image are in [the package's README](../../../README.md#online-d-143).

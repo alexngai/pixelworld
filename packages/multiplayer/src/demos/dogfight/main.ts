@@ -3,7 +3,7 @@ import { Game } from "@pixelworlds/game/src/game";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { quickRoom } from "../../index";
 import { startDogfight } from "./client";
-import { DOGFIGHT_START, DOGFIGHT_WORLD } from "./rules";
+import { DOGFIGHT_LOBBY, DOGFIGHT_START, DOGFIGHT_WORLD } from "./rules";
 
 /**
  * The dogfight demo's page (D-114): the example game in the air over the
@@ -15,7 +15,7 @@ import { DOGFIGHT_START, DOGFIGHT_WORLD } from "./rules";
 async function main() {
   const params = new URLSearchParams(location.search);
   if (!params.get("room")) {
-    params.set("room", await quickRoom().catch(() => "canyon")); // no lobby (an old server): a room by name
+    params.set("room", await quickRoom(undefined, DOGFIGHT_LOBBY).catch(() => "canyon")); // no lobby (an old server): a room by name
     history.replaceState(null, "", `?${params}`);
   }
   const game = await Game.create({

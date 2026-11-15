@@ -3,7 +3,7 @@ import { Game } from "@pixelworlds/game/src/game";
 import { stylePack } from "@pixelworlds/game/src/styles";
 import { quickRoom } from "../../index";
 import { startRace } from "./client";
-import { COURSE, RACE_WORLD } from "./rules";
+import { COURSE, RACE_LOBBY, RACE_WORLD } from "./rules";
 
 /**
  * The race demo's page (D-119): the example game's car on the Southwest's
@@ -17,7 +17,7 @@ import { COURSE, RACE_WORLD } from "./rules";
 async function main() {
   const params = new URLSearchParams(location.search);
   if (!params.get("room")) {
-    params.set("room", await quickRoom().catch(() => "strip")); // no lobby (an old server): a room by name
+    params.set("room", await quickRoom(undefined, RACE_LOBBY).catch(() => "strip")); // no lobby (an old server): a room by name
     history.replaceState(null, "", `?${params}`);
   }
   const game = await Game.create({

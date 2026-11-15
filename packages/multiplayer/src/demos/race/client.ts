@@ -56,7 +56,7 @@ export async function startRace(game: Game, opts: { room: string; name?: string 
   car.paused = true; // the TickClient drives it; the controller only draws it
   let room: Room;
   try {
-    room = await joinRoom(opts.path ?? "/race", opts.room);
+    room = await joinRoom(opts.path ?? "/race", opts.room, { version: import.meta.env.PLAY_BUILD });
   } catch (e) {
     car.paused = false;
     hud?.say(`Race: ${e instanceof Error ? e.message : String(e)} · driving alone`, 6);
