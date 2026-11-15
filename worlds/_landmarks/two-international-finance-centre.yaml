@@ -1,0 +1,11 @@
+name: Two International Finance Centre
+# Overture's footprint (國際金融中心二期, 415.8 m, 90 storeys) on Central's
+# waterfront, a square about 67 m on a side; its centroid
+anchor: { lon: 114.159278, lat: 22.285297 }
+height: 416
+clear: 30
+replaces: [ddfd0659-5bab-4a76-9482-93fe12405c75]
+depictions:
+  # a tapering shaft of blue-green glass between steel fins, set back near
+  # its top to a crown; no name
+  generic: { group: landmark.tower.glass }

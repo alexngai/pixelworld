@@ -235,9 +235,13 @@ export const tongLau: Generator = (ctx) => {
  * the low mall or podium of two to six storeys instead: shops at the street,
  * big sign bands across the storeys above, few windows. Any height: storeys
  * from the record, else from the height (`storey`).
+ * With `vertical`, the chance of a vertical sign painted up the front near a
+ * corner for a few storeys, and `rooftop`, of a billboard on the roof's front
+ * edge on a steel base (both in the sign ramps, so they glow at night; D-134).
  * params: storey (voxels a storey; 5, 7 with mall), signs (the chance of the
  * mezzanine's billboards, or a mall storey's band; 0.6), ac (the share of
- * windows with an air conditioner; 0.35), mall (1: a mall), litFraction.
+ * windows with an air conditioner; 0.35), mall (1: a mall), vertical (0),
+ * rooftop (0), litFraction.
  * roles: wall (wall.* tile variants), trim (piers and mullions: trim.*
  * follows the wall), sign (sign.* variants), unit, grime, shade, shutter,
  * frame, tank, accent, roof, window, lit.
@@ -324,7 +328,28 @@ export const compositeTower: Generator = (ctx) => {
       }
     }
   }
+  // a vertical sign up the front near a corner, flush on the wall, a few storeys tall (D-134)
+  if (!mall && W >= 6 && floors >= 4 && rand() < param("vertical", 0)) {
+    const field = sign();
+    let ink = sign();
+    if (ink === field) ink = p.trim;
+    const a0 = rand() < 0.5 ? 1 : W - 3;
+    const top = Math.min(Hr - 2, fh * (1 + 3 + Math.floor(rand() * Math.min(4, floors - 3))));
+    for (let z = fh; z < top; z++)
+      for (let a = a0; a < a0 + 2; a++) paint(a, z, z === fh || z === top - 1 ? frame : (z + a) % 3 === 0 ? ink : field);
+  }
   for (let a = 0; a < W; a++) raise(a, Hr, p.trim);
+  // a billboard on the roof's front edge, on a steel base the width of it (D-134)
+  if (W >= 6 && rand() < param("rooftop", 0)) {
+    const field = sign();
+    let ink = sign();
+    if (ink === field) ink = p.trim;
+    const bh = clamp(Math.round(W * 0.35), 3, 8);
+    for (let a = 1; a < W - 1; a++) {
+      raise(a, Hr + 1, frame);
+      for (let z = Hr + 2; z < Hr + 2 + bh; z++) raise(a, z, a === 1 || a === W - 2 || z === Hr + 1 + bh ? frame : (a + z) % 4 === 0 ? ink : field);
+    }
+  }
 
   // the roof: a lift machine room, a water tank, aerials
   if (W >= 5 && D >= 6) {

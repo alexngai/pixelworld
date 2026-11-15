@@ -2,6 +2,9 @@ import type { Generator } from "pixelworld/generators";
 import { BUILDING_GENERATORS } from "./buildings";
 import { LANDMARK_GENERATORS } from "./landmarks";
 import { PROP_GENERATORS } from "./props";
+import { ESTATE_GENERATORS } from "./estate";
+import { TEMPLE_GENERATORS } from "./temple";
+import { VEHICLE_GENERATORS } from "./vehicles";
 
 /** The plugin's name: the npm package's, and what style packs name in `plugins`. */
 export const PLUGIN_NAME = "@pixelworlds/city-hongkong";
@@ -12,9 +15,12 @@ export const PLUGIN_NAME = "@pixelworlds/city-hongkong";
  * slender commercial-residential block of the 60s to 80s, and the low malls
  * and podiums) and `pencilTower` (the slim residential tower); the landmark
  * shapes `curvedRoofHall` and `grandHotel`; and `neonSign`, the signs that
- * hang over the street from both sides. A function, so a page that only
+ * hang over the street from both sides; and the double-deckers,
+ * `doubleDeckTram` and `doubleDeckBus` (D-133); the street market's stalls
+ * the temples and the public-housing estates, `marketStalls`, `chineseTemple`
+ * and `estateTower` (D-134). A function, so a page that only
  * names the plugin (`cityPlugin`) doesn't bundle them.
  */
 export function hongKongGenerators(): Record<string, Generator> {
-  return { ...BUILDING_GENERATORS, ...LANDMARK_GENERATORS, ...PROP_GENERATORS };
+  return { ...BUILDING_GENERATORS, ...LANDMARK_GENERATORS, ...PROP_GENERATORS, ...VEHICLE_GENERATORS, ...TEMPLE_GENERATORS, ...ESTATE_GENERATORS };
 }

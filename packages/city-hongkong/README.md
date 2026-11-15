@@ -2,7 +2,7 @@
 
 Hong Kong's city pack for [pixelworld](https://www.npmjs.com/package/pixelworld): the generators its `hongkong` style pack names. They draw Kowloon's tenements of the 1950s and 60s in rows, pastel and white mosaic, with balconies of railings, laundry and air conditioners over shops under their signboards (`tongLau`); the slender composite buildings over shops, a dense grid of small windows and air conditioners, and the malls and podiums under their sign bands (`compositeTower`); the slim residential towers of bay windows under a crown (`pencilTower`); the neon signs that hang over the street from both sides, on steel frames drawn in one-pixel lines (`neonSign`); and two landmark shapes of Tsim Sha Tsui's waterfront: a windowless hall under a curved roof, the Hong Kong Cultural Centre's type (`curvedRoofHall`), and a grand hotel with its tower behind, The Peninsula's type (`grandHotel`). The `hongkong` pack names San Francisco's pack too, `@pixelworlds/city-sf`, for its blocks and commercial towers, so load both.
 
-<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/hk-mongkok.png" width="400" alt="Mong Kok in Hong Kong, drawn with this pack">
+<img src="https://raw.githubusercontent.com/alexngai/pixelworld/main/docs/images/readme/hk-waterfront.png" width="400" alt="Central's waterfront in Hong Kong, drawn with this pack">
 
 ```sh
 npm install pixelworld @pixelworlds/city-sf @pixelworlds/city-hongkong

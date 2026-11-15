@@ -1,0 +1,11 @@
+name: Bank of China Tower
+# Overture's footprint (中銀大廈, its podium about 66 m on a side) on Garden
+# Road; its centroid. Overture has no height for it
+anchor: { lon: 114.161569, lat: 22.279268 }
+height: 367          # the masts' tips; the roof is at 315 m
+clear: 30
+replaces: [137579ca-1a6a-4fce-b1e2-913ac9088217]
+depictions:
+  # a square tower of glass whose corners are cut as it rises, to a square
+  # turned 45 degrees at the top; no masts, no bracing, no name
+  generic: { group: landmark.tower.obelisk.diagonal }

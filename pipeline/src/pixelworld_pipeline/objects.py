@@ -64,6 +64,7 @@ from rasterio.warp import transform as transform_points
 from . import plugins, progress
 from .region import Region
 from .sources import rasters
+from .sources.features import without_tunnels
 
 LANDCOVER_CODES = {name: code for code, name in rasters.WORLDCOVER.items()}
 RESIDENTIAL = {
@@ -239,7 +240,9 @@ def _codes(names: list[str]) -> set[int]:
 def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=None) -> list[dict]:
     """Jittered-lattice scatter where the land cover matches, thinned by density.
     A rule with `canopy: <metres>` keeps points where the canopy height map
-    (WRI/Meta, 1 m) is at least that tall instead (M3): trees where trees are."""
+    (WRI/Meta, 1 m) is at least that tall (M3): trees where trees are; with
+    `landcover` too, only on those classes (D-117: town's trees placed, the
+    woods left to the client's scatter)."""
     spacing = float(rule["spacing"])
     density = float(rule.get("density", 1.0))
     codes = _codes(rule["landcover"]) if "landcover" in rule else None
@@ -256,6 +259,28 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
     xs = (ii.ravel() + jitter[0]) * spacing
     ys = (jj.ravel() + jitter[1]) * spacing
     cx, cy = p.to_cells(xs, ys)
+    if rule.get("water"):
+        # on the water, afloat at its level (D-133): boats in a harbour's shelters
+        ix = np.clip(cx.astype(np.int64), 0, p.cx - 1)
+        iy = np.clip(cy.astype(np.int64), 0, p.cy - 1)
+        wet = p.water[iy, ix] if p.water is not None else np.zeros(n, dtype=bool)
+        ok = p.inside(cx, cy) & wet & (keep_roll < density)
+        if "bounds" in rule:
+            ok &= _in_boxes(p, rule["bounds"], xs, ys)
+        ok &= ~occupied(xs, ys)
+        keep = np.nonzero(ok)[0]
+        return [
+            {
+                "g": rule["group"],
+                "x": float(cx[k]),
+                "y": float(cy[k]),
+                "s": int(seeds[k]),
+                "r": int(rots[k]),
+                # a voxel (an eighth of a step) of the hull under the water's surface
+                "z0": float(p.water_level[iy[k], ix[k]]) - 0.125,
+            }
+            for k in keep
+        ]
     ok = p.free(cx, cy) & (keep_roll < density)
     if "canopy" in rule:
         cand = np.nonzero(ok)[0]
@@ -263,7 +288,7 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
         if canopy is not None and len(cand):
             tall[cand] = canopy.sample(xs[cand], ys[cand], p.region.crs) >= float(rule["canopy"])
         ok &= tall
-    else:
+    if codes is not None:
         ok &= np.isin(p.landcover_at(xs, ys), list(codes))
     ok &= ~occupied(xs, ys)
     keep = np.nonzero(ok)[0]
@@ -278,6 +303,17 @@ def scatter(p: Placement, rule: dict[str, Any], occupied, tag: str = "", canopy=
         }
         for k, g in zip(keep, groups, strict=True)
     ]
+
+
+def _in_boxes(p: Placement, boxes, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+    """Projected points inside any of the lon/lat boxes ([w, s, e, n], or a list of them)."""
+    boxes = boxes if isinstance(boxes[0], (list, tuple)) else [boxes]
+    lon, lat = transform_points(p.region.crs, "EPSG:4326", list(xs), list(ys))
+    lon, lat = np.asarray(lon), np.asarray(lat)
+    hit = np.zeros(len(xs), dtype=bool)
+    for w, s, e, n in boxes:
+        hit |= (lon >= w) & (lon <= e) & (lat >= s) & (lat <= n)
+    return hit
 
 
 def _groups_by_landcover(
@@ -567,8 +603,8 @@ def street_trees(
     not_name = rule.get("notName", "").lower()
     if name or not_name:
         # names aren't in the road layer's columns; fetch them for this rule only
-        road_rows = plugins.source(p.region, "features").streets(
-            p.region.lonlat_envelope(), classes
+        road_rows = without_tunnels(
+            plugins.source(p.region, "features").streets(p.region.lonlat_envelope(), classes)
         )
     for row in sorted(road_rows, key=lambda r: r["id"]):
         if row["class"] not in classes:
@@ -1210,7 +1246,8 @@ def type_buildings(
 def _ground_features(region: Region, found: list[dict], feats: list[dict], classes: list[str]):
     """The land-use class (Overture's, of `classes`) under each building's
     centroid, as the feature `ground` (`grounds:` rules, D-100): a temple's or
-    a shrine's grounds (OSM's landuse=religious), a cemetery."""
+    a shrine's grounds (OSM's landuse=religious), a cemetery; and the land's
+    name as `groundName` (`groundHas:`, D-134): a housing estate's."""
     from .ground import project_rows
 
     rows = plugins.source(region, "features").land_use(tuple(region.lonlat_envelope()), classes)
@@ -1218,12 +1255,15 @@ def _ground_features(region: Region, found: list[dict], feats: list[dict], class
     if not polys:
         return
     kinds = [str(r.get("class") or "") for r in rows]
+    names = [str((r.get("names") or {}).get("primary") or "") for r in rows]
     tree = shapely.STRtree(polys)
     has = [i for i, inst in enumerate(found) if "_c" in inst and feats[i]]
     pts = shapely.points([found[i]["_c"] for i in has])
     hit, poly = tree.query(pts, predicate="within")
     for k, j in zip(hit.tolist(), poly.tolist(), strict=True):
         feats[has[k]]["ground"] = kinds[j]
+        # the land's name: a housing estate's (`groundHas:` rules, D-134)
+        feats[has[k]]["groundName"] = names[j]
     n = len(set(hit.tolist()))
     progress.log(f"typology grounds: {n} buildings in {len(polys)} areas of {classes}")
 
@@ -1771,18 +1811,21 @@ def place(
     ground: np.ndarray | None = None,
     open_water: np.ndarray | None = None,
     on_road: np.ndarray | None = None,
+    water_level: np.ndarray | None = None,
 ) -> tuple[list[dict], dict]:
     """All instances for a region, plus counts per group for the build report.
 
     heights(x, y, metres) → drawn height in steps at a projected point (dam crests).
     streets (the straightened road lines in cells) and water (a cell mask) feed
-    the building typology (D-055). roads (the road mask and half-widths in
+    the building typology (D-055) and vegetation rules on the water, which
+    float at `water_level` (steps). roads (the road mask and half-widths in
     cells) are what `snap.buildings.clearRoads` keeps buildings off. ground
     (cell heights, steps) and open_water (the water mask with the roads that cross
     it) and on_road (the road mask) shape bridges' approaches (`bridge_approaches`).
     """
     spec = region.objects or {}
     p = Placement(region, blocked, layout, shift)
+    p.water, p.water_level = water, water_level
     snap = (region.snap or {}).get("buildings")
     instances: list[dict] = []
 

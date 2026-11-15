@@ -1,16 +1,16 @@
 {
-  "packageHash": "b99ae04ecaa09422c2e57e55b38c00884e583c785496396eae5de726276aea3a",
+  "packageHash": "224087a1e75fc0f71669b28408bc39caedea5df2d9cb576a32e097fea2f1e978",
   "cells": [
     610,
     324
   ],
   "chunks": 60,
   "heightRange": [
-    9,
+    8,
     25
   ],
   "inputs": {
-    "roadSegments": 14992,
+    "roadSegments": 15011,
     "riverLines": 27
   },
   "objects": {
@@ -35,14 +35,14 @@
     "landmark.hall.glass": 1,
     "landmark.hall.opera": 1,
     "landmark.tower.lattice": 1,
-    "prop.signal": 296,
-    "prop.streetlight": 3554,
-    "tree": 16347,
-    "tree.street": 7776
+    "prop.signal": 298,
+    "prop.streetlight": 3548,
+    "tree": 16409,
+    "tree.street": 7711
   },
   "roads": {
-    "cells": 33233,
-    "edges": 35173,
+    "cells": 33018,
+    "edges": 34909,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 19,
@@ -51,8 +51,8 @@
     "ok": true
   },
   "paths": {
-    "segments": 54420,
-    "cells": 95965
+    "segments": 54401,
+    "cells": 95832
   },
   "rails": {
     "street": 0,
@@ -60,21 +60,21 @@
     "train": 327
   },
   "lanes": {
-    "counted": 51396,
-    "oneway": 42787,
-    "divided": 6590
+    "counted": 51084,
+    "oneway": 42563,
+    "divided": 6575
   },
   "surfaces": {
-    "woodland": 12442,
+    "woodland": 12441,
     "water": 7066,
     "desert": 188,
     "grass": 24,
-    "urban": 164824,
-    "lawn": 13096
+    "urban": 164823,
+    "lawn": 13098
   },
   "routes": {
     "ferry": 2,
-    "road": 5843,
+    "road": 5749,
     "train": 11
   }
 }
