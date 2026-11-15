@@ -1052,7 +1052,7 @@ describe("Fogfront's server over the Presidio (D-121)", () => {
     expect([standsIn(0), standsIn(2)]).toEqual([true, true]);
     expect(passable(worlds[0]!.grid, cx, cy)).toBe(false);
     expect(lb.failed).toBeUndefined();
-  });
+  }, 30_000); // two pages' worlds and a match played to a fallen building: 5.0–5.3 s on CI's runners
 
   it("two against two, and spectators: a side's view serialized once for its two players and its watchers, shared orders and glim (D-127)", async () => {
     const teams: { t: number; to: string[] }[] = [];
