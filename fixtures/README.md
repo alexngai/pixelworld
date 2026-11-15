@@ -321,6 +321,21 @@ uv run pixelworld build ../worlds/hongkong/region.yaml
 
 Sources and licenses: as `hongkong-island`'s.
 
+## zion-walk
+
+Zion Canyon's walking level (D-137), built from [`worlds/zion/walk.yaml`](../worlds/zion/walk.yaml) on the `zion` style pack (it extends `desert-southwest`): the canyon of the North Fork of the Virgin River from Springdale and the visitor centre to the Temple of Sinawava and the end of the Riverside Walk, at 10 m per cell (800 × 1222 cells), in true relief (vertical ×1.0).
+
+- **Terrain:** USGS 3DEP 1/3″ at full resolution with 4 × 4 micro-cells (2.5 m) that slope however steep, so walls are smooth faces (`micro.maxSlope`, D-141), from 1,178 m on the river at Springdale to 2,274 m on the rims. Cliffs take the pack's Zion strata by elevation: Chinle, Moenave, Kayenta, the Navajo sandstone's red base, salmon middle and white top, and the Carmel on the highest rims.
+- **Water:** the Virgin River only, 20 m wide (3,577 water cells); Overture's streams here are dry washes.
+- **Objects:** 44,879 broadleaf trees and 10,452 pinyon-juniper where the canopy height map has trees 4 m or taller, 10,037 shrubs, and 423 buildings: Springdale's (84 commercial, 230 residential) and 109 in the park drawn rustic (`building.park`: the lodge, its cabins, the museum). 331 traffic routes.
+- **Size:** 5.7 MB (chunks 4.7 MB, objects 0.95 MB). Built in 190 s on a first build (the canopy downloads), 18 s from the download cache.
+
+uv run pixelworld build ../worlds/zion/walk.yaml
+
+- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rivers and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.
