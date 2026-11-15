@@ -4,8 +4,8 @@
 # Point, the Royal Arches, North Dome and Half Dome round the Merced River,
 # the valley's meadows, Yosemite Village, the Ahwahnee and Curry Village.
 # A first cut on the pipeline as it is, to see what the park needs: its
-# trees are the client's scatter by WorldCover's classes, its granite the
-# `sierra` pack's strata by height.
+# trees are the client's scatter by WorldCover's classes and the canopy map's
+# trees off the woods, its granite the `sierra` pack's strata by height.
 # Build: cd pipeline && uv run pixelworld build ../worlds/yosemite/valley.yaml
 id: yosemite-valley
 name: Yosemite Valley (walking)
@@ -69,4 +69,8 @@ objects:
   buildings:
     minArea: 20
     houseMaxArea: 250
+  vegetation:
+    # trees where the canopy map shows 3 m or more and WorldCover doesn't
+    # call it wooded (the woods are the client's scatter, as D-117's are)
+    - { group: tree.conifer, canopy: 3, landcover: [built, grass, shrub, bare, wetland], spacing: 10, density: 0.8 }
   depiction: { heightStretch: 1.0, scatter: 1.0 }

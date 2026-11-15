@@ -1851,7 +1851,7 @@
       "x": 0,
       "y": 8,
       "path": "chunks/0_8.pxwc.gz",
-      "sha256": "846b88ba51980882206afd50e9026ed11e73c3a6a2d756aa4cb9fc86d0159ce7",
+      "sha256": "3daae8359103c6f62e52d6ba507a2355b889159e1459985eb8d327268061a5e3",
       "heightRange": [
         280,
         394
@@ -1861,7 +1861,7 @@
       "x": 1,
       "y": 8,
       "path": "chunks/1_8.pxwc.gz",
-      "sha256": "87fa3a09b905cfa386ea0fe911fc386152e591c6e421528f3d12bfb59f7864cf",
+      "sha256": "f34fe486363715325a5d968614e65c484004106dd92f986cd5e22b631ce28dd3",
       "heightRange": [
         285,
         354
@@ -2585,6 +2585,11 @@
       "name": "Overture Maps Foundation buildings theme: \u00a9 OpenStreetMap contributors, Esri Community Maps contributors, Microsoft, Google Open Buildings",
       "license": "ODbL 1.0",
       "url": "https://docs.overturemaps.org/attribution/"
+    },
+    {
+      "name": "High Resolution Canopy Height Maps by WRI and Meta",
+      "license": "CC BY 4.0",
+      "url": "https://sustainability.atmeta.com/blog/2024/04/22/using-artificial-intelligence-to-map-the-earths-forests/"
     }
   ],
   "roadClasses": {
@@ -2622,7 +2627,7 @@
     "name": "pixelworld_pipeline.build",
     "version": "1",
     "params": {
-      "region": "d9644688342e30f6",
+      "region": "f0b4f0c36085a880",
       "features": {
         "kind": "overture",
         "release": "2026-10-21.0"
@@ -2641,8 +2646,8 @@
   },
   "objects": {
     "path": "objects.json.gz",
-    "sha256": "8abd3f3f29a6208896d03e61ad1cd30bbf048b4a18be29dc5dcc6e9403a1f912",
-    "count": 738
+    "sha256": "994a260271d961ff69dfc87506700a92885b44b28980f959d45c6a44a07daae2",
+    "count": 7800
   },
   "depiction": {
     "heightStretch": 1.0,
@@ -2670,11 +2675,11 @@
     ],
     "sha256": "24c96d4928ea2dd96ce18ffa9a2bfac3dfb6865922163582114f991d276b44bb"
   },
-  "packageHash": "bb11bba4eaedcc74297cf15dd52515f8664d599b0eed3df905e345803c985958",
+  "packageHash": "54c7c5034352871025505701010574ad573e946fe4b92d792e99a9fbdadf7bd2",
   "routes": {
     "path": "routes.json.gz",
-    "sha256": "9a433e53b1a98859dbdfd80c2cc147476d5700bc2b36b4c43c9b06e8b58aa4b6",
+    "sha256": "ada93f8080bba665d3131259cfbaa26f7182ca93e80e4df1e35147d44c774cc0",
     "version": 1,
-    "count": 231
+    "count": 227
   }
 }

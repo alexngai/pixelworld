@@ -1,5 +1,5 @@
 {
-  "packageHash": "bb11bba4eaedcc74297cf15dd52515f8664d599b0eed3df905e345803c985958",
+  "packageHash": "54c7c5034352871025505701010574ad573e946fe4b92d792e99a9fbdadf7bd2",
   "cells": [
     1456,
     667
@@ -10,16 +10,17 @@
     660
   ],
   "inputs": {
-    "roadSegments": 163,
+    "roadSegments": 165,
     "riverLines": 142
   },
   "objects": {
     "building.commercial": 248,
-    "building.residential": 490
+    "building.residential": 490,
+    "tree.conifer": 7062
   },
   "roads": {
-    "cells": 4920,
-    "edges": 4970,
+    "cells": 4848,
+    "edges": 4896,
     "discontinuous_edges": 0,
     "steep_edges": 0,
     "components": 7,
@@ -43,6 +44,6 @@
     "lawn": 2509
   },
   "routes": {
-    "road": 231
+    "road": 227
   }
 }
