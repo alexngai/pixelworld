@@ -137,6 +137,7 @@ Status values:
 | D-129 | `pixelworld-pipeline` released from CI through PyPI trusted publishing, on a tag | Accepted |
 | D-130 | The repository public: the whole CI on every pull request, and PyPI uploads through an environment with attestations | Accepted |
 | D-131 | Bridges come ashore on approaches over land, and the land a deck lands on stays land | Accepted |
+| D-136 | Yosemite: a driving level the valley's width and a walking level of its floor, on the pipeline as it is, with a `sierra` pack | Accepted (M5) |
 | D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
 
 ---
@@ -1903,6 +1904,30 @@ The point is more room for visual interest; both halves are wanted.
   - **Moving a bridge's ends onto land when it is placed:** at placement the end was on land; the deck pass flooded it afterwards.
   - **Patching only the objects in the committed packages:** the flooding is in the terrain, and the packages were stale anyway.
 - **Later:** New York's packages need rebuilding for their bridges' approaches (until then they draw as before). The arch and stone bridge generators have no approaches yet. sf-walk and the other cities' packages may be as stale as San Francisco's were.
+
+### D-136: Yosemite: a driving level the valley's width and a walking level of its floor, on the pipeline as it is, with a `sierra` pack (accepted, M5)
+- **Why:** the owner asked for levels of natural scenery beyond the Grand Canyon, starting with Yosemite Valley, built first on the pipeline as it is to see what a park needs. Zion, Yellowstone, Arches and Glacier are being tried the same way (D-137–D-140).
+- **What:**
+  - **`yosemite-valley`** (`worlds/yosemite/valley.yaml`, walking): Tunnel View to Half Dome and Nevada Fall, 1456 × 667 cells at 10 m, drawn true (`verticalExaggeration: 1.0`), micro-terrain at K=4, every cell steeper than 0.9 rock (`terrain.cliffSlope`). Roads, trails and the valley's bike paths along their centre lines; the Merced and its creeks; meadows from Overture's land use as lawn; Overture's buildings; its trees the client's scatter by WorldCover's classes. A rule for the canopy map's trees in the open needs D-117's `landcover` with `canopy`, not on main yet: on main such a rule placed 258,640 trees, the woods' included.
+  - **`yosemite`** (`worlds/yosemite/region.yaml`, driving): El Portal's canyon to Tenaya Lake, 636 × 445 cells at 50 m, true, K=4. The two are each other's levels.
+  - **Walls as faces:** both levels set `micro.maxSlope: 64` (D-141), so their walls are smooth faces lit by their slope, not terraces.
+  - **The `sierra` pack** (`worlds/_styles/sierra/style.json`): `desert-southwest` with the Grand Canyon's strata ramps dropped and its own granite strata (grey above 1,800 m, a warmer grey below), bare ground as granite slab, granite sand, meadow greens, a deep fir green above WorldCover's forest line, and timber and shake roofs for the lodges. Its scatter: mixed conifer, incense cedar and black oak in the woods, fir above, granite boulders on slab and rock. A full pack, as the others are: `extends` would serve, but the pipeline and the model preview don't resolve it, and the pack test checks every pack whole.
+- **What was learned:**
+  - **Scale:** a cell is 32 px wide and a height step 8 px, so at 10 m true El Capitan's 1,000 m face is about 2,000 px tall and a screen at the first zoom shows about 300 m: the walking level is the valley floor, and only the driving level shows the valley, a screen across between its walls.
+  - **Walls:** at K=2 the walls came out as fields of cubes, each 5 m micro-cell a column a few steps above the next; bilinear sampling (D-132) changed little. K=4 (2.5 m micro-cells, quarter steps) made the cubes fine ledges, for 5.0 MB instead of 2.9, and `micro.maxSlope` (D-141) took the ledges off.
+  - **Creeks:** drawn down the walls they read as falls already (Yosemite, Bridalveil, Ribbon), as stepped water.
+- **Measured** (builds of 2026-11-14, from the download cache): the walking level 738 buildings, 231 traffic routes, 4.9 MB, 25 s; the driving level 176 buildings, 111 routes, 1.7 MB, 33 s. Road reports clean.
+- **Looked at** (headless, the viewer): the valley from the driving level, both ways round, from Tunnel View and over Half Dome; on foot Cook's Meadow, the village, the Ahwahnee, El Capitan's foot and Half Dome's face.
+- **Rejected alternatives:**
+  - **Exaggeration below 1 on the walking level,** so that walls up to 63° draw as slopes rather than steps: the walls would lose 40% of their height.
+  - **`riverWidthMeters`** on the driving level: no change; the Merced's width comes from its water areas, which are about right.
+- **Later:**
+  - **Waterfalls:** a fall drawn where a creek leaves a wall, with spray at its foot, rather than water stepping down the face.
+  - **The canopy map's trees** in the meadows and the village, with D-117's `landcover` filter.
+  - **Trees by species:** WorldCover's tree class is one surface; a biome layer from the park's vegetation map or LANDFIRE would place red fir, Jeffrey pine, black oak and the sequoia groves, and a tree kit draw them. Every conifer's one-voxel tip draws a dark outline at close zoom.
+  - **Finer terrain:** 3DEP's 2019 park-wide lidar (1 m) as a source; the walls here come from the 10 m DEM.
+  - **Landmarks:** the Ahwahnee is a flat brown slab; the lodges, the chapel and the Glacier Point lookout have no shapes.
+  - **A flying level** of the park to Tuolumne Meadows, and a golden once the look settles.
 
 ### D-141: Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) (accepted, M5)
 - **Why:** the national parks (Yosemite, D-136; Zion, Yellowstone, Arches and Glacier, D-137–D-140) are walls hundreds of metres tall drawn true. A micro-cell is a plane through its four corners only while they span at most 3 micro-steps (D-038); a steeper one is flat at their mean, so every wall came out as a stack of terraces with a riser between each, read as layer lines across Yosemite's granite. The cap suits the Grand Canyon, whose ledges are stepped strata, and keeps rising edges on clean pixel angles (D-023), so it stays the default.

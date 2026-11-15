@@ -1,0 +1,50 @@
+# Yosemite, driving level (D-136): Yosemite Valley with its rims and the
+# high country round it at 50 m per cell, from El Portal's canyon to Tenaya
+# Lake: the valley a screen across at the first zoom, its walls drawn true,
+# El Capitan's and Half Dome's faces 1,000 m tall, Glacier Point, Clouds
+# Rest, Tenaya Canyon and the Merced's canyon below the valley. The walking
+# level (valley.yaml) is the valley floor at 10 m.
+# Build: cd pipeline && uv run pixelworld build ../worlds/yosemite/region.yaml
+id: yosemite
+name: Yosemite (driving)
+level: drive
+levels:
+  - { name: drive, world: yosemite, label: "Driving Yosemite" }
+  - { name: walk, world: yosemite-valley, label: "Walking Yosemite Valley" }
+bounds: [-119.780, 37.660, -119.420, 37.860] # lon/lat: west, south, east, north (~31.7 × 22.2 km)
+
+metersPerCell: 50
+verticalExaggeration: 1.0
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+style: sierra
+start: { lon: -119.6000, lat: 37.7350 } # the valley between El Capitan and Half Dome
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1, resampling: bilinear }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  roads: { classes: [primary, secondary, tertiary, residential, unclassified] }
+  paths: { classes: [path, footway, steps] }
+  rivers: { subtypes: [river, stream] }
+
+geology: { default: sierra-nevada }
+
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3 }
+widths: { scale: 1.5, minCells: 0.08, centrelines: true }
+
+# 12.5 m micro-cells from the 10 m DEM
+# the walls tilt as faces rather than stepping down in terraces: a
+# micro-cell up to 64 micro-steps from corner to corner is still a slope (D-136)
+micro: { k: 4, dem: { overview: 1 }, maxSlope: 64 }
+
+terrain: { cliffSlope: 0.9, minLakeArea: 4000, maxLakeRelief: 8 }
+
+objects:
+  buildings: { minArea: 150, houseMaxArea: 250 }
+  depiction: { scatter: 1.0 }

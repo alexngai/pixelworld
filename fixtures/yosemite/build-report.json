@@ -1,0 +1,48 @@
+{
+  "packageHash": "f4800fced35c096510adf7c4dbd67c036ca42dfcfaf1b78cc9efe4ffc262c0c9",
+  "cells": [
+    636,
+    445
+  ],
+  "chunks": 70,
+  "heightRange": [
+    28,
+    173
+  ],
+  "inputs": {
+    "roadSegments": 231,
+    "riverLines": 540
+  },
+  "objects": {
+    "building.commercial": 84,
+    "building.residential": 92
+  },
+  "roads": {
+    "cells": 2950,
+    "edges": 2972,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 3,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 627,
+    "cells": 12544
+  },
+  "surfaces": {
+    "rock": 6966,
+    "woodland": 101821,
+    "forest": 81711,
+    "scrub": 168,
+    "water": 10905,
+    "desert": 22907,
+    "grass": 58485,
+    "urban": 54,
+    "snow": 3
+  },
+  "routes": {
+    "road": 111
+  }
+}

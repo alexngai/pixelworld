@@ -620,3 +620,12 @@ A full pack (`worlds/_styles/hongkong/style.json`), laid out like `tokyo` with i
 | `landmark.tower.clock` | `towerHall` (core's kit) | the Tsim Sha Tsui Clock Tower: a red-brick shaft on a low plinth with arched openings, a clock on each face (they glow at night) under a cornice, an open belvedere, a lantern and a pointed granite cap with its flagpole |
 | `landmark.hall.curved` | `curvedRoofHall` (Hong Kong's) | the Hong Kong Cultural Centre, on its footprint: walls of pink tile with no windows, a joint every five courses, under a roof that sweeps up from the harbour side to its crest at the back in a concave curve, flat at its foot and steep near the top |
 | `landmark.hotel` | `grandHotel` (Hong Kong's) | The Peninsula, on the old hotel's footprint: cream wings round the forecourt over a granite ground storey, paired windows, a cornice and a balustrade; across the back of its main block, the 1994 tower to the full height, its windows in bands, its top storey glazed and a helipad's ring on its roof |
+
+## 24. Sierra Nevada (the `sierra` pack, D-136)
+
+A full pack (`worlds/_styles/sierra/style.json`): `desert-southwest`'s, less the Grand Canyon's strata ramps, with Yosemite's granite and greens. It names no plugins.
+
+- **Strata:** one set, `yosemite` (the `sierra-nevada` province and the default): `granite` above 1,800 m, `granite-warm` below.
+- **Surfaces:** `desert` (WorldCover's bare ground) is granite slab; `sand` is `granite-sand`; `grass` and `lawn` are `meadow`; `woodland` is `conifer` and `forest` (above 2,300 m) `fir`.
+- **Scatter:** `tree.conifer` (mixed conifer, 9–15 voxels), `tree.cedar` (a narrow cone) and `tree.oak` (`roundTree`) in the woods; `tree.fir` above; shrubs in `oak`; granite boulders on slab, rock and sand.
+- **Buildings:** `building.residential` and `.commercial` in `timber` with `shake` roofs.
