@@ -14,6 +14,9 @@ region spec's optional `ground` section tells them apart:
         wooded: { over: [woodland], maxCover: 0.5 }  # tree cover, where the canopy map is open
         paved: [pedestrian]  # land use inside a park left as it is (courts, plazas)
         spread: { over: [grass], meters: 20 }  # into the open grass around a lawn
+      scrub:  # open hillsides: woods where the canopy map shows few trees (D-133)
+        over: [woodland]
+        maxCover: 0.3      # cells with less than this share under canopy 3 m or taller
       yard:   # backyards and front gardens, beside houses (after objects)
         near: [building.rowhouse, building.house, building.residential, building.apartment]
         over: [urban, grass, desert]
@@ -229,6 +232,28 @@ def lawn(
     if rule.get("spread"):
         out = spread_lawn(out, surface, names, wild, rule["spread"], region.meters_per_cell)
     return out
+
+
+def scrub(
+    region: Region,
+    surface: np.ndarray,
+    names: dict[int, str],
+    rule: dict[str, Any],
+    shift=None,
+    canopy=None,
+) -> np.ndarray:
+    """The scrub rule (D-133): cells of the `over` surfaces (woodland) where
+    the canopy map shows less than `maxCover` of the cell under trees
+    `canopy` metres or taller. WorldCover calls a hillside of grass and low
+    shrubs tree cover (Hong Kong's ridges); the canopy map tells them apart."""
+    under = np.isin(surface, surface_ids(names, list(rule.get("over", ["woodland"]))))
+    if not under.any():
+        return under
+    if canopy is None:
+        canopy = plugins.source(region, "canopy").grid(region.lonlat_envelope())
+    xs, ys = drawn_cell_points(region, surface.shape, shift)
+    cover = canopy_cover(region, canopy, xs, ys, under, float(rule.get("canopy", 3.0)))
+    return under & (cover < float(rule.get("maxCover", 0.3)))
 
 
 def water_area_cells(region: Region, shape: tuple[int, int], classes: list[str]) -> np.ndarray:

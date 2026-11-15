@@ -1,16 +1,16 @@
 {
-  "packageHash": "382e22d504e314599a69c70d3d07f3978088b850c00be8cdad2bfcfcbf5638cf",
+  "packageHash": "9f259d13ebf46df159fb178a841b4e8ae7bafef21ebcd19f46a924fac7cee782",
   "cells": [
     184,
     222
   ],
   "chunks": 12,
   "heightRange": [
-    0,
+    -1,
     42
   ],
   "inputs": {
-    "roadSegments": 4757,
+    "roadSegments": 4801,
     "riverLines": 971
   },
   "objects": {
@@ -22,11 +22,11 @@
     "landmark.tower.candle": 1
   },
   "roads": {
-    "cells": 3471,
-    "edges": 3748,
+    "cells": 3309,
+    "edges": 3565,
     "discontinuous_edges": 0,
     "steep_edges": 0,
-    "components": 3,
+    "components": 9,
     "split_segments": 0,
     "disconnected_junctions": 0,
     "ok": true
@@ -34,21 +34,21 @@
   "rails": {
     "street": 0,
     "cable": 0,
-    "train": 1772
+    "train": 1777
   },
   "surfaces": {
-    "woodland": 20142,
-    "water": 3504,
+    "woodland": 20133,
+    "water": 3511,
     "desert": 57,
-    "grass": 167,
+    "grass": 165,
     "farmland": 1092,
-    "urban": 15131,
-    "lawn": 755
+    "urban": 15134,
+    "lawn": 756
   },
   "routes": {
     "ferry": 2,
     "lightrail": 5,
-    "road": 732,
+    "road": 711,
     "train": 55
   }
 }

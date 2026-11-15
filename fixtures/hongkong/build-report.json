@@ -1,0 +1,83 @@
+{
+  "packageHash": "3c5fd44a7e199392a0cd016e4de8b804da2efcfa43c7e356636783513552f675",
+  "cells": [
+    660,
+    634
+  ],
+  "chunks": 110,
+  "heightRange": [
+    -2,
+    80
+  ],
+  "inputs": {
+    "roadSegments": 21313,
+    "riverLines": 37
+  },
+  "objects": {
+    "building.civic": 866,
+    "building.commercial": 3464,
+    "building.composite": 6501,
+    "building.estate": 1770,
+    "building.parking": 84,
+    "building.podium": 787,
+    "building.residential": 4187,
+    "building.temple": 17,
+    "building.tonglau": 5389,
+    "building.tower": 612,
+    "building.tower.hotel": 54,
+    "building.tower.residential": 3088,
+    "building.village": 15833,
+    "landmark.hall.curved": 1,
+    "landmark.hall.curved.glass": 1,
+    "landmark.hotel": 1,
+    "landmark.tower.clock": 1,
+    "landmark.tower.cylinder": 1,
+    "landmark.tower.glass": 2,
+    "landmark.tower.obelisk.diagonal": 1,
+    "landmark.tower.pyramid": 1,
+    "prop.boat": 1067,
+    "prop.boat.junk": 4,
+    "tree": 6869,
+    "tree.street": 7777
+  },
+  "roads": {
+    "cells": 46831,
+    "edges": 52588,
+    "discontinuous_edges": 0,
+    "steep_edges": 0,
+    "components": 55,
+    "split_segments": 0,
+    "disconnected_junctions": 0,
+    "ok": true
+  },
+  "paths": {
+    "segments": 33123,
+    "cells": 82232
+  },
+  "rails": {
+    "street": 717,
+    "cable": 0,
+    "train": 1185
+  },
+  "lanes": {
+    "counted": 0,
+    "oneway": 33334,
+    "divided": 18473
+  },
+  "surfaces": {
+    "woodland": 77209,
+    "scrub": 53103,
+    "water": 189771,
+    "desert": 4401,
+    "grass": 2583,
+    "farmland": 113,
+    "urban": 81686,
+    "lawn": 9574
+  },
+  "routes": {
+    "ferry": 46,
+    "road": 19399,
+    "streetcar": 17,
+    "train": 8
+  }
+}

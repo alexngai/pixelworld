@@ -82,4 +82,143 @@ function board(m: VoxelModel, b: { x0: number; x1: number; y: number; z0: number
     }
 }
 
-export const PROP_GENERATORS: Record<string, Generator> = { neonSign };
+/**
+ * A boat afloat (D-133), moored in a typhoon shelter or out on the harbour,
+ * standing on the water's level (the instance's `z0`), its hull's lowest
+ * voxel under the plane. By seed, unless `kind` names one: a sampan (a small
+ * open hull under an arched canopy of tarpaulin, 11 voxels long), a fishing
+ * boat (a broad hull with a stripe, a wheelhouse aft and a mast, 24 long) or,
+ * with `kind: 3`, a junk (a dark hull with a raised stern and two masts
+ * carrying battened red sails, 28 long). Faces +x; the hull narrows to its bow.
+ * params: kind (0: sampans and fishing boats by seed, 1 a sampan, 2 a fishing
+ * boat, 3 a junk), fishing (0.35, the share of fishing boats).
+ * roles: hull.*, stripe.*, canopy.*, cabin, window, sail, trim (masts, battens).
+ */
+export const boat: Generator = ({ rand, ramp, ramps, param }) => {
+  const kind = Math.round(param("kind", 0)) || (rand() < param("fishing", 0.35) ? 2 : 1);
+  const L = kind === 1 ? 11 : kind === 2 ? 24 : 28;
+  const W = kind === 1 ? 3 : 7;
+  const mast = kind === 1 ? 0 : kind === 2 ? 12 : 22;
+  const m = new VoxelModel(L, W, 6 + mast);
+  const one = (role: string) => {
+    const ids = ramps(role);
+    return m.material(ids.length ? ids[Math.floor(rand() * ids.length)]! : ramp(role));
+  };
+  const hull = one("hull");
+  const stripe = kind === 3 ? hull : one("stripe");
+  const trim = m.material(ramp("trim"));
+  // the hull, narrowing to its bow over its last quarter; a stripe along its top
+  const bow = Math.max(2, Math.round(L / 4));
+  const half = (u: number) => (u < L - bow ? W / 2 : (W / 2) * Math.max(0.35, (L - u) / bow));
+  const c = (W - 1) / 2;
+  const deck = kind === 1 ? 2 : 3;
+  for (let u = 0; u < L; u++)
+    for (let v = 0; v < W; v++) {
+      if (Math.abs(v - c) > half(u) - 0.25) continue;
+      for (let z = 0; z < deck; z++) m.set(u, v, z, z === deck - 1 ? stripe : hull);
+      if (kind === 3 && u < 4) for (let z = deck; z < deck + 2; z++) m.set(u, v, z, hull); // the raised stern
+    }
+  if (kind === 1) {
+    // an arched canopy over the middle: tarpaulin in a barrel
+    const canopy = one("canopy");
+    for (let u = 2; u < L - 3; u++) {
+      m.set(u, 0, deck, canopy);
+      m.set(u, W - 1, deck, canopy);
+      for (let v = 0; v < W; v++) m.set(u, v, deck + 1, canopy);
+    }
+    return m;
+  }
+  if (kind === 2) {
+    // the wheelhouse aft, windows round its top; a mast forward of it
+    const cabin = m.material(ramp("cabin"));
+    const win = m.material(ramp("window"));
+    for (let u = 2; u < 8; u++)
+      for (let v = 1; v < W - 1; v++)
+        for (let z = deck; z < deck + 3; z++) {
+          const skin = u === 2 || u === 7 || v === 1 || v === W - 2;
+          m.set(u, v, z, skin && z === deck + 1 && (u + v) % 2 === 0 ? win : cabin);
+        }
+    for (let z = deck; z < deck + mast; z++) m.set(11, Math.floor(c), z, trim);
+    return m;
+  }
+  // a junk: two masts, each with a battened red sail along the hull, a voxel thick
+  const sail = m.material(ramp("sail"));
+  const v0 = Math.floor(c);
+  for (const [u0, len, top] of [
+    [7, 9, mast],
+    [17, 7, mast - 5],
+  ] as const) {
+    for (let z = deck; z < deck + top; z++) m.set(u0 + len, v0, z, trim);
+    for (let z = deck + 3; z < deck + top; z++)
+      for (let u = u0 + Math.max(0, Math.floor((deck + top - z) / 4) - 1); u < u0 + len; u++)
+        m.set(u, v0, z, (z - deck) % 3 === 0 ? trim : sail);
+  }
+  return m;
+};
+
+/**
+ * A street market's stalls (D-134), down the middle of a market street (the
+ * Ladies' Market, Temple Street, Chun Yeung Street): two rows back to back,
+ * each stall its own tarpaulin over a table of goods, the aisles either side
+ * left clear. Placed across the road (`streetProps` with `across: true`), so
+ * the model's x runs from one building line (x = 0) to the other (x = span)
+ * and its y along the street; its stalls fill the length, a voxel's gap
+ * between them. Some stalls hang goods (clothes, bags) along a rail under the
+ * canopy's edge; bare bulbs are strung along the tarpaulins' aisle edges, so
+ * the market glows at night.
+ * params: span (voxels between the building lines; 24), length (voxels along
+ * the street; 18), depth (a row's depth; 4), height (the canopy's; 6).
+ * roles: canopy.* (tarpaulins), goods.* (what's on the tables and the rails),
+ * table, frame (posts and rails), lamp (the bulbs, lit at night).
+ */
+export const marketStalls: Generator = ({ rand, ramp, ramps, param }) => {
+  const S = Math.max(10, Math.round(param("span", 24)));
+  const L = Math.max(6, Math.round(param("length", 18)));
+  const D = Math.max(2, Math.min(Math.round(param("depth", 4)), Math.floor(S / 2) - 2));
+  const H = Math.max(4, Math.round(param("height", 6)));
+  const m = new VoxelModel(S, L, H + 1);
+  const pick = (role: string) => {
+    const ids = ramps(role);
+    return m.material(ids.length ? ids[Math.floor(rand() * ids.length)]! : ramp(role));
+  };
+  const table = m.material(ramp("table"));
+  const frame = m.material(ramp("frame"));
+  const lamp = m.material(ramp("lamp"));
+  const mid = Math.floor(S / 2);
+  for (const [x0, x1, out] of [
+    [mid - D, mid, -1],
+    [mid, mid + D, 1],
+  ] as const) {
+    let y = 0;
+    while (y < L) {
+      const len = Math.min(L - y, 4 + Math.floor(rand() * 3));
+      const canopy = pick("canopy");
+      const hangs = rand() < 0.4;
+      for (let yy = y; yy < y + len - 1; yy++) {
+        for (let x = x0; x < x1; x++) {
+          const edge = out < 0 ? x === x0 : x === x1 - 1; // the aisle's side
+          m.set(x, yy, 1, table);
+          if (!edge) m.set(x, yy, 2, rand() < 0.75 ? pick("goods") : table);
+          // the tarpaulin, a voxel lower over the aisle, bare bulbs strung along that edge
+          m.set(x, yy, edge ? H - 1 : H, edge && (yy - y) % 2 === 1 ? lamp : canopy);
+          // goods hung along a rail under the canopy's edge, a post at each end of the stall
+          if (edge) {
+            const post = yy === y || yy === y + len - 2;
+            for (let z = 0; z < H - 1; z++) {
+              if (post) m.set(x, yy, z, frame);
+              else if (hangs && z >= H - 3) m.set(x, yy, z, pick("goods"));
+            }
+          }
+        }
+        // the inner posts hold the tarpaulin's high side up
+        const inner = out < 0 ? x1 - 1 : x0;
+        if (yy === y || yy === y + len - 2) for (let z = 0; z < H; z++) m.set(inner, yy, z, frame);
+        else for (let z = 3; z < H; z++) m.set(inner, yy, z, frame);
+      }
+      y += len;
+    }
+  }
+  return m;
+};
+
+export const PROP_GENERATORS: Record<string, Generator> = { neonSign, boat, marketStalls };

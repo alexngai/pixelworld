@@ -1,0 +1,190 @@
+# Hong Kong Island, walking level (D-117): the whole island at 10 m per
+# cell, on open data only (D-107), from Kennedy Town to Cape D'Aguilar and
+# from North Point's waterfront to Stanley, with the north tip of Lamma
+# across the West Lamma Channel. Along the north shore, Central's towers
+# (Two IFC, the Bank of China Tower), Wan Chai's and Causeway Bay's back
+# streets under neon, the Convention Centre and Central Plaza, the trams on
+# their one line from Kennedy Town to Shau Kei Wan; above them the
+# Mid-Levels' towers climbing to the Peak (552 m); over the hills the
+# country parks, and on the south side Aberdeen, Ap Lei Chau, Repulse Bay,
+# Stanley and Shek O.
+# Hong Kong's own building and terrain data (LandsD) can't be adapted under
+# its terms (docs/cities.md), so heights come from OSM's floors where it has
+# them and from each neighbourhood's typical height where it doesn't, and the
+# ground from Copernicus GLO-30 with its buildings filtered off in town and
+# a canopy's height off the woods (D-115): the island's surveyed summits come
+# out a median 16 m low. On the Mid-Levels' slopes streets and building
+# bases are off by several floors (docs/cities.md).
+# Build: cd pipeline && uv run pixelworld build ../worlds/hongkong/island.yaml
+id: hongkong-island
+name: Hong Kong Island (walking)
+level: walk
+levels:
+  - { name: drive, world: hongkong, label: "Driving round Victoria Harbour" }
+  - { name: walk, world: hongkong-island, label: "Walking Hong Kong Island" }
+bounds: [114.105, 22.195, 114.265, 22.293] # lon/lat: west, south, east, north
+
+metersPerCell: 10
+# the Peak is 552 m: 203 steps, drawn true to 1.5
+verticalExaggeration: 1.5
+maxSlope: 3
+chunkSize: 64
+smoothing: null
+warp: null
+
+# the north shore's grids run along the shore, about 15° off east-west, and
+# the hills' roads follow the contours: streets within 6° of one of the 16
+# directions snap to it, the rest are drawn along their own centre lines (D-082)
+snap:
+  roads: { angle: 6, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 6, follow: 3, clearRoads: { nudgeMeters: 5 } }
+
+widths:
+  scale: 1.0
+  minCells: 0.15
+  centrelines: true
+  lanes: { lines: true, meters: 3.5 }
+micro: { k: 2, dem: { overview: 1 }, smooth: { lawn: 15 } }
+
+ground:
+  lawn:
+    landUse: [park, dog_park, village_green, pitch, recreation_ground, grass, garden, cemetery, grave_yard, meadow]
+    over: [grass, desert, urban, farmland]
+    keep: [grassland, scrub, heath, beach, sand]
+    maxSlope: 0.2
+    slopeMeters: 50
+    wooded: { over: [woodland], maxCover: 0.5, canopy: 3 }
+    spread: { over: [grass], meters: 25 }
+
+  # the open ridges (Dragon's Back, High West): WorldCover calls them tree
+  # cover; where the canopy map shows few trees 3 m or taller, scrub (D-133)
+  scrub: { over: [woodland], maxCover: 0.3 }
+
+terrain: { minLakeArea: 4000 }
+
+objects:
+  buildings:
+    minArea: 15
+    # 25 storeys and up: below it, rules sort walk-ups, tong lau and composite buildings
+    towerMeters: 80
+    podiumMeters: 18
+    houseMaxArea: 350
+  # Building typologies (D-055) with no records to read (D-107): each
+  # neighbourhood names its buildings' hood, and gives the ones OSM has no
+  # floors for its typical height (the median of OSM's floors on footprints
+  # under 300 m² there, measured 2026-11-12: open data only). First match
+  # wins. The boxes are sources.facts.
+  typology:
+    rules:
+      # Hong Kong's public housing: the blocks on an estate's land, which OSM
+      # names for the estate (邨); and the temples, Man Mo, Tin Hau, Hung Shing
+      # and Pak Tai, by name (D-134)
+      - { group: building.estate, from: [building.tower, building.residential, building.commercial], grounds: [residential], groundHas: ["邨"] }
+      - { group: building.temple, from: [building.residential, building.commercial, building.parking], nameHas: ["Temple"], kinds: ["", temple, religious] }
+      # towers of 25 storeys and up: flats where OSM says so, and in the old
+      # districts and the Mid-Levels every narrow one (the pencil towers);
+      # glass elsewhere
+      - { group: building.tower.residential, from: [building.tower], kinds: [apartments, residential, house, dormitory] }
+      - { group: building.tower.residential, from: [building.tower], hoods: [Sheung Wan, Sai Ying Pun, Kennedy Town, Wan Chai, Causeway Bay, North Point, Happy Valley, Mid-Levels, Quarry Bay, Shau Kei Wan], maxWidth: 35 }
+      # malls and podiums: wide and low
+      - { group: building.podium, floors: [1, 7], minWidth: 40 }
+      # the composite buildings of the 1960s–80s: 10–24 storeys on a narrow lot
+      - { group: building.composite, floors: [10, 24], maxWidth: 35 }
+      # tong lau: 3–9 storeys on a narrow lot, in the old districts
+      - { group: building.tonglau, floors: [3, 9], maxWidth: 18, hoods: [Sheung Wan, Sai Ying Pun, Kennedy Town, Wan Chai, Causeway Bay, North Point, Shau Kei Wan] }
+      - { group: building.civic, kinds: [school, college, university, hospital, government, civic, public, religious, church, temple, fire_station, police] }
+      # the Peak's and the south side's villas, and village houses (three
+      # storeys on a small lot) anywhere: white tile or paint, no shop signs
+      - { group: building.village, floors: [1, 4], hoods: [The Peak, Pok Fu Lam, Repulse Bay, Stanley, Shek O] }
+      - { group: building.village, floors: [1, 3], maxWidth: 20 }
+  vegetation:
+    # town's trees where the canopy map shows 3 m or more and the land isn't
+    # wooded; the country parks' woods are the client's scatter (D-117)
+    - { group: tree, canopy: 3, landcover: [built, grass, shrub, crop, bare, wetland], spacing: 8, density: 0.9 }
+    # sampans and fishing boats moored in the typhoon shelters (Causeway Bay,
+    # Aberdeen, Shau Kei Wan), afloat at the water's level (D-133)
+    - group: prop.boat
+      water: true
+      spacing: 18
+      density: 0.45
+      bounds: [[114.1805, 22.2845, 114.1895, 22.2895], [114.1460, 22.2435, 114.1660, 22.2490], [114.2240, 22.2800, 114.2330, 22.2860]]
+    # a few junks under red sails out on the harbour
+    - { group: prop.boat.junk, water: true, spacing: 400, density: 0.35, bounds: [114.1500, 22.2860, 114.2100, 22.2930] }
+  streetTrees:
+    - { group: tree.street, roads: [primary, secondary, tertiary], canopy: 3, spacing: 10, kerb: 1.2 }
+  streetProps:
+    - { group: prop.streetlight, roads: [primary, secondary, tertiary], spacing: 40, offset: 9 }
+    - { group: prop.signal, roads: [primary, secondary, tertiary], at: junctions, offset: 10 }
+    # neon signs hung across Wan Chai's and Causeway Bay's back streets from
+    # the buildings either side (D-108), every 12 m
+    - group: prop.neon
+      roads: [tertiary, residential, unclassified]
+      across: true
+      spacing: 12
+      bounds: [114.1700, 22.2740, 114.1920, 22.2810]
+    # and in the other old districts' back streets: Sheung Wan and Sai Ying
+    # Pun, North Point, Shau Kei Wan (D-133)
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1400, 22.2840, 114.1560, 22.2885] }
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.1925, 22.2860, 114.2040, 22.2915] }
+    - { group: prop.neon, roads: [tertiary, residential, unclassified], across: true, spacing: 14, bounds: [114.2250, 22.2775, 114.2320, 22.2820] }
+    # market stalls down the middle of the market streets, under tarpaulins
+    # and strung bulbs (D-134)
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Graham Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Chun Yeung Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Marble Road", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Stanley New Street", across: true, spacing: 11 }
+  # new ones go at the end: a landmark's seed is its place in the list
+  landmarks: [two-international-finance-centre, bank-of-china-tower, central-plaza, hong-kong-convention-and-exhibition-centre, hopewell-centre]
+  landmarkDepiction: generic
+  depiction: { heightStretch: 1.0, scatter: 1.0 }
+
+style: hongkong
+start: { lon: 114.1588, lat: 22.2815 } # Statue Square, Central
+
+sources:
+  # Copernicus GLO-30 with buildings filtered off in town (D-107, D-115);
+  # its 30 m pixels are coarser than the cells and the micro-cells, so they're
+  # interpolated (bilinear), not each spread flat over 3×3 cells (D-132)
+  dem: { kind: copernicus-glo30-ground, overview: 1, resampling: bilinear }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  # facts by neighbourhood box (D-107), for objects.typology: no records to
+  # read. Central comes before the Mid-Levels, whose box runs down to Caine Road
+  facts:
+    kind: areas
+    areas:
+      - { hood: Central, bounds: [114.1530, 22.2785, 114.1630, 22.2930], floors: 8 }
+      - { hood: Mid-Levels, bounds: [114.1400, 22.2720, 114.1630, 22.2835], floors: 15 }
+      - { hood: The Peak, bounds: [114.1350, 22.2550, 114.1650, 22.2720], floors: 4 }
+      - { hood: Kennedy Town, bounds: [114.1050, 22.2760, 114.1350, 22.2930], floors: 12 }
+      - { hood: Sai Ying Pun, bounds: [114.1350, 22.2835, 114.1460, 22.2930], floors: 6 }
+      - { hood: Sheung Wan, bounds: [114.1460, 22.2835, 114.1560, 22.2930], floors: 6 }
+      - { hood: Admiralty, bounds: [114.1630, 22.2740, 114.1700, 22.2900], floors: 7 }
+      - { hood: Wan Chai, bounds: [114.1700, 22.2720, 114.1810, 22.2900], floors: 13 }
+      - { hood: Causeway Bay, bounds: [114.1810, 22.2740, 114.1920, 22.2900], floors: 6 }
+      - { hood: Happy Valley, bounds: [114.1760, 22.2580, 114.1950, 22.2740], floors: 10 }
+      - { hood: North Point, bounds: [114.1920, 22.2800, 114.2070, 22.2930], floors: 20 }
+      - { hood: Quarry Bay, bounds: [114.2070, 22.2780, 114.2230, 22.2930], floors: 6 }
+      - { hood: Shau Kei Wan, bounds: [114.2230, 22.2700, 114.2360, 22.2870], floors: 10 }
+      - { hood: Chai Wan, bounds: [114.2360, 22.2550, 114.2550, 22.2850], floors: 7 }
+      - { hood: Pok Fu Lam, bounds: [114.1200, 22.2450, 114.1400, 22.2760], floors: 4 }
+      - { hood: Aberdeen, bounds: [114.1400, 22.2430, 114.1760, 22.2580], floors: 6 }
+      - { hood: Ap Lei Chau, bounds: [114.1400, 22.2320, 114.1620, 22.2430], floors: 16 }
+      - { hood: Repulse Bay, bounds: [114.1760, 22.2250, 114.2050, 22.2500], floors: 6 }
+      - { hood: Stanley, bounds: [114.2000, 22.1950, 114.2300, 22.2250], floors: 4 }
+      - { hood: Shek O, bounds: [114.2400, 22.2150, 114.2650, 22.2400], floors: 2 }
+  roads:
+    classes: [motorway, trunk, primary, secondary, tertiary, residential, unclassified, living_street, service]
+    excludeSubclasses: [parking_aisle, driveway]
+    joinIslands: [parking_aisle]
+  paths: { classes: [sidewalk, crosswalk, footway, pedestrian, steps, path, cycleway] }
+  rivers:
+    subtypes: [river]
+  rails:
+    # the trams along the north shore and round Happy Valley
+    - { draw: street, rail: [tram] }
+    # the MTR where it runs in the open (the South Island line's viaduct),
+    # and the Peak Tram up the hill
+    - { draw: train, rail: [standard_gauge, narrow_gauge, subway, light_rail, funicular], bundle: 20 }
+
+geology: null

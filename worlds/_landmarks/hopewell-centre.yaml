@@ -1,0 +1,11 @@
+name: Hopewell Centre
+# Overture's footprint of the tower (合和中心, 216 m, 64 storeys) on Queen's
+# Road East, Wan Chai, a circle 46 m across; its centroid
+anchor: { lon: 114.171588, lat: 22.274671 }
+height: 216
+clear: 25
+replaces: [dc48fd1e-6e56-4ea3-928e-64ccd4d61000]
+depictions:
+  # a white cylinder striped with its windows, a glazed ring at its top (the
+  # revolving restaurant); no name
+  generic: { group: landmark.tower.cylinder }

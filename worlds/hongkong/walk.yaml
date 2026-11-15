@@ -15,7 +15,8 @@ id: hongkong-walk
 name: Hong Kong (walking)
 level: walk
 levels:
-  - { name: walk, world: hongkong-walk, label: "Walking Kowloon: Tsim Sha Tsui to Mong Kok" }
+  - { name: drive, world: hongkong, label: "Driving round Victoria Harbour" }
+  - { name: walk, world: hongkong-walk, label: "Walking Kowloon" }
 bounds: [114.156, 22.290, 114.178, 22.330] # lon/lat: west, south, east, north
 
 metersPerCell: 10
@@ -65,6 +66,11 @@ objects:
   # measured 2026-11-11: open data only). First match wins. The boxes are sources.facts.
   typology:
     rules:
+      # Hong Kong's public housing: the blocks on an estate's land, which OSM
+      # names for the estate (邨); and the temples, Man Mo, Tin Hau, Hung Shing
+      # and Pak Tai, by name (D-134)
+      - { group: building.estate, from: [building.tower, building.residential, building.commercial], grounds: [residential], groundHas: ["邨"] }
+      - { group: building.temple, from: [building.residential, building.commercial, building.parking], nameHas: ["Temple"], kinds: ["", temple, religious] }
       # towers of 25 storeys and up: flats where OSM says so, and in the old
       # districts every narrow one (the pencil towers); glass elsewhere
       - { group: building.tower.residential, from: [building.tower], kinds: [apartments, residential, house, dormitory] }
@@ -80,6 +86,9 @@ objects:
   vegetation:
     # Kowloon Park's and King's Park's trees where the canopy map shows 3 m or more
     - { group: tree, canopy: 3, spacing: 8, density: 0.9 }
+    # boats moored in the Yau Ma Tei typhoon shelter, junks out on the harbour (D-133)
+    - { group: prop.boat, water: true, spacing: 18, density: 0.45, bounds: [114.1590, 22.3050, 114.1650, 22.3150] }
+    - { group: prop.boat.junk, water: true, spacing: 400, density: 0.35, bounds: [114.1560, 22.2900, 114.1780, 22.2930] }
   streetTrees:
     - { group: tree.street, roads: [primary, secondary, tertiary], canopy: 3, spacing: 10, kerb: 1.2 }
   streetProps:
@@ -94,6 +103,11 @@ objects:
       across: true
       spacing: 12
       bounds: [114.1640, 22.2940, 114.1760, 22.3300]
+    # market stalls down the middle of the market streets, under tarpaulins
+    # and strung bulbs (D-134)
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Tung Choi Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Temple Street", across: true, spacing: 11 }
+    - { group: prop.market, roads: [tertiary, residential, unclassified, living_street, pedestrian], name: "Fa Yuen Street", across: true, spacing: 11 }
   # new ones go at the end: a landmark's seed is its place in the list
   landmarks: [international-commerce-centre, tsim-sha-tsui-clock-tower, hong-kong-cultural-centre, the-peninsula]
   landmarkDepiction: generic
@@ -103,8 +117,10 @@ style: hongkong
 start: { lon: 114.1717, lat: 22.3190 } # Nathan Road at Argyle Street, Mong Kok
 
 sources:
-  # Copernicus GLO-30 with buildings filtered off (D-107)
-  dem: { kind: copernicus-glo30-ground, overview: 1 }
+  # Copernicus GLO-30 with buildings filtered off in town (D-107, D-115);
+  # its 30 m pixels are coarser than the cells and the micro-cells, so they're
+  # interpolated (bilinear), not each spread flat over 3×3 cells (D-132)
+  dem: { kind: copernicus-glo30-ground, overview: 1, resampling: bilinear }
   landcover: { kind: esa-worldcover-2021, overview: 1 }
   features: { kind: overture, release: 2026-10-21.0 }
   # facts by neighbourhood box (D-107), for objects.typology: no records to read
