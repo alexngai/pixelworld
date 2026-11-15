@@ -5,6 +5,7 @@ import {
   INDEX_SILHOUETTE,
   STYLE_SCHEMA_FILE,
   buildPalette,
+  mergeStylePacks,
   paletteIndex,
   styleIssues,
   validateStyle,
@@ -14,9 +15,14 @@ import {
 const ROOT = join(__dirname, "../../../worlds/_styles");
 const SCHEMA = resolve(__dirname, "../schema", STYLE_SCHEMA_FILE);
 // every directory is a pack (the licence file beside them isn't)
-const packs = readdirSync(ROOT, { withFileTypes: true })
+const files = readdirSync(ROOT, { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => [e.name, JSON.parse(readFileSync(join(ROOT, e.name, "style.json"), "utf8"))] as const);
+// a pack that extends another is checked with its parents merged in, as the viewer loads it
+const byId = new Map<string, Record<string, unknown>>(files);
+const merged = (json: Record<string, unknown>): Record<string, unknown> =>
+  typeof json.extends === "string" ? mergeStylePacks(merged(byId.get(json.extends)!), json) : json;
+const packs = files.map(([id, json]) => [id, merged(json)] as const);
 
 describe("every style pack", () => {
   it("is found", () => expect(packs.map(([id]) => id)).toEqual(expect.arrayContaining(["bay-area", "desert-southwest"])));

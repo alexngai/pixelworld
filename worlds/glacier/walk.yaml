@@ -1,0 +1,78 @@
+# Glacier National Park's high country, walking level (D-140): Logan Pass and
+# the Going-to-the-Sun Road along the Garden Wall, north over the wall to
+# Grinnell Glacier and Upper Grinnell Lake, and down the valley past Grinnell
+# Lake and Lake Josephine to Swiftcurrent Lake and the Many Glacier Hotel, at
+# 10 m per cell. Horns and aretes banded by the Belt Supergroup (the `glacier`
+# pack's strata), glaciers and snowfields, glacial lakes, subalpine fir and
+# spruce giving way to alpine meadow and talus.
+# The flying level (fly.yaml) draws the same box at 50 m.
+# Build: cd pipeline && uv run pixelworld build ../worlds/glacier/walk.yaml
+id: glacier-walk
+name: Glacier National Park (walking)
+level: walk
+levels:
+  - { name: fly, world: glacier-fly, label: Flying over the Garden Wall }
+  - { name: walk, world: glacier-walk, label: Walking Logan Pass to Many Glacier }
+bounds: [-113.830, 48.680, -113.630, 48.810] # lon/lat: west, south, east, north (west past the Loop, where the road would leave the box and come back)
+
+metersPerCell: 10
+# true relief: the walls rise 600-1,000 m above the lakes
+verticalExaggeration: 1.0
+maxSlope: 3
+chunkSize: 64
+
+style: glacier
+start: { lon: -113.7180, lat: 48.6960 } # Logan Pass
+
+sources:
+  # 1/3 arc-second (10 m) 3DEP; 1 m lidar DEMs exist here (MT statewide
+  # 2020-21) but the pipeline has no 1 m source
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  roads:
+    classes: [primary, secondary, tertiary, residential, unclassified, service]
+    excludeSubclasses: [parking_aisle, driveway]
+  rivers: { subtypes: [river, stream] }
+  # the glacial lakes' own shorelines, levelled (D-103); Swiftcurrent Lake,
+  # Lake Josephine and the Swiftcurrent valley's tarns are class `water`
+  lakes: { classes: [lake, pond, reservoir, water] }
+  paths: { classes: [path, footway, steps] }
+
+# The Belt strata dip about 8 degrees west-south-west (fitted to USGS I-1508-F
+# through Macrostrat, D-140), so each formation's elevation falls about 146 m
+# per km toward the McDonald valley. A strata set is flat, and a pack has at
+# most four: four strips along the strike (N32W), each with its own set
+# (the `glacier` pack), their seams placed off Logan Pass, Grinnell Glacier
+# and Many Glacier.
+geology:
+  default: belt-west # Logan Pass, Haystack Butte, the road down to the Loop, McDonald valley
+  provinces:
+    - name: belt-garden # the Garden Wall's north half, Swiftcurrent Pass, Grinnell Glacier, Mt Gould, Mt Grinnell
+      polygon: [[-113.6615, 48.66], [-113.6175, 48.66], [-113.7795, 48.83], [-113.8235, 48.83]]
+    - name: belt-grinnell # Grinnell Lake and the valley below it
+      polygon: [[-113.6175, 48.66], [-113.5736, 48.66], [-113.7356, 48.83], [-113.7795, 48.83]]
+    - name: belt-many # Lake Josephine, Swiftcurrent Lake, Many Glacier
+      polygon: [[-113.5736, 48.66], [-113.50, 48.66], [-113.50, 48.83], [-113.7356, 48.83]]
+
+# fine cells: steep cells are rock whatever their cover (glaciers stay ice).
+# The lakes are flat (5th to 95th percentile within 6 m) but their cells'
+# corners climb the cirque walls, up to 86 m at Upper Grinnell Lake against
+# the glacier's front; WorldCover's "water" in the shadow of north faces spans
+# 35-148 m. 90 m keeps every lake and drops the worst shadow (D-140).
+terrain: { cliffSlope: 1.0, minLakeArea: 2000, maxLakeRelief: 90 }
+
+snap:
+  roads: { angle: 10, directions: 16, simplify: 0.75, maxShift: 2.0 }
+  buildings: { angle: 12, follow: 3, clearRoads: { nudgeMeters: 5 } }
+widths: { scale: 1.0, minCells: 0.15, centrelines: true }
+# walls as faces lit by their slope (D-141): stepped, they read as columns
+# of micro-cells rather than the Belt's bedding
+micro: { k: 2, dem: { overview: 1 }, maxSlope: 64 }
+
+objects:
+  buildings: { minArea: 30 }
+  # the client scatters subalpine fir, spruce, krummholz and boulders by
+  # surface; objects at 1.25x so they keep the terrain's true scale (terrain
+  # draws 1.96 px per metre at 1.0x, objects 1.6)
+  depiction: { heightStretch: 1.25, scatter: 1.0 }

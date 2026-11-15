@@ -278,6 +278,25 @@ Sources and licenses:
 - Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## glacier-walk, glacier-fly
+
+Glacier National Park's high country (D-140), built from [`worlds/glacier/walk.yaml`](../worlds/glacier/walk.yaml) and [`fly.yaml`](../worlds/glacier/fly.yaml) on the `glacier` style pack: Logan Pass and the Going-to-the-Sun Road along the Garden Wall, Grinnell Glacier and Upper Grinnell Lake, and Many Glacier's lakes, in `[-113.83, 48.68, -113.63, 48.81]`.
+
+- **Walking (`glacier-walk`):** 10 m per cell (1,474 × 1,447 cells, 552 chunks), true relief, objects 1.25× (`heightStretch`), micro-terrain K=2 from the 1/3″ DEM with walls drawn as faces (`micro.maxSlope: 64`, D-141); roads, trails and streams along their centre lines; Overture's lakes levelled. Heights about 1,030–3,050 m in 4.08 m steps. 96 buildings at Many Glacier and Logan Pass, 55 traffic routes (two of them the tour boats on Swiftcurrent Lake and Lake Josephine). Road report clean. 5.7 MB, built in about 23 s from the download cache.
+- **Flying (`glacier-fly`):** the same box at 50 m (296 × 290 cells, 25 chunks), micro-terrain K=4 with walls as faces, rivers only, no buildings. 624 KB, about 6 s.
+- **Strata:** the Belt Supergroup's formations by elevation, in four strips along the strike, each its own `geology` province and strata set, fitted to the USGS geologic map (D-140).
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/glacier/walk.yaml
+uv run pixelworld build ../worlds/glacier/fly.yaml
+```
+
+Sources and licenses:
+- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, water, rivers and buildings: Overture Maps (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints). ODbL 1.0.
+
 ## exp-* (M1.5 pixel detail experiment)
 
 Two small areas at three resolutions each, built from [`worlds/experiment/`](../worlds/experiment/). Every variant shares the same 160 m/cell layout on screen: finer cells are drawn smaller (`render.scale` in the manifest), so the variants line up for comparison.
