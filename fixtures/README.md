@@ -125,14 +125,14 @@ New York at two scale levels (D-078, D-083), built from [`worlds/nyc/`](../world
 - **nyc (driving):** Manhattan at 25 m per cell, from the Battery to Inwood, with what the box takes in across the rivers: Brooklyn from the Heights to Greenpoint and Bushwick, Long Island City and Astoria, the South Bronx along the Harlem River, and Jersey City, Hoboken and the Palisades to Fort Lee.
   - **Buildings:** 185,581 from Overture footprints and heights; 129,188 have facts (New Jersey has none and keeps the generic groups).
   - **Types:** tenements (26,185), brownstones (16,981), houses (16,526), historic commercial blocks (14,378), prewar apartment blocks (5,497), warehouses (4,145), cast-iron lofts (301), pier sheds (65), and towers by era: deco (2,871), slabs (2,442), postmodern (901) and glass (1,640), with 354 left to a kind by seed.
-  - **Also:** 64,837 canopy trees and 31,534 sidewalk trees (one every 16 m), 23,971 lawn and 26,771 yard cells, 8,287 rail cells (the elevated lines, Metro-North's viaduct), 120,442 road cells with centre-line pieces, 25,808 traffic routes.
+  - **Also:** 64,911 canopy trees and 31,522 sidewalk trees (one every 16 m), 23,971 lawn and 26,771 yard cells, 8,287 rail cells (the elevated lines, Metro-North's viaduct), 120,442 road cells with centre-line pieces, 25,482 traffic routes.
   - **Landmarks (generic depictions):** One World Trade Center, the Woolworth Building, the Empire State Building, the Chrysler Building, the Flatiron Building and Grand Central Terminal (the last two on their own footprints), and the Brooklyn, Manhattan, Williamsburg, Queensboro and George Washington Bridges (in pieces, D-056).
   - **Size:** 10 MB, of which `objects.json.gz` is 8.3 MB. Built in 477 s with the download cache (431 s the first time, downloads included, by the pipeline's clock).
 - **nyc-walk:** Manhattan at 10 m per cell from the Battery to 86th Street (Lower Manhattan, Midtown, and the Upper West and East Sides' south halves across Central Park), with Brooklyn Heights, DUMBO, Williamsburg, Greenpoint, Long Island City and Astoria's south end across the East River.
   - **Buildings:** 67,370; 60,549 have facts.
   - **Types:** tenements (13,623), brownstones (8,250), historic commercial blocks (7,219), prewar apartment blocks (3,364), warehouses (1,032), houses (805), cast-iron lofts (297), pier sheds (30), and towers by era: deco (3,261), slabs (2,403), postmodern (988) and glass (1,678), with 288 left to a kind by seed.
   - **Centre lines:** 124,169 road cells and 218,684 path cells carry pieces; 33 and 641 have more than six, and drop their narrowest.
-  - **Also:** 62,094 canopy trees and 14,764 sidewalk trees, 45,606 lawn and 49,393 yard cells, 12,366 street lights and 438 signals, 2,880 rail cells, 13,073 traffic routes.
+  - **Also:** 62,218 canopy trees and 14,802 sidewalk trees, 45,606 lawn and 49,393 yard cells, 12,377 street lights and 448 signals, 2,880 rail cells, 12,509 traffic routes.
   - **Landmarks:** the driving level's, but for the George Washington Bridge.
   - **Size:** 7.4 MB, of which `objects.json.gz` is 4.1 MB and the chunks 3.0 MB. Built in 511 s, the first fetch of its NYC Open Data included.
 - **Road reports:** clean on both levels (no discontinuous or steep edges, no disconnected junctions).
@@ -158,7 +158,7 @@ Paris's walking level (D-078, D-086), built from [`worlds/paris/walk.yaml`](../w
 - **Types:** Haussmann blocks (5,783), faubourg houses (2,475), post-war blocks (1,412), civic stone buildings (452), HBM blocks (388), palaces by name (33 pieces: the Louvre and the Hôtel des Invalides, D-088) and warehouses (12); the rest keep the stone default (`haussmann`: 9,820 residential, 3,711 commercial), and 28 towers.
 - **Courtyards:** kept open (`courtyards: true`, D-088): 2,791 buildings carry theirs.
 - **Centre lines:** 45,185 road cells and 82,732 path cells carry pieces; 14 and 990 have more than six, and drop their narrowest.
-- **Also:** 16,347 canopy trees and 7,776 street trees, 13,096 lawn cells, 3,554 street lights and 296 signals, 327 rail cells, 5,856 traffic routes.
+- **Also:** 16,409 canopy trees and 7,711 street trees, 13,096 lawn cells, 3,548 street lights and 298 signals, 327 rail cells, 5,762 traffic routes.
 - **Landmarks (generic depictions, drawn on their own proportions, D-087, D-088):** the Eiffel Tower (unlit), Notre-Dame, the Arc de Triomphe, the Palais Garnier, the Pont Alexandre III, the Dôme des Invalides, the Grand Palais and the Pont Neuf's two arms.
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
 - **Size:** 2.9 MB. Built in about 70 s with the download cache.
@@ -207,7 +207,7 @@ Kyoto's driving level (D-101), built from [`worlds/kyoto/region.yaml`](../worlds
 - **Buildings:** 182,019 from Overture footprints; 170,903 have PLATEAU facts (96 meshes), 163,971 heights and 78,043 roof shapes come from them.
 - **Types:** wooden houses under gabled (72,608) and hipped (1,538) roofs, mid-rises (38,479), machiya (28,162), temple halls and pavilions (1,138; 522 buildings stand in 46 temple and shrine grounds), kura (411), shrine halls (145), Nijō Castle's palace halls and gates (33) and the Imperial Palace's halls, gates and corridors (64 pieces), by name and shape (D-102, D-103, D-104); the defaults 36,535 houses, 2,765 low blocks, 76 taller blocks, 65 car parks.
 - **Walls:** 1,944 stretches of stone wall along OSM's retaining walls (814 pieces of line), Nijō Castle's ishigaki round its moats among them (D-104).
-- **Also:** 42,128 canopy trees and 3,224 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,329 traffic routes.
+- **Also:** 42,395 canopy trees and 3,223 street trees, 4,268 lawn cells (the Imperial Palace's courts left paved), 291 cells of ponds and moats from Overture's water areas (Kinkaku-ji's pond, Nijō Castle's moats; D-103), 1,937 rail cells, 13,281 traffic routes.
 - **Landmarks:** the walking level's six, Tō-ji's five-storey pagoda (55 m), Heian Shrine's great torii (24.4 m) and Kinkaku-ji's Golden Pavilion (D-102).
 - **Road report:** clean (29 components).
 - **Size:** 7.5 MB. Built in about 170 s with the download cache (about 380 s the first time).
@@ -259,10 +259,10 @@ Sources and licenses:
 
 Kowloon's walking level (D-109), built from [`worlds/hongkong/walk.yaml`](../worlds/hongkong/walk.yaml) on the `hongkong` style pack (D-108): Tsim Sha Tsui's waterfront to Prince Edward, West Kowloon and the ICC to King's Park, at 10 m per cell (228 × 444 cells), on open data alone (D-107): Hong Kong's own building and terrain data can't be adapted under its terms (docs/cities.md). Heights are true (`heightStretch` 1.0); roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
 
-- **Terrain:** Copernicus GLO-30 with buildings and trees filtered off (the `copernicus-glo30-ground` terrain source, D-107): 18 drawn steps from the harbour to King's Park. Measured against the Lands Department's 5 m DTM, an RMSE of 6.4 m over the pilot's land.
-- **Buildings:** 7,104 from Overture footprints (OpenStreetMap). OSM gives floors on about half; the rest take their neighbourhood's typical height from the spec (the `areas` facts source, D-107: 3,328 buildings).
+- **Terrain:** Copernicus GLO-30 with buildings filtered off in town and at most a canopy's height off the parks' trees (the `copernicus-glo30-ground` terrain source, D-107, D-115), its 30 m pixels interpolated onto the cells (D-132): 29 drawn steps from the harbour to Woh Chai Shan. With the filter everywhere, measured against the Lands Department's 5 m DTM, an RMSE of 6.4 m over the pilot's land (D-107); the town-only filter moved 1.1% of land cells by two steps or more, in the parks and on the hills, and brought its 11 surveyed hills from an RMSE of 18 m to 10 m (D-115).
+- **Buildings:** 7,103 from Overture footprints (OpenStreetMap). OSM gives floors on about half; the rest take their neighbourhood's typical height from the spec (the `areas` facts source, D-107: 3,327 buildings).
 - **Types** (by floors, footprint width, OSM's class and neighbourhood): tong lau (3,726), composite buildings (985), residential towers (299), podiums and malls (65), civic buildings (105), glass towers (61) and hotels (7); 857 commercial and 995 residential keep the defaults.
-- **Also:** neon signs hung across the streets from both sides (597 on Nathan Road, 5,075 in the old districts' streets), 7,789 canopy trees and 706 street trees, 2,164 street lights and 292 signals, 418 rail cells, 3,961 traffic routes (21 for ferries).
+- **Also:** neon signs hung across the streets from both sides (597 on Nathan Road, 5,059 in the old districts' streets), 7,846 canopy trees and 714 street trees, 2,154 street lights and 291 signals, 418 rail cells, 3,668 traffic routes (21 for ferries); 139 boats moored in the Yau Ma Tei typhoon shelter and 2 junks on the harbour (D-133); 312 market stalls on Tung Choi Street (the Ladies' Market), Temple Street and Fa Yuen Street, 77 estate blocks and 2 temples (D-134). Road tunnels over 150 m aren't drawn (D-115): the Western Harbour Crossing doesn't cross the water.
 - **Landmarks (generic depictions, D-108):** the International Commerce Centre, the Tsim Sha Tsui clock tower, the Cultural Centre and the Peninsula.
 - **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
 - **Size:** 1.2 MB. Built in about 50 s with the download cache (110 s on a first build).
@@ -278,6 +278,77 @@ Sources and licenses:
 - Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 - Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
 
+## hongkong-island
+
+Hong Kong Island's walking level (D-117), built from [`worlds/hongkong/island.yaml`](../worlds/hongkong/island.yaml) on the `hongkong` style pack: the whole island from Kennedy Town to Cape D'Aguilar and from North Point's waterfront to Stanley, with the north tip of Lamma, at 10 m per cell (1650 × 1086 cells, 442 chunks), on open data alone (D-107). Heights are true (`heightStretch` 1.0); roads and paths are drawn along their own centre lines, snapped to 16 directions only within 6° of one (D-082).
+
+- **Terrain:** Copernicus GLO-30 with buildings filtered off in town and at most a canopy's height off the woods (D-115), its 30 m pixels interpolated onto the cells and micro-cells (D-132): 200 drawn steps from the sea to the Peak. Its 183 summits with a surveyed height come out a median 16 m low (RMSE 16 m). On the Mid-Levels' slopes streets and building bases are several floors off (docs/cities.md).
+- **Buildings:** 20,947 from Overture footprints (OpenStreetMap). OSM gives floors on 37–79% along the north shore and far fewer on the Peak and the south side; the rest take their neighbourhood's typical height from the spec (the `areas` facts source: 20 neighbourhoods, 9,208 buildings).
+- **Types:** composite buildings (4,487), residential towers (1,924), tong lau (1,670) in the old districts, podiums and malls (340), civic buildings (315), village houses and villas (7,321, white tile, cream or salmon), glass towers (353) and hotels (40); 1,722 commercial and 2,733 residential keep the defaults.
+- **Ground:** the open ridges (Dragon's Back, High West) as scrub where the canopy map shows few trees (302,472 cells; D-133), the rest of the country parks woods; cut slopes grey shotcrete below 250 m (D-133).
+- **Estates and temples** (D-134): 428 public-housing blocks on land named for an estate (邨), and 10 temple halls (Man Mo Temple's among them); vertical signs and rooftop billboards on the composite and commercial blocks; 109 market stalls on Graham Street, Chun Yeung Street, Marble Road and Stanley New Street.
+- **Also:** 3,900 neon signs across the back streets of Wan Chai, Causeway Bay, Sheung Wan and Sai Ying Pun, North Point and Shau Kei Wan, 11,403 canopy trees in town and 7,157 street trees (the country parks' woods are the client's scatter), 6,869 street lights and 642 signals; the trams in the street (1,999 cells) and the Peak Tram and the MTR's open stretches (896 cells); 9,663 traffic routes (22 for the trams, drawn as double-deckers, and 36 for ferries); 1,480 sampans and fishing boats moored in the typhoon shelters of Causeway Bay, Aberdeen and Shau Kei Wan, and 5 junks under red sails on the harbour (D-133). Road tunnels over 150 m aren't drawn (D-115).
+- **Landmarks (generic depictions, D-117, D-133):** Two IFC, the Bank of China Tower, Central Plaza, the Convention Centre's New Wing and Hopewell Centre.
+- **Road report:** clean (no discontinuous or steep edges, no disconnected junctions).
+- **Size:** 6.6 MB (52,513 objects). Built in about 70 s with the download cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/hongkong/island.yaml
+```
+
+Sources and licenses:
+- Elevation: Copernicus DEM GLO-30, produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Copernicus DEM licence.
+- Land cover (and where the ground filter applies): ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rails, parks and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+- Tree canopy: High Resolution Canopy Height Maps by WRI and Meta. CC BY 4.0.
+
+## hongkong
+
+Hong Kong's driving level (D-133), built from [`worlds/hongkong/region.yaml`](../worlds/hongkong/region.yaml) on the `hongkong` style pack: both shores of Victoria Harbour, from Kennedy Town to Lei Yue Mun and from Stanley to Prince Edward, at 25 m per cell (660 × 634 cells, 110 chunks), on open data alone (D-107). Its walking level is `hongkong-island`; `hongkong-walk` links back to it. It shares the walking levels' neighbourhoods (28 boxes) and typology rules.
+
+- **Terrain:** as the walking levels' (D-115, D-132): 82 drawn steps from the sea to the Peak.
+- **Buildings:** 42,652 from Overture footprints; 11,856 take their neighbourhood's typical height.
+- **Also:** 1,770 estate blocks and 17 temple halls (D-134); 1,067 boats in the typhoon shelters (Causeway Bay, Aberdeen, Shau Kei Wan, Yau Ma Tei) and 4 junks on the harbour; 6,869 canopy trees in town and 7,777 street trees; the open ridges as scrub (53,103 cells); 19,470 traffic routes (17 for the trams, 46 for ferries, the Star Ferry among them).
+- **Landmarks (generic):** the ICC, the Tsim Sha Tsui clock tower, the Cultural Centre, the Peninsula, Two IFC, the Bank of China Tower, Central Plaza, the Convention Centre and Hopewell Centre.
+- **Road report:** clean. The north edge is at 22.338°, past a trunk road's viaduct by Sham Shui Po that otherwise leaves the edge and comes back.
+- **Size:** 3.5 MB. Built in about 3 minutes from the download cache.
+
+```sh
+cd pipeline
+uv run pixelworld build ../worlds/hongkong/region.yaml
+```
+
+Sources and licenses: as `hongkong-island`'s.
+
+## zion-walk
+
+Zion Canyon's walking level (D-137), built from [`worlds/zion/walk.yaml`](../worlds/zion/walk.yaml) on the `zion` style pack (it extends `desert-southwest`): the canyon of the North Fork of the Virgin River from Springdale and the visitor centre to the Temple of Sinawava and the end of the Riverside Walk, at 10 m per cell (800 × 1222 cells), in true relief (vertical ×1.0).
+
+- **Terrain:** USGS 3DEP 1/3″ at full resolution with 4 × 4 micro-cells (2.5 m) that slope however steep, so walls are smooth faces (`micro.maxSlope`, D-141), from 1,178 m on the river at Springdale to 2,274 m on the rims. Cliffs take the pack's Zion strata by elevation: Chinle, Moenave, Kayenta, the Navajo sandstone's red base, salmon middle and white top, and the Carmel on the highest rims.
+- **Water:** the Virgin River only, 20 m wide (3,577 water cells); Overture's streams here are dry washes.
+- **Objects:** 44,879 broadleaf trees and 10,452 pinyon-juniper where the canopy height map has trees 4 m or taller, 10,037 shrubs, and 423 buildings: Springdale's (84 commercial, 230 residential) and 109 in the park drawn rustic (`building.park`: the lodge, its cabins, the museum). 331 traffic routes.
+- **Size:** 5.7 MB (chunks 4.7 MB, objects 0.95 MB). Built in 190 s on a first build (the canopy downloads), 18 s from the download cache.
+
+uv run pixelworld build ../worlds/zion/walk.yaml
+
+- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
+- Land cover: ESA WorldCover 2021. CC BY 4.0.
+- Roads, paths, rivers and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
+
+## glacier-walk, glacier-fly
+
+Glacier National Park's high country (D-140), built from [`worlds/glacier/walk.yaml`](../worlds/glacier/walk.yaml) and [`fly.yaml`](../worlds/glacier/fly.yaml) on the `glacier` style pack: Logan Pass and the Going-to-the-Sun Road along the Garden Wall, Grinnell Glacier and Upper Grinnell Lake, and Many Glacier's lakes, in `[-113.83, 48.68, -113.63, 48.81]`.
+
+- **Walking (`glacier-walk`):** 10 m per cell (1,474 × 1,447 cells, 552 chunks), true relief, objects 1.25× (`heightStretch`), micro-terrain K=2 from the 1/3″ DEM with walls drawn as faces (`micro.maxSlope: 64`, D-141); roads, trails and streams along their centre lines; Overture's lakes levelled. Heights about 1,030–3,050 m in 4.08 m steps. 96 buildings at Many Glacier and Logan Pass, 55 traffic routes (two of them the tour boats on Swiftcurrent Lake and Lake Josephine). Road report clean. 5.7 MB, built in about 23 s from the download cache.
+- **Flying (`glacier-fly`):** the same box at 50 m (296 × 290 cells, 25 chunks), micro-terrain K=4 with walls as faces, rivers only, no buildings. 624 KB, about 6 s.
+- **Strata:** the Belt Supergroup's formations by elevation, in four strips along the strike, each its own `geology` province and strata set, fitted to the USGS geologic map (D-140).
+
+uv run pixelworld build ../worlds/glacier/walk.yaml
+uv run pixelworld build ../worlds/glacier/fly.yaml
+
+- Roads, paths, water, rivers and buildings: Overture Maps (OpenStreetMap, Esri Community Maps, Microsoft and Google Open Buildings footprints). ODbL 1.0.
+
 ## yellowstone-walk
 
 Yellowstone's Upper and Midway Geyser Basins (D-138), built from [`worlds/yellowstone/walk.yaml`](../worlds/yellowstone/walk.yaml) on the `yellowstone` style pack: the Firehole River from Old Faithful and the Old Faithful Inn to Grand Prismatic Spring and Excelsior Geyser, at 6 m per cell (796 × 1,538 cells) so that small hot pools hold a cell. Heights are true for objects (`heightStretch` 1.0).
@@ -289,14 +360,8 @@ Yellowstone's Upper and Midway Geyser Basins (D-138), built from [`worlds/yellow
 - **Road report:** clean.
 - **Size:** 5.2 MB. Rebuilt in about 25 s from the download cache.
 
-```sh
-cd pipeline
 uv run pixelworld build ../worlds/yellowstone/walk.yaml
-```
 
-Sources and licenses:
-- Elevation: USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM. Public domain.
-- Land cover: ESA WorldCover 2021. CC BY 4.0.
 - Roads, paths, rivers, hot springs, geyser points and buildings: Overture Maps (OpenStreetMap and others). ODbL 1.0.
 
 ## exp-* (M1.5 pixel detail experiment)

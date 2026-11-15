@@ -1,5 +1,5 @@
 {
-  "packageHash": "d51893665686ca6b9b118c4a53eb683a7a5482ab63d89675c2d95b5ea99d643a",
+  "packageHash": "4be3e30dc7e9551bdf760b251813f99611dd94ed2b8984037ada276a56091420",
   "cells": [
     294,
     378
@@ -10,7 +10,7 @@
     56
   ],
   "inputs": {
-    "roadSegments": 29395,
+    "roadSegments": 29399,
     "riverLines": 901
   },
   "objects": {
@@ -36,19 +36,19 @@
     "landmark.temple.stage": 1,
     "landmark.torii.great": 1,
     "landmark.tower.candle": 1,
-    "tree": 42128,
-    "tree.street": 3224,
+    "tree": 42395,
+    "tree.street": 3223,
     "wall.stone": 1451,
     "wall.stone.diagonal": 158,
     "wall.stone.slant": 127,
     "wall.stone.slant2": 208
   },
   "roads": {
-    "cells": 36563,
-    "edges": 41421,
+    "cells": 36393,
+    "edges": 41221,
     "discontinuous_edges": 0,
     "steep_edges": 0,
-    "components": 29,
+    "components": 31,
     "split_segments": 0,
     "disconnected_junctions": 0,
     "ok": true
@@ -60,22 +60,22 @@
   },
   "lanes": {
     "counted": 0,
-    "oneway": 13963,
-    "divided": 4933
+    "oneway": 13760,
+    "divided": 4719
   },
   "surfaces": {
     "woodland": 24478,
-    "water": 1936,
+    "water": 1937,
     "desert": 131,
     "grass": 279,
     "farmland": 268,
-    "urban": 79772,
+    "urban": 79771,
     "lawn": 4268
   },
   "routes": {
     "ferry": 1,
     "lightrail": 2,
-    "road": 13256,
+    "road": 13208,
     "train": 70
   }
 }

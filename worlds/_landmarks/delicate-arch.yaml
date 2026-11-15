@@ -1,0 +1,11 @@
+name: Delicate Arch
+wikidata: Q2300616
+# a free-standing arch of Entrada sandstone on the rim of a slickrock bowl: 16 m
+# tall, its opening about 14 m high and 10 m wide (NPS); anchor from Overture's
+# place. Its slab runs north–south, so the opening is seen from the bowl's west side.
+anchor: { lon: -109.49935, lat: 38.74366 }
+height: 16
+orient: 1
+clear: 12
+depictions:
+  generic: { group: landmark.arch }

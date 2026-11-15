@@ -54,6 +54,12 @@ describe("fetching a world package's files", () => {
     await expect(fetchWorldFile("/nope/chunk.bin", INFO)).rejects.toThrow("returned an HTML page");
   });
 
+  it("doesn't take binary data that starts with '<' for a page (a .gz sent with Content-Encoding, decompressed)", async () => {
+    const geo = new Uint8Array([0x3c, 0x9a, 0x43, 0xf9, 0x4d, 0x27, 0x39, 0x02]); // zion-walk's geo grid begins so (D-137)
+    serve(new Response(geo)); // no content type
+    expect(new Uint8Array(await fetchWorldFile("/zion-walk/geo.i32.gz", INFO))).toEqual(geo);
+  });
+
   it("names the URL of a network failure", async () => {
     serve(new TypeError("Failed to fetch"));
     await expect(fetchWorldFile("https://cdn.example.test/w/manifest.json", INFO)).rejects.toThrow(

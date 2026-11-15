@@ -401,6 +401,41 @@ def drop_small(mask: np.ndarray, min_cells: int) -> np.ndarray:
     return keep[labels]
 
 
+def cut_corners(
+    corners: np.ndarray, k: int, cuts: list[tuple[float, float, float, float]]
+) -> np.ndarray:
+    """Corner elevations (metres, k corners per cell) with the ground within each
+    cut's radius lowered to its foot: cuts are (x, y in cells, radius in cells,
+    foot in metres). A DEM holds an arch's fin and a balanced rock's spike, which
+    would fill the opening under a span or hide the neck under a boulder (D-139)."""
+    out = corners.copy()
+    for x, y, r, foot in cuts:
+        x0, x1 = max(0, int((x - r) * k)), min(out.shape[1], int((x + r) * k) + 2)
+        y0, y1 = max(0, int((y - r) * k)), min(out.shape[0], int((y + r) * k) + 2)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        win = out[y0:y1, x0:x1]
+        inside = np.hypot(xx / k - x, yy / k - y) <= r
+        win[inside] = np.minimum(win[inside], foot)
+    return out
+
+
+def landmark_cuts(region: Region) -> list[tuple[float, float, float, float]]:
+    """The cuts of a region's anchored landmarks that have `cut` and `baseMeters` (D-139)."""
+    lms = [
+        lm
+        for lm in (region.objects or {}).get("landmarks") or []
+        if lm.get("cut") and "baseMeters" in lm and "lon" in lm
+    ]
+    if not lms:
+        return []
+    xs, ys = region.lonlat_to_cell([lm["lon"] for lm in lms], [lm["lat"] for lm in lms])
+    m = region.meters_per_cell
+    return [
+        (float(x), float(y), float(lm["cut"]) / m, float(lm["baseMeters"]))
+        for x, y, lm in zip(xs, ys, lms, strict=True)
+    ]
+
+
 def drop_sloped(mask: np.ndarray, corner_m: np.ndarray, max_relief: float) -> np.ndarray:
     """Remove water bodies whose ground spans more than max_relief metres.
 
@@ -733,6 +768,10 @@ def build(
     # fetch (cached)
     progress.stage("terrain", "elevation and land cover (downloads are cached)")
     dem = layout.corner_elevation(region.sources["dem"])
+    # ponytail: uniform grids only; a warped layout's cells aren't lonlat_to_cell's
+    cuts = [] if layout.warped else landmark_cuts(region)
+    if cuts:
+        dem = cut_corners(dem, 1, cuts)
     dem_real = dem
     vref = vfac = None
     if layout.warped and layout.spec.vertical:
@@ -768,11 +807,13 @@ def build(
         joined = road_stage.joining_segments(road_rows, extra)
         road_rows = sorted(road_rows + joined, key=lambda r: r["id"])
         progress.log(f"islands: {len(joined)} of {len(extra)} {road_spec['joinIslands']} join them")
+    # harbour crossings and hill tunnels aren't drawn over the water or the hill
+    road_rows = features.without_tunnels(road_rows)
     path_ids: dict[int, str] = {}
     path_rows: list[dict] = []
     if region.sources.get("paths"):
         path_ids = class_ids(region.sources["paths"]["classes"], PATH_ORDER)
-        path_rows = feats.paths(bbox, region.sources["paths"]["classes"])
+        path_rows = features.without_tunnels(feats.paths(bbox, region.sources["paths"]["classes"]))
     path_id = {c: i for i, c in path_ids.items()}
     rivers = region.sources.get("rivers") or {}
     river_rows = feats.rivers(bbox, rivers.get("subtypes") or RIVER_SUBTYPES)
@@ -993,6 +1034,13 @@ def build(
         )
         surface[lawn] = surface_id["lawn"]
         progress.log(f"ground: {int(lawn.sum())} lawn cells")
+    if ground.get("scrub"):
+        # open hillsides the canopy map shows few trees on (D-133)
+        open_ground = ground_stage.scrub(
+            region, surface, surface_names, ground["scrub"], road_shift
+        )
+        surface[open_ground] = surface_id["scrub"]
+        progress.log(f"ground: {int(open_ground.sum())} scrub cells")
     # a swung street's gardens: the cells its bends sweep take the rule's surface
     for a, b, half, name in gardens:
         band = road_stage.street_band(a, b, half + 0.5, (cy, cx)) & (water == NO_WATER)
@@ -1024,6 +1072,8 @@ def build(
         k = int(region.micro["k"])
         dem_spec = region.sources["dem"] | (region.micro.get("dem") or {})
         micro_m = layout.corner_elevation(dem_spec, k)
+        if cuts:
+            micro_m = cut_corners(micro_m, k, cuts)
         if layout.warped and layout.spec.vertical:
             micro_m = layout.relief(micro_m, k)[0]
         # smoothed surfaces (M3.5): {surface: metres}, a Gaussian over each surface's own ground
@@ -1160,9 +1210,13 @@ def build(
     if objects.get("typology"):
         attribution += plugins.attribution(region, "facts")
     canopy_rules = [*(objects.get("vegetation") or []), *(objects.get("streetTrees") or [])]
-    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded")
+    wooded = ((region.ground or {}).get("lawn") or {}).get("wooded") or (region.ground or {}).get(
+        "scrub"
+    )
     if any("canopy" in r for r in canopy_rules) or wooded:
         attribution += plugins.attribution(region, "canopy")
+    # a source may name another's data it reads (GLO-30's ground reads WorldCover): once each
+    attribution = [a for i, a in enumerate(attribution) if a not in attribution[:i]]
 
     sx, sy = layout.lonlat_to_cell([region.start[0]], [region.start[1]])
     warp_info = None

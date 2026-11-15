@@ -1,0 +1,13 @@
+name: Double Arch
+wikidata: Q2565817
+# two arches springing from one leg over an alcove that opens to the southeast,
+# in a massif 60–80 m tall (USGS 3DEP 1 m lidar); the larger spans about 44 m
+# and is 34 m high (NPS). Anchor from Overture's place, in the alcove.
+anchor: { lon: -109.54035, lat: 38.69159 }
+height: 55
+base: 1578          # the alcove's floor
+cut: 25
+orient: 2           # the shared leg to the northwest, the spans on the alcove's north and west
+clear: 20
+depictions:
+  generic: { group: landmark.arch.double }

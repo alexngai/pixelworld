@@ -536,6 +536,17 @@ def test_canopy_trees_take_the_groups_of_their_cells_land_cover(monkeypatch):
     assert west == {"tree.cypress", "tree.eucalyptus"} and east == {"tree"}
     with pytest.raises(ValueError, match="unknown land cover class"):
         objects.scatter(p, rule | {"byLandcover": {"trees": ["x"]}}, _none, "t", FakeCanopy())
+    # with `landcover` too, only on those classes: town's trees, not the woods (D-117)
+    x0, _, x1, _ = p.envelope
+    p.landcover_at = lambda xs, ys: np.where(np.asarray(xs) < (x0 + x1) / 2, 10, 50)
+    town = objects.scatter(
+        p,
+        {"group": "tree", "canopy": 3, "spacing": 20, "landcover": ["built"]},
+        _none,
+        "t",
+        FakeCanopy(),
+    )
+    assert town and all(i["x"] >= cx // 2 - 1 for i in town)
 
 
 def test_lowrise_blocks_cover_free_built_up_cells():

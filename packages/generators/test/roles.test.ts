@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { generatorIssues, resolveStyleExtends, type StylePack } from "@pixelworlds/style";
+import { generatorIssues, mergeStylePacks, type StylePack } from "@pixelworlds/style";
 import { describe, expect, it } from "vitest";
 import {
   KNOWN_PLUGIN_GENERATORS,
@@ -89,15 +89,18 @@ describe("roles", () => {
     expect(new VoxelModel(1, 1, 1).material(0)).toBe(1);
   });
 
-  it("every committed pack names generators that are built in or come with a plugin it names", async () => {
+  it("every committed pack names generators that are built in or come with a plugin it names", () => {
     const root = fileURLToPath(new URL("../../../worlds/_styles/", import.meta.url));
     const ids = readdirSync(root, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
     expect(ids.length).toBeGreaterThan(1);
+    // a pack that extends another is checked with its parents merged in, as the viewer loads it
+    const raw = new Map(ids.map((id) => [id, JSON.parse(readFileSync(`${root}${id}/style.json`, "utf8")) as Record<string, unknown>]));
+    const merged = (json: Record<string, unknown>): Record<string, unknown> =>
+      typeof json.extends === "string" ? mergeStylePacks(merged(raw.get(json.extends)!), json) : json;
     for (const id of ids) {
-      const read = (p: string) => JSON.parse(readFileSync(`${root}${p}/style.json`, "utf8"));
-      const pack = (await resolveStyleExtends(read(id), read)) as StylePack;
+      const pack = merged(raw.get(id)!) as unknown as StylePack;
       const fromPlugins = Object.entries(KNOWN_PLUGIN_GENERATORS).filter(([, plugin]) => pack.plugins?.includes(plugin));
       const known = [...listGenerators().map((g) => g.name), ...fromPlugins.map(([name]) => name)];
       expect(generatorIssues(pack, known), id).toEqual([]);

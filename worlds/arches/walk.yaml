@@ -1,0 +1,46 @@
+# Arches National Park, walking level (D-139): Balanced Rock and the Windows
+# section to Delicate Arch, its viewpoints and the Wolfe Ranch trail, at 10 m.
+# Build: cd pipeline && uv run pixelworld build ../worlds/arches/walk.yaml
+id: arches-walk
+name: Arches National Park (walking)
+bounds: [-109.575, 38.68, -109.485, 38.75]
+metersPerCell: 10
+verticalExaggeration: 1.0
+maxSlope: 3
+style: arches
+start: { lon: -109.5640, lat: 38.7010 } # Balanced Rock
+
+sources:
+  dem: { kind: usgs-3dep-13arcsec, overview: 1 }
+  landcover: { kind: esa-worldcover-2021, overview: 1 }
+  features: { kind: overture, release: 2026-10-21.0 }
+  roads:
+    classes: [primary, secondary, tertiary, residential, unclassified, service]
+    excludeSubclasses: [parking_aisle, driveway]
+  paths: { classes: [path, footway, steps] }
+  rivers: { subtypes: [river] } # Salt Wash and Courthouse Wash run dry: no streams
+
+# Cliffs show the Entrada over the Dewey Bridge member by elevation (the arches
+# pack's strata). The beds dip toward Salt Wash, so the Delicate Arch side has
+# its own bands, about 120 m lower: a rough hand-drawn outline.
+geology:
+  default: windows
+  provinces:
+    - name: salt-wash
+      polygon: [[-109.535, 38.75], [-109.485, 38.75], [-109.485, 38.715], [-109.515, 38.715], [-109.535, 38.728]]
+
+# the park road and its spurs curve over open country: drawn along their own
+# centre lines (D-082) rather than snapped to the 8 grid directions
+widths: { scale: 1.5, minCells: 0.1, centrelines: true }
+micro: { k: 4, dem: { overview: 1 }, maxSlope: 64 }
+
+objects:
+  # the Wolfe Ranch cabin, trailhead shelters and vault toilets
+  buildings: { minArea: 10, houseMaxArea: 120 }
+  vegetation:
+    - { group: tree.pinyon-juniper, landcover: [tree], spacing: 20, density: 0.5 }
+    - { group: tree.pinyon-juniper, landcover: [shrub, grass], spacing: 40, density: 0.25 }
+    - { group: shrub, landcover: [shrub, grass, bare], spacing: 25, density: 0.3 }
+  # the arches and Balanced Rock (D-139): a DEM can't hold an opening under a span
+  landmarks: [delicate-arch, north-window, south-window, turret-arch, double-arch, balanced-rock]
+  depiction: { heightStretch: 1.25, scatter: 1.0 }

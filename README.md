@@ -21,11 +21,15 @@ Every image here is a screenshot of the viewer, taken by [`tools/readme-shots.mj
 <table>
 <tr>
 <td width="50%"><a href="docs/images/readme/sf-chinatown.png"><img src="docs/images/readme/sf-chinatown.png" width="400" alt="Chinatown"></a><br><sub><b>Chinatown</b>, walking: pagoda-roofed corners, and lanterns strung across Grant Avenue.</sub></td>
+<td width="50%"><a href="docs/images/readme/sf-painted-ladies.png"><img src="docs/images/readme/sf-painted-ladies.png" width="400" alt="The Painted Ladies"></a><br><sub><b>The Painted Ladies</b> on Steiner Street, their painted fronts and bays, walking.</sub></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/images/readme/sf-lombard.png"><img src="docs/images/readme/sf-lombard.png" width="400" alt="Lombard Street"></a><br><sub><b>Lombard Street</b>'s brick hairpins between their gardens, walking.</sub></td>
 <td width="50%"><a href="docs/images/readme/sf-hills.png"><img src="docs/images/readme/sf-hills.png" width="400" alt="The Western Addition"></a><br><sub><b>The Western Addition</b>, driving: rowhouses and flats, block by block from the city's records.</sub></td>
 </tr>
 <tr>
-<td><a href="docs/images/readme/sf-golden-gate.png"><img src="docs/images/readme/sf-golden-gate.png" width="400" alt="The Golden Gate Bridge"></a><br><sub><b>The Golden Gate</b>, flying: a modelled landmark on the real terrain of the strait.</sub></td>
-<td><a href="docs/images/readme/sf-downtown-night.png"><img src="docs/images/readme/sf-downtown-night.png" width="400" alt="Downtown San Francisco at night"></a><br><sub><b>Downtown at night:</b> the Salesforce Tower, lit windows, and the Bay Bridge.</sub></td>
+<td width="50%"><a href="docs/images/readme/sf-golden-gate.png"><img src="docs/images/readme/sf-golden-gate.png" width="400" alt="The Golden Gate Bridge"></a><br><sub><b>The Golden Gate</b>, flying: the deck comes ashore on its approach viaducts.</sub></td>
+<td width="50%"><a href="docs/images/readme/sf-downtown-night.png"><img src="docs/images/readme/sf-downtown-night.png" width="400" alt="Downtown San Francisco at night"></a><br><sub><b>Downtown at night:</b> the Salesforce Tower, lit windows, and the Bay Bridge.</sub></td>
 </tr>
 </table>
 
@@ -33,12 +37,16 @@ Every image here is a screenshot of the viewer, taken by [`tools/readme-shots.mj
 
 <table>
 <tr>
-<td width="50%"><a href="docs/images/readme/nyc-village.png"><img src="docs/images/readme/nyc-village.png" width="400" alt="Greenwich Village"></a><br><sub><b>Greenwich Village</b>, walking: brick walk-ups, brownstones and water towers, from the city's lot records (PLUTO).</sub></td>
-<td width="50%"><a href="docs/images/readme/nyc-midtown.png"><img src="docs/images/readme/nyc-midtown.png" width="400" alt="Midtown"></a><br><sub><b>Midtown</b>, walking: setback towers with tanks on their roofs.</sub></td>
+<td width="50%"><a href="docs/images/readme/nyc-central-park.png"><img src="docs/images/readme/nyc-central-park.png" width="400" alt="Central Park"></a><br><sub><b>Central Park</b>'s Pond under the towers of Central Park South, walking.</sub></td>
+<td width="50%"><a href="docs/images/readme/nyc-battery.png"><img src="docs/images/readme/nyc-battery.png" width="400" alt="Battery Park"></a><br><sub><b>Battery Park</b> and Castle Clinton on the harbour, walking.</sub></td>
 </tr>
 <tr>
-<td><a href="docs/images/readme/nyc-bridges.png"><img src="docs/images/readme/nyc-bridges.png" width="400" alt="The Brooklyn and Manhattan bridges"></a><br><sub><b>The Brooklyn and Manhattan bridges</b> over the East River, driving.</sub></td>
-<td><a href="docs/images/readme/nyc-midtown-night.png"><img src="docs/images/readme/nyc-midtown-night.png" width="400" alt="Midtown at night"></a><br><sub><b>Midtown at night,</b> round Bryant Park.</sub></td>
+<td width="50%"><a href="docs/images/readme/nyc-village.png"><img src="docs/images/readme/nyc-village.png" width="400" alt="Greenwich Village"></a><br><sub><b>Greenwich Village</b>, walking: brick walk-ups, brownstones and water towers, from the city's lot records (PLUTO).</sub></td>
+<td width="50%"><a href="docs/images/readme/nyc-brownstones.png"><img src="docs/images/readme/nyc-brownstones.png" width="400" alt="Brownstones"></a><br><sub><b>The West Village</b> up close: stoops, cornices and water tanks.</sub></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/images/readme/nyc-bridges.png"><img src="docs/images/readme/nyc-bridges.png" width="400" alt="The Brooklyn and Manhattan bridges"></a><br><sub><b>The Brooklyn and Manhattan bridges</b> over the East River, driving.</sub></td>
+<td width="50%"><a href="docs/images/readme/nyc-midtown-night.png"><img src="docs/images/readme/nyc-midtown-night.png" width="400" alt="Midtown at night"></a><br><sub><b>Midtown at night,</b> round Bryant Park.</sub></td>
 </tr>
 </table>
 
@@ -47,32 +55,49 @@ Every image here is a screenshot of the viewer, taken by [`tools/readme-shots.mj
 <table>
 <tr>
 <td width="50%"><a href="docs/images/readme/kyoto-yasaka.png"><img src="docs/images/readme/kyoto-yasaka.png" width="400" alt="Yasaka Pagoda"></a><br><sub><b>Yasaka Pagoda</b> over Higashiyama's machiya, wires strung pole to pole.</sub></td>
-<td width="50%"><a href="docs/images/readme/kyoto-station.png"><img src="docs/images/readme/kyoto-station.png" width="400" alt="Kyoto Station and Kyoto Tower"></a><br><sub><b>Kyoto Tower</b> over the station, with Higashi Hongan-ji's halls beyond, driving.</sub></td>
+<td width="50%"><a href="docs/images/readme/kyoto-yasaka-shrine.png"><img src="docs/images/readme/kyoto-yasaka-shrine.png" width="400" alt="Yasaka Shrine"></a><br><sub><b>Yasaka Shrine</b>'s vermilion halls under the trees, walking.</sub></td>
 </tr>
 <tr>
-<td><a href="docs/images/readme/kyoto-gion.png"><img src="docs/images/readme/kyoto-gion.png" width="400" alt="Gion by day"></a><br><sub><b>Gion</b>'s tiled roofs by day…</sub></td>
-<td><a href="docs/images/readme/kyoto-gion-night.png"><img src="docs/images/readme/kyoto-gion-night.png" width="400" alt="Gion at night"></a><br><sub>…and at night: the same tiles, in the night palette.</sub></td>
+<td width="50%"><a href="docs/images/readme/kyoto-shoseien.png"><img src="docs/images/readme/kyoto-shoseien.png" width="400" alt="Shōsei-en"></a><br><sub><b>Shōsei-en</b>, Higashi Hongan-ji's garden, its pond and halls.</sub></td>
+<td width="50%"><a href="docs/images/readme/kyoto-kamo.png"><img src="docs/images/readme/kyoto-kamo.png" width="400" alt="The Kamo River"></a><br><sub><b>The Kamo River</b> and its wooded banks by Gion.</sub></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/images/readme/kyoto-nanzenji.png"><img src="docs/images/readme/kyoto-nanzenji.png" width="400" alt="Nanzen-ji"></a><br><sub><b>Nanzen-ji</b> under the wooded Higashiyama hills, driving.</sub></td>
+<td width="50%"><a href="docs/images/readme/kyoto-gion-night.png"><img src="docs/images/readme/kyoto-gion-night.png" width="400" alt="Gion at night"></a><br><sub><b>Gion</b>'s tiled roofs at night.</sub></td>
 </tr>
 </table>
 
-### And more
+### Hong Kong
 
 <table>
 <tr>
-<td width="50%"><a href="docs/images/readme/paris-etoile.png"><img src="docs/images/readme/paris-etoile.png" width="400" alt="The Arc de Triomphe"></a><br><sub><b>Paris:</b> the Arc de Triomphe and the Haussmann blocks round the Étoile.</sub></td>
+<td width="50%"><a href="docs/images/readme/hk-waterfront.png"><img src="docs/images/readme/hk-waterfront.png" width="400" alt="Central's waterfront"></a><br><sub><b>Central</b>'s waterfront on Victoria Harbour, Two IFC over it, driving.</sub></td>
+<td width="50%"><a href="docs/images/readme/hk-wanchai.png"><img src="docs/images/readme/hk-wanchai.png" width="400" alt="Wan Chai"></a><br><sub><b>Wan Chai</b> round Central Plaza, driving.</sub></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/images/readme/hk-peak.png"><img src="docs/images/readme/hk-peak.png" width="400" alt="The Peak"></a><br><sub><b>The Mid-Levels</b> climbing to the Peak's woods, walking.</sub></td>
+<td width="50%"><a href="docs/images/readme/hk-central-night.png"><img src="docs/images/readme/hk-central-night.png" width="400" alt="Central at night"></a><br><sub><b>Central at night.</b></sub></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/images/readme/hk-aberdeen.png"><img src="docs/images/readme/hk-aberdeen.png" width="400" alt="Aberdeen"></a><br><sub><b>Aberdeen</b>'s typhoon shelter and its boats, walking.</sub></td>
+<td width="50%"><a href="docs/images/readme/hk-man-mo.png"><img src="docs/images/readme/hk-man-mo.png" width="400" alt="Man Mo Temple"></a><br><sub><b>Man Mo Temple</b> among the signs of Sheung Wan, walking.</sub></td>
+</tr>
+</table>
+
+### Paris, Tokyo and the Southwest
+
+<table>
+<tr>
+<td width="50%"><a href="docs/images/readme/paris-eiffel.png"><img src="docs/images/readme/paris-eiffel.png" width="400" alt="The Eiffel Tower"></a><br><sub><b>Paris:</b> the Eiffel Tower over the Champ de Mars and the Seine's quays.</sub></td>
 <td width="50%"><a href="docs/images/readme/paris-cite.png"><img src="docs/images/readme/paris-cite.png" width="400" alt="Notre-Dame"></a><br><sub><b>Paris:</b> Notre-Dame on the Île de la Cité.</sub></td>
 </tr>
 <tr>
-<td><a href="docs/images/readme/hk-mongkok.png"><img src="docs/images/readme/hk-mongkok.png" width="400" alt="Mong Kok"></a><br><sub><b>Hong Kong:</b> Mong Kok's towers and signs.</sub></td>
-<td><a href="docs/images/readme/hk-temple-street-night.png"><img src="docs/images/readme/hk-temple-street-night.png" width="400" alt="Temple Street at night"></a><br><sub><b>Hong Kong:</b> Temple Street's neon at night.</sub></td>
+<td width="50%"><a href="docs/images/readme/paris-opera.png"><img src="docs/images/readme/paris-opera.png" width="400" alt="The Opéra"></a><br><sub><b>Paris:</b> the Opéra Garnier's domes, walking.</sub></td>
+<td width="50%"><a href="docs/images/readme/tokyo-shinjuku.png"><img src="docs/images/readme/tokyo-shinjuku.png" width="400" alt="Shinjuku"></a><br><sub><b>Tokyo:</b> Shinjuku's towers.</sub></td>
 </tr>
 <tr>
-<td><a href="docs/images/readme/sw-grand-canyon.png"><img src="docs/images/readme/sw-grand-canyon.png" width="400" alt="The Grand Canyon"></a><br><sub><b>The Grand Canyon</b>, flying.</sub></td>
-<td><a href="docs/images/readme/sw-hoover-dam.png"><img src="docs/images/readme/sw-hoover-dam.png" width="400" alt="Hoover Dam"></a><br><sub><b>Hoover Dam</b> between Lake Mead and the Colorado, driving.</sub></td>
-</tr>
-<tr>
-<td><a href="docs/images/readme/tokyo-shinjuku.png"><img src="docs/images/readme/tokyo-shinjuku.png" width="400" alt="Shinjuku"></a><br><sub><b>Tokyo:</b> Shinjuku's towers.</sub></td>
-<td></td>
+<td width="50%"><a href="docs/images/readme/sw-grand-canyon.png"><img src="docs/images/readme/sw-grand-canyon.png" width="400" alt="The Grand Canyon"></a><br><sub><b>The Grand Canyon</b>, flying.</sub></td>
+<td width="50%"><a href="docs/images/readme/sw-hoover-dam.png"><img src="docs/images/readme/sw-hoover-dam.png" width="400" alt="Hoover Dam"></a><br><sub><b>Hoover Dam</b> between Lake Mead and the Colorado, driving.</sub></td>
 </tr>
 </table>
 
@@ -114,7 +139,7 @@ pnpm install
 pnpm dev            # http://localhost:5173: the US Southwest
 ```
 
-`?world=` picks another world: `/sf-walk/`, `/sf/`, `/sf-fly/`, `/nyc-walk/`, `/nyc/`, `/kyoto-walk/`, `/kyoto/`, `/kyoto-fly/`, `/paris-walk/`, `/tokyo-walk/`, `/hongkong-walk/`, `/southwest-walk/`, `/southwest-fly/` (for example http://localhost:5173/?world=/kyoto-walk/).
+`?world=` picks another world: `/sf-walk/`, `/sf/`, `/sf-fly/`, `/nyc-walk/`, `/nyc/`, `/kyoto-walk/`, `/kyoto/`, `/kyoto-fly/`, `/paris-walk/`, `/tokyo-walk/`, `/hongkong-island/`, `/hongkong/`, `/hongkong-walk/`, `/southwest-walk/`, `/southwest-fly/` (for example http://localhost:5173/?world=/kyoto-walk/).
 
 | Input | Action |
 |---|---|

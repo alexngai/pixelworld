@@ -499,3 +499,17 @@ def test_a_bridge_approach_lands_where_its_road_leaves_the_line():
     assert ap == [7.5, 3.5] and az == [0.0, 0.0]  # east comes down steeper, onto its road
     road[:, :] = False  # no road beyond either end: no approach
     assert objects.bridge_approaches(fp, ground, water, 8.0, 1.0, road)[1] == [0.0, 0.0]
+
+
+def test_a_cut_lowers_the_ground_under_an_anchored_landmark_to_its_foot():
+    """D-139: the DEM holds an arch's fin; the cut opens the ground under the span."""
+    from pixelworld_pipeline.build import cut_corners
+
+    k = 2
+    fin = np.full((21, 21), 100.0)  # 10 × 10 cells of corners at k = 2
+    fin[:, 9:12] = 140.0  # a fin along y through x = 5 cells
+    cut = cut_corners(fin, k, [(5.0, 5.0, 2.0, 100.0)])
+    assert cut[10, 10] == 100.0  # under the landmark: its foot
+    assert cut[10 + 2 * k + 1, 10] == 140.0  # past the radius the fin stands
+    assert cut[10, 0] == 100.0 and fin[10, 10] == 140.0  # elsewhere as was; the input untouched
+    assert (cut_corners(fin, k, [(5.0, 5.0, 2.0, 120.0)]) >= 100.0).all()  # never raised

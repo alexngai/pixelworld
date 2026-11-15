@@ -325,6 +325,54 @@ describe("landmark kit", () => {
     expect(windows).toBeGreaterThan(100);
   });
 
+  it("draws stone arches open under their span, and a boulder balanced on a neck (D-139)", () => {
+    const ids = new Map([["entrada", 1], ["dewey-bridge", 2], ["moab-tongue", 3]]);
+    const rock = { rock: "entrada", base: "dewey-bridge", cap: "moab-tongue" };
+    const catalog = {
+      "landmark.arch": { generator: "stoneArch", ramps: rock, params: { span: 1, opening: 0.6, clear: 0.85, waist: 0.35, skew: 0.25 } },
+      "landmark.arch.double": { generator: "stoneArch", ramps: rock, params: { span: 1.5, opening: 1, clear: 0.8, double: 1 } },
+      "landmark.rock.balanced": { generator: "balancedRock", ramps: rock },
+    } as AssetCatalog;
+    const rampOf = (m: VoxelModel, x: number, y: number, z: number) => [...ids].find(([, i]) => m.get(x, y, z) && i === m.materials[m.get(x, y, z)])?.[0];
+    const solidAt = (m: VoxelModel, x: number, z: number) => [...Array(m.sy).keys()].some((y) => m.get(x, y, z) > 0);
+    const a = generateModel(catalog, ids, "landmark.arch", { seed: 1, heightVox: 26 });
+    const mid = Math.floor(a.sx / 2);
+    let top = 0;
+    for (let x = 0; x < a.sx; x++) for (let y = 0; y < a.sy; y++) top = Math.max(top, topOf(a, x, y));
+    expect(top).toBeGreaterThanOrEqual(24);
+    expect(solidAt(a, mid, 0) || solidAt(a, mid, 10)).toBe(false); // open under the span
+    expect(solidAt(a, mid, 24)).toBe(true); // the span over it
+    expect(solidAt(a, 3, 0) && solidAt(a, a.sx - 4, 0)).toBe(true); // both legs on the ground
+    expect([...Array(a.sy).keys()].map((y) => rampOf(a, 3, y, 0)).filter(Boolean)[0]).toBe("dewey-bridge"); // at the foot
+    // the double arch: a second span along y sharing the corner leg, open under both
+    const d = generateModel(catalog, ids, "landmark.arch.double", { seed: 1, heightVox: 40 });
+    const [c, far] = [Math.floor(d.sx / 2), d.sx - 4];
+    expect(d.get(c, far, 2) || d.get(far, c, 2)).toBe(0);
+    const spanAt = (x: (k: number) => number, y: (k: number) => number) =>
+      [...Array(12).keys()].some((k) => [35, 36, 37, 38].some((z) => d.get(x(k), y(k), z) > 0));
+    expect(spanAt(() => c, (k) => d.sx - 1 - k)).toBe(true); // the span along x, over the far side
+    expect(spanAt((k) => d.sx - 1 - k, () => c)).toBe(true); // and along y
+    // turned along the diagonal x = y: open under the middle, its legs at the diagonal's ends
+    const g = generateModel({ ...catalog, "landmark.arch": { ...catalog["landmark.arch"]!, params: { span: 1.6, opening: 0.8, clear: 0.6, diagonal: 1 } } }, ids, "landmark.arch", {
+      seed: 1,
+      heightVox: 30,
+    });
+    const gc = Math.floor(g.sx / 2);
+    expect(g.sx).toBe(g.sy);
+    expect(g.get(gc, gc, 1)).toBe(0);
+    expect(topOf(g, gc, gc)).toBeGreaterThanOrEqual(25);
+    expect(g.get(gc - 14, gc - 14, 1) || g.get(gc - 13, gc - 13, 1)).toBeGreaterThan(0);
+    expect(g.get(gc + 14, gc - 14, 1)).toBe(0); // nothing across the other diagonal
+    // the balanced rock: the boulder overhangs a neck of the pedestal's rock
+    const b = generateModel(catalog, ids, "landmark.rock.balanced", { seed: 1, heightVox: 62 });
+    const width = (z: number) => [...Array(b.sx).keys()].filter((x) => b.get(x, Math.floor(b.sy / 2), z)).length;
+    const neck = 62 - Math.round(62 * 0.42) - 1;
+    expect(width(neck + 12)).toBeGreaterThan(width(neck) + 6);
+    expect(width(0)).toBeGreaterThan(width(neck) + 10);
+    expect(rampOf(b, Math.floor(b.sx / 2), Math.floor(b.sy / 2), neck)).toBe("dewey-bridge");
+    expect(rampOf(b, Math.floor(b.sx / 2), Math.floor(b.sy / 2), neck + 12)).toBe("entrada");
+  });
+
   it("owns a big model per voxel column, never merging faces across cells", () => {
     const m = generateModel(style.assets, rampIds, "landmark.bridge.suspension", { seed: 1, mask: band(9, 400), heightVox: 20 });
     const voxel = { h: 1 / 16, v: 1 / 8 };

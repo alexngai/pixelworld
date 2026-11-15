@@ -1,0 +1,13 @@
+name: North Window
+wikidata: Q62026550
+# an opening about 16 m high and 28 m wide (NPS) in a sandstone fin that runs
+# northwest–southeast, 12 m thick and 45 m tall (USGS 3DEP 1 m lidar); anchor
+# from Overture. Drawn from its sill: the fin below it is the DEM's, as is the
+# fin beyond the cut, which the DEM holds solid through the opening.
+anchor: { lon: -109.53281, lat: 38.68572 }
+height: 29          # sill to the fin's top (1641 m)
+base: 1612          # the sill, about 10 m over the ground to its west
+cut: 26
+clear: 20
+depictions:
+  generic: { group: landmark.arch.window }

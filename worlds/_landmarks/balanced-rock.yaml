@@ -1,0 +1,13 @@
+name: Balanced Rock
+wikidata: Q3525243
+# a boulder of Entrada sandstone (about 17 m) on a pedestal of Dewey Bridge
+# mudstone, 39 m in all (NPS). Anchor at the USGS 3DEP 1/3″ spike (38 m over its
+# surroundings), which Wikidata's point agrees with to 25 m; the cut takes the
+# spike away so the pedestal's neck shows.
+anchor: { lon: -109.56423, lat: 38.70035 }
+height: 39
+base: 1535
+cut: 20
+clear: 15
+depictions:
+  generic: { group: landmark.rock.balanced }

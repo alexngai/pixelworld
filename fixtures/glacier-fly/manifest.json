@@ -1,0 +1,394 @@
+{
+  "format": "pixelworld-world",
+  "formatVersion": 0,
+  "id": "glacier-fly",
+  "name": "Glacier National Park (flying)",
+  "chunkSize": 64,
+  "cellsX": 296,
+  "cellsY": 290,
+  "chunks": [
+    {
+      "x": 0,
+      "y": 0,
+      "path": "chunks/0_0.pxwc.gz",
+      "sha256": "93e0a50e9d1758b2f91820c819a2b90ec7c34fd422ef7dfaffdb0359554c5e70",
+      "heightRange": [
+        60,
+        99
+      ]
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "path": "chunks/1_0.pxwc.gz",
+      "sha256": "046c6c36c47d352bfba63a9ccc7437f14a22c47355d41e79f07d99cfa1c5f3d9",
+      "heightRange": [
+        78,
+        137
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "path": "chunks/2_0.pxwc.gz",
+      "sha256": "c4bdc2e0b6de7c556781e6ec20bd5ab73312640f410ff978f4d8d991a54f9937",
+      "heightRange": [
+        74,
+        139
+      ]
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "path": "chunks/3_0.pxwc.gz",
+      "sha256": "b8e04f3b321942697e106d0dbe4ce2f62e055705cffd05cbcd491393f5119951",
+      "heightRange": [
+        72,
+        118
+      ]
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "path": "chunks/4_0.pxwc.gz",
+      "sha256": "d4ac9525178f57f70aec5010f0dd71b2a851ba5f94c58d6715514802d66aba44",
+      "heightRange": [
+        71,
+        114
+      ]
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "path": "chunks/0_1.pxwc.gz",
+      "sha256": "382f865cd6acc5e079cd8677a613c178bba63e5d1c81768938df11f311700933",
+      "heightRange": [
+        55,
+        93
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "path": "chunks/1_1.pxwc.gz",
+      "sha256": "d2ea23de8a3241ee30144c869ae15611cdf247c7463a9c2a632a84303860cdee",
+      "heightRange": [
+        73,
+        121
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "path": "chunks/2_1.pxwc.gz",
+      "sha256": "d35448a07e1e8d43888c5b874bb2964262d72bcb7e67f39895e271cbd60b1f2c",
+      "heightRange": [
+        72,
+        132
+      ]
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "path": "chunks/3_1.pxwc.gz",
+      "sha256": "09804fb8aafc2c5646694359a089160c24e5ad1fd563830c7d47b702dff66896",
+      "heightRange": [
+        72,
+        140
+      ]
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "path": "chunks/4_1.pxwc.gz",
+      "sha256": "6a3c5a642d8f366c9f6f14ed954eb71fb59c76e4aa710180f7dbaf30c5d8b776",
+      "heightRange": [
+        82,
+        140
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "path": "chunks/0_2.pxwc.gz",
+      "sha256": "8a5980a77b46673072e61b4ad629b390c6b827765f6d6ff2705c782734c95940",
+      "heightRange": [
+        53,
+        86
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "path": "chunks/1_2.pxwc.gz",
+      "sha256": "6412c74c40d72936773ec8031526e7b17acdc70a97037635a45d878ae29d2114",
+      "heightRange": [
+        52,
+        110
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "path": "chunks/2_2.pxwc.gz",
+      "sha256": "37069f1739bf1d4d7b2fcca61358920ba47d6e883542ae2d01300bb886d0cd4c",
+      "heightRange": [
+        73,
+        143
+      ]
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "path": "chunks/3_2.pxwc.gz",
+      "sha256": "f57ecf176a343074c24be9c2856145f93eab2b459cb1fc0b2c688183c0aad194",
+      "heightRange": [
+        77,
+        137
+      ]
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "path": "chunks/4_2.pxwc.gz",
+      "sha256": "670e256c963032827bf931a3b9b24493ef889dc6f3d792c37109e30927f787d9",
+      "heightRange": [
+        87,
+        150
+      ]
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "path": "chunks/0_3.pxwc.gz",
+      "sha256": "580a641a83d7247955e4676fea696fce3abbd94d6aaae30866754dedac8e00cf",
+      "heightRange": [
+        51,
+        101
+      ]
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "path": "chunks/1_3.pxwc.gz",
+      "sha256": "3a78749418d6f738811787332124b52e7317fd55111d93e191f63354c3b7607f",
+      "heightRange": [
+        52,
+        131
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "path": "chunks/2_3.pxwc.gz",
+      "sha256": "ffe610a1d2aed06050e5cdff24139e2c5b706198bf6d8b226928495adf688ef3",
+      "heightRange": [
+        60,
+        138
+      ]
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "path": "chunks/3_3.pxwc.gz",
+      "sha256": "42a9aff53f1fa31c9423ae92bfe123d090e36d50c63f17700ccd29fb9e20a9f9",
+      "heightRange": [
+        83,
+        138
+      ]
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "path": "chunks/4_3.pxwc.gz",
+      "sha256": "2c1b51ee46359f6589b092093cbbecec030fcce076b1f0adafd22a936ff93888",
+      "heightRange": [
+        96,
+        140
+      ]
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "path": "chunks/0_4.pxwc.gz",
+      "sha256": "169319ecbece3ee968e59cbf9a697536ca65fc4234a1778bc063b63dbdfc4cde",
+      "heightRange": [
+        50,
+        130
+      ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "path": "chunks/1_4.pxwc.gz",
+      "sha256": "fad3b70d6fa884a5482e5e82ef6edbd67a8da528add2bb7c9f97b19a84039924",
+      "heightRange": [
+        66,
+        134
+      ]
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "path": "chunks/2_4.pxwc.gz",
+      "sha256": "2672b3e0cc5536065cb518388149c8879ce9aeafc42fd0b95ca73682c142779c",
+      "heightRange": [
+        79,
+        131
+      ]
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "path": "chunks/3_4.pxwc.gz",
+      "sha256": "414a7edebfa1962d430b271a51b0189fa37eafc131cadc62297b4cd8f9507f0d",
+      "heightRange": [
+        76,
+        103
+      ]
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "path": "chunks/4_4.pxwc.gz",
+      "sha256": "d18fe977abfdd69fbbd86654aa0f06a297d3b95651714a305741fceb88ef3ad3",
+      "heightRange": [
+        80,
+        144
+      ]
+    }
+  ],
+  "scale": {
+    "metersPerCell": 50.0,
+    "metersPerStep": 20.412415,
+    "elevationDatumMeters": 0,
+    "verticalExaggeration": 1.0
+  },
+  "heightRange": [
+    50,
+    150
+  ],
+  "surfaces": {
+    "0": "none",
+    "1": "rock",
+    "2": "woodland",
+    "3": "forest",
+    "4": "scrub",
+    "5": "water",
+    "6": "sand",
+    "7": "desert",
+    "8": "grass",
+    "9": "farmland",
+    "10": "urban",
+    "11": "snow"
+  },
+  "style": "glacier",
+  "attribution": [
+    {
+      "name": "USGS 3D Elevation Program (3DEP) 1/3 arc-second DEM",
+      "license": "Public domain",
+      "url": "https://www.usgs.gov/3d-elevation-program"
+    },
+    {
+      "name": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+      "license": "CC BY 4.0",
+      "url": "https://esa-worldcover.org"
+    },
+    {
+      "name": "\u00a9 OpenStreetMap contributors, Overture Maps Foundation (transportation and base themes)",
+      "license": "ODbL 1.0",
+      "url": "https://overturemaps.org"
+    }
+  ],
+  "roadClasses": {
+    "1": "service",
+    "2": "unclassified",
+    "3": "residential",
+    "4": "tertiary",
+    "5": "secondary",
+    "6": "primary"
+  },
+  "pathClasses": {
+    "1": "path",
+    "2": "steps",
+    "3": "footway"
+  },
+  "geology": {
+    "0": "belt-west",
+    "1": "belt-garden",
+    "2": "belt-grinnell",
+    "3": "belt-many"
+  },
+  "start": {
+    "x": 165,
+    "y": 253
+  },
+  "source": {
+    "crs": "+proj=tmerc +lat_0=48.745 +lon_0=-113.73 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True",
+    "bounds": [
+      -113.83,
+      48.68,
+      -113.63,
+      48.81
+    ]
+  },
+  "generator": {
+    "name": "pixelworld_pipeline.build",
+    "version": "1",
+    "params": {
+      "region": "bd8aafe6be2642a7",
+      "features": {
+        "kind": "overture",
+        "release": "2026-10-21.0"
+      },
+      "maxSlope": 3,
+      "bilateral": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "micro": {
+    "k": 4,
+    "shores": true,
+    "maxSlope": 64
+  },
+  "objects": {
+    "path": "objects.json.gz",
+    "sha256": "47c34c528ccd7489d59112565da0bd661bae1e5a4af2d13e74379c1db2e635f0",
+    "count": 0
+  },
+  "depiction": {
+    "heightStretch": 1.25,
+    "scatter": 0.6
+  },
+  "level": "fly",
+  "levels": [
+    {
+      "name": "fly",
+      "world": "glacier-fly",
+      "label": "Flying over the Garden Wall"
+    },
+    {
+      "name": "walk",
+      "world": "glacier-walk",
+      "label": "Walking Logan Pass to Many Glacier"
+    }
+  ],
+  "geo": {
+    "path": "geo.i32.gz",
+    "step": 16,
+    "size": [
+      20,
+      20
+    ],
+    "sha256": "1a5f19b6ad3f6839107445c78a2ce95fb40cd2811d54f7f7feed02bf261d913e"
+  },
+  "packageHash": "3ac9716c965cff3a64144fddac40ca7f6aeae19ab5e30e7d1c26ab79ca06fa3e",
+  "routes": {
+    "path": "routes.json.gz",
+    "sha256": "6bef8c29e0aaa5cc9a02d8f6d3ddfcf6b210d09e703087123a6b4f9b273a3701",
+    "version": 1,
+    "count": 64
+  }
+}
