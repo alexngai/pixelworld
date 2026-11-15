@@ -323,7 +323,7 @@ export class ChunkStore {
     const w = Math.max(0, sx1 - sx0);
     const h = Math.max(0, sy1 - sy0);
     const k = this.manifest.micro?.k;
-    const grid = new TerrainGrid(w, h, k ? { micro: emptyMicro(k, w, h) } : undefined);
+    const grid = new TerrainGrid(w, h, k ? { micro: emptyMicro(k, w, h, this.manifest.micro?.maxSlope) } : undefined);
     const s = this.chunkSize;
     for (const [cx, cy] of this.chunksFor(sx0, sy0, sx1, sy1)) {
       const chunk = this.use(this.key(cx, cy))?.chunk;

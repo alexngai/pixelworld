@@ -325,6 +325,8 @@ def follow_beds(
         # too steep to slope) touching the band; smooth ground stays as it is
         h = round_half_up(out[y0 : y1 + 1, x0 : x1 + 1])
         quad = (h[:-1, :-1], h[:-1, 1:], h[1:, 1:], h[1:, :-1])
+        # ponytail: the default cap even where micro.maxSlope raises it (D-136), so a
+        # bed may be cut under ground the client draws as a slope; thread it if roads show it
         steep = np.maximum.reduce(quad) - np.minimum.reduce(quad) > MICRO_MAX_OFFSET
         core = d <= r - 1.0 / k
         if not (steep & (core[:-1, :-1] | core[:-1, 1:] | core[1:, 1:] | core[1:, :-1])).any():

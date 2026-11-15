@@ -134,6 +134,29 @@ def test_gzip_chunks_decode_and_package_hash_is_stable(tmp_path):
     assert c["packageHash"] != a["packageHash"]
 
 
+def test_micro_max_slope_is_in_the_manifest_only_when_set(tmp_path):
+    from pixelworld_pipeline.world_format import write_package
+
+    base = np.zeros((4, 4), np.int16)
+    args = dict(
+        world_id="t",
+        name="t",
+        base=base,
+        shape=np.zeros_like(base, dtype=np.uint8),
+        surface=np.ones_like(base, dtype=np.uint8),
+        water=np.full_like(base, NO_WATER),
+        road=np.zeros_like(base, dtype=np.uint16),
+        chunk_size=4,
+        scale={"metersPerCell": 1, "metersPerStep": 1, "elevationDatumMeters": 0},
+        surfaces={1: "rock"},
+        style="s",
+        attribution=[],
+        micro=(np.zeros((9, 9), np.int32), 2),
+    )
+    assert "maxSlope" not in write_package(tmp_path / "a", **args)["micro"]
+    assert write_package(tmp_path / "b", **args, micro_max_slope=64)["micro"]["maxSlope"] == 64
+
+
 def _footprint_bits(instances):
     return [[[v.hex() for v in p] for p in inst.get("fp", [])] for inst in instances]
 

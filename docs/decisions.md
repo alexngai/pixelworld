@@ -143,6 +143,7 @@ Status values:
 | D-133 | Hong Kong's details: double-deckers, boats in the typhoon shelters, open ridges, concrete slopes, more neon and landmarks, and the harbour's driving level | Accepted (M5) |
 | D-134 | Hong Kong's night, cloud, markets, estates, signs and temples | Accepted (M5) |
 | D-135 | Hong Kong's landmark towers lit at night like the buildings round them | Accepted (M5) |
+| D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
 
 ---
 
@@ -2003,3 +2004,17 @@ The point is more room for visual interest; both halves are wanted.
 - **What:** core's `obeliskTower` and `pyramidTower` take an optional `lit` role (lit.* variants, one per tower by seed) and `litFraction` (0.35), as core's `building` does: each window pane is lit by night at that share. Without `lit` they draw nothing random, so every other pack's towers are unchanged. The `hongkong` pack's towers go back to steel (the ICC, Two IFC, the Bank of China Tower) and granite (Central Plaza) with `lit-cool` or `lit` windows at 0.5; the Convention Centre's joints go back to steel, and `led-white` is gone (41 ramps).
 - **Looked at:** the towers in the model preview by day (as before) and night; the harbour at night, the ICC and Central Plaza dark glass with lit windows among their neighbours. The Hong Kong goldens pass unchanged; other packs' towers draw as before (they name no `lit`).
 - **Rejected alternatives:** lighting only the towers' edges and crowns (a new role in both generators for a look the owner didn't ask for); `lit` as the towers' whole `window` (every pane glowing: another white tower).
+
+### D-141: Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) (accepted, M5)
+- **Why:** the national parks (Yosemite, D-136; Zion, Yellowstone, Arches and Glacier, D-137–D-140) are walls hundreds of metres tall drawn true. A micro-cell is a plane through its four corners only while they span at most 3 micro-steps (D-038); a steeper one is flat at their mean, so every wall came out as a stack of terraces with a riser between each, read as layer lines across Yosemite's granite. The cap suits the Grand Canyon, whose ledges are stepped strata, and keeps rising edges on clean pixel angles (D-023), so it stays the default.
+- **What:**
+  - **Spec:** `micro.maxSlope`, a whole number of micro-steps, 3 or more (default 3): the steepest micro-cell drawn as a slope.
+  - **Package:** the manifest's `micro.maxSlope`, written only when the spec sets it, so every other package is unchanged byte for byte.
+  - **Client:** `MicroLayers.maxSlope`, set by `emptyMicro` from the manifest (the chunk store, `assembleTerrain`) and kept by `TerrainGrid.slice`; `microCellCorners` takes it, so drawing, heights, the bake worker and queries all derive micro-cells the same way.
+  - **Pipeline:** traffic routes take the ground's height under the same rule (`routes.Package.surface_height`).
+- **Looked at:** Yosemite's driving and walking levels at 64 (every micro-cell slopes): El Capitan, Half Dome and the valley's walls as smooth faces lit by their slope, where they were terraced; the valley floor as before.
+- **Rejected alternatives:**
+  - **A higher cap everywhere:** the Grand Canyon's ledges and every golden would change.
+  - **Smoothing heights (`micro.smooth`):** it rounds them before they are drawn, but a micro-cell steeper than the cap is still a terrace.
+  - **A lower vertical exaggeration,** so walls fall under the cap: they lose their height.
+- **Later:** road beds still look for terraces under the pavement with the default cap (`micro.py`), so a bed may be cut under ground drawn as a slope; no road climbs a wall in the parks.
