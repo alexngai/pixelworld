@@ -154,6 +154,8 @@ The pipeline's `semantics` stage fills each layer from the first available sourc
 |---|---|---|
 | Mapillary | street-level facade reference for hero assets | CC BY-SA 4.0. Reference only, so share-alike doesn't attach to our assets. |
 | Wikimedia Commons | landmark photo reference | per file |
+| USGS glacier margins of Glacier National Park, 2015 (Fagre and others, 2017, doi:10.5066/F7P26WB1) | checking WorldCover's snow and ice against the glaciers (D-140) | public domain |
+| USGS geologic map of Glacier National Park (I-1508-F, Whipple 1992), read through Macrostrat's API | the `glacier` pack's strata elevations, fitted to its formations (D-140); only the fitted contact elevations are kept | map: public domain; Macrostrat: CC BY 4.0 |
 
 ### Commercial (only if open data runs out)
 

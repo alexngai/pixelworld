@@ -1,0 +1,24 @@
+# Glacier National Park's high country, flying level (D-140): the walking
+# level's box at 50 m per cell, where a screen holds the Garden Wall, the
+# Grinnell cirque and the Many Glacier lakes together. Same relief, strata and
+# pack; no buildings (the walking level draws Many Glacier's).
+# Build: cd pipeline && uv run pixelworld build ../worlds/glacier/fly.yaml
+extends: walk.yaml
+id: glacier-fly
+name: Glacier National Park (flying)
+level: fly
+
+metersPerCell: 50
+# 12.5 m micro-cells from the 10 m DEM, walls as faces (D-141)
+micro: { k: 4, dem: { overview: 1 }, maxSlope: 64 }
+# rivers only: a creek would be a whole 50 m cell
+sources:
+  rivers: { subtypes: [river] }
+widths: { scale: 2.0, minCells: 0.08, centrelines: true }
+# a lake's cells climb further up the cirque walls at 50 m; the shadows on
+# north faces (3-5 ha) are smaller than minLakeArea here
+terrain: { cliffSlope: 1.0, minLakeArea: 50000, maxLakeRelief: 120 }
+
+objects:
+  buildings: null
+  depiction: { heightStretch: 1.25, scatter: 0.6 }
