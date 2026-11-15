@@ -272,7 +272,7 @@ export async function startRts(opts: RtsOptions): Promise<void> {
   hud.status("joining…");
   let room: Room;
   try {
-    room = await joinRoom(opts.path ?? "/rts", opts.room);
+    room = await joinRoom(opts.path ?? "/rts", opts.room, { version: import.meta.env.PLAY_BUILD });
   } catch (e) {
     hud.status(`Fogfront: ${e instanceof Error ? e.message : String(e)}`);
     return;

@@ -63,7 +63,7 @@ export async function startDogfight(game: Game, opts: { room: string; name?: str
   const hud = game.hud;
   let room: Room;
   try {
-    room = await joinRoom(opts.path ?? "/dogfight", opts.room);
+    room = await joinRoom(opts.path ?? "/dogfight", opts.room, { version: import.meta.env.PLAY_BUILD });
   } catch (e) {
     hud?.say(`Dogfight: ${e instanceof Error ? e.message : String(e)} · flying alone`, 6);
     return;

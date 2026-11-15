@@ -159,11 +159,13 @@ class RoomImpl implements Room {
  * Join a room: `url` is the server's WebSocket path (`ws:`, `wss:`, or
  * `http(s):` and relative URLs, taken as the page's own host). Rejects when
  * no server answers, the room is full, or the server sends the page away.
+ * `version` is the page's build, for a server that checks it (D-143).
  */
-export function joinRoom(url: string | URL, room: string): Promise<Room> {
+export function joinRoom(url: string | URL, room: string, opts: { version?: string } = {}): Promise<Room> {
   const u = new URL(url, globalThis.location?.href);
   u.protocol = u.protocol.replace(/^http/, "ws");
   u.searchParams.set("room", room);
+  if (opts.version) u.searchParams.set("v", opts.version);
   const ws = new WebSocket(u);
   ws.binaryType = "arraybuffer";
   return new Promise((resolve, reject) => {

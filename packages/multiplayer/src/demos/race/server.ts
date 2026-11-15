@@ -7,12 +7,13 @@ import { stylePack } from "@pixelworlds/game/src/styles";
 import { openWorld, type WorldQuery } from "pixelworld/engine";
 import { loadRoutes } from "pixelworld/traffic";
 import { cleanName, type RoomInfo } from "../../index";
-import { History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Place, type Relay, type RelayLog, type TickRole } from "../../server";
+import { History, Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Place, type Relay, type RelayLog, type RelayOptions, type TickRole } from "../../server";
 import {
   BOTS,
   Ghosts,
   PASS,
   RACE,
+  RACE_LOBBY,
   RACE_WORLD,
   TICK,
   contacts,
@@ -99,7 +100,7 @@ export function logLine(l: RelayLog): void {
  * next one tries again. An empty room stays open a minute. `lag` holds every
  * message back that many ms each way.
  */
-export function attachRace(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void } = {}): Relay {
+export function attachRace(server: Server, opts: Pick<RelayOptions, "lag" | "maxRooms" | "log" | "version" | "sameOrigin"> = {}): Relay {
   let opened: Promise<RaceWorld> | null = null;
   const world = () => {
     if (!opened) {
@@ -115,6 +116,8 @@ export function attachRace(server: Server, opts: { lag?: number; maxRooms?: numb
   return attachRelay(server, {
     path: "/race",
     lag: opts.lag,
+    version: opts.version,
+    sameOrigin: opts.sameOrigin,
     maxRooms: opts.maxRooms,
     maxPlayers: 12,
     idle: { named: 60_000 },
@@ -125,7 +128,7 @@ export function attachRace(server: Server, opts: { lag?: number; maxRooms?: numb
 
 /** The lobby for the race's rooms: quick play puts a page in a room that isn't mid-race. */
 export function raceLobby(relay: Relay): (req: IncomingMessage, res: ServerResponse) => boolean {
-  return lobbyHandler(relay, { fits: (r: RoomInfo) => (r.info as Partial<RaceInfo>).phase !== "racing" });
+  return lobbyHandler(relay, { base: RACE_LOBBY, fits: (r: RoomInfo) => (r.info as Partial<RaceInfo>).phase !== "racing" });
 }
 
 interface Car {

@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { WebSocket as NodeSocket } from "ws";
 import { Correction, EventQueue, Prediction, SERVER, ServerClock, Smoothing, TickClient, cleanName, joinRoom, type Room, type TickMessage, type TickSnapshot } from "../src/index";
 import { History, Phases, TickRoom, attachRelay, lobbyHandler, serveStatic, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../src/server";
 import { loopback } from "../src/testing";
@@ -608,6 +609,35 @@ describe("the lobby (D-118)", () => {
     const gone = once<[string | null]>((f) => (a.onClose = f));
     relay.close("the server is restarting");
     expect(await gone).toEqual(["the server is restarting"]);
+  });
+});
+
+describe("pages from another build or site (D-143)", () => {
+  it("sends a page from another build away to reload, and takes one from its own", async () => {
+    const { url } = await setup({ version: "b" });
+    const reload = "the game has been updated: reload the page";
+    await expect(joinRoom(url, "x", { version: "a" })).rejects.toThrow(reload);
+    await expect(joinRoom(url, "x")).rejects.toThrow(reload);
+    const page = await joinRoom(url, "x", { version: "b" });
+    open.rooms.push(page);
+    expect(page.name).toBe("x");
+  });
+
+  it("refuses a socket from a page on another site, and takes one from its own or from no page", async () => {
+    const { url } = await setup({ sameOrigin: true });
+    const own = url.replace("ws:", "http:").replace("/relay", "");
+    /** Whether a socket with this `Origin` opens, or the status it was refused with. */
+    const opens = (origin?: string) =>
+      new Promise<number | "open">((resolve) => {
+        const ws = new NodeSocket(url + "?room=x", origin ? { origin } : {});
+        ws.on("error", () => {});
+        ws.on("open", () => (resolve("open"), ws.close()));
+        ws.on("unexpected-response", (req, res) => (resolve(res.statusCode ?? 0), req.destroy()));
+      });
+    expect(await opens("https://elsewhere.example")).toBe(403);
+    expect(await opens("null")).toBe(403); // a sandboxed page
+    expect(await opens(own)).toBe("open");
+    expect(await opens()).toBe("open"); // not a browser: Origin keeps nothing else out
   });
 });
 

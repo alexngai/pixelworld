@@ -13,6 +13,8 @@ import { Schema, angle, exact, fixed, int } from "../../codec";
 export const DOGFIGHT_START = { lon: -112.11, lat: 36.08 };
 /** The flying level they fly over. */
 export const DOGFIGHT_WORLD = "/southwest-fly/";
+/** The lobby's paths (D-143): the game's own, beside the other demos' on one server. */
+export const DOGFIGHT_LOBBY = "/dogfight/api";
 /** The fixed step both sides fly at (s): one input each. */
 export const TICK = 1 / 60;
 export const HP = 100;

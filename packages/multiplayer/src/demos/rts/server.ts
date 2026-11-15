@@ -4,13 +4,14 @@ import { stylePack } from "@pixelworlds/game/src/styles";
 import { fogSampler, openWorld, type FogSampler, type WorldInfo } from "pixelworld/engine";
 import { TrafficSim, loadRoutes, type Pose } from "pixelworld/traffic";
 import { cleanName, vehiclesNet, type RoomInfo, type VehicleNet } from "../../index";
-import { Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type TickRole } from "../../server";
+import { Phases, TickRoom, attachRelay, lobbyHandler, type HostedRoom, type Relay, type RelayLog, type RelayOptions, type TickRole } from "../../server";
 import { Bot } from "./bot";
 import { RtsGame, parseCommand, type GameEvent } from "./game";
 import { DEFAULT_MAP, MAPS, mapOf, planMap, type Layout, type RtsMap } from "./maps";
 import {
   MATCH,
   SNAPSHOT_EVERY,
+  RTS_LOBBY,
   TEAMS,
   TICK,
   TEAM_NAMES,
@@ -113,7 +114,7 @@ export function logLine(l: RelayLog): void {
 }
 
 /** Fogfront on an HTTP server that also serves the page and the world package: `/rts?room=`. */
-export function attachRts(server: Server, opts: { lag?: number; maxRooms?: number; log?: (l: RelayLog) => void } = {}): Relay {
+export function attachRts(server: Server, opts: Pick<RelayOptions, "lag" | "maxRooms" | "log" | "version" | "sameOrigin"> = {}): Relay {
   /** Each map's world, opened when a room first plays it (D-128). */
   const opened = new Map<string, Promise<RtsWorld>>();
   const world = (map: RtsMap) => {
@@ -131,6 +132,8 @@ export function attachRts(server: Server, opts: { lag?: number; maxRooms?: numbe
   return attachRelay(server, {
     path: "/rts",
     lag: opts.lag,
+    version: opts.version,
+    sameOrigin: opts.sameOrigin,
     maxRooms: opts.maxRooms,
     maxPlayers: 8,
     idle: { named: 60_000 },
@@ -142,6 +145,7 @@ export function attachRts(server: Server, opts: { lag?: number; maxRooms?: numbe
 /** The lobby: quick play puts a page in a room on the map it asked for (D-128), waiting for a second side. */
 export function rtsLobby(relay: Relay): (req: IncomingMessage, res: ServerResponse) => boolean {
   return lobbyHandler(relay, {
+    base: RTS_LOBBY,
     settings: (body) => {
       const map = mapOf((body as Partial<RtsSettings> | null)?.map);
       return map ? ({ map: map.id } satisfies RtsSettings) : null;

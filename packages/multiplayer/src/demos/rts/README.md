@@ -40,8 +40,7 @@ The server runs the game (a `TickRoom` at 20 ticks a second, 10 snapshots a seco
 | `server.ts` | the room: a `TickRoom` per room on `/rts?room=`, the match's phases, each side's view to its group (its players and watchers); `attachRts(server)` |
 | `client.ts` | the page: the view and its camera, units and buildings as entities, selecting and ordering, the HUD |
 | `main.ts`, `index.html` | the page's entry: `?map=`, quick play or `?room=`, `&name=`, `&vs=bot`, `&size=2`, `&side=`, `&watch=` |
-| `serve.ts` | the production server: the built page and its level, the lobby, and the rooms, on one port |
-| `vite.config.ts` | the dev server (the rooms beside it) and both builds |
+| `vite.config.ts` | the dev server, with the rooms and the lobby beside it (the production build is the three demos', `../vite.config.ts`) |
 
 ## Play
 
@@ -56,9 +55,4 @@ pnpm --filter @pixelworlds/multiplayer demo:rts      # http://localhost:5255/?na
 
 ## Production
 
-```sh
-pnpm --filter @pixelworlds/multiplayer demo:rts:build   # dist/client (the page and the maps' five levels, 21 MB) and dist/server/serve.js (one file)
-pnpm --filter @pixelworlds/multiplayer demo:rts:start   # http://localhost:8080/; PORT, RTS_LAG, RTS_DAY=40,20 (seconds of day and night, to see night come); the lobby on /api
-```
-
-Rooms live in the server's memory, so run one process. The dogfight's `Dockerfile` and `fly.toml` show how to put it in an image.
+Built and served with the other demos on one server, at https://play.pixelworld.site/rts/ (D-143): the page at `/rts/`, its lobby on `/rts/api`, its rooms on `/rts`. `demos:build`, `demos:start` and the image are in [the package's README](../../../README.md#online-d-143).

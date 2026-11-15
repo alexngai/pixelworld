@@ -93,6 +93,10 @@ export interface RelayOptions {
   lobbyOnly?: boolean;
   /** The server's log: rooms opening and closing, players coming and going, a game's errors and notes (default: errors to the console). */
   log?: (line: RelayLog) => void;
+  /** The server's build (D-143): a page from another (`joinRoom`'s `version`, or none) is sent away to reload, since it predicts with other physics. Default: no check. */
+  version?: string;
+  /** Refuse a browser's socket from a page on another origin than the server's own (its `Origin` against the request's `Host`, D-143). Default false. */
+  sameOrigin?: boolean;
 }
 
 export interface Relay {
@@ -125,6 +129,15 @@ interface OpenRoom {
   idleMs: number;
   idle: ReturnType<typeof setTimeout> | null;
 }
+
+/** An origin's host (`example.com:8080`), or null for one that isn't a URL (a sandboxed page's "null"). */
+const hostOf = (origin: string): string | null => {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return null;
+  }
+};
 
 export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
   const path = opts.path ?? "/relay";
@@ -232,7 +245,8 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
     }
   };
 
-  const join = (ws: WebSocket, name: string) => {
+  const join = (ws: WebSocket, name: string, version: string | null) => {
+    if (opts.version && version !== opts.version) return bye(ws, "the game has been updated: reload the page");
     const room = rooms.get(name);
     if (!room && opts.lobbyOnly) return bye(ws, `there is no room "${name}" open: it may have closed`);
     if (!room && rooms.size >= maxRooms) return bye(ws, "the server has all the rooms it can take: join one that is open");
@@ -299,8 +313,14 @@ export function attachRelay(server: Server, opts: RelayOptions = {}): Relay {
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = new URL(req.url ?? "/", "http://relay");
     if (url.pathname !== path) return;
+    // a browser always says where its page came from; a page elsewhere doesn't get a socket here
+    const origin = req.headers.origin;
+    if (opts.sameOrigin && origin !== undefined && hostOf(origin) !== req.headers.host) {
+      socket.end("HTTP/1.1 403 Forbidden\r\nconnection: close\r\n\r\n");
+      return;
+    }
     const name = (url.searchParams.get("room") || "lobby").slice(0, ROOM_NAME_MAX);
-    wss.handleUpgrade(req, socket, head, (ws) => join(ws, name));
+    wss.handleUpgrade(req, socket, head, (ws) => join(ws, name, url.searchParams.get("v")));
   };
   server.on("upgrade", onUpgrade);
 

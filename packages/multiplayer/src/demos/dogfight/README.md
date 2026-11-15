@@ -10,9 +10,7 @@ A match: a 10 s countdown with the guns cold, play to 10 kills or 5 minutes, 10 
 | `server.ts` | the game: a `TickRoom` per room on `/dogfight?room=`, and `attachDogfight(server)` |
 | `client.ts` | the page's part: a `TickClient` flying the example game's plane, the others as `RemotePlayers`, tracers, tags, the board |
 | `main.ts`, `index.html` | the page: the example game in the air at the canyon |
-| `serve.ts` | the production server: the built page and its world, and the rooms, on one port |
-| `vite.config.ts` | the dev server (the rooms beside it) and both builds |
-| `Dockerfile`, `fly.toml` | the image, and Fly.io |
+| `vite.config.ts` | the dev server, with the rooms and the lobby beside it (the production build is the three demos', `../vite.config.ts`) |
 
 ## Play
 
@@ -24,16 +22,4 @@ The example game's plane keys (W/S pull and push, A/D roll, Q/E rudder, Shift an
 
 ## Production
 
-```sh
-pnpm --filter @pixelworlds/multiplayer demo:dogfight:build   # dist/client (the page and southwest-fly) and dist/server/serve.js (one file)
-pnpm --filter @pixelworlds/multiplayer demo:dogfight:start   # http://localhost:8080/; PORT, DOGFIGHT_LAG; the lobby on /api, a log line per room event, and a reason to every page when stopped
-```
-
-Docker, from the repository's root:
-
-```sh
-docker build -f packages/multiplayer/src/demos/dogfight/Dockerfile -t pixelworld-dogfight .
-docker run --rm -p 8080:8080 pixelworld-dogfight
-```
-
-Fly.io: the commands are at the top of `fly.toml`. Rooms live in the server's memory, so run exactly one machine. It stops when idle and wakes on the next visit.
+Built and served with the other demos on one server, at https://play.pixelworld.site/dogfight/ (D-143): the page at `/dogfight/`, its lobby on `/dogfight/api`, its rooms on `/dogfight`. `demos:build`, `demos:start` and the image are in [the package's README](../../../README.md#online-d-143).

@@ -37,6 +37,8 @@ import {
 
 /** The driving level the match is on. */
 export const RTS_WORLD = "/sf/";
+/** The lobby's paths (D-143): the game's own, beside the other demos' on one server. */
+export const RTS_LOBBY = "/rts/api";
 /** The play area (cells of the level): the Presidio, from Baker Beach's bluffs to Crissy Field. */
 export const MAP = { x0: 118, y0: 140, w: 144, h: 110 };
 /** The server's fixed step (s): orders, movement and fights. */

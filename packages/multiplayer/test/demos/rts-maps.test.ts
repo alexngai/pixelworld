@@ -5,9 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TickClient, joinRoom } from "../../src/index";
 import { serveStatic, type Relay } from "../../src/server";
 import { DEFAULT_MAP, MAPS, planMap, type Layout } from "../../src/demos/rts/maps";
-import { BUILDINGS, MAX_RISE, OBJECTIVE, WOODS, cellIndex, findPath, passable, walkFrom, type MapGrid, type RtsEvent, type RtsSnap, type RtsWorldNet } from "../../src/demos/rts/rules";
+import { BUILDINGS, MAX_RISE, OBJECTIVE, RTS_LOBBY, WOODS, cellIndex, findPath, passable, walkFrom, type MapGrid, type RtsEvent, type RtsSnap, type RtsWorldNet } from "../../src/demos/rts/rules";
 import { BOT, RtsRoom, attachRts, openRtsWorld, rtsLobby, type RtsWorld } from "../../src/demos/rts/server";
-import { WORLDS } from "../../src/demos/rts/vite.config";
+import { WORLDS } from "../../src/demos/vite.config";
 import { loopback } from "../../src/testing";
 
 /**
@@ -41,7 +41,7 @@ const foot = (g: MapGrid, [x, y]: [number, number], size: number) => Array.from(
 
 describe("Fogfront's maps from a level's cells (D-128)", () => {
   it("every map's level is one a build ships", () => {
-    expect(new Set(Object.values(MAPS).map((m) => m.world))).toEqual(new Set(WORLDS));
+    expect(WORLDS).toEqual(expect.arrayContaining(Object.values(MAPS).map((m) => m.world)));
     expect(MAPS[DEFAULT_MAP]!.layout).toBeDefined(); // the Presidio's, by hand
   });
 
@@ -133,7 +133,8 @@ describe("Fogfront's map as a room's setting (D-128)", () => {
     await new Promise<void>((r) => http.listen(0, r));
     const relay: Relay = attachRts(http, { log: () => {} });
     lobby = rtsLobby(relay);
-    const url = `http://localhost:${(http.address() as AddressInfo).port}/api`;
+    const base = `http://localhost:${(http.address() as AddressInfo).port}`;
+    const url = `${base}${RTS_LOBBY}`;
     const quick = async (settings?: unknown) => {
       const res = await fetch(`${url}/quick`, { method: "POST", body: JSON.stringify({ settings }) });
       return { status: res.status, ...((await res.json()) as { room?: string }) };
@@ -150,7 +151,7 @@ describe("Fogfront's map as a room's setting (D-128)", () => {
       expect(Object.fromEntries(rooms.map((r) => [r.name, (r.info as { map: string }).map]))).toEqual({ [kowloon.room!]: "kowloon", [presidio.room!]: "presidio" });
       // a page in each hears its room's map, once the server has opened that map's level
       const hear = async (code: string) => {
-        const room = await joinRoom(`${url.replace("/api", "")}/rts`, code);
+        const room = await joinRoom(`${base}/rts`, code);
         const map = await new Promise<string>((resolve) => new TickClient<never, RtsSnap, RtsWorldNet, RtsEvent>(room, { tick: 1 / 20, onWorld: (w) => resolve(w.map) }).hello({ name: "Look", vs: "any" }));
         room.close();
         return map;

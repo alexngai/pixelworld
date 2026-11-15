@@ -2,7 +2,7 @@ import "@pixelworlds/game/src/game.css";
 import { quickRoom } from "../../index";
 import { startRts } from "./client";
 import { DEFAULT_MAP, MAPS, mapOf } from "./maps";
-import { TEAMS, WATCHES } from "./rules";
+import { RTS_LOBBY, TEAMS, WATCHES } from "./rules";
 
 /**
  * Fogfront's page (D-121). `?map=` (D-128: `presidio`, `midtown`,
@@ -18,7 +18,7 @@ async function main() {
   const params = new URLSearchParams(location.search);
   const map = mapOf(params.get("map")) ?? MAPS[DEFAULT_MAP]!;
   if (!params.get("room")) {
-    params.set("room", await quickRoom({ map: map.id }).catch(() => "presidio")); // no lobby (an old server): a room by name
+    params.set("room", await quickRoom({ map: map.id }, RTS_LOBBY).catch(() => "presidio")); // no lobby (an old server): a room by name
     params.set("map", map.id);
     history.replaceState(null, "", `?${params}`);
   }
