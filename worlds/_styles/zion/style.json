@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../packages/style/schema/style-pack.v1.schema.json",
+  "extends": "desert-southwest",
+  "id": "zion",
+  "name": "Zion Canyon",
+  "ramps": {
+    "kaibab": null,
+    "hermit": null,
+    "supai": null,
+    "redwall": null,
+    "muav": null,
+    "tonto": null,
+    "tapeats": null,
+    "coconino": null,
+    "dolomite": null,
+    "carmel": ["#2c2a33", "#4a4650", "#6e6868", "#938b82", "#b4aa9a", "#d0c7b4"],
+    "navajo-white": ["#3e3436", "#6e5d55", "#a08a72", "#c9b293", "#e4d2b0", "#f7ecd2"],
+    "navajo-salmon": ["#3a2630", "#66403f", "#94604f", "#bf8364", "#dca47d", "#efc39a"],
+    "navajo-red": ["#341c26", "#5c2a2c", "#8a3c33", "#ad5038", "#c66a42", "#d98757"],
+    "kayenta": ["#2c1824", "#4b2229", "#6e302f", "#8f4236", "#a8573e", "#bd6e4b"],
+    "moenave": ["#30202a", "#553236", "#7d4a42", "#a2654f", "#bd7f5d", "#d29a72"],
+    "chinle": ["#26202e", "#3f3444", "#5c4b5a", "#7b6470", "#977e86", "#b29aa0"],
+    "riparian": ["#1a2420", "#2a3a2a", "#3d5033", "#53683d", "#6a7f48", "#859857"],
+    "cottonwood": ["#14241c", "#1f3a25", "#2d532c", "#3f6e33", "#56893b", "#73a346"],
+    "desert": ["#3a2a30", "#604240", "#8a5f50", "#b07c62", "#cc9a78", "#e2b791"],
+    "sand": ["#3a2a30", "#5f4440", "#87634f", "#ad8461", "#cba478", "#e2c294"],
+    "scrub": ["#2a2528", "#463c3a", "#64574c", "#82735e", "#9f8f70", "#b9aa86"],
+    "grass": ["#29281f", "#434430", "#5f613e", "#7b7d4b", "#979858", "#b1b26c"],
+    "urban": ["#2a2428", "#453b3c", "#635655", "#827370", "#a1918b", "#bfb0a8"],
+    "water": ["#14202a", "#1d3236", "#2a4640", "#3d5c4a", "#567259", "#71896a"]
+  },
+  "strataSets": {
+    "grand-canyon": null,
+    "desert-ranges": null,
+    "zion": [
+      { "name": "Carmel formation", "aboveMeters": 2180, "ramp": "carmel" },
+      { "name": "Navajo sandstone, white top", "aboveMeters": 1920, "ramp": "navajo-white" },
+      { "name": "Navajo sandstone, salmon", "aboveMeters": 1720, "ramp": "navajo-salmon" },
+      { "name": "Navajo sandstone, red base", "aboveMeters": 1520, "ramp": "navajo-red" },
+      { "name": "Kayenta formation", "aboveMeters": 1370, "ramp": "kayenta" },
+      { "name": "Moenave formation", "aboveMeters": 1260, "ramp": "moenave" },
+      { "name": "Chinle formation", "aboveMeters": -100000, "ramp": "chinle" }
+    ]
+  },
+  "defaultStrata": "zion",
+  "provinces": null,
+  "surfaces": {
+    "woodland": { "ramp": "riparian", "pattern": "trees", "density": 0.09 }
+  },
+  "scatter": {
+    "woodland": [{ "group": "tree.pinyon-juniper", "perCell": 0.4 }],
+    "grass": [{ "group": "shrub", "perCell": 0.3 }],
+    "scrub": [{ "group": "shrub", "perCell": 0.6 }, { "group": "tree.pinyon-juniper", "perCell": 0.08 }],
+    "desert": [{ "group": "shrub.desert", "perCell": 0.1 }, { "group": "rock.boulder", "perCell": 0.03 }],
+    "rock": [{ "group": "rock.boulder", "perCell": 0.03 }]
+  },
+  "assets": {
+    "tree.cottonwood": {
+      "generator": "roundTree",
+      "ramps": { "body": "cottonwood", "trunk": "bark" },
+      "params": { "radius": 2.4, "radiusJitter": 0.8, "height": 1.9, "trunk": 2, "lobes": 5, "holes": 0.08 }
+    },
+    "rock.boulder": { "generator": "boulder", "ramps": { "rock": "navajo-salmon" } },
+    "building.park": {
+      "generator": "building",
+      "ramps": { "wall": "ochre", "roof": "iron", "window": "glass" },
+      "params": { "style": 0 }
+    }
+  }
+}
