@@ -250,3 +250,22 @@ def test_a_features_source_of_ones_own_is_selected_by_name():
         assert plugins.entries(src.attribution)[0]["name"] == "City ponds"
         with pytest.raises(NotImplementedError, match="CityPonds gives no roads"):
             src.roads(region.bounds, ["primary"])
+
+
+def test_scrub_turns_woods_with_little_canopy_into_scrub():
+    """D-133: Hong Kong's open ridges, which WorldCover calls tree cover."""
+    region = Region.from_dict(SPEC)
+    cx, cy = region.cells
+    west = region.grid[0]
+
+    class WestCanopy:  # tall trees on the west half of the region, low shrubs on the east
+        def sample(self, xs, ys, crs):
+            return np.where(np.asarray(xs) - west < cx * 10.0, 12.0, 1.0)
+
+    surface = np.full((cy, cx), S["woodland"], dtype=np.uint8)
+    surface[:, : cx // 8] = S["urban"]
+    out = ground.scrub(region, surface, NAMES, {"over": ["woodland"]}, canopy=WestCanopy())
+    assert out[:, cx // 2 + 1 :].all()  # the open east is scrub
+    assert not out[:, cx // 8 : cx // 2 - 1].any()  # the wooded west stays woods
+    assert not out[:, : cx // 8].any()  # town isn't touched
+    assert Region.from_dict(SPEC | {"ground": {"scrub": {"maxCover": 0.2}}}).ground["scrub"]

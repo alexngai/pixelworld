@@ -339,15 +339,31 @@ const suspensionBridge: Generator = ({ ramp, ramps, param, mask, heightVox, fram
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
 /**
+ * A tower's window panes: its `window` glass, or, where the asset names `lit`
+ * (lit.* variants: one per tower, by seed), lit by night at `litFraction`
+ * (0.35) of the windows, as a building's are (D-135). Without `lit` it draws
+ * nothing random, so a pack's towers stay as they were.
+ */
+function towerPanes(ctx: Pick<GenContext, "rand" | "ramps" | "param">, m: VoxelModel, glass: number): () => number {
+  const lits = ctx.ramps("lit");
+  if (!lits.length) return () => glass;
+  const lit = m.material(lits[Math.floor(ctx.rand() * lits.length)]!);
+  const share = ctx.param("litFraction", 0.35);
+  return () => (ctx.rand() < share ? lit : glass);
+}
+
+/**
  * A slender four-sided pyramid tower: windowed faces tapering straight up
  * into a clad spire, two vertical wings (lift and stair shafts) on the east
  * and west faces that stand clear of them as the faces slope in, and an open
  * arcade at its foot.
  * params: base (the base's width over the height; 0.2), spire (the clad
  * spire's share of the height; 0.2), wing (where the wings come clear of the
- * faces, over the height; 0.45).
+ * faces, over the height; 0.45), litFraction (with `lit`; 0.35).
+ * roles: structure, window, lit (optional: lit.* variants, windows lit by night).
  */
-const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
+const pyramidTower: Generator = (ctx) => {
+  const { ramp, param, heightVox } = ctx;
   const H = Math.max(20, Math.round(heightVox ?? 120));
   const B = Math.max(4, Math.round(H * param("base", 0.2)));
   const body = Math.round(H * (1 - param("spire", 0.2))); // windowed floors below, the clad spire above
@@ -355,6 +371,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
   const m = new VoxelModel(size, size, H + 1);
   const wall = m.material(ramp("structure"));
   const glass = m.material(ramp("window"));
+  const pane = towerPanes(ctx, m, glass);
   const c = (size - 1) / 2;
   const R = (z: number) => (B / 2) * (1 - z / H); // the faces' half-width: straight to the tip
   const wingOut = R(H * param("wing", 0.45)) + 0.5; // the wings' outer faces are vertical
@@ -371,7 +388,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
         if (dm > r) {
           // a wing beyond the face: solid, a slit of windows down its middle, its top stepped
           if (dx > dy && dx <= wingOut && dy <= wingHalf && z < wingTop - Math.max(0, Math.round(dx - wingOut + 2)))
-            m.set(x, y, z, dx > wingOut - 1 && dy < 0.6 && z % 3 !== 0 ? glass : wall);
+            m.set(x, y, z, dx > wingOut - 1 && dy < 0.6 && z % 3 !== 0 ? pane() : wall);
           continue;
         }
         const skin = dm > r - 1;
@@ -384,7 +401,7 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
         if (z < arcade - 1 && mod(Math.round(along), 3) !== 0) continue;
         // windows in vertical strips on the skin, solid edges
         const win = z >= arcade && z % 3 !== 0 && mod(Math.round(along), 2) === 0 && Math.abs(dx - dy) > 1;
-        m.set(x, y, z, win ? glass : wall);
+        m.set(x, y, z, win ? pane() : wall);
       }
   }
   return m;
@@ -397,10 +414,12 @@ const pyramidTower: Generator = ({ ramp, param, heightVox }) => {
  * params: base (the base's width over the height; 0.12), top (the top's width
  * over the base's; 0.75), corner (corner radius over the half-width at the
  * base; 0.3), crown (the crown's share of the height; 0.1), turn (1 turns the
- * plan 45°, for a diagonal street grid; 0).
- * roles: structure (fins, floor lines, lattice), window (glass).
+ * plan 45°, for a diagonal street grid; 0), litFraction (with `lit`; 0.35).
+ * roles: structure (fins, floor lines, lattice), window (glass), lit
+ * (optional: lit.* variants, windows lit by night).
  */
-const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
+const obeliskTower: Generator = (ctx) => {
+  const { ramp, param, heightVox } = ctx;
   const H = Math.max(24, Math.round(heightVox ?? 150));
   const r0 = Math.max(3, (H * param("base", 0.12)) / 2);
   const r1 = r0 * param("top", 0.75);
@@ -413,6 +432,7 @@ const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
   const m = new VoxelModel(size, size, H + 1);
   const white = m.material(ramp("structure"));
   const glass = m.material(ramp("window"));
+  const pane = towerPanes(ctx, m, glass);
   const core = H - Math.round(crown * 0.6); // the core stops short of the crown's top
   for (let z = 0; z < H; z++) {
     const f = z / H;
@@ -441,7 +461,7 @@ const obeliskTower: Generator = ({ ramp, param, heightVox }) => {
           } else if (sd < -2.2 && z < core) m.set(x, y, z, glass);
           continue;
         }
-        m.set(x, y, z, skin && z % 4 !== 0 && mod(along, 2) !== 0 ? glass : white); // pale fins and floor lines
+        m.set(x, y, z, skin && z % 4 !== 0 && mod(along, 2) !== 0 ? pane() : white); // pale fins and floor lines
       }
   }
   return m;
@@ -881,7 +901,123 @@ const cellhouse: Generator = ({ ramp, ramps, param, mask, heightVox, frame }) =>
   return m;
 };
 
+/**
+ * A natural stone arch (D-139): a slab of rock along x with an opening under
+ * its span, which a DEM can't hold. Its outline is a superellipse `span` × H
+ * wide (exponent `round`: 2 a dome, larger a blocky fin), thinner across
+ * (`depth` × H at the foot) toward its top, its faces wavy and ledged; the
+ * opening a half-ellipse `opening` × H wide and `clear` × H tall. `waist`
+ * pinches the legs a third of the way up, `skew` thins the +x leg, `turret`
+ * stands a tower that many times H tall beside the −x leg, `double: 1` adds a
+ * second arch along y that shares the +x leg, and `diagonal: 1` runs the slab
+ * along x = y (quarter turns give the other diagonal). Edges are weathered by
+ * the seed.
+ * roles: rock, base (the foot's darker member; rock if absent), cap (the pale
+ * top; rock if absent).
+ */
+const stoneArch: Generator = ({ rand, ramp, ramps, param, heightVox }) => {
+  const H = Math.max(10, Math.round(heightVox ?? 30));
+  const W = Math.max(5, Math.round(H * param("span", 1)));
+  const D = Math.max(2, H * param("depth", 0.25));
+  const n = param("round", 2.5);
+  const ow = (H * param("opening", 0.6)) / 2;
+  const oh = H * param("clear", 0.8);
+  const waist = param("waist", 0);
+  const skew = param("skew", 0);
+  const turret = param("turret", 0);
+  const double = param("double", 0) >= 1;
+  const diagonal = !double && param("diagonal", 0) >= 1;
+  const tw = turret > 0 ? Math.max(3, Math.round(D * 1.3)) : 0;
+  const Ht = Math.round(H * Math.max(1, turret));
+  const L = W + tw; // the slab's length, its turret's included
+  const sx = diagonal ? Math.ceil((L + D) / Math.SQRT2) + 2 : L + 2;
+  const sy = double || diagonal ? sx : Math.ceil(D) + 2;
+  const m = new VoxelModel(sx, sy, Math.max(H, Ht) + 1);
+  const rock = m.material(ramp("rock"));
+  const base = m.material(ramps("base")[0] ?? ramp("rock"));
+  const cap = m.material(ramps("cap")[0] ?? ramp("rock"));
+  const foot = Math.round(H * param("foot", 0.12));
+  const capZ = H - Math.max(1, Math.round(H * param("capShare", 0.08)));
+  const [p1, p2] = [rand() * 6.3, rand() * 6.3];
+  // whether the slab is solid at u voxels along it from the arch's middle and height z (open under the span)
+  const solid = (u: number, z: number) => {
+    if (tw && Math.abs(u + W / 2 + tw / 2 - 1) <= (tw / 2) * Math.pow(Math.max(0, 1 - (z / Ht) ** 4), 0.25)) return true;
+    const t = z / H;
+    if (t >= 1) return false;
+    const outer = (W / 2) * Math.pow(1 - t ** n, 1 / n);
+    const open = z < oh ? ow * Math.sqrt(1 - (z / oh) ** 2) : 0;
+    let leg = (outer - open) * (1 - waist * Math.exp(-(((t - 0.3) / 0.12) ** 2)));
+    if (u > 0) leg *= 1 - skew;
+    return Math.abs(u) >= open && Math.abs(u) <= open + leg;
+  };
+  // a slab: each column's place along it (u) and across it (v), from the column's middle
+  const slab = (frame: (x: number, y: number) => [number, number]) => {
+    for (let z = 0; z < m.sz; z++) {
+      const ledge = z % 6 === 0 ? 0.7 : 0; // bedding: a ledge every few voxels
+      const half = (D / 2) * (1 - 0.4 * Math.min(1, z / H)) + 0.3 - ledge;
+      for (let y = 0; y < sy; y++)
+        for (let x = 0; x < sx; x++) {
+          const [u, v] = frame(x + 0.5, y + 0.5);
+          if (!solid(u, z)) continue;
+          let above = 0; // the top rounds across the slab, a ridge and not a deck
+          while (above < D / 2 && solid(u, z + above + 1)) above++;
+          const crown = above < D / 2 ? Math.sqrt((above + 0.5) / (D / 2)) : 1;
+          const wave = 0.9 * Math.sin(u * 0.37 + p1) + 0.5 * Math.sin(u * 0.91 + z * 0.2 + p2); // wavy faces
+          if (Math.abs(v) > (half + wave * Math.sign(v || 1) * 0.5) * crown + (rand() - 0.5) * 0.9) continue;
+          if (!solid(u + 0.9, z) && !solid(u - 0.9, z) && rand() < 0.5) continue; // a weathered sliver
+          m.set(x, y, z, z < foot ? base : z >= capZ + 1.5 * Math.sin(u * 0.29 + p2) ? cap : rock); // the cap's foot wanders
+        }
+    }
+  };
+  const u0 = 1 + tw + W / 2; // the arch's middle along a slab drawn from the box's edge
+  if (diagonal) {
+    // the slab's whole length centred in the box
+    slab((x, y) => [(x - sx / 2 + (y - sy / 2)) / Math.SQRT2 - tw / 2, (x - sx / 2 - (y - sy / 2)) / Math.SQRT2]);
+  } else if (double) {
+    const far = sx - D / 2 - 1; // both slabs along the box's far sides, meeting in its far corner
+    slab((x, y) => [x - u0, y - far]);
+    slab((x, y) => [y - u0, x - far]);
+  } else slab((x, y) => [x - u0, y - sy / 2]);
+  return m;
+};
+
+/**
+ * A balanced rock (D-139): a boulder on a pedestal of softer rock. The
+ * pedestal flares from a neck `neck` × H wide under the boulder to a skirt
+ * `base` × H wide; the boulder is `cap` × H tall and `capWidth` × H across, a
+ * rounded block longer along x than y, overhanging the neck.
+ * roles: rock (the boulder), base (the pedestal; rock if absent).
+ */
+const balancedRock: Generator = ({ rand, ramp, ramps, param, heightVox }) => {
+  const H = Math.max(12, Math.round(heightVox ?? 40));
+  const capH = Math.max(4, Math.round(H * param("cap", 0.42)));
+  const pedH = H - capH;
+  const rb = (H * param("base", 0.5)) / 2;
+  const rn = (H * param("neck", 0.14)) / 2;
+  const rc = (H * param("capWidth", 0.32)) / 2;
+  const R = Math.ceil(Math.max(rb, rc) * 1.2) + 1;
+  const size = 2 * R + 1;
+  const m = new VoxelModel(size, size, H + 1);
+  const boulder = m.material(ramp("rock"));
+  const pedestal = m.material(ramps("base")[0] ?? ramp("rock"));
+  for (let z = 0; z < H; z++) {
+    const ped = z < pedH;
+    const w = (z - pedH) / capH;
+    const r = ped
+      ? rn + (rb - rn) * Math.pow(1 - z / pedH, 2.2)
+      : Math.max(rn, rc * Math.pow(Math.max(0, 1 - Math.abs(2 * w - 1) ** 4), 1 / 4));
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const d = Math.hypot((x - R) / 1.15, (y - R) / 0.9);
+        if (d <= r + (rand() - 0.5) * 0.8) m.set(x, y, z, ped ? pedestal : boulder);
+      }
+  }
+  return m;
+};
+
 export const LANDMARK_KIT: Record<string, Generator> = {
+  stoneArch,
+  balancedRock,
   suspensionBridge,
   pyramidTower,
   obeliskTower,

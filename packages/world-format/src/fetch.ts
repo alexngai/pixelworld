@@ -32,15 +32,16 @@ export interface WorldFileInfo {
   hint?: string;
 }
 
-/** Whether a response is an HTML page: by its type, or by its first byte where it has none. */
+/**
+ * Whether a response is an HTML page: by its type, or where it has none by an
+ * opening tag (past spaces and a BOM). Not by a bare "<": a server that sends a
+ * `.gz` with `Content-Encoding: gzip` (Vite's dev server) hands over the bytes
+ * decompressed, and binary data such as a geo grid may start with 0x3c (D-137).
+ */
 function isHtml(res: Response, bytes: ArrayBuffer): boolean {
   if (/\btext\/html\b/i.test(res.headers.get("content-type") ?? "")) return true;
-  const head = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 64));
-  for (const b of head) {
-    if (b === 0x20 || b === 0x09 || b === 0x0a || b === 0x0d || b === 0xef || b === 0xbb || b === 0xbf) continue; // space, BOM
-    return b === 0x3c; // "<": no world file starts so (JSON, gzip, PNG and chunks don't)
-  }
-  return false;
+  const head = String.fromCharCode(...new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 64)));
+  return /^[\s\xef\xbb\xbf]*<(?:!doctype|html|head|body|!--)/i.test(head);
 }
 
 /** An error's message, after its name where that says more than "Error". */

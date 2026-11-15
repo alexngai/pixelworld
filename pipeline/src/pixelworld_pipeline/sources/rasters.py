@@ -163,11 +163,17 @@ def source(ref: Ref, role: str | None = None, region: Region | None = None, *, w
     return plugins.open_source(role or plugins.role_of(kind) or "terrain", ref, region, where=where)
 
 
+# built-in kinds whose output changed under the same spec: their caches are written anew
+CACHE_TAGS = {"copernicus-glo30-ground": "|town3"}  # the opening only in town (D-115)
+
+
 def _ref_key(ref: Ref) -> str:
     """A spec block's part of a cache key: its kind, and its options if it has any
     (so caches written before options existed still match)."""
     kind, options = plugins.split_ref(ref)
-    return kind + (json.dumps(options, sort_keys=True) if options else "")
+    return (
+        kind + (json.dumps(options, sort_keys=True) if options else "") + CACHE_TAGS.get(kind, "")
+    )
 
 
 # 3DEP DEM products: region-spec kind → (product directory, file prefix).
@@ -252,11 +258,24 @@ class CopernicusGLO30(RasterSource):
         return copernicus_glo30_tiles(bounds)
 
 
-def ground_filter(a: np.ndarray, k: int) -> np.ndarray:
+# how far the surface model may stand on a canopy outside town (D-115)
+CANOPY_M = 12.0
+
+
+def ground_filter(
+    a: np.ndarray, k: int, built: np.ndarray | None = None, trees: np.ndarray | None = None
+) -> np.ndarray:
     """A surface model's ground: a grey opening (the lowest value in each k×k
     window, then the highest of those) that takes off what stands narrower
     than the window (buildings, trees), then a 3×3 mean. Water (≤ 0.5 m) and
-    gaps (NaN) are left as they are and don't pull the shore down (D-107)."""
+    gaps (NaN) are left as they are and don't pull the shore down (D-107).
+
+    With `built` (built-up land on the same grid), the opening is kept whole
+    only in town: built-up land at least 3 pixels across (a road or a row of
+    houses over a hill isn't), widened by a pixel and feathered over three.
+    Elsewhere it may lower the surface by at most `CANOPY_M` under `trees`
+    and not at all on open ground, so it doesn't plane off summits and ridges
+    (D-115)."""
     from scipy import ndimage
 
     if k < 3:
@@ -268,15 +287,30 @@ def ground_filter(a: np.ndarray, k: int) -> np.ndarray:
     ok = np.isfinite(b)
     weight = ndimage.uniform_filter(ok.astype(float), 3)
     mean = ndimage.uniform_filter(np.where(ok, b, 0.0), 3) / np.maximum(weight, 1e-9)
-    return np.where(water | ~ok, a, mean)
+    ground = np.where(water | ~ok, a, mean)
+    if built is None:
+        return ground
+    # ponytail: one canopy height for every wood; read the canopy map if hills' woods vary
+    cap = CANOPY_M * trees if trees is not None else 0.0
+    country = np.minimum(a, np.maximum(ground, a - cap))
+    # town is built-up land 3 pixels across or more: a road, a dual carriageway
+    # or a row of houses over a hill isn't
+    square = np.ones((3, 3), bool)
+    town = ndimage.binary_dilation(ndimage.binary_opening(built, square), square)
+    w = ndimage.uniform_filter(town.astype(float), 3)
+    return w * ground + (1.0 - w) * country
 
 
 class CopernicusGLO30Ground(CopernicusGLO30):
-    """GLO-30 with buildings and trees taken off by `ground_filter` over a
-    210 m window, on its own 1″ grid before it's warped onto the region's.
-    Measured in Kowloon against the Lands Department's 5 m DTM: an RMSE of
-    7.9 m on flat streets (12.3 m unfiltered), 15.4 m on slopes over 15°
-    (13.4 m unfiltered), so for flat dense cities, not hillsides (D-107)."""
+    """GLO-30 with buildings taken off by `ground_filter` over a 210 m window,
+    on its own 1″ grid before it's warped onto the region's, where ESA
+    WorldCover 2021 says the land is built up; outside town only a canopy's
+    height comes off its trees, and open hills keep GLO-30 as it is (D-115).
+    Measured in Kowloon against the Lands Department's 5 m DTM with the
+    filter everywhere: an RMSE of 7.9 m on flat streets (12.3 m unfiltered),
+    15.4 m on slopes over 15° (13.4 m unfiltered) (D-107). On Hong Kong
+    Island's 183 surveyed summits, the filter everywhere read 36 m low
+    (median), GLO-30 as it is 5 m (D-115)."""
 
     window_m = 210.0
 
@@ -298,8 +332,23 @@ class CopernicusGLO30Ground(CopernicusGLO30):
             np.nan,
         )
         k = int(round(self.window_m / (self.native_m * overview))) | 1
+        ground = grid
+        if k >= 3:  # under 3 pixels at this overview, the window takes nothing off
+            cover = np.zeros(grid.shape, np.uint8)
+            missing += _warp_tiles(
+                esa_worldcover_tiles((w, s, e, n)),
+                cover,
+                grid_transform,
+                "EPSG:4326",
+                overview,
+                Resampling.mode,
+                0,
+            )
+            if not cover.any():
+                progress.log("terrain: no WorldCover here, so no town to filter: GLO-30 as it is")
+            ground = ground_filter(grid, k, built=cover == 50, trees=np.isin(cover, (10, 95)))
         reproject(
-            source=ground_filter(grid, k),
+            source=ground,
             destination=dst,
             src_transform=grid_transform,
             src_crs="EPSG:4326",
@@ -403,6 +452,8 @@ class ESAWorldCover(RasterSource):
 
 
 ESA_WORLDCOVER_2021 = ESAWorldCover()
+# GLO-30's ground reads WorldCover's built-up land (D-115)
+CopernicusGLO30Ground.attribution = [CopernicusGLO30.attribution, ESAWorldCover.attribution]
 
 
 # ESA WorldCover 2021 class codes.

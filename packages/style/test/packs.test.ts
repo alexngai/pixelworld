@@ -15,14 +15,13 @@ import {
 const ROOT = join(__dirname, "../../../worlds/_styles");
 const SCHEMA = resolve(__dirname, "../schema", STYLE_SCHEMA_FILE);
 // every directory is a pack (the licence file beside them isn't)
-const files = readdirSync(ROOT, { withFileTypes: true })
+const packs = readdirSync(ROOT, { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => [e.name, JSON.parse(readFileSync(join(ROOT, e.name, "style.json"), "utf8"))] as const);
-// a pack that extends another is checked with its parents merged in, as the viewer loads it
-const byId = new Map<string, Record<string, unknown>>(files);
+// a pack that extends another is checked merged with its parents, as the viewer loads it (D-075)
+const raw = new Map<string, Record<string, unknown>>(packs);
 const merged = (json: Record<string, unknown>): Record<string, unknown> =>
-  typeof json.extends === "string" ? mergeStylePacks(merged(byId.get(json.extends)!), json) : json;
-const packs = files.map(([id, json]) => [id, merged(json)] as const);
+  typeof json.extends === "string" ? mergeStylePacks(merged(raw.get(json.extends)!), json) : json;
 
 describe("every style pack", () => {
   it("is found", () => expect(packs.map(([id]) => id)).toEqual(expect.arrayContaining(["bay-area", "desert-southwest"])));
@@ -32,12 +31,12 @@ describe("every style pack", () => {
       expect(typeof json.$schema).toBe("string");
       expect(resolve(ROOT, id, json.$schema as string)).toBe(SCHEMA);
       expect(existsSync(SCHEMA)).toBe(true);
-      expect(styleIssues(json)).toEqual([]);
+      expect(styleIssues(merged(json))).toEqual([]);
     });
 
   for (const [id, json] of packs)
     it(`${id}: validates, fits the palette and has its id, the marker ramp and a night palette`, () => {
-      const style = validateStyle(json as StylePack);
+      const style = validateStyle(merged(json) as unknown as StylePack);
       expect(style.id).toBe(id);
       const day = buildPalette(style);
       expect(paletteIndex(day.rampIds.size - 1, 5)).toBeLessThan(INDEX_SILHOUETTE);
