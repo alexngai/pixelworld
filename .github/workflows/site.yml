@@ -7,7 +7,8 @@ name: Site
 # page runs), so a first visit draws at once; a world whose start tiles fail
 # still deploys, and bakes its first view in the browser. The custom domain is
 # set in the repository's Pages settings (source: GitHub Actions), not by a
-# CNAME file.
+# CNAME file. The `play` job deploys the multiplayer server to Fly.io from the
+# same commit (D-144).
 
 on:
   push:
@@ -110,3 +111,16 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  play:
+    # play.pixelworld.site on Fly.io (D-143, D-144): the multiplayer demos' pages, worlds and rooms,
+    # built remotely from this commit. FLY_API_TOKEN is a deploy token for the pixelworld-play app
+    # (`fly tokens create deploy -a pixelworld-play`). A deploy restarts its one machine: open rooms
+    # are told the server is restarting. Independent of the Pages deploy: either can fail alone.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy . --remote-only --ha=false --config packages/multiplayer/src/demos/fly.toml --dockerfile packages/multiplayer/src/demos/Dockerfile
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
