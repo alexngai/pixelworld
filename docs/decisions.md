@@ -153,6 +153,7 @@ Status values:
 | D-143 | The multiplayer demos on one server at play.pixelworld.site: pages, worlds and rooms from one build, each game's lobby on its own path | Accepted |
 | D-144 | play.pixelworld.site deploys on every push to main, beside the site | Accepted |
 | D-145 | The tile key's plugins part hashes each module by its path, not its origin | Accepted |
+| D-146 | The viewer's minimap: the world as the view sees it from above, turning with the view, with north on it | Accepted |
 
 ---
 
