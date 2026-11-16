@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/grid": "workspace:*",
     "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*",
     "@pixelworlds/city-hongkong": "workspace:*",

@@ -10,9 +10,12 @@
     <canvas id="view"></canvas>
     <div id="hud" class="hud"></div>
     <div id="help" class="help">
-      WASD / drag pan · arrows drive · Q/E rotate · 1–6 zoom · F follow · N no-clip · T day/night · L level · V traffic · G fog · I sources · H hide
+      WASD / drag pan · arrows drive · Q/E rotate · 1–6 zoom · F follow · N no-clip · T day/night · L level · V traffic · G fog · M map · I sources · H hide
     </div>
-    <div id="layers" class="layers hidden"></div>
+    <div class="side">
+      <canvas id="minimap" class="minimap hidden" title="The world as the view sees it: click to go there (M hides it)"></canvas>
+      <div id="layers" class="layers hidden"></div>
+    </div>
     <div id="attribution" class="attribution"></div>
     <div id="sources" class="modal hidden" role="dialog" aria-label="Data sources"></div>
     <script type="module" src="/src/main.ts"></script>
