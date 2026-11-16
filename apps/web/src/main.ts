@@ -1,12 +1,13 @@
 import {
   createWorldView,
   fogLayer,
+  Minimap,
   roverController,
   steamLayer,
   type RoverOptions,
   type TileBake,
 } from "@pixelworlds/engine";
-import { TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
+import { loadRoutes, TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
 import { stylePack } from "./styles";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
 import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
@@ -123,6 +124,7 @@ async function main() {
   const attribution = document.getElementById("attribution")!;
   const sources = document.getElementById("sources")!;
   const layersEl = document.getElementById("layers")!;
+  const mapEl = document.getElementById("minimap") as HTMLCanvasElement;
   const showHud = params.get("hud") !== "0";
   if (!showHud) for (const el of [hud, help, attribution]) el.classList.add("hidden");
 
@@ -257,6 +259,40 @@ async function main() {
     if (showHud) layersEl.classList.remove("hidden");
   }
 
+  // the minimap (M, D-146): the world as the view sees it from above, the ground on
+  // screen, the rover and north; roads from traffic's routes, else the package's
+  const map = new Minimap(mapEl, { iso: true });
+  const { cellsX, cellsY } = view.world;
+  const landmarks = view.query.landmarks();
+  map.setWorld(view.world, trafficOn?.sim.net ?? null, landmarks);
+  let routesAsked = !!trafficOn;
+  function drawMap() {
+    if (mapEl.classList.contains("hidden")) return;
+    if (!routesAsked) {
+      routesAsked = true; // once shown: the package's routes, without traffic's
+      void loadRoutes(view.world.url, manifest)
+        .then((routes) => {
+          if (!routes) return;
+          map.setWorld(view.world, routes, landmarks);
+          drawMap();
+        })
+        .catch((e: unknown) => console.warn("minimap routes:", e));
+    }
+    map.draw(rover.rover.x, rover.rover.y, { view });
+  }
+  if (showHud) mapEl.classList.remove("hidden");
+  view.onFrame(drawMap);
+  // a click on the map takes the rover there
+  mapEl.addEventListener("click", (e) => {
+    const [x, y] = map.toCell(e.offsetX, e.offsetY);
+    if (x < 0 || y < 0 || x >= cellsX || y >= cellsY) return;
+    void view.camera.lookAt({ x, y }).then((ok) => {
+      if (!ok) return;
+      rover.place(x, y);
+      rover.follow = true;
+    });
+  });
+
   const levels = manifest.levels ?? [];
   function switchLevel(name?: string) {
     if (levels.length < 2) return;
@@ -275,8 +311,14 @@ async function main() {
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "t" && view.hasNight) view.palette = view.palette === "night" ? "day" : "night";
-    else if (k === "h") [hud, help, ...(hasLayers ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
-    else if (k === "i") sources.classList.toggle("hidden");
+    else if (k === "h") {
+      [hud, help, ...(hasLayers ? [layersEl] : [])].forEach((el) => el.classList.toggle("hidden"));
+      mapEl.classList.toggle("hidden", hud.classList.contains("hidden")); // the map with the rest, even if M hid it
+      drawMap();
+    } else if (k === "m") {
+      mapEl.classList.toggle("hidden");
+      drawMap();
+    } else if (k === "i") sources.classList.toggle("hidden");
     else if (k === "l") switchLevel();
     else if (k === "escape") sources.classList.add("hidden");
     else {

@@ -16,11 +16,13 @@ The reference viewer is `apps/web` (`pnpm dev`, http://localhost:5173), a client
 | L | next scale level in the package's list (flying → driving → walking → flying), at the same place |
 | V | traffic on or off (worlds with routes) |
 | G | fog on or off (styles with fog over this world and level) |
+| M | minimap on or off |
 | I | data sources and licences; Esc closes them |
-| H | hide or show the HUD, help and layer panel |
+| H | hide or show the HUD, help, minimap and layer panel |
 | Alt+click | log what is under the pointer to the console (`inspect`, §3) |
+| click the minimap | take the rover there |
 
-The layer panel (top right, with the HUD) switches layers and their sublayers: traffic's road vehicles, rail and transit, and ferries.
+The minimap (top right, D-146) is the whole world as the view sees it from above: a diamond that turns with the view (Q/E). On it are the world's roads (from its routes, where the package has them) and landmarks, the ground on screen as a white box, the rover as a yellow dot, and a compass needle pointing north (the grid's north: rows run north to south). The layer panel under it switches layers and their sublayers: traffic's road vehicles, rail and transit, and ferries.
 
 ## 2. URL parameters
 
@@ -49,7 +51,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&ground
 | `plugins=0` | loaded | Load no city packs: a style's generators from a plugin fail, and are drawn as missing-model markers with one error each (D-072) |
 | `palette=night` | day | Start at night, where the style has a night palette |
 | `marker=0` | shown | Don't draw the rover (clean screenshots) |
-| `hud=0` | shown | Hide the HUD, help line, attribution and layer panel |
+| `hud=0` | shown | Hide the HUD, help line, attribution, minimap and layer panel (H shows them) |
 | `cache=0` | on | Skip the IndexedDB tile cache: every tile is baked fresh by the code as it is now. Not needed after code edits: the cache key follows the code that bakes tiles (D-072) ([CONTRIBUTING.md §6](../CONTRIBUTING.md#6-the-tile-cache)) |
 | `ground=0` | on | No ground-only bake before a tile's own: the view is blank where its tiles are baking, but each tile is baked once. Faster to `ready()` with one bake worker; the final view is the same |
 | `startTiles=0` | on | Skip the world's start tiles (`start-tiles.bin`, built by `tools/prebake.mjs`): the first view is baked too |

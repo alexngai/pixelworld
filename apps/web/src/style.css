@@ -112,11 +112,25 @@ canvas#view.fixed {
   color: var(--muted);
 }
 
-/* Optional layers (traffic): a toggle per layer and sublayer, top right. */
-.layers {
+/* Top right: the minimap (D-146), and the layer panel under it. */
+.side {
   position: fixed;
   top: 8px;
   right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.minimap {
+  background: var(--panel);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Optional layers (traffic): a toggle per layer and sublayer. */
+.layers {
   background: var(--panel);
   padding: 6px 8px;
   border-radius: 4px;

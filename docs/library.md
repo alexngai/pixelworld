@@ -209,7 +209,7 @@ The engine is out of the app (refactors 1–4 of §4). `apps/web` is now a clien
 
 ### 7.1 Packages
 
-- **`@pixelworlds/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `steamLayer`, `listenTo` and the types. It is built on `@pixelworlds/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
+- **`@pixelworlds/engine`** (`packages/engine`, one index, `src/index.ts`): `createWorldView`, `roverController`, `fogLayer`, `steamLayer`, `listenTo`, `Minimap` and the types. It is built on `@pixelworlds/runtime` (chunk store, bake service and worker, tile cache, compositor, camera, fog fields), which stays internal: nothing in the engine's public types needs a runtime import.
 - **`@pixelworlds/sim`**: the traffic simulation and its layer, `trafficLayer`. It imports the engine's types only, so the engine knows nothing of traffic. It becomes `pixelworld/traffic` when packaged.
 - **`apps/web`**: the reference viewer.
 - **`examples/minimal-viewer`**: `pnpm example:minimal` (port 5180).
@@ -435,10 +435,28 @@ await next.ready();   // the old view kept the canvas until here, and is now des
 `@pixelworlds/game` is M4's example client (D-070): a car on the driving levels, a plane on the flying levels, and take-off and landing between them, built only on `@pixelworlds/engine`, `@pixelworlds/sim` and the style packs (no runtime or engine internals). `pnpm --filter @pixelworlds/game dev` (port 5252).
 
 - **Controllers:** `CarController` and `PlaneController` implement `Controller`: they own their entities (the style's `vehicle.car.player`, and `vehicle.plane` with its shadow, `part` 1), step pure physics (`car.ts`, `plane.ts`) against the world as the queries read it, and drive the camera. A script steps them with a fixed dt through `step(dt, input)` while `paused`.
-- **What it reads:** `heightAt`, `surfaceAt` and `roadAt` for speeds and slopes; `objectsAt` for buildings and towers; traffic's `vehiclesNear` for collisions; the routes (`loadRoutes`, `RouteNetwork`) for the roads' graded surfaces and bridge decks, the autopilot's road plans and the minimap; `lonLatToCell`/`cellToLonLat` to carry a place and a heading between levels; `landmarks()` for place names.
+- **What it reads:** `heightAt`, `surfaceAt` and `roadAt` for speeds and slopes; `objectsAt` for buildings and towers; traffic's `vehiclesNear` for collisions; the routes (`loadRoutes`, `RouteNetwork`) for the roads' graded surfaces and bridge decks, the autopilot's road plans and the minimap (§7.11); `lonLatToCell`/`cellToLonLat` to carry a place and a heading between levels; `landmarks()` for place names.
 - **Engine additions it needed:** `query.objectsAt` and `query.landmarks` (§7.6), `createWorldView({ replace })` (§7.9), and traffic's `vehiclesNear`. Everything else was already public.
 - **Game time and labels (D-073):** P pauses the view's game time (`view.paused`): the vehicle, traffic and fog hold still together, and a level change keeps it. The HUD names the landmarks in view over them, placed with `camera.project` where `isDrawn`.
 - **Also in `@pixelworlds/sim`:** `TrafficLayer.vehiclesNear(x, y, radius)` returns the shown vehicles' cars near a place with their size in plan (`modelSize`), for collisions; a switched-off layer or hidden sublayer has none.
+
+### 7.11 The minimap (D-146)
+
+The whole world drawn small, on a canvas the app places, with the player over it. The example game's is north up with a heading arrow; the viewer's is `iso`: the world as the view projects it (heights left out), a diamond in a 2:1 box that turns with the view, with the ground on screen outlined and a compass needle pointing north.
+
+```ts
+const map = new Minimap(canvas, { iso: true });           // 200×100 px iso, 180 px wide north up
+map.setWorld(view.world, await loadRoutes(view.world.url, view.world.manifest), view.query.landmarks());
+view.onFrame(() => map.draw(rover.x, rover.y, { view }));  // iso: turns to the view's rotation, outlines the ground on screen
+canvas.onclick = (e) => {
+  const [x, y] = map.toCell(e.offsetX, e.offsetY);       // the cell clicked
+};
+```
+
+- **Roads:** anything shaped like a `RouteNetwork` (`MinimapRoads`): `"road"` routes, the main classes in their own colours; null for none. The engine doesn't import `pixelworld/traffic`, so the app passes them (traffic's `sim.net`, or `loadRoutes`).
+- **`draw(x, y, { heading?, colour?, view? })`:** an arrow along `heading` (radians in the grid, 0 east), else a dot. Each rotation's roads are drawn once and kept. Nothing is drawn while the canvas has the class `hidden`.
+- **`viewOnGround(view)`:** the four corners of the ground on screen, in cells, at the focus height.
+- **No input or DOM of its own** (the engine owns no UI): the app places the canvas, styles it and handles clicks (`toCell`).
 
 ## 8. As built: generator plugins (M4)
 

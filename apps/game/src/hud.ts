@@ -1,4 +1,5 @@
 import type { RouteNetwork } from "@pixelworlds/sim";
+import { Minimap } from "@pixelworlds/engine";
 
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),
@@ -59,21 +60,12 @@ const HELP = `<h2>Keys</h2>
 
 const deg = (rad = 0) => `${rad >= 0 ? "+" : "−"}${Math.abs(Math.round((rad * 180) / Math.PI))}`;
 
-const CLASS_COLOUR: Record<string, string> = {
-  motorway: "#f2c35b",
-  trunk: "#e0a35a",
-  primary: "#c9b48a",
-  secondary: "#8f8a7a",
-};
-
 export class Hud {
   private readonly panel: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly banner: HTMLElement;
   private readonly help: HTMLElement;
-  private readonly map: HTMLCanvasElement;
-  private base: HTMLCanvasElement | null = null;
-  private world = { cellsX: 1, cellsY: 1 };
+  private readonly map: Minimap;
   private bannerUntil = 0;
   private readonly root: HTMLElement;
   private readonly labelEls: HTMLElement[] = [];
@@ -95,7 +87,7 @@ export class Hud {
     this.help = el("help");
     this.help.innerHTML = HELP;
     this.help.classList.add("hidden");
-    this.map = el("minimap", "canvas") as HTMLCanvasElement;
+    this.map = new Minimap(el("minimap", "canvas") as HTMLCanvasElement);
     this.bar = el("modes");
     this.bar.addEventListener("click", (e) => {
       const b = (e.target as HTMLElement).closest("button");
@@ -132,11 +124,11 @@ export class Hud {
   }
 
   toggleMap(): void {
-    this.map.classList.toggle("hidden");
+    this.map.canvas.classList.toggle("hidden");
   }
 
   hide(): void {
-    for (const e of [this.panel, this.hint, this.banner, this.help, this.map, this.bar, ...this.labelEls]) e.classList.add("hidden");
+    for (const e of [this.panel, this.hint, this.banner, this.help, this.map.canvas, this.bar, ...this.labelEls]) e.classList.add("hidden");
   }
 
   /** Names over places on the canvas (CSS px from its top-left, as the camera projects them). */
@@ -189,63 +181,13 @@ export class Hud {
     }
   }
 
-  /** Draw the world's roads and landmarks once, for the minimap. */
+  /** The world's roads and landmarks, for the minimap. */
   setWorld(cellsX: number, cellsY: number, routes: RouteNetwork | null, landmarks: readonly { x: number; y: number }[]): void {
-    this.world = { cellsX, cellsY };
-    const w = 180;
-    const h = Math.max(60, Math.min(200, Math.round((w * cellsY) / cellsX)));
-    this.map.width = w;
-    this.map.height = h;
-    const base = document.createElement("canvas");
-    base.width = w;
-    base.height = h;
-    const ctx = base.getContext("2d")!;
-    ctx.fillStyle = "#1e1c2b";
-    ctx.fillRect(0, 0, w, h);
-    const sx = w / cellsX;
-    const sy = h / cellsY;
-    for (const cls of ["secondary", "primary", "trunk", "motorway", ""]) {
-      ctx.strokeStyle = CLASS_COLOUR[cls] ?? "#6d6a60";
-      ctx.lineWidth = cls === "motorway" || cls === "trunk" ? 1.2 : 0.7;
-      ctx.beginPath();
-      for (const r of routes?.routes ?? []) {
-        if (r.net !== "road") continue;
-        const known = r.cls in CLASS_COLOUR;
-        if ((cls && r.cls !== cls) || (!cls && known)) continue;
-        for (let i = 0; i < r.pts.length; i += 3) {
-          const x = r.pts[i]! * sx;
-          const y = r.pts[i + 1]! * sy;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-    }
-    ctx.fillStyle = "#7fd0c8";
-    for (const l of landmarks) ctx.fillRect(l.x * sx - 1.5, l.y * sy - 1.5, 3, 3);
-    this.base = base;
+    this.map.setWorld({ cellsX, cellsY }, routes, landmarks);
   }
 
   /** The minimap with the player on it (cells, heading). */
   drawMap(x: number, y: number, heading: number, colour: string): void {
-    if (!this.base || this.map.classList.contains("hidden")) return;
-    const ctx = this.map.getContext("2d")!;
-    ctx.drawImage(this.base, 0, 0);
-    const px = (x / this.world.cellsX) * this.map.width;
-    const py = (y / this.world.cellsY) * this.map.height;
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(heading);
-    ctx.fillStyle = colour;
-    ctx.strokeStyle = "#141320";
-    ctx.beginPath();
-    ctx.moveTo(6, 0);
-    ctx.lineTo(-4, 4);
-    ctx.lineTo(-2, 0);
-    ctx.lineTo(-4, -4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    this.map.draw(x, y, { heading, colour });
   }
 }
