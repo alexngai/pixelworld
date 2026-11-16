@@ -151,6 +151,7 @@ Status values:
 | D-141 | Sheer walls drawn as faces: a world may let steeper micro-cells slope (`micro.maxSlope`) | Accepted (M5) |
 | D-142 | pixelworld.site: the viewer, the example game and every world on GitHub Pages, with start tiles baked against the built viewer | Accepted |
 | D-143 | The multiplayer demos on one server at play.pixelworld.site: pages, worlds and rooms from one build, each game's lobby on its own path | Accepted |
+| D-144 | play.pixelworld.site deploys on every push to main, beside the site | Accepted |
 
 ---
 
@@ -2233,3 +2234,9 @@ The point is more room for visual interest; both halves are wanted.
   - **A server per game:** three apps, three cold starts and three deploys for demos that each sit idle most of the time.
   - **The build id from git:** the image is built without `.git` (the `.dockerignore`); an id made at build time and read from beside the pages needs nothing from outside the build.
 - **Later:** if the world packages' bandwidth from one region matters, they could come from a CDN with the pages still on the server, as long as the worlds are versioned with the build; `fly deploy` could run from the site's workflow with a deploy token, so the site and the server go out together.
+
+### D-144: play.pixelworld.site deploys on every push to main, beside the site (accepted)
+- **Why:** the owner asked for it. Until now the server went out only when someone ran `fly deploy`, so it fell behind main (D-143's Later).
+- **What:** a `play` job in `.github/workflows/site.yml` runs `flyctl deploy --remote-only` from the pushed commit, with Fly's remote builder and a deploy token for `pixelworld-play` in the `FLY_API_TOKEN` secret. It runs beside the Pages jobs and depends on none of them, so a failed server deploy leaves the site deploying, and the reverse. The server serves its own pages (D-143), so they always match its rooms.
+- **Cost:** each push restarts the one machine, and open rooms are told the server is restarting. Pushes to main are a few a day, and the demos are idle most of the time.
+- **Rejected:** a `paths:` filter for the files the image holds (the multiplayer package, the game, the engine's packages, seven worlds, the lockfile). A filter that misses one file deploys a stale server without saying so, while a deploy that wasn't needed costs only a restart.

@@ -88,7 +88,7 @@ docker build -f packages/multiplayer/src/demos/Dockerfile -t pixelworld-demos . 
 
 - **One build:** a page predicts with the server's physics over the same world package, so the pages, the worlds and the server ship in one image. Each build has an id (`version.txt` for the server, `import.meta.env.PLAY_BUILD` in the pages); a page from another build is told to reload.
 - **Same origin:** the server refuses a socket from a page on another site, and the lobby sends no CORS headers, so only its own pages use it.
-- **Fly.io:** `src/demos/fly.toml` has the commands (launch, the certificate for play.pixelworld.site, deploy). One machine, since rooms live in its memory; it stops when idle, and the page's own request wakes it in a few seconds. It used 110 MB with a room of each game open; the VM has 512 MB.
+- **Fly.io:** `src/demos/fly.toml` has the commands (launch, the certificate for play.pixelworld.site, deploy); every push to main deploys it, with the site (`.github/workflows/site.yml`, D-144). One machine, since rooms live in its memory; it stops when idle, and the page's own request wakes it in a few seconds. It used 110 MB with a room of each game open; the VM has 512 MB.
 - **Each demo's own config** (`demo:dogfight` and the rest) is its dev server, with its rooms and lobby at the same paths.
 
 ### On a big world (D-120)

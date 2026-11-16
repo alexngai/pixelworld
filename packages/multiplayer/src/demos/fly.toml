@@ -5,7 +5,9 @@
 #   fly certs add play.pixelworld.site --config packages/multiplayer/src/demos/fly.toml
 #
 # and in Cloudflare's DNS, a CNAME `play` to pixelworld-play.fly.dev, DNS only
-# (grey cloud: Fly issues the certificate). Then to deploy:
+# (grey cloud: Fly issues the certificate). Every push to main deploys it
+# (.github/workflows/site.yml's `play` job, with the FLY_API_TOKEN secret, D-144);
+# to deploy by hand:
 #
 #   fly deploy . --ha=false --config packages/multiplayer/src/demos/fly.toml --dockerfile packages/multiplayer/src/demos/Dockerfile
 #
