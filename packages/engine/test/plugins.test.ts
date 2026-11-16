@@ -102,6 +102,18 @@ describe("a plugin's code in the tile cache key (D-072)", () => {
     expect(await key(server({ ...SOURCES, "/src/worker.ts": SOURCES["/src/worker.ts"].replace("v=1a2b", "v=9z9z") }).fetchText)).not.toBe(before);
   });
 
+  it("is the same for the same build on another origin, so tiles prebaked on one host serve another (D-145)", async () => {
+    registerGenerators({ adobe }, { source: demo.name });
+    const { fetchText } = server(SOURCES);
+    const here = await key(fetchText);
+    vi.stubGlobal("location", { href: "http://localhost:4190/viewer/" });
+    try {
+      expect(await key(fetchText)).toBe(here);
+    } finally {
+      vi.stubGlobal("location", { href: "https://pixelworld.test/viewer/" });
+    }
+  });
+
   it("changes with the plugin's version, and keys a module it can't fetch by its URL", async () => {
     const { fetchText } = server({});
     const a = await key(fetchText);

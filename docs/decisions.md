@@ -152,6 +152,7 @@ Status values:
 | D-142 | pixelworld.site: the viewer, the example game and every world on GitHub Pages, with start tiles baked against the built viewer | Accepted |
 | D-143 | The multiplayer demos on one server at play.pixelworld.site: pages, worlds and rooms from one build, each game's lobby on its own path | Accepted |
 | D-144 | play.pixelworld.site deploys on every push to main, beside the site | Accepted |
+| D-145 | The tile key's plugins part hashes each module by its path, not its origin | Accepted |
 
 ---
 
@@ -2240,3 +2241,9 @@ The point is more room for visual interest; both halves are wanted.
 - **What:** a `play` job in `.github/workflows/site.yml` runs `flyctl deploy --remote-only` from the pushed commit, with Fly's remote builder and a deploy token for `pixelworld-play` in the `FLY_API_TOKEN` secret. It runs beside the Pages jobs and depends on none of them, so a failed server deploy leaves the site deploying, and the reverse. The server serves its own pages (D-143), so they always match its rooms.
 - **Cost:** each push restarts the one machine, and open rooms are told the server is restarting. Pushes to main are a few a day, and the demos are idle most of the time.
 - **Rejected:** a `paths:` filter for the files the image holds (the multiplayer package, the game, the engine's packages, seven worlds, the lockfile). A filter that misses one file deploys a stale server without saying so, while a deploy that wasn't needed costs only a restart.
+
+### D-145: The tile key's plugins part hashes each module by its path, not its origin (accepted)
+- **Why:** on pixelworld.site (D-142) the city worlds didn't use their start tiles. Yosemite Valley drew all 28 of its first tiles from its pack, but `sf-walk` baked every one. The plugins part of the tile key (D-072) labels each module it hashes with its full URL. CI prebakes against the built site at `http://localhost:4190`, so the keys never matched `https://pixelworld.site`. Worlds with no city pack (the Southwest, the parks) have no plugins part and matched. This was the six cities: San Francisco, New York, Kyoto, Hong Kong, Paris and Tokyo.
+- **What:** `moduleCode` (`packages/engine/src/plugins.ts`) labels each module by its path and query, without the origin. It still follows and dedupes modules by their full URL. The same build has the same key on any host. A different path layout (the viewer at `/view/` or at `/`) still keys apart, which it should: it imports different URLs.
+- **Cost:** tiles already cached under a plugin are unreachable once, and bake again.
+- **Test:** `packages/engine/test/plugins.test.ts`, the same modules under two origins give the same key.
