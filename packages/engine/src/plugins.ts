@@ -112,7 +112,8 @@ export async function moduleCode(url: string, fetchFn: FetchText = fetchText): P
     );
     batch.forEach((u, i) => {
       const text = texts[i]!;
-      parts.push(`${stamps(u.href)}\n${typeof text === "string" ? text : `failed: ${text.failed}`}`);
+      // each module by its path, not its origin: tiles prebaked on one host match the same build on another (D-145)
+      parts.push(`${stamps(u.pathname + u.search)}\n${typeof text === "string" ? text : `failed: ${text.failed}`}`);
       if (typeof text === "string") next.push(...importsOf(text, u));
     });
     queue = next;
