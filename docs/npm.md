@@ -182,6 +182,7 @@ The npm packages are `pixelworld` and the six city packs, `@pixelworlds/city-sf`
 
 - **Publish with pnpm, not npm:** only pnpm applies `publishConfig.exports` and turns the city packs' `workspace:^` peer range into `^<pixelworld's version>`. A tarball packed by npm would point at TypeScript sources it doesn't contain; `node tools/pack-check.mjs` and `node tools/city-pack-check.mjs` reject one. The workflow packs with pnpm; pnpm publishes through the npm CLI (11.5.1 or later for trusted publishing).
 - **Provenance:** npm attests where each version was built when it is published from a public repository.
+- **Some packages failed with `ENEEDAUTH`:** npm has no trusted publisher for them (step 4 below), so it didn't accept the workflow's identity. The rest are published, tagged and released. Add the missing trusted publishers, then run the workflow on `main` again: `gh workflow run release.yml --ref main`. With no changesets left on `main`, it publishes only the versions that aren't on npm yet. Until it does, a city pack on npm may still name the previous `pixelworld` as its peer, and a fresh install warns. This happened with 0.2.0, whose trusted publisher was set for `pixelworld` alone.
 
 **One-time setup** (a maintainer, before the first release):
 
@@ -206,7 +207,20 @@ The npm packages are `pixelworld` and the six city packs, `@pixelworlds/city-sf`
    - **Check:** `npm view pixelworld version` and `npm view @pixelworlds/city-sf version` show 0.1.0.
 
    Then merge the pull request. The workflow finds everything published and publishes nothing; tag the release by hand if you want the tags (below).
-4. **Trusted publishers:** on npmjs.com, for each of the seven packages, Settings → Trusted publishing → GitHub Actions: organization or user `alexngai`, repository `pixelworld`, workflow `release.yml`, no environment.
+4. **Trusted publishers:** for each of the seven packages. npm has no setting for a whole organization or scope. On npmjs.com, a package's Settings → Trusted publishing → GitHub Actions: organization or user `alexngai`, repository `pixelworld`, workflow `release.yml`, no environment. Or all of them from a terminal, logged in (`npm login`, which asks for 2FA), with npm 11.15 or later:
+
+   ```sh
+   for p in pixelworld @pixelworlds/city-sf @pixelworlds/city-nyc @pixelworlds/city-paris \
+            @pixelworlds/city-kyoto @pixelworlds/city-tokyo @pixelworlds/city-hongkong; do
+     npm trust github "$p" --repo alexngai/pixelworld --file release.yml --allow-publish --yes || break
+     sleep 2
+   done
+   ```
+
+   - **`--allow-publish`:** npm requires a permission flag on each trust; this one lets the workflow publish.
+   - **Use it within 2 days:** a new trusted publisher that hasn't published a version by then expires.
+   - **Check:** `npm trust list <package>`.
+   - **A new city pack** gets one the same way, after its first version is published by hand (step 3).
 5. **Lock it down:** for each package, Settings → Publishing access → *Require two-factor authentication and disallow tokens*. Trusted publishing keeps working.
 
 **By hand, if CI can't** (an outage): as step 3, from a clean `main` after merging the version pull request, then tag each package (`git tag -a <name>@<version>`) and `git push --follow-tags`.
