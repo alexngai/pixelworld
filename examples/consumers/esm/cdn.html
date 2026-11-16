@@ -36,7 +36,7 @@
     <div id="status">loading…</div>
     <script type="module">
       // The package from another origin, as from a CDN (?cdn= overrides it; the consumer test serves its own).
-      const cdn = new URLSearchParams(location.search).get("cdn") ?? "https://cdn.jsdelivr.net/npm/pixelworld@0.1.0/dist/";
+      const cdn = new URLSearchParams(location.search).get("cdn") ?? "https://cdn.jsdelivr.net/npm/pixelworld@0.2.0/dist/";
       const { createWorldView, roverController } = await import(`${cdn}engine.js`);
 
       // Browsers start workers only from the page's own origin. A blob: URL is the page's,

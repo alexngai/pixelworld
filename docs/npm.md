@@ -118,7 +118,7 @@ await createWorldView({ canvas, worldUrl, style, workerUrl: "/static/bake.worker
 For the package from a CDN, start the worker from a `blob:` URL, which is the page's, and import the CDN's worker in it (CDNs serve it with CORS):
 
 ```ts
-const cdn = "https://cdn.jsdelivr.net/npm/pixelworld@0.1.0/dist/";
+const cdn = "https://cdn.jsdelivr.net/npm/pixelworld@0.2.0/dist/";
 const { createWorldView } = await import(`${cdn}engine.js`);
 const workerUrl = URL.createObjectURL(new Blob([`import "${cdn}bake.worker.js";`], { type: "text/javascript" }));
 await createWorldView({ canvas, worldUrl, style, workerUrl });

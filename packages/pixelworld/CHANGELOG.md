@@ -1,5 +1,26 @@
 # pixelworld
 
+## 0.2.0
+
+### Minor Changes
+
+- 4d94895: Hot pools and steam (D-138):
+  - **`hotPool`**, a built-in generator, draws a pool on its outline in rings of colour by distance from its edge: mats, a yellow rim, green shallows, turquoise water and a deep blue centre.
+  - **`steamLayer()`** draws plumes over the placed objects a style pack's new `atmosphere.steam` names. Each plume rises, widens, leans with the wind and breaks into puffs, dithered into the frame as fog is and kept behind what stands in front of it.
+  - **The style pack schema** gains `atmosphere.steam`.
+- e1146dd: `Minimap` in `pixelworld/engine` (D-146): a world's roads and landmarks drawn small on a canvas the app places, with the player over it, north up or (`iso`) as the view sees it from above, turning with the view, with the ground on screen outlined and a compass needle pointing north. `toCell` turns a click into a cell; `viewOnGround(view)` gives the ground on screen in cells.
+
+### Patch Changes
+
+- 25eb46a: A suspension bridge comes ashore on its approaches: where a world package gives a bridge approaches (`ap`, the line's run past each anchorage over land, and `az`, the ground where each lands), the deck comes down them on piers from its anchorage to the ground, with railings and a girder along its edges, so it meets the road it carries. The suspension spans stay level over the water. Without approaches it is drawn as before.
+- 4b5927d: Core knows Hong Kong's `marketStalls`, `chineseTemple` and `estateTower` (from `@pixelworlds/city-hongkong`), so a style that names one without its plugin loaded says which plugin to load.
+- bfc3d59: Core knows Hong Kong's `doubleDeckTram`, `doubleDeckBus` and `boat` (from `@pixelworlds/city-hongkong`), so a style that names one without its plugin loaded says which plugin to load.
+- 176f50a: Core's `obeliskTower` and `pyramidTower` take an optional `lit` role and `litFraction`: windows lit by night as a building's are. Without `lit` they draw exactly as before.
+- 256a058: A world package may let steeper micro-cells slope (`micro.maxSlope` in its manifest, micro-steps, 3 or more): micro-cells up to that steep are drawn as planes through their corners rather than flat terraces, so sheer walls read as faces. `microCellCorners` and `emptyMicro` take it; without it micro-terrain is drawn as before.
+- 28cf99b: Two landmark kit shapes for natural scenery: `stoneArch`, a slab of rock with an opening under its span (a free-standing arch, a window in a fin, a turret beside it, two spans sharing a leg, or turned along the diagonal), and `balancedRock`, a boulder on the neck of a flared pedestal.
+- 9095a03: The tile cache key's plugins part hashes each plugin module by its path, not its full URL: tiles baked for one host (start tiles prebaked on a build server) now match the same build served from another. Tiles already cached under a plugin are baked again once.
+- 7734fce: A world file without a content type is taken for an HTML page only when it starts with an opening tag (`<!doctype`, `<html`, `<head`, `<body`, `<!--`), not any `<`: a `.gz` a server sends with `Content-Encoding: gzip` (Vite's dev server) arrives decompressed, and binary data such as a geo grid may start with that byte.
+
 ## 0.1.0
 
 ### Minor Changes

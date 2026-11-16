@@ -1,5 +1,21 @@
 # @pixelworlds/city-kyoto
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [25eb46a]
+- Updated dependencies [4d94895]
+- Updated dependencies [4b5927d]
+- Updated dependencies [bfc3d59]
+- Updated dependencies [176f50a]
+- Updated dependencies [256a058]
+- Updated dependencies [e1146dd]
+- Updated dependencies [28cf99b]
+- Updated dependencies [9095a03]
+- Updated dependencies [7734fce]
+  - pixelworld@0.2.0
+
 ## 0.1.0
 
 ### Minor Changes
