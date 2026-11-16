@@ -4,8 +4,8 @@ import { Minimap, viewOnGround } from "../src/minimap";
 
 /** The minimap's projection (D-146): no DOM is needed until it draws. */
 const map = (iso: boolean, cellsX = 300, cellsY = 120) => {
-  const m = new Minimap({ width: 0, height: 0 } as HTMLCanvasElement, iso);
-  m.setWorld(cellsX, cellsY, null, []);
+  const m = new Minimap({ width: 0, height: 0 } as HTMLCanvasElement, { iso });
+  m.setWorld({ cellsX, cellsY }, null, []);
   return m;
 };
 
@@ -63,7 +63,8 @@ describe("minimap", () => {
     for (const r of ROTATIONS) {
       m.rotation = r;
       // a 640×360 view (render px) at render scale 2, around cell (150, 60)
-      const [tl, tr, br, bl] = viewOnGround({ x: 150, y: 60 }, 640, 360, r, 2).map(([x, y]) => m.toMap(x, y));
+      const view = { camera: { x: 150, y: 60, rotation: r, internalWidth: 640, internalHeight: 360 }, world: { renderScale: 2 } };
+      const [tl, tr, br, bl] = viewOnGround(view).map(([x, y]) => m.toMap(x, y));
       expect(tl![1]).toBeCloseTo(tr![1]); // top edge level
       expect(tr![0]).toBeCloseTo(br![0]); // right edge upright
       expect(bl![1]).toBeCloseTo(br![1]);

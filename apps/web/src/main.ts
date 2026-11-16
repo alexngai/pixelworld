@@ -1,13 +1,13 @@
 import {
   createWorldView,
   fogLayer,
+  Minimap,
   roverController,
   steamLayer,
   type RoverOptions,
   type TileBake,
 } from "@pixelworlds/engine";
 import { loadRoutes, TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
-import { Minimap, viewOnGround } from "@pixelworlds/game/src/minimap";
 import { stylePack } from "./styles";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
 import { inspectOnAltClick, inspector, type Inspection } from "./inspect";
@@ -261,10 +261,10 @@ async function main() {
 
   // the minimap (M, D-146): the world as the view sees it from above, the ground on
   // screen, the rover and north; roads from traffic's routes, else the package's
-  const map = new Minimap(mapEl, true);
+  const map = new Minimap(mapEl, { iso: true });
   const { cellsX, cellsY } = view.world;
   const landmarks = view.query.landmarks();
-  map.setWorld(cellsX, cellsY, trafficOn?.sim.net ?? null, landmarks);
+  map.setWorld(view.world, trafficOn?.sim.net ?? null, landmarks);
   let routesAsked = !!trafficOn;
   function drawMap() {
     if (mapEl.classList.contains("hidden")) return;
@@ -273,14 +273,12 @@ async function main() {
       void loadRoutes(view.world.url, manifest)
         .then((routes) => {
           if (!routes) return;
-          map.setWorld(cellsX, cellsY, routes, landmarks);
+          map.setWorld(view.world, routes, landmarks);
           drawMap();
         })
         .catch((e: unknown) => console.warn("minimap routes:", e));
     }
-    const c = view.camera;
-    map.rotation = c.rotation;
-    map.draw(rover.rover.x, rover.rover.y, null, "#ffe36e", viewOnGround(c, c.internalWidth, c.internalHeight, c.rotation, view.world.renderScale));
+    map.draw(rover.rover.x, rover.rover.y, { view });
   }
   if (showHud) mapEl.classList.remove("hidden");
   view.onFrame(drawMap);

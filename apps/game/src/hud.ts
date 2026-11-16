@@ -1,5 +1,5 @@
 import type { RouteNetwork } from "@pixelworlds/sim";
-import { Minimap } from "./minimap";
+import { Minimap } from "@pixelworlds/engine";
 
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),
@@ -183,11 +183,11 @@ export class Hud {
 
   /** The world's roads and landmarks, for the minimap. */
   setWorld(cellsX: number, cellsY: number, routes: RouteNetwork | null, landmarks: readonly { x: number; y: number }[]): void {
-    this.map.setWorld(cellsX, cellsY, routes, landmarks);
+    this.map.setWorld({ cellsX, cellsY }, routes, landmarks);
   }
 
   /** The minimap with the player on it (cells, heading). */
   drawMap(x: number, y: number, heading: number, colour: string): void {
-    this.map.draw(x, y, heading, colour);
+    this.map.draw(x, y, { heading, colour });
   }
 }

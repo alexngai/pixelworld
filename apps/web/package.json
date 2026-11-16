@@ -12,7 +12,6 @@
   "dependencies": {
     "@pixelworlds/bake": "workspace:*",
     "@pixelworlds/engine": "workspace:*",
-    "@pixelworlds/game": "workspace:*",
     "@pixelworlds/generators": "workspace:*",
     "@pixelworlds/grid": "workspace:*",
     "@pixelworlds/sim": "workspace:*",

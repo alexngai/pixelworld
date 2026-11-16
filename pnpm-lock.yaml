@@ -64,9 +64,6 @@ importers:
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
-      '@pixelworlds/grid':
-        specifier: workspace:*
-        version: link:../../packages/grid
       '@pixelworlds/sim':
         specifier: workspace:*
         version: link:../../packages/sim
@@ -102,9 +99,6 @@ importers:
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
-      '@pixelworlds/game':
-        specifier: workspace:*
-        version: link:../game
       '@pixelworlds/generators':
         specifier: workspace:*
         version: link:../../packages/generators
