@@ -13,6 +13,9 @@ import type { WorldView } from "./types";
  *   for (const t of top.tiles(x0, y0, x1, y1)) ctx.drawImage(t.image, (t.x - x0) * k, (t.y - y0) * k, t.w * k, t.h * k);
  */
 
+/** A tile whose bake failed is asked for again after this long (ms). */
+const RETRY_MS = 5000;
+
 export interface TopDownTile {
   /** Its top-left cell, and its size in cells (`tile`, less at the world's edge). */
   x: number;
@@ -31,7 +34,10 @@ export class TopDownMap {
   private queue: [number, number][] = [];
   private readonly listeners = new Set<() => void>();
   private readonly concurrency: number;
-  private epoch = 0;
+  /** Tiles baking when `forget` dropped them: their images are stale, and they're asked for again. */
+  private readonly stale = new Set<string>();
+  /** When a tile's bake last failed (a fetch, a worker's error): tried again a while after. */
+  private readonly failed = new Map<string, number>();
 
   constructor(
     private readonly view: WorldView,
@@ -48,11 +54,14 @@ export class TopDownMap {
     const t = this.tile;
     const out: TopDownTile[] = [];
     const want: [number, number][] = [];
-    for (let ty = Math.max(0, Math.floor(y0 / t)); ty <= Math.min(Math.ceil(cellsY / t) - 1, Math.floor(y1 / t)); ty++)
-      for (let tx = Math.max(0, Math.floor(x0 / t)); tx <= Math.min(Math.ceil(cellsX / t) - 1, Math.floor(x1 / t)); tx++) {
-        const got = this.ready.get(`${tx},${ty}`);
+    const now = performance.now();
+    // x1, y1 exclusive
+    for (let ty = Math.max(0, Math.floor(y0 / t)); ty <= Math.min(Math.ceil(cellsY / t), Math.ceil(y1 / t)) - 1; ty++)
+      for (let tx = Math.max(0, Math.floor(x0 / t)); tx <= Math.min(Math.ceil(cellsX / t), Math.ceil(x1 / t)) - 1; tx++) {
+        const id = `${tx},${ty}`;
+        const got = this.ready.get(id);
         if (got) out.push(got);
-        else if (got === undefined) want.push([tx, ty]);
+        else if (got === undefined && now - (this.failed.get(id) ?? -Infinity) > RETRY_MS) want.push([tx, ty]);
       }
     const mx = (x0 + x1) / 2 / t - 0.5;
     const my = (y0 + y1) / 2 / t - 0.5;
@@ -69,11 +78,12 @@ export class TopDownMap {
   /** Drop the tiles meeting a rectangle of cells (or every one), to bake them again: the world was edited there. */
   forget(x0 = -Infinity, y0 = -Infinity, x1 = Infinity, y1 = Infinity): void {
     const t = this.tile;
-    for (const id of [...this.ready.keys()]) {
+    const meets = (id: string) => {
       const [tx, ty] = id.split(",").map(Number) as [number, number];
-      if (tx * t < x1 && (tx + 1) * t > x0 && ty * t < y1 && (ty + 1) * t > y0) this.ready.delete(id);
-    }
-    this.epoch++;
+      return tx * t < x1 && (tx + 1) * t > x0 && ty * t < y1 && (ty + 1) * t > y0;
+    };
+    for (const id of [...this.ready.keys()]) if (meets(id)) this.ready.delete(id);
+    for (const id of this.baking) if (meets(id)) this.stale.add(id);
     this.listeners.forEach((f) => f());
   }
 
@@ -83,29 +93,44 @@ export class TopDownMap {
       const id = `${tx},${ty}`;
       if (this.baking.has(id) || this.ready.has(id)) continue;
       this.baking.add(id);
-      const epoch = this.epoch;
       const { cellsX, cellsY } = this.view.world.manifest;
       const t = this.tile;
       const [x0, y0] = [tx * t, ty * t];
       const [x1, y1] = [Math.min(cellsX, x0 + t), Math.min(cellsY, y0 + t)];
       void this.view
         .bakeTopDown(x0, y0, x1, y1, { px: this.px, shadows: false, cache: true })
-        .catch(() => null)
-        .then((img) => {
-          this.baking.delete(id);
-          if (epoch !== this.epoch) return this.pump();
-          let tile: TopDownTile | null = null;
-          if (img) {
-            const image = document.createElement("canvas");
-            image.width = img.width;
-            image.height = img.height;
-            image.getContext("2d")!.putImageData(new ImageData(img.rgba, img.width, img.height), 0, 0);
-            tile = { x: x0, y: y0, w: x1 - x0, h: y1 - y0, image };
-          }
-          this.ready.set(id, tile);
-          this.listeners.forEach((f) => f());
-          this.pump();
-        });
+        .then(
+          (img) => this.done(id, x0, y0, x1, y1, img),
+          () => {
+            // not baked (a fetch failed, the worker erred): asked for again a while after
+            this.baking.delete(id);
+            this.failed.set(id, performance.now());
+            setTimeout(() => this.listeners.forEach((f) => f()), RETRY_MS + 10);
+            this.pump();
+          },
+        );
     }
+  }
+
+  private done(id: string, x0: number, y0: number, x1: number, y1: number, img: Awaited<ReturnType<WorldView["bakeTopDown"]>>): void {
+    this.baking.delete(id);
+    this.failed.delete(id);
+    if (this.stale.delete(id)) {
+      // forgotten while it baked: its image is old, and the listeners ask for it again
+      this.listeners.forEach((f) => f());
+      return this.pump();
+    }
+    let tile: TopDownTile | null = null;
+    if (img) {
+      const image = document.createElement("canvas");
+      image.width = img.width;
+      image.height = img.height;
+      image.getContext("2d")!.putImageData(new ImageData(img.rgba, img.width, img.height), 0, 0);
+      tile = { x: x0, y: y0, w: x1 - x0, h: y1 - y0, image };
+    }
+    // null: nothing there to draw
+    this.ready.set(id, tile);
+    this.listeners.forEach((f) => f());
+    this.pump();
   }
 }

@@ -670,12 +670,17 @@ class View implements WorldView {
       const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
-      // revealing entities: the bare tiles under them, once all of them are baked (asked for from the next frame)
-      this.revealBoxes = ents.list
-        .filter((s) => s.reveal)
-        .slice(0, MAX_REVEALS)
-        .map((s) => revealRect(s)!);
-      const bare = this.revealBoxes.length ? this.bareTiles(r, order, this.revealBoxes) : [];
+      // revealing entities: the bare tiles under each (asked for from the next frame); each sees through once all of
+      // its own are baked, the others wait, so one moving somewhere new doesn't switch the rest off
+      const revealing = ents.list.filter((s) => s.reveal).slice(0, MAX_REVEALS);
+      this.revealBoxes = revealing.map((s) => revealRect(s)!);
+      const bareSet = new Set<GpuImage>();
+      revealing.forEach((s, i) => {
+        const under = this.bareTiles(r, order, this.revealBoxes[i]!);
+        if (under) for (const b of under) bareSet.add(b);
+        else s.reveal = null; // this frame's draw only; the entity keeps its reveal
+      });
+      const bare = [...bareSet];
       if (this.replacing && !complete) {
         // hold: the view being replaced keeps the canvas until this one has a whole frame
         drawn = false;
@@ -745,14 +750,14 @@ class View implements WorldView {
     return out;
   }
 
-  /** The bare tiles under the reveals, or none until every one of them is baked. */
-  private bareTiles(r: Rotation, order: readonly TileInView[], boxes: readonly ScreenBox[]): GpuImage[] {
+  /** The bare tiles under a reveal, or null until every one of them is baked. */
+  private bareTiles(r: Rotation, order: readonly TileInView[], box: ScreenBox): GpuImage[] | null {
     const out: GpuImage[] = [];
     for (const t of order) {
       const img = this.gpu.get(tileKey(r, t.tx, t.ty))?.img;
-      if (!img || !boxes.some((b) => overlaps(img.image, b))) continue;
+      if (!img || !overlaps(img.image, box)) continue;
       const bare = this.gpu.get(tileKey(r, t.tx, t.ty, true));
-      if (!bare) return [];
+      if (!bare) return null;
       bare.lastDrawn = this.frameNo;
       if (bare.img) out.push(bare.img);
     }
@@ -896,8 +901,9 @@ class View implements WorldView {
     const { manifest, store } = this.w;
     const px = opts.px ?? 8;
     const owned = { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
-    // a margin of context: what casts shadows in, scatter the same as the tiles'
-    const m = 4;
+    // a margin of context: what casts shadows in, scatter the same as the tiles', and with a tilt, the tall buildings south of it that lean in
+    // ponytail: towers taken as at most 150 steps above the ground; a taller one south of a tilted bake leans in cut off
+    const m = 4 + Math.ceil(((opts.tilt ?? 0) * 150) / px);
     const sx0 = Math.max(0, owned.x0 - m);
     const sy0 = Math.max(0, owned.y0 - m);
     const sx1 = Math.min(manifest.cellsX, owned.x1 + m);
@@ -914,8 +920,10 @@ class View implements WorldView {
     });
     const tilt = opts.tilt ?? 0;
     const shadows = opts.shadows ?? true;
-    // kept with the tiles (D-158): the tile key's world, style and bake code (all but its last part, the tile's own), and the area's
-    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}`, ...(removed.length ? [`edits:${removed.join(",")}`] : [])].join("|") : null;
+    // kept with the tiles (D-158): the tile key's world, style and bake code (all but its last part, the tile's own), the
+    // area's, and the edits its slice holds: objects taken out, terrain edited (D-147)
+    const cells = store.editsIn(sx0, sy0, sx1, sy1);
+    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}`, ...(removed.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|") : null;
     const kept = key ? await this.cache!.get(key) : null;
     if (kept) return { width: kept.width, height: kept.height, rgba: paletteImage(kept, this.w.palette), image: kept, px, x: owned.x0, y: owned.y0 };
     // the whole slice drawn (an object anchored in the margin reaches into the rectangle too), then cut to the rectangle
