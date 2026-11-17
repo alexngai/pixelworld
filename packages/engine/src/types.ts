@@ -630,9 +630,10 @@ export interface EntitySpec {
    * See through what stands in front of it (D-079), for a player among tall
    * buildings: within `margin` render px of its sprite (default 24),
    * buildings and landmarks in front of it are dithered away (`density` of
-   * their pixels, 0–1, default 0.75) to the ground behind. The tiles around
-   * it are baked a second time without their buildings for this. The first
-   * visible entity with `reveal` counts. Default off.
+   * their pixels, 0–1, default 0.75; at 1 a clean cut, D-154) to the ground
+   * behind. The tiles around it are baked a second time without their
+   * buildings for this. The first eight visible entities with `reveal`
+   * count, each clearing its own ellipse. Default off.
    */
   reveal?: { margin?: number; density?: number };
   visible?: boolean;

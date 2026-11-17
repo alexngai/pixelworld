@@ -32,6 +32,7 @@ import {
   type Strike,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
+import { TacticalMap } from "./map";
 import type { Outlook } from "./worker";
 
 /**
@@ -93,6 +94,7 @@ interface Label {
 
 type Phase = "pick" | "move" | "strike" | "busy" | "over";
 
+const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 const angle = (dir: number) => Math.atan2(DIRS[dir]![1], DIRS[dir]![0]);
 const pips = (hp: number, max: number) => "■".repeat(Math.max(0, hp)) + "□".repeat(Math.max(0, max - hp));
 
@@ -130,7 +132,10 @@ export class Fight {
   private razedThisTurn: number[] = [];
   private readonly entities: (Entity | null)[] = [];
   private readonly overlay: BoardOverlay;
-  private readonly window: Entity;
+  private readonly map: TacticalMap;
+  /** Buildings in front of the board, out of the world while the fight lasts (D-154), and the rotation they were found for. */
+  private hidden: number[] = [];
+  private hiddenFor = -1;
   private readonly fires = new Map<number, Entity[]>();
   private readonly fx = new Set<{ entities: Entity[]; until: number }>();
   private readonly queue: Step[] = [];
@@ -165,18 +170,16 @@ export class Fight {
     this.hud = document.createElement("div");
     this.hud.className = "fight";
     s.ui.append(this.hud);
+    const away = (k: number) => (k >= 0 ? this.centre(k) : { x: -1e9, y: -1e9 });
+    this.map = new TacticalMap(s.ui, s.puzzle.combat.arena.w, s.puzzle.combat.arena.h, {
+      click: (k) => this.click(away(k).x, away(k).y),
+      hover: (k) => this.pointer(away(k).x, away(k).y),
+      back: () => this.back(),
+    });
     this.overlay = new BoardOverlay(s.board, { id: "fight" });
     void this.view.layers.add(this.overlay);
-    // a window through the towers onto the board (D-079): a speck at its middle, revealing as far as the board reaches
-    const a = this.c.arena;
-    const middle = toWorld(s.board, { x: a.w / 2, y: a.h / 2 });
-    this.window = this.view.entities.add({
-      model: { boxes: [{ x0: -0.01, y0: -0.01, z0: 0, x1: 0.01, y1: 0.01, z1: 0.01, ramp: 0 }], key: "fight-window" },
-      x: middle.x,
-      y: middle.y,
-      reveal: { margin: 16 * Math.max(a.w, a.h) * s.board.cell * this.view.world.renderScale + 24, density: 0.9 },
-      wait: false,
-    });
+    this.bestRotation();
+    this.clearView();
     this.frameBoard();
     for (let u = 0; u < this.c.roster.length; u++) this.spawnEntity(u);
     this.offFrame = this.view.onFrame((e) => this.frame(e.now));
@@ -185,6 +188,86 @@ export class Fight {
     const f = s.puzzle.fight;
     const traps = f && f.firstTurns > f.safeFirstTurns ? ` Careful: ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
     this.say(`Hold the block for ${this.rounds} rounds. Click a rig to move it.${traps}`);
+  }
+
+  /**
+   * Turn the camera to the side from which the board's own buildings hide
+   * the least of it: the fewest cells behind a taller building of the board
+   * (a unit's cell counting three), down each cell's view ray.
+   */
+  private bestRotation(): void {
+    const { camera } = this.view;
+    const c = this.c;
+    const a = c.arena;
+    const start = camera.rotation;
+    let best = start;
+    let least = Infinity;
+    for (let i = 0; i < 4; i++) {
+      camera.rotation = ((start + i) % 4) as typeof start;
+      // towards the camera along a screen point's ray: a cell across each way, two steps up
+      const m = this.centre(0);
+      const at = camera.project(m.x, m.y, 0);
+      const toward = DIAGONALS.find(([dx, dy]) => {
+        const q = camera.project(m.x + dx, m.y + dy, 2);
+        return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
+      });
+      if (!toward) return void (camera.rotation = start);
+      let hidden = 0;
+      for (let k = 0; k < a.w * a.h; k++) {
+        const p = this.centre(k);
+        const h = standAt(c, k);
+        for (let t = 0.25; ; t += 0.25) {
+          const q = boardCellAt(this.board, p.x + t * toward[0], p.y + t * toward[1]);
+          if (q < 0) break;
+          if (a.struct[q]! >= 0 && a.struct[q] !== a.struct[k] && standAt(c, q) > h + 2 * t) {
+            hidden += c.occ[k]! >= 0 ? 3 : 1;
+            break;
+          }
+        }
+      }
+      if (hidden < least) [least, best] = [hidden, camera.rotation];
+    }
+    camera.rotation = best;
+  }
+
+  /**
+   * Take what stands between the camera and the board out of the world (its
+   * tiles bake again without it), and put back what no longer does: only the
+   * fight's own buildings stay (and trees), so a slab on the board too thin
+   * to count as a building no longer stands over a street the fight thinks
+   * open. Picks down the view ray over the board's cells, roofs included,
+   * again after each removal, for what stood behind.
+   */
+  private clearView(): void {
+    const { camera, query, edits } = this.view;
+    if (camera.rotation === this.hiddenFor) return;
+    this.hiddenFor = camera.rotation;
+    // the map turned as the view is
+    const o = camera.project(this.centre(0).x, this.centre(0).y, 0);
+    const pi = camera.project(this.centre(1).x, this.centre(1).y, 0);
+    const pj = camera.project(this.centre(this.c.arena.w).x, this.centre(this.c.arena.w).y, 0);
+    this.map.orient({ x: pi.x - o.x, y: pi.y - o.y }, { x: pj.x - o.x, y: pj.y - o.y });
+    if (this.hidden.length) edits.restore(this.hidden);
+    const a = this.c.arena;
+    const keep = new Set(a.structures.map((s) => s.object));
+    const found = new Set<number>();
+    for (let pass = 0; pass < 6; pass++) {
+      const more: number[] = [];
+      for (let j = 0; j <= 2 * a.h; j++)
+        for (let i = 0; i <= 2 * a.w; i++) {
+          const k = Math.min(a.h - 1, j >> 1) * a.w + Math.min(a.w - 1, i >> 1);
+          const p = toWorld(this.board, { x: i / 2, y: j / 2 });
+          const at = camera.project(p.x, p.y, standAt(this.c, k));
+          const hit = query.pickObject(at.x, at.y);
+          if (hit && !keep.has(hit.index) && !found.has(hit.index) && !hit.group.startsWith("tree")) {
+            found.add(hit.index);
+            more.push(hit.index);
+          }
+        }
+      if (!more.length) break;
+      edits.remove(more);
+    }
+    this.hidden = [...found];
   }
 
   /** The camera on the board's middle, zoomed in as far as the board still fits about half the screen. */
@@ -216,6 +299,8 @@ export class Fight {
       h: h ?? standAt(this.c, k),
       heading: teamOf(this.c, u) === INVADERS && this.c.aim[u]! >= 0 ? angle(this.c.aim[u]!) : 0,
       silhouette: true,
+      // a clean cut through whatever of the board's own stands in front of it (D-154)
+      reveal: { margin: 14, density: 1 },
       wait: false,
     });
   }
@@ -281,6 +366,7 @@ export class Fight {
 
   private frame(now: number): void {
     this.now = now;
+    this.clearView();
     // the timeline
     for (let guard = 0; guard < 64; guard++) {
       if (!this.current) {
@@ -517,7 +603,9 @@ export class Fight {
     const marks: Mark[] = [];
     for (const [k, kind] of byCell) marks.push({ i: k % c.arena.w, j: Math.floor(k / c.arena.w), kind });
     this.overlay.setMarks(marks);
-    this.overlay.setArrows([...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint]);
+    const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
+    this.overlay.setArrows(arrows);
+    this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown) });
 
     // labels: hit points over every unit, the invaders' order, arrivals, what a hovered strike would do
     const keep = new Set<string>();
@@ -595,7 +683,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>Tab</kbd> weapon · <kbd>Space</kbd> hold fire · right-click back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom</div></div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>Tab</kbd> weapon · <kbd>Space</kbd> hold fire · right-click back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>
@@ -779,6 +867,10 @@ export class Fight {
   }
 
   key(k: string): boolean {
+    if (k === "m") {
+      this.map.toggle();
+      return true;
+    }
     if (k === "o") {
       this.assist = !this.assist;
       if (this.assist) this.checkOutlook();
@@ -947,11 +1039,12 @@ export class Fight {
     for (const e of this.entities) e?.remove();
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
-    this.window.remove();
+    if (this.hidden.length) this.view.edits.restore(this.hidden);
     this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();
     this.hud.remove();
+    this.map.el.remove();
   }
 
   /** The puzzle, for a retry. */

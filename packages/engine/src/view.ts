@@ -7,6 +7,7 @@ import {
   Compositor,
   StartTiles,
   TileCache,
+  MAX_REVEALS,
   revealRect,
   tileKey,
   worldDepthRange,
@@ -216,8 +217,8 @@ class View implements WorldView {
   private readonly idleAsked = new Set<TileKey>();
   private readonly idleDone = new Set<TileKey>();
   private readonly prefetches = new Prefetches();
-  /** Where a revealing entity cleared the world last frame (absolute screen px), or null. */
-  private revealBox: ScreenBox | null = null;
+  /** Where the revealing entities cleared the world last frame (absolute screen px). */
+  private revealBoxes: ScreenBox[] = [];
   /** Tile images on the GPU from before an edit that touches them (D-124): drawn until their new bake is ready. */
   private readonly stale = new Set<TileKey>();
 
@@ -667,10 +668,12 @@ class View implements WorldView {
       const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
-      // a revealing entity: the bare tiles under it, once all of them are baked (asked for from the next frame)
-      const rv = ents.list.find((s) => s.reveal);
-      this.revealBox = rv ? revealRect(rv) : null;
-      const bare = this.revealBox ? this.bareTiles(r, order, this.revealBox) : [];
+      // revealing entities: the bare tiles under them, once all of them are baked (asked for from the next frame)
+      this.revealBoxes = ents.list
+        .filter((s) => s.reveal)
+        .slice(0, MAX_REVEALS)
+        .map((s) => revealRect(s)!);
+      const bare = this.revealBoxes.length ? this.bareTiles(r, order, this.revealBoxes) : [];
       if (this.replacing && !complete) {
         // hold: the view being replaced keeps the canvas until this one has a whole frame
         drawn = false;
@@ -727,26 +730,25 @@ class View implements WorldView {
     return null;
   }
 
-  /** Bare variants of the tiles drawn under last frame's reveal, and a little around it (it moves). */
+  /** Bare variants of the tiles drawn under last frame's reveals, and a little around them (they move). */
   private bareWanted(r: Rotation, order: readonly TileInView[]): TileRequest[] {
-    const box = this.revealBox;
-    if (!box) return [];
+    if (!this.revealBoxes.length) return [];
     const g = REVEAL_AHEAD_PX;
-    const grown = { left: box.left - g, top: box.top - g, right: box.right + g, bottom: box.bottom + g };
+    const grown = this.revealBoxes.map((b) => ({ left: b.left - g, top: b.top - g, right: b.right + g, bottom: b.bottom + g }));
     const out: TileRequest[] = [];
     for (const t of order) {
       const img = this.gpu.get(tileKey(r, t.tx, t.ty))?.img;
-      if (img && overlaps(img.image, grown)) out.push({ rotation: r, tx: t.tx, ty: t.ty, bare: true });
+      if (img && grown.some((b) => overlaps(img.image, b))) out.push({ rotation: r, tx: t.tx, ty: t.ty, bare: true });
     }
     return out;
   }
 
-  /** The bare tiles under a reveal, or none until every one of them is baked. */
-  private bareTiles(r: Rotation, order: readonly TileInView[], box: ScreenBox): GpuImage[] {
+  /** The bare tiles under the reveals, or none until every one of them is baked. */
+  private bareTiles(r: Rotation, order: readonly TileInView[], boxes: readonly ScreenBox[]): GpuImage[] {
     const out: GpuImage[] = [];
     for (const t of order) {
       const img = this.gpu.get(tileKey(r, t.tx, t.ty))?.img;
-      if (!img || !overlaps(img.image, box)) continue;
+      if (!img || !boxes.some((b) => overlaps(img.image, b))) continue;
       const bare = this.gpu.get(tileKey(r, t.tx, t.ty, true));
       if (!bare) return [];
       bare.lastDrawn = this.frameNo;

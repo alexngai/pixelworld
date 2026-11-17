@@ -53,6 +53,9 @@ void main() {
 }
 `;
 
+/** How many sprites can see through what stands in front of them at once (D-154). */
+export const MAX_REVEALS = 8;
+
 const QUAD_FS = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
@@ -65,9 +68,10 @@ uniform vec2 uDepthRange;
 uniform int uMode;          // 0 = normal, 1 = occluded silhouette, 2 = bare tile inside the reveal
 uniform float uSilhouette;  // palette index / 255
 uniform int uRevealOn;      // tiles in front of a player see-through (normal mode)
-uniform vec4 uReveal;       // the reveal ellipse: centre, radii (absolute art px)
-uniform float uRevealS;     // the player's u + v
-uniform float uRevealDensity;
+uniform int uRevealCount;
+uniform vec4 uReveal[${MAX_REVEALS}];       // each reveal's ellipse: centre, radii (absolute art px)
+uniform float uRevealS[${MAX_REVEALS}];     // its sprite's u + v
+uniform float uRevealDensity[${MAX_REVEALS}];
 out vec4 o;
 
 const float BAYER[16] = float[16](
@@ -87,18 +91,23 @@ void main() {
   float d = uDepthBase + local;
   float z = clamp(1.0 - (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x), 0.0, 1.0);
   if (uRevealOn == 1 || uMode == 2) {
-    float r = length((art - uReveal.xy) / uReveal.zw);
-    if (uMode == 2) {
-      if (r >= 1.0) discard;  // a bare tile fills only the reveal, where the tiles let it through
-    } else if (r < 1.0) {
-      // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
-      float s = art.y / 32.0 + 0.75 * d;
-      if (s > uRevealS + 0.5) {
-        ivec2 ap = ivec2(floor(art));
-        float k = uRevealDensity * smoothstep(1.0, 0.7, r);  // a dithered edge
-        if ((BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0 < k) discard;
+    // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
+    float s = art.y / 32.0 + 0.75 * d;
+    ivec2 ap = ivec2(floor(art));
+    float dither = (BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0;
+    bool inside = false;
+    for (int i = 0; i < ${MAX_REVEALS}; i++) {
+      if (i >= uRevealCount) break;
+      float r = length((art - uReveal[i].xy) / uReveal[i].zw);
+      if (r >= 1.0) continue;
+      inside = true;
+      if (uMode != 2 && s > uRevealS[i] + 0.5) {
+        // a dithered edge, or at full density a clean cut
+        float k = uRevealDensity[i] >= 1.0 ? 1.0 : uRevealDensity[i] * smoothstep(1.0, 0.7, r);
+        if (dither < k) discard;
       }
     }
+    if (uMode == 2 && !inside) discard;  // a bare tile fills only the reveals, where the tiles let it through
   }
   gl_FragDepth = z;
   if (uMode == 1) {
@@ -152,8 +161,9 @@ export interface SpriteInstance {
   silhouetteIndex?: number;
   /**
    * Show what this sprite stands behind (D-079): within `margin` px of it,
-   * world pixels in front of it are dithered away (`density` of them, 0–1)
-   * over the bare tiles (`TileRequest.bare`). The first such sprite of a frame counts.
+   * world pixels in front of it are dithered away (`density` of them, 0–1;
+   * at 1 a clean cut) over the bare tiles (`TileRequest.bare`). The first
+   * `MAX_REVEALS` such sprites of a frame count.
    */
   reveal?: Reveal | null;
 }
@@ -294,9 +304,9 @@ export class Compositor {
   }
 
   /**
-   * Draw a frame. With `bare` tiles (those under a revealing sprite, all of
-   * them baked), the first sprite with `reveal` sees through what stands in
-   * front of it. `behind` (tiles' ground alone, while they bake) fills only
+   * Draw a frame. With `bare` tiles (those under the revealing sprites, all
+   * of them baked), the first `MAX_REVEALS` sprites with `reveal` see through
+   * what stands in front of them. `behind` (tiles' ground alone, while they bake) fills only
    * what nothing else covers: drawn a little further back than it stands.
    */
   render(
@@ -354,13 +364,23 @@ export class Compositor {
         s.sy + s.sprite.image.top,
         s.depth + s.sprite.image.depthBase,
       ] as const;
-    const rv = bare.length ? sprites.find((s) => s.reveal) : undefined;
-    const box = rv && revealRect(rv);
+    const reveals = bare.length ? sprites.filter((s) => s.reveal).slice(0, MAX_REVEALS) : [];
+    const box = reveals.length > 0;
     if (box) {
-      // the ellipse in absolute art px
-      gl.uniform4f(u.loc("uReveal"), (box.left + box.right) / 2, (box.top + box.bottom) / 2, (box.right - box.left) / 2, (box.bottom - box.top) / 2);
-      gl.uniform1f(u.loc("uRevealS"), rv!.sy / 32 + 0.75 * rv!.depth); // its u + v, as the shader works it out
-      gl.uniform1f(u.loc("uRevealDensity"), Math.min(1, Math.max(0, rv!.reveal!.density)));
+      const ellipses = new Float32Array(4 * MAX_REVEALS);
+      const fronts = new Float32Array(MAX_REVEALS);
+      const densities = new Float32Array(MAX_REVEALS);
+      reveals.forEach((rv, i) => {
+        // the ellipse in absolute art px; the sprite's u + v, as the shader works it out
+        const b = revealRect(rv)!;
+        ellipses.set([(b.left + b.right) / 2, (b.top + b.bottom) / 2, (b.right - b.left) / 2, (b.bottom - b.top) / 2], 4 * i);
+        fronts[i] = rv.sy / 32 + 0.75 * rv.depth;
+        densities[i] = Math.min(1, Math.max(0, rv.reveal!.density));
+      });
+      gl.uniform4fv(u.loc("uReveal"), ellipses);
+      gl.uniform1fv(u.loc("uRevealS"), fronts);
+      gl.uniform1fv(u.loc("uRevealDensity"), densities);
+      gl.uniform1i(u.loc("uRevealCount"), reveals.length);
     }
     gl.uniform1i(u.loc("uRevealOn"), box ? 1 : 0);
     for (const tile of tiles) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 0);
