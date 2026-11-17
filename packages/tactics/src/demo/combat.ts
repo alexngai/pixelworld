@@ -2,6 +2,9 @@ import { boardCellAt, toWorld, type Board, type Boards, type Entity, type WorldV
 import {
   A_WATER,
   BoardOverlay,
+  aimOf,
+  resolveInvaders,
+  standAt,
   DIRS,
   FIGHTERS,
   INVADERS,
@@ -33,11 +36,13 @@ import {
 } from "../index";
 
 /**
- * The sandbox's combat (D-150): a puzzle made on a board cut where the
- * pointer is, played turn by turn. Click a rig, a cell to move to, then a
- * target; Enter ends the turn and the invaders strike; U takes the turn back,
- * H shows a turn that loses nobody, N makes another puzzle, Esc leaves. A
- * building that falls is taken out of the world (D-124).
+ * The sandbox's combat (D-150, D-151): a puzzle made on a board cut where
+ * the pointer is, played turn by turn. Click a rig, a cell to move to (roofs
+ * it can climb onto too), then a target; Tab picks its weapon (the crane's
+ * hoist: the unit to lift, then where to set it; any rig's evacuation: the
+ * building beside it). Enter ends the turn and the invaders strike; U takes
+ * the turn back, H shows a turn that loses nobody, N makes another puzzle,
+ * Esc leaves. A building that falls is taken out of the world (D-124).
  */
 
 export interface CombatEnv {
@@ -105,6 +110,9 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
   let acted = new Set<number>();
   let razedThisTurn: number[] = [];
   let selected = -1;
+  /** The selected rig's weapon (Tab), and for a hoist, the direction of the unit it lifts (−1 until one is clicked). */
+  let weapon = 0;
+  let lift = -1;
   let phase: "pick" | "move" | "strike" | "invaders" | "over" = "pick";
   let hint: Arrow[] = [];
   const start = cloneCombat(c);
@@ -112,7 +120,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
   const overlay = new BoardOverlay(board, { id: "combat" });
   void view.layers.add(overlay);
   const centre = (k: number) => toWorld(board, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
-  const stand = (k: number) => board.height[k]!;
+  const stand = (k: number) => standAt(c, k);
   const entities = c.roster.map((kind, u) => {
     const p = centre(c.pos[u]!);
     return view.entities.add({
@@ -179,48 +187,77 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     }
   };
 
+  /** The cells the selected weapon can be aimed at, each with its strike: for a hoist, the units to lift, then where to set one down. */
   const strikeTargets = (u: number) => {
     const out = new Map<number, Strike>();
     for (const s of strikesOf(c, u)) {
+      if (s.weapon !== weapon) continue;
+      if (FIGHTERS[c.roster[u]!].weapons[weapon]!.kind === "hoist") {
+        if (lift < 0) out.set(strikeCell(c, u, s), { ...s, to: -1 });
+        else if (s.dir === lift) out.set(s.to!, s);
+        continue;
+      }
       const k = strikeCell(c, u, s);
       if (k >= 0 && !out.has(k)) out.set(k, s);
     }
     return out;
   };
 
+  /** Where the round, played out as it stands, does harm: cells struck, crushed or fallen from, and buildings hit. */
+  const harm = () => {
+    const log: CombatEvent[] = [];
+    const r = cloneCombat(c);
+    resolveInvaders(r, log);
+    const cells = new Set<number>();
+    for (const e of log) {
+      if (e.t === "crush") cells.add(e.at);
+      if (e.t === "structure") for (const k of a.structures[e.id]!.cells) cells.add(k);
+      if (e.t === "damage") cells.add(r.pos[e.unit]!);
+    }
+    return cells;
+  };
+
   const draw = () => {
     const marks: Mark[] = [];
     const arrows: Arrow[] = [];
     const ij = (k: number): [number, number] => [k % a.w, Math.floor(k / a.w)];
-    const mark = (k: number, kind: Mark["kind"]) => marks.push({ i: k % a.w, j: Math.floor(k / a.w), kind });
+    // one mark a cell, the later over the earlier
+    const byCell = new Map<number, Mark["kind"]>();
+    const mark = (k: number, kind: Mark["kind"]) => byCell.set(k, kind);
+    // what the round does as things stand (a toppling tower's line too)
+    if (phase !== "invaders" && phase !== "over") for (const k of harm()) mark(k, "danger");
     for (let u = 0; u < c.roster.length; u++) {
       if (c.hp[u]! <= 0) continue;
       if (teamOf(c, u) === INVADERS) {
         mark(c.pos[u]!, "enemy");
         if (c.aim[u]! < 0) continue;
-        const t = strikeCell(c, u, { dir: c.aim[u]!, range: c.reach[u]! });
-        if (t < 0) continue;
-        mark(t, "danger");
-        arrows.push({ from: ij(c.pos[u]!), to: ij(t), kind: "attack" });
+        const t = strikeCell(c, u, aimOf(c, u));
+        if (t >= 0) arrows.push({ from: ij(c.pos[u]!), to: ij(t), kind: "attack" });
       } else mark(c.pos[u]!, u === selected ? "select" : acted.has(u) ? "info" : "ally");
     }
     if (selected >= 0 && phase === "move") for (const k of movesOf(c, selected)) if (k !== c.pos[selected]) mark(k, "move");
-    if (selected >= 0 && phase === "strike") for (const k of strikeTargets(selected).keys()) mark(k, "attack");
+    if (selected >= 0 && phase === "strike") for (const k of strikeTargets(selected).keys()) mark(k, lift >= 0 ? "move" : "attack");
+    for (const [k, kind] of byCell) marks.push({ i: k % a.w, j: Math.floor(k / a.w), kind });
     overlay.setMarks(marks);
     overlay.setArrows([...arrows, ...hint]);
     // the panel: whose turn, the squad, the invaders' aims, what is at stake
     const lines: string[] = [`Round ${round} of ${ROUNDS} · ${phaseText()}`];
     for (let u = 0; u < c.roster.length; u++) {
       const f = FIGHTERS[c.roster[u]!];
-      if (teamOf(c, u) === SQUAD) lines.push(`${f.name} ${c.hp[u]}/${f.hp}${c.hp[u]! <= 0 ? " down" : acted.has(u) ? " · done" : ""}`);
+      if (teamOf(c, u) !== SQUAD) continue;
+      const roof = a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " · on a roof" : "";
+      const arm = u === selected && phase === "strike" ? ` · ${f.weapons[weapon]!.name} (Tab: ${f.weapons.map((w) => w.name).join(", ")})` : "";
+      lines.push(`${f.name} ${c.hp[u]}/${f.hp}${c.hp[u]! <= 0 ? " down" : acted.has(u) ? " · done" : ""}${roof}${arm}`);
     }
     for (let u = 0, order = 1; u < c.roster.length; u++) {
       if (teamOf(c, u) !== INVADERS || c.hp[u]! <= 0) continue;
       const f = FIGHTERS[c.roster[u]!];
-      const t = c.aim[u]! >= 0 ? strikeCell(c, u, { dir: c.aim[u]!, range: c.reach[u]! }) : -1;
+      const t = c.aim[u]! >= 0 ? strikeCell(c, u, aimOf(c, u)) : -1;
       const sid = t >= 0 ? structureAt(c, t) : -1;
-      const at = sid >= 0 ? `${a.structures[sid]!.name.replace("building.", "")} (${a.structures[sid]!.people} people)` : t >= 0 && c.occ[t]! >= 0 ? FIGHTERS[c.roster[c.occ[t]!]!].name : "nothing";
-      lines.push(`${order++}. ${f.name} ${c.hp[u]}/${f.hp} → ${f.weapon.name} at ${at}`);
+      const st = sid >= 0 ? a.structures[sid]! : null;
+      const people = st ? (c.evacuated[sid] ? "empty" : `${st.people} people${c.evacuating[sid] ? ", evacuating" : ""}`) : "";
+      const at = st ? `${st.name.replace("building.", "")} (${people}${st.topple ? `, topples ${st.topple}` : ""})` : t >= 0 && c.occ[t]! >= 0 ? FIGHTERS[c.roster[c.occ[t]!]!].name : "nothing";
+      lines.push(`${order++}. ${f.name} ${c.hp[u]}/${f.hp}${a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " (on a roof)" : ""} → ${f.weapons[0]!.name} at ${at}`);
     }
     const o = outcome(start, c);
     lines.push(`People lost ${Math.round(o.lost)} · puzzle ${puzzle.difficulty.toFixed(1)} bits, ${puzzle.stats.perfectLeaves} of ${puzzle.stats.leaves} end states lose nobody`);
@@ -231,7 +268,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     ({
       pick: "click a rig (Enter ends the turn, H a hint, U undoes, N another puzzle, Esc leaves)",
       move: "click where it moves (its own cell to stay)",
-      strike: "click a target (Space to hold fire)",
+      strike: lift >= 0 ? "click where to set it down" : "click a target (Tab another weapon, Space to hold fire)",
       invaders: "the invaders strike…",
       over: "over: N for another puzzle, Esc to leave",
     })[phase];
@@ -239,6 +276,8 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
   const done = (u: number) => {
     acted.add(u);
     selected = -1;
+    weapon = 0;
+    lift = -1;
     phase = "pick";
     hint = [];
   };
@@ -252,7 +291,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     for (let u = 0; u < c.roster.length; u++) {
       if (teamOf(c, u) !== INVADERS || c.hp[u]! <= 0 || c.aim[u]! < 0) continue;
       const log: CombatEvent[] = [];
-      strike(c, u, { dir: c.aim[u]!, range: c.reach[u]! }, log);
+      strike(c, u, aimOf(c, u), log);
       fallen(log);
       const hitAt = log.find((e) => e.t === "strike");
       if (hitAt?.t === "strike") {
@@ -319,6 +358,8 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       const u = c.occ[k]!;
       if (u >= 0 && teamOf(c, u) === SQUAD && !acted.has(u) && phase !== "strike") {
         selected = u;
+        weapon = 0;
+        lift = -1;
         phase = "move";
       } else if (phase === "move" && movesOf(c, selected).includes(k)) {
         moveUnit(c, selected, k);
@@ -327,6 +368,10 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       } else if (phase === "strike") {
         const s = strikeTargets(selected).get(k);
         if (!s) return;
+        if (s.to === -1) {
+          lift = s.dir; // the unit to lift: now where to set it down
+          return draw();
+        }
         const log: CombatEvent[] = [];
         strike(c, selected, s, log);
         fallen(log);
@@ -343,6 +388,12 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       if (phase === "invaders") return true;
       if (k === "enter" && phase !== "over") {
         void endTurn();
+        return true;
+      }
+      if (k === "tab" && phase === "strike") {
+        weapon = (weapon + 1) % FIGHTERS[c.roster[selected]!].weapons.length;
+        lift = -1;
+        draw();
         return true;
       }
       if (k === " " && phase === "strike") {

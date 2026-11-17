@@ -2,20 +2,26 @@ import { CELL_TREES, CELL_WALL, CELL_WATER, type Board, type WorldQuery } from "
 import { objectInfo } from "./buildings";
 
 /**
- * Turn-based combat on a board cut from a real city (D-150): the rigs'
- * squad against invaders who show what they will strike before they strike.
+ * Turn-based combat on a board cut from a real city (D-150, D-151): the
+ * rigs' squad against invaders who show what they will strike before they
+ * strike.
  *
  * A round: the invaders have aimed (each one a direction, kept relative to
- * where it stands); the squad's rigs each move and strike, in any order;
- * then each invader strikes in turn from wherever it now stands, so one
- * pushed round may strike another; then fire burns. Then the invaders move
- * and aim again. Everything is deterministic and plain data, so a solver can
- * search a turn and a server can run one.
+ * where it stands); the squad's rigs each move and act, in any order; then
+ * each invader strikes in turn from wherever it now stands, so one pushed
+ * round may strike another; then fire burns and evacuations end. Then the
+ * invaders move and aim again. Everything is deterministic and plain data, so
+ * a solver can search a turn and a server can run one.
  *
  * Buildings are structures with hit points and the people inside them (the
- * world's occupants, D-149): the squad wins a round by losing none. Water
- * drowns what can't fly; a drop off high ground hurts; fire set on lawns and
- * woods burns who stands there and the wooden buildings beside it.
+ * world's occupants, D-149), and roofs at their real heights (D-151): units
+ * climb onto low ones and crawlers up any; one on a roof takes the strikes
+ * meant for the building under it; a push off a roof is a fall; a shot from a
+ * roof flies over lower ones; a building brought down drops what stood on it,
+ * and a tall one topples along the line it was struck on, onto what stands
+ * there. The squad wins a round by losing nobody. Water drowns what can't
+ * fly; fire set on lawns and woods burns who stands there and the wooden
+ * buildings beside it.
  */
 
 /** Directions: north, east, south, west. */
@@ -32,8 +38,14 @@ export const INVADERS = 1;
 
 export interface Weapon {
   name: string;
-  /** `melee` strikes the next cell; `shot` the first thing along a line; `lob` a cell 2+ away along a line, over what lies between. */
-  kind: "melee" | "shot" | "lob";
+  /**
+   * `melee` strikes the next cell; `shot` the first thing along a line (over
+   * roofs lower than the shooter); `lob` a cell 2+ away along a line, over
+   * what lies between; `hoist` lifts the unit on the next cell onto a cell
+   * within two (`Strike.to`); `evacuate` empties the next cell's building of
+   * its people by the round's end.
+   */
+  kind: "melee" | "shot" | "lob" | "hoist" | "evacuate";
   damage: number;
   /** Melee and shots push what they strike on along the line; a lob pushes what stands round its target outward. */
   push: boolean;
@@ -50,22 +62,39 @@ export interface Fighter {
   team: typeof SQUAD | typeof INVADERS;
   hp: number;
   move: number;
-  /** Crosses water and drops, and isn't drowned. */
+  /** The most it climbs between neighbouring cells (metres): rigs onto low roofs, crawlers up any wall. */
+  climb: number;
+  /** Crosses water, gaps and roofs, and isn't drowned or hurt by a fall. */
   flying?: boolean;
-  weapon: Weapon;
+  /** Its weapons; an invader aims its first. */
+  weapons: Weapon[];
 }
 
 export type FighterKind = "wrecker" | "pumper" | "crane" | "crawler" | "brute" | "flyer";
 
+const EVACUATE: Weapon = { name: "evacuate", kind: "evacuate", damage: 0, push: false };
+
 export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
-  wrecker: { name: "Wrecker", team: SQUAD, hp: 3, move: 3, weapon: { name: "ram", kind: "melee", damage: 2, push: true } },
-  pumper: { name: "Pumper", team: SQUAD, hp: 3, move: 3, weapon: { name: "water cannon", kind: "shot", damage: 1, push: true, douses: true } },
-  crane: { name: "Crane", team: SQUAD, hp: 2, move: 3, weapon: { name: "drop", kind: "lob", damage: 1, push: true, range: [2, 4] } },
-  // tougher than a turn's strikes can bring down, mostly: the squad turns them, drowns them, and puts them out of line
-  crawler: { name: "Crawler", team: INVADERS, hp: 3, move: 3, weapon: { name: "bite", kind: "melee", damage: 1, push: false } },
-  brute: { name: "Brute", team: INVADERS, hp: 4, move: 2, weapon: { name: "slam", kind: "melee", damage: 2, push: true } },
-  flyer: { name: "Flyer", team: INVADERS, hp: 2, move: 4, flying: true, weapon: { name: "spit", kind: "shot", damage: 1, push: false, ignites: true } },
+  wrecker: { name: "Wrecker", team: SQUAD, hp: 3, move: 3, climb: 15, weapons: [{ name: "ram", kind: "melee", damage: 2, push: true }, EVACUATE] },
+  pumper: { name: "Pumper", team: SQUAD, hp: 3, move: 3, climb: 15, weapons: [{ name: "water cannon", kind: "shot", damage: 1, push: true, douses: true }, EVACUATE] },
+  crane: {
+    name: "Crane",
+    team: SQUAD,
+    hp: 2,
+    move: 3,
+    climb: 15,
+    weapons: [{ name: "drop", kind: "lob", damage: 1, push: true, range: [2, 4] }, { name: "hoist", kind: "hoist", damage: 0, push: false }, EVACUATE],
+  },
+  // tougher than a turn's strikes can bring down, mostly: the squad turns them, drowns them, drops them and puts them out of line
+  crawler: { name: "Crawler", team: INVADERS, hp: 3, move: 3, climb: Infinity, weapons: [{ name: "bite", kind: "melee", damage: 1, push: false }] },
+  brute: { name: "Brute", team: INVADERS, hp: 4, move: 2, climb: 4, weapons: [{ name: "slam", kind: "melee", damage: 2, push: true }] },
+  flyer: { name: "Flyer", team: INVADERS, hp: 2, move: 4, climb: Infinity, flying: true, weapons: [{ name: "spit", kind: "shot", damage: 1, push: false, ignites: true }] },
 };
+
+/** How far a hoist sets a unit down from the crane (cells, along the streets). */
+export const HOIST_REACH = 2;
+/** The longest line a toppling building falls along (cells). */
+export const TOPPLE_MAX = 4;
 
 // ---------------------------------------------------------------- the arena
 
@@ -82,21 +111,30 @@ export interface Structure {
   people: number;
   /** Fire beside it damages it each round. */
   flammable: boolean;
+  /** Its cells. */
+  cells: number[];
+  /** How many cells it falls across when it topples (its height in cells, at most TOPPLE_MAX; 0 for one too low to topple). */
+  topple: number;
 }
 
-/** What doesn't change in a fight: the ground, water and structures, row-major (`y · w + x`). */
+/** What doesn't change in a fight: the ground, water, structures and roofs, row-major (`y · w + x`). */
 export interface Arena {
   w: number;
   h: number;
   flags: Uint8Array;
   /** Ground height (steps). */
   height: Float32Array;
+  /** Roof height (steps) on a structure's cells; the ground elsewhere. */
+  roof: Float32Array;
   /** The structure on each cell, or −1. */
   struct: Int16Array;
   structures: Structure[];
-  /** The most a unit climbs between cells, and the drop that hurts it, a point of damage each (steps). */
+  /** Metres up a step: what fighters climb and buildings stand in. */
+  metersPerStep: number;
+  /** The most a push carries a unit up (steps); the drop that hurts it, a point of damage each; how far up or down a melee strike reaches (steps). */
   climb: number;
   fall: number;
+  reach: number;
 }
 
 /** Structure hit points by material strength (wood 1 … steel 4). */
@@ -106,20 +144,23 @@ const BURNABLE = new Set(["forest", "woodland", "scrub", "grass", "lawn", "yard"
 
 /**
  * An arena from a board cut from the world (D-148): its water, its walled
- * cells as structures (each wall object one, with hit points by material
- * and its people, D-149), its burnable lawns and woods, and its heights.
+ * cells as structures (each wall object one, with hit points by material,
+ * its people (D-149), its roof's real height and how far it topples), its
+ * burnable lawns and woods, and its heights.
  */
 export function arenaFromBoard(
   b: Board,
   query: Pick<WorldQuery, "object">,
   surfaces: Record<string, string>,
-  opts: { metersPerCell: number; climbMeters?: number; fallMeters?: number },
+  opts: { metersPerCell: number; climbMeters?: number; fallMeters?: number; reachMeters?: number },
 ): Arena {
   const n = b.w * b.h;
   const flags = new Uint8Array(n);
   const struct = new Int16Array(n).fill(-1);
+  const roof = Float32Array.from(b.height);
   const structures: Structure[] = [];
   const ids = new Map<number, number>();
+  const step = b.metersPerStep;
   for (let i = 0; i < n; i++) {
     if (b.flags[i]! & CELL_WATER) flags[i]! |= A_WATER;
     else if (b.flags[i]! & CELL_TREES || BURNABLE.has(surfaces[String(b.surface[i])] ?? "")) flags[i]! |= A_BURNS;
@@ -140,26 +181,37 @@ export function arenaFromBoard(
         hp: info ? hpOf(info.strength) : 2,
         people: info?.occupants ?? 0,
         flammable: (info?.flammability ?? 0) >= 0.6,
+        cells: [],
+        topple: 0,
       });
     }
     struct[i] = id;
+    roof[i] = Math.max(b.height[i]!, top);
+    structures[id]!.cells.push(i);
   }
-  const step = b.metersPerStep;
+  for (const s of structures) {
+    // its height in board cells: a tower falls far, a house not at all
+    const tall = Math.max(...s.cells.map((k) => roof[k]! - b.height[k]!)) * step / b.metersPerCell;
+    s.topple = tall >= 1.5 ? Math.min(TOPPLE_MAX, Math.round(tall)) : 0;
+  }
   return {
     w: b.w,
     h: b.h,
     flags,
     height: Float32Array.from(b.height),
+    roof,
     struct,
     structures,
+    metersPerStep: step,
     climb: Math.max(1, Math.round((opts.climbMeters ?? 4) / step)),
     fall: Math.max(1, Math.round((opts.fallMeters ?? 8) / step)),
+    reach: Math.max(1, Math.round((opts.reachMeters ?? 6) / step)),
   };
 }
 
 // ---------------------------------------------------------------- a fight
 
-/** A fight's state: the units (by their place in `roster`), the structures' hit points and the fires. */
+/** A fight's state: the units (by their place in `roster`), the structures' hit points and people, and the fires. */
 export interface Combat {
   readonly arena: Arena;
   readonly roster: readonly FighterKind[];
@@ -168,19 +220,24 @@ export interface Combat {
   hp: Int8Array;
   aim: Int8Array;
   reach: Int8Array;
-  /** The unit on each cell, or −1. */
+  /** The unit on each cell (on the ground, or on the roof of a building standing there), or −1. */
   occ: Int8Array;
   structHp: Int8Array;
+  /** Structures being emptied this round, and those empty: hits on them cost no people. */
+  evacuating: Uint8Array;
+  evacuated: Uint8Array;
   fire: Uint8Array;
   /** Since the fight began: people lost, and structure hit points lost. */
   lost: number;
   razed: number;
 }
 
-/** A strike: its direction, and how far for a lob (1 otherwise). */
+/** An action's aim: a weapon (by its place in the fighter's), a direction, how far for a lob (1 otherwise), and where a hoist sets down. */
 export interface Strike {
+  weapon: number;
   dir: number;
   range: number;
+  to?: number;
 }
 
 export type CombatEvent =
@@ -188,9 +245,14 @@ export type CombatEvent =
   | { t: "strike"; unit: number; at: number }
   | { t: "push"; unit: number; from: number; to: number }
   | { t: "bump"; unit: number; at: number }
+  | { t: "fall"; unit: number; drop: number }
   | { t: "damage"; unit: number; amount: number }
   | { t: "down"; unit: number; at: number; drowned: boolean }
   | { t: "structure"; id: number; amount: number; destroyed: boolean; people: number }
+  | { t: "topple"; id: number; dir: number; cells: number[] }
+  | { t: "crush"; at: number }
+  | { t: "hoist"; unit: number; from: number; to: number }
+  | { t: "evacuate"; id: number }
   | { t: "ignite"; at: number }
   | { t: "douse"; at: number };
 
@@ -198,6 +260,7 @@ type Log = CombatEvent[] | undefined;
 
 export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at: number }[]): Combat {
   const n = arena.w * arena.h;
+  const ns = arena.structures.length;
   const c: Combat = {
     arena,
     roster: units.map((u) => u.kind),
@@ -207,6 +270,8 @@ export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at:
     reach: new Int8Array(units.length).fill(1),
     occ: new Int8Array(n).fill(-1),
     structHp: Int8Array.from(arena.structures.map((s) => s.hp)),
+    evacuating: new Uint8Array(ns),
+    evacuated: new Uint8Array(ns),
     fire: new Uint8Array(n),
     lost: 0,
     razed: 0,
@@ -228,6 +293,8 @@ export function cloneCombat(c: Combat): Combat {
     reach: c.reach.slice(),
     occ: c.occ.slice(),
     structHp: c.structHp.slice(),
+    evacuating: c.evacuating.slice(),
+    evacuated: c.evacuated.slice(),
     fire: c.fire.slice(),
     lost: c.lost,
     razed: c.razed,
@@ -250,19 +317,23 @@ export function structureAt(c: Combat, k: number): number {
   return s >= 0 && c.structHp[s]! > 0 ? s : -1;
 }
 
-/** Whether a unit could stand on a cell (nothing standing there, no water for one that walks), and climb into it from `from`. */
+/** Where one stands on a cell (steps): a standing building's roof, else the ground (a fallen one's rubble). */
+export function standAt(c: Combat, k: number): number {
+  return structureAt(c, k) >= 0 ? c.arena.roof[k]! : c.arena.height[k]!;
+}
+
+/** Whether a unit could move from a cell onto a neighbour: no water for one that walks, and a climb within its reach. */
 function enterable(c: Combat, u: number, from: number, k: number): boolean {
-  if (structureAt(c, k) >= 0) return false;
-  if (FIGHTERS[c.roster[u]!].flying) return true;
-  const a = c.arena;
-  return !(a.flags[k]! & A_WATER) && Math.abs(a.height[k]! - a.height[from]!) <= a.climb;
+  const f = FIGHTERS[c.roster[u]!];
+  if (f.flying) return true;
+  if (c.arena.flags[k]! & A_WATER && structureAt(c, k) < 0) return false;
+  return Math.abs(standAt(c, k) - standAt(c, from)) * c.arena.metersPerStep <= f.climb;
 }
 
 /** The cells a unit can move to this turn (its own included): through its own side's units, not the other's, ending on an empty cell. */
 export function movesOf(c: Combat, u: number): number[] {
   const a = c.arena;
-  const n = a.w * a.h;
-  const dist = new Int8Array(n).fill(-1);
+  const dist = new Int8Array(a.w * a.h).fill(-1);
   const start = c.pos[u]!;
   const team = teamOf(c, u);
   const move = FIGHTERS[c.roster[u]!].move;
@@ -285,32 +356,61 @@ export function movesOf(c: Combat, u: number): number[] {
   return out;
 }
 
-/** A unit's strikes from where it stands (those that land on the arena). */
-export function strikesOf(c: Combat, u: number): Strike[] {
-  const w = FIGHTERS[c.roster[u]!].weapon;
-  const out: Strike[] = [];
-  for (let d = 0; d < 4; d++) {
-    if (w.kind !== "lob") {
-      if (step(c.arena, c.pos[u]!, d) >= 0) out.push({ dir: d, range: 1 });
-      continue;
+/** Cells a hoist from a cell may set a unit down on: within HOIST_REACH along the streets, empty, and not the crane's own. */
+export function hoistCells(c: Combat, from: number): number[] {
+  const a = c.arena;
+  const out: number[] = [];
+  const x0 = from % a.w;
+  const y0 = Math.floor(from / a.w);
+  for (let y = Math.max(0, y0 - HOIST_REACH); y <= Math.min(a.h - 1, y0 + HOIST_REACH); y++)
+    for (let x = Math.max(0, x0 - HOIST_REACH); x <= Math.min(a.w - 1, x0 + HOIST_REACH); x++) {
+      const k = y * a.w + x;
+      if (k !== from && Math.abs(x - x0) + Math.abs(y - y0) <= HOIST_REACH && c.occ[k]! < 0) out.push(k);
     }
-    for (let r = w.range![0]; r <= w.range![1]; r++) if (step(c.arena, c.pos[u]!, d, r) >= 0) out.push({ dir: d, range: r });
-  }
   return out;
 }
 
-/** The first unit or standing structure along a line from a cell, or −1. */
-export function firstHit(c: Combat, from: number, dir: number): number {
-  for (let k = step(c.arena, from, dir); k >= 0; k = step(c.arena, k, dir)) if (c.occ[k]! >= 0 || structureAt(c, k) >= 0) return k;
+/** A unit's strikes from where it stands, every weapon's (those that land on the arena; a hoist's for each cell it may set down on). */
+export function strikesOf(c: Combat, u: number): Strike[] {
+  const f = FIGHTERS[c.roster[u]!];
+  const from = c.pos[u]!;
+  const out: Strike[] = [];
+  f.weapons.forEach((w, weapon) => {
+    for (let dir = 0; dir < 4; dir++) {
+      if (w.kind === "lob") {
+        for (let r = w.range![0]; r <= w.range![1]; r++) if (step(c.arena, from, dir, r) >= 0) out.push({ weapon, dir, range: r });
+        continue;
+      }
+      const t = step(c.arena, from, dir);
+      if (t < 0) continue;
+      if (w.kind === "hoist") {
+        if (c.occ[t]! >= 0) for (const to of hoistCells(c, from)) out.push({ weapon, dir, range: 1, to });
+      } else if (w.kind !== "evacuate" || (structureAt(c, t) >= 0 && !c.evacuated[structureAt(c, t)] && !c.evacuating[structureAt(c, t)])) {
+        out.push({ weapon, dir, range: 1 });
+      }
+    }
+  });
+  return out;
+}
+
+/** The first thing along a line from a cell that a shot from a height stops at: a unit, or a building taller than the shooter. −1 for none. */
+export function shotStop(c: Combat, from: number, dir: number, height: number): number {
+  for (let k = step(c.arena, from, dir); k >= 0; k = step(c.arena, k, dir)) {
+    if (c.occ[k]! >= 0) return k;
+    if (structureAt(c, k) >= 0 && c.arena.roof[k]! > height) return k;
+  }
   return -1;
 }
 
 /** Where a unit's strike lands from where it stands now: its target cell, or −1 (a shot that meets nothing). */
 export function strikeCell(c: Combat, u: number, s: Strike): number {
-  const w = FIGHTERS[c.roster[u]!].weapon;
+  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
   const from = c.pos[u]!;
-  return w.kind === "shot" ? firstHit(c, from, s.dir) : step(c.arena, from, s.dir, s.range);
+  return w.kind === "shot" ? shotStop(c, from, s.dir, standAt(c, from)) : step(c.arena, from, s.dir, w.kind === "lob" ? s.range : 1);
 }
+
+/** An invader's aimed strike. */
+export const aimOf = (c: Combat, u: number): Strike => ({ weapon: 0, dir: c.aim[u]!, range: c.reach[u]! });
 
 export function moveUnit(c: Combat, u: number, to: number, log?: Log): void {
   const from = c.pos[u]!;
@@ -330,33 +430,69 @@ function hurt(c: Combat, u: number, amount: number, log: Log, drowned = false): 
   log?.push({ t: "down", unit: u, at: c.pos[u]!, drowned });
 }
 
-function hurtStructure(c: Combat, id: number, amount: number, log: Log): void {
+/** A unit drops from one height to a lower one: a point of damage each `fall` steps (fliers glide down). */
+function drop(c: Combat, u: number, from: number, to: number, log: Log): void {
+  const d = from - to;
+  if (FIGHTERS[c.roster[u]!].flying || d < c.arena.fall) return;
+  log?.push({ t: "fall", unit: u, drop: d });
+  hurt(c, u, Math.floor(d / c.arena.fall), log);
+}
+
+/**
+ * Damage a structure (from a direction, at one of its cells): its people
+ * lost by its share (none once evacuated). Brought down, what stood on its
+ * roof falls to the ground, and a tall one topples along the direction it
+ * was struck in, crushing what stands on the cells it falls across.
+ */
+function hurtStructure(c: Combat, id: number, amount: number, dir: number, at: number, log: Log): void {
   const hp = c.structHp[id]!;
   if (hp <= 0) return;
   const lost = Math.min(amount, hp);
   const s = c.arena.structures[id]!;
   c.structHp[id] = hp - lost;
   c.razed += lost;
-  const people = (s.people * lost) / s.hp;
+  const people = c.evacuated[id] ? 0 : (s.people * lost) / s.hp;
   c.lost += people;
-  log?.push({ t: "structure", id, amount: lost, destroyed: hp - lost <= 0, people });
+  const destroyed = hp - lost <= 0;
+  log?.push({ t: "structure", id, amount: lost, destroyed, people });
+  if (!destroyed) return;
+  const a = c.arena;
+  for (const k of s.cells) {
+    const u = c.occ[k]!;
+    if (u >= 0) drop(c, u, a.roof[k]!, a.height[k]!, log);
+  }
+  if (dir < 0 || !s.topple) return;
+  const cells: number[] = [];
+  for (let i = 1, k = step(a, at, dir); k >= 0 && cells.length < s.topple; i++, k = step(a, at, dir, i)) if (a.struct[k] !== id) cells.push(k);
+  log?.push({ t: "topple", id, dir, cells });
+  for (const k of cells) {
+    log?.push({ t: "crush", at: k });
+    const u = c.occ[k]!;
+    if (u >= 0) hurt(c, u, 2, log);
+    const sid = structureAt(c, k);
+    if (sid >= 0) hurtStructure(c, sid, 1, dir, k, log); // and it may topple on in turn
+  }
 }
 
-/** Push what stands on a cell one along a direction: it bumps into what is there (both hurt), off a drop, or into water. */
+/** Push what stands on a cell one along a direction: it bumps into a unit or a wall too high to be pushed up (both hurt), drops off a height, or into water. */
 function push(c: Combat, k: number, dir: number, log: Log): void {
   const u = c.occ[k]!;
   if (u < 0) return;
   const a = c.arena;
   const to = step(a, k, dir);
   if (to < 0) return; // the arena's edge holds
-  const sid = structureAt(c, to);
   const other = c.occ[to]!;
   const flying = FIGHTERS[c.roster[u]!].flying;
-  if (sid >= 0 || other >= 0 || (!flying && a.height[to]! - a.height[k]! > a.climb)) {
+  const from = standAt(c, k);
+  const onto = standAt(c, to);
+  if (other >= 0 || (!flying && onto - from > a.climb)) {
     log?.push({ t: "bump", unit: u, at: to });
     hurt(c, u, 1, log);
-    if (sid >= 0) hurtStructure(c, sid, 1, log);
     if (other >= 0) hurt(c, other, 1, log);
+    else {
+      const sid = structureAt(c, to);
+      if (sid >= 0) hurtStructure(c, sid, 1, dir, to, log);
+    }
     return;
   }
   c.occ[k] = -1;
@@ -364,48 +500,66 @@ function push(c: Combat, k: number, dir: number, log: Log): void {
   c.pos[u] = to;
   log?.push({ t: "push", unit: u, from: k, to });
   if (flying) return;
-  if (a.flags[to]! & A_WATER) return hurt(c, u, c.hp[u]!, log, true);
-  const drop = a.height[k]! - a.height[to]!;
-  if (drop >= a.fall) hurt(c, u, Math.floor(drop / a.fall), log);
+  if (a.flags[to]! & A_WATER && structureAt(c, to) < 0) return hurt(c, u, c.hp[u]!, log, true);
+  drop(c, u, from, onto, log);
   if (c.fire[to]) hurt(c, u, 1, log);
-}
-
-/** Strike a cell: the unit there takes the damage (and is pushed on), else the structure. */
-function hit(c: Combat, k: number, damage: number, pushDir: number, log: Log): void {
-  const u = c.occ[k]!;
-  if (u >= 0) {
-    hurt(c, u, damage, log);
-    if (pushDir >= 0 && c.hp[u]! > 0) push(c, k, pushDir, log);
-    return;
-  }
-  const sid = structureAt(c, k);
-  if (sid >= 0) hurtStructure(c, sid, damage, log);
 }
 
 /** A unit strikes from where it stands. */
 export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   if (c.hp[u]! <= 0) return;
-  const w = FIGHTERS[c.roster[u]!].weapon;
+  const a = c.arena;
+  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
+  const from = c.pos[u]!;
   const k = strikeCell(c, u, s);
   if (k < 0) return;
   log?.push({ t: "strike", unit: u, at: k });
+  if (w.kind === "evacuate") {
+    const sid = structureAt(c, k);
+    if (sid >= 0 && !c.evacuated[sid]) {
+      c.evacuating[sid] = 1;
+      log?.push({ t: "evacuate", id: sid });
+    }
+    return;
+  }
+  if (w.kind === "hoist") {
+    const v = c.occ[k]!;
+    const to = s.to ?? -1;
+    if (v < 0 || to < 0 || c.occ[to]! >= 0) return;
+    c.occ[k] = -1;
+    c.occ[to] = v;
+    c.pos[v] = to;
+    log?.push({ t: "hoist", unit: v, from: k, to });
+    if (!FIGHTERS[c.roster[v]!].flying && a.flags[to]! & A_WATER && structureAt(c, to) < 0) hurt(c, v, c.hp[v]!, log, true);
+    else if (c.fire[to]) hurt(c, v, 1, log);
+    return;
+  }
   if (w.douses && c.fire[k]) {
     c.fire[k] = 0;
     log?.push({ t: "douse", at: k });
   }
-  hit(c, k, w.damage, w.kind !== "lob" && w.push ? s.dir : -1, log);
+  const v = c.occ[k]!;
+  // a melee strike reaches a unit only so far up or down: past that, it strikes the wall of the building under it
+  const reaches = v >= 0 && (w.kind !== "melee" || Math.abs(standAt(c, k) - standAt(c, from)) <= a.reach);
+  if (reaches) {
+    hurt(c, v, w.damage, log);
+    if (w.kind !== "lob" && w.push && c.hp[v]! > 0) push(c, k, s.dir, log);
+  } else {
+    const sid = structureAt(c, k);
+    if (sid >= 0) hurtStructure(c, sid, w.damage, s.dir, k, log);
+  }
   if (w.kind === "lob" && w.push)
     for (let d = 0; d < 4; d++) {
-      const nk = step(c.arena, k, d);
+      const nk = step(a, k, d);
       if (nk >= 0 && c.occ[nk]! >= 0) push(c, nk, d, log);
     }
-  if (w.ignites && c.arena.flags[k]! & A_BURNS && structureAt(c, k) < 0 && !c.fire[k]) {
+  if (w.ignites && a.flags[k]! & A_BURNS && structureAt(c, k) < 0 && !c.fire[k]) {
     c.fire[k] = 1;
     log?.push({ t: "ignite", at: k });
   }
 }
 
-/** A rig's turn: it moves, then strikes (or doesn't). */
+/** A rig's turn: it moves, then acts (or doesn't). */
 export function act(c: Combat, u: number, dest: number, s: Strike | null, log?: Log): void {
   moveUnit(c, u, dest, log);
   if (s) strike(c, u, s, log);
@@ -413,11 +567,10 @@ export function act(c: Combat, u: number, dest: number, s: Strike | null, log?: 
 
 /** The invaders strike as they aimed, in order, each from where it stands now. */
 export function resolveInvaders(c: Combat, log?: Log): void {
-  for (let u = 0; u < c.roster.length; u++)
-    if (teamOf(c, u) === INVADERS && c.hp[u]! > 0 && c.aim[u]! >= 0) strike(c, u, { dir: c.aim[u]!, range: c.reach[u]! }, log);
+  for (let u = 0; u < c.roster.length; u++) if (teamOf(c, u) === INVADERS && c.hp[u]! > 0 && c.aim[u]! >= 0) strike(c, u, aimOf(c, u), log);
 }
 
-/** The round's end: fire burns who stands in it, and the wooden buildings beside it. */
+/** The round's end: fire burns who stands in it and the wooden buildings beside it; buildings being evacuated are empty. */
 export function endRound(c: Combat, log?: Log): void {
   const a = c.arena;
   const burnt = new Set<number>();
@@ -429,27 +582,35 @@ export function endRound(c: Combat, log?: Log): void {
       const sid = structureAt(c, step(a, k, d));
       if (sid >= 0 && a.structures[sid]!.flammable && !burnt.has(sid)) {
         burnt.add(sid);
-        hurtStructure(c, sid, 1, log);
+        hurtStructure(c, sid, 1, -1, -1, log);
       }
     }
   }
+  for (let s = 0; s < c.evacuating.length; s++)
+    if (c.evacuating[s]) {
+      c.evacuated[s] = 1;
+      c.evacuating[s] = 0;
+    }
 }
 
 // ---------------------------------------------------------------- the invaders
 
-/** What a strike landing on a cell is worth to an invader: a building most, a rig, never one of its own. */
-function worth(c: Combat, k: number): number {
-  if (k < 0) return 0;
-  if (structureAt(c, k) >= 0) return 10;
-  const u = c.occ[k]!;
-  if (u < 0) return 0;
-  return teamOf(c, u) === SQUAD ? 6 : -10;
+/**
+ * What an invader's strike would do right now, to it: buildings hit most (10
+ * a hit), a rig's damage (6 a point), its own side's (−10 a point).
+ */
+function aimValue(c: Combat, u: number, s: Strike): number {
+  const n = cloneCombat(c);
+  strike(n, u, s);
+  let value = 10 * (n.razed - c.razed);
+  for (let v = 0; v < c.roster.length; v++) if (v !== u) value += (c.hp[v]! - n.hp[v]!) * (teamOf(c, v) === SQUAD ? 6 : -10);
+  return value;
 }
 
 /**
- * The invaders move and aim, in order: each where its strike would land on
- * the most (a building over a rig, never one of its own), nearer moves first;
- * one with nothing worth striking heads for the nearest building and doesn't aim.
+ * The invaders move and aim, in order: each where its strike would do the
+ * most (a building over a rig, never its own side), nearer moves first; one
+ * with nothing worth striking heads for the nearest building and doesn't aim.
  */
 export function planInvaders(c: Combat): void {
   const a = c.arena;
@@ -462,7 +623,7 @@ export function planInvaders(c: Combat): void {
       moveUnit(c, u, dest);
       for (const s of strikesOf(c, u)) {
         // a little for staying put, and a stable jitter so ties don't all go north
-        const value = worth(c, strikeCell(c, u, s)) - 0.01 * manhattan(a, from, dest) + (((dest * 31 + s.dir * 7) % 13) / 1000);
+        const value = aimValue(c, u, s) - 0.01 * manhattan(a, from, dest) + ((dest * 31 + s.dir * 7) % 13) / 1000;
         if (value > best.value) best = { dest, s, value };
       }
       moveUnit(c, u, from);
@@ -487,7 +648,7 @@ function manhattan(a: Arena, p: number, q: number): number {
 // ---------------------------------------------------------------- outcomes
 
 export interface Outcome {
-  /** People lost, and structure hit points lost. */
+  /** People lost, and structure hit points lost (empty buildings' too). */
   lost: number;
   razed: number;
   /** Rigs down, and their hit points lost. */
@@ -496,10 +657,13 @@ export interface Outcome {
   /** Invaders down, and their hit points lost. */
   kills: number;
   invaderDamage: number;
-  /** No building touched and no rig down. */
+  /** Nobody lost, and no rig down. */
   perfect: boolean;
   score: number;
 }
+
+/** People lost below this count as none (shares of a building's people are fractions). */
+export const NOBODY = 1e-6;
 
 /** How a fight went from one state to a later one. */
 export function outcome(from: Combat, to: Combat): Outcome {
@@ -527,12 +691,12 @@ export function outcome(from: Combat, to: Combat): Outcome {
     rigDamage,
     kills,
     invaderDamage,
-    perfect: razed === 0 && rigsDown === 0,
-    score: -1000 * razed - lost / 100 - 400 * rigsDown - 20 * rigDamage + 60 * kills + 8 * invaderDamage,
+    perfect: lost <= NOBODY && rigsDown === 0,
+    score: -10 * lost - 100 * razed - 400 * rigsDown - 20 * rigDamage + 60 * kills + 8 * invaderDamage,
   };
 }
 
-/** A state's hash (positions, hit points, structures, fires): two lanes of FNV-1a, as one whole number below 2^49 (room for flags above it). */
+/** A state's hash (positions, hit points, structures, evacuations, fires): two lanes of FNV-1a, as one whole number below 2^49 (room for flags above it). */
 export function hashCombat(c: Combat): number {
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
@@ -543,6 +707,7 @@ export function hashCombat(c: Combat): number {
   for (const v of c.pos) mix(v);
   for (const v of c.hp) mix(v + 7);
   for (const v of c.structHp) mix(v + 31);
+  for (let s = 0; s < c.evacuating.length; s++) if (c.evacuating[s] || c.evacuated[s]) mix(s * 4 + c.evacuating[s]! * 2 + c.evacuated[s]! + 8191);
   for (let k = 0; k < c.fire.length; k++) if (c.fire[k]) mix(k + 4099);
   return (h1 >>> 0) * 131072 + ((h2 >>> 0) & 0x1ffff);
 }

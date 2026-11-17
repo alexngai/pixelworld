@@ -3,17 +3,19 @@ import {
   DIR_NAMES,
   FIGHTERS,
   INVADERS,
+  NOBODY,
   SQUAD,
   act,
   cloneCombat,
   endRound,
-  firstHit,
   hashCombat,
   movesOf,
   newCombat,
   outcome,
   planInvaders,
   resolveInvaders,
+  shotStop,
+  standAt,
   step,
   strikeCell,
   strikesOf,
@@ -87,9 +89,9 @@ function mattering(c: Combat, rig: number): Uint8Array {
     if (teamOf(c, u) !== INVADERS || c.hp[u]! <= 0) continue;
     for (let d = 0; d < 4; d++) mark(step(a, c.pos[u]!, d));
     if (c.aim[u]! < 0) continue;
-    const w = FIGHTERS[c.roster[u]!].weapon;
+    const w = FIGHTERS[c.roster[u]!].weapons[0]!;
     if (w.kind === "shot") {
-      const end = firstHit(c, c.pos[u]!, c.aim[u]!);
+      const end = shotStop(c, c.pos[u]!, c.aim[u]!, standAt(c, c.pos[u]!));
       for (let k = step(a, c.pos[u]!, c.aim[u]!); k >= 0; k = step(a, k, c.aim[u]!)) {
         mark(k);
         if (k === end) break;
@@ -105,12 +107,20 @@ function mattering(c: Combat, rig: number): Uint8Array {
   return m;
 }
 
-/** Whether a strike from where the unit stands touches anything (a unit, a structure, a fire to put out, a unit round a lob's target). */
-function touches(c: Combat, u: number, s: Strike): boolean {
+/**
+ * Whether a strike from where the unit stands can change this round: it
+ * touches a unit, a structure, a fire to put out, or a unit round a lob's
+ * target; a hoist sets its unit down where it can matter (`where`: in the
+ * way, beside an invader), on water or on a roof. An evacuation never does:
+ * it empties a building only by the round's end.
+ */
+function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null): boolean {
+  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
+  if (w.kind === "evacuate") return false;
+  if (w.kind === "hoist") return !where || where[s.to!] === 1 || !!(c.arena.flags[s.to!]! & A_WATER) || c.arena.struct[s.to!]! >= 0;
   const k = strikeCell(c, u, s);
   if (k < 0) return false;
   if (c.occ[k]! >= 0 || structureAt(c, k) >= 0 || c.fire[k]) return true;
-  const w = FIGHTERS[c.roster[u]!].weapon;
   if (w.kind !== "lob" || !w.push) return false;
   for (let d = 0; d < 4; d++) {
     const nk = step(c.arena, k, d);
@@ -128,7 +138,7 @@ export function actionsOf(c: Combat, rig: number, mode: "perfect" | "best" | "al
     c.occ[from] = -1;
     c.occ[dest] = rig;
     c.pos[rig] = dest;
-    for (const s of strikesOf(c, rig)) if (mode === "all" || touches(c, rig, s)) out.push({ unit: rig, dest, strike: s });
+    for (const s of strikesOf(c, rig)) if (mode === "all" || touches(c, rig, s, where)) out.push({ unit: rig, dest, strike: s });
     if (!where || where[dest]) out.push({ unit: rig, dest, strike: null });
     c.occ[dest] = -1;
     c.occ[from] = rig;
@@ -179,8 +189,8 @@ export function solveTurn(start: Combat, opts: SolveOptions = {}): SolveResult {
       for (const a of actionsOf(c, rigs[i]!, mode)) {
         const n = cloneCombat(c);
         act(n, a.unit, a.dest, a.strike);
-        // a building hurt, or a rig down, is never undone: no perfect turn goes on from it
-        if (mode === "perfect" && (n.razed > c.razed || rigDown(c, n))) continue;
+        // people lost, or a rig down, is never undone: no perfect turn goes on from it
+        if (mode === "perfect" && (n.lost > c.lost + NOBODY || rigDown(c, n))) continue;
         dfs(n, acted | (1 << i), [...plan, a], strikes + (a.strike ? 1 : 0));
         if (res.nodes >= maxNodes) return void (res.complete = false);
       }
@@ -229,9 +239,16 @@ export function describePlan(start: Combat, plan: readonly Action[]): string[] {
     const move = a.dest === c.pos[a.unit] ? "stays" : `moves to ${at(a.dest)}`;
     act(c, a.unit, a.dest, null);
     const s = a.strike;
-    const strike = s ? `, ${f.weapon.name} ${DIR_NAMES[s.dir]}${f.weapon.kind === "lob" ? ` ${s.range}` : ""} at ${at(strikeCell(c, a.unit, s))}` : "";
-    if (s) act(c, a.unit, a.dest, s);
-    return `${f.name} ${move}${strike}`;
+    let what = "";
+    if (s) {
+      const w = f.weapons[s.weapon]!;
+      const k = strikeCell(c, a.unit, s);
+      if (w.kind === "hoist") what = `, hoists the ${FIGHTERS[c.roster[c.occ[k]!]!].name} ${DIR_NAMES[s.dir]} of it to ${at(s.to!)}`;
+      else if (w.kind === "evacuate") what = `, evacuates ${c.arena.structures[c.arena.struct[k]!]!.name.replace("building.", "")} ${DIR_NAMES[s.dir]} of it`;
+      else what = `, ${w.name} ${DIR_NAMES[s.dir]}${w.kind === "lob" ? ` ${s.range}` : ""} at ${at(k)}`;
+      act(c, a.unit, a.dest, s);
+    }
+    return `${f.name} ${move}${what}`;
   });
 }
 
@@ -241,10 +258,12 @@ export function describePlan(start: Combat, plan: readonly Action[]): string[] {
  * What a turn does that makes it a puzzle: `drown` an invader pushed into
  * water; `turn` invaders striking their own; `redirect` an invader pushed off
  * its line so its strike lands on nothing that matters; `bump` an invader
- * hurt by being pushed into something; `block` a rig taking a strike meant
- * for a building; `douse` a fire put out; `kill` an invader brought down.
+ * hurt by being pushed into something; `fall` an invader dropped off a
+ * height; `crush` an invader under a toppling building; `block` a rig taking
+ * a strike meant for a building (from a roof, say); `douse` a fire put out;
+ * `kill` an invader brought down.
  */
-export type Mechanic = "drown" | "turn" | "redirect" | "bump" | "block" | "douse" | "kill";
+export type Mechanic = "drown" | "turn" | "redirect" | "fall" | "crush" | "bump" | "block" | "douse" | "kill";
 
 /** The mechanics a plan uses, played out with its round. */
 export function mechanicsOf(start: Combat, plan: readonly Action[]): Mechanic[] {
@@ -256,6 +275,12 @@ export function mechanicsOf(start: Combat, plan: readonly Action[]): Mechanic[] 
   resolveInvaders(end, theirs);
   const out = new Set<Mechanic>();
   const invader = (u: number) => teamOf(start, u) === INVADERS;
+  let crushing = false;
+  for (const e of [...mine, ...theirs]) {
+    if (e.t === "fall" && invader(e.unit)) out.add("fall");
+    if (e.t === "damage" && crushing && invader(e.unit)) out.add("crush");
+    crushing = e.t === "crush" || (crushing && e.t === "damage");
+  }
   for (const e of mine) {
     if (e.t === "down" && invader(e.unit)) out.add(e.drowned ? "drown" : "kill");
     if (e.t === "bump" && invader(e.unit)) out.add("bump");
@@ -267,7 +292,7 @@ export function mechanicsOf(start: Combat, plan: readonly Action[]): Mechanic[] 
   }
   // pushed off a line that struck something that mattered, onto one that doesn't
   const harmful = (x: Combat, u: number) => {
-    const k = strikeCell(x, u, { dir: x.aim[u]!, range: x.reach[u]! });
+    const k = strikeCell(x, u, { weapon: 0, dir: x.aim[u]!, range: x.reach[u]! });
     return k >= 0 && (structureAt(x, k) >= 0 || (x.occ[k]! >= 0 && teamOf(x, x.occ[k]!) === SQUAD));
   };
   for (let u = 0; u < start.roster.length; u++)
@@ -276,7 +301,7 @@ export function mechanicsOf(start: Combat, plan: readonly Action[]): Mechanic[] 
 }
 
 /** What each mechanic adds to a puzzle's difficulty (bits): turning invaders on the city is the art; killing them is the least of it. */
-const CLEVER: Record<Mechanic, number> = { drown: 2, turn: 2, redirect: 2, bump: 1, block: 1, douse: 1, kill: 0 };
+const CLEVER: Record<Mechanic, number> = { drown: 2, turn: 2, redirect: 2, fall: 2, crush: 2, bump: 1, block: 1, douse: 1, kill: 0 };
 
 // ---------------------------------------------------------------- puzzles
 
@@ -354,8 +379,12 @@ function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: 
     used.add(at);
     units.push({ kind, at });
   }
+  const roofs: number[] = [];
+  for (let k = 0; k < a.w * a.h; k++) if (a.struct[k]! >= 0) roofs.push(k);
   for (const kind of invaders) {
-    const ok = open.filter((k) => !used.has(k) && cheb(k, centre) <= 5 && units.every((u) => cheb(u.at, k) >= 2));
+    // a crawler or a flyer starts on a roof now and then
+    const climbs = FIGHTERS[kind].climb === Infinity && roofs.length && rand() < 0.35;
+    const ok = (climbs ? roofs : open).filter((k) => !used.has(k) && cheb(k, centre) <= 5 && units.every((u) => cheb(u.at, k) >= 2));
     if (!ok.length) return null;
     const close = ok.filter(nearBuilding);
     const at = pick(close.length && rand() < 0.8 ? close : ok);
