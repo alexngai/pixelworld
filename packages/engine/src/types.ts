@@ -450,6 +450,15 @@ export interface WorldView extends ControllerView {
   /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
   bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
   /**
+   * Draw placed objects cut down (D-159): each object (its index, as
+   * `WorldEdits` names them) up to a height (world steps), what's above left
+   * out of the image and the inside of its far walls dark, as a cutaway. Only
+   * the drawing changes (the queries still answer with the whole building);
+   * the tiles they reach bake again, without meshing again. Replaces the
+   * previous cuts; null for none.
+   */
+  cutDown(cuts: ReadonlyMap<number, number> | null): void;
+  /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and
    * outlined as the tiles are, once and not kept. `px` screen px per world

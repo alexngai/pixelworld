@@ -7,7 +7,8 @@ import { standAt, type Combat, type Mark } from "@pixelworlds/tactics";
  * grid reads on stepped roofs and in every rotation. Marked cells are filled
  * see-through, with a glow. The pointer's and the keyboard's cells are
  * outlined, with lines down to the ground when they stand on a roof. A cell
- * hidden behind a building is outlined dashed, seen through it. It is redrawn
+ * hidden behind a building is outlined dashed, seen through it; a building
+ * of the fight cut down in front of a unit (D-159) is outlined whole. Redrawn
  * every frame (the camera moves), on a 2D canvas over the world: no bakes, so
  * the cursor moves at once.
  */
@@ -19,6 +20,11 @@ export interface GlassState {
   hover: number;
   /** Cells the selected rig could strike from the cell pointed at (outlined, faint). */
   reach: readonly number[];
+  /** Per cell: still hidden behind a building (dashed). */
+  hidden: Uint8Array;
+  /** The fight's buildings cut down in front of a unit (D-159), outlined whole; and how high their stumps stand (steps). */
+  ghosts: readonly number[];
+  stump: number;
 }
 
 const COLOUR: Record<Mark["kind"], string> = {
@@ -35,9 +41,6 @@ const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, 
 export class BoardGlass {
   readonly el: HTMLCanvasElement;
   private s: GlassState | null = null;
-  /** Per cell: a building other than its own stands between it and the camera; and what that was worked out for. */
-  private hidden: Uint8Array;
-  private hiddenFor = "";
 
   constructor(
     parent: HTMLElement,
@@ -47,28 +50,10 @@ export class BoardGlass {
     this.el = document.createElement("canvas");
     this.el.className = "glass";
     parent.before(this.el);
-    this.hidden = new Uint8Array(board.w * board.h);
   }
 
   set(s: GlassState): void {
     this.s = s;
-  }
-
-  /** Which cells a building hides, by picking down each cell's view ray (again when the camera turns or the world changes). */
-  private occlusion(c: Combat): void {
-    const { camera, query, edits } = this.view;
-    const key = `${camera.rotation}:${edits.version}:${c.structHp.join("")}`;
-    if (key === this.hiddenFor) return;
-    this.hiddenFor = key;
-    const a = c.arena;
-    for (let k = 0; k < a.w * a.h; k++) {
-      const p = toWorld(this.board, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
-      const at = camera.project(p.x, p.y, standAt(c, k) + 0.05);
-      const hit = query.pickObject(at.x, at.y);
-      const sid = a.struct[k]!;
-      const own = sid >= 0 && c.structHp[sid]! > 0 ? a.structures[sid]!.object : -1;
-      this.hidden[k] = hit && hit.index !== own && !hit.group.startsWith("tree") ? 1 : 0;
-    }
   }
 
   frame(): void {
@@ -87,7 +72,6 @@ export class BoardGlass {
     if (!s) return;
     const c = s.state;
     const a = c.arena;
-    this.occlusion(c);
     const { camera } = this.view;
     const quad = (k: number, h: number, inset = 0): [number, number][] =>
       [
@@ -110,11 +94,46 @@ export class BoardGlass {
     g.lineWidth = 1;
     for (let k = 0; k < a.w * a.h; k++) {
       path(quad(k, standAt(c, k) + lift));
-      g.setLineDash(this.hidden[k] ? [3, 3] : []);
-      g.strokeStyle = this.hidden[k] ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)";
+      g.setLineDash(s.hidden[k] ? [3, 3] : []);
+      g.strokeStyle = s.hidden[k] ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)";
       g.stroke();
     }
     g.setLineDash([]);
+    // the fight's buildings cut down in front of a unit (D-159): whole, as outlines, from the stump to the roof
+    g.save();
+    g.strokeStyle = "rgba(170,215,255,0.55)";
+    g.shadowColor = "rgba(170,215,255,0.8)";
+    g.shadowBlur = 6;
+    g.lineWidth = 1.2;
+    for (const id of s.ghosts) {
+      const st = a.structures[id];
+      if (!st || c.structHp[id]! <= 0) continue;
+      const mine = new Set(st.cells);
+      for (const k of st.cells) {
+        const i = k % a.w;
+        const j = Math.floor(k / a.w);
+        const roof = quad(k, standAt(c, k));
+        const foot = quad(k, a.height[k]! + s.stump);
+        // sides open to another cell: their roof edge, and their corners down to the stump
+        ([[i, j - 1, 0, 1], [i + 1, j, 1, 2], [i, j + 1, 2, 3], [i - 1, j, 3, 0]] as const).forEach(([ni, nj, p, q]) => {
+          if (ni >= 0 && nj >= 0 && ni < a.w && nj < a.h && mine.has(nj * a.w + ni)) return;
+          // the roof's edge plainly, the corners down to the stump faintly
+          g.strokeStyle = "rgba(170,215,255,0.5)";
+          g.shadowBlur = 6;
+          g.beginPath();
+          g.moveTo(...roof[p]!);
+          g.lineTo(...roof[q]!);
+          g.stroke();
+          g.strokeStyle = "rgba(170,215,255,0.2)";
+          g.shadowBlur = 0;
+          g.beginPath();
+          g.moveTo(...roof[p]!);
+          g.lineTo(...foot[p]!);
+          g.stroke();
+        });
+      }
+    }
+    g.restore();
     // marked cells: see-through fills, glowing edges
     for (const m of s.marks) {
       const k = m.j * a.w + m.i;
@@ -123,13 +142,13 @@ export class BoardGlass {
       const pts = quad(k, standAt(c, k) + lift, 0.04);
       path(pts);
       if (fill) {
-        g.fillStyle = `rgba(${rgb},${this.hidden[k] ? fill * 0.7 : fill})`;
+        g.fillStyle = `rgba(${rgb},${s.hidden[k] ? fill * 0.7 : fill})`;
         g.fill();
       }
       g.save();
       g.shadowColor = `rgba(${rgb},0.9)`;
       g.shadowBlur = 8;
-      g.setLineDash(this.hidden[k] ? [4, 3] : []);
+      g.setLineDash(s.hidden[k] ? [4, 3] : []);
       g.strokeStyle = `rgba(${rgb},${m.kind === "ally" || m.kind === "enemy" ? 0.55 : 0.85})`;
       g.lineWidth = m.kind === "select" ? 2.5 : 1.5;
       g.stroke();

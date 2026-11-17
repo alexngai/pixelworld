@@ -133,15 +133,17 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const tileEdits = new TileEdits((i) => objectTiles(w, i), tileCells(w));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
+    // buildings cut down (D-159): not on the ground alone, nor the bare variant (no buildings there)
+    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
       const cells = tileEdits.cellsFor(t.tx, t.ty);
-      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed, cells);
+      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed, cells, cut);
       const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
-      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed, ...(cells ? { cells } : {}) };
+      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed, ...(cells ? { cells } : {}), ...(cut ? { cut } : {}) };
     }
     const { slice, cells } = await tileSlice(w, t);
-    return { slice, removed, ...(cells ? { cells } : {}) };
+    return { slice, removed, ...(cells ? { cells } : {}), ...(cut ? { cut } : {}) };
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
@@ -230,7 +232,7 @@ class View implements WorldView {
     private readonly compositor: Compositor,
     private readonly service: BakeService,
     private readonly cache: TileStore | null,
-    private readonly cacheKey: (t: TileRequest, removed?: readonly number[], cells?: string) => string,
+    private readonly cacheKey: (t: TileRequest, removed?: readonly number[], cells?: string, cut?: string) => string,
     editLog: EditLog,
     private readonly tileEdits: TileEdits,
   ) {
@@ -321,11 +323,13 @@ class View implements WorldView {
       const outdated =
         !res.ground &&
         !failed &&
-        ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") || (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty));
+        ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
+          (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
+          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty)));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
-        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed, res.cells), img);
+        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed, res.cells, res.cut), img);
       };
       // baked while idle, for later (another rotation, around the view): into the cache, not onto the GPU
       if (this.idleAsked.delete(res.key) && !(res.rotation === this.cam.rotation && this.near.some((t) => t.tx === res.tx && t.ty === res.ty))) {
@@ -895,6 +899,10 @@ class View implements WorldView {
       out.push(img ? { rotation: r, ...img } : null);
     }
     return out;
+  }
+
+  cutDown(cuts: ReadonlyMap<number, number> | null): void {
+    this.edited(this.tileEdits.setCuts(cuts ?? new Map()));
   }
 
   async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean } = {}): Promise<TopDownImage | null> {

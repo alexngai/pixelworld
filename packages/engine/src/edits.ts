@@ -153,4 +153,37 @@ export class TileEdits {
   cellsFor(tx: number, ty: number): string {
     return this.terrain?.key(tx, ty) ?? "";
   }
+
+  /** Buildings cut down (D-159): object → height (world steps), and the objects whose bake reaches each tile. */
+  private cuts = new Map<number, number>();
+  private readonly cutByTile = new Map<string, Set<number>>();
+
+  /** Cut these objects down (or none); the tiles whose images change. */
+  setCuts(cuts: ReadonlyMap<number, number>): [number, number][] {
+    const touched = new Map<string, [number, number]>();
+    const changed = new Set<number>();
+    for (const [i, h] of cuts) if (this.cuts.get(i) !== h) changed.add(i);
+    for (const i of this.cuts.keys()) if (!cuts.has(i)) changed.add(i);
+    for (const i of changed)
+      for (const t of this.tilesOf(i)) {
+        const at = `${t[0]},${t[1]}`;
+        touched.set(at, t);
+        let set = this.cutByTile.get(at);
+        if (cuts.has(i)) {
+          if (!set) this.cutByTile.set(at, (set = new Set()));
+          set.add(i);
+        } else if (set) {
+          set.delete(i);
+          if (!set.size) this.cutByTile.delete(at);
+        }
+      }
+    this.cuts = new Map(cuts);
+    return [...touched.values()];
+  }
+
+  /** The cuts a tile's bake reaches, "index:height,…" in order, or "" for none. */
+  cutFor(tx: number, ty: number): string {
+    const set = this.cutByTile.get(`${tx},${ty}`);
+    return set ? [...set].sort((a, b) => a - b).map((i) => `${i}:${this.cuts.get(i)}`).join(",") : "";
+  }
 }

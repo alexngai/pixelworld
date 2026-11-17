@@ -458,7 +458,7 @@ export async function openTileCache(option: WorldViewOptions["cache"], code = BA
  * objects (D-124) is kept under them as well (the list itself, not a hash:
  * one tile's is short, and two lists must never share a key).
  */
-export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[], cells?: string) => string {
+export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[], cells?: string, cut?: string) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
@@ -471,6 +471,6 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...plugins,
   ];
   // and one whose slice holds terrain edits (D-147) under them: the edits themselves, in the order stamped
-  return (t, removed, cells) =>
-    [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|");
+  return (t, removed, cells, cut) =>
+    [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : []), ...(cut ? [`cut:${cut}`] : [])].join("|");
 }

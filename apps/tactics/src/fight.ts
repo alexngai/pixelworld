@@ -136,8 +136,6 @@ export class Fight {
   /** What the looked-at cell holds, said beside it, and that cell. */
   private readonly tip: HTMLElement;
   private tipAt = -1;
-  /** Half see-through, what stands in front of the looked-at cell (D-156): a speck there with a reveal. */
-  private readonly peek: Entity;
   private hover = -1;
   private arrowsShown = "";
   /** A board step along the view's u (down-right on screen) and v (down-left): what the arrow keys move by. */
@@ -150,9 +148,18 @@ export class Fight {
   private readonly entities: (Entity | null)[] = [];
   private readonly overlay: BoardOverlay;
   private readonly map: TacticalMap;
-  /** Buildings in front of the board, out of the world while the fight lasts (D-154), and the rotation they were found for. */
-  private hidden: number[] = [];
+  /** The rotation the view was laid out for, and the way to the camera over the ground (a diagonal). */
   private hiddenFor = -1;
+  private toward: readonly [number, number] = [1, 1];
+  /** Per board cell, what stands between it and the camera (D-159): from its middle, and from its middle, corners and a unit's head. */
+  private rays: { centre: Set<number>; all: Set<number> }[] | null = null;
+  /** The fight's own buildings cut down in front of a unit (their ids), shown whole as outlines; what the cuts are now. */
+  private ghosts: number[] = [];
+  private cutKey = "";
+  /** Cutting on (V turns it off: the city as it stands). */
+  private cutting = true;
+  /** Cells still hidden by a building (dashed on the glass). */
+  private hiddenCells: Uint8Array;
   private readonly fires = new Map<number, Entity[]>();
   private readonly ash = new Set<number>();
   private readonly fx = new Set<{ entities: Entity[]; until: number }>();
@@ -184,6 +191,7 @@ export class Fight {
     this.hints = s.hints;
     this.ramps = rampsFor(s.view.world.palette.rampIds);
     this.c = cloneCombat(s.puzzle.combat);
+    this.hiddenCells = new Uint8Array(this.c.arena.w * this.c.arena.h);
     this.start = cloneCombat(this.c);
     this.turnStart = cloneCombat(this.c);
     this.labelRoot = s.labels;
@@ -202,14 +210,6 @@ export class Fight {
     this.tip.className = "tip";
     this.tip.hidden = true;
     s.labels.append(this.tip);
-    this.peek = this.view.entities.add({
-      model: { boxes: [{ x0: -0.01, y0: -0.01, z0: 0, x1: 0.01, y1: 0.01, z1: 0.01, ramp: 0 }], key: "fight-peek" },
-      x: 0,
-      y: 0,
-      reveal: { margin: 34, density: 0.55 },
-      visible: false,
-      wait: false,
-    });
     void this.view.layers.add(this.overlay);
     this.bestRotation();
     this.clearView();
@@ -278,16 +278,9 @@ export class Fight {
     camera.rotation = best;
   }
 
-  /**
-   * Take what stands between the camera and the board out of the world (its
-   * tiles bake again without it), and put back what no longer does: only the
-   * fight's own buildings stay (and trees), so a slab on the board too thin
-   * to count as a building no longer stands over a street the fight thinks
-   * open. Picks down the view ray over the board's cells, roofs included,
-   * again after each removal, for what stood behind.
-   */
+  /** Lay the map and the arrow keys as the view lies, and cut down what hides the board from this side (again when the camera turns). */
   private clearView(): void {
-    const { camera, query, edits } = this.view;
+    const { camera } = this.view;
     if (camera.rotation === this.hiddenFor) return;
     this.hiddenFor = camera.rotation;
     // the map turned as the view is
@@ -302,27 +295,107 @@ export class Fight {
     const [ai, aj] = [along(di), along(dj)];
     this.stepU = [ai[0], aj[0]];
     this.stepV = [ai[1], aj[1]];
-    if (this.hidden.length) edits.restore(this.hidden);
-    const a = this.c.arena;
-    const keep = new Set(a.structures.map((s) => s.object));
-    const found = new Set<number>();
-    for (let pass = 0; pass < 6; pass++) {
-      const more: number[] = [];
-      for (let j = 0; j <= 2 * a.h; j++)
-        for (let i = 0; i <= 2 * a.w; i++) {
-          const k = Math.min(a.h - 1, j >> 1) * a.w + Math.min(a.w - 1, i >> 1);
-          const p = toWorld(this.board, { x: i / 2, y: j / 2 });
-          const at = camera.project(p.x, p.y, standAt(this.c, k));
-          const hit = query.pickObject(at.x, at.y);
-          if (hit && !keep.has(hit.index) && !found.has(hit.index) && !hit.group.startsWith("tree")) {
-            found.add(hit.index);
-            more.push(hit.index);
+    // which way the camera is, over the ground: a cell across each way (two steps up) stays on one screen point
+    const m = this.centre(0);
+    const at = camera.project(m.x, m.y, 0);
+    this.toward =
+      DIAGONALS.find(([dx, dy]) => {
+        const q = camera.project(m.x + dx, m.y + dy, 2);
+        return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
+      }) ?? [1, 1];
+    this.rays = null;
+    this.updateCuts();
+  }
+
+  /**
+   * The placed objects between the camera and a point (world cells, steps),
+   * by a march up its view ray over their footprints and heights: all of them,
+   * front ones and those behind, but trees.
+   */
+  private occluders(x: number, y: number, h: number): Set<number> {
+    const out = new Set<number>();
+    const { query } = this.view;
+    const [dx, dy] = this.toward;
+    // a cell across each way, two steps up; to the tallest tower (about 150 steps)
+    for (let t = 0.25; t < 80; t += 0.35) {
+      const z = h + 2 * t;
+      for (const o of query.objectsAt(x + dx * t, y + dy * t))
+        if (o.base !== null && z >= o.base && z <= (o.top ?? o.base + 3) && !o.group.startsWith("tree")) out.add(o.index);
+    }
+    return out;
+  }
+
+  /**
+   * What hides the fight is cut down to a stump (D-159), drawn so; the
+   * queries still have it whole. Every building between the camera and the
+   * board that isn't the fight's own; and the fight's own where they stand in
+   * front of a unit (not one a unit stands on). The cut board buildings are
+   * shown whole as outlines (the glass); cells still hidden are dashed there.
+   */
+  private updateCuts(): void {
+    const c = this.c;
+    const a = c.arena;
+    const stump = 6 / a.metersPerStep;
+    const own = new Map(a.structures.map((st, id) => [st.object, id] as const));
+    // what stands between each cell and the camera: from its middle and corners, at a unit's feet and head;
+    // once a rotation (and again when a building falls)
+    if (!this.rays) {
+      this.rays = [];
+      for (let k = 0; k < a.w * a.h; k++) {
+        const h = standAt(c, k) + 0.1;
+        const centre = new Set<number>();
+        const all = new Set<number>();
+        for (const [di, dj] of [[0.5, 0.5], [0.05, 0.05], [0.95, 0.05], [0.95, 0.95], [0.05, 0.95]] as const)
+          for (const z of [h, h + 1.5]) {
+            const p = toWorld(this.board, { x: (k % a.w) + di, y: Math.floor(k / a.w) + dj });
+            for (const o of this.occluders(p.x, p.y, z)) {
+              all.add(o);
+              if (di === 0.5 && z === h) centre.add(o);
+            }
+          }
+        this.rays.push({ centre, all });
+      }
+    }
+    const cuts = new Map<number, number>();
+    if (this.cutting) {
+      const { query } = this.view;
+      const p0 = toWorld(this.board, { x: 0, y: 0 });
+      const p1 = toWorld(this.board, { x: a.w, y: a.h });
+      const [bx0, by0, bx1, by1] = [Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y)];
+      const stoodOn = new Set<number>();
+      for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0 && structureAt(c, c.pos[u]!) >= 0) stoodOn.add(a.structures[structureAt(c, c.pos[u]!)]!.object);
+      this.ghosts = [];
+      for (let k = 0; k < a.w * a.h; k++) {
+        const sid = structureAt(c, k);
+        const mine = sid >= 0 ? a.structures[sid]!.object : -1;
+        for (const o of this.rays[k]!.all) {
+          if (o === mine || cuts.has(o)) continue;
+          const id = own.get(o);
+          if (id === undefined) {
+            // not the fight's: a stump; a slab on the board too thin to be one of its buildings stands over street the fight takes for open, so to the ground
+            const hit = query.object(o);
+            if (!hit) continue;
+            const onBoard = (hit.fp ?? [[hit.x, hit.y] as [number, number]]).some(([x, y]) => x > bx0 && x < bx1 && y > by0 && y < by1);
+            cuts.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + (onBoard ? 0.05 : stump));
+          } else if (!stoodOn.has(o) && c.structHp[id]! > 0) {
+            // the fight's own: a stump, outlined whole
+            cuts.set(o, a.height[a.structures[id]!.cells[0]!]! + stump);
+            this.ghosts.push(id);
           }
         }
-      if (!more.length) break;
-      edits.remove(more);
+      }
+    } else this.ghosts = [];
+    const key = [...cuts].map(([o, h]) => `${o}:${h.toFixed(2)}`).sort().join(",");
+    if (key !== this.cutKey) {
+      this.cutKey = key;
+      this.view.cutDown(cuts.size ? cuts : null);
     }
-    this.hidden = [...found];
+    // the cells still hidden: behind a building that isn't cut and isn't the cell's own (dashed on the glass)
+    for (let k = 0; k < a.w * a.h; k++) {
+      const sid = structureAt(c, k);
+      const mine = sid >= 0 ? a.structures[sid]!.object : -1;
+      this.hiddenCells[k] = [...this.rays[k]!.centre].some((o) => o !== mine && !cuts.has(o)) ? 1 : 0;
+    }
   }
 
   /** The camera on the board's middle, zoomed in as far as the board still fits about two thirds of the screen. */
@@ -354,8 +427,6 @@ export class Fight {
       h: h ?? standAt(this.c, k),
       heading: teamOf(this.c, u) === INVADERS && this.c.aim[u]! >= 0 ? angle(this.c.aim[u]!) : 0,
       silhouette: true,
-      // a clean cut through whatever of the board's own stands in front of it (D-154)
-      reveal: { margin: 14, density: 1 },
       wait: false,
     });
   }
@@ -422,6 +493,7 @@ export class Fight {
         this.effect("smoke", k, 2, Infinity);
       }
     }
+    this.updateCuts();
   }
 
   private frame(now: number): void {
@@ -559,6 +631,7 @@ export class Fight {
                   this.view.edits.remove([s.object]);
                   this.razed.push(s.object);
                   this.razedThisTurn.push(s.object);
+                  this.rays = null;
                   this.refreshArt();
                 }
               },
@@ -683,7 +756,7 @@ export class Fight {
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
     }
-    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach });
+    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach, hidden: this.hiddenCells, ghosts: this.ghosts, stump: 6 / c.arena.metersPerStep });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
@@ -770,7 +843,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city</div></div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city · <kbd>V</kbd> cutaway</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>
@@ -864,12 +937,8 @@ export class Fight {
   private inspect(c: Combat, k: number): void {
     if (k < 0 || this.phase === "busy" || this.phase === "over") {
       this.tip.hidden = true;
-      this.peek.visible = false;
       return;
     }
-    const p = this.centre(k);
-    this.peek.moveTo(p.x, p.y, standAt(c, k));
-    this.peek.visible = true;
     const a = c.arena;
     const lines: string[] = [];
     const u = c.occ[k]!;
@@ -1031,6 +1100,13 @@ export class Fight {
   }
 
   key(k: string): boolean {
+    if (k === "v") {
+      this.cutting = !this.cutting;
+      this.updateCuts();
+      this.say(this.cutting ? "What hides the board is cut down (V for the city whole)." : "The city whole (V to cut down what hides the board).");
+      this.paint();
+      return true;
+    }
     if (k === "m") {
       this.map.toggle();
       return true;
@@ -1092,6 +1168,7 @@ export class Fight {
       this.c = cloneCombat(this.turnStart);
       if (this.razedThisTurn.length) {
         this.view.edits.restore(this.razedThisTurn);
+        this.rays = null;
         this.refreshArt();
       }
       this.razed = this.razed.filter((o) => !this.razedThisTurn.includes(o));
@@ -1233,7 +1310,7 @@ export class Fight {
     for (const e of this.entities) e?.remove();
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
-    if (this.hidden.length) this.view.edits.restore(this.hidden);
+    this.view.cutDown(null);
     this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();
@@ -1241,7 +1318,6 @@ export class Fight {
     this.map.el.remove();
     this.glass.dispose();
     this.tip.remove();
-    this.peek.remove();
   }
 
   /** The puzzle, for a retry. */

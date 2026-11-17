@@ -74,6 +74,12 @@ export interface BakeTileMessage {
    * kept scene is meshed again when they differ from those it was meshed with.
    */
   cells?: string;
+  /**
+   * Buildings cut down (D-159): "index:height,…", each placed object's index
+   * and the height (world steps) it is cut at. Only the bake changes: the
+   * kept scene is drawn with the cut, not meshed again.
+   */
+  cut?: string;
 }
 
 export interface BakeSpriteMessage {

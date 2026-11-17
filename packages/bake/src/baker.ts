@@ -44,6 +44,12 @@ export interface BakeOptions {
   shadowTexel?: number;
   /** How the world is laid out (default the iso view; `topDownProjection` from above, D-155). */
   projection?: Projection;
+  /**
+   * Buildings cut down (D-159): for each cell of a rectangle, the height
+   * (render steps) the objects it owns are cut at, 0 for none; what's above
+   * isn't drawn, and the inside of their far walls shows dark, as solid.
+   */
+  cut?: { x0: number; y0: number; w: number; h: number; heights: Float32Array };
 }
 
 export interface StyleParams {
@@ -71,6 +77,8 @@ const MAX_SHADOW = 4096;
 const TEXEL_UNIT = 9;
 /** The texture unit of a field's ground shape (FIELD_SHAPE_FS). */
 const SHAPE_UNIT = 10;
+/** The cut-down heights (D-159). */
+const CUT_UNIT = 11;
 
 interface UploadedMesh {
   vao: WebGLVertexArrayObject;
@@ -478,6 +486,13 @@ export class Baker {
       }
     }
 
+    // the cut's heights, and which way the camera is: across the projection's screen axes, the way depth grows
+    const cut = options.cut;
+    const cutTex = cut ? createTexture(gl, cut.w, cut.h, gl.R32F, gl.RED, gl.FLOAT, cut.heights) : null;
+    const [px, py, pd] = [proj.x, proj.y, proj.d];
+    let toward = [px[1] * py[2] - px[2] * py[1], px[2] * py[0] - px[0] * py[2], px[0] * py[1] - px[1] * py[0]];
+    if (toward[0]! * pd[0] + toward[1]! * pd[1] + toward[2]! * pd[2] < 0) toward = toward.map((v) => -v);
+
     // 2. G-buffer: ramp, light level, AO, flags + depth
     const gTex = rgba8Texture(gl, gw, gh);
     const gDepth = depthTexture(gl, gw, gh);
@@ -526,12 +541,19 @@ export class Baker {
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.loc("uShadowMap"), 0);
       gl.uniform1i(u.loc("uFaceTexels"), TEXEL_UNIT);
+      gl.uniform1i(u.loc("uCutOn"), cutTex ? 1 : 0);
+      gl.uniform1i(u.loc("uCutMask"), CUT_UNIT);
+      gl.uniform2i(u.loc("uCutOrigin"), cut?.x0 ?? 0, cut?.y0 ?? 0);
+      gl.uniform3fv(u.loc("uToward"), toward);
       const sr = style.steepRock;
       gl.uniform1i(u.loc("uSteepDrop"), sr?.drop ?? 0);
       gl.uniform1i(u.loc("uRockSurface"), sr?.rockSurface ?? -1);
       gl.uniform1i(u.loc("uWaterSurface"), sr?.waterSurface ?? -1);
       gl.uniform1i(u.loc("uSnowSurface"), sr?.snowSurface ?? -1);
     }
+    gl.activeTexture(gl.TEXTURE0 + CUT_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, cutTex);
+    gl.activeTexture(gl.TEXTURE0);
     gl.useProgram(this.g.prog);
     const hide = options.hide;
     // draws are the scene's meshes, then its batches
@@ -570,12 +592,12 @@ export class Baker {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindVertexArray(null);
-    for (const unit of [SHAPE_UNIT, TEXEL_UNIT, 8, 7, 6, 5, 4, 3, 2, 1, 0]) {
+    for (const unit of [CUT_UNIT, SHAPE_UNIT, TEXEL_UNIT, 8, 7, 6, 5, 4, 3, 2, 1, 0]) {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, null);
     }
     for (const fb of [shadowFb, gFb, outFb]) if (fb) gl.deleteFramebuffer(fb);
-    for (const tex of [shadowTex, gTex, gDepth, outTex]) if (tex) gl.deleteTexture(tex);
+    for (const tex of [shadowTex, gTex, gDepth, outTex, cutTex]) if (tex) gl.deleteTexture(tex);
 
     return {
       image: { ...rect, depthBase, pixels },

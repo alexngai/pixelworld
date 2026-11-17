@@ -129,7 +129,8 @@ export class BakeHost {
     const meshMs = performance.now() - t0;
     // ponytail: a bare variant whose scene left the cache meshes the tile again; bake both together if that shows
     const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
-    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set(objects) } : {}) });
+    const cut = msg.cut && !msg.bare && !msg.ground ? this.cutMask(init, msg.cut) : null;
+    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set(objects) } : {}), ...(cut ? { cut } : {}) });
     // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there)
     if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) applyHeroPaint(res.image, msg.rotation, init.heroes);
     const vertices =
@@ -139,6 +140,35 @@ export class BakeHost {
     // every bake of the tile (each rotation) reports its failed models: such a tile isn't kept in the persistent cache
     if (msg.ground) this.baker.releaseScene(scene);
     this.reply(msg.id, res, meshMs, vertices, this.sceneFailures.get(scene));
+  }
+
+  /**
+   * The heights (render steps) objects are cut at (D-159), by the cell that
+   * owns them (their anchor's), over the anchors' bounds: a big building
+   * anchored outside the slice reaches into it too.
+   */
+  private cutMask(init: InitMessage, cut: string): { x0: number; y0: number; w: number; h: number; heights: Float32Array } | null {
+    const instances = init.objects?.instances;
+    if (!instances) return null;
+    const s = init.renderScale ?? 1;
+    const list: [number, number, number][] = [];
+    for (const part of cut.split(",")) {
+      const [i, h] = part.split(":").map(Number) as [number, number];
+      const o = instances[i];
+      if (o) list.push([Math.floor(o.x), Math.floor(o.y), h * s]);
+    }
+    if (!list.length) return null;
+    const x0 = Math.min(...list.map((l) => l[0]));
+    const y0 = Math.min(...list.map((l) => l[1]));
+    const w = Math.max(...list.map((l) => l[0])) - x0 + 1;
+    const h = Math.max(...list.map((l) => l[1])) - y0 + 1;
+    const heights = new Float32Array(w * h);
+    for (const [x, y, c] of list) {
+      // several objects of a cell: the lowest cut
+      const k = (y - y0) * w + (x - x0);
+      heights[k] = heights[k] ? Math.min(heights[k]!, c) : Math.max(1e-3, c);
+    }
+    return { x0, y0, w, h, heights };
   }
 
   /** A slice's scene, in render units: its terrain, and its placed objects but those removed (none: no objects). */
