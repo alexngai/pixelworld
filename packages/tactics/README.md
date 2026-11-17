@@ -7,6 +7,7 @@ What a turn-based tactics game on pixelworld's real cities draws and reads, besi
 - **`objectInfo`**: a building's storeys, floor area, use, material, occupants, flammability and strength.
 - **Roofs and buildings (D-151)**: units climb onto roofs by their reach, shield the building under them, fall when pushed off, and fall with it when it comes down; tall buildings topple across a line; the crane hoists; any rig evacuates.
 - **Whole fights (D-152)**: `solveFight` searches a fight over its rounds for a line that holds every round, and counts the first turns that lose nobody now but lose the fight later (traps). `generatePuzzle({ rounds: 3 })` makes puzzles whose whole fight can be held.
+- **The city's geometry (D-157)**: rigs and crawlers leap from roof to roof across a street; striking from 6 m above does a point more; fire spreads through trees and grass and burns out to ash (`isBurning`).
 - **Combat (D-150)**: a turn-based fight on a board (`arenaFromBoard`, `newCombat`, `planInvaders`, `act`, `resolveInvaders`, `endRound`): invaders aim before the squad moves, and strike from wherever they stand after. `solveTurn` searches a turn for the plays that lose nobody; `generatePuzzle` makes positions that are solvable, beat a greedy player, and take clever play (`mechanicsOf`).
 
 ```ts
@@ -42,4 +43,4 @@ describePlan(puzzle.combat, puzzle.solution.plan);       // ["Wrecker moves to (
 solveTurn(puzzle.combat).perfect.length;                 // the turns that lose nobody
 ```
 
-In the sandbox, C starts a fight under the pointer. The playable game is `apps/tactics` (D-153): `pnpm --filter @pixelworlds/tactics-game dev`, then http://localhost:5300.
+In the sandbox, C starts a fight under the pointer. The playable game is `apps/tactics` (D-153; the board over the city view, a keyboard cursor, a tactical map baked from above and the city map in D-154–D-158): `pnpm --filter @pixelworlds/tactics-game dev`, then http://localhost:5300.
