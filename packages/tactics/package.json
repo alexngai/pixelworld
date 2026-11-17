@@ -1,0 +1,25 @@
+{
+  "name": "@pixelworlds/tactics",
+  "license": "MIT OR Apache-2.0",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tactics on pixelworld's real cities: board overlays, unit and effect voxel models, and building occupants and materials",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "demo": "vite --config src/demo/vite.config.ts"
+  },
+  "dependencies": {
+    "@pixelworlds/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixelworlds/city-hongkong": "workspace:*",
+    "@pixelworlds/city-kyoto": "workspace:*",
+    "@pixelworlds/city-nyc": "workspace:*",
+    "@pixelworlds/city-paris": "workspace:*",
+    "@pixelworlds/city-sf": "workspace:*",
+    "@pixelworlds/city-tokyo": "workspace:*"
+  }
+}

@@ -11,6 +11,7 @@ import {
 } from "@pixelworlds/grid";
 import type { StylePack } from "@pixelworlds/style";
 import type { WorldManifest } from "@pixelworlds/world-format";
+import type { ObjectInstance } from "@pixelworlds/generators";
 import type { LandmarkInfo, ObjectHit, PickResult, RoadInfo, SurfaceInfo, WorldQuery } from "./types";
 
 /** The loaded terrain the queries read (a ChunkStore). */
@@ -57,6 +58,8 @@ export interface ObjectSource {
   landmarks(): LandmarkInfo[];
   /** The highest an object reaches over ground no higher than this (steps). */
   highest(ground: number): number;
+  /** An object's data by its place in the objects file, or null where that isn't known. */
+  instance(index: number): ObjectInstance | null;
 }
 
 /** Height resolution of `pick`'s march along the view ray (steps). */
@@ -204,5 +207,6 @@ export function createQuery(
 
     objectsAt: (x, y) => (objects ? objects.at(x, y) : []),
     landmarks: () => (objects ? objects.landmarks() : []),
+    object: (index) => (objects ? objects.instance(index) : null),
   };
 }

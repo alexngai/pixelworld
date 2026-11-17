@@ -69,6 +69,11 @@ export interface BakeTileMessage {
    * when they differ from the ones it was meshed without.
    */
   removed?: number[];
+  /**
+   * The terrain edits the slice holds (`ChunkStore.editsIn`, D-147): its
+   * kept scene is meshed again when they differ from those it was meshed with.
+   */
+  cells?: string;
 }
 
 export interface BakeSpriteMessage {

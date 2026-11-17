@@ -1,3 +1,4 @@
+import { cellsArea } from "./edits";
 import type { ObjectHit, WorldEdits, WorldQuery } from "./types";
 
 /**
@@ -96,40 +97,41 @@ export function readCells(query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "ro
     roadClass: new Uint8Array(n),
     objects: new Map(),
   };
-  const wall = opts.wall ?? isWall;
-  const trees = opts.trees ?? isTree;
-  const tall = opts.defaultHeight ?? 3;
-  for (let cy = 0; cy < rect.h; cy++)
-    for (let cx = 0; cx < rect.w; cx++) {
-      const x = rect.x0 + cx + 0.5;
-      const y = rect.y0 + cy + 0.5;
-      const i = cy * rect.w + cx;
-      const ground = query.heightAt(x, y) ?? 0;
-      c.height[i] = ground;
-      const s = query.surfaceAt(x, y);
-      let f = s?.waterLevel != null ? CELL_WATER : 0;
-      c.surface[i] = s?.id ?? 0;
-      const road = query.roadAt(x, y);
-      if (road) {
-        f |= CELL_ROAD;
-        c.roadClass[i] = road.classId;
-      }
-      c.flags[i] = f;
-      const on: CellObject[] = [];
-      for (const o of query.objectsAt(x, y)) {
-        opts.onObject?.(o, i);
-        const w = wall(o);
-        const t = !w && trees(o);
-        if (w || t) on.push({ index: o.index, wall: w, trees: t, top: o.top ?? (o.base ?? ground) + tall });
-      }
-      if (on.length) c.objects.set(i, on);
-      settle(c, i, () => false);
-    }
+  for (let i = 0; i < n; i++) readCell(c, query, i, opts);
   return c;
 }
 
-/** A cell's walls, trees and top from the objects standing on it (and its ground). */
-function settle(c: Cells, i: number, removed: (index: number) => boolean): void {
+/** Read one cell from the queries, at its middle: as `readCells` does, and again after a terrain edit (`followEdits`). */
+function readCell(c: Cells, query: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">, i: number, opts: ReadCellsOptions, removed: (index: number) => boolean = () => false): void {
+  const wall = opts.wall ?? isWall;
+  const trees = opts.trees ?? isTree;
+  const tall = opts.defaultHeight ?? 3;
+  const x = c.x0 + (i % c.w) + 0.5;
+  const y = c.y0 + Math.floor(i / c.w) + 0.5;
+  const ground = query.heightAt(x, y) ?? 0;
+  c.height[i] = ground;
+  const s = query.surfaceAt(x, y);
+  let f = s?.waterLevel != null ? CELL_WATER : 0;
+  c.surface[i] = s?.id ?? 0;
+  const road = query.roadAt(x, y);
+  c.roadClass[i] = road?.classId ?? 0;
+  if (road) f |= CELL_ROAD;
+  c.flags[i] = f;
+  // what an edit took out stays on the cell's list (the queries no longer answer for it), so putting it back finds it
+  const on: CellObject[] = (c.objects.get(i) ?? []).filter((o) => removed(o.index));
+  for (const o of query.objectsAt(x, y)) {
+    opts.onObject?.(o, i);
+    const w = wall(o);
+    const t = !w && trees(o);
+    if (w || t) on.push({ index: o.index, wall: w, trees: t, top: o.top ?? (o.base ?? ground) + tall });
+  }
+  if (on.length) c.objects.set(i, on);
+  else c.objects.delete(i);
+  settleCell(c, i, removed);
+}
+
+/** A cell's walls, trees and top from the objects standing on it (and its ground), but those `removed`. */
+export function settleCell(c: Cells, i: number, removed: (index: number) => boolean): void {
   let f = c.flags[i]! & ~(CELL_WALL | CELL_TREES);
   let top = c.height[i]!;
   for (const o of c.objects.get(i) ?? []) {
@@ -157,13 +159,30 @@ export function cellsOf(c: Cells, objects: Iterable<number>): number[] {
  */
 export function setRemoved(c: Cells, removed: (index: number) => boolean, objects?: Iterable<number>): void {
   const cells = objects ? cellsOf(c, objects) : [...c.objects.keys()];
-  for (const i of cells) settle(c, i, removed);
+  for (const i of cells) settleCell(c, i, removed);
 }
 
-/** Keep the cells to a world's edits (a page's view, or a world a server keeps for one match): returns a function that stops. */
-export function followEdits(c: Cells, edits: Pick<WorldEdits, "isRemoved" | "onChange">): () => void {
-  setRemoved(c, (o) => edits.isRemoved(o));
-  return edits.onChange((e) => setRemoved(c, (o) => edits.isRemoved(o), e.objects));
+/**
+ * Keep the cells to a world's edits (a page's view, or a world a server keeps
+ * for one match): objects taken out and put back, and, given the world's
+ * queries, the cells a terrain edit changed read again (D-147). Returns a
+ * function that stops.
+ */
+export function followEdits(
+  c: Cells,
+  edits: Pick<WorldEdits, "isRemoved" | "onChange">,
+  query?: Pick<WorldQuery, "heightAt" | "surfaceAt" | "roadAt" | "objectsAt">,
+  opts: ReadCellsOptions = {},
+): () => void {
+  const removed = (o: number) => edits.isRemoved(o);
+  setRemoved(c, removed);
+  return edits.onChange((e) => {
+    if (e.op !== "cells") return setRemoved(c, removed, e.objects);
+    const area = cellsArea(e.cells);
+    if (!query || !area) return;
+    for (let cy = Math.max(c.y0, area[1]); cy < Math.min(c.y0 + c.h, area[3]); cy++)
+      for (let cx = Math.max(c.x0, area[0]); cx < Math.min(c.x0 + c.w, area[2]); cx++) readCell(c, query, cellIndex(c, cx, cy), opts, removed);
+  });
 }
 
 /** A cell's index, or −1 outside the rectangle. */

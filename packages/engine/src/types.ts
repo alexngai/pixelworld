@@ -1,5 +1,5 @@
 import type { BakedImage } from "@pixelworlds/bake";
-import type { Box, PluginDescriptor } from "@pixelworlds/generators";
+import type { Box, ObjectInstance, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
@@ -11,7 +11,7 @@ import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/wor
  * steps, screen positions in internal (render) pixels before the zoom.
  */
 
-export type { Box, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+export type { Box, ObjectInstance, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
 
 /** A baked sprite on the GPU (from `LayerContext.bakeSprite`); opaque to layers. */
 export type Sprite = GpuImage;
@@ -79,33 +79,59 @@ export interface OpenWorldOptions {
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
-  /** Placed objects taken out and put back (D-124): the queries agree at once; there is nothing to bake. */
+  /** Placed objects taken out and put back (D-124), and terrain edited (D-147): the queries agree at once; there is nothing to bake. */
   readonly edits: WorldEdits;
   /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
   stats(): WorldStats;
 }
 
-/** A runtime edit to a world (D-124): placed objects taken out of it, or put back. */
-export interface WorldEdit {
+/** A runtime edit to a world: placed objects taken out of it or put back (D-124), or terrain cells edited (D-147). */
+export type WorldEdit = ObjectsEdit | CellsEdit;
+
+export interface ObjectsEdit {
   op: "remove" | "restore";
   /** The objects, by `ObjectHit.index`. */
   objects: number[];
 }
 
+export interface CellsEdit {
+  op: "cells";
+  cells: CellEdit[];
+}
+
+/** A change to one terrain cell (D-147). Fields left out stay as they are; a later edit of the cell overrides an earlier one's fields. */
+export interface CellEdit {
+  /** The cell (whole cells, inside the world). */
+  x: number;
+  y: number;
+  /** A surface the world has, by name (its manifest's `surfaces`): scorched ground as `rock`, say. */
+  surface?: string;
+  /**
+   * Water standing at this level (steps), or null to drain it. A world with
+   * `micro.shores` draws it as a plane at that level; others draw water where
+   * a cell's surface is `water`, so set that too.
+   */
+  water?: number | null;
+  /** Level the ground at this height (steps); the neighbours slope or step to meet it, and objects on it stand on it. */
+  height?: number;
+}
+
 /**
  * A world's runtime edits (D-124): its placed objects (buildings, trees,
- * landmarks) taken out and put back, as a log of ops a game can send and
- * replay. The queries (`objectsAt`, `pickObject`, `landmarks`) stop
- * answering for a removed object at once; a view bakes again the tiles whose
- * bake reaches it, the one it shows first, each kept on screen until its new
- * image is ready.
+ * landmarks) taken out and put back, and its terrain cells' surface, water
+ * and height (D-147), as a log of ops a game can send and replay. The
+ * queries (`objectsAt`, `pickObject`, `landmarks`, `heightAt`, `surfaceAt`)
+ * answer with them at once; a view bakes again the tiles an op reaches, the
+ * one it shows first, each kept on screen until its new image is ready.
  */
 export interface WorldEdits {
+  /** Edit terrain cells (D-147): the op, with the edits that applied (cells inside the world, surfaces it has, numbers), or null when none did. */
+  cells(cells: Iterable<CellEdit>): WorldEdit | null;
   /** Take objects out (`ObjectHit.index`): the op, with those that were standing, or null when none was. */
   remove(objects: Iterable<number>): WorldEdit | null;
   /** Put removed objects back (every one, by default): the op, or null when none was removed. */
   restore(objects?: Iterable<number>): WorldEdit | null;
-  /** Apply an op (from another page's `list`, or a server's): as `remove` or `restore` does; indices not in the world are left out. */
+  /** Apply an op (from another page's `list`, or a server's): as `remove`, `restore` or `cells` does; what isn't in the world is left out. */
   apply(edit: WorldEdit): WorldEdit | null;
   isRemoved(object: number): boolean;
   /** The objects removed now. */
@@ -484,6 +510,12 @@ export interface WorldQuery {
    * there.
    */
   pickObject(screenX: number, screenY: number): ObjectHit | null;
+  /**
+   * A placed object's data (footprint, real height, storeys, year, facade…)
+   * by its index (`ObjectHit.index`), removed or not (`edits.isRemoved` says
+   * which); null where there is none, or the objects come by chunk (D-123).
+   */
+  object(index: number): Readonly<ObjectInstance> | null;
   /** Cell position of a lon/lat (worlds with a geo grid; null outside). */
   lonLatToCell(lon: number, lat: number): [number, number] | null;
   cellToLonLat(x: number, y: number): [number, number] | null;

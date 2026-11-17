@@ -58,6 +58,8 @@ interface Entry {
   plan: ModelPlan | null | undefined;
   /** Cached base height (steps), once the terrain under it was loaded. */
   base: number | null;
+  /** The edits' version it was read at: a terrain edit (D-147) may have moved the ground under it since. */
+  baseAt?: number;
 }
 
 /** Where a model drawn from an anchor stands, in plan: the columns its voxels fill. */
@@ -235,7 +237,8 @@ export class ObjectIndex {
   }
 
   private base(e: Entry): number | null {
-    if (e.base !== null) return e.base;
+    const version = this.edits?.version ?? 0;
+    if (e.base !== null && (e.inst.z0 !== undefined || e.baseAt === version)) return e.base;
     const pts = e.inst.fp?.length ? e.inst.fp : [[e.inst.x, e.inst.y] as [number, number]];
     let lo = Infinity;
     for (const [x, y] of pts) {
@@ -245,6 +248,7 @@ export class ObjectIndex {
       lo = Math.min(lo, h);
     }
     e.base = lo;
+    e.baseAt = version;
     return lo;
   }
 
@@ -297,6 +301,11 @@ export class ObjectIndex {
       out.push(this.hit(e));
     }
     return out;
+  }
+
+  /** An object's data by its place in the objects file (removed or not: the edits say which), or null where there is none or the index doesn't name it. */
+  instance(index: number): ObjectInstance | null {
+    return this.named ? (this.instances[index] ?? null) : null;
   }
 
   /** Landmarks from the registry (objects with an id), one per id at the middle of its parts' anchors. */
@@ -371,6 +380,11 @@ export class ChunkedObjects {
 
   landmarks(): LandmarkInfo[] {
     return this.landmarkIndex.landmarks();
+  }
+
+  /** Objects by chunk aren't named by their place in the whole file (D-123): none is known by index. */
+  instance(): ObjectInstance | null {
+    return null;
   }
 
   /** The landmarks' highest only: objects come by chunk only on a server (D-123), where nothing picks along a view ray (D-124). */

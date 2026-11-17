@@ -24,5 +24,6 @@ export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";
 export { Minimap, viewOnGround, type MinimapOptions, type MinimapRoads, type MinimapView } from "./minimap";
 export * from "./cells";
+export * from "./boards";
 export { veilLayer, VeilLayer, type VeilLayerOptions } from "./veil";
 export type * from "./types";

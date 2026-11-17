@@ -1,4 +1,5 @@
 import { BAKE_CODE } from "@pixelworlds/bake";
+import { NO_WATER } from "@pixelworlds/grid";
 import { footprintBounds, resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
 import {
   ChunkStore,
@@ -39,10 +40,10 @@ import {
   type WorldFetch,
   type WorldManifest,
 } from "@pixelworlds/world-format";
-import { EditLog } from "./edits";
+import { EditLog, type TileCells } from "./edits";
 import { ChunkedObjects, landmarkPlan, ObjectIndex } from "./objects";
 import { createQuery, type PickView } from "./queries";
-import type { OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
+import type { CellEdit, OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -222,7 +223,7 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null, edits:
           metersPerCell: manifest.scale.metersPerCell,
           heightStretch,
         }),
-      named ? edits : null,
+      edits, // a chunk's objects aren't named (−1, never removed), but their bases follow terrain edits
       named,
     );
   const objects = !w.objects || !assets ? null : w.chunkedObjects ? new ChunkedObjects(index(w.objects.instances), (x, y) => w.store.objectsIn(x, y), index) : index(w.objects.instances, true);
@@ -248,8 +249,61 @@ export async function openWorld(opts: OpenWorldOptions): Promise<OpenedWorld> {
     throw new Error(`openWorld: "${opts.worldUrl}" is relative, and there is no page to resolve it against: give an absolute URL or \`base\``);
   }
   const w = await loadWorld({ ...opts, worldUrl, headless: true });
-  const edits = new EditLog(w.chunkedObjects ? (w.manifest.objects?.count ?? 0) : (w.objects?.instances.length ?? 0));
+  const edits = new EditLog(w.chunkedObjects ? (w.manifest.objects?.count ?? 0) : (w.objects?.instances.length ?? 0), cellEditor(w));
   return { world: worldInfo(w), query: worldQuery(w, null, edits), edits, stats: () => chunkStats(w.store) };
+}
+
+/**
+ * Terrain cell edits for a world's `EditLog` (D-147): each edit checked (a
+ * whole cell inside the world, a surface the world has, numbers), the bad
+ * ones left out as ops from the network are; the rest written to the chunk
+ * store, which every query and slice reads. The edits that applied.
+ * ponytail: tile height ranges and the view's depth range aren't widened by a raised cell; widen them if a mound pokes above its tile's range
+ */
+export function cellEditor(w: LoadedWorld): (cells: CellEdit[]) => CellEdit[] {
+  const ids = new Map(Object.entries(w.manifest.surfaces).map(([id, name]) => [name, Number(id)]));
+  const { cellsX, cellsY } = w.manifest;
+  const num = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  return (cells) => {
+    const done: CellEdit[] = [];
+    for (const c of cells) {
+      if (!c || !Number.isInteger(c.x) || !Number.isInteger(c.y) || c.x < 0 || c.y < 0 || c.x >= cellsX || c.y >= cellsY) continue;
+      if (c.surface !== undefined && !ids.has(c.surface)) continue;
+      if (c.water !== undefined && c.water !== null && !num(c.water)) continue;
+      if (c.height !== undefined && !num(c.height)) continue;
+      if (c.surface === undefined && c.water === undefined && c.height === undefined) continue;
+      const one: CellEdit = { x: c.x, y: c.y };
+      if (c.surface !== undefined) one.surface = c.surface;
+      if (c.water !== undefined) one.water = c.water === null ? null : Math.round(c.water);
+      if (c.height !== undefined) one.height = c.height;
+      done.push(one);
+    }
+    w.store.editCells(
+      done.map((c) => ({
+        x: c.x,
+        y: c.y,
+        ...(c.surface !== undefined ? { surface: ids.get(c.surface)! } : {}),
+        ...(c.water !== undefined ? { water: c.water === null ? NO_WATER : c.water } : {}),
+        ...(c.height !== undefined ? { height: c.height } : {}),
+      })),
+    );
+    return done;
+  };
+}
+
+/** Terrain edits as a view's bake tiles see them (D-147): the tiles whose slice an area reaches, and the edits each slice holds. */
+export function tileCells(w: LoadedWorld): TileCells {
+  const ts = w.tileSize;
+  const last = (cells: number) => Math.ceil(cells / ts) - 1;
+  return {
+    tiles: ([x0, y0, x1, y1]) => {
+      const out: [number, number][] = [];
+      for (let ty = Math.max(0, Math.floor((y0 - w.margin) / ts)); ty <= Math.min(last(w.manifest.cellsY), Math.ceil((y1 + w.margin) / ts) - 1); ty++)
+        for (let tx = Math.max(0, Math.floor((x0 - w.margin) / ts)); tx <= Math.min(last(w.manifest.cellsX), Math.ceil((x1 + w.margin) / ts) - 1); tx++) out.push([tx, ty]);
+      return out;
+    },
+    key: (tx, ty) => w.store.editsIn(...sliceRect(w, tx, ty)),
+  };
 }
 
 /** What a store holds now (`OpenedWorld.stats`, and a view's). */
@@ -344,13 +398,18 @@ function sliceRect(w: LoadedWorld, tx: number, ty: number): [number, number, num
   ];
 }
 
-/** A tile's cells plus its context margin, clipped to the world, for its bake (loads the chunks it needs). */
-export async function tileSlice(w: LoadedWorld, t: TileRequest): Promise<TerrainSlice> {
+/**
+ * A tile's cells plus its context margin, clipped to the world, for its bake
+ * (loads the chunks it needs); and the terrain edits it holds (D-147), read
+ * with it, so the two can't differ by an edit made in between.
+ */
+export async function tileSlice(w: LoadedWorld, t: TileRequest): Promise<{ slice: TerrainSlice; cells: string }> {
   const { store } = w;
   const [x0, y0, x1, y1] = sliceRect(w, t.tx, t.ty);
   await store.ensureRect(x0, y0, x1, y1);
   const s = store.slice(x0, y0, x1, y1);
-  return { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+  const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+  return { slice, cells: store.editsIn(x0, y0, x1, y1) };
 }
 
 /**
@@ -399,7 +458,7 @@ export async function openTileCache(option: WorldViewOptions["cache"], code = BA
  * objects (D-124) is kept under them as well (the list itself, not a hash:
  * one tile's is short, and two lists must never share a key).
  */
-export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[]) => string {
+export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[], cells?: string) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
@@ -411,5 +470,7 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
     ...plugins,
   ];
-  return (t, removed) => [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : [])].join("|");
+  // and one whose slice holds terrain edits (D-147) under them: the edits themselves, in the order stamped
+  return (t, removed, cells) =>
+    [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|");
 }

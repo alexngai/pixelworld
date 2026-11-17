@@ -58,6 +58,8 @@ import {
   worldInfo,
   worldQuery,
   type LoadedWorld,
+  cellEditor,
+  tileCells,
 } from "./world";
 
 const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the GPU
@@ -122,18 +124,21 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
-  // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them
-  const edits = new EditLog(w.objects?.instances.length ?? 0);
-  const tileEdits = new TileEdits((i) => objectTiles(w, i));
+  // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them;
+  // terrain edited (D-147): each tile's slice holds the edits it reaches, and is kept under those
+  const edits = new EditLog(w.objects?.instances.length ?? 0, cellEditor(w));
+  const tileEdits = new TileEdits((i) => objectTiles(w, i), tileCells(w));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
-      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed);
+      const cells = tileEdits.cellsFor(t.tx, t.ty);
+      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed, cells);
       const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
-      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed };
+      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed, ...(cells ? { cells } : {}) };
     }
-    return { slice: await tileSlice(w, t), removed };
+    const { slice, cells } = await tileSlice(w, t);
+    return { slice, removed, ...(cells ? { cells } : {}) };
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
@@ -222,7 +227,7 @@ class View implements WorldView {
     private readonly compositor: Compositor,
     private readonly service: BakeService,
     private readonly cache: TileStore | null,
-    private readonly cacheKey: (t: TileRequest, removed?: readonly number[]) => string,
+    private readonly cacheKey: (t: TileRequest, removed?: readonly number[], cells?: string) => string,
     editLog: EditLog,
     private readonly tileEdits: TileEdits,
   ) {
@@ -310,11 +315,14 @@ class View implements WorldView {
       // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
       // (a tile that failed to prepare or bake made nothing: it isn't asked for again)
       const failed = !res.fromCache && !res.stats;
-      const outdated = !res.ground && !failed && (res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",");
+      const outdated =
+        !res.ground &&
+        !failed &&
+        ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") || (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
-        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed), img);
+        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed, res.cells), img);
       };
       // baked while idle, for later (another rotation, around the view): into the cache, not onto the GPU
       if (this.idleAsked.delete(res.key) && !(res.rotation === this.cam.rotation && this.near.some((t) => t.tx === res.tx && t.ty === res.ty))) {
@@ -429,8 +437,8 @@ class View implements WorldView {
   }
 
   /**
-   * Objects taken out or put back (D-124): the tiles whose bake reaches them
-   * bake again. In the rotation shown, each image stays on screen until its
+   * Objects taken out or put back (D-124), or terrain edited (D-147): the
+   * tiles whose bake reaches them bake again. In the rotation shown, each image stays on screen until its
    * new one is ready; in the others, and kept in the cache, they are let go.
    */
   private edited(tiles: [number, number][]): void {

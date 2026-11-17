@@ -104,9 +104,9 @@ export class BakeHost {
     const t0 = performance.now();
     // the ground alone is quick: no objects, and nothing kept (the whole tile's scene has them)
     let scene = msg.ground ? undefined : this.meshCache.get(key);
-    const edits = msg.removed?.join(",") ?? "";
+    const edits = `${msg.removed?.join(",") ?? ""}|${msg.cells ?? ""}`;
     if (scene && this.sceneEdits.get(scene) !== edits) {
-      // objects taken out or put back since it was meshed (D-124): meshed again
+      // objects taken out or put back, or the terrain edited, since it was meshed (D-124, D-147): meshed again
       this.baker.releaseScene(scene);
       this.meshCache.delete(key);
       scene = undefined;

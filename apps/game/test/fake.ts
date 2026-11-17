@@ -88,6 +88,7 @@ export class FakeWorld {
         this.objects.filter((o) => x >= o.bounds[0] && y >= o.bounds[1] && x <= o.bounds[2] && y <= o.bounds[3]),
       landmarks: () => [],
       pickObject: () => null,
+      object: () => null,
     };
   }
 }
