@@ -642,7 +642,7 @@ export interface EntitySpec {
    * buildings and landmarks in front of it are dithered away (`density` of
    * their pixels, 0–1, default 0.75; at 1 a clean cut, D-154) to the ground
    * behind. The tiles around it are baked a second time without their
-   * buildings for this. The first eight visible entities with `reveal`
+   * buildings for this. The first twelve visible entities with `reveal`
    * count, each clearing its own ellipse. Default off.
    */
   reveal?: { margin?: number; density?: number };

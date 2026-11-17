@@ -17,6 +17,8 @@ export interface GlassState {
   marks: readonly Mark[];
   cursor: number;
   hover: number;
+  /** Cells the selected rig could strike from the cell pointed at (outlined, faint). */
+  reach: readonly number[];
 }
 
 const COLOUR: Record<Mark["kind"], string> = {
@@ -133,6 +135,16 @@ export class BoardGlass {
       g.stroke();
       g.restore();
     }
+    // what could be struck from where the rig would go
+    g.save();
+    g.setLineDash([3, 2]);
+    g.lineWidth = 1.5;
+    g.strokeStyle = "rgba(242,193,78,0.85)";
+    for (const k of s.reach) {
+      path(quad(k, standAt(c, k) + lift, 0.18));
+      g.stroke();
+    }
+    g.restore();
     // the pointer's and the keyboard's cells; down to the ground from a roof
     for (const [k, rgb, w] of [
       [s.hover, "255,255,255", 1.5],

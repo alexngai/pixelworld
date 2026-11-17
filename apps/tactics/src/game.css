@@ -260,6 +260,30 @@ kbd {
   z-index: 5;
 }
 
+/* what a cell holds */
+.tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 300px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(14, 13, 22, 0.88);
+  border: 1px solid var(--edge);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+.tip b {
+  color: var(--ink);
+}
+.tip b.rig {
+  color: var(--rig);
+}
+.tip b.invader {
+  color: var(--enemy);
+}
+
 /* over the world */
 .label {
   position: absolute;

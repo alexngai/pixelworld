@@ -54,7 +54,7 @@ void main() {
 `;
 
 /** How many sprites can see through what stands in front of them at once (D-154). */
-export const MAX_REVEALS = 8;
+export const MAX_REVEALS = 12;
 
 const QUAD_FS = /* glsl */ `#version 300 es
 precision highp float;

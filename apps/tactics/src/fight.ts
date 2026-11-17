@@ -129,6 +129,11 @@ export class Fight {
   private hint: Arrow[] = [];
   /** The board's cells over the city view (D-156), and the cell under the pointer. */
   private readonly glass: BoardGlass;
+  /** What the looked-at cell holds, said beside it, and that cell. */
+  private readonly tip: HTMLElement;
+  private tipAt = -1;
+  /** Half see-through, what stands in front of the looked-at cell (D-156): a speck there with a reveal. */
+  private readonly peek: Entity;
   private hover = -1;
   private arrowsShown = "";
   /** A board step along the view's u (down-right on screen) and v (down-left): what the arrow keys move by. */
@@ -188,6 +193,18 @@ export class Fight {
     });
     this.overlay = new BoardOverlay(s.board, { id: "fight", grid: false });
     this.glass = new BoardGlass(s.labels, s.view, s.board);
+    this.tip = document.createElement("div");
+    this.tip.className = "tip";
+    this.tip.hidden = true;
+    s.labels.append(this.tip);
+    this.peek = this.view.entities.add({
+      model: { boxes: [{ x0: -0.01, y0: -0.01, z0: 0, x1: 0.01, y1: 0.01, z1: 0.01, ramp: 0 }], key: "fight-peek" },
+      x: 0,
+      y: 0,
+      reveal: { margin: 34, density: 0.55 },
+      visible: false,
+      wait: false,
+    });
     void this.view.layers.add(this.overlay);
     this.bestRotation();
     this.clearView();
@@ -303,7 +320,7 @@ export class Fight {
     this.hidden = [...found];
   }
 
-  /** The camera on the board's middle, zoomed in as far as the board still fits about half the screen. */
+  /** The camera on the board's middle, zoomed in as far as the board still fits about two thirds of the screen. */
   private frameBoard(): void {
     const { camera, query, canvas } = this.view;
     const a = this.c.arena;
@@ -312,7 +329,7 @@ export class Fight {
     const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, query.heightAt(p.x, p.y) ?? 0));
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
-    const fit = Math.min((0.55 * canvas.clientWidth) / (Math.max(...xs) - Math.min(...xs)), (0.5 * canvas.clientHeight) / (Math.max(...ys) - Math.min(...ys)));
+    const fit = Math.min((0.7 * canvas.clientWidth) / (Math.max(...xs) - Math.min(...xs)), (0.6 * canvas.clientHeight) / (Math.max(...ys) - Math.min(...ys)));
     camera.zoom = Math.min(6, Math.max(1, Math.floor(camera.zoom * fit)));
   }
 
@@ -401,6 +418,11 @@ export class Fight {
     this.now = now;
     this.clearView();
     this.glass.frame();
+    if (!this.tip.hidden && this.tipAt >= 0) {
+      const p = this.centre(this.tipAt);
+      const q = this.view.camera.project(p.x, p.y, standAt(this.c, this.tipAt));
+      this.tip.style.transform = `translate(${Math.round(q.x + 26)}px, ${Math.round(q.y - 10)}px)`;
+    }
     // the timeline
     for (let guard = 0; guard < 64; guard++) {
       if (!this.current) {
@@ -637,7 +659,19 @@ export class Fight {
     if (this.selected >= 0 && this.phase === "strike") for (const k of this.targets(this.selected).keys()) mark(k, this.lift >= 0 ? "move" : "attack");
     const marks: Mark[] = [];
     for (const [k, kind] of byCell) marks.push({ i: k % c.arena.w, j: Math.floor(k / c.arena.w), kind });
-    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover });
+    // in the move phase, what the rig could strike from the cell pointed at
+    const focus = this.focus();
+    const reach: number[] = [];
+    if (this.phase === "move" && focus >= 0 && movesOf(c, this.selected).includes(focus)) {
+      const d = cloneCombat(c);
+      moveUnit(d, this.selected, focus);
+      for (const st of strikesOf(d, this.selected)) {
+        const t = strikeCell(d, this.selected, st);
+        if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
+      }
+    }
+    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach });
+    this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
     const arrowsKey = JSON.stringify(arrows);
@@ -806,6 +840,63 @@ export class Fight {
     this.phase = "pick";
     this.lift = -1;
     this.preview = null;
+  }
+
+  /** The cell looked at: the pointer's, else the keyboard's. */
+  private focus(): number {
+    return this.hover >= 0 ? this.hover : this.cursor;
+  }
+
+  /** What stands on a cell, said beside it: a unit's moves and weapons or aim, a building's height, people and strength, the ground's dangers. */
+  private inspect(c: Combat, k: number): void {
+    if (k < 0 || this.phase === "busy" || this.phase === "over") {
+      this.tip.hidden = true;
+      this.peek.visible = false;
+      return;
+    }
+    const p = this.centre(k);
+    this.peek.moveTo(p.x, p.y, standAt(c, k));
+    this.peek.visible = true;
+    const a = c.arena;
+    const lines: string[] = [];
+    const u = c.occ[k]!;
+    if (u >= 0) {
+      const f = FIGHTERS[c.roster[u]!];
+      const squad = teamOf(c, u) === SQUAD;
+      lines.push(`<b class="${squad ? "rig" : "invader"}">${f.name}</b> ${pips(c.hp[u]!, f.hp)}${squad && this.acted.has(u) ? " · done" : ""}`);
+      lines.push(`moves ${f.move} · ${f.flying ? "flies" : f.climb >= 1e3 ? "climbs any wall" : `climbs ${f.climb} m`}`);
+      for (const w of squad ? f.weapons : f.weapons.slice(0, 1)) {
+        const what =
+          w.kind === "hoist" ? "lifts the unit beside it up to 2 cells" : w.kind === "evacuate" ? "empties the building beside it by the round's end" : `${w.damage} damage${w.push ? ", pushes" : ""}${w.range ? `, ${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? ", first thing in line" : ", next cell"}${w.ignites ? ", sets alight" : ""}${w.douses ? ", douses" : ""}`;
+        lines.push(`· ${w.name}: ${what}`);
+      }
+      if (!squad && c.aim[u]! >= 0) {
+        const t = strikeCell(c, u, aimOf(c, u));
+        const sid = t >= 0 ? structureAt(c, t) : -1;
+        lines.push(`aims ${DIR_NAMES[c.aim[u]!]} at ${sid >= 0 ? `a building (${a.structures[sid]!.people} people)` : t >= 0 && c.occ[t]! >= 0 ? FIGHTERS[c.roster[c.occ[t]!]!].name : "nothing"}; strikes ${this.order(c).get(u) ?? "—"}${["st", "nd", "rd"][(this.order(c).get(u) ?? 4) - 1] ?? "th"}`);
+      }
+    }
+    const sid = a.struct[k]!;
+    if (sid >= 0) {
+      const st = a.structures[sid]!;
+      const m = Math.round(standAt(c, k) * a.metersPerStep);
+      if (c.structHp[sid]! <= 0) lines.push("<b>rubble</b>");
+      else {
+        lines.push(`<b>${st.name.replace(/^building\./, "").replace(/\./g, " ")}</b> · ${m} m tall`);
+        lines.push(`${c.evacuated[sid] ? "empty" : `${st.people} people`} · ${c.structHp[sid]} hp${st.topple ? ` · topples ${st.topple} cells` : ""}${st.flammable ? " · burns" : ""}`);
+        lines.push(m <= 15 ? "rigs can climb onto it" : "too tall for the rigs to climb; crawlers can");
+      }
+    } else if (a.flags[k]! & A_WATER) lines.push("<b>water</b>: a unit pushed in drowns (not flyers)");
+    if (c.fire[k]) lines.push("<b>burning</b>: hurts who stands here");
+    const arrival = arriving(c).find((x) => x.at === k);
+    if (arrival) lines.push(`▼ a ${FIGHTERS[arrival.kind].name} lands here at the round's end: stand here to block it (1 damage)`);
+    if (!lines.length) {
+      this.tip.hidden = true;
+      return;
+    }
+    this.tip.innerHTML = lines.join("<br>");
+    this.tip.hidden = false;
+    this.tipAt = k;
   }
 
   /** The first rig still to act's cell (where the cursor starts). */
@@ -1133,6 +1224,8 @@ export class Fight {
     this.hud.remove();
     this.map.el.remove();
     this.glass.dispose();
+    this.tip.remove();
+    this.peek.remove();
   }
 
   /** The puzzle, for a retry. */
