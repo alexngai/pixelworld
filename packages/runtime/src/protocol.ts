@@ -1,5 +1,5 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworlds/grid";
-import type { BakedImage, StyleParams } from "@pixelworlds/bake";
+import type { BakedImage, Projection, StyleParams } from "@pixelworlds/bake";
 import type { HeroPaint } from "./heroPaint";
 import { BIG_FOOTPRINT_CELLS, footprintBounds, type AssetCatalog, type Box, type ModelFailure, type ObjectInstance, type ScatterRules } from "@pixelworlds/generators";
 
@@ -92,6 +92,21 @@ export interface BakeObjectsMessage {
   slice: TerrainSlice;
 }
 
+/**
+ * Bake a rectangle of the world in another projection (D-155: from above),
+ * once, nothing kept: its cells, on a slice with a margin of context that
+ * casts shadows into it, with its placed objects but those removed.
+ */
+export interface BakeAreaMessage {
+  type: "bakeArea";
+  id: number;
+  owned: { x0: number; y0: number; x1: number; y1: number };
+  slice: TerrainSlice;
+  removed?: number[];
+  projection: Projection;
+  shadows: boolean;
+}
+
 /** A plugin for the bake worker to import (docs/plugins.md §9): an absolute module URL. */
 export interface PluginRef {
   name: string;
@@ -109,7 +124,7 @@ export interface LoadPluginsMessage {
   plugins: PluginRef[];
 }
 
-export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | LoadPluginsMessage;
+export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | BakeAreaMessage | LoadPluginsMessage;
 
 export interface BakeStats {
   meshMs: number;

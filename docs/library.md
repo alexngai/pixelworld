@@ -251,6 +251,7 @@ interface WorldView {
   isDrawn(x, y): boolean; prefetch(x, y, radius?): Promise<void>;      // baking ahead (D-073)
   stats(): ViewStats; tileBakes(): TileBake[]; timeFrames(n): number;
   bakeObject(id): Promise<((BakedImage & { rotation }) | null)[]>; // the hero tool's bake
+  bakeTopDown(x0, y0, x1, y1, { px?, tilt?, shadows? }?): Promise<TopDownImage | null>; // a rectangle from above, north up (D-155): RGBA in the day palette, and the baked indices
   onFrame(listener: (e: FrameEvent) => void): () => void;          // FrameEvent: the FrameClock, now, drawn
   serialize(): ViewState; restore(state: ViewState): void;         // camera, every layer's state, the controller's
   destroy(): void;

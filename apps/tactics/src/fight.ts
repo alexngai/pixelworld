@@ -32,6 +32,7 @@ import {
   type Strike,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
+import { BoardGlass } from "./glass";
 import { TacticalMap } from "./map";
 import type { Outlook } from "./worker";
 
@@ -126,6 +127,13 @@ export class Fight {
   private outlookToken = 0;
   private assist = true;
   private hint: Arrow[] = [];
+  /** The board's cells over the city view (D-156), and the cell under the pointer. */
+  private readonly glass: BoardGlass;
+  private hover = -1;
+  private arrowsShown = "";
+  /** A board step along the view's u (down-right on screen) and v (down-left): what the arrow keys move by. */
+  private stepU: [number, number] = [1, 0];
+  private stepV: [number, number] = [0, 1];
   /** A strike under the pointer, played on a copy: what it would do. */
   private preview: { state: Combat; arrows: Arrow[]; tags: { k: number; text: string; cls: string }[] } | null = null;
   private razed: number[] = [];
@@ -151,6 +159,8 @@ export class Fight {
   private readonly struck = new Set<number>();
   /** Enter pressed once with rigs that haven't acted: the next ends the turn. */
   private confirmEnd = false;
+  /** The keyboard's cell (arrows move it, Space acts there), or −1 till a key is pressed. */
+  private cursor = -1;
 
   constructor(s: FightSetup) {
     this.done = new Promise((r) => (this.finish = r));
@@ -176,11 +186,13 @@ export class Fight {
       hover: (k) => this.pointer(away(k).x, away(k).y),
       back: () => this.back(),
     });
-    this.overlay = new BoardOverlay(s.board, { id: "fight" });
+    this.overlay = new BoardOverlay(s.board, { id: "fight", grid: false });
+    this.glass = new BoardGlass(s.labels, s.view, s.board);
     void this.view.layers.add(this.overlay);
     this.bestRotation();
     this.clearView();
     this.frameBoard();
+    this.refreshArt();
     for (let u = 0; u < this.c.roster.length; u++) this.spawnEntity(u);
     this.offFrame = this.view.onFrame((e) => this.frame(e.now));
     this.checkOutlook();
@@ -188,6 +200,20 @@ export class Fight {
     const f = s.puzzle.fight;
     const traps = f && f.firstTurns > f.safeFirstTurns ? ` Careful: ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
     this.say(`Hold the block for ${this.rounds} rounds. Click a rig to move it.${traps}`);
+  }
+
+  /** The board baked from above for the map (D-155), again when what stands on it changes; the latest asked wins. */
+  private artToken = 0;
+  private refreshArt(): void {
+    const token = ++this.artToken;
+    const a = this.c.arena;
+    const p0 = toWorld(this.board, { x: 0, y: 0 });
+    const p1 = toWorld(this.board, { x: a.w, y: a.h });
+    // about one art px a map px when the map is large
+    const px = Math.max(4, Math.round((TacticalMap.BIG * (window.devicePixelRatio || 1)) / this.board.cell));
+    void this.view.bakeTopDown(Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y), { px, shadows: false }).then((img) => {
+      if (img && token === this.artToken && this.phase !== "over") this.map.setArt(img.rgba, img.width, img.height);
+    });
   }
 
   /**
@@ -246,7 +272,14 @@ export class Fight {
     const o = camera.project(this.centre(0).x, this.centre(0).y, 0);
     const pi = camera.project(this.centre(1).x, this.centre(1).y, 0);
     const pj = camera.project(this.centre(this.c.arena.w).x, this.centre(this.c.arena.w).y, 0);
-    this.map.orient({ x: pi.x - o.x, y: pi.y - o.y }, { x: pj.x - o.x, y: pj.y - o.y });
+    const di = { x: pi.x - o.x, y: pi.y - o.y };
+    const dj = { x: pj.x - o.x, y: pj.y - o.y };
+    this.map.orient(di, dj);
+    // the arrow keys: right along u, down along v, as the map lies
+    const along = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
+    const [ai, aj] = [along(di), along(dj)];
+    this.stepU = [ai[0], aj[0]];
+    this.stepV = [ai[1], aj[1]];
     if (this.hidden.length) edits.restore(this.hidden);
     const a = this.c.arena;
     const keep = new Set(a.structures.map((s) => s.object));
@@ -367,6 +400,7 @@ export class Fight {
   private frame(now: number): void {
     this.now = now;
     this.clearView();
+    this.glass.frame();
     // the timeline
     for (let guard = 0; guard < 64; guard++) {
       if (!this.current) {
@@ -490,6 +524,7 @@ export class Fight {
                   this.view.edits.remove([s.object]);
                   this.razed.push(s.object);
                   this.razedThisTurn.push(s.object);
+                  this.refreshArt();
                 }
               },
             });
@@ -602,10 +637,15 @@ export class Fight {
     if (this.selected >= 0 && this.phase === "strike") for (const k of this.targets(this.selected).keys()) mark(k, this.lift >= 0 ? "move" : "attack");
     const marks: Mark[] = [];
     for (const [k, kind] of byCell) marks.push({ i: k % c.arena.w, j: Math.floor(k / c.arena.w), kind });
-    this.overlay.setMarks(marks);
+    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover });
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
-    this.overlay.setArrows(arrows);
-    this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown) });
+    // the overlay bakes again for new arrows only (a hover changes nothing there)
+    const arrowsKey = JSON.stringify(arrows);
+    if (arrowsKey !== this.arrowsShown) {
+      this.arrowsShown = arrowsKey;
+      this.overlay.setArrows(arrows);
+    }
+    this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown), cursor: this.cursor });
 
     // labels: hit points over every unit, the invaders' order, arrivals, what a hovered strike would do
     const keep = new Set<string>();
@@ -683,7 +723,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>Tab</kbd> weapon · <kbd>Space</kbd> hold fire · right-click back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map</div></div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>
@@ -752,7 +792,7 @@ export class Fight {
     const w = FIGHTERS[this.c.roster[this.selected]!].weapons[this.weapon]!;
     if (w.kind === "hoist") return this.lift >= 0 ? "Click where to set it down." : "Hoist: click the unit beside the crane to lift.";
     if (w.kind === "evacuate") return "Evacuate: click the building beside it (its people are out by the round's end).";
-    return `${w.name}: hover a target to see what it does, click to strike. Tab for another weapon, Space to hold fire, right-click to take the move back.`;
+    return `${w.name}: hover a target to see what it does, click to strike. Tab for another weapon, X to hold fire, right-click to take the move back.`;
   }
 
   /** Take back the selected rig's move this activation. */
@@ -768,8 +808,19 @@ export class Fight {
     this.preview = null;
   }
 
+  /** The first rig still to act's cell (where the cursor starts). */
+  private firstRig(): number {
+    const u = this.c.roster.findIndex((_, v) => teamOf(this.c, v) === SQUAD && this.c.hp[v]! > 0 && !this.acted.has(v));
+    return u >= 0 ? this.c.pos[u]! : 0;
+  }
+
   /** The pointer over a world point: in the strike phase, what the strike there would do. */
   pointer(x: number, y: number, object?: number): void {
+    const hk = this.cellUnder(x, y, object);
+    if (hk !== this.hover) {
+      this.hover = hk;
+      this.paint();
+    }
     if (this.phase !== "strike") {
       if (this.preview) {
         this.preview = null;
@@ -828,6 +879,12 @@ export class Fight {
       this.paint();
       void this.steps(this.animate(log)).then(() => {
         this.phase = "strike";
+        if (this.cursor >= 0) {
+          // the keyboard's cursor on a target: an invader's first, else anyone's, else the first
+          const ts = [...this.targets(this.selected).keys()];
+          const who = (t: number) => (this.c.occ[t]! >= 0 ? (teamOf(this.c, this.c.occ[t]!) === INVADERS ? 2 : 1) : 0);
+          this.cursor = ts.sort((p, q) => who(q) - who(p))[0] ?? this.cursor;
+        }
         this.sync();
         this.say(this.strikePrompt());
         this.paint();
@@ -884,11 +941,38 @@ export class Fight {
       this.paint();
       return true;
     }
+    const step = { arrowright: this.stepU, arrowdown: this.stepV, arrowleft: [-this.stepU[0], -this.stepU[1]], arrowup: [-this.stepV[0], -this.stepV[1]] }[k];
+    if (step) {
+      const a = this.c.arena;
+      const from = this.cursor >= 0 ? this.cursor : this.selected >= 0 ? this.c.pos[this.selected]! : this.firstRig();
+      const i = Math.max(0, Math.min(a.w - 1, (from % a.w) + step[0]!));
+      const j = Math.max(0, Math.min(a.h - 1, Math.floor(from / a.w) + step[1]!));
+      this.cursor = this.cursor < 0 ? from : j * a.w + i;
+      const p = this.centre(this.cursor);
+      this.pointer(p.x, p.y);
+      this.paint();
+      return true;
+    }
+    if (k === " " && this.cursor >= 0) {
+      const p = this.centre(this.cursor);
+      this.click(p.x, p.y);
+      return true;
+    }
+    if (k === "tab" && this.phase === "pick") {
+      // the next rig still to act
+      const rigs = this.c.roster.map((_, u) => u).filter((u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u));
+      if (!rigs.length) return true;
+      const at = rigs.find((u) => this.c.pos[u] === this.cursor);
+      const u = rigs[(at === undefined ? 0 : rigs.indexOf(at) + 1) % rigs.length]!;
+      this.cursor = this.c.pos[u]!;
+      this.select(u);
+      return true;
+    }
     if (k === "tab" && this.phase === "strike") {
       this.chooseWeapon(this.selected, (this.weapon + 1) % FIGHTERS[this.c.roster[this.selected]!].weapons.length);
       return true;
     }
-    if (k === " " && this.phase === "strike") {
+    if (k === "x" && this.phase === "strike") {
       void this.act(null);
       return true;
     }
@@ -899,7 +983,10 @@ export class Fight {
     if (k === "u" && this.resets > 0) {
       this.resets--;
       this.c = cloneCombat(this.turnStart);
-      if (this.razedThisTurn.length) this.view.edits.restore(this.razedThisTurn);
+      if (this.razedThisTurn.length) {
+        this.view.edits.restore(this.razedThisTurn);
+        this.refreshArt();
+      }
       this.razed = this.razed.filter((o) => !this.razedThisTurn.includes(o));
       this.razedThisTurn = [];
       this.acted = new Set();
@@ -1045,6 +1132,7 @@ export class Fight {
     this.labels.clear();
     this.hud.remove();
     this.map.el.remove();
+    this.glass.dispose();
   }
 
   /** The puzzle, for a retry. */

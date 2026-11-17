@@ -26,6 +26,14 @@ body {
   image-rendering: pixelated;
 }
 
+.glass {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
 #labels {
   position: fixed;
   inset: 0;

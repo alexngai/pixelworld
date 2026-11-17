@@ -46,6 +46,9 @@ export const GBUFFER_VS = /* glsl */ `#version 300 es
 precision highp float;
 ${ATTRIBS}
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
+uniform vec3 uProjD;
 uniform vec2 uOrigin;      // screen px of the target's top-left corner
 uniform vec2 uSize;        // target size in px
 uniform vec2 uDepthRange;  // scene min/max depth
@@ -71,9 +74,11 @@ void main() {
   vec3 pos = aPos + aInstOffset;
   vec2 uv = uRot * pos.xy;
   float h = pos.z;
-  float sx = 16.0 * (uv.x - uv.y);
-  float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
-  float d = uv.x + uv.y + h / 3.0;
+  // the projection (D-155): iso, sx = 16(u − v), sy = 8(u + v) − 8h, d = u + v + h/3; or from above
+  vec3 q = vec3(uv, h);
+  float sx = dot(uProjX, q);
+  float sy = dot(uProjY, q);
+  float d = dot(uProjD, q);
   gl_Position = vec4(
     2.0 * (sx - uOrigin.x) / uSize.x - 1.0,
     2.0 * (sy - uOrigin.y) / uSize.y - 1.0,
@@ -272,6 +277,8 @@ bool piecesSimple(ivec2 c, int slot) {
 }
 
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
 uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
 uniform int uRailRamp;           // -1: the style draws no rails
 
@@ -394,8 +401,8 @@ float bentWayDistance(vec2 local, ivec2 c, int mask, out vec2 dir) {
 float onePixel(vec2 dir) {
   vec2 d = uRot * dir;
   vec2 n = vec2(-d.y, d.x);
-  vec2 l = vec2(16.0 * (d.x - d.y), 8.0 * (d.x + d.y));  // screen px per render unit along
-  vec2 m = vec2(16.0 * (n.x - n.y), 8.0 * (n.x + n.y));  // and across
+  vec2 l = vec2(dot(uProjX.xy, d), dot(uProjY.xy, d));  // screen px per render unit along
+  vec2 m = vec2(dot(uProjX.xy, n), dot(uProjY.xy, n));  // and across
   float across = abs(l.x * m.y - l.y * m.x) / length(l);
   return 0.5 * max(abs(l.x), abs(l.y)) / length(l) / (across * uScale);
 }
@@ -1187,6 +1194,9 @@ precision highp sampler2D;
 ${FIELD_COMMON}
 ${FIELD_VERTEX}
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
+uniform vec3 uProjD;
 uniform vec2 uOrigin;
 uniform vec2 uSize;
 uniform vec2 uDepthRange;
@@ -1251,9 +1261,10 @@ void main() {
 
   vec2 uv = uRot * pos.xy;
   float h = pos.z;
-  float sx = 16.0 * (uv.x - uv.y);
-  float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
-  float d = uv.x + uv.y + h / 3.0;
+  vec3 q = vec3(uv, h);
+  float sx = dot(uProjX, q);
+  float sy = dot(uProjY, q);
+  float d = dot(uProjD, q);
   gl_Position = vec4(
     2.0 * (sx - uOrigin.x) / uSize.x - 1.0,
     2.0 * (sy - uOrigin.y) / uSize.y - 1.0,

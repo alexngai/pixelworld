@@ -58,11 +58,38 @@ function owns(owned: Ownership, cx: number, cy: number): boolean {
   return owned === "all" || (cx >= owned.x0 && cx < owned.x1 && cy >= owned.y0 && cy < owned.y1);
 }
 
+/**
+ * How a bake lays the world out (D-155): screen x, screen y and depth (larger
+ * nearer) as linear in a point's rotated (u, v) and height h (steps).
+ */
+export interface Projection {
+  x: readonly [number, number, number];
+  y: readonly [number, number, number];
+  d: readonly [number, number, number];
+}
+
+/** The world's 2:1 view: sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3. */
+export const ISO_PROJECTION: Projection = {
+  x: [HALF_W, -HALF_W, 0],
+  y: [HALF_H, HALF_H, -STEP_PX],
+  d: [1, 1, DEPTH_PER_STEP],
+};
+
+/**
+ * From above (D-155): `px` screen px per render cell, north up, the roofs
+ * nearest; `tilt` px of a south wall per step (0 straight down, a little to
+ * see the walls).
+ */
+export function topDownProjection(px: number, tilt = 0): Projection {
+  return { x: [px, 0, 0], y: [0, px, -tilt], d: [0, tilt / (3 * px), DEPTH_PER_STEP] };
+}
+
 /** Screen-space bounds and depth range of the scene points selected by `owned`. */
 export function screenBounds(
   scene: MeshData | BakeScene,
   r: Rotation,
   owned: Ownership,
+  p: Projection = ISO_PROJECTION,
 ): ScreenBounds | null {
   const b: ScreenBounds = {
     minSx: Infinity,
@@ -77,9 +104,9 @@ export function screenBounds(
     if (!owns(owned, cx, cy)) return;
     any = true;
     const [u, w] = rotateXY(x, y, r);
-    const sx = HALF_W * (u - w);
-    const sy = HALF_H * (u + w) - STEP_PX * h;
-    const d = u + w + h * DEPTH_PER_STEP;
+    const sx = p.x[0] * u + p.x[1] * w + p.x[2] * h;
+    const sy = p.y[0] * u + p.y[1] * w + p.y[2] * h;
+    const d = p.d[0] * u + p.d[1] * w + p.d[2] * h;
     if (sx < b.minSx) b.minSx = sx;
     if (sx > b.maxSx) b.maxSx = sx;
     if (sy < b.minSy) b.minSy = sy;

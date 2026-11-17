@@ -13,7 +13,7 @@
  * Without a view, `openWorld({ worldUrl, style })` gives the same queries
  * (D-111): for a game server or a bot that must agree with the views.
  */
-export { createWorldView } from "./view";
+export { createWorldView, paletteImage } from "./view";
 export { openWorld } from "./world";
 export { DRAW_ONLY_LAYERS, type DroppableLayer } from "@pixelworlds/world-format";
 export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";

@@ -449,6 +449,16 @@ export interface WorldView extends ControllerView {
   timeFrames(n: number): number;
   /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
   bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
+  /**
+   * A rectangle of the world drawn from above, north up (D-155): its terrain,
+   * roads and placed objects (but those the edits removed), shaded and
+   * outlined as the tiles are, once and not kept. `px` screen px per world
+   * cell (default 8); `tilt` px of a south wall per step (default 0:
+   * straight down; a little shows the walls); shadows on by default. The
+   * rectangle is widened to whole cells: the image's pixel (i, j) shows cell
+   * (x + i / px, y + j / px) of `TopDownImage`. Null where nothing is there.
+   */
+  bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts?: { px?: number; tilt?: number; shadows?: boolean }): Promise<TopDownImage | null>;
   /** Called after every animation frame (from the start, before `ready()`); `dt` is game time. */
   onFrame(listener: (e: FrameEvent) => void): () => void;
   /** The camera, every layer's state and the controller's (where it has `serialize`). */
@@ -644,6 +654,20 @@ export interface EntitySpec {
    * hold the view up, and each shows once its first sprite is baked.
    */
   wait?: boolean;
+}
+
+/** A rectangle of the world from above (`WorldView.bakeTopDown`, D-155). */
+export interface TopDownImage {
+  width: number;
+  height: number;
+  /** RGBA in the world's day palette; empty pixels transparent. */
+  rgba: Uint8ClampedArray<ArrayBuffer>;
+  /** The baked image itself: palette indices (R) and local depth, for another palette. */
+  image: BakedImage;
+  /** Screen px per world cell, and the world cell at the image's top-left corner. */
+  px: number;
+  x: number;
+  y: number;
 }
 
 /** An entity's `reveal`, with its defaults. */

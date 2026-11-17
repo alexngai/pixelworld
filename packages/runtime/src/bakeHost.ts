@@ -14,7 +14,7 @@ import {
   type ModelFailure,
   type ObjectInstance,
 } from "@pixelworlds/generators";
-import { objectInSlice, type BakeTileMessage, type FromWorker, type InitMessage, type TerrainSlice, type ToWorker, type WorldObjects } from "./protocol";
+import { objectInSlice, type BakeAreaMessage, type BakeTileMessage, type FromWorker, type InitMessage, type TerrainSlice, type ToWorker, type WorldObjects } from "./protocol";
 
 /**
  * Executes bake requests against a WebGL2 context. Used inside the bake
@@ -78,6 +78,9 @@ export class BakeHost {
           this.reply(msg.id, res, meshMs, built.merged.vertexCount, built.failures);
           break;
         }
+        case "bakeArea":
+          this.bakeArea(msg);
+          break;
         case "bakeSprite": {
           const t0 = performance.now();
           const mesh = buildBoxesMesh(msg.boxes);
@@ -112,35 +115,7 @@ export class BakeHost {
       scene = undefined;
     }
     if (!scene) {
-      const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
-      const world = { width: init.worldWidth, height: init.worldHeight };
-      if (grid.micro) {
-        // micro-terrain: the GPU builds the geometry from height textures
-        const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor, shores: init.shores });
-        scene = { meshes: [], batches: [], fields: [field] };
-      } else {
-        const terrain = buildTerrainMesh(
-          grid,
-          { x0: 0, y0: 0, x1: slice.width, y1: slice.height },
-          { floor: init.floor, offset: [slice.x0, slice.y0], world },
-        );
-        scene = { meshes: [terrain], batches: [] };
-      }
-      if (init.objects && !msg.ground) {
-        const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned, new Set(msg.removed));
-        scene.meshes.push(objects.merged, objects.lines);
-        scene.batches.push(...objects.batches);
-        this.sceneObjects.set(scene, [objects.merged, objects.lines]);
-        if (objects.failures.length) this.sceneFailures.set(scene, objects.failures);
-      }
-      const s = init.renderScale ?? 1;
-      if (s !== 1) {
-        for (const m of scene.meshes) scaleMesh(m, s);
-        for (const b of scene.batches) {
-          scaleMesh(b.mesh, s);
-          for (let i = 0; i < b.offsets.length; i++) b.offsets[i]! *= s;
-        }
-      }
+      scene = this.buildScene(init, slice, owned, msg.ground ? null : (msg.removed ?? []));
       if (!msg.ground) {
         this.meshCache.set(key, scene);
         this.sceneEdits.set(scene, edits);
@@ -164,6 +139,49 @@ export class BakeHost {
     // every bake of the tile (each rotation) reports its failed models: such a tile isn't kept in the persistent cache
     if (msg.ground) this.baker.releaseScene(scene);
     this.reply(msg.id, res, meshMs, vertices, this.sceneFailures.get(scene));
+  }
+
+  /** A slice's scene, in render units: its terrain, and its placed objects but those removed (none: no objects). */
+  private buildScene(init: InitMessage, slice: TerrainSlice, owned: { x0: number; y0: number; x1: number; y1: number }, removed: readonly number[] | null): BakeScene {
+    const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
+    const world = { width: init.worldWidth, height: init.worldHeight };
+    let scene: BakeScene;
+    if (grid.micro) {
+      // micro-terrain: the GPU builds the geometry from height textures
+      const field = buildTerrainField(grid, { offset: [slice.x0, slice.y0], world, floor: init.floor, shores: init.shores });
+      scene = { meshes: [], batches: [], fields: [field] };
+    } else {
+      const terrain = buildTerrainMesh(grid, { x0: 0, y0: 0, x1: slice.width, y1: slice.height }, { floor: init.floor, offset: [slice.x0, slice.y0], world });
+      scene = { meshes: [terrain], batches: [] };
+    }
+    if (init.objects && removed) {
+      const objects = this.objectsFor(init.objects, slice, grid, init.renderScale ?? 1, owned, new Set(removed));
+      scene.meshes.push(objects.merged, objects.lines);
+      scene.batches.push(...objects.batches);
+      this.sceneObjects.set(scene, [objects.merged, objects.lines]);
+      if (objects.failures.length) this.sceneFailures.set(scene, objects.failures);
+    }
+    const s = init.renderScale ?? 1;
+    if (s !== 1) {
+      for (const m of scene.meshes) scaleMesh(m, s);
+      for (const b of scene.batches) {
+        scaleMesh(b.mesh, s);
+        for (let i = 0; i < b.offsets.length; i++) b.offsets[i]! *= s;
+      }
+    }
+    return scene;
+  }
+
+  /** A rectangle in another projection (D-155): meshed, baked once in rotation 0 and let go. */
+  private bakeArea(msg: BakeAreaMessage): void {
+    const init = this.init;
+    if (!init) throw new Error("bake host not initialised");
+    const t0 = performance.now();
+    const scene = this.buildScene(init, msg.slice, msg.owned, msg.removed ?? []);
+    const meshMs = performance.now() - t0;
+    const res = this.baker.bake(scene, 0, msg.owned, { shadows: msg.shadows, projection: msg.projection });
+    this.baker.releaseScene(scene);
+    this.reply(msg.id, res, meshMs, scene.meshes.reduce((n, m) => n + m.vertexCount, 0), this.sceneFailures.get(scene));
   }
 
   /**

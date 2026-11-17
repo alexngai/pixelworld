@@ -9,6 +9,7 @@ import {
   type FromWorker,
   type InitMessage,
   type PluginRef,
+  type BakeAreaMessage,
   type TerrainSlice,
   type ToWorker,
 } from "./protocol";
@@ -131,6 +132,7 @@ export class BakeService {
   private spriteQueue: (
     | { id: number; rotation: Rotation; boxes: Box[] }
     | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
+    | Omit<BakeAreaMessage, "type">
   )[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
@@ -311,6 +313,17 @@ export class BakeService {
     });
   }
 
+  /** Bake a rectangle of the world in another projection (D-155), once. */
+  bakeArea(area: Omit<BakeAreaMessage, "type" | "id">): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const id = this.nextId++;
+      this.spriteJobs.set(id, resolve);
+      this.spriteQueue.push({ id, ...area });
+      this.pump();
+    });
+  }
+
   get idle(): boolean {
     return this.bakers.every((b) => !b.job) && this.spriteQueue.length === 0 && this.wanted.every((t) => this.done.has(requestKey(t)));
   }
@@ -335,6 +348,7 @@ export class BakeService {
       if (sprite) {
         b.job = { id: sprite.id, tile: null };
         if ("boxes" in sprite) b.transport.send({ type: "bakeSprite", ...sprite });
+        else if ("owned" in sprite) b.transport.send({ type: "bakeArea", ...sprite });
         else b.transport.send({ type: "bakeObjects", ...sprite });
         continue;
       }

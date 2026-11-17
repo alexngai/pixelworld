@@ -1,4 +1,4 @@
-import type { BakedImage } from "@pixelworlds/bake";
+import { topDownProjection, type BakedImage } from "@pixelworlds/bake";
 import { footprintBounds, generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworlds/generators";
 import { project, type Rotation } from "@pixelworlds/grid";
 import {
@@ -20,7 +20,7 @@ import {
   type TileKey,
   type TileRequest,
 } from "@pixelworlds/runtime";
-import { buildPalette } from "@pixelworlds/style";
+import { buildPalette, type Palette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
 import { GameClock } from "./clock";
 import { Controllers } from "./controller";
@@ -30,6 +30,7 @@ import { Layers } from "./layers";
 import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
 import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
+  TopDownImage,
   ControllerHost,
   EntityList,
   FrameEvent,
@@ -890,6 +891,48 @@ class View implements WorldView {
     return out;
   }
 
+  async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean } = {}): Promise<TopDownImage | null> {
+    const { manifest, store } = this.w;
+    const px = opts.px ?? 8;
+    const owned = { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
+    // a margin of context: what casts shadows in, scatter the same as the tiles'
+    const m = 4;
+    const sx0 = Math.max(0, owned.x0 - m);
+    const sy0 = Math.max(0, owned.y0 - m);
+    const sx1 = Math.min(manifest.cellsX, owned.x1 + m);
+    const sy1 = Math.min(manifest.cellsY, owned.y1 + m);
+    await store.ensureRect(sx0, sy0, sx1, sy1);
+    const s = store.slice(sx0, sy0, sx1, sy1);
+    const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+    const rs = this.rs;
+    const removed = this.edits.removed();
+    // the whole slice drawn (an object anchored in the margin reaches into the rectangle too), then cut to the rectangle
+    const whole = await this.service.bakeArea({
+      owned: { x0: sx0, y0: sy0, x1: sx1, y1: sy1 },
+      slice,
+      ...(removed.length ? { removed: [...removed] } : {}),
+      // in render units: px per render cell, and per render step
+      projection: topDownProjection(px / rs, (opts.tilt ?? 0) / rs),
+      shadows: opts.shadows ?? true,
+    });
+    if (!whole) return null;
+    // screen x = px·x and y = px·y on the ground (h = 0): the rectangle's pixels of the image
+    const left = Math.round(owned.x0 * px);
+    const top = Math.round(owned.y0 * px);
+    const width = Math.round(owned.x1 * px) - left;
+    const height = Math.round(owned.y1 * px) - top;
+    const pixels = new Uint8Array(width * height * 4);
+    for (let j = 0; j < height; j++) {
+      const sj = top + j - whole.top;
+      if (sj < 0 || sj >= whole.height) continue;
+      const i0 = Math.max(0, whole.left - left);
+      const i1 = Math.min(width, whole.left + whole.width - left);
+      if (i1 > i0) pixels.set(whole.pixels.subarray((sj * whole.width + left + i0 - whole.left) * 4, (sj * whole.width + left + i1 - whole.left) * 4), (j * width + i0) * 4);
+    }
+    const image = { left, top, width, height, depthBase: whole.depthBase, pixels };
+    return { width, height, rgba: paletteImage(image, this.w.palette), image, px, x: owned.x0, y: owned.y0 };
+  }
+
   serialize(): ViewState {
     const c = this.camera;
     const state: ViewState = {
@@ -934,4 +977,19 @@ class View implements WorldView {
     this.baked.clear();
     this.prefetches.clear();
   }
+}
+
+/** A baked image in a palette's colours (RGBA); empty pixels stay transparent. */
+export function paletteImage(image: BakedImage, palette: Palette): Uint8ClampedArray<ArrayBuffer> {
+  const out = new Uint8ClampedArray(image.width * image.height * 4);
+  const src = image.pixels;
+  for (let i = 0; i < out.length; i += 4) {
+    if (src[i + 3] === 0) continue;
+    const p = src[i]! * 4;
+    out[i] = palette.rgba[p]!;
+    out[i + 1] = palette.rgba[p + 1]!;
+    out[i + 2] = palette.rgba[p + 2]!;
+    out[i + 3] = 255;
+  }
+  return out;
 }

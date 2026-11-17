@@ -1,10 +1,12 @@
 import { A_WATER, FIGHTERS, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
- * The board from above (D-154): its cells, buildings shaded by height, water,
- * fire, the marks and arrows the board shows, and every unit, turned 45° so
- * its corners sit where the city view's do. Nothing stands in the way here,
- * and it takes clicks and hovers like the board. M makes it larger.
+ * The board from above (D-154, D-155): the city baked straight down
+ * (`WorldView.bakeTopDown`) once it's ready, a diagram of its buildings till
+ * then; over it the grid, the board's marks and arrows, and every unit. Laid
+ * as the city view lies (its u axis to the right, v down: the view turned 45°
+ * left), never at a slant, so the art stays crisp. It takes clicks, hovers
+ * and right-clicks like the board; M makes it larger.
  */
 
 export interface MapState {
@@ -14,18 +16,23 @@ export interface MapState {
   acted: ReadonlySet<number>;
   striking: number;
   order: ReadonlyMap<number, number>;
+  /** The keyboard's cell, or −1. */
+  cursor: number;
 }
 
-const FILL: Partial<Record<Mark["kind"], string>> = { move: "rgba(89,195,106,0.55)", attack: "rgba(242,193,78,0.6)", danger: "rgba(229,72,77,0.45)", info: "rgba(242,193,78,0.25)" };
+const FILL: Partial<Record<Mark["kind"], string>> = { move: "rgba(89,195,106,0.45)", attack: "rgba(242,193,78,0.55)", danger: "rgba(229,72,77,0.42)", info: "rgba(242,193,78,0.22)" };
 const ARROW: Record<string, string> = { attack: "#ff7a6b", move: "#8fe39a", info: "#ffd166" };
+const PAD = 6;
 
 export class TacticalMap {
   readonly el: HTMLCanvasElement;
   private big = false;
-  /** Board (i, j) → the map's unturned grid: each board axis along one of its axes, either way. */
+  /** Board (i, j) → the map's grid: each board axis along one of its axes, either way. */
   private axes: { i: [number, number]; j: [number, number] } = { i: [1, 0], j: [0, 1] };
   private last: MapState | null = null;
   private hover = -1;
+  /** The board baked from above, board-aligned: `scale` of its px a board cell. */
+  private art: { image: HTMLCanvasElement; scale: number } | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -58,11 +65,21 @@ export class TacticalMap {
     });
   }
 
-  /** Lay the map as the city view lies: board axis screen directions (from the camera) to the map's. */
+  /** Lay the map as the city view lies: the board axes' screen directions there (from the camera). */
   orient(di: { x: number; y: number }, dj: { x: number; y: number }): void {
-    // turned 45° clockwise, the map's +x runs down-right on screen and its +y down-left, as the view's u and v
+    // the map's +x is the view's u (down-right on screen), its +y the view's v (down-left)
     const axis = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
     this.axes = { i: axis(di), j: axis(dj) };
+    this.redraw();
+  }
+
+  /** The board from above: RGBA covering it exactly, board i along x and j along y. */
+  setArt(rgba: Uint8ClampedArray<ArrayBuffer>, width: number, height: number): void {
+    const image = document.createElement("canvas");
+    image.width = width;
+    image.height = height;
+    image.getContext("2d")!.putImageData(new ImageData(rgba, width, height), 0, 0);
+    this.art = { image, scale: width / this.w };
     this.redraw();
   }
 
@@ -72,61 +89,53 @@ export class TacticalMap {
     this.redraw();
   }
 
+  get isBig(): boolean {
+    return this.big;
+  }
+
   draw(s: MapState): void {
     this.last = s;
     this.redraw();
   }
 
+  /** Map px a board cell (larger: about what the art is baked at). */
+  static readonly BIG = 56;
   private get cell(): number {
-    return this.big ? 46 : 22;
+    return this.big ? TacticalMap.BIG : 26;
   }
 
-  /** The map's grid size, and a board cell's place on it. */
-  private grid(): { gw: number; gh: number; at(i: number, j: number): [number, number] } {
+  /** The map's grid size; a board point (continuous) on it. */
+  private grid(): { gw: number; gh: number; at(bi: number, bj: number): [number, number] } {
     const { i, j } = this.axes;
     const gw = i[0] !== 0 ? this.w : this.h;
     const gh = i[0] !== 0 ? this.h : this.w;
-    const at = (bi: number, bj: number): [number, number] => {
-      let x = i[0] * bi + j[0] * bj;
-      let y = i[1] * bi + j[1] * bj;
-      if (i[0] < 0 || j[0] < 0) x += gw - 1;
-      if (i[1] < 0 || j[1] < 0) y += gh - 1;
-      return [x, y];
-    };
-    return { gw, gh, at };
+    // a reversed axis runs from the far edge: a cell [b, b + 1] lands on [g − b − 1, g − b]
+    const ox = i[0] < 0 || j[0] < 0 ? gw : 0;
+    const oy = i[1] < 0 || j[1] < 0 ? gh : 0;
+    return { gw, gh, at: (bi, bj) => [i[0] * bi + j[0] * bj + ox, i[1] * bi + j[1] * bj + oy] };
   }
 
-  /** The canvas's size, and where a grid point lands on it (turned 45° about its middle). */
-  private frame(): { size: number; to(x: number, y: number): [number, number] } {
-    const { gw, gh } = this.grid();
+  /** A board cell's corners and middle on the canvas. */
+  private cellRect(k: number, inset = 0): { x: number; y: number; s: number; cx: number; cy: number } {
+    const { at } = this.grid();
+    const bi = k % this.w;
+    const bj = Math.floor(k / this.w);
+    const [ax, ay] = at(bi, bj);
+    const [bx, by] = at(bi + 1, bj + 1);
     const c = this.cell;
-    const size = Math.ceil(((gw + gh) * c) / Math.SQRT2) + 8;
-    const r = Math.SQRT1_2;
-    return {
-      size,
-      to: (x, y) => {
-        const px = (x - gw / 2) * c;
-        const py = (y - gh / 2) * c;
-        return [size / 2 + r * (px - py), size / 2 + r * (px + py)];
-      },
-    };
+    const x = PAD + Math.min(ax, bx) * c;
+    const y = PAD + Math.min(ay, by) * c;
+    return { x: x + inset * c, y: y + inset * c, s: c * (1 - 2 * inset), cx: x + c / 2, cy: y + c / 2 };
   }
 
   private cellAt(cx: number, cy: number): number {
-    const { gw, gh, at } = this.grid();
-    const { size } = this.frame();
     const c = this.cell;
-    const r = Math.SQRT1_2;
-    const dx = cx - size / 2;
-    const dy = cy - size / 2;
-    const x = Math.floor((r * (dx + dy)) / c + gw / 2);
-    const y = Math.floor((r * (dy - dx)) / c + gh / 2);
-    if (x < 0 || y < 0 || x >= gw || y >= gh) return -1;
-    for (let bj = 0; bj < this.h; bj++)
-      for (let bi = 0; bi < this.w; bi++) {
-        const [mx, my] = at(bi, bj);
-        if (mx === x && my === y) return bj * this.w + bi;
-      }
+    const x = Math.floor((cx - PAD) / c);
+    const y = Math.floor((cy - PAD) / c);
+    for (let k = 0; k < this.w * this.h; k++) {
+      const r = this.cellRect(k);
+      if (Math.floor((r.x - PAD) / c + 0.5) === x && Math.floor((r.y - PAD) / c + 0.5) === y) return k;
+    }
     return -1;
   }
 
@@ -135,113 +144,143 @@ export class TacticalMap {
     if (!s) return;
     const c = s.state;
     const a = c.arena;
-    const { at } = this.grid();
-    const { size, to } = this.frame();
+    const { gw, gh, at } = this.grid();
+    const cs = this.cell;
+    const W = gw * cs + 2 * PAD;
+    const H = gh * cs + 2 * PAD;
     const dpr = window.devicePixelRatio || 1;
-    if (this.el.width !== size * dpr) {
-      this.el.width = this.el.height = size * dpr;
-      this.el.style.width = this.el.style.height = `${size}px`;
+    if (this.el.width !== Math.round(W * dpr) || this.el.height !== Math.round(H * dpr)) {
+      this.el.width = Math.round(W * dpr);
+      this.el.height = Math.round(H * dpr);
+      this.el.style.width = `${W}px`;
+      this.el.style.height = `${H}px`;
     }
     const g = this.el.getContext("2d")!;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, size, size);
-    const corners = (k: number, inset = 0): [number, number][] => {
-      const [x, y] = at(k % a.w, Math.floor(k / a.w));
-      return [to(x + inset, y + inset), to(x + 1 - inset, y + inset), to(x + 1 - inset, y + 1 - inset), to(x + inset, y + 1 - inset)];
-    };
-    const centre = (k: number): [number, number] => {
-      const [x, y] = at(k % a.w, Math.floor(k / a.w));
-      return to(x + 0.5, y + 0.5);
-    };
-    const poly = (pts: [number, number][]) => {
+    g.clearRect(0, 0, W, H);
+    const rect = (k: number, inset = 0) => {
+      const r = this.cellRect(k, inset);
       g.beginPath();
-      pts.forEach(([x, y], n) => (n ? g.lineTo(x, y) : g.moveTo(x, y)));
-      g.closePath();
+      g.rect(r.x, r.y, r.s, r.s);
     };
-    // the ground, water and buildings: the taller the lighter
+
+    // the ground: the city from above, or a diagram of it
+    if (this.art) {
+      const { i, j } = this.axes;
+      const [ox, oy] = at(0, 0);
+      const k = (cs / this.art.scale) * dpr;
+      g.setTransform(k * i[0], k * i[1], k * j[0], k * j[1], dpr * (PAD + ox * cs), dpr * (PAD + oy * cs));
+      g.imageSmoothingEnabled = k < 1;
+      g.drawImage(this.art.image, 0, 0);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
     for (let k = 0; k < a.w * a.h; k++) {
       const sid = a.struct[k]!;
-      poly(corners(k));
-      if (sid >= 0 && c.structHp[sid]! > 0) {
-        const l = 34 + Math.round(40 * Math.min(1, standAt(c, k) / 30));
-        g.fillStyle = `hsl(230, 8%, ${l}%)`;
-      } else g.fillStyle = sid >= 0 ? "#5d4f43" : a.flags[k]! & A_WATER ? "#2d5b8a" : "#2c2b36";
+      const razed = sid >= 0 && c.structHp[sid]! <= 0;
+      if (this.art && !razed) continue;
+      rect(k);
+      if (razed) g.fillStyle = this.art ? "rgba(93,79,67,0.85)" : "#5d4f43";
+      else if (sid >= 0) g.fillStyle = `hsl(230, 8%, ${34 + Math.round(40 * Math.min(1, standAt(c, k) / 30))}%)`;
+      else g.fillStyle = a.flags[k]! & A_WATER ? "#2d5b8a" : "#2c2b36";
       g.fill();
-      g.strokeStyle = "rgba(232,220,188,0.08)";
-      g.lineWidth = 1;
+    }
+    // the grid, and each building's outline
+    g.strokeStyle = this.art ? "rgba(255,255,255,0.16)" : "rgba(232,220,188,0.1)";
+    g.lineWidth = 1;
+    for (let k = 0; k < a.w * a.h; k++) {
+      rect(k);
       g.stroke();
     }
-    // a building's outline: where its cells meet another's, or the street
-    g.strokeStyle = "rgba(14,13,22,0.9)";
-    g.lineWidth = 2;
+    g.strokeStyle = this.art ? "rgba(255,240,200,0.55)" : "rgba(14,13,22,0.9)";
+    g.lineWidth = this.art ? 1.5 : 2;
     for (let k = 0; k < a.w * a.h; k++) {
       const sid = a.struct[k]!;
       if (sid < 0) continue;
-      const i = k % a.w;
-      const j = Math.floor(k / a.w);
-      const p = corners(k);
-      const edge = (n: number, ni: number, nj: number) => {
-        const out = ni < 0 || nj < 0 || ni >= a.w || nj >= a.h || a.struct[nj * a.w + ni] !== sid;
-        if (!out) return;
+      const r = this.cellRect(k);
+      const bi = k % a.w;
+      const bj = Math.floor(k / a.w);
+      for (const [ni, nj] of [[bi - 1, bj], [bi + 1, bj], [bi, bj - 1], [bi, bj + 1]] as const) {
+        if (ni >= 0 && nj >= 0 && ni < a.w && nj < a.h && a.struct[nj * a.w + ni] === sid) continue;
+        // the side facing that neighbour (off the board too), by where its cell lands
+        const [nx, ny] = at(ni + 0.5, nj + 0.5);
+        const mx = PAD + nx * cs;
+        const my = PAD + ny * cs;
+        const [x0, y0, x1, y1] =
+          my < r.y ? [r.x, r.y, r.x + r.s, r.y] : my > r.y + r.s ? [r.x, r.y + r.s, r.x + r.s, r.y + r.s] : mx < r.x ? [r.x, r.y, r.x, r.y + r.s] : [r.x + r.s, r.y, r.x + r.s, r.y + r.s];
         g.beginPath();
-        g.moveTo(...p[n]!);
-        g.lineTo(...p[(n + 1) % 4]!);
+        g.moveTo(x0, y0);
+        g.lineTo(x1, y1);
         g.stroke();
-      };
-      // the corners go round the grid cell (x, y)…(x+1, y+1): the side a board neighbour faces (off the board too) by where it lands
-      const [x, y] = at(i, j);
-      for (const [ni, nj] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]] as const) {
-        const [nx, ny] = at(ni, nj);
-        const side = ny < y ? 0 : nx > x ? 1 : ny > y ? 2 : 3;
-        edge(side, ni, nj);
+      }
+    }
+    // how tall each building stands, when there's room to say
+    if (this.big) {
+      g.font = "bold 11px ui-monospace, Menlo, monospace";
+      g.textAlign = "left";
+      g.textBaseline = "top";
+      const done = new Set<number>();
+      for (let k = 0; k < a.w * a.h; k++) {
+        const sid = a.struct[k]!;
+        if (sid < 0 || done.has(sid) || c.structHp[sid]! <= 0) continue;
+        done.add(sid);
+        const r = this.cellRect(k);
+        const text = `${Math.round(standAt(c, k) * a.metersPerStep)} m`;
+        g.fillStyle = "rgba(14,13,22,0.75)";
+        g.fillRect(r.x + 2, r.y + 2, g.measureText(text).width + 6, 15);
+        g.fillStyle = "#e8dcbc";
+        g.fillText(text, r.x + 5, r.y + 4);
       }
     }
     // fire
     for (let k = 0; k < a.w * a.h; k++)
       if (c.fire[k]) {
-        const [x, y] = centre(k);
-        g.fillStyle = "rgba(255,140,40,0.8)";
+        const r = this.cellRect(k);
+        g.fillStyle = "rgba(255,140,40,0.85)";
         g.beginPath();
-        g.arc(x, y, this.cell * 0.18, 0, 2 * Math.PI);
+        g.arc(r.cx, r.cy, cs * 0.18, 0, 2 * Math.PI);
         g.fill();
       }
-    // the board's marks
+    // the board's marks, the pointer's and the keyboard's cells
     for (const m of s.marks) {
       const k = m.j * a.w + m.i;
       if (m.kind === "select") {
-        poly(corners(k, 0.06));
+        rect(k, 0.06);
         g.strokeStyle = "#ffffff";
         g.lineWidth = 2;
         g.stroke();
       } else if (FILL[m.kind]) {
-        poly(corners(k));
+        rect(k);
         g.fillStyle = FILL[m.kind]!;
         g.fill();
       }
     }
-    if (this.hover >= 0) {
-      poly(corners(this.hover, 0.04));
-      g.strokeStyle = "rgba(255,255,255,0.7)";
-      g.lineWidth = 1.5;
+    for (const [k, col] of [
+      [this.hover, "rgba(255,255,255,0.75)"],
+      [s.cursor, "#ffd166"],
+    ] as const) {
+      if (k < 0) continue;
+      rect(k, 0.03);
+      g.strokeStyle = col;
+      g.lineWidth = 2;
       g.stroke();
     }
     // arrows
     for (const r of s.arrows) {
-      const [x0, y0] = centre(r.from[1] * a.w + r.from[0]);
-      const [x1, y1] = centre(r.to[1] * a.w + r.to[0]);
+      const p = this.cellRect(r.from[1] * a.w + r.from[0]);
+      const q = this.cellRect(r.to[1] * a.w + r.to[0]);
       const col = ARROW[r.kind] ?? "#ffd166";
-      const t = Math.atan2(y1 - y0, x1 - x0);
-      const hd = this.cell * 0.3;
+      const t = Math.atan2(q.cy - p.cy, q.cx - p.cx);
+      const hd = cs * 0.3;
       g.strokeStyle = g.fillStyle = col;
       g.lineWidth = this.big ? 3 : 2;
       g.beginPath();
-      g.moveTo(x0, y0);
-      g.lineTo(x1 - Math.cos(t) * hd * 0.6, y1 - Math.sin(t) * hd * 0.6);
+      g.moveTo(p.cx, p.cy);
+      g.lineTo(q.cx - Math.cos(t) * hd * 0.6, q.cy - Math.sin(t) * hd * 0.6);
       g.stroke();
       g.beginPath();
-      g.moveTo(x1, y1);
-      g.lineTo(x1 - Math.cos(t - 0.45) * hd, y1 - Math.sin(t - 0.45) * hd);
-      g.lineTo(x1 - Math.cos(t + 0.45) * hd, y1 - Math.sin(t + 0.45) * hd);
+      g.moveTo(q.cx, q.cy);
+      g.lineTo(q.cx - Math.cos(t - 0.45) * hd, q.cy - Math.sin(t - 0.45) * hd);
+      g.lineTo(q.cx - Math.cos(t + 0.45) * hd, q.cy - Math.sin(t + 0.45) * hd);
       g.closePath();
       g.fill();
     }
@@ -250,34 +289,38 @@ export class TacticalMap {
     g.textAlign = "center";
     g.textBaseline = "middle";
     for (const { at: k } of c.schedule[c.round] ?? []) {
-      const [x, y] = centre(k);
+      const r = this.cellRect(k);
       g.fillStyle = "#ffd166";
-      g.font = font(this.cell * 0.6);
-      g.fillText("▼", x, y);
+      g.font = font(cs * 0.6);
+      g.fillText("▼", r.cx, r.cy);
     }
     for (let u = 0; u < c.roster.length; u++) {
       if (c.hp[u]! <= 0) continue;
-      const [x, y] = centre(c.pos[u]!);
+      const p = this.cellRect(c.pos[u]!);
       const squad = teamOf(c, u) === SQUAD;
-      const r = this.cell * 0.36;
+      const r = cs * 0.34;
       g.globalAlpha = squad && s.acted.has(u) ? 0.55 : 1;
       g.fillStyle = squad ? "#7fc8ff" : "#ff7a6b";
+      g.strokeStyle = u === s.striking ? "#ffffff" : "rgba(14,13,22,0.9)";
+      g.lineWidth = u === s.striking ? 3 : 1.5;
       g.beginPath();
-      g.arc(x, y, r, 0, 2 * Math.PI);
+      g.arc(p.cx, p.cy, r, 0, 2 * Math.PI);
       g.fill();
-      if (u === s.striking) {
-        g.strokeStyle = "#ffffff";
-        g.lineWidth = 2.5;
-        g.stroke();
-      }
+      g.stroke();
       g.fillStyle = "#1e1c2b";
-      g.font = font(r * 1.2);
-      g.fillText(FIGHTERS[c.roster[u]!].name[0]!, x, y + 0.5);
+      g.font = font(r * 1.15);
+      g.fillText(FIGHTERS[c.roster[u]!].name[0]!, p.cx, p.cy + 0.5);
+      // on a roof: a tick above
+      if (a.struct[c.pos[u]!]! >= 0 && c.structHp[a.struct[c.pos[u]!]!]! > 0) {
+        g.fillStyle = "#e8dcbc";
+        g.font = font(r * 0.8);
+        g.fillText("▲", p.cx - r * 1.1, p.cy - r * 1.05);
+      }
       const n = teamOf(c, u) === INVADERS ? s.order.get(u) : undefined;
       if (n) {
         g.fillStyle = "#ff7a6b";
         g.font = font(r * 0.95);
-        g.fillText(String(n), x + r * 1.15, y - r * 1.05);
+        g.fillText(String(n), p.cx + r * 1.15, p.cy - r * 1.05);
       }
       g.globalAlpha = 1;
     }

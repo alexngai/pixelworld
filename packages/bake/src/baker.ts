@@ -1,7 +1,7 @@
 import { EDGE_NEIGHBOR, NO_WATER, PIECES, STEP_WORLD, SUN_DIR, rotateXY, rotationMat2, type Rotation } from "@pixelworlds/grid";
 import { TEXEL_ROW, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworlds/generators";
 import { SHADES, type MaterialTables } from "@pixelworlds/style";
-import { asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership } from "./bounds";
+import { ISO_PROJECTION, asScene, lightBasis, lightBounds, pixelRect, screenBounds, type BakeScene, type Ownership, type Projection } from "./bounds";
 import { Uniforms, compileProgram, createTexture, depthTexture, framebuffer, rgba8Texture, type GL } from "./gl";
 import {
   COMPOSITE_FS,
@@ -42,6 +42,8 @@ export interface BakeOptions {
   hide?: ReadonlySet<MeshData>;
   /** Shadow-map texel size in render units (default 0.03 × render scale). */
   shadowTexel?: number;
+  /** How the world is laid out (default the iso view; `topDownProjection` from above, D-155). */
+  projection?: Projection;
 }
 
 export interface StyleParams {
@@ -417,9 +419,10 @@ export class Baker {
     const t0 = performance.now();
     const gl = this.gl;
     const scene = asScene(input);
-    const ownedBounds = screenBounds(scene, rotation, owned);
+    const proj = options.projection ?? ISO_PROJECTION;
+    const ownedBounds = screenBounds(scene, rotation, owned, proj);
     if (!ownedBounds) return null;
-    const all = screenBounds(scene, rotation, "all")!;
+    const all = screenBounds(scene, rotation, "all", proj)!;
     const rect = pixelRect(ownedBounds);
     const gw = rect.width + 2 * PAD;
     const gh = rect.height + 2 * PAD;
@@ -487,6 +490,9 @@ export class Baker {
       gl.useProgram(prog);
       const t = style.tables;
       gl.uniformMatrix2fv(u.loc("uRot"), false, rot);
+      gl.uniform3fv(u.loc("uProjX"), proj.x);
+      gl.uniform3fv(u.loc("uProjY"), proj.y);
+      gl.uniform3fv(u.loc("uProjD"), proj.d);
       gl.uniform2f(u.loc("uOrigin"), origin[0], origin[1]);
       gl.uniform2f(u.loc("uSize"), gw, gh);
       gl.uniform2fv(u.loc("uDepthRange"), depthRange);
