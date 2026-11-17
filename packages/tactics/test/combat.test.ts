@@ -17,6 +17,7 @@ import {
   planInvaders,
   playOut,
   resolveInvaders,
+  solveFight,
   solveTurn,
   standAt,
   strike,
@@ -322,6 +323,77 @@ describe("what a turn takes (D-150, D-151)", () => {
     e.structHp[0] = 1;
     expect(mechanicsOf(e, [{ unit: 0, dest: cell(t, 0, 0), strike: S(EAST) }])).toContain("crush");
   });
+});
+
+describe("a fight over several rounds (D-152)", () => {
+  // streets by a river, two brutes aiming: wrecker (4,6), pumper (3,6), crane (2,5); brutes at (3,1) aiming south, (1,5) aiming east
+  const a = arena(["HH..#...", "H...#.**", "...H..**", "~~......", "~~..##..", "...H....", "#.....~~", "##...w~~"]);
+  const position = () => {
+    const c = newCombat(a, units(a, [["wrecker", 4, 6], ["pumper", 3, 6], ["crane", 2, 5], ["brute", 3, 1], ["brute", 1, 5]]));
+    c.aim.set([-1, -1, -1, SOUTH, EAST]);
+    return c;
+  };
+  /** The round played on from a turn, as a fight does: the invaders strike, fire burns, they aim again. */
+  const after = (c: ReturnType<typeof position>, plan: { unit: number; dest: number; strike: Strike | null }[]) => {
+    const n = cloneCombat(c);
+    for (const x of plan) act(n, x.unit, x.dest, x.strike);
+    resolveInvaders(n);
+    endRound(n);
+    planInvaders(n);
+    return n;
+  };
+
+  it("finds a line that holds every round, each turn losing nobody", () => {
+    const c = position();
+    const f = solveFight(c, { rounds: 3 });
+    expect(f.winnable).toBe(true);
+    let d = c;
+    for (const plan of f.line) {
+      const n = cloneCombat(d);
+      for (const x of plan) act(n, x.unit, x.dest, x.strike);
+      expect(outcome(d, playOut(n)).perfect).toBe(true);
+      d = after(d, plan);
+    }
+  });
+
+  it("some turns that lose nobody now lose the fight later: the player can corner the squad", () => {
+    const c = position();
+    const f = solveFight(c, { rounds: 3, count: true, maxNodes: 2_000_000 });
+    expect(f.safeFirstTurns).toBeGreaterThan(0);
+    expect(f.safeFirstTurns).toBeLessThan(f.firstTurns);
+    // find one such trap among the perfect first turns, and check it from the round after
+    const trap = solveTurn(c, { keep: 256 }).perfect.find((t) => {
+      const later = solveFight(after(c, t.plan), { rounds: 2, maxNodes: 400_000 });
+      return later.complete && !later.winnable;
+    })!;
+    const played = cloneCombat(c);
+    for (const x of trap.plan) act(played, x.unit, x.dest, x.strike);
+    expect(outcome(c, playOut(played)).perfect).toBe(true); // nobody lost this round…
+    expect(solveFight(after(c, trap.plan), { rounds: 2 }).winnable).toBe(false); // …and the next two can't both be held
+  });
+
+  it("weighs rigs that have acted: with them done, only this round's ending is searched", () => {
+    const c = position();
+    const f = solveFight(c, { rounds: 3 });
+    const d = cloneCombat(c);
+    for (const x of f.line[0]!) act(d, x.unit, x.dest, x.strike);
+    const done = solveFight(d, { rounds: 3, acted: [0, 1, 2] });
+    expect(done.winnable).toBe(true);
+    expect(done.line[0]).toEqual([]);
+  });
+
+  it("makes puzzles whose whole fight can be held, the line kept with them", async () => {
+    const p = await generatePuzzle(a, { seed: 3, attempts: 60, timeMs: 20_000, rounds: 3, clever: false, target: 3 });
+    expect(p?.fight?.line.length).toBeGreaterThan(0);
+    expect(p!.solution.plan).toEqual(p!.fight!.line[0]);
+    let d = p!.combat;
+    for (const plan of p!.fight!.line) {
+      const n = cloneCombat(d);
+      for (const x of plan) act(n, x.unit, x.dest, x.strike);
+      expect(outcome(d, playOut(n)).perfect).toBe(true);
+      d = after(d, plan);
+    }
+  }, 60_000);
 });
 
 describe("puzzles (D-150)", () => {

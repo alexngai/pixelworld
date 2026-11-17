@@ -18,6 +18,7 @@ import {
   movesOf,
   outcome,
   planInvaders,
+  solveFight,
   solveTurn,
   strike,
   strikeCell,
@@ -88,8 +89,9 @@ export async function startCombat(env: CombatEnv, x: number, y: number, seed = 1
   const b = board;
   const puzzle = await generatePuzzle(arena, {
     seed,
-    timeMs: 5000,
+    timeMs: 6000,
     attempts: 400,
+    rounds: ROUNDS, // the whole fight winnable, not only its first turn (D-152)
     onProgress: (n, best) => say(`making a puzzle… ${n} positions tried${best !== null ? `, the hardest ${best.toFixed(1)} bits` : ""}`),
   });
   if (!puzzle) {
@@ -116,6 +118,24 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
   let phase: "pick" | "move" | "strike" | "invaders" | "over" = "pick";
   let hint: Arrow[] = [];
   const start = cloneCombat(c);
+  /** Whether the fight can still be held from here, as the fight solver last found (D-152). */
+  let verdict = "checking…";
+  let checking = 0;
+  const roundsLeft = () => ROUNDS - round + 1;
+  /** Look ahead from where the fight stands, after the page has drawn: can every round left still be held? */
+  const checkFight = () => {
+    const token = ++checking;
+    verdict = "checking…";
+    setTimeout(() => {
+      if (token !== checking || phase === "over") return;
+      const f = solveFight(c, { rounds: roundsLeft(), acted: [...acted], maxNodes: 150_000 });
+      if (f.winnable) verdict = roundsLeft() > 1 ? `can be held to the end (round ${ROUNDS})` : "this round can be held";
+      else if (!f.complete) verdict = "unclear: the search ran out";
+      else if (solveTurn(c, { acted: [...acted], keep: 1, maxNodes: 100_000 }).perfect.length) verdict = "this round can be held, but not every round after it: people will be lost";
+      else verdict = "this round can't be held without losses";
+      draw();
+    }, 30);
+  };
 
   const overlay = new BoardOverlay(board, { id: "combat" });
   void view.layers.add(overlay);
@@ -260,6 +280,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       lines.push(`${order++}. ${f.name} ${c.hp[u]}/${f.hp}${a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " (on a roof)" : ""} → ${f.weapons[0]!.name} at ${at}`);
     }
     const o = outcome(start, c);
+    lines.push(`Fight: ${phase === "over" ? "over" : verdict}`);
     lines.push(`People lost ${Math.round(o.lost)} · puzzle ${puzzle.difficulty.toFixed(1)} bits, ${puzzle.stats.perfectLeaves} of ${puzzle.stats.leaves} end states lose nobody`);
     status.textContent = lines.join("\n");
   };
@@ -280,6 +301,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     lift = -1;
     phase = "pick";
     hint = [];
+    checkFight();
   };
 
   const endTurn = async () => {
@@ -323,12 +345,16 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     acted = new Set();
     razedThisTurn = [];
     phase = "pick";
+    checkFight();
     draw();
   };
 
   const showHint = () => {
-    const res = solveTurn(c, { acted: [...acted], keep: 1, maxNodes: 100_000 });
-    const sol = res.perfect[0] ?? solveTurn(c, { acted: [...acted], mode: "best", maxNodes: 100_000 }).best;
+    if (c.roster.every((_, u) => teamOf(c, u) !== SQUAD || c.hp[u]! <= 0 || acted.has(u))) return say(`Every rig has acted: Enter ends the turn. The fight ${verdict}.`);
+    // a turn after which every round left can be held; else one that holds this round; else the least bad
+    const f = solveFight(c, { rounds: roundsLeft(), acted: [...acted], maxNodes: 300_000 });
+    const res = f.winnable ? null : solveTurn(c, { acted: [...acted], keep: 1, maxNodes: 100_000 });
+    const sol = f.winnable ? { plan: f.line[0]! } : (res!.perfect[0] ?? solveTurn(c, { acted: [...acted], mode: "best", maxNodes: 100_000 }).best);
     if (!sol) return say("no turn left to play");
     const ij = (k: number): [number, number] => [k % a.w, Math.floor(k / a.w)];
     const d = cloneCombat(c);
@@ -340,12 +366,22 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       if (t >= 0) hint.push({ from: ij(x.dest), to: ij(t), kind: "info" });
       if (x.strike) strike(d, x.unit, x.strike);
     }
-    say(`${res.perfect.length ? "A turn that loses nobody" : "No turn loses nobody now; the best"}:\n${describePlan(c, sol.plan).join("\n")}`);
+    const what = f.winnable
+      ? roundsLeft() > 1
+        ? "A turn that loses nobody and keeps the whole fight winnable"
+        : "A turn that loses nobody"
+      : res!.perfect.length
+        ? "A turn that loses nobody now (no turn keeps every later round safe)"
+        : "No turn loses nobody now; the best";
+    say(`${what}:\n${describePlan(c, sol.plan).join("\n")}`);
     draw();
   };
 
   draw();
-  say(`A puzzle: ${puzzle.stats.perfectLeaves} of ${puzzle.stats.leaves} ways to play this turn lose nobody. Click a rig.`);
+  const f = puzzle.fight;
+  const traps = f && f.firstTurns > f.safeFirstTurns ? ` ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
+  say(`A puzzle: ${puzzle.stats.perfectLeaves} of ${puzzle.stats.leaves} ways to play this turn lose nobody.${traps} Click a rig.`);
+  checkFight();
 
   return {
     click(x, y, object) {
@@ -414,6 +450,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
         phase = "pick";
         hint = [];
         sync();
+        checkFight();
         draw();
         say("the turn taken back");
         return true;

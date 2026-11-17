@@ -66,6 +66,12 @@ export interface SolveOptions {
   keep?: number;
   /** Rigs that have already acted this turn (by unit). */
   acted?: readonly number[];
+  /**
+   * Try evacuating the towers that would topple (default false): it changes
+   * nothing this round, but empty, a tower can be brought down on invaders
+   * in a later one. `solveFight` asks for it before the last round.
+   */
+  evacuate?: boolean;
 }
 
 export interface SolveResult {
@@ -111,12 +117,16 @@ function mattering(c: Combat, rig: number): Uint8Array {
  * Whether a strike from where the unit stands can change this round: it
  * touches a unit, a structure, a fire to put out, or a unit round a lob's
  * target; a hoist sets its unit down where it can matter (`where`: in the
- * way, beside an invader), on water or on a roof. An evacuation never does:
- * it empties a building only by the round's end.
+ * way, beside an invader), on water or on a roof. An evacuation never does
+ * (it empties a building only by the round's end): with `evacuate`, one of a
+ * tower that would topple is tried, for the rounds after.
  */
-function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null): boolean {
+function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null, evacuate = false): boolean {
   const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
-  if (w.kind === "evacuate") return false;
+  if (w.kind === "evacuate") {
+    const sid = evacuate ? structureAt(c, strikeCell(c, u, s)) : -1;
+    return sid >= 0 && c.arena.structures[sid]!.topple > 0;
+  }
   if (w.kind === "hoist") return !where || where[s.to!] === 1 || !!(c.arena.flags[s.to!]! & A_WATER) || c.arena.struct[s.to!]! >= 0;
   const k = strikeCell(c, u, s);
   if (k < 0) return false;
@@ -130,7 +140,7 @@ function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null): boo
 }
 
 /** A rig's actions worth trying: every move with each strike that touches something, and moves without a strike (where they can matter, in `perfect` mode). */
-export function actionsOf(c: Combat, rig: number, mode: "perfect" | "best" | "all" = "all"): Action[] {
+export function actionsOf(c: Combat, rig: number, mode: "perfect" | "best" | "all" = "all", evacuate = false): Action[] {
   const from = c.pos[rig]!;
   const where = mode === "perfect" ? mattering(c, rig) : null;
   const out: Action[] = [];
@@ -138,7 +148,7 @@ export function actionsOf(c: Combat, rig: number, mode: "perfect" | "best" | "al
     c.occ[from] = -1;
     c.occ[dest] = rig;
     c.pos[rig] = dest;
-    for (const s of strikesOf(c, rig)) if (mode === "all" || touches(c, rig, s, where)) out.push({ unit: rig, dest, strike: s });
+    for (const s of strikesOf(c, rig)) if (mode === "all" || touches(c, rig, s, where, evacuate)) out.push({ unit: rig, dest, strike: s });
     if (!where || where[dest]) out.push({ unit: rig, dest, strike: null });
     c.occ[dest] = -1;
     c.occ[from] = rig;
@@ -186,7 +196,7 @@ export function solveTurn(start: Combat, opts: SolveOptions = {}): SolveResult {
     if (acted === all) return leaf(c, plan, strikes);
     for (let i = 0; i < rigs.length; i++) {
       if (acted & (1 << i)) continue;
-      for (const a of actionsOf(c, rigs[i]!, mode)) {
+      for (const a of actionsOf(c, rigs[i]!, mode, opts.evacuate)) {
         const n = cloneCombat(c);
         act(n, a.unit, a.dest, a.strike);
         // people lost, or a rig down, is never undone: no perfect turn goes on from it
@@ -227,6 +237,121 @@ export function greedyTurn(start: Combat): Solution {
     c = best.next;
   }
   return { plan, outcome: outcome(start, playOut(c)) };
+}
+
+// ---------------------------------------------------------------- a fight
+
+export interface FightOptions {
+  /** Rounds to hold, this one included. */
+  rounds: number;
+  /** Turn-search states to spend in all (default 400,000): past it the search stops, `complete` false. */
+  maxNodes?: number;
+  /** Rigs that have already acted this round. */
+  acted?: readonly number[];
+  /** Check every perfect first turn (up to 256) for whether the fight can still be held after it, not only until one can (default false). */
+  count?: boolean;
+  /**
+   * Try evacuating towers before the last round, to bring one down on the
+   * invaders later (default false). It multiplies the turns searched, and on
+   * the real boards measured it never made a lost fight winnable.
+   */
+  evacuate?: boolean;
+}
+
+export interface FightResult {
+  /** Every round held without losing anybody (or the invaders all down before the last). */
+  winnable: boolean;
+  /** A turn for each round that holds the fight (the first: this round's). */
+  line: Action[][];
+  /**
+   * Perfect first turns decided, and of those, the ones after which the fight
+   * can still be held (with `count`, every one checked; else up to the first
+   * that can). A turn whose search ran out isn't decided: it is neither.
+   */
+  firstTurns: number;
+  safeFirstTurns: number;
+  nodes: number;
+  /** False where a search ran out of states, or a round had more perfect turns than it kept: `winnable` false may then be wrong. */
+  complete: boolean;
+}
+
+const invadersLeft = (c: Combat) => c.roster.some((_, u) => teamOf(c, u) === INVADERS && c.hp[u]! > 0);
+
+/**
+ * Search a fight over its rounds (D-152): every perfect turn of this round,
+ * the invaders' strikes, their next aims (deterministic: the fight is a
+ * puzzle with nobody to answer), and so on, depth first, the turns that hurt
+ * the invaders most tried first, and each state surely lost not searched
+ * again. A turn that loses nobody now may still lose the fight.
+ */
+export function solveFight(start: Combat, opts: FightOptions): FightResult {
+  const max = opts.maxNodes ?? 400_000;
+  const res: FightResult = { winnable: false, line: [], firstTurns: 0, safeFirstTurns: 0, nodes: 0, complete: true };
+  /** States from which every turn was searched and each lost the fight. */
+  const lost = new Set<number>();
+  /** Searches that couldn't finish (out of states, or more perfect turns than kept): a loss found while it grows isn't sure. */
+  let unsure = 0;
+
+  /** This round's perfect turns, the hardest on the invaders first. */
+  const turns = (c: Combat, roundsLeft: number, acted?: readonly number[]) => {
+    const t = solveTurn(c, { keep: 256, maxNodes: Math.max(1, Math.min(100_000, max - res.nodes)), evacuate: !!opts.evacuate && roundsLeft > 1, ...(acted ? { acted } : {}) });
+    res.nodes += t.nodes;
+    if (!t.complete || t.perfect.length < t.perfectLeaves) unsure++;
+    return t.perfect.sort((p, q) => q.outcome.kills - p.outcome.kills || q.outcome.invaderDamage - p.outcome.invaderDamage || p.outcome.rigDamage - q.outcome.rigDamage);
+  };
+  /** The round played on from a turn: the invaders strike, fire burns, they aim again. */
+  const after = (c: Combat, plan: readonly Action[]) => {
+    const n = cloneCombat(c);
+    for (const a of plan) act(n, a.unit, a.dest, a.strike);
+    resolveInvaders(n);
+    endRound(n);
+    if (invadersLeft(n)) planInvaders(n);
+    return n;
+  };
+  /** A line that holds the rest of the fight from a state at the start of a round, or null. */
+  const hold = (c: Combat, roundsLeft: number): Action[][] | null => {
+    if (!invadersLeft(c) || roundsLeft <= 0) return [];
+    const key = hashCombat(c) * 8 + Math.min(roundsLeft, 7);
+    if (lost.has(key)) return null;
+    if (res.nodes >= max) {
+      unsure++;
+      return null;
+    }
+    const mark = unsure;
+    for (const t of turns(c, roundsLeft)) {
+      const rest = hold(after(c, t.plan), roundsLeft - 1);
+      if (rest) return [t.plan, ...rest];
+    }
+    if (unsure === mark) lost.add(key); // every turn searched to the end, and each lost
+    return null;
+  };
+
+  for (const t of turns(start, opts.rounds, opts.acted)) {
+    if (res.nodes >= max) {
+      unsure++;
+      break;
+    }
+    const mark = unsure;
+    const rest = hold(after(start, t.plan), opts.rounds - 1);
+    if (rest) {
+      res.firstTurns++;
+      res.safeFirstTurns++;
+      if (!res.winnable) {
+        res.winnable = true;
+        res.line = [t.plan, ...rest];
+      }
+      if (!opts.count) break;
+    } else if (unsure === mark) res.firstTurns++; // surely a trap
+  }
+  res.complete = unsure === 0;
+  return res;
+}
+
+/** How a plan's round plays out. */
+function outcomeOf(c: Combat, plan: readonly Action[]): Outcome {
+  const d = cloneCombat(c);
+  for (const a of plan) act(d, a.unit, a.dest, a.strike);
+  return outcome(c, playOut(d));
 }
 
 /** A plan in words, cells as (column, row). */
@@ -308,13 +433,19 @@ const CLEVER: Record<Mechanic, number> = { drown: 2, turn: 2, redirect: 2, fall:
 export interface Puzzle {
   /** The position: the invaders have aimed; the squad is to play. */
   combat: Combat;
-  /** A turn that loses nobody, and what it takes. */
+  /** A turn that loses nobody (with `rounds`, one after which the whole fight can be held), and what it takes. */
   solution: Solution;
   mechanics: Mechanic[];
   /**
+   * With `rounds`: a turn for each round that holds the fight, and of the
+   * perfect first turns, how many keep it winnable (the rest are traps).
+   */
+  fight?: { rounds: number; line: Action[][]; firstTurns: number; safeFirstTurns: number };
+  /**
    * How hard (bits): log2 of how many end states the search met for each
    * that loses nobody, 1.5 for each strike beyond one a perfect turn needs,
-   * and more for the mechanics its solution uses (`CLEVER`).
+   * more for the mechanics its solution uses (`CLEVER`), and with `rounds`
+   * twice log2 of perfect first turns for each that doesn't lose the fight.
    */
   difficulty: number;
   stats: { nodes: number; leaves: number; perfectLeaves: number; minStrikes: number; attempts: number; ms: number };
@@ -336,6 +467,14 @@ export interface PuzzleOptions {
   maxNodes?: number;
   /** Called after each position tried. */
   onProgress?: (tried: number, best: number | null) => void;
+  /**
+   * Rounds the whole fight must be winnable over (default 1: the first turn
+   * only). Over more, a position is kept only if some perfect first turn
+   * leads to every round held, and its traps count toward its difficulty.
+   */
+  rounds?: number;
+  /** States each fight check may search (default 200,000). */
+  fightNodes?: number;
 }
 
 function mulberry(seed: number): () => number {
@@ -419,15 +558,20 @@ export async function generatePuzzle(a: Arena, opts: PuzzleOptions = {}): Promis
     const c = position(a, rand, squad, invaders);
     if (c) {
       const res = solveTurn(c, { maxNodes: opts.maxNodes ?? 60_000, keep: 1 });
-      if (res.perfect.length && !greedyTurn(c).outcome.perfect) {
-        const mechanics = mechanicsOf(c, res.perfect[0]!.plan);
+      const rounds = opts.rounds ?? 1;
+      const f = res.perfect.length && rounds > 1 ? solveFight(c, { rounds, count: true, maxNodes: opts.fightNodes ?? 200_000 }) : null;
+      if (res.perfect.length && !greedyTurn(c).outcome.perfect && (!f || f.winnable)) {
+        const solution = f ? { plan: f.line[0]!, outcome: outcomeOf(c, f.line[0]!) } : res.perfect[0]!;
+        const mechanics = mechanicsOf(c, solution.plan);
         const clever = mechanics.reduce((n, m) => n + CLEVER[m], 0);
-        const difficulty = Math.log2(res.leaves / res.perfectLeaves) + 1.5 * Math.max(0, res.minStrikes - 1) + clever;
+        const traps = f ? 2 * Math.log2(f.firstTurns / f.safeFirstTurns) : 0;
+        const difficulty = Math.log2(res.leaves / res.perfectLeaves) + 1.5 * Math.max(0, res.minStrikes - 1) + clever + traps;
         // a clever puzzle over a plain one, whatever their bits
         const rank = (p: Puzzle | null) => (p ? (wantClever && p.mechanics.some((m) => CLEVER[m] > 0) ? 100 : 0) + p.difficulty : -Infinity);
         if (rank({ difficulty, mechanics } as Puzzle) > rank(best)) {
           const { nodes, leaves, perfectLeaves, minStrikes } = res;
-          best = { combat: c, solution: res.perfect[0]!, mechanics, difficulty, stats: { nodes, leaves, perfectLeaves, minStrikes, attempts: tried + 1, ms: 0 } };
+          best = { combat: c, solution, mechanics, difficulty, stats: { nodes, leaves, perfectLeaves, minStrikes, attempts: tried + 1, ms: 0 } };
+          if (f) best.fight = { rounds, line: f.line, firstTurns: f.firstTurns, safeFirstTurns: f.safeFirstTurns };
         }
       }
     }
