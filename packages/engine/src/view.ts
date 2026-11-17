@@ -8,6 +8,7 @@ import {
   StartTiles,
   TileCache,
   MAX_REVEALS,
+  objectInSlice,
   revealRect,
   tileKey,
   worldDepthRange,
@@ -891,7 +892,7 @@ class View implements WorldView {
     return out;
   }
 
-  async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean } = {}): Promise<TopDownImage | null> {
+  async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean } = {}): Promise<TopDownImage | null> {
     const { manifest, store } = this.w;
     const px = opts.px ?? 8;
     const owned = { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
@@ -905,15 +906,26 @@ class View implements WorldView {
     const s = store.slice(sx0, sy0, sx1, sy1);
     const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
     const rs = this.rs;
-    const removed = this.edits.removed();
+    // the objects taken out that this slice holds (an edit elsewhere doesn't change its image)
+    const instances = this.w.objects?.instances;
+    const removed = this.edits.removed().filter((i) => {
+      const o = instances?.[i];
+      return o ? objectInSlice(o, sx0, sy0, sx1, sy1) : false;
+    });
+    const tilt = opts.tilt ?? 0;
+    const shadows = opts.shadows ?? true;
+    // kept with the tiles (D-158): the tile key's world, style and bake code (all but its last part, the tile's own), and the area's
+    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}`, ...(removed.length ? [`edits:${removed.join(",")}`] : [])].join("|") : null;
+    const kept = key ? await this.cache!.get(key) : null;
+    if (kept) return { width: kept.width, height: kept.height, rgba: paletteImage(kept, this.w.palette), image: kept, px, x: owned.x0, y: owned.y0 };
     // the whole slice drawn (an object anchored in the margin reaches into the rectangle too), then cut to the rectangle
     const whole = await this.service.bakeArea({
       owned: { x0: sx0, y0: sy0, x1: sx1, y1: sy1 },
       slice,
       ...(removed.length ? { removed: [...removed] } : {}),
       // in render units: px per render cell, and per render step
-      projection: topDownProjection(px / rs, (opts.tilt ?? 0) / rs),
-      shadows: opts.shadows ?? true,
+      projection: topDownProjection(px / rs, tilt / rs),
+      shadows,
     });
     if (!whole) return null;
     // screen x = px·x and y = px·y on the ground (h = 0): the rectangle's pixels of the image
@@ -930,6 +942,7 @@ class View implements WorldView {
       if (i1 > i0) pixels.set(whole.pixels.subarray((sj * whole.width + left + i0 - whole.left) * 4, (sj * whole.width + left + i1 - whole.left) * 4), (j * width + i0) * 4);
     }
     const image = { left, top, width, height, depthBase: whole.depthBase, pixels };
+    if (key) void this.cache!.put(key, image);
     return { width, height, rgba: paletteImage(image, this.w.palette), image, px, x: owned.x0, y: owned.y0 };
   }
 

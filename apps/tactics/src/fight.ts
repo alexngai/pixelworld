@@ -770,7 +770,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map</div></div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>

@@ -165,6 +165,7 @@ Status values:
 | D-155 | Top-down bakes: the bake's projection as a parameter, a world rectangle drawn from above | Accepted |
 | D-156 | The fight's board over the city view: cells at their heights, see-through and glowing, a keyboard cursor | Accepted |
 | D-157 | The city's geometry in fights: leaps from roof to roof, high ground, fire that spreads and burns out | Accepted |
+| D-158 | The whole world from above: top-down tiles baked on demand and kept, and the game's city map | Accepted |
 
 ---
 
@@ -2380,3 +2381,10 @@ The point is more room for visual interest; both halves are wanted.
 - **Shown:** the tooltip says who leaps, the point from high ground, and what burns, burns out or has burnt; ash keeps a wisp of smoke, and is dark on the map.
 - **Checked:** a rig leaping a canal it can't walk, a brute not, nobody onto a tower 84 m up; a ram from a low roof downing a crawler that the same ram from the street leaves on a point; fire running along a lawn a cell a round and burning out behind (three burnouts); a shot from a tower's roof now doing two; the solver and puzzle tests unchanged otherwise; North Beach's fight made under the new rules, with leaps among its roofs.
 - **Later:** rubble from a fallen building as rough ground; fire spreading into buildings' roofs; bridges and piers.
+
+### D-158: The whole world from above: top-down tiles baked on demand and kept, and the game's city map (accepted)
+- **Why:** the owner asked for top-down bakes of the whole world, wary of the rework a full top-down mode would take (D-155: fifteen to twenty files). A map that pans over the whole world needs only images of it from above, a tile at a time.
+- **What:** `TopDownMap(view, { tile, px, concurrency })` in the engine: `tiles(x0, y0, x1, y1)` gives the tiles of `tile` cells baked so far over a rectangle and asks for the rest, nearest its middle first, two at a time (the city view keeps its bakers); `onChange` says when one comes in; `forget(rect)` lets the tiles an edit touched bake again. `bakeTopDown`'s `cache` keeps an image with the view's tiles (the persistent cache, under the world's tile key and the area's, with the removed objects its slice holds), so a city looked over once comes back at once.
+- **The city map (`cityMap.ts`, C):** the city north up from `TopDownMap` tiles (64 cells at 4 px), dragged and zoomed (½–8 px a cell), with the fight's board ringed, the operation's blocks named, and the ground the city view shows dashed; an edit bakes again only the tiles under it.
+- **Checked:** Lower Manhattan: seven 64-cell tiles in 24 s, reading as a satellite map (the street grid, parks, piers), the Financial District's board and SoHo marked; size budgets raised with notes (the tarball 820 KB, every entry 127 KB).
+- **Later:** a top-down overview for the viewer and the driving game; coarser tiles (fewer, bigger) when zoomed out; the campaign's city map (part 2).

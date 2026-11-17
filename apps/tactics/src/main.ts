@@ -7,6 +7,7 @@ import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
 import { arenaFromBoard, type Arena, type Puzzle } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
+import { CityMap } from "./cityMap";
 import { Fight, type FightOutcome } from "./fight";
 import "./game.css";
 import { CITIES, type City, type Site } from "./sites";
@@ -131,7 +132,29 @@ async function operation(city: City): Promise<void> {
   const played: Played[] = [];
   let fight: Fight | null = null;
   let board: Board | null = null;
-  Object.assign(window, { __tactics: { view, boards, brain, fight: () => fight, board: () => board, played } });
+  // the city from above (D-158): the operation's blocks on it, and the board being fought
+  const places = city.sites.flatMap((s) => {
+    const at = view.query.lonLatToCell(s.lon, s.lat);
+    return at ? [{ name: s.name, x: at[0], y: at[1] }] : [];
+  });
+  const cityMap = new CityMap(ui, view, places, () => {
+    if (!board) return null;
+    const x0 = board.origin[0];
+    const y0 = board.origin[1];
+    return { x0, y0, x1: x0 + board.w * board.cell, y1: y0 + board.h * board.cell };
+  });
+  view.edits.onChange((e) => {
+    // the tiles under what was edited bake again: objects' footprints, terrain cells
+    const pts = e.op === "cells" ? e.cells.map((c) => [c.x, c.y] as const) : e.objects.flatMap((i) => {
+      const o = view.query.object(i);
+      return o ? (o.fp ?? [[o.x, o.y] as const]) : [];
+    });
+    if (!pts.length) return;
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    cityMap.forget(Math.min(...xs) - 4, Math.min(...ys) - 4, Math.max(...xs) + 4, Math.max(...ys) + 4);
+  });
+  Object.assign(window, { __tactics: { view, boards, brain, fight: () => fight, board: () => board, played, cityMap } });
 
   // the pointer and keys go to the fight on
   const canvas = view.canvas;
@@ -154,6 +177,11 @@ async function operation(city: City): Promise<void> {
   });
   window.addEventListener("keydown", (e) => {
     const k = e.key === "Enter" ? "enter" : e.key === "Tab" ? "tab" : e.key === "Escape" ? "escape" : e.key.toLowerCase();
+    if (k === "c" || (k === "escape" && cityMap.open)) {
+      cityMap.toggle();
+      if (k === "escape") cityMap.close();
+      return e.preventDefault();
+    }
     if (fight?.key(k)) e.preventDefault();
   });
 

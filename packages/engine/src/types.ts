@@ -456,9 +456,10 @@ export interface WorldView extends ControllerView {
    * cell (default 8); `tilt` px of a south wall per step (default 0:
    * straight down; a little shows the walls); shadows on by default. The
    * rectangle is widened to whole cells: the image's pixel (i, j) shows cell
-   * (x + i / px, y + j / px) of `TopDownImage`. Null where nothing is there.
+   * (x + i / px, y + j / px) of `TopDownImage`. `cache` keeps it with the
+   * view's tiles (D-158). Null where nothing is there.
    */
-  bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts?: { px?: number; tilt?: number; shadows?: boolean }): Promise<TopDownImage | null>;
+  bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts?: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean }): Promise<TopDownImage | null>;
   /** Called after every animation frame (from the start, before `ready()`); `dt` is game time. */
   onFrame(listener: (e: FrameEvent) => void): () => void;
   /** The camera, every layer's state and the controller's (where it has `serialize`). */

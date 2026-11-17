@@ -23,6 +23,7 @@ export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";
 export { Minimap, viewOnGround, type MinimapOptions, type MinimapRoads, type MinimapView } from "./minimap";
+export { TopDownMap, type TopDownTile } from "./topdown";
 export * from "./cells";
 export * from "./boards";
 export { veilLayer, VeilLayer, type VeilLayerOptions } from "./veil";

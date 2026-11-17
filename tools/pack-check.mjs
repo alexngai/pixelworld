@@ -28,7 +28,7 @@ export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.met
  * here the library is unminified and the worker minified but for whitespace, see build.mjs).
  */
 export const BUDGETS = {
-  tarball: 800 * 1024, // gzipped .tgz, with source maps (769.3 KB with the national parks, D-136–D-141)
+  tarball: 820 * 1024, // gzipped .tgz, with source maps (769.3 KB with the national parks, D-136–D-141; 803.4 KB with D-147–D-158's edits, boards and top-down bakes)
   unpacked: 2.9 * 1024 * 1024, // everything, as installed (2870.5 KB with D-147/D-148's terrain edits and boards)
   js: 770 * 1024, // dist/*.js without maps: the library chunks and the worker (702.8 KB with D-124/D-125's edits, cells and veil; 754.6 KB with D-147/D-148's terrain edits and boards)
   worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
