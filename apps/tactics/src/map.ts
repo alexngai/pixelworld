@@ -1,4 +1,4 @@
-import { A_WATER, FIGHTERS, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { A_WATER, FIGHTERS, FIRE_ASH, isBurning, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
  * The board from above (D-154, D-155): the city baked straight down
@@ -231,15 +231,21 @@ export class TacticalMap {
         g.fillText(text, r.x + 5, r.y + 4);
       }
     }
-    // fire
-    for (let k = 0; k < a.w * a.h; k++)
-      if (c.fire[k]) {
+    // fire, and ash where it burnt out
+    for (let k = 0; k < a.w * a.h; k++) {
+      if (c.fire[k] === FIRE_ASH) {
+        rect(k);
+        g.fillStyle = "rgba(30,28,32,0.55)";
+        g.fill();
+      }
+      if (isBurning(c, k)) {
         const r = this.cellRect(k);
         g.fillStyle = "rgba(255,140,40,0.85)";
         g.beginPath();
         g.arc(r.cx, r.cy, cs * 0.18, 0, 2 * Math.PI);
         g.fill();
       }
+    }
     // the board's marks, the pointer's and the keyboard's cells
     for (const m of s.marks) {
       const k = m.j * a.w + m.i;

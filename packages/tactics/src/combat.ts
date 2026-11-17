@@ -66,6 +66,8 @@ export interface Fighter {
   climb: number;
   /** Crosses water, gaps and roofs, and isn't drowned or hurt by a fall. */
   flying?: boolean;
+  /** Leaps from a roof across a street one cell wide to a roof about as high (two moves, D-157). */
+  leaps?: boolean;
   /** Its weapons; an invader aims its first. */
   weapons: Weapon[];
 }
@@ -75,8 +77,8 @@ export type FighterKind = "wrecker" | "pumper" | "crane" | "crawler" | "brute" |
 const EVACUATE: Weapon = { name: "evacuate", kind: "evacuate", damage: 0, push: false };
 
 export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
-  wrecker: { name: "Wrecker", team: SQUAD, hp: 3, move: 3, climb: 15, weapons: [{ name: "ram", kind: "melee", damage: 2, push: true }, EVACUATE] },
-  pumper: { name: "Pumper", team: SQUAD, hp: 3, move: 3, climb: 15, weapons: [{ name: "water cannon", kind: "shot", damage: 1, push: true, douses: true }, EVACUATE] },
+  wrecker: { name: "Wrecker", team: SQUAD, leaps: true, hp: 3, move: 3, climb: 15, weapons: [{ name: "ram", kind: "melee", damage: 2, push: true }, EVACUATE] },
+  pumper: { name: "Pumper", team: SQUAD, leaps: true, hp: 3, move: 3, climb: 15, weapons: [{ name: "water cannon", kind: "shot", damage: 1, push: true, douses: true }, EVACUATE] },
   crane: {
     name: "Crane",
     team: SQUAD,
@@ -86,7 +88,7 @@ export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
     weapons: [{ name: "drop", kind: "lob", damage: 1, push: true, range: [2, 4] }, { name: "hoist", kind: "hoist", damage: 0, push: false }, EVACUATE],
   },
   // tougher than a turn's strikes can bring down, mostly: the squad turns them, drowns them, drops them and puts them out of line
-  crawler: { name: "Crawler", team: INVADERS, hp: 3, move: 3, climb: Infinity, weapons: [{ name: "bite", kind: "melee", damage: 1, push: false }] },
+  crawler: { name: "Crawler", team: INVADERS, leaps: true, hp: 3, move: 3, climb: Infinity, weapons: [{ name: "bite", kind: "melee", damage: 1, push: false }] },
   brute: { name: "Brute", team: INVADERS, hp: 4, move: 2, climb: 4, weapons: [{ name: "slam", kind: "melee", damage: 2, push: true }] },
   flyer: { name: "Flyer", team: INVADERS, hp: 2, move: 4, climb: Infinity, flying: true, weapons: [{ name: "spit", kind: "shot", damage: 1, push: false, ignites: true }] },
 };
@@ -102,6 +104,18 @@ export const TOPPLE_MAX = 4;
 export const A_WATER = 1;
 /** Lawn, woods, scrub: fire takes there. */
 export const A_BURNS = 2;
+
+/**
+ * Fire (D-157): a cell burns for two rounds' ends (`Combat.fire` 1, then 2),
+ * setting the burnable cells beside it alight at each, then burns out to ash
+ * (`FIRE_ASH`), which doesn't burn again.
+ */
+export const FIRE_ASH = 3;
+export const isBurning = (c: Pick<Combat, "fire">, k: number): boolean => c.fire[k] === 1 || c.fire[k] === 2;
+/** Striking a unit from this far above it (metres) does a point more (D-157). */
+export const HIGH_GROUND_M = 6;
+/** How much higher or lower a roof a leap lands on may be (metres). */
+export const LEAP_M = 6;
 
 export interface Structure {
   /** The world object (`ObjectHit.index`), or −1. */
@@ -269,6 +283,7 @@ export type CombatEvent =
   | { t: "evacuate"; id: number }
   | { t: "ignite"; at: number }
   | { t: "douse"; at: number }
+  | { t: "burnout"; at: number }
   | { t: "arrive"; unit: number; at: number }
   | { t: "blocked"; unit: number; at: number };
 
@@ -371,30 +386,54 @@ function enterable(c: Combat, u: number, from: number, k: number): boolean {
   return Math.abs(standAt(c, k) - standAt(c, from)) * c.arena.metersPerStep <= f.climb;
 }
 
-/** The cells a unit can move to this turn (its own included): through its own side's units, not the other's, ending on an empty cell. */
+/**
+ * The cells a unit can move to this turn (its own included): through its own
+ * side's units, not the other's, ending on an empty cell; a step a move, a
+ * leap from roof to roof across a street two (D-157).
+ */
 export function movesOf(c: Combat, u: number): number[] {
   const a = c.arena;
   const dist = new Int8Array(a.w * a.h).fill(-1);
   const start = c.pos[u]!;
   const team = teamOf(c, u);
-  const move = FIGHTERS[c.roster[u]!].move;
+  const f = FIGHTERS[c.roster[u]!];
   const queue = [start];
   dist[start] = 0;
+  const seen = new Uint8Array(a.w * a.h);
+  seen[start] = 1;
   const out: number[] = [start];
+  const reach = (k: number, nk: number, cost: number) => {
+    const nd = dist[k]! + cost;
+    if (nd > f.move || (dist[nk]! >= 0 && dist[nk]! <= nd)) return;
+    const o = c.occ[nk]!;
+    if (o >= 0 && teamOf(c, o) !== team) return;
+    dist[nk] = nd;
+    queue.push(nk);
+    if (o < 0 && !seen[nk]) {
+      seen[nk] = 1;
+      out.push(nk);
+    }
+  };
   for (let q = 0; q < queue.length; q++) {
     const k = queue[q]!;
-    if (dist[k]! >= move) continue;
     for (let d = 0; d < 4; d++) {
       const nk = step(a, k, d);
-      if (nk < 0 || dist[nk]! >= 0 || !enterable(c, u, k, nk)) continue;
-      const o = c.occ[nk]!;
-      if (o >= 0 && teamOf(c, o) !== team) continue;
-      dist[nk] = dist[k]! + 1;
-      queue.push(nk);
-      if (o < 0) out.push(nk);
+      if (nk >= 0 && enterable(c, u, k, nk)) reach(k, nk, 1);
+      if (f.leaps && !f.flying) {
+        const far = nk >= 0 ? step(a, nk, d) : -1;
+        if (far >= 0 && leapable(c, k, nk, far)) reach(k, far, 2);
+      }
     }
   }
   return out;
+}
+
+/** A leap from roof k over cell mid to roof far: a street between (lower than both), and the roofs within LEAP_M of each other. */
+function leapable(c: Combat, k: number, mid: number, far: number): boolean {
+  if (structureAt(c, k) < 0 || structureAt(c, far) < 0) return false;
+  const hk = standAt(c, k);
+  const hf = standAt(c, far);
+  return standAt(c, mid) < Math.min(hk, hf) && Math.abs(hk - hf) * c.arena.metersPerStep <= LEAP_M;
 }
 
 /** Cells a hoist from a cell may set a unit down on: within HOIST_REACH along the streets, empty, and not the crane's own. */
@@ -543,7 +582,7 @@ function push(c: Combat, k: number, dir: number, log: Log): void {
   if (flying) return;
   if (a.flags[to]! & A_WATER && structureAt(c, to) < 0) return hurt(c, u, c.hp[u]!, log, true);
   drop(c, u, from, onto, log);
-  if (c.fire[to]) hurt(c, u, 1, log);
+  if (isBurning(c, to)) hurt(c, u, 1, log);
 }
 
 /** A unit strikes from where it stands. */
@@ -572,10 +611,10 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
     c.pos[v] = to;
     log?.push({ t: "hoist", unit: v, from: k, to });
     if (!FIGHTERS[c.roster[v]!].flying && a.flags[to]! & A_WATER && structureAt(c, to) < 0) hurt(c, v, c.hp[v]!, log, true);
-    else if (c.fire[to]) hurt(c, v, 1, log);
+    else if (isBurning(c, to)) hurt(c, v, 1, log);
     return;
   }
-  if (w.douses && c.fire[k]) {
+  if (w.douses && isBurning(c, k)) {
     c.fire[k] = 0;
     log?.push({ t: "douse", at: k });
   }
@@ -583,7 +622,9 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   // a melee strike reaches a unit only so far up or down: past that, it strikes the wall of the building under it
   const reaches = v >= 0 && (w.kind !== "melee" || Math.abs(standAt(c, k) - standAt(c, from)) <= a.reach);
   if (reaches) {
-    hurt(c, v, w.damage, log);
+    // from high ground, a point more
+    const above = w.damage > 0 && (standAt(c, from) - standAt(c, k)) * a.metersPerStep >= HIGH_GROUND_M;
+    hurt(c, v, w.damage + (above ? 1 : 0), log);
     if (w.kind !== "lob" && w.push && c.hp[v]! > 0) push(c, k, s.dir, log);
   } else {
     const sid = structureAt(c, k);
@@ -594,7 +635,7 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
       const nk = step(a, k, d);
       if (nk >= 0 && c.occ[nk]! >= 0) push(c, nk, d, log);
     }
-  if (w.ignites && a.flags[k]! & A_BURNS && structureAt(c, k) < 0 && !c.fire[k]) {
+  if (w.ignites && a.flags[k]! & A_BURNS && structureAt(c, k) < 0 && c.fire[k] === 0) {
     c.fire[k] = 1;
     log?.push({ t: "ignite", at: k });
   }
@@ -619,17 +660,27 @@ export function resolveInvaders(c: Combat, log?: Log): void {
 export function endRound(c: Combat, log?: Log): void {
   const a = c.arena;
   const burnt = new Set<number>();
+  const lit = new Set<number>();
   for (let k = 0; k < c.fire.length; k++) {
-    if (!c.fire[k]) continue;
+    if (!isBurning(c, k)) continue;
     const u = c.occ[k]!;
     if (u >= 0) hurt(c, u, 1, log);
     for (let d = 0; d < 4; d++) {
-      const sid = structureAt(c, step(a, k, d));
+      const nk = step(a, k, d);
+      const sid = structureAt(c, nk);
       if (sid >= 0 && a.structures[sid]!.flammable && !burnt.has(sid)) {
         burnt.add(sid);
         hurtStructure(c, sid, 1, -1, -1, log);
       }
+      // the fire spreads to the burnable ground beside it (D-157)
+      if (nk >= 0 && sid < 0 && a.flags[nk]! & A_BURNS && c.fire[nk] === 0) lit.add(nk);
     }
+  }
+  for (let k = 0; k < c.fire.length; k++)
+    if (isBurning(c, k) && ++c.fire[k]! === FIRE_ASH) log?.push({ t: "burnout", at: k });
+  for (const k of lit) {
+    c.fire[k] = 1;
+    log?.push({ t: "ignite", at: k });
   }
   for (let s = 0; s < c.evacuating.length; s++)
     if (c.evacuating[s]) {
@@ -675,7 +726,7 @@ export function planInvaders(c: Combat): void {
     const from = c.pos[u]!;
     let best: { dest: number; s: Strike | null; value: number } = { dest: from, s: null, value: 0 };
     for (const dest of movesOf(c, u)) {
-      if (c.fire[dest]) continue;
+      if (isBurning(c, dest)) continue;
       moveUnit(c, u, dest);
       for (const s of strikesOf(c, u)) {
         // a little for staying put, and a stable jitter so ties don't all go north
@@ -765,6 +816,6 @@ export function hashCombat(c: Combat): number {
   for (const v of c.hp) mix(v + 7);
   for (const v of c.structHp) mix(v + 31);
   for (let s = 0; s < c.evacuating.length; s++) if (c.evacuating[s] || c.evacuated[s]) mix(s * 4 + c.evacuating[s]! * 2 + c.evacuated[s]! + 8191);
-  for (let k = 0; k < c.fire.length; k++) if (c.fire[k]) mix(k + 4099);
+  for (let k = 0; k < c.fire.length; k++) if (c.fire[k]) mix(k * 4 + c.fire[k]! + 4099);
   return (h1 >>> 0) * 131072 + ((h2 >>> 0) & 0x1ffff);
 }

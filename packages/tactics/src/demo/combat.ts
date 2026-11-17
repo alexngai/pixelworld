@@ -26,6 +26,7 @@ import {
   structureAt,
   teamOf,
   moveUnit,
+  isBurning,
   type Arrow,
   type Combat,
   type CombatEvent,
@@ -180,10 +181,10 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     });
     for (let k = 0; k < c.fire.length; k++) {
       const f = fires.get(k);
-      if (c.fire[k] && !f) {
+      if (isBurning(c, k) && !f) {
         const p = centre(k);
         fires.set(k, env.effect("fire", p.x, p.y, 3));
-      } else if (!c.fire[k] && f) {
+      } else if (!isBurning(c, k) && f) {
         f.until = 0;
         fires.delete(k);
       }

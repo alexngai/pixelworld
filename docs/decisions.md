@@ -164,6 +164,7 @@ Status values:
 | D-154 | Seeing a fight's board: what stands in front taken out, a clean cut in front of every unit, the board from above | Accepted |
 | D-155 | Top-down bakes: the bake's projection as a parameter, a world rectangle drawn from above | Accepted |
 | D-156 | The fight's board over the city view: cells at their heights, see-through and glowing, a keyboard cursor | Accepted |
+| D-157 | The city's geometry in fights: leaps from roof to roof, high ground, fire that spreads and burns out | Accepted |
 
 ---
 
@@ -2370,3 +2371,12 @@ The point is more room for visual interest; both halves are wanted.
 - **Intent:** in the move phase, the cells the selected rig could strike from the cell looked at (the pointer's, else the cursor's) are outlined dashed. A tooltip beside the looked-at cell says what it holds: a unit's moves, climbing and weapons (an invader's aim and turn to strike), a building's height, people, strength, how far it topples and whether the rigs can climb it, water, fire, an arrival.
 - **A peek:** what stands in front of the looked-at cell is half see-through (a reveal at 0.55, D-079), so a cell behind a tower can be read before acting there; the reveal count is twelve now, so it never takes a unit's cut.
 - **Checked:** live in the Financial District: a rig picked with Tab, moved with an arrow and Space, the cursor on a target and the strike made with Space; the glass's move range and roof-top danger cells; the map's art; three cells outlined from a move cell; the tooltips of a flyer ("aims west at a building (147 people); strikes 1st") and a 56 m tower ("651 people · 3 hp · topples 2 cells · too tall for the rigs to climb").
+
+### D-157: The city's geometry in fights: leaps from roof to roof, high ground, fire that spreads and burns out (accepted)
+- **Why:** the owner asked for more interactions with the environment and its own geometry. Real blocks have roofs at many heights with streets between, parks and lawns: rules that reward reading them.
+- **Leaps:** the wrecker, the pumper and crawlers (`Fighter.leaps`) leap from a roof across a street one cell wide (lower than both roofs) onto a roof within 6 m of theirs (`LEAP_M`), for two moves; `movesOf` relaxes over steps of one and leaps of two. A street of water, or a drop too deep to climb, no longer cuts a rooftop off. The game arcs a leap over the street.
+- **High ground:** a strike on a unit from 6 m or more above it (`HIGH_GROUND_M`) does a point more: a rig on a low roof, a flyer's spit from a tower. The previews and the invaders' aims count it, as they play strikes out.
+- **Fire:** a burning cell burns for two rounds' ends (`Combat.fire` 1, then 2) and at each sets the burnable cells beside it (trees, lawns, grass) alight, then burns out to ash (`FIRE_ASH`), which doesn't burn again (`isBurning`); a `burnout` event marks it. Fire in a park now runs; the pumper's cannon still puts a cell out. The hash takes the fire's age.
+- **Shown:** the tooltip says who leaps, the point from high ground, and what burns, burns out or has burnt; ash keeps a wisp of smoke, and is dark on the map.
+- **Checked:** a rig leaping a canal it can't walk, a brute not, nobody onto a tower 84 m up; a ram from a low roof downing a crawler that the same ram from the street leaves on a point; fire running along a lawn a cell a round and burning out behind (three burnouts); a shot from a tower's roof now doing two; the solver and puzzle tests unchanged otherwise; North Beach's fight made under the new rules, with leaps among its roofs.
+- **Later:** rubble from a fallen building as rough ground; fire spreading into buildings' roofs; bridges and piers.

@@ -10,6 +10,7 @@ import {
   cloneCombat,
   endRound,
   hashCombat,
+  isBurning,
   movesOf,
   newCombat,
   outcome,
@@ -132,7 +133,7 @@ function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null, evac
   if (w.kind === "hoist") return !where || where[s.to!] === 1 || !!(c.arena.flags[s.to!]! & A_WATER) || c.arena.struct[s.to!]! >= 0;
   const k = strikeCell(c, u, s);
   if (k < 0) return false;
-  if (c.occ[k]! >= 0 || structureAt(c, k) >= 0 || c.fire[k]) return true;
+  if (c.occ[k]! >= 0 || structureAt(c, k) >= 0 || isBurning(c, k)) return true;
   if (w.kind !== "lob" || !w.push) return false;
   for (let d = 0; d < 4; d++) {
     const nk = step(c.arena, k, d);

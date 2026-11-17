@@ -210,7 +210,7 @@ describe("roofs and buildings (D-151)", () => {
     const a = arena(["H#.."]);
     const high = newCombat(a, units(a, [["pumper", 0, 0], ["crawler", 3, 0]]));
     strike(high, 0, S(EAST));
-    expect([high.hp[1], high.structHp[1]]).toEqual([2, 1]);
+    expect([high.hp[1], high.structHp[1]]).toEqual([1, 1]); // from 90 m up: a point more (D-157)
     const b = arena([".#.."]);
     const low = newCombat(b, units(b, [["pumper", 0, 0], ["crawler", 3, 0]]));
     strike(low, 0, S(EAST));
@@ -285,6 +285,43 @@ describe("invaders arriving (D-153)", () => {
     const blocks = f.line[0]!.some((x) => x.dest === cell(a, 1, 0));
     // either the wrecker blocks the arrival, or it deals with the brute in the second round
     expect(blocks || f.line.length === 2).toBe(true);
+  });
+});
+
+describe("the city's geometry (D-157)", () => {
+  it("a rig leaps from roof to roof across a canal it can't walk; a brute can't", () => {
+    const a = arena(["#~#", "~~~"]);
+    const rig = newCombat(a, units(a, [["wrecker", 0, 0]]));
+    expect(movesOf(rig, 0)).toContain(cell(a, 2, 0));
+    const brute = newCombat(a, units(a, [["brute", 0, 0]]));
+    expect(movesOf(brute, 0)).not.toContain(cell(a, 2, 0));
+    // not onto a tower's roof: 84 m higher
+    const t = arena(["#~H", "~~~"]);
+    expect(movesOf(newCombat(t, units(t, [["wrecker", 0, 0]])), 0)).not.toContain(cell(t, 2, 0));
+  });
+
+  it("striking from 6 m above does a point more", () => {
+    const a = arena(["#...", "...."]);
+    const high = newCombat(a, units(a, [["wrecker", 0, 0], ["crawler", 1, 0]]));
+    strike(high, 0, S(EAST));
+    const low = newCombat(a, units(a, [["wrecker", 0, 1], ["crawler", 1, 1]]));
+    strike(low, 0, S(EAST));
+    expect([high.hp[1], low.hp[1]]).toEqual([0, 1]);
+  });
+
+  it("fire spreads through the lawn at each round's end and burns out after two, never to burn again", () => {
+    const a = arena(["***.", "...."]);
+    const c = newCombat(a, units(a, [["pumper", 3, 1]]));
+    c.fire[cell(a, 0, 0)] = 1;
+    const log: CombatEvent[] = [];
+    endRound(c, log);
+    expect([...c.fire.slice(0, 4)]).toEqual([2, 1, 0, 0]);
+    endRound(c, log);
+    expect([...c.fire.slice(0, 4)]).toEqual([3, 2, 1, 0]);
+    endRound(c, log);
+    endRound(c, log);
+    expect([...c.fire.slice(0, 4)]).toEqual([3, 3, 3, 0]);
+    expect(log.filter((e) => e.t === "burnout").length).toBe(3);
   });
 });
 

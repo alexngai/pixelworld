@@ -1,6 +1,10 @@
 import { boardCellAt, toWorld, type Board, type Entity, type WorldView } from "@pixelworlds/engine";
 import {
+  A_BURNS,
   A_WATER,
+  FIRE_ASH,
+  HIGH_GROUND_M,
+  isBurning,
   BoardOverlay,
   DIRS,
   DIR_NAMES,
@@ -150,6 +154,7 @@ export class Fight {
   private hidden: number[] = [];
   private hiddenFor = -1;
   private readonly fires = new Map<number, Entity[]>();
+  private readonly ash = new Set<number>();
   private readonly fx = new Set<{ entities: Entity[]; until: number }>();
   private readonly queue: Step[] = [];
   private current: { step: Step; t0: number } | null = null;
@@ -405,11 +410,16 @@ export class Fight {
     }
     for (let k = 0; k < c.fire.length; k++) {
       const f = this.fires.get(k);
-      if (c.fire[k] && !f) this.fires.set(k, this.effect("fire", k, 3, Infinity));
-      else if (!c.fire[k] && f) {
+      if (isBurning(c, k) && !f) this.fires.set(k, this.effect("fire", k, 3, Infinity));
+      else if (!isBurning(c, k) && f) {
         for (const e of f) e.remove();
         for (const x of this.fx) if (x.entities === f) this.fx.delete(x);
         this.fires.delete(k);
+      }
+      // burnt out: a wisp of smoke stays
+      if (c.fire[k] === FIRE_ASH && !this.ash.has(k)) {
+        this.ash.add(k);
+        this.effect("smoke", k, 2, Infinity);
       }
     }
   }
@@ -497,9 +507,12 @@ export class Fight {
     let lastAt = -1;
     for (const e of log) {
       switch (e.t) {
-        case "move":
-          steps.push(tween(e.unit, e.from, e.to, Math.min(500, 130 * manhattan(c.arena.w, e.from, e.to))));
+        case "move": {
+          // roof to roof: a leap, arcing over the street
+          const leap = structureAt(c, e.from) >= 0 && structureAt(c, e.to) >= 0 && manhattan(c.arena.w, e.from, e.to) >= 2;
+          steps.push(tween(e.unit, e.from, e.to, Math.min(500, 130 * manhattan(c.arena.w, e.from, e.to)), leap ? 6 : 0));
           break;
+        }
         case "strike": {
           lastAt = e.at;
           const w = FIGHTERS[c.roster[e.unit]!].weapons[e.weapon]!;
@@ -864,12 +877,13 @@ export class Fight {
       const f = FIGHTERS[c.roster[u]!];
       const squad = teamOf(c, u) === SQUAD;
       lines.push(`<b class="${squad ? "rig" : "invader"}">${f.name}</b> ${pips(c.hp[u]!, f.hp)}${squad && this.acted.has(u) ? " · done" : ""}`);
-      lines.push(`moves ${f.move} · ${f.flying ? "flies" : f.climb >= 1e3 ? "climbs any wall" : `climbs ${f.climb} m`}`);
+      lines.push(`moves ${f.move} · ${f.flying ? "flies" : f.climb >= 1e3 ? "climbs any wall" : `climbs ${f.climb} m`}${f.leaps ? " · leaps roof to roof" : ""}`);
       for (const w of squad ? f.weapons : f.weapons.slice(0, 1)) {
         const what =
           w.kind === "hoist" ? "lifts the unit beside it up to 2 cells" : w.kind === "evacuate" ? "empties the building beside it by the round's end" : `${w.damage} damage${w.push ? ", pushes" : ""}${w.range ? `, ${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? ", first thing in line" : ", next cell"}${w.ignites ? ", sets alight" : ""}${w.douses ? ", douses" : ""}`;
         lines.push(`· ${w.name}: ${what}`);
       }
+      if (f.weapons.some((w) => w.damage > 0)) lines.push(`a point more striking from ${HIGH_GROUND_M} m above`);
       if (!squad && c.aim[u]! >= 0) {
         const t = strikeCell(c, u, aimOf(c, u));
         const sid = t >= 0 ? structureAt(c, t) : -1;
@@ -887,7 +901,9 @@ export class Fight {
         lines.push(m <= 15 ? "rigs can climb onto it" : "too tall for the rigs to climb; crawlers can");
       }
     } else if (a.flags[k]! & A_WATER) lines.push("<b>water</b>: a unit pushed in drowns (not flyers)");
-    if (c.fire[k]) lines.push("<b>burning</b>: hurts who stands here");
+    if (isBurning(c, k)) lines.push(`<b>burning</b>: hurts who stands here; spreads to the trees and grass beside it at the round's end${c.fire[k] === 2 ? ", then burns out" : ""}`);
+    else if (c.fire[k] === FIRE_ASH) lines.push("<b>burnt out</b>: won't burn again");
+    else if (a.flags[k]! & A_BURNS && sid < 0) lines.push("trees or grass: burns, and fire spreads through it");
     const arrival = arriving(c).find((x) => x.at === k);
     if (arrival) lines.push(`▼ a ${FIGHTERS[arrival.kind].name} lands here at the round's end: stand here to block it (1 damage)`);
     if (!lines.length) {
