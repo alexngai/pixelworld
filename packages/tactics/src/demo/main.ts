@@ -19,6 +19,7 @@ import {
   type WorldView,
 } from "@pixelworlds/engine";
 import { BoardOverlay, entityModel, objectInfo, rampsFor, type Arrow, type FxKind, type Mark, type UnitKind } from "../index";
+import { startCombat, type CombatMode } from "./combat";
 
 /**
  * The tactics sandbox (D-147–D-149): the engine's terrain edits and boards,
@@ -332,7 +333,18 @@ async function setUp(view: WorldView) {
   intents();
 
   // ---------------------------------------------------------------- input
-  let pointer: { x: number; y: number; object?: number } | null = null;
+  let pointer: { x: number; y: number; object?: number; ground?: { x: number; y: number } } | null = null;
+  // a fight (D-150): C starts one under the pointer; while it is on, clicks and keys are its
+  let combat: CombatMode | null = null;
+  let combatSeed = 1;
+  let starting = false;
+  const fight = async (x: number, y: number) => {
+    if (starting) return;
+    starting = true;
+    combat?.stop();
+    combat = await startCombat({ view, boards, ramps, say, status, effect }, x, y, combatSeed++);
+    starting = false;
+  };
   let down: { x: number; y: number } | null = null;
   const canvas = view.canvas;
   canvas.addEventListener("pointermove", (e) => {
@@ -340,17 +352,29 @@ async function setUp(view: WorldView) {
     const object = query.pickObject(e.offsetX, e.offsetY);
     const ground = query.pick(e.offsetX, e.offsetY);
     const at = object ? { x: (object.bounds[0] + object.bounds[2]) / 2, y: (object.bounds[1] + object.bounds[3]) / 2 } : ground;
-    pointer = at ? { x: at.x, y: at.y, ...(object && object.index >= 0 ? { object: object.index } : {}) } : null;
-    if (pointer) status.textContent = describe(pointer.x, pointer.y);
+    pointer = at ? { x: at.x, y: at.y, ...(object && object.index >= 0 ? { object: object.index } : {}), ...(ground ? { ground: { x: ground.x, y: ground.y } } : {}) } : null;
+    if (pointer && !combat) status.textContent = describe(pointer.x, pointer.y);
   });
   canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerup", (e) => {
-    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && pointer) select(pointer.x, pointer.y);
+    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && pointer) {
+      const g = pointer.ground ?? pointer;
+      if (combat) combat.click(g.x, g.y, pointer.object);
+      else select(pointer.x, pointer.y);
+    }
     down = null;
   });
   let grids = true;
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
+    if (combat) {
+      if (k === "n") return void fight(view.camera.x, view.camera.y);
+      if (combat.key(k)) {
+        if (k === "escape") combat = null;
+        e.preventDefault();
+        return;
+      }
+    } else if (k === "c" && pointer) return void fight((pointer.ground ?? pointer).x, (pointer.ground ?? pointer).y);
     if (k === "g") {
       grids = !grids;
       for (const o of overlays.values()) o.setGrid(grids);
@@ -366,7 +390,7 @@ async function setUp(view: WorldView) {
 
   await view.ready();
   say(`${view.world.manifest.id}: boards of 1, 0.5 and 3 cells a cell; ${units.length} units`);
-  return { boards, main, fine, coarse, overlays, units, ignite, demolish, flood, raise, nextTurn, select, describe, burning };
+  return { boards, main, fine, coarse, overlays, units, ignite, demolish, flood, raise, nextTurn, select, describe, burning, fight, combat: () => combat };
 }
 
 main().catch((e: unknown) => {
