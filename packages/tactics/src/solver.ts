@@ -6,6 +6,7 @@ import {
   NOBODY,
   SQUAD,
   act,
+  arriving,
   cloneCombat,
   endRound,
   hashCombat,
@@ -108,6 +109,7 @@ function mattering(c: Combat, rig: number): Uint8Array {
       if (w.kind === "lob") for (let d = 0; d < 4; d++) mark(step(a, t, d));
     }
   }
+  for (const { at } of arriving(c)) mark(at); // standing there blocks an arrival
   mark(c.pos[rig]!);
   for (let d = 0; d < 4; d++) mark(step(a, c.pos[rig]!, d));
   return m;
@@ -275,7 +277,8 @@ export interface FightResult {
   complete: boolean;
 }
 
-const invadersLeft = (c: Combat) => c.roster.some((_, u) => teamOf(c, u) === INVADERS && c.hp[u]! > 0);
+/** Invaders standing, or still to arrive. */
+const invadersLeft = (c: Combat) => c.roster.some((_, u) => teamOf(c, u) === INVADERS && c.hp[u]! > 0) || c.schedule.slice(c.round).some((r) => r.length > 0);
 
 /**
  * Search a fight over its rounds (D-152): every perfect turn of this round,
@@ -475,6 +478,8 @@ export interface PuzzleOptions {
   rounds?: number;
   /** States each fight check may search (default 200,000). */
   fightNodes?: number;
+  /** Invaders arriving at the end of each round but the last, when there are several (default 1). */
+  arrivals?: number;
 }
 
 function mulberry(seed: number): () => number {
@@ -495,8 +500,8 @@ function openCells(a: Arena): number[] {
   return out;
 }
 
-/** Try one position: the squad round a cell, invaders near it and near buildings; null where it is no puzzle. */
-function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: FighterKind[]): Combat | null {
+/** Try one position: the squad round a cell, invaders near it and near buildings, and those arriving later; null where it is no puzzle. */
+function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: FighterKind[], arrivals: FighterKind[][] = []): Combat | null {
   const open = openCells(a);
   if (open.length < squad.length + invaders.length + 4) return null;
   const pick = <T>(xs: T[]) => xs[Math.floor(rand() * xs.length)]!;
@@ -530,7 +535,17 @@ function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: 
     used.add(at);
     units.push({ kind, at });
   }
-  const c = newCombat(a, units);
+  // arrivals: on open ground near the fight, away from everyone, one cell each
+  const schedule = arrivals.map((kinds) =>
+    kinds.flatMap((kind) => {
+      const ok = open.filter((k) => !used.has(k) && cheb(k, centre) <= 5 && units.every((u) => cheb(u.at, k) >= 2));
+      if (!ok.length) return [];
+      const at = pick(ok);
+      used.add(at);
+      return [{ kind, at }];
+    }),
+  );
+  const c = newCombat(a, units, schedule);
   planInvaders(c);
   // a threat worth a puzzle: left alone, the round costs two buildings' worth, and every invader aims
   for (let u = 0; u < c.roster.length; u++) if (teamOf(c, u) === INVADERS && c.aim[u]! < 0) return null;
@@ -555,10 +570,11 @@ export async function generatePuzzle(a: Arena, opts: PuzzleOptions = {}): Promis
     const invaders = Array.isArray(opts.invaders)
       ? opts.invaders
       : Array.from({ length: opts.invaders ?? 2 + Math.floor(rand() * 2) }, () => kinds[Math.floor(rand() * kinds.length)]!);
-    const c = position(a, rand, squad, invaders);
+    const rounds = opts.rounds ?? 1;
+    const arrivals = Array.from({ length: rounds - 1 }, () => Array.from({ length: opts.arrivals ?? 1 }, () => kinds[Math.floor(rand() * kinds.length)]!));
+    const c = position(a, rand, squad, invaders, arrivals);
     if (c) {
       const res = solveTurn(c, { maxNodes: opts.maxNodes ?? 60_000, keep: 1 });
-      const rounds = opts.rounds ?? 1;
       const f = res.perfect.length && rounds > 1 ? solveFight(c, { rounds, count: true, maxNodes: opts.fightNodes ?? 200_000 }) : null;
       if (res.perfect.length && !greedyTurn(c).outcome.perfect && (!f || f.winnable)) {
         const solution = f ? { plan: f.line[0]!, outcome: outcomeOf(c, f.line[0]!) } : res.perfect[0]!;

@@ -73,6 +73,33 @@ importers:
 
   apps/site: {}
 
+  apps/tactics:
+    dependencies:
+      '@pixelworlds/city-hongkong':
+        specifier: workspace:*
+        version: link:../../packages/city-hongkong
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../../packages/city-kyoto
+      '@pixelworlds/city-nyc':
+        specifier: workspace:*
+        version: link:../../packages/city-nyc
+      '@pixelworlds/city-paris':
+        specifier: workspace:*
+        version: link:../../packages/city-paris
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../../packages/city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../../packages/city-tokyo
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworlds/tactics':
+        specifier: workspace:*
+        version: link:../../packages/tactics
+
   apps/web:
     dependencies:
       '@pixelworlds/bake':

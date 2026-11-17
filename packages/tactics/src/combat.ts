@@ -211,10 +211,24 @@ export function arenaFromBoard(
 
 // ---------------------------------------------------------------- a fight
 
-/** A fight's state: the units (by their place in `roster`), the structures' hit points and people, and the fires. */
+/** An invader due to arrive: its kind and cell. */
+export interface Arrival {
+  kind: FighterKind;
+  at: number;
+}
+
+/** A fight's state: the units (by their place in `roster`, which grows as invaders arrive), the structures' hit points and people, and the fires. */
 export interface Combat {
   readonly arena: Arena;
-  readonly roster: readonly FighterKind[];
+  roster: FighterKind[];
+  /**
+   * Who arrives at the end of each round (`schedule[r]` at round r's end,
+   * the first round 0), shown a round ahead: a unit standing on the cell
+   * blocks the arrival and takes a point for it. Shared by clones.
+   */
+  readonly schedule: readonly (readonly Arrival[])[];
+  /** Rounds ended so far. */
+  round: number;
   /** Each unit's cell (kept after it falls), hit points (0: down), and aim: a direction, or −1; and a lob's reach. */
   pos: Int16Array;
   hp: Int8Array;
@@ -242,7 +256,7 @@ export interface Strike {
 
 export type CombatEvent =
   | { t: "move"; unit: number; from: number; to: number }
-  | { t: "strike"; unit: number; at: number }
+  | { t: "strike"; unit: number; at: number; weapon: number }
   | { t: "push"; unit: number; from: number; to: number }
   | { t: "bump"; unit: number; at: number }
   | { t: "fall"; unit: number; drop: number }
@@ -254,16 +268,20 @@ export type CombatEvent =
   | { t: "hoist"; unit: number; from: number; to: number }
   | { t: "evacuate"; id: number }
   | { t: "ignite"; at: number }
-  | { t: "douse"; at: number };
+  | { t: "douse"; at: number }
+  | { t: "arrive"; unit: number; at: number }
+  | { t: "blocked"; unit: number; at: number };
 
 type Log = CombatEvent[] | undefined;
 
-export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at: number }[]): Combat {
+export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at: number }[], schedule: readonly (readonly Arrival[])[] = []): Combat {
   const n = arena.w * arena.h;
   const ns = arena.structures.length;
   const c: Combat = {
     arena,
     roster: units.map((u) => u.kind),
+    schedule,
+    round: 0,
     pos: Int16Array.from(units.map((u) => u.at)),
     hp: Int8Array.from(units.map((u) => FIGHTERS[u.kind].hp)),
     aim: new Int8Array(units.length).fill(-1),
@@ -286,7 +304,9 @@ export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at:
 export function cloneCombat(c: Combat): Combat {
   return {
     arena: c.arena,
-    roster: c.roster,
+    roster: c.roster.slice(),
+    schedule: c.schedule,
+    round: c.round,
     pos: c.pos.slice(),
     hp: c.hp.slice(),
     aim: c.aim.slice(),
@@ -302,6 +322,27 @@ export function cloneCombat(c: Combat): Combat {
 }
 
 export const teamOf = (c: Combat, u: number) => FIGHTERS[c.roster[u]!].team;
+
+/** The invaders arriving at this round's end. */
+export const arriving = (c: Combat): readonly Arrival[] => c.schedule[c.round] ?? [];
+
+/** Add a unit to a fight (an arrival): the roster and each unit's arrays grow by one. */
+export function addUnit(c: Combat, kind: FighterKind, at: number): number {
+  const u = c.roster.length;
+  const grow = <T extends Int8Array | Int16Array>(a: T, v: number): T => {
+    const b = new (a.constructor as new (n: number) => T)(a.length + 1);
+    b.set(a);
+    b[a.length] = v;
+    return b;
+  };
+  c.roster.push(kind);
+  c.pos = grow(c.pos, at);
+  c.hp = grow(c.hp, FIGHTERS[kind].hp);
+  c.aim = grow(c.aim, -1);
+  c.reach = grow(c.reach, 1);
+  c.occ[at] = u;
+  return u;
+}
 export const alive = (c: Combat, u: number) => c.hp[u]! > 0;
 
 /** The cell a step from k in a direction, or −1 off the arena. */
@@ -513,7 +554,7 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   const from = c.pos[u]!;
   const k = strikeCell(c, u, s);
   if (k < 0) return;
-  log?.push({ t: "strike", unit: u, at: k });
+  log?.push({ t: "strike", unit: u, at: k, weapon: s.weapon });
   if (w.kind === "evacuate") {
     const sid = structureAt(c, k);
     if (sid >= 0 && !c.evacuated[sid]) {
@@ -570,7 +611,11 @@ export function resolveInvaders(c: Combat, log?: Log): void {
   for (let u = 0; u < c.roster.length; u++) if (teamOf(c, u) === INVADERS && c.hp[u]! > 0 && c.aim[u]! >= 0) strike(c, u, aimOf(c, u), log);
 }
 
-/** The round's end: fire burns who stands in it and the wooden buildings beside it; buildings being evacuated are empty. */
+/**
+ * The round's end: fire burns who stands in it and the wooden buildings
+ * beside it; buildings being evacuated are empty; the round's invaders
+ * arrive, but where a unit stands, which takes a point for blocking it.
+ */
 export function endRound(c: Combat, log?: Log): void {
   const a = c.arena;
   const burnt = new Set<number>();
@@ -591,6 +636,17 @@ export function endRound(c: Combat, log?: Log): void {
       c.evacuated[s] = 1;
       c.evacuating[s] = 0;
     }
+  for (const { kind, at } of arriving(c)) {
+    const u = c.occ[at]!;
+    if (u >= 0) {
+      log?.push({ t: "blocked", unit: u, at });
+      hurt(c, u, 1, log);
+    } else if (structureAt(c, at) < 0) {
+      const v = addUnit(c, kind, at); // not inside the log's push: with no log, `?.` would skip it
+      log?.push({ t: "arrive", unit: v, at });
+    }
+  }
+  c.round++;
 }
 
 // ---------------------------------------------------------------- the invaders
@@ -704,6 +760,7 @@ export function hashCombat(c: Combat): number {
     h1 = Math.imul(h1 ^ (v & 0xffff), 0x01000193);
     h2 = Math.imul(h2 ^ (v & 0xffff), 0x5bd1e995) ^ (h2 >>> 13);
   };
+  mix(c.round + 60000);
   for (const v of c.pos) mix(v);
   for (const v of c.hp) mix(v + 7);
   for (const v of c.structHp) mix(v + 31);

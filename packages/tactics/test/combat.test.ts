@@ -258,6 +258,36 @@ describe("roofs and buildings (D-151)", () => {
   });
 });
 
+describe("invaders arriving (D-153)", () => {
+  it("arrive at their round's end where shown, and a unit standing there blocks one, taking a point", () => {
+    const a = arena(["....", "...."]);
+    const c = newCombat(a, units(a, [["pumper", 0, 0]]), [[{ kind: "crawler", at: cell(a, 3, 1) }, { kind: "brute", at: cell(a, 0, 0) }], [{ kind: "flyer", at: cell(a, 2, 0) }]]);
+    const log: CombatEvent[] = [];
+    endRound(c, log);
+    expect(log).toEqual([
+      { t: "arrive", unit: 1, at: cell(a, 3, 1) },
+      { t: "blocked", unit: 0, at: cell(a, 0, 0) },
+      { t: "damage", unit: 0, amount: 1 },
+    ]);
+    expect([c.roster, c.round, c.hp[0], c.hp[1], c.occ[cell(a, 3, 1)]]).toEqual([["pumper", "crawler"], 1, 2, 3, 1]);
+    endRound(c);
+    expect(c.roster).toEqual(["pumper", "crawler", "flyer"]);
+    endRound(c); // nobody due after
+    expect(c.roster.length).toBe(3);
+  });
+
+  it("a fight isn't won while invaders are still due, and a rig can be sent to block one", () => {
+    const a = arena(["#.....", "......"]);
+    // nobody standing yet; a brute arrives beside the building at the first round's end
+    const c = newCombat(a, units(a, [["wrecker", 3, 1]]), [[{ kind: "brute", at: cell(a, 1, 0) }]]);
+    const f = solveFight(c, { rounds: 2 });
+    expect(f.winnable).toBe(true);
+    const blocks = f.line[0]!.some((x) => x.dest === cell(a, 1, 0));
+    // either the wrecker blocks the arrival, or it deals with the brute in the second round
+    expect(blocks || f.line.length === 2).toBe(true);
+  });
+});
+
 describe("the turn solver (D-150)", () => {
   // a brute beside a tower: it takes all 4 of the squad's damage to bring down, and pushing it west breaks the tower
   const a = arena(["H.....", "......", "......", "......"]);

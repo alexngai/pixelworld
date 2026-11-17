@@ -42,4 +42,4 @@ describePlan(puzzle.combat, puzzle.solution.plan);       // ["Wrecker moves to (
 solveTurn(puzzle.combat).perfect.length;                 // the turns that lose nobody
 ```
 
-In the sandbox, C starts a fight under the pointer.
+In the sandbox, C starts a fight under the pointer. The playable game is `apps/tactics` (D-153): `pnpm --filter @pixelworlds/tactics-game dev`, then http://localhost:5300.
