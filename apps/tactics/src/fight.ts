@@ -141,6 +141,11 @@ export class Fight {
   private readonly hud: HTMLElement;
   private readonly labelRoot: HTMLElement;
   private now = 0;
+  /** The invader striking now, and those that have struck this round (their arrows gone). */
+  private striking = -1;
+  private readonly struck = new Set<number>();
+  /** Enter pressed once with rigs that haven't acted: the next ends the turn. */
+  private confirmEnd = false;
 
   constructor(s: FightSetup) {
     this.done = new Promise((r) => (this.finish = r));
@@ -172,7 +177,7 @@ export class Fight {
       reveal: { margin: 16 * Math.max(a.w, a.h) * s.board.cell * this.view.world.renderScale + 24, density: 0.9 },
       wait: false,
     });
-    this.view.camera.setFocus(middle.x, middle.y, this.view.query.heightAt(middle.x, middle.y) ?? 0);
+    this.frameBoard();
     for (let u = 0; u < this.c.roster.length; u++) this.spawnEntity(u);
     this.offFrame = this.view.onFrame((e) => this.frame(e.now));
     this.checkOutlook();
@@ -180,6 +185,19 @@ export class Fight {
     const f = s.puzzle.fight;
     const traps = f && f.firstTurns > f.safeFirstTurns ? ` Careful: ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
     this.say(`Hold the block for ${this.rounds} rounds. Click a rig to move it.${traps}`);
+  }
+
+  /** The camera on the board's middle, zoomed in as far as the board still fits about half the screen. */
+  private frameBoard(): void {
+    const { camera, query, canvas } = this.view;
+    const a = this.c.arena;
+    const middle = toWorld(this.board, { x: a.w / 2, y: a.h / 2 });
+    camera.setFocus(middle.x, middle.y, query.heightAt(middle.x, middle.y) ?? 0);
+    const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, query.heightAt(p.x, p.y) ?? 0));
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const fit = Math.min((0.55 * canvas.clientWidth) / (Math.max(...xs) - Math.min(...xs)), (0.5 * canvas.clientHeight) / (Math.max(...ys) - Math.min(...ys)));
+    camera.zoom = Math.min(6, Math.max(1, Math.floor(camera.zoom * fit)));
   }
 
   // ---------------------------------------------------------------- the world: entities, effects, labels
@@ -433,7 +451,7 @@ export class Fight {
   private aims(s: Combat): Arrow[] {
     const out: Arrow[] = [];
     for (let u = 0; u < s.roster.length; u++) {
-      if (teamOf(s, u) !== INVADERS || s.hp[u]! <= 0 || s.aim[u]! < 0) continue;
+      if (teamOf(s, u) !== INVADERS || s.hp[u]! <= 0 || s.aim[u]! < 0 || this.struck.has(u)) continue;
       const t = strikeCell(s, u, aimOf(s, u));
       if (t >= 0) out.push({ from: this.ij(s.pos[u]!), to: this.ij(t), kind: "attack" });
     }
@@ -472,7 +490,12 @@ export class Fight {
 
   private order(s: Combat): Map<number, number> {
     const out = new Map<number, number>();
-    for (let u = 0, n = 1; u < s.roster.length; u++) if (teamOf(s, u) === INVADERS && s.hp[u]! > 0 && s.aim[u]! >= 0) out.set(u, n++);
+    // numbered as at the round's start: those that have struck keep their numbers out of the list
+    for (let u = 0, n = 1; u < s.roster.length; u++) {
+      if (teamOf(s, u) !== INVADERS || s.aim[u]! < 0 || (s.hp[u]! <= 0 && !this.struck.has(u))) continue;
+      if (!this.struck.has(u) && s.hp[u]! > 0) out.set(u, n);
+      n++;
+    }
     return out;
   }
 
@@ -505,7 +528,7 @@ export class Fight {
       keep.add(id);
       const f = FIGHTERS[shown.roster[u]!];
       const n = order.get(u);
-      this.label(id, shown.pos[u]!, `${n ? `${n} ` : ""}${pips(shown.hp[u]!, f.hp)}`, teamOf(shown, u) === SQUAD ? (this.acted.has(u) ? "rig done" : "rig") : "invader");
+      this.label(id, shown.pos[u]!, `${n ? `${n} ` : ""}${pips(shown.hp[u]!, f.hp)}`, teamOf(shown, u) === SQUAD ? (this.acted.has(u) ? "rig done" : "rig") : u === this.striking ? "invader striking" : "invader");
     }
     arriving(shown).forEach(({ kind, at }, i) => {
       keep.add(`arrive-${i}`);
@@ -572,7 +595,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}</div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>Tab</kbd> weapon · <kbd>Space</kbd> hold fire · right-click back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>
@@ -623,6 +646,7 @@ export class Fight {
     this.lift = -1;
     this.phase = "move";
     this.hint = [];
+    this.confirmEnd = false;
     this.say(`${FIGHTERS[c.roster[u]!].name}: click where it moves (its own cell to stay). Right-click to cancel.`);
     this.paint();
   }
@@ -733,7 +757,7 @@ export class Fight {
     this.act(s);
   }
 
-  private act(s: Strike | null): void {
+  private act(s: Strike | null): Promise<void> {
     const u = this.selected;
     const log: CombatEvent[] = [];
     if (s) strike(this.c, u, s, log);
@@ -741,9 +765,10 @@ export class Fight {
     this.selected = -1;
     this.preview = null;
     this.hint = [];
+    this.confirmEnd = false;
     this.phase = "busy";
     this.paint();
-    void this.steps(this.animate(log)).then(() => {
+    return this.steps(this.animate(log)).then(() => {
       this.sync();
       this.phase = "pick";
       this.checkOutlook();
@@ -772,12 +797,11 @@ export class Fight {
       return true;
     }
     if (k === " " && this.phase === "strike") {
-      this.act(null);
+      void this.act(null);
       return true;
     }
     if (k === "enter") {
-      if (this.phase === "strike") this.act(null);
-      void this.endTurn();
+      void this.askEndTurn();
       return true;
     }
     if (k === "u" && this.resets > 0) {
@@ -835,6 +859,20 @@ export class Fight {
 
   // ---------------------------------------------------------------- the round
 
+  /** Enter: the selected rig holds fire; with rigs still to act, the first press asks, the second ends the turn. */
+  private async askEndTurn(): Promise<void> {
+    if (this.phase === "strike") await this.act(null);
+    else if (this.phase === "move") this.cancelMove();
+    const idle = this.c.roster.filter((_, u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u)).length;
+    if (idle && !this.confirmEnd) {
+      this.confirmEnd = true;
+      this.say(`${idle === 1 ? "A rig hasn't" : `${idle} rigs haven't`} acted: Enter again to end the turn anyway.`);
+      return this.paint();
+    }
+    this.confirmEnd = false;
+    await this.endTurn();
+  }
+
   private async endTurn(): Promise<void> {
     if (this.phase === "busy" || this.phase === "over") return;
     this.phase = "busy";
@@ -847,9 +885,15 @@ export class Fight {
     // each invader in turn, so the eye can follow
     for (let u = 0; u < this.c.roster.length; u++) {
       if (teamOf(this.c, u) !== INVADERS || this.c.hp[u]! <= 0 || this.c.aim[u]! < 0) continue;
+      // a beat with the striker marked, then its strike
+      this.striking = u;
+      this.paint();
+      await this.steps([{ ms: 380 }]);
       const log: CombatEvent[] = [];
       strike(this.c, u, aimOf(this.c, u), log);
       await this.steps([...this.animate(log), { ms: 250 }]);
+      this.striking = -1;
+      this.struck.add(u);
       this.sync();
       this.paint();
     }
@@ -870,6 +914,7 @@ export class Fight {
       if (teamOf(this.c, u) === INVADERS && this.c.hp[u]! > 0 && aiming.pos[u] !== this.c.pos[u]) moves.push(...this.animate([{ t: "move", unit: u, from: aiming.pos[u]!, to: this.c.pos[u]! }]));
     await this.steps(moves);
     this.sync();
+    this.struck.clear();
     this.turnStart = cloneCombat(this.c);
     this.acted = new Set();
     this.razedThisTurn = [];

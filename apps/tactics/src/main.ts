@@ -92,33 +92,31 @@ async function openCity(city: City): Promise<WorldView> {
   return view;
 }
 
-/** A board round a site with buildings enough for a fight, and a puzzle made on it; null when none comes of it. */
-async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, seed: number): Promise<{ board: Board; puzzle: Puzzle } | null> {
-  const n = note(`<h2>${site.name}</h2><p>Scouting the block…</p>`);
-  try {
-    await view.camera.lookAt({ lon: site.lon, lat: site.lat });
-    const cx = Math.floor(view.camera.x);
-    const cy = Math.floor(view.camera.y);
-    const mpc = view.world.manifest.scale.metersPerCell;
-    for (const cell of [site.cell, site.cell === 1 ? 2 : 1])
-      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        const span = SIZE * cell;
-        const board = await boards.add({ x0: cx - span / 2 + dx * span, y0: cy - span / 2 + dy * span, w: SIZE, h: SIZE, cell });
-        const arena: Arena = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
-        if (arena.structures.length < 5) {
-          boards.remove(board);
-          continue;
-        }
-        const puzzle = await brain.generate(arena, { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1 }, (tried) =>
-          n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`),
-        );
-        if (puzzle) return { board, puzzle };
+/**
+ * A board round a site with buildings enough for a fight, and a puzzle made on
+ * it; null when none comes of it. It needs no camera there, so the next block
+ * is made while this one is fought.
+ */
+async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, seed: number, progress: (tried: number) => void): Promise<{ board: Board; puzzle: Puzzle } | null> {
+  const at = view.query.lonLatToCell(site.lon, site.lat);
+  if (!at) return null;
+  const cx = Math.floor(at[0]);
+  const cy = Math.floor(at[1]);
+  const mpc = view.world.manifest.scale.metersPerCell;
+  for (const cell of [site.cell, site.cell === 1 ? 2 : 1])
+    for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const span = SIZE * cell;
+      const board = await boards.add({ x0: cx - span / 2 + dx * span, y0: cy - span / 2 + dy * span, w: SIZE, h: SIZE, cell });
+      const arena: Arena = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
+      if (arena.structures.length < 5) {
         boards.remove(board);
+        continue;
       }
-    return null;
-  } finally {
-    n.close();
-  }
+      const puzzle = await brain.generate(arena, { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1 }, progress);
+      if (puzzle) return { board, puzzle };
+      boards.remove(board);
+    }
+  return null;
 }
 
 interface Played {
@@ -159,9 +157,26 @@ async function operation(city: City): Promise<void> {
     if (fight?.key(k)) e.preventDefault();
   });
 
+  // each block is made while the one before it is fought, on a worker of its own (the fight's outlook and hints keep theirs)
+  const maker = new Brain();
+  let tried = 0;
+  let waiting: { set(html: string): void } | null = null;
+  const make = (i: number) => {
+    tried = 0;
+    return scout(view, boards, maker, city.sites[i]!, i + 1, (n) => {
+      tried = n;
+      waiting?.set(`<h2>${city.sites[i]!.name}</h2><p>Working out the invaders' landing… ${n} positions tried</p>`);
+    });
+  };
+  let next = make(0);
   for (let i = 0; i < city.sites.length; i++) {
     const site = city.sites[i]!;
-    const found = await scout(view, boards, brain, site, i + 1);
+    const n = note(`<h2>${site.name}</h2><p>${tried ? `Working out the invaders' landing… ${tried} positions tried` : "Scouting the block…"}</p>`);
+    waiting = n;
+    const [found] = await Promise.all([next, view.camera.lookAt({ lon: site.lon, lat: site.lat })]);
+    waiting = null;
+    n.close();
+    if (i + 1 < city.sites.length) next = make(i + 1);
     if (!found) {
       played.push({ site, outcome: null });
       await screen(`<h2>${site.name}</h2><p>No fight could be made on this block.</p><button data-go="next">Move on</button>`);

@@ -187,6 +187,12 @@ kbd {
   border-color: var(--warn);
   color: var(--warn);
 }
+.fight .keys {
+  color: var(--dim);
+  font-size: 11px;
+  border-top: 1px solid var(--edge);
+  padding-top: 5px;
+}
 .fight .tag {
   color: var(--dim);
   font-size: 11px;
@@ -236,9 +242,9 @@ kbd {
   top: 0;
   translate: -50% -100%;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 3px 5px;
   border-radius: 3px;
   background: rgba(14, 13, 22, 0.78);
   will-change: transform;
@@ -251,6 +257,17 @@ kbd {
 }
 .label.invader {
   color: var(--enemy);
+}
+.label.striking {
+  background: var(--enemy);
+  color: #1e1c2b;
+  font-weight: bold;
+  animation: pulse 0.38s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  to {
+    scale: 1.25;
+  }
 }
 .label.arrive {
   color: var(--warn);
