@@ -76,6 +76,7 @@ class EntityImpl implements Entity {
   private _roll: number;
   private _visible: boolean;
   private _silhouette: boolean;
+  private _outline: readonly [number, number, number] | null;
   private _reveal: EntityReveal | null;
   /** The palette index of its silhouette, where it has a ramp of its own (`silhouetteRamp`). */
   readonly silhouetteIndex: number | undefined;
@@ -99,6 +100,7 @@ class EntityImpl implements Entity {
     this._roll = spec.roll ?? 0;
     this._visible = spec.visible ?? true;
     this._silhouette = spec.silhouette ?? false;
+    this._outline = spec.outline ?? null;
     this.silhouetteIndex = spec.silhouetteRamp === undefined ? undefined : paletteIndex(spec.silhouetteRamp, SHADES - 1);
     this._reveal = withRevealDefaults(spec.reveal);
     this.headings = Math.max(1, Math.round(spec.headings ?? DEFAULT_HEADINGS));
@@ -158,6 +160,15 @@ class EntityImpl implements Entity {
   set silhouette(v: boolean) {
     if (v === this._silhouette) return;
     this._silhouette = v;
+    this.owner.changed();
+  }
+
+  get outline(): readonly [number, number, number] | null {
+    return this._outline;
+  }
+  set outline(v: readonly [number, number, number] | null) {
+    if (v === this._outline || (v && this._outline && v.every((c, i) => c === this._outline![i]))) return;
+    this._outline = v;
     this.owner.changed();
   }
 
@@ -306,7 +317,7 @@ export class Entities implements EntityList {
       e.shownRotation = rotation;
       const p = project(e.x, e.y, e.h + e.lift);
       // not rounded: the compositor places sprites between art pixels, so they glide
-      list.push({ sprite, sx: p.sx, sy: p.sy, depth: p.depth, silhouette: e.silhouette, silhouetteIndex: e.silhouetteIndex, reveal: e.reveal });
+      list.push({ sprite, sx: p.sx, sy: p.sy, depth: p.depth, silhouette: e.silhouette, silhouetteIndex: e.silhouetteIndex, reveal: e.reveal, ...(e.outline ? { outline: e.outline } : {}) });
     }
     return { list, complete };
   }

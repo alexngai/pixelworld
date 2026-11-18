@@ -106,6 +106,10 @@ const GHOST = 0.3;
 const TOP_SUN: [number, number, number] = [0.15, 0.27, 1.6];
 /** …under the selected unit or the cell looked at, even in the way (D-166). */
 const GHOST_LIT = 0.85;
+/** Units' outlines (D-170): the rig chosen, what the rig's move or strike would reach or affect, what the invaders will hurt. */
+const CHOSEN: [number, number, number] = [110, 235, 95];
+const AIMED: [number, number, number] = [255, 214, 64];
+const THREATENED: [number, number, number] = [255, 72, 72];
 /** How long the cutaway stays after what called for it ends (ms, D-167): a sweep of the pointer doesn't flicker it. */
 const CUT_LINGER_MS = 450;
 /** How high a building cut down stands (metres): a plinth, its footprint plain, a unit in the street behind it in view (the faint building shows the rest). */
@@ -816,7 +820,8 @@ export class Fight {
     const shown = this.preview?.state ?? c;
     const byCell = new Map<number, Mark["kind"]>();
     const mark = (k: number, kind: Mark["kind"]) => byCell.set(k, kind);
-    if (this.phase !== "busy" && this.phase !== "over") for (const k of this.harm(shown)) mark(k, "danger");
+    const danger = this.phase !== "busy" && this.phase !== "over" ? this.harm(shown) : new Set<number>();
+    for (const k of danger) mark(k, "danger");
     for (const { at } of arriving(shown)) mark(at, "info");
     for (let u = 0; u < shown.roster.length; u++) {
       if (shown.hp[u]! <= 0) continue;
@@ -839,6 +844,18 @@ export class Fight {
         const t = strikeCell(d, this.selected, st);
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
+    }
+    // units outlined (D-170): green the rig chosen; yellow what it could strike, or what the move or strike pointed at would reach or
+    // affect; red what the invaders will hurt
+    const aimed = new Set<number>();
+    const unitAt = (k: number) => (c.occ[k]! >= 0 ? aimed.add(c.occ[k]!) : aimed);
+    if (this.selected >= 0 && this.phase === "strike") for (const k of this.targets(this.selected).keys()) unitAt(k);
+    for (const k of reach) unitAt(k);
+    if (this.preview) for (let u = 0; u < c.roster.length; u++) if (this.preview.state.hp[u] !== c.hp[u] || this.preview.state.pos[u] !== c.pos[u]) aimed.add(u);
+    for (let u = 0; u < c.roster.length; u++) {
+      const e = this.entities[u];
+      if (!e) continue;
+      e.outline = u === this.selected ? CHOSEN : aimed.has(u) ? AIMED : c.hp[u]! > 0 && danger.has(c.pos[u]!) ? THREATENED : null;
     }
     // the fight's buildings cut away, each drawn as itself over the cut (D-162), far to near: solid, but faint where in the way (D-166)
     const alphas = this.ghostAlphas(shown, focus);

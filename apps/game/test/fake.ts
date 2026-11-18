@@ -100,6 +100,7 @@ export function building(x0: number, y0: number, x1: number, y1: number, group =
 
 class FakeEntity implements Entity {
   reveal = null;
+  outline: readonly [number, number, number] | null = null;
   pitch = 0;
   roll = 0;
 

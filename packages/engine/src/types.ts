@@ -678,6 +678,12 @@ export interface EntitySpec {
    */
   silhouetteRamp?: number;
   /**
+   * An outline round its sprite in this colour (0–255 each), a few pixels wide,
+   * drawn over everything, a building in front of it too (D-170): a game's
+   * way of saying a unit is chosen, threatened or aimed at. Default none.
+   */
+  outline?: readonly [number, number, number] | null;
+  /**
    * See through what stands in front of it (D-079), for a player among tall
    * buildings: within `margin` render px of its sprite (default 24),
    * buildings and landmarks in front of it are dithered away (`density` of
@@ -737,6 +743,8 @@ export interface Entity {
   roll: number;
   visible: boolean;
   silhouette: boolean;
+  /** Its outline's colour (`EntitySpec.outline`), or null for none. */
+  outline: readonly [number, number, number] | null;
   /** Seeing through what stands in front of it (`EntitySpec.reveal`, with its defaults), or null. */
   reveal: EntityReveal | null;
   /** Move (cells, steps); the height defaults to the ground there, or stays where it isn't loaded. */

@@ -8,7 +8,9 @@ import { standAt, type Combat, type Mark } from "@pixelworlds/tactics";
  * see-through, with a glow. The pointer's and the keyboard's cells are
  * outlined, with lines down to the ground when they stand on a roof. A cell
  * hidden behind a building is outlined dashed, seen through it; a building
- * of the fight cut down in front of a unit (D-159) is outlined whole. Redrawn
+ * of the fight cut down in front of a unit (D-159) is outlined whole. A cell
+ * the invaders will strike is striped red, and a building of theirs outlined
+ * red whole (D-170). Redrawn
  * every frame (the camera moves), on a 2D canvas over the world: no bakes, so
  * the cursor moves at once.
  */
@@ -36,7 +38,20 @@ const COLOUR: Record<Mark["kind"], string> = {
   enemy: "255,122,107",
   info: "242,193,78",
 };
-const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, danger: 0.3, info: 0.16, select: 0.12 };
+/** How a building of the fight is drawn whole: its roof's edge (alpha, glow, width), its corners down, the faint panes of its sides and roof. */
+interface Whole {
+  edge: number;
+  glow: number;
+  width: number;
+  corner: number;
+  pane: number;
+  roof: number;
+}
+const GLASS: Whole = { edge: 0.5, glow: 6, width: 1.2, corner: 0.2, pane: 0.012, roof: 0.03 };
+const GLASS_LIT: Whole = { edge: 0.95, glow: 10, width: 1.8, corner: 0.55, pane: 0.08, roof: 0.14 };
+/** A building the invaders will strike (D-170): outlined, barely filled (its roof is striped). */
+const THREAT: Whole = { edge: 0.95, glow: 8, width: 2, corner: 0.75, pane: 0.015, roof: 0 };
+const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, info: 0.16, select: 0.12 };
 
 export class BoardGlass {
   readonly el: HTMLCanvasElement;
@@ -90,6 +105,21 @@ export class BoardGlass {
       g.closePath();
     };
     const lift = 0.08;
+    // hazard stripes across a cell (D-170): bands along the edge of it that runs up to the right on screen, every other one filled
+    const stripes = (pts: [number, number][], rgb: string, alpha: number) => {
+      const up = (p: number, q: number) => (pts[q]![0] - pts[p]![0]) * (pts[q]![1] - pts[p]![1]) < 0;
+      const [p0, p1, p3] = up(0, 1) ? [0, 1, 3] : [0, 3, 1];
+      const at = (u: number, v: number): [number, number] => [
+        pts[p0]![0] + u * (pts[p1]![0] - pts[p0]![0]) + v * (pts[p3]![0] - pts[p0]![0]),
+        pts[p0]![1] + u * (pts[p1]![1] - pts[p0]![1]) + v * (pts[p3]![1] - pts[p0]![1]),
+      ];
+      g.fillStyle = `rgba(${rgb},${alpha})`;
+      const n = 8;
+      for (let b = 0; b < n; b += 2) {
+        path([at(0, b / n), at(1, b / n), at(1, (b + 1) / n), at(0, (b + 1) / n)]);
+        g.fill();
+      }
+    };
     // the grid: faint, dashed through a building
     g.lineWidth = 1;
     for (let k = 0; k < a.w * a.h; k++) {
@@ -99,48 +129,51 @@ export class BoardGlass {
       g.stroke();
     }
     g.setLineDash([]);
-    // the fight's buildings cut down (D-159): whole, as glass, from the stump to the roof; the looked-at one brighter
-    const focus = s.hover >= 0 ? s.hover : s.cursor;
-    const focused = focus >= 0 ? a.struct[focus]! : -1;
-    g.save();
-    for (const id of s.ghosts) {
+    // a building of the fight whole, from its foot to its roof: the roof faintly filled, its outer sides as faint panes, the roof's
+    // edge plainly, its corners down faintly
+    const building = (id: number, rgb: string, w: Whole, foot: (k: number) => number) => {
       const st = a.structures[id];
-      if (!st || c.structHp[id]! <= 0) continue;
-      const lit = id === focused;
+      if (!st || c.structHp[id]! <= 0) return;
       const mine = new Set(st.cells);
       for (const k of st.cells) {
         const i = k % a.w;
         const j = Math.floor(k / a.w);
         const roof = quad(k, standAt(c, k));
-        const foot = quad(k, a.height[k]! + s.stump);
-        // its roof, faintly filled
+        const base = quad(k, foot(k));
         path(roof);
-        g.fillStyle = `rgba(170,215,255,${lit ? 0.14 : 0.03})`;
+        g.fillStyle = `rgba(${rgb},${w.roof})`;
         g.fill();
-        // sides open to another cell: a faint pane, the roof's edge plainly, the corners down to the stump faintly
         ([[i, j - 1, 0, 1], [i + 1, j, 1, 2], [i, j + 1, 2, 3], [i - 1, j, 3, 0]] as const).forEach(([ni, nj, p, q]) => {
           if (ni >= 0 && nj >= 0 && ni < a.w && nj < a.h && mine.has(nj * a.w + ni)) return;
-          path([roof[p]!, roof[q]!, foot[q]!, foot[p]!]);
-          g.fillStyle = `rgba(170,215,255,${lit ? 0.08 : 0.012})`;
+          path([roof[p]!, roof[q]!, base[q]!, base[p]!]);
+          g.fillStyle = `rgba(${rgb},${w.pane})`;
           g.fill();
-          g.strokeStyle = `rgba(170,215,255,${lit ? 0.95 : 0.5})`;
-          g.shadowColor = "rgba(170,215,255,0.8)";
-          g.shadowBlur = lit ? 10 : 6;
-          g.lineWidth = lit ? 1.8 : 1.2;
+          g.strokeStyle = `rgba(${rgb},${w.edge})`;
+          g.shadowColor = `rgba(${rgb},0.8)`;
+          g.shadowBlur = w.glow;
+          g.lineWidth = w.width;
           g.beginPath();
           g.moveTo(...roof[p]!);
           g.lineTo(...roof[q]!);
           g.stroke();
-          g.strokeStyle = `rgba(170,215,255,${lit ? 0.55 : 0.2})`;
+          g.strokeStyle = `rgba(${rgb},${w.corner})`;
           g.shadowBlur = 0;
           g.lineWidth = 1.2;
           g.beginPath();
           g.moveTo(...roof[p]!);
-          g.lineTo(...foot[p]!);
+          g.lineTo(...base[p]!);
           g.stroke();
         });
       }
-    }
+    };
+    // the fight's buildings cut down (D-159): as glass, from the stump; the looked-at one brighter
+    const focus = s.hover >= 0 ? s.hover : s.cursor;
+    const focused = focus >= 0 ? a.struct[focus]! : -1;
+    // the invaders' targets among the buildings (D-170): red, whole, from the ground, over the glass
+    const threatened = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => a.struct[m.j * a.w + m.i]!).filter((id) => id >= 0));
+    g.save();
+    for (const id of s.ghosts) if (!threatened.has(id)) building(id, "170,215,255", id === focused ? GLASS_LIT : GLASS, (k) => a.height[k]! + s.stump);
+    for (const id of threatened) building(id, COLOUR.danger, THREAT, (k) => a.height[k]!);
     g.restore();
     // marked cells: see-through fills, glowing edges
     for (const m of s.marks) {
@@ -153,6 +186,7 @@ export class BoardGlass {
         g.fillStyle = `rgba(${rgb},${s.hidden[k] ? fill * 0.7 : fill})`;
         g.fill();
       }
+      if (m.kind === "danger") stripes(pts, rgb, s.hidden[k] ? 0.32 : 0.45);
       g.save();
       g.shadowColor = `rgba(${rgb},0.9)`;
       g.shadowBlur = 8;

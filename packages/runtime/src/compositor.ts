@@ -96,6 +96,37 @@ void main() {
 }
 `;
 
+// A sprite's outline (D-170): a few art pixels round its shape (about 6 target px at any zoom), in its colour, over everything (a unit
+// hidden behind a building too).
+const OUTLINE_FS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp sampler2D uImage;
+uniform vec2 uRectOrigin;   // target px of the rect uWidth art px larger each way than the image
+uniform float uZoom;
+uniform vec2 uCanvas;
+uniform vec4 uColor;
+uniform int uWidth;         // art px
+out vec4 o;
+bool solid(ivec2 p) {
+  ivec2 n = textureSize(uImage, 0);
+  return p.x >= 0 && p.y >= 0 && p.x < n.x && p.y < n.y && texelFetch(uImage, p, 0).a >= 0.5;
+}
+void main() {
+  vec2 fc = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y);
+  ivec2 p = ivec2(floor((fc - uRectOrigin) / uZoom)) - uWidth;
+  if (solid(p)) discard;
+  float r = float(uWidth * uWidth) + 0.5 * float(uWidth);
+  for (int dy = -3; dy <= 3; dy++)
+    for (int dx = -3; dx <= 3; dx++)
+      if (abs(dx) <= uWidth && abs(dy) <= uWidth && float(dx * dx + dy * dy) <= r && solid(p + ivec2(dx, dy))) {
+        o = uColor;
+        return;
+      }
+  discard;
+}
+`;
+
 /** How many sprites can see through what stands in front of them at once (D-154). */
 export const MAX_REVEALS = 12;
 
@@ -209,6 +240,8 @@ export interface SpriteInstance {
    * `MAX_REVEALS` such sprites of a frame count.
    */
   reveal?: Reveal | null;
+  /** An outline round it in this colour (0–255 each), drawn over everything (D-170), or none. */
+  outline?: readonly [number, number, number] | null;
 }
 
 export interface Reveal {
@@ -245,6 +278,8 @@ export class Compositor {
   private paletteTex: WebGLTexture | null = null;
   private readonly loneProg: WebGLProgram;
   private readonly loneU: Uniforms;
+  private readonly outlineProg: WebGLProgram;
+  private readonly outlineU: Uniforms;
   private target: {
     w: number;
     h: number;
@@ -275,6 +310,8 @@ export class Compositor {
     this.palU = new Uniforms(gl, this.palProg);
     this.loneProg = compileProgram(gl, LONE_VS, LONE_FS);
     this.loneU = new Uniforms(gl, this.loneProg);
+    this.outlineProg = compileProgram(gl, LONE_VS, OUTLINE_FS);
+    this.outlineU = new Uniforms(gl, this.outlineProg);
     this.vao = gl.createVertexArray()!;
   }
 
@@ -322,6 +359,7 @@ export class Compositor {
     gl.deleteProgram(this.quadProg);
     gl.deleteProgram(this.palProg);
     gl.deleteProgram(this.loneProg);
+    gl.deleteProgram(this.outlineProg);
     gl.deleteVertexArray(this.vao);
   }
 
@@ -525,6 +563,34 @@ export class Compositor {
         gl.activeTexture(gl.TEXTURE0 + unit);
         gl.bindTexture(gl.TEXTURE_2D, null);
       }
+    }
+
+    // Outlines round sprites (D-170), over everything
+    const outlined = sprites.filter((s) => s.outline);
+    if (outlined.length) {
+      gl.useProgram(this.outlineProg);
+      const O = this.outlineU;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1i(O.loc("uImage"), 0);
+      gl.uniform2f(O.loc("uTarget"), w, h);
+      gl.uniform2f(O.loc("uCanvas"), this.canvas.width, this.canvas.height);
+      gl.uniform1f(O.loc("uZoom"), k);
+      const m = Math.min(3, Math.max(1, Math.round(6 / k)));
+      gl.uniform1i(O.loc("uWidth"), m);
+      for (const s of outlined) {
+        const [left, top] = spriteAt(s);
+        const img = s.sprite;
+        const x = (left - m - ox) * k;
+        const y = (top - m - oy) * k;
+        if (x >= w || y >= h || x + (img.image.width + 2 * m) * k <= 0 || y + (img.image.height + 2 * m) * k <= 0) continue;
+        const [r, g, b] = s.outline!;
+        gl.bindTexture(gl.TEXTURE_2D, img.texture);
+        gl.uniform2f(O.loc("uRectOrigin"), x, y);
+        gl.uniform2f(O.loc("uRectSize"), img.image.width + 2 * m, img.image.height + 2 * m);
+        gl.uniform4f(O.loc("uColor"), r / 255, g / 255, b / 255, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
     }
   }
 }

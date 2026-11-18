@@ -177,6 +177,7 @@ Status values:
 | D-167 | The city whole at rest, the cutaway while the board is looked at closely | Accepted |
 | D-168 | What hides the board gone always; only the board's own buildings whole at rest | Accepted |
 | D-169 | Boards chosen for how little their own buildings hide; the fight begins from the clearest side | Accepted |
+| D-170 | Units outlined by what's happening to them; struck cells striped, struck buildings outlined red | Accepted |
 
 ---
 
@@ -2471,3 +2472,10 @@ The point is more room for visual interest; both halves are wanted.
 - **The scout:** boards are tried on a grid at half a board's width round each site, both cell sizes (50, up from 10), each scored by the share of its cells hidden from its clearest side; tried clearest first, the site's own cell size and middle preferred a little; one hiding more than 15% only when no clearer one makes a fight, so a dense block still gets one.
 - **The start:** the fight turns the camera to the side whose exact rays (the cutaway's, D-159, worked out for all four sides as it begins: 0.17 s, done a moment later before) hide the fewest cells as the view stands at rest, a unit's cell counting three.
 - **Calibrated and checked:** of the Financial District's 50 boards the clearest hides 2%, the one fought before 9%, most 15–45%; Midtown's clearest 0%. The grid score ranks the sides as the exact rays do but counts fewer (6 cells against 12 on one side), so 15% on it is about a fifth on screen. The Financial District now plays on a board hiding 12 weighted cells from its start side (16, 16 and 39 from the others); Mong Kok's hides 9–12 cells a side, no unit hidden at the start.
+
+### D-170: Units outlined by what's happening to them; struck cells striped, struck buildings outlined red (accepted)
+- **Why:** the owner asked for units made plainer the way Into the Breach does it, by outlines in colour, and for what the invaders will strike to be marked by hazard stripes, a building among it outlined red.
+- **Engine:** an entity's `outline` (`[r, g, b]`, or null; `EntitySpec.outline`) draws a line round its sprite in that colour over the finished frame, over everything (a building in front of it too, so a unit's silhouette is outlined as well). A pass of its own after the lone buildings (D-162), on the canvas's colours: for each outlined sprite, the art pixels outside its shape within a few of it (a disc, 1–3 art px, about 6 screen pixels at any zoom). Off by default, so nothing else draws differently.
+- **In the fight:** green for the rig chosen; yellow for what it could strike (the units on its targets), what the move pointed at would let it strike, and what the strike pointed at would hurt or push; red for what the invaders will hurt (a unit on a cell of theirs). Chosen over aimed over threatened.
+- **Struck cells:** a cell the invaders will strike is striped red (bands along the edge of it that runs up to the right on screen, every other one filled, on the roof where a unit would stand) and edged red as before; a building of the fight among them is outlined red whole, from the ground to its roof (the roof's edge glowing, its corners down, barely filled, over the glass if it's cut down).
+- **Checked:** the Financial District: at rest the wrecker an invader aims at outlined red, the two towers the invaders will strike outlined red with striped roofs; the wrecker chosen turns green, and in its strike the crane on one of its targets yellow; the outlines one art pixel wide at first, too thin at the fight's zoom, now about six screen pixels. The size budgets within their limits (the package's JS 788 KB of 790).
