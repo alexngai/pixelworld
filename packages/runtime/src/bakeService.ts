@@ -16,8 +16,8 @@ import {
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean): TileKey =>
-  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean, cutaway?: boolean): TileKey =>
+  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}${cutaway ? ":cutaway" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
@@ -34,9 +34,14 @@ export interface TileRequest {
    * answers with it instead (`whole`).
    */
   ground?: boolean;
+  /**
+   * The tile with what's cut down cut (D-159, D-167), kept beside the plain
+   * tile, so the view switches between them at once (`WorldView.cutaway`).
+   */
+  cutaway?: boolean;
 }
 
-const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.cutaway);
 
 /**
  * What `prepare` hands back: a cached image, or a terrain slice to bake.
@@ -460,7 +465,7 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
+      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : t.cutaway ? { cutaway: true } : {};
       const removed = p.removed ? { removed: p.removed } : {};
       const cells = p.cells ? { cells: p.cells } : {};
       const cut = p.cut ? { cut: p.cut } : {};

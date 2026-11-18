@@ -91,6 +91,8 @@ interface TileEntry {
   bare?: boolean;
   /** The ground alone, drawn until the whole tile is baked. */
   ground?: boolean;
+  /** The tile with its cuts (D-167), drawn in its place while the cutaway shows. */
+  cutaway?: boolean;
 }
 
 /** Bake workers by default: the cores less one for the page, at most 4 (each keeps its own copy of the world's objects). */
@@ -134,8 +136,8 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const tileEdits = new TileEdits((i) => objectTiles(w, i), tileCells(w));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
-    // buildings cut down (D-159): not on the ground alone, nor the bare variant (no buildings there)
-    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation);
+    // buildings cut down (D-159): only in the cutaway variant, kept beside the plain tile (D-167)
+    const cut = t.cutaway ? tileEdits.cutFor(t.tx, t.ty, t.rotation) : "";
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
       const cells = tileEdits.cellsFor(t.tx, t.ty);
@@ -179,6 +181,8 @@ class View implements WorldView {
   private readonly rs: number;
   private readonly tiles: TileGrid;
   private readonly gpu = new Map<TileKey, TileEntry>();
+  /** The tiles cuts reach drawn as their cutaway variants (D-167). */
+  private cutawayOn = true;
   private gpuBytes = 0;
   private readonly depthRange: [number, number];
   private night = false;
@@ -317,8 +321,13 @@ class View implements WorldView {
         const { meshMs, bakeMs, vertices } = res.stats;
         this.bakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
       }
-      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : res.ground ? { ground: true } : {}) };
-      const whole = !res.bare && !res.ground;
+      const at = {
+        rotation: res.rotation,
+        tx: res.tx,
+        ty: res.ty,
+        ...(res.bare ? { bare: true } : res.ground ? { ground: true } : res.cutaway ? { cutaway: true } : {}),
+      };
+      const whole = !res.bare && !res.ground && !res.cutaway;
       // the ground came after the whole tile: not needed
       if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
       // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
@@ -329,7 +338,7 @@ class View implements WorldView {
         !failed &&
         ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
           (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
-          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation)));
+          (res.cut ?? "") !== (res.cutaway ? this.tileEdits.cutFor(res.tx, res.ty, res.rotation) : ""));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
@@ -453,21 +462,24 @@ class View implements WorldView {
    * tiles whose bake reaches them bake again. In the rotation shown, each image stays on screen until its
    * new one is ready; in the others, and kept in the cache, they are let go.
    */
-  private edited(tiles: [number, number][], rotations: readonly Rotation[] = [0, 1, 2, 3]): void {
+  private edited(tiles: [number, number][], rotations: readonly Rotation[] = [0, 1, 2, 3], cutsOnly = false): void {
     const r = this.cam.rotation;
+    // cuts change only the cutaway variants (D-167)
+    const variants = cutsOnly ? (["cutaway"] as const) : (["plain", "bare", "cutaway"] as const);
     for (const [tx, ty] of tiles)
       for (const rot of rotations)
-        for (const bare of [false, true]) {
-          const key = tileKey(rot, tx, ty, bare);
+        for (const v of variants) {
+          const key = tileKey(rot, tx, ty, v === "bare", false, v === "cutaway");
           this.idleDone.delete(key);
-          if (rot === r && this.gpu.has(key)) {
+          // (a cutaway no cut reaches any more is let go)
+          if (rot === r && this.gpu.has(key) && (v !== "cutaway" || this.tileEdits.hasCuts(tx, ty, rot))) {
             this.stale.add(key);
             this.service.forget(key);
           } else {
             this.drop(key);
             this.service.forget(key);
             // a ground request answered with the whole tile is done too: its ground shows first again
-            if (!bare) {
+            if (v === "plain") {
               this.service.forget(tileKey(rot, tx, ty, false, true));
               this.baked.set(rot, tx, ty, false);
             }
@@ -605,19 +617,21 @@ class View implements WorldView {
     const ground = this.groundFirst
       ? order.filter((t) => t.visible && !this.gpu.has(tileKey(r, t.tx, t.ty))).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, ground: true }))
       : [];
-    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, this.bareWanted(r, order), ground);
+    // the cutaway variants of the tiles cuts reach (D-167), shown or not: ready when the cutaway is turned on
+    const cutaway = order.filter((t) => this.tileEdits.hasCuts(t.tx, t.ty, r)).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, cutaway: true }));
+    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, [...this.bareWanted(r, order), ...cutaway], ground);
     // a tile baked while idle and wanted now: asked for again, the cache has it
     if (this.idleDone.size)
       for (const t of this.wanted) {
-        const k = tileKey(t.rotation, t.tx, t.ty);
+        const k = tileKey(t.rotation, t.tx, t.ty, false, false, t.cutaway);
         if (!t.bare && this.idleDone.delete(k)) this.service.forget(k);
       }
     // nothing else waiting and the camera still: one tile at a time for later (another rotation, around
     // the view); while it moves, the look-ahead has the tiles that matter
     const still = Math.hypot(this.motion.vx, this.motion.vy) < IDLE_SPEED;
-    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground)));
+    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.cutaway)));
     const idle = this.idleBake && !busy ? this.nextIdle(r, info) : null;
-    if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty));
+    if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty, false, false, idle.cutaway));
     this.service.want(idle ? [...this.wanted, idle] : this.wanted);
     if (this.prefetches.size) this.prefetches.settle((t) => this.has(tileKey(t.rotation, t.tx, t.ty)));
 
@@ -628,10 +642,13 @@ class View implements WorldView {
     let missingTiles = 0;
     for (const t of order) {
       const entry = this.gpu.get(tileKey(r, t.tx, t.ty));
-      if (entry) {
-        entry.lastDrawn = this.frameNo;
-        if (entry.img) drawTiles.push(entry.img);
-      } else if (t.visible) {
+      // its cutaway in its place while that shows (D-167); both kept as drawn, so switching is at once
+      const cut = this.tileEdits.hasCuts(t.tx, t.ty, r) ? this.gpu.get(tileKey(r, t.tx, t.ty, false, false, true)) : undefined;
+      if (cut) cut.lastDrawn = this.frameNo;
+      const shown = this.cutawayOn && cut ? cut : entry;
+      if (shown?.img) drawTiles.push(shown.img);
+      if (entry) entry.lastDrawn = this.frameNo;
+      else if (t.visible) {
         complete = false;
         missingTiles++;
       }
@@ -740,12 +757,25 @@ class View implements WorldView {
    */
   private nextIdle(r: Rotation, info: FrameInfo): TileRequest | null {
     const fresh = (t: TileRequest) => {
-      const k = tileKey(t.rotation, t.tx, t.ty);
+      const k = tileKey(t.rotation, t.tx, t.ty, false, false, t.cutaway);
       return !this.idleDone.has(k) && !this.gpu.has(k);
     };
+    // the tile, then its cutaway where cuts reach it (D-167)
+    const next = (q: TileRequest): TileRequest | null => {
+      if (fresh(q)) return q;
+      const c = { ...q, cutaway: true };
+      return this.tileEdits.hasCuts(q.tx, q.ty, q.rotation) && fresh(c) ? c : null;
+    };
     const at = { x: info.focus.x, y: info.focus.y };
-    for (let k = 1; k < 4; k++) for (const q of this.prefetchTiles(((r + k) % 4) as Rotation, at)) if (fresh(q)) return q;
-    for (const q of this.tiles.around(r, at.x, at.y, IDLE_RADIUS)) if (fresh(q)) return q;
+    for (let k = 1; k < 4; k++)
+      for (const q of this.prefetchTiles(((r + k) % 4) as Rotation, at)) {
+        const n = next(q);
+        if (n) return n;
+      }
+    for (const q of this.tiles.around(r, at.x, at.y, IDLE_RADIUS)) {
+      const n = next(q);
+      if (n) return n;
+    }
     return null;
   }
 
@@ -798,7 +828,7 @@ class View implements WorldView {
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
       this.stale.delete(key);
-      if (!e.bare && !e.ground) {
+      if (!e.bare && !e.ground && !e.cutaway) {
         this.baked.set(e.rotation, e.tx, e.ty, false);
         this.service.forget(tileKey(e.rotation, e.tx, e.ty, false, true));
       }
@@ -957,7 +987,18 @@ class View implements WorldView {
 
 
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void {
-    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation])) this.edited(tiles, [r as Rotation]);
+    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation]))
+      this.edited(tiles, [r as Rotation], true);
+  }
+
+  get cutaway(): boolean {
+    return this.cutawayOn;
+  }
+
+  set cutaway(on: boolean) {
+    if (on === this.cutawayOn) return;
+    this.cutawayOn = on;
+    this.invalidate();
   }
 
   async bakeTopDown(

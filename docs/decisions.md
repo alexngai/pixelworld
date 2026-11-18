@@ -174,6 +174,7 @@ Status values:
 | D-164 | Finer bakes from above: short shadows from a high sun, the units' own models from above | Accepted |
 | D-165 | The map laid out from the camera at every drawing | Accepted |
 | D-166 | The map a quarter turn clockwise; the board's buildings solid, faint only where in the way | Accepted |
+| D-167 | The city whole at rest, the cutaway while the board is looked at closely | Accepted |
 
 ---
 
@@ -2449,3 +2450,9 @@ The point is more room for visual interest; both halves are wanted.
 - **The map:** the view's top-left edge runs along the map's top, its top-right edge along the map's right (the board's diamond turned an eighth clockwise), on all four sides; `mapAxis` says it once, and the arrow keys use it, so right is the map's right and down its down.
 - **Solid by default:** the fight's buildings (its lone ghosts, D-162) draw at full strength unless in the way: 30% where one stands in front of a unit or of the cell looked at, 85% under the selected unit and under the cell looked at. Only the faint ones get the glass outlines; a cell behind a solid one is outlined dashed through it.
 - **Checked:** the Financial District: eleven buildings solid, nine faint with their glass, every unit in view; on all four sides the map's top is the view's top-left edge and its right the top-right edge.
+
+### D-167: The city whole at rest, the cutaway while the board is looked at closely (accepted)
+- **Why:** the owner asked for the scene as it stands when nothing is being done, the units it hides shown as silhouettes rather than cut out, so the player feels grounded; and for the see-through views (D-159, D-162, D-166) only while a unit is chosen, a move plays out, or a unit or a building is looked at.
+- **Instant, in the engine:** cuts used to be baked into the tile itself, so turning them off or on baked again or read the cache (0.2 s from the cache, seconds without, the tiles changing one by one). Now the cuts make a variant of each tile they reach (`TileRequest.cutaway`, its own key and cache entry), baked and kept beside the plain tile, asked for after the visible tiles and while idle in the other rotations; `view.cutaway` picks which is drawn, both kept as drawn so neither is evicted for the other. Changing the cuts bakes only the variants; the plain tiles stay. A side effect: a fight begins with nothing to bake again, and a turn of the camera draws the plain tiles it already had.
+- **In the fight:** the cutaway shows while a rig is chosen, while the fight is busy (a rig's move or strike, the invaders' turn), and while the pointer or the cursor is on a unit or on a cell the standing city hides; it stays 0.45 s after, so a sweep of the pointer doesn't flicker it. Otherwise the city stands whole, the units it hides drawn as the engine's checkered silhouettes (rigs in the style's colour, invaders red), the grid dashed where hidden. V keeps the cutaway on.
+- **Checked:** the Financial District: at rest the city whole with the rigs' silhouettes; the pointer on a rig cuts it away in the same frame, from the other sides too after a turn; the invaders' turn cut away throughout, back to the city whole half a second after.

@@ -189,6 +189,11 @@ export class TileEdits {
     });
   }
 
+  /** Whether any cut reaches a tile's bake in a rotation (cheap: asked every frame). */
+  hasCuts(tx: number, ty: number, rotation: number): boolean {
+    return !!this.cutByTile[rotation]?.has(`${tx},${ty}`);
+  }
+
   /** The cuts a tile's bake reaches in a rotation, "index:height,…" in order, or "" for none. */
   cutFor(tx: number, ty: number, rotation: number): string {
     const set = this.cutByTile[rotation]?.get(`${tx},${ty}`);

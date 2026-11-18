@@ -106,6 +106,8 @@ const GHOST = 0.3;
 const TOP_SUN: [number, number, number] = [0.15, 0.27, 1.6];
 /** …under the selected unit or the cell looked at, even in the way (D-166). */
 const GHOST_LIT = 0.85;
+/** How long the cutaway stays after what called for it ends (ms, D-167): a sweep of the pointer doesn't flicker it. */
+const CUT_LINGER_MS = 450;
 /** How high a building cut down stands (metres): a plinth, its footprint plain, a unit in the street behind it in view (the faint building shows the rest). */
 const STUMP_M = 0.5;
 
@@ -176,10 +178,13 @@ export class Fight {
   private primed = false;
   /** The fight's own buildings cut down in front of a unit (their ids), shown whole as outlines; what the cuts are now. */
   private ghosts: number[] = [];
-  /** Cutting on (V turns it off: the city as it stands). */
-  private cutting = true;
-  /** Cells still hidden by a building (dashed on the glass). */
-  private hiddenCells: Uint8Array;
+  /** The cutaway showing now (D-167): while a rig is chosen, a move plays out, or a unit or a hidden cell is looked at; else the city whole. */
+  private cutting = false;
+  /** V: the cutaway always. */
+  private pinned = false;
+  /** Till when the cutaway stays after what called for it ended (ms), or 0. */
+  private cutTill = 0;
+  private cutTimer = 0;
   private readonly fires = new Map<number, Entity[]>();
   private readonly ash = new Set<number>();
   private readonly fx = new Set<{ entities: Entity[]; until: number }>();
@@ -211,7 +216,6 @@ export class Fight {
     this.hints = s.hints;
     this.ramps = rampsFor(s.view.world.palette.rampIds);
     this.c = cloneCombat(s.puzzle.combat);
-    this.hiddenCells = new Uint8Array(this.c.arena.w * this.c.arena.h);
     this.start = cloneCombat(this.c);
     this.turnStart = cloneCombat(this.c);
     this.labelRoot = s.labels;
@@ -391,8 +395,7 @@ export class Fight {
   private updateCuts(): void {
     const r = this.view.camera.rotation;
     const side = this.side(r);
-    this.ghosts = this.cutting ? side.ghosts : [];
-    this.hiddenCells = this.cutting ? side.hidden : side.hiddenWhole;
+    this.ghosts = side.ghosts;
     this.send(r);
     // the other sides a moment later, so this one draws first
     if (!this.primed) {
@@ -404,13 +407,12 @@ export class Fight {
     }
   }
 
-  /** A side's cuts to the view, if they changed (or none while the cutaway is off). */
+  /** A side's cuts to the view, if they changed: baked beside the plain tiles, shown while the cutaway is (D-167). */
   private send(r: number): void {
     const side = this.side(r);
-    const key = this.cutting ? side.key : "";
-    if (this.sent[r] === key) return;
-    this.sent[r] = key;
-    this.view.cutDown(this.cutting && side.cuts.size ? side.cuts : null, r as Rotation);
+    if (this.sent[r] === side.key) return;
+    this.sent[r] = side.key;
+    this.view.cutDown(side.cuts.size ? side.cuts : null, r as Rotation);
   }
 
   /** What one side of the view needs cut, outlined and dashed, worked out once (again when a building falls). */
@@ -514,7 +516,9 @@ export class Fight {
       y: p.y,
       h: h ?? standAt(this.c, k),
       heading: teamOf(this.c, u) === INVADERS && this.c.aim[u]! >= 0 ? angle(this.c.aim[u]!) : 0,
+      // seen through what hides it (D-167): the rigs in the style's colour, the invaders red
       silhouette: true,
+      ...(teamOf(this.c, u) === INVADERS ? { silhouetteRamp: this.ramps.red } : {}),
       wait: false,
     });
   }
@@ -835,6 +839,8 @@ export class Fight {
     for (const [k, kind] of byCell) marks.push({ i: k % c.arena.w, j: Math.floor(k / c.arena.w), kind });
     // in the move phase, what the rig could strike from the cell pointed at
     const focus = this.focus();
+    this.cutting = this.cutawayWanted(shown, focus);
+    this.view.cutaway = this.cutting;
     const reach: number[] = [];
     if (this.phase === "move" && focus >= 0 && movesOf(c, this.selected).includes(focus)) {
       const d = cloneCombat(c);
@@ -944,7 +950,7 @@ export class Fight {
     const round = Math.min(this.rounds, c.round + 1);
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
-      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city · <kbd>V</kbd> cutaway</div></div>
+      <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city · <kbd>V</kbd> cutaway always</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
         <button data-act="end" ${this.phase === "busy" || this.phase === "over" ? "disabled" : ""}>End turn <kbd>Enter</kbd></button>
@@ -1043,18 +1049,44 @@ export class Fight {
     for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0) for (const id of side.blockers[c.pos[u]!] ?? []) inWay.add(id);
     if (focus >= 0) for (const id of side.blockers[focus] ?? []) inWay.add(id);
     const lit = new Set<number>();
-    for (const k of [this.selected >= 0 ? c.pos[this.selected]! : -1, focus]) if (k >= 0 && a.struct[k]! >= 0) lit.add(a.struct[k]!);
+    for (const u of [this.selected, this.striking]) if (u >= 0 && a.struct[c.pos[u]!]! >= 0) lit.add(a.struct[c.pos[u]!]!);
+    if (focus >= 0 && a.struct[focus]! >= 0) lit.add(a.struct[focus]!);
     return this.ghosts.map((id) => (lit.has(id) ? GHOST_LIT : inWay.has(id) ? GHOST : 1));
   }
 
   /** The cells hidden now (dashed on the glass): behind a building left whole, or one of the fight's drawn solid (D-166). */
   private hiddenNow(c: Combat, alphas: readonly number[]): Uint8Array {
-    if (!this.cutting) return this.hiddenCells;
     const side = this.side(this.view.camera.rotation);
+    if (!this.cutting) return side.hiddenWhole;
     const solid = new Set(this.ghosts.filter((_, n) => (alphas[n] ?? 1) >= GHOST_LIT));
-    const out = new Uint8Array(this.hiddenCells);
+    const out = new Uint8Array(side.hidden);
     for (let k = 0; k < out.length; k++) if (!out[k] && (side.blockers[k] ?? []).some((id) => id !== c.arena.struct[k] && solid.has(id))) out[k] = 1;
     return out;
+  }
+
+  /**
+   * Whether the cutaway shows (D-167): the city stands whole, a unit it
+   * hides seen as a silhouette, till the board is looked at closely: a rig
+   * chosen, a move playing out, a unit or a hidden cell under the pointer or
+   * the cursor (or V, always). It stays a moment after.
+   */
+  private cutawayWanted(c: Combat, focus: number): boolean {
+    const hidden = this.side(this.view.camera.rotation).hiddenWhole;
+    const want = this.pinned || this.selected >= 0 || this.phase === "busy" || (focus >= 0 && (c.occ[focus]! >= 0 || !!hidden[focus]));
+    if (want || this.phase === "over") {
+      this.cutTill = 0;
+      return want;
+    }
+    // it stays a moment from when it stopped being called for
+    const now = performance.now();
+    if (this.cutting && !this.cutTill) this.cutTill = now + CUT_LINGER_MS;
+    if (now < this.cutTill) {
+      clearTimeout(this.cutTimer);
+      this.cutTimer = window.setTimeout(() => this.paint(), this.cutTill - now + 10);
+      return true;
+    }
+    this.cutTill = 0;
+    return false;
   }
 
   /** The cell looked at: the pointer's, else the keyboard's. */
@@ -1230,10 +1262,8 @@ export class Fight {
 
   key(k: string): boolean {
     if (k === "v") {
-      this.cutting = !this.cutting;
-      this.primed = false; // every side's cuts on or off
-      this.updateCuts();
-      this.say(this.cutting ? "What hides the board is cut down (V for the city whole)." : "The city whole (V to cut down what hides the board).");
+      this.pinned = !this.pinned;
+      this.say(this.pinned ? "What hides the board stays cut down (V: only while you look closely)." : "What hides the board is cut down while you look closely (V: always).");
       this.paint();
       return true;
     }
@@ -1437,10 +1467,12 @@ export class Fight {
   /** Leave the world as the fight left it (its fallen buildings stay fallen), with the fight's own things gone. */
   dispose(): void {
     this.offFrame();
+    clearTimeout(this.cutTimer);
     for (const e of this.entities) e?.remove();
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
     this.view.cutDown(null);
+    this.view.cutaway = true;
     this.view.setLoneGhosts(null);
     this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();

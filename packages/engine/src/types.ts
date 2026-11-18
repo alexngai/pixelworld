@@ -454,12 +454,19 @@ export interface WorldView extends ControllerView {
    * `WorldEdits` names them) up to a height (world steps), what's above left
    * out of the image and the inside of its far walls dark, as a cutaway. Only
    * the drawing changes (the queries still answer with the whole building);
-   * the tiles they reach bake again, without meshing again. Replaces the
-   * previous cuts, in one rotation of the view (what hides a place depends on
-   * the side it's seen from; the tiles of the others, baked while idle, keep
-   * theirs) or all four; null for none.
+   * the tiles they reach bake a cutaway variant (D-167), without meshing
+   * again, kept beside the plain tile. Replaces the previous cuts, in one
+   * rotation of the view (what hides a place depends on the side it's seen
+   * from; the tiles of the others, baked while idle, keep theirs) or all
+   * four; null for none.
    */
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void;
+  /**
+   * Whether the cuts show (default true). Off, the city stands whole; the
+   * cutaway tiles are still baked and kept, so turning it on again shows
+   * them at once (D-167).
+   */
+  cutaway: boolean;
   /**
    * Placed objects drawn on their own over the finished frame (D-162), each
    * at its opacity (0–1), far to near as listed, where it stands in front of
