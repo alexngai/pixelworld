@@ -134,7 +134,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
     // buildings cut down (D-159): not on the ground alone, nor the bare variant (no buildings there)
-    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty);
+    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
       const cells = tileEdits.cellsFor(t.tx, t.ty);
@@ -328,7 +328,7 @@ class View implements WorldView {
         !failed &&
         ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
           (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
-          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty)));
+          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation)));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
@@ -452,10 +452,10 @@ class View implements WorldView {
    * tiles whose bake reaches them bake again. In the rotation shown, each image stays on screen until its
    * new one is ready; in the others, and kept in the cache, they are let go.
    */
-  private edited(tiles: [number, number][]): void {
+  private edited(tiles: [number, number][], rotations: readonly Rotation[] = [0, 1, 2, 3]): void {
     const r = this.cam.rotation;
     for (const [tx, ty] of tiles)
-      for (const rot of [0, 1, 2, 3] as const)
+      for (const rot of rotations)
         for (const bare of [false, true]) {
           const key = tileKey(rot, tx, ty, bare);
           this.idleDone.delete(key);
@@ -907,8 +907,8 @@ class View implements WorldView {
     return out;
   }
 
-  cutDown(cuts: ReadonlyMap<number, number> | null): void {
-    this.edited(this.tileEdits.setCuts(cuts ?? new Map()));
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void {
+    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation])) this.edited(tiles, [r as Rotation]);
   }
 
   async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean } = {}): Promise<TopDownImage | null> {

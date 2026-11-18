@@ -455,9 +455,11 @@ export interface WorldView extends ControllerView {
    * out of the image and the inside of its far walls dark, as a cutaway. Only
    * the drawing changes (the queries still answer with the whole building);
    * the tiles they reach bake again, without meshing again. Replaces the
-   * previous cuts; null for none.
+   * previous cuts, in one rotation of the view (what hides a place depends on
+   * the side it's seen from; the tiles of the others, baked while idle, keep
+   * theirs) or all four; null for none.
    */
-  cutDown(cuts: ReadonlyMap<number, number> | null): void;
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void;
   /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and

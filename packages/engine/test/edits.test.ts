@@ -140,6 +140,21 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect(objectTiles(w, 9)).toEqual([]);
   });
 
+  it("cuts down objects per rotation (D-159): a tile's cuts in one rotation leave the others' alone", () => {
+    const tiles = new TileEdits((i) => objectTiles(w, i));
+    const touched = tiles.setCuts(new Map([[1, 4.5]]), [2]);
+    expect(touched.map(([r, ts]) => [r, sorted(ts)])).toEqual([[2, ["1,1", "1,2", "2,1", "2,2"]]]);
+    expect(tiles.cutFor(1, 2, 2)).toBe("1:4.5");
+    expect(tiles.cutFor(1, 2, 0)).toBe("");
+    // all four at once; then the same again touches nothing
+    tiles.setCuts(new Map([[1, 4.5], [3, 2]]));
+    expect([0, 1, 2, 3].map((r) => tiles.cutFor(1, 0, r))).toEqual(["3:2", "3:2", "3:2", "3:2"]);
+    expect(tiles.setCuts(new Map([[1, 4.5], [3, 2]])).every(([, ts]) => ts.length === 0)).toBe(true);
+    // none in one rotation
+    tiles.setCuts(new Map(), [1]);
+    expect([tiles.cutFor(2, 2, 1), tiles.cutFor(2, 2, 3)]).toEqual(["", "1:4.5"]);
+  });
+
   it("each tile knows the removed objects its bake reaches", () => {
     const tiles = new TileEdits((i) => objectTiles(w, i));
     expect(sorted(tiles.apply({ op: "remove", objects: [2, 1] }))).toEqual(["0,2", "0,3", "1,1", "1,2", "1,3", "2,1", "2,2", "2,3", "3,2", "3,3"]);
