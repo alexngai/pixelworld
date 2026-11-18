@@ -10,13 +10,14 @@ import {
   type InitMessage,
   type PluginRef,
   type BakeAreaMessage,
+  type BakeLoneMessage,
   type TerrainSlice,
   type ToWorker,
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean, uncut?: boolean): TileKey =>
-  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}${uncut ? ":uncut" : ""}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean): TileKey =>
+  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
@@ -33,14 +34,9 @@ export interface TileRequest {
    * answers with it instead (`whole`).
    */
   ground?: boolean;
-  /**
-   * The tile as it stands, its buildings not cut down (D-159): drawn faintly
-   * over a cut tile where they stood in front (D-160). The plain tile's image.
-   */
-  uncut?: boolean;
 }
 
-const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.uncut);
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
 
 /**
  * What `prepare` hands back: a cached image, or a terrain slice to bake.
@@ -140,6 +136,7 @@ export class BakeService {
     | { id: number; rotation: Rotation; boxes: Box[] }
     | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
     | Omit<BakeAreaMessage, "type">
+    | Omit<BakeLoneMessage, "type">
   )[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
@@ -320,6 +317,17 @@ export class BakeService {
     });
   }
 
+  /** Bake placed objects on their own (D-162), by index, in a rotation, on a slice's ground. */
+  bakeLone(rotation: Rotation, objects: number[], slice: TerrainSlice): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const id = this.nextId++;
+      this.spriteJobs.set(id, resolve);
+      this.spriteQueue.push({ id, rotation, objects, slice });
+      this.pump();
+    });
+  }
+
   /** Bake a rectangle of the world in another projection (D-155), once. */
   bakeArea(area: Omit<BakeAreaMessage, "type" | "id">): Promise<BakedImage | null> {
     if (this.disposed) return Promise.resolve(null);
@@ -356,6 +364,7 @@ export class BakeService {
         b.job = { id: sprite.id, tile: null };
         if ("boxes" in sprite) b.transport.send({ type: "bakeSprite", ...sprite });
         else if ("owned" in sprite) b.transport.send({ type: "bakeArea", ...sprite });
+        else if ("objects" in sprite) b.transport.send({ type: "bakeLone", ...sprite });
         else b.transport.send({ type: "bakeObjects", ...sprite });
         continue;
       }
@@ -451,7 +460,7 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : t.uncut ? { uncut: true } : {};
+      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
       const removed = p.removed ? { removed: p.removed } : {};
       const cells = p.cells ? { cells: p.cells } : {};
       const cut = p.cut ? { cut: p.cut } : {};

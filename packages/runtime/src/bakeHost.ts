@@ -14,7 +14,7 @@ import {
   type ModelFailure,
   type ObjectInstance,
 } from "@pixelworlds/generators";
-import { objectInSlice, type BakeAreaMessage, type BakeTileMessage, type FromWorker, type InitMessage, type TerrainSlice, type ToWorker, type WorldObjects } from "./protocol";
+import { objectInSlice, type BakeAreaMessage, type BakeLoneMessage, type BakeTileMessage, type FromWorker, type InitMessage, type TerrainSlice, type ToWorker, type WorldObjects } from "./protocol";
 
 /**
  * Executes bake requests against a WebGL2 context. Used inside the bake
@@ -80,6 +80,9 @@ export class BakeHost {
         }
         case "bakeArea":
           this.bakeArea(msg);
+          break;
+        case "bakeLone":
+          this.bakeLone(msg);
           break;
         case "bakeSprite": {
           const t0 = performance.now();
@@ -200,6 +203,43 @@ export class BakeHost {
       }
     }
     return scene;
+  }
+
+  /** Objects on their own (D-162): built as a tile builds them, in render units, baked with nothing else and let go. */
+  private bakeLone(msg: BakeLoneMessage): void {
+    const init = this.init;
+    if (!init?.objects) throw new Error("bakeLone needs a world with objects");
+    const t0 = performance.now();
+    const { slice } = msg;
+    const grid = new TerrainGrid(slice.width, slice.height, { ...slice.layers, micro: slice.micro ?? null });
+    const objects = init.objects;
+    const rs = init.renderScale ?? 1;
+    const voxel = objectVoxelScale(rs);
+    const built = buildObjects(
+      msg.objects.flatMap((i) => objects.instances[i] ?? []),
+      {
+        catalog: objects.catalog,
+        rampIds: new Map(objects.rampIds),
+        voxel,
+        voxelMeters: voxel.h * objects.metersPerCell,
+        heightStretch: objects.heightStretch,
+        variants: objects.variants,
+        heightAt: (x, y) => grid.surfaceHeightAt(x - slice.x0, y - slice.y0),
+        texels: true,
+      },
+    );
+    const scene: BakeScene = { meshes: [built.merged, built.lines], batches: built.batches };
+    if (rs !== 1) {
+      for (const m of scene.meshes) scaleMesh(m, rs);
+      for (const b of scene.batches) {
+        scaleMesh(b.mesh, rs);
+        for (let i = 0; i < b.offsets.length; i++) b.offsets[i]! *= rs;
+      }
+    }
+    const meshMs = performance.now() - t0;
+    const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
+    this.baker.releaseScene(scene);
+    this.reply(msg.id, res, meshMs, built.merged.vertexCount, built.failures);
   }
 
   /** A rectangle in another projection (D-155): meshed, baked once in rotation 0 and let go. */

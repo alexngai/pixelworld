@@ -364,8 +364,6 @@ export class Fight {
    */
   private updateCuts(): void {
     const r = this.view.camera.rotation;
-    // what's cut still shows faintly, under the glass (D-160)
-    this.view.cutGhost = this.cutting ? GHOST : 0;
     const side = this.side(r);
     this.ghosts = this.cutting ? side.ghosts : [];
     this.hiddenCells = this.cutting ? side.hidden : side.hiddenWhole;
@@ -415,9 +413,6 @@ export class Fight {
       rays.push({ centre, all });
     }
     const { query } = this.view;
-    const p0 = toWorld(this.board, { x: 0, y: 0 });
-    const p1 = toWorld(this.board, { x: a.w, y: a.h });
-    const [bx0, by0, bx1, by1] = [Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y)];
     const cuts = new Map<number, number>();
     const ghosts: number[] = [];
     const blockers: number[][] = rays.map((ray) => [...new Set([...ray.all].flatMap((o) => (own.has(o) ? [own.get(o)!] : [])))]);
@@ -428,11 +423,10 @@ export class Fight {
         if (o === mine || cuts.has(o)) continue;
         const id = own.get(o);
         if (id === undefined) {
-          // not the fight's: a stump; a slab on the board too thin to be one of its buildings stands over street the fight takes for open, so to the ground
+          // not the fight's: gone, to the ground (D-162), so nothing outside the board stands in its way
           const hit = query.object(o);
           if (!hit) continue;
-          const onBoard = (hit.fp ?? [[hit.x, hit.y] as [number, number]]).some(([x, y]) => x > bx0 && x < bx1 && y > by0 && y < by1);
-          cuts.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + (onBoard ? 0.05 : stump));
+          cuts.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + 0.05);
         } else if (c.structHp[id]! > 0) {
           // the fight's own: a stump, outlined whole as glass (a unit on its roof stands on the glass)
           cuts.set(o, a.height[a.structures[id]!.cells[0]!]! + stump);
@@ -832,10 +826,11 @@ export class Fight {
       reach,
       hidden: this.hiddenCells,
       ghosts: this.ghosts,
-      ghostAlpha: this.ghostAlphas(shown, focus),
-      baseAlpha: this.cutting ? GHOST : 0,
       stump: STUMP_M / c.arena.metersPerStep,
     });
+    // the fight's buildings cut away, each drawn faintly as itself (D-162), far to near
+    const alphas = this.ghostAlphas(shown, focus);
+    this.view.setLoneGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
@@ -1407,7 +1402,7 @@ export class Fight {
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
     this.view.cutDown(null);
-    this.view.cutGhost = 0;
+    this.view.setLoneGhosts(null);
     this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();

@@ -113,6 +113,19 @@ export interface BakeAreaMessage {
   shadows: boolean;
 }
 
+/**
+ * Placed objects on their own (D-162), by their indices in the world's
+ * objects, built as a tile builds them on the slice's ground heights and drawn
+ * in a rotation, nothing else in the scene: a building as it looks alone.
+ */
+export interface BakeLoneMessage {
+  type: "bakeLone";
+  id: number;
+  rotation: Rotation;
+  objects: number[];
+  slice: TerrainSlice;
+}
+
 /** A plugin for the bake worker to import (docs/plugins.md §9): an absolute module URL. */
 export interface PluginRef {
   name: string;
@@ -130,7 +143,7 @@ export interface LoadPluginsMessage {
   plugins: PluginRef[];
 }
 
-export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | BakeAreaMessage | LoadPluginsMessage;
+export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | BakeAreaMessage | BakeLoneMessage | LoadPluginsMessage;
 
 export interface BakeStats {
   meshMs: number;

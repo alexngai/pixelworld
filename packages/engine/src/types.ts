@@ -461,21 +461,13 @@ export interface WorldView extends ControllerView {
    */
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void;
   /**
-   * How much of the buildings cut down still shows (D-160), 0–1 (default 0):
-   * where one stood in front of what's drawn now, its pixels blended over at
-   * this opacity, so a cutaway keeps the sense of the solid building. The
-   * cut tiles' plain images are baked (or read from the cache) beside them.
+   * Placed objects drawn on their own over the finished frame (D-162), each
+   * at its opacity (0–1), far to near as listed, where it stands in front of
+   * what's drawn: with `cutDown`, the buildings cut away shown faintly as
+   * themselves, nothing of the buildings around them mixed in. Each is baked
+   * alone the first time it's listed in a rotation. Null for none.
    */
-  cutGhost: number;
-  /**
-   * How much of the buildings cut down shows, pixel by pixel (D-161): an
-   * image over the canvas (stretched to it; its red, 0–1, the opacity there),
-   * in place of `cutGhost`'s one value; null to go back to it. Painting the
-   * buildings' shapes into it lets each show as much as an app likes (more
-   * where nothing stands behind, most where a unit stands on one), with no
-   * tile baked again. Upload again (call again) when it changes.
-   */
-  setCutGhostMask(mask: TexImageSource | null): void;
+  setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void;
   /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and
