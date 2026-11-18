@@ -186,6 +186,9 @@ class View implements WorldView {
   private ratio = 1;
   private resizeObserver: ResizeObserver | null = null;
   private readonly onWindowResize = () => this.fitCanvas();
+  private readonly onVisible = () => {
+    if (document.visibilityState === "visible") this.dirty = true;
+  };
 
   // the frame loop
   private dirty = true;
@@ -366,6 +369,7 @@ class View implements WorldView {
     else {
       this.fitCanvas();
       window.addEventListener("resize", this.onWindowResize);
+      document.addEventListener("visibilitychange", this.onVisible);
       if (typeof ResizeObserver !== "undefined") {
         this.resizeObserver = new ResizeObserver(() => this.fitCanvas());
         this.resizeObserver.observe(this.canvas);
@@ -545,6 +549,8 @@ class View implements WorldView {
 
   /** Follow the canvas's size on the page. */
   private fitCanvas(): void {
+    // the page may have dropped the canvas's pixels (a pane hidden and shown, a screenshot's resize): draw again
+    this.dirty = true;
     if (this.fixedSize) return;
     const dpr = window.devicePixelRatio || 1;
     const w = Math.round((this.canvas.clientWidth || window.innerWidth) * dpr);
@@ -992,6 +998,7 @@ class View implements WorldView {
     // a view still waiting to take over from another leaves it as it is: its owner keeps it
     this.replacing = null;
     window.removeEventListener("resize", this.onWindowResize);
+    document.removeEventListener("visibilitychange", this.onVisible);
     this.resizeObserver?.disconnect();
     void this.controllerHost.use(null);
     this.layerList.dispose();

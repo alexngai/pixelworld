@@ -99,33 +99,41 @@ export class BoardGlass {
       g.stroke();
     }
     g.setLineDash([]);
-    // the fight's buildings cut down in front of a unit (D-159): whole, as outlines, from the stump to the roof
+    // the fight's buildings cut down (D-159): whole, as glass, from the stump to the roof; the looked-at one brighter
+    const focus = s.hover >= 0 ? s.hover : s.cursor;
+    const focused = focus >= 0 ? a.struct[focus]! : -1;
     g.save();
-    g.strokeStyle = "rgba(170,215,255,0.55)";
-    g.shadowColor = "rgba(170,215,255,0.8)";
-    g.shadowBlur = 6;
-    g.lineWidth = 1.2;
     for (const id of s.ghosts) {
       const st = a.structures[id];
       if (!st || c.structHp[id]! <= 0) continue;
+      const lit = id === focused;
       const mine = new Set(st.cells);
       for (const k of st.cells) {
         const i = k % a.w;
         const j = Math.floor(k / a.w);
         const roof = quad(k, standAt(c, k));
         const foot = quad(k, a.height[k]! + s.stump);
-        // sides open to another cell: their roof edge, and their corners down to the stump
+        // its roof, faintly filled
+        path(roof);
+        g.fillStyle = `rgba(170,215,255,${lit ? 0.14 : 0.03})`;
+        g.fill();
+        // sides open to another cell: a faint pane, the roof's edge plainly, the corners down to the stump faintly
         ([[i, j - 1, 0, 1], [i + 1, j, 1, 2], [i, j + 1, 2, 3], [i - 1, j, 3, 0]] as const).forEach(([ni, nj, p, q]) => {
           if (ni >= 0 && nj >= 0 && ni < a.w && nj < a.h && mine.has(nj * a.w + ni)) return;
-          // the roof's edge plainly, the corners down to the stump faintly
-          g.strokeStyle = "rgba(170,215,255,0.5)";
-          g.shadowBlur = 6;
+          path([roof[p]!, roof[q]!, foot[q]!, foot[p]!]);
+          g.fillStyle = `rgba(170,215,255,${lit ? 0.08 : 0.012})`;
+          g.fill();
+          g.strokeStyle = `rgba(170,215,255,${lit ? 0.95 : 0.5})`;
+          g.shadowColor = "rgba(170,215,255,0.8)";
+          g.shadowBlur = lit ? 10 : 6;
+          g.lineWidth = lit ? 1.8 : 1.2;
           g.beginPath();
           g.moveTo(...roof[p]!);
           g.lineTo(...roof[q]!);
           g.stroke();
-          g.strokeStyle = "rgba(170,215,255,0.2)";
+          g.strokeStyle = `rgba(170,215,255,${lit ? 0.55 : 0.2})`;
           g.shadowBlur = 0;
+          g.lineWidth = 1.2;
           g.beginPath();
           g.moveTo(...roof[p]!);
           g.lineTo(...foot[p]!);
