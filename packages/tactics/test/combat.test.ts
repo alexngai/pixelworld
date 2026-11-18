@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { Boards, openWorld } from "@pixelworlds/engine";
+import { Boards, openWorld, type Board } from "@pixelworlds/engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   A_BURNS,
@@ -10,6 +10,7 @@ import {
   endRound,
   generatePuzzle,
   greedyTurn,
+  hiddenFrom,
   mechanicsOf,
   movesOf,
   newCombat,
@@ -461,6 +462,19 @@ describe("a fight over several rounds (D-152)", () => {
       d = after(d, plan);
     }
   }, 60_000);
+});
+
+describe("what a board's own buildings hide (D-169)", () => {
+  it("a cell behind a tower, seen from its side, is hidden; seen from the other side, the tower's foot is not", () => {
+    const a = arena(["....", ".H..", "....", "...."]);
+    const b = { origin: [0, 0], cell: 1, w: 4, h: 4 } as unknown as Board;
+    // the camera off to the south-east: the cells north-west of the tower are behind it
+    const se = hiddenFrom(b, a, [1, 1]);
+    expect([se[cell(a, 0, 0)], se[cell(a, 2, 2)], se[cell(a, 1, 1)]]).toEqual([1, 0, 0]);
+    // off to the north-west: the cells south-east of it, as far as the ray stays under its roof
+    const nw = hiddenFrom(b, a, [-1, -1]);
+    expect([nw[cell(a, 2, 2)], nw[cell(a, 3, 3)], nw[cell(a, 0, 0)]]).toEqual([1, 1, 0]);
+  });
 });
 
 describe("puzzles (D-150)", () => {

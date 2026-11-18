@@ -176,6 +176,7 @@ Status values:
 | D-166 | The map a quarter turn clockwise; the board's buildings solid, faint only where in the way | Accepted |
 | D-167 | The city whole at rest, the cutaway while the board is looked at closely | Accepted |
 | D-168 | What hides the board gone always; only the board's own buildings whole at rest | Accepted |
+| D-169 | Boards chosen for how little their own buildings hide; the fight begins from the clearest side | Accepted |
 
 ---
 
@@ -2463,3 +2464,10 @@ The point is more room for visual interest; both halves are wanted.
 - **Engine:** `cutDown(cuts, rotation, { always: true })` keeps a second set of cuts, replaced on its own, made in the plain tiles as well as the cutaway variants (`TileEdits` keeps both sets per rotation; a tile's cut string is the plain one's set, or both for the cutaway, the lower height where both cut one). Changing that set bakes both variants; the cutaway's own still bakes only its variant.
 - **In the fight:** what isn't the fight's and hides any of its cells (D-162's cut to the ground) goes into the set cut always; the fight's own buildings in front of another of its cells into the cutaway's. At rest the board's buildings stand whole with nothing in front of them; the cells they hide are dashed and the units they hide are silhouettes.
 - **Checked:** the Financial District: at rest the board in plain view, its buildings whole, nothing outside it in front; the pointer on a rig still cuts the board's own away in the same frame; a turn of the camera drawn in 0.13 s, cleared on that side too.
+
+### D-169: Boards chosen for how little their own buildings hide; the fight begins from the clearest side (accepted)
+- **Why:** the owner suggested easing the occlusion problem at its source, alongside the views (D-159–D-168): pick boards whose buildings hide little of them, and start the camera on the side that hides least, so on average the game reads without the see-through views.
+- **The score:** `hiddenFrom(board, arena, toward)` (in `@pixelworlds/tactics`) marks the cells an arena's own buildings hide from one side: down each cell's view ray from where a unit would stand, the first cell of another building whose roof is above it. On the board's grid alone, so cheap enough to score fifty boards while a fight is played. Only the board's own buildings count: what's outside it and in the way is gone always (D-168).
+- **The scout:** boards are tried on a grid at half a board's width round each site, both cell sizes (50, up from 10), each scored by the share of its cells hidden from its clearest side; tried clearest first, the site's own cell size and middle preferred a little; one hiding more than 15% only when no clearer one makes a fight, so a dense block still gets one.
+- **The start:** the fight turns the camera to the side whose exact rays (the cutaway's, D-159, worked out for all four sides as it begins: 0.17 s, done a moment later before) hide the fewest cells as the view stands at rest, a unit's cell counting three.
+- **Calibrated and checked:** of the Financial District's 50 boards the clearest hides 2%, the one fought before 9%, most 15–45%; Midtown's clearest 0%. The grid score ranks the sides as the exact rays do but counts fewer (6 cells against 12 on one side), so 15% on it is about a fifth on screen. The Financial District now plays on a board hiding 12 weighted cells from its start side (16, 16 and 39 from the others); Mong Kok's hides 9–12 cells a side, no unit hidden at the start.

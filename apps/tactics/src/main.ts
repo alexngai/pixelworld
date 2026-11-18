@@ -4,11 +4,11 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
-import { arenaFromBoard, type Arena, type Puzzle } from "@pixelworlds/tactics";
+import { Boards, createWorldView, roverController, type Board, type BoardSpec, type WorldView } from "@pixelworlds/engine";
+import { arenaFromBoard, hiddenFrom, type Puzzle } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { CityMap } from "./cityMap";
-import { Fight, type FightOutcome } from "./fight";
+import { Fight, towardCamera, type FightOutcome } from "./fight";
 import "./game.css";
 import { CITIES, type City, type Site } from "./sites";
 
@@ -33,6 +33,10 @@ const ROUNDS = 3;
 const RESETS = 1;
 const HINTS = 1;
 const SIZE = 8;
+/** The most of a board its own buildings may hide from its clearest side (D-169): a board hiding more is tried only when none clearer makes a fight. */
+const MAX_HIDDEN = 0.15;
+/** Where boards are tried round a site, in spans (a board's width): a grid at half spans. */
+const OFFSETS = [-1, -0.5, 0, 0.5, 1].flatMap((dx) => [-1, -0.5, 0, 0.5, 1].map((dy) => [dx, dy] as const));
 
 const ui = document.getElementById("ui")!;
 const labels = document.getElementById("labels")!;
@@ -95,8 +99,12 @@ async function openCity(city: City): Promise<WorldView> {
 
 /**
  * A board round a site with buildings enough for a fight, and a puzzle made on
- * it; null when none comes of it. It needs no camera there, so the next block
- * is made while this one is fought.
+ * it; null when none comes of it. Boards are tried round the site, each
+ * scored by how much of it its own buildings hide from its clearest side
+ * (D-169), clearest first (the site's own cell size and its middle preferred
+ * a little); one hiding more than `MAX_HIDDEN` only when none clearer makes a
+ * fight. It needs no camera there, so the next block is made while this one
+ * is fought.
  */
 async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, seed: number, progress: (tried: number) => void): Promise<{ board: Board; puzzle: Puzzle } | null> {
   const at = view.query.lonLatToCell(site.lon, site.lat);
@@ -104,19 +112,27 @@ async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, 
   const cx = Math.floor(at[0]);
   const cy = Math.floor(at[1]);
   const mpc = view.world.manifest.scale.metersPerCell;
+  const arenaOf = (board: Board) => arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
+  const towards = [0, 1, 2, 3].map((r) => towardCamera(view, r));
+  const tries: { spec: BoardSpec; score: number }[] = [];
   for (const cell of [site.cell, site.cell === 1 ? 2 : 1])
-    for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    for (const [dx, dy] of OFFSETS) {
       const span = SIZE * cell;
-      const board = await boards.add({ x0: cx - span / 2 + dx * span, y0: cy - span / 2 + dy * span, w: SIZE, h: SIZE, cell });
-      const arena: Arena = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
-      if (arena.structures.length < 5) {
-        boards.remove(board);
-        continue;
-      }
-      const puzzle = await brain.generate(arena, { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1 }, progress);
-      if (puzzle) return { board, puzzle };
+      const spec = { x0: Math.round(cx - span / 2 + dx * span), y0: Math.round(cy - span / 2 + dy * span), w: SIZE, h: SIZE, cell };
+      const board = await boards.add(spec);
+      const arena = arenaOf(board);
       boards.remove(board);
+      if (arena.structures.length < 5) continue;
+      const hidden = Math.min(...towards.map((t) => hiddenFrom(board, arena, t).reduce((n, v) => n + v, 0))) / (SIZE * SIZE);
+      tries.push({ spec, score: hidden + (hidden > MAX_HIDDEN ? 1 : 0) + (cell === site.cell ? 0 : 0.1) + 0.03 * Math.hypot(dx, dy) });
     }
+  tries.sort((p, q) => p.score - q.score);
+  for (const { spec } of tries) {
+    const board = await boards.add(spec);
+    const puzzle = await brain.generate(arenaOf(board), { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1 }, progress);
+    if (puzzle) return { board, puzzle };
+    boards.remove(board);
+  }
   return null;
 }
 

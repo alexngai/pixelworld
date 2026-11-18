@@ -1,4 +1,4 @@
-import { CELL_TREES, CELL_WALL, CELL_WATER, type Board, type WorldQuery } from "@pixelworlds/engine";
+import { CELL_TREES, CELL_WALL, CELL_WATER, boardCellAt, toWorld, type Board, type WorldQuery } from "@pixelworlds/engine";
 import { objectInfo } from "./buildings";
 
 /**
@@ -376,6 +376,30 @@ export function structureAt(c: Combat, k: number): number {
 /** Where one stands on a cell (steps): a standing building's roof, else the ground (a fallen one's rubble). */
 export function standAt(c: Combat, k: number): number {
   return structureAt(c, k) >= 0 ? c.arena.roof[k]! : c.arena.height[k]!;
+}
+
+/**
+ * The cells of an arena its own buildings hide from one side of the city
+ * view (D-169), as they stand: down each cell's view ray, from where a unit
+ * there would stand toward the camera (`toward`: the diagonal the view looks
+ * along, a world cell across each way rising two steps), the first cell of
+ * another of its buildings whose roof is above the ray.
+ */
+export function hiddenFrom(b: Board, a: Arena, toward: readonly [number, number]): Uint8Array {
+  const out = new Uint8Array(a.w * a.h);
+  for (let k = 0; k < a.w * a.h; k++) {
+    const p = toWorld(b, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
+    const h = a.roof[k]!;
+    for (let t = 0.25; ; t += 0.25) {
+      const q = boardCellAt(b, p.x + t * toward[0], p.y + t * toward[1]);
+      if (q < 0) break;
+      if (a.struct[q]! >= 0 && a.struct[q] !== a.struct[k] && a.roof[q]! > h + 2 * t) {
+        out[k] = 1;
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 /** Whether a unit could move from a cell onto a neighbour: no water for one that walks, and a climb within its reach. */

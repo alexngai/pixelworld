@@ -129,6 +129,21 @@ interface Side {
 const angle = (dir: number) => Math.atan2(DIRS[dir]![1], DIRS[dir]![0]);
 const pips = (hp: number, max: number) => "■".repeat(Math.max(0, hp)) + "□".repeat(Math.max(0, max - hp));
 
+/** Which way the camera is from a side of the view, over the ground: a world cell across each way (two steps up) stays on one screen point. */
+export function towardCamera(view: WorldView, r: number): readonly [number, number] {
+  const { camera } = view;
+  const was = camera.rotation;
+  camera.rotation = r as Rotation;
+  const at = camera.project(camera.x, camera.y, 0);
+  const d =
+    DIAGONALS.find(([dx, dy]) => {
+      const q = camera.project(camera.x + dx, camera.y + dy, 2);
+      return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
+    }) ?? ([1, 1] as const);
+  camera.rotation = was;
+  return d;
+}
+
 export class Fight {
   readonly done: Promise<FightOutcome>;
   private finish!: (o: FightOutcome) => void;
@@ -284,40 +299,22 @@ export class Fight {
 
   /**
    * Turn the camera to the side from which the board's own buildings hide
-   * the least of it: the fewest cells behind a taller building of the board
-   * (a unit's cell counting three), down each cell's view ray.
+   * the least of it (D-169): the fewest cells hidden as the view stands at
+   * rest (each side's rays, worked out now rather than a moment later), a
+   * unit's counting three.
    */
   private bestRotation(): void {
     const { camera } = this.view;
     const c = this.c;
-    const a = c.arena;
     const start = camera.rotation;
     let best = start;
     let least = Infinity;
     for (let i = 0; i < 4; i++) {
-      camera.rotation = ((start + i) % 4) as typeof start;
-      // towards the camera along a screen point's ray: a cell across each way, two steps up
-      const m = this.centre(0);
-      const at = camera.project(m.x, m.y, 0);
-      const toward = DIAGONALS.find(([dx, dy]) => {
-        const q = camera.project(m.x + dx, m.y + dy, 2);
-        return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
-      });
-      if (!toward) return void (camera.rotation = start);
-      let hidden = 0;
-      for (let k = 0; k < a.w * a.h; k++) {
-        const p = this.centre(k);
-        const h = standAt(c, k);
-        for (let t = 0.25; ; t += 0.25) {
-          const q = boardCellAt(this.board, p.x + t * toward[0], p.y + t * toward[1]);
-          if (q < 0) break;
-          if (a.struct[q]! >= 0 && a.struct[q] !== a.struct[k] && standAt(c, q) > h + 2 * t) {
-            hidden += c.occ[k]! >= 0 ? 3 : 1;
-            break;
-          }
-        }
-      }
-      if (hidden < least) [least, best] = [hidden, camera.rotation];
+      const r = ((start + i) % 4) as Rotation;
+      const hidden = this.side(r).hiddenRest;
+      let n = 0;
+      for (let k = 0; k < hidden.length; k++) if (hidden[k]) n += c.occ[k]! >= 0 ? 3 : 1;
+      if (n < least) [least, best] = [n, r];
     }
     camera.rotation = best;
   }
@@ -352,21 +349,7 @@ export class Fight {
     this.updateCuts();
   }
 
-  /** Which way the camera is from a side, over the ground: a cell across each way (two steps up) stays on one screen point. */
-  private towardFrom(r: number): readonly [number, number] {
-    const { camera } = this.view;
-    const was = camera.rotation;
-    camera.rotation = r as typeof was;
-    const m = this.centre(0);
-    const at = camera.project(m.x, m.y, 0);
-    const d =
-      DIAGONALS.find(([dx, dy]) => {
-        const q = camera.project(m.x + dx, m.y + dy, 2);
-        return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
-      }) ?? [1, 1];
-    camera.rotation = was;
-    return d;
-  }
+
 
   /**
    * The placed objects between the camera and a point (world cells, steps),
@@ -426,7 +409,7 @@ export class Fight {
     if (known) return known;
     const c = this.c;
     const a = c.arena;
-    const toward = this.towardFrom(r);
+    const toward = towardCamera(this.view, r);
     const stump = STUMP_M / a.metersPerStep;
     const own = new Map(a.structures.map((st, id) => [st.object, id] as const));
     // what stands between each cell and the camera: from its middle and corners, at a unit's feet and head
