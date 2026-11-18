@@ -102,13 +102,19 @@ type Phase = "pick" | "move" | "strike" | "busy" | "over";
 const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 /** How much of a building cut down still shows, where it stood in front (D-160). */
 const GHOST = 0.3;
+/** …where nothing of the fight's stands behind it (D-161); and under the selected unit or the cell looked at. */
+const GHOST_CLEAR = 0.6;
+const GHOST_LIT = 0.85;
 /** How high a building cut down stands (metres): a plinth, its footprint plain, a unit in the street behind it in view (the faint building shows the rest). */
 const STUMP_M = 0.5;
 
 /** One side of the view's cutaway (D-159): the buildings cut, the fight's among them (outlined), the cells still hidden with it and without. */
 interface Side {
   cuts: Map<number, number>;
+  /** The fight's buildings cut, far to near. */
   ghosts: number[];
+  /** Per cell, the fight's buildings in front of it (ids). */
+  blockers: number[][];
   hidden: Uint8Array;
   hiddenWhole: Uint8Array;
   key: string;
@@ -414,6 +420,7 @@ export class Fight {
     const [bx0, by0, bx1, by1] = [Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y)];
     const cuts = new Map<number, number>();
     const ghosts: number[] = [];
+    const blockers: number[][] = rays.map((ray) => [...new Set([...ray.all].flatMap((o) => (own.has(o) ? [own.get(o)!] : [])))]);
     for (let k = 0; k < a.w * a.h; k++) {
       const sid = structureAt(c, k);
       const mine = sid >= 0 ? a.structures[sid]!.object : -1;
@@ -444,7 +451,13 @@ export class Fight {
       hiddenWhole[k] = front.length ? 1 : 0;
     }
     const key = [...cuts].map(([o, h]) => `${o}:${h.toFixed(2)}`).sort().join(",");
-    return (this.sides[r] = { cuts, ghosts, hidden, hiddenWhole, key });
+    // far to near (the nearer drawn over the farther in the opacity mask): along the way to the camera
+    const depth = (id: number) => {
+      const p = this.centre(a.structures[id]!.cells[0]!);
+      return p.x * toward[0] + p.y * toward[1];
+    };
+    ghosts.sort((p, q) => depth(p) - depth(q));
+    return (this.sides[r] = { cuts, ghosts, blockers, hidden, hiddenWhole, key });
   }
 
   /** A building fell (or stood again): every side's cuts afresh, this one's now, the others' a moment later. */
@@ -811,7 +824,18 @@ export class Fight {
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
     }
-    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach, hidden: this.hiddenCells, ghosts: this.ghosts, stump: STUMP_M / c.arena.metersPerStep });
+    this.glass.set({
+      state: shown,
+      marks,
+      cursor: this.cursor,
+      hover: this.hover,
+      reach,
+      hidden: this.hiddenCells,
+      ghosts: this.ghosts,
+      ghostAlpha: this.ghostAlphas(shown, focus),
+      baseAlpha: this.cutting ? GHOST : 0,
+      stump: STUMP_M / c.arena.metersPerStep,
+    });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
@@ -981,6 +1005,22 @@ export class Fight {
     this.phase = "pick";
     this.lift = -1;
     this.preview = null;
+  }
+
+  /**
+   * How much of each cut building of the fight shows (D-161): little where it
+   * stands in front of a unit, more where nothing of the fight's is behind it
+   * (the back rows), most under the selected unit and the cell looked at.
+   */
+  private ghostAlphas(c: Combat, focus: number): number[] {
+    if (!this.cutting) return [];
+    const side = this.side(this.view.camera.rotation);
+    const a = c.arena;
+    const before = new Set<number>();
+    for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0) for (const id of side.blockers[c.pos[u]!] ?? []) before.add(id);
+    const lit = new Set<number>();
+    for (const k of [this.selected >= 0 ? c.pos[this.selected]! : -1, focus]) if (k >= 0 && a.struct[k]! >= 0) lit.add(a.struct[k]!);
+    return this.ghosts.map((id) => (lit.has(id) ? GHOST_LIT : before.has(id) ? GHOST : GHOST_CLEAR));
   }
 
   /** The cell looked at: the pointer's, else the keyboard's. */

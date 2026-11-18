@@ -168,6 +168,7 @@ Status values:
 | D-158 | The whole world from above: top-down tiles baked on demand and kept, and the game's city map | Accepted |
 | D-159 | Buildings cut down to stumps: a cutaway that hides nothing of the fight, drawn by the bake | Accepted |
 | D-160 | What's cut down still shows faintly: the plain tiles blended over the cutaway | Accepted |
+| D-161 | How much of each cut building shows: a mask painted by the app, nothing baked again | Accepted |
 
 ---
 
@@ -2408,3 +2409,9 @@ The point is more room for visual interest; both halves are wanted.
 - **How, without dithering:** the frame is palette indices until its last pass, where colours become RGBA, so true blending is possible there. A cut tile's plain image (its buildings standing: a tile variant, `TileRequest.uncut`, which is the plain tile and is kept under the plain tile's cache key) is drawn into a target of its own, index and depth, nearest surface kept. The palette pass blends its colour over the frame's at `view.cutGhost` (0–1) wherever it stood nearer than what the frame shows: where a cut building was in front, a unit, the street or a stump shows through it. Off (0) by default, and the frame then is exactly as before.
 - **In the fight:** the cutaway draws the cut buildings at 30% under the glass (its edges and faint panes); the stumps went down to a 0.5 m plinth (a 3 m one still hid a rig in the street at walking scale), the faint building showing the rest. V turns both off.
 - **Checked:** the Financial District: the board's twenty buildings faint under the glass, every rig and invader in view through them, the foreground's cut buildings faint too, the city around them whole; the golden renders unchanged; the view's budgets within their limits.
+
+### D-161: How much of each cut building shows: a mask painted by the app, nothing baked again (accepted)
+- **Why:** the owner asked for the cut buildings that hide no unit (the back rows above all) to show more, and the building under a selected unit, or under the cell looked at, more still, so a unit's place reads at once.
+- **How:** the ghost's opacity (D-160) can come from a mask (`view.setCutGhostMask(image)`): an image over the canvas whose red is the opacity there, stretched to it, sampled by the palette pass in place of `cutGhost`'s one value. The opacity is per pixel, the building is the app's to know: no tile bakes again when it changes, only the mask is drawn and uploaded (a quarter of the canvas). Null goes back to the one value.
+- **In the fight:** the glass layer paints each cut building of the fight's whole box (roof, foot and sides, cell by cell), far to near so the nearer wins, over a base for everything else cut (30%): 30% where it stands in front of a unit (its own blockers, worked out with the rays, D-159), 60% where it hides none (the back rows), 85% under the selected unit and the cell looked at. The mask is painted again only when the camera, the units or the selection change.
+- **Checked:** the Financial District: nine buildings at 30%, eleven at 60%; the tower a crawler stands on, 68 m up, near solid when looked at, the crawler plainly on it; the golden renders unchanged.

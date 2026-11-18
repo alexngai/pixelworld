@@ -138,6 +138,8 @@ uniform vec2 uCanvas;
 uniform int uLut;
 uniform highp sampler2D uGhost;  // the uncut tiles (D-160): index and depth, as the target holds them
 uniform float uGhostAlpha;       // how much of them shows where they stood in front, 0 for none
+uniform int uGhostMasked;        // 1: how much, per pixel, from the mask's red (D-161), over the canvas, top row first
+uniform sampler2D uGhostMask;
 out vec4 o;
 void main() {
   ivec2 q = ivec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y);  // the target's rows run top down
@@ -150,7 +152,8 @@ void main() {
     float zm = dot(floor(m.gba * 255.0 + 0.5), vec3(65536.0, 256.0, 1.0));
     float zg = dot(floor(g.gba * 255.0 + 0.5), vec3(65536.0, 256.0, 1.0));
     int gi = int(g.r * 255.0 + 0.5);
-    if (zg + 2.0 < zm && gi != index) o = mix(o, texelFetch(uPalette, ivec2(gi, uLut), 0), uGhostAlpha);
+    float a = uGhostMasked == 1 ? texture(uGhostMask, vec2(gl_FragCoord.x / uCanvas.x, 1.0 - gl_FragCoord.y / uCanvas.y)).r : uGhostAlpha;
+    if (zg + 2.0 < zm && gi != index) o = mix(o, texelFetch(uPalette, ivec2(gi, uLut), 0), a);
   }
 }
 `;
@@ -211,6 +214,8 @@ export class Compositor {
   private palU: Uniforms;
   private vao: WebGLVertexArrayObject;
   private paletteTex: WebGLTexture | null = null;
+  /** How much of what's cut shows, per pixel (D-161): an app's mask over the canvas, or null for one opacity. */
+  private ghostMask: WebGLTexture | null = null;
   private target: {
     w: number;
     h: number;
@@ -242,6 +247,28 @@ export class Compositor {
     this.quadU = new Uniforms(gl, this.quadProg);
     this.palU = new Uniforms(gl, this.palProg);
     this.vao = gl.createVertexArray()!;
+  }
+
+  /** The ghost's opacity per pixel (D-161): an image over the canvas (its red, 0–1), stretched to it; null for `ghosts.alpha` everywhere. */
+  setGhostMask(source: TexImageSource | null): void {
+    const gl = this.gl;
+    if (!source) {
+      if (this.ghostMask) gl.deleteTexture(this.ghostMask);
+      this.ghostMask = null;
+      return;
+    }
+    if (!this.ghostMask) {
+      this.ghostMask = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, this.ghostMask);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.ghostMask);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
   setPalette(rgba: Uint8Array, rows = 1): void {
@@ -286,6 +313,8 @@ export class Compositor {
     this.releaseTarget();
     if (this.paletteTex) gl.deleteTexture(this.paletteTex);
     this.paletteTex = null;
+    if (this.ghostMask) gl.deleteTexture(this.ghostMask);
+    this.ghostMask = null;
     for (const p of this.fogPasses.values()) p.dispose();
     this.fogPasses.clear();
     this.steamPass?.dispose();
@@ -483,7 +512,13 @@ export class Compositor {
     gl.bindTexture(gl.TEXTURE_2D, ghostOn ? t.ghost!.color : null);
     gl.uniform1i(p.loc("uGhost"), 2);
     gl.uniform1f(p.loc("uGhostAlpha"), ghostOn ? ghosts!.alpha : 0);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, ghostOn ? this.ghostMask : null);
+    gl.uniform1i(p.loc("uGhostMask"), 3);
+    gl.uniform1i(p.loc("uGhostMasked"), ghostOn && this.ghostMask ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.activeTexture(gl.TEXTURE0);
   }

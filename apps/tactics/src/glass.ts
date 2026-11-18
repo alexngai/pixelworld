@@ -22,9 +22,12 @@ export interface GlassState {
   reach: readonly number[];
   /** Per cell: still hidden behind a building (dashed). */
   hidden: Uint8Array;
-  /** The fight's buildings cut down in front of a unit (D-159), outlined whole; and how high their stumps stand (steps). */
+  /** The fight's buildings cut down (D-159), far to near, outlined whole; and how high their stumps stand (steps). */
   ghosts: readonly number[];
   stump: number;
+  /** How much of each of them shows (D-161), and of everything else cut. */
+  ghostAlpha: readonly number[];
+  baseAlpha: number;
 }
 
 const COLOUR: Record<Mark["kind"], string> = {
@@ -41,6 +44,9 @@ const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, 
 export class BoardGlass {
   readonly el: HTMLCanvasElement;
   private s: GlassState | null = null;
+  /** How much of what's cut shows, pixel by pixel (D-161), at a quarter of the canvas; and what it was painted for. */
+  private readonly mask = document.createElement("canvas");
+  private maskFor = "";
 
   constructor(
     parent: HTMLElement,
@@ -90,6 +96,7 @@ export class BoardGlass {
       g.closePath();
     };
     const lift = 0.08;
+    this.paintMask(s, quad, W, H);
     // the grid: faint, dashed through a building
     g.lineWidth = 1;
     for (let k = 0; k < a.w * a.h; k++) {
@@ -207,7 +214,52 @@ export class BoardGlass {
     }
   }
 
+  /** Paint each cut building's shape over the view at its opacity (the nearer over the farther), the rest at the base, when anything changed. */
+  private paintMask(s: GlassState, quad: (k: number, h: number) => [number, number][], W: number, H: number): void {
+    const { camera } = this.view;
+    const key = [camera.x, camera.y, camera.zoom, camera.rotation, W, H, s.baseAlpha, s.ghosts.join(","), s.ghostAlpha.join(","), s.state.structHp.join("")].join("|");
+    if (key === this.maskFor) return;
+    this.maskFor = key;
+    const q = 4;
+    const mw = Math.max(1, Math.ceil(W / q));
+    const mh = Math.max(1, Math.ceil(H / q));
+    if (this.mask.width !== mw || this.mask.height !== mh) {
+      this.mask.width = mw;
+      this.mask.height = mh;
+    }
+    const g = this.mask.getContext("2d")!;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const grey = (a: number) => {
+      const v = Math.round(a * 255);
+      return `rgb(${v},${v},${v})`;
+    };
+    g.fillStyle = grey(s.baseAlpha);
+    g.fillRect(0, 0, mw, mh);
+    g.setTransform(1 / q, 0, 0, 1 / q, 0, 0);
+    const c = s.state;
+    const a = c.arena;
+    s.ghosts.forEach((id, n) => {
+      const st = a.structures[id];
+      if (!st || c.structHp[id]! <= 0) return;
+      g.fillStyle = grey(s.ghostAlpha[n] ?? s.baseAlpha);
+      for (const k of st.cells) {
+        const roof = quad(k, standAt(c, k));
+        const foot = quad(k, a.height[k]!);
+        // the cell's whole box: its roof, its foot and its four sides
+        const faces = [roof, foot, ...[0, 1, 2, 3].map((p) => [roof[p]!, roof[(p + 1) % 4]!, foot[(p + 1) % 4]!, foot[p]!])];
+        for (const f of faces) {
+          g.beginPath();
+          f.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+          g.closePath();
+          g.fill();
+        }
+      }
+    });
+    this.view.setCutGhostMask(this.mask);
+  }
+
   dispose(): void {
     this.el.remove();
+    this.view.setCutGhostMask(null);
   }
 }

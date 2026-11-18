@@ -468,6 +468,15 @@ export interface WorldView extends ControllerView {
    */
   cutGhost: number;
   /**
+   * How much of the buildings cut down shows, pixel by pixel (D-161): an
+   * image over the canvas (stretched to it; its red, 0–1, the opacity there),
+   * in place of `cutGhost`'s one value; null to go back to it. Painting the
+   * buildings' shapes into it lets each show as much as an app likes (more
+   * where nothing stands behind, most where a unit stands on one), with no
+   * tile baked again. Upload again (call again) when it changes.
+   */
+  setCutGhostMask(mask: TexImageSource | null): void;
+  /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and
    * outlined as the tiles are, once and not kept. `px` screen px per world

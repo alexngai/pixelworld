@@ -933,6 +933,11 @@ class View implements WorldView {
     this.dirty = true;
   }
 
+  setCutGhostMask(mask: TexImageSource | null): void {
+    this.compositor.setGhostMask(mask);
+    this.dirty = true;
+  }
+
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void {
     for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation])) this.edited(tiles, [r as Rotation]);
   }
