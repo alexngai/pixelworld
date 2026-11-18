@@ -24,6 +24,16 @@ const FILL: Partial<Record<Mark["kind"], string>> = { move: "rgba(89,195,106,0.4
 const ARROW: Record<string, string> = { attack: "#ff7a6b", move: "#8fe39a", info: "#ffd166" };
 const PAD = 6;
 
+/**
+ * Which way on the map a direction on the city view's screen runs (D-166):
+ * the view's top-left edge at the map's top and its top-right edge at its
+ * right (the board's diamond turned an eighth clockwise); the view's
+ * down-right (its u) down, its down-left (v) left.
+ */
+export function mapAxis(d: { x: number; y: number }): [number, number] {
+  return d.y > 0 ? (d.x > 0 ? [0, 1] : [-1, 0]) : d.x < 0 ? [0, -1] : [1, 0];
+}
+
 export class TacticalMap {
   readonly el: HTMLCanvasElement;
   private big = false;
@@ -32,10 +42,8 @@ export class TacticalMap {
   private screenAxes: () => { di: { x: number; y: number }; dj: { x: number; y: number } } = () => ({ di: { x: 1, y: 1 }, dj: { x: -1, y: 1 } });
   /** Board (i, j) → the map's grid: each board axis along one of its axes, either way, as the view lies now. */
   private get axes(): { i: [number, number]; j: [number, number] } {
-    // the map's +x is the view's u (down-right on screen), its +y the view's v (down-left)
-    const axis = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
     const { di, dj } = this.screenAxes();
-    return { i: axis(di), j: axis(dj) };
+    return { i: mapAxis(di), j: mapAxis(dj) };
   }
   private last: MapState | null = null;
   private hover = -1;

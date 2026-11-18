@@ -37,7 +37,7 @@ import {
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
 import { BoardGlass } from "./glass";
-import { TacticalMap } from "./map";
+import { TacticalMap, mapAxis } from "./map";
 import type { Outlook } from "./worker";
 
 /**
@@ -104,8 +104,7 @@ const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 const GHOST = 0.3;
 /** The sun for bakes from above (D-164): where the world's is, but high, for short shadows. */
 const TOP_SUN: [number, number, number] = [0.15, 0.27, 1.6];
-/** …where nothing of the fight's stands behind it (D-161); and under the selected unit or the cell looked at. */
-const GHOST_CLEAR = 0.6;
+/** …under the selected unit or the cell looked at, even in the way (D-166). */
 const GHOST_LIT = 0.85;
 /** How high a building cut down stands (metres): a plinth, its footprint plain, a unit in the street behind it in view (the faint building shows the rest). */
 const STUMP_M = 0.5;
@@ -336,10 +335,9 @@ export class Fight {
     this.hiddenFor = camera.rotation;
     // the map turned as the view is (it asks the camera itself, at every drawing)
     this.map.refresh();
-    // the arrow keys: right along u, down along v, as the map lies
+    // the arrow keys run as the map lies: right is its right, down its down
     const { di, dj } = this.screenAxes();
-    const along = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
-    const [ai, aj] = [along(di), along(dj)];
+    const [ai, aj] = [mapAxis(di), mapAxis(dj)];
     this.stepU = [ai[0], aj[0]];
     this.stepV = [ai[1], aj[1]];
     // this side's cuts were sent with the others' when the fight began: only the outlines and hidden cells change
@@ -846,19 +844,20 @@ export class Fight {
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
     }
+    // the fight's buildings cut away, each drawn as itself over the cut (D-162), far to near: solid, but faint where in the way (D-166)
+    const alphas = this.ghostAlphas(shown, focus);
+    this.view.setLoneGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
     this.glass.set({
       state: shown,
       marks,
       cursor: this.cursor,
       hover: this.hover,
       reach,
-      hidden: this.hiddenCells,
-      ghosts: this.ghosts,
+      hidden: this.hiddenNow(shown, alphas),
+      // glass outlines on the faint ones only: a solid building needs none
+      ghosts: this.ghosts.filter((_, n) => (alphas[n] ?? 1) < 1),
       stump: STUMP_M / c.arena.metersPerStep,
     });
-    // the fight's buildings cut away, each drawn faintly as itself (D-162), far to near
-    const alphas = this.ghostAlphas(shown, focus);
-    this.view.setLoneGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
@@ -1031,19 +1030,31 @@ export class Fight {
   }
 
   /**
-   * How much of each cut building of the fight shows (D-161): little where it
-   * stands in front of a unit, more where nothing of the fight's is behind it
-   * (the back rows), most under the selected unit and the cell looked at.
+   * How much of each cut building of the fight shows (D-166): all of it,
+   * solid, unless it stands in the way, in front of a unit or of the cell
+   * looked at, where it's faint; the building under the selected unit or the
+   * cell looked at nearly solid, even in the way, so where they are reads.
    */
   private ghostAlphas(c: Combat, focus: number): number[] {
     if (!this.cutting) return [];
     const side = this.side(this.view.camera.rotation);
     const a = c.arena;
-    const before = new Set<number>();
-    for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0) for (const id of side.blockers[c.pos[u]!] ?? []) before.add(id);
+    const inWay = new Set<number>();
+    for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0) for (const id of side.blockers[c.pos[u]!] ?? []) inWay.add(id);
+    if (focus >= 0) for (const id of side.blockers[focus] ?? []) inWay.add(id);
     const lit = new Set<number>();
     for (const k of [this.selected >= 0 ? c.pos[this.selected]! : -1, focus]) if (k >= 0 && a.struct[k]! >= 0) lit.add(a.struct[k]!);
-    return this.ghosts.map((id) => (lit.has(id) ? GHOST_LIT : before.has(id) ? GHOST : GHOST_CLEAR));
+    return this.ghosts.map((id) => (lit.has(id) ? GHOST_LIT : inWay.has(id) ? GHOST : 1));
+  }
+
+  /** The cells hidden now (dashed on the glass): behind a building left whole, or one of the fight's drawn solid (D-166). */
+  private hiddenNow(c: Combat, alphas: readonly number[]): Uint8Array {
+    if (!this.cutting) return this.hiddenCells;
+    const side = this.side(this.view.camera.rotation);
+    const solid = new Set(this.ghosts.filter((_, n) => (alphas[n] ?? 1) >= GHOST_LIT));
+    const out = new Uint8Array(this.hiddenCells);
+    for (let k = 0; k < out.length; k++) if (!out[k] && (side.blockers[k] ?? []).some((id) => id !== c.arena.struct[k] && solid.has(id))) out[k] = 1;
+    return out;
   }
 
   /** The cell looked at: the pointer's, else the keyboard's. */

@@ -173,6 +173,7 @@ Status values:
 | D-163 | The tactical map as the overhead view: crisp at both sizes, heights in colour | Accepted |
 | D-164 | Finer bakes from above: short shadows from a high sun, the units' own models from above | Accepted |
 | D-165 | The map laid out from the camera at every drawing | Accepted |
+| D-166 | The map a quarter turn clockwise; the board's buildings solid, faint only where in the way | Accepted |
 
 ---
 
@@ -2442,3 +2443,9 @@ The point is more room for visual interest; both halves are wanted.
 - **Why:** the owner saw a unit on the map facing a quarter turn off its facing in the city view: one facing the view's bottom-left edge faced the map's right edge, not its bottom. The map's layout (which board axis runs which way on it) was worked out when the fight noticed the camera had turned, from its frame callback; until that frame came (a frame late at best, a second or two with the frames held back, as for a page in the background), the map drew the new side with the last side's layout, and the units' facings with it.
 - **What:** the map asks the camera where the board's axes run on screen at every drawing (and every click it reads), so it can't lie a side behind; Q and E (the free camera's turns) lay the fight out for the new side at once (the arrow keys' directions, the cutaway's outlines), not at the next frame.
 - **Checked:** pressing Q four times, east in the view and on the map agree right after each press, on every side.
+
+### D-166: The map a quarter turn clockwise; the board's buildings solid, faint only where in the way (accepted)
+- **Why:** the owner asked for the map turned a quarter clockwise from D-165's layout, the same on every side; and, back on the city view, for the board's buildings to read more plainly: faint everywhere (D-162) they looked like no buildings at all.
+- **The map:** the view's top-left edge runs along the map's top, its top-right edge along the map's right (the board's diamond turned an eighth clockwise), on all four sides; `mapAxis` says it once, and the arrow keys use it, so right is the map's right and down its down.
+- **Solid by default:** the fight's buildings (its lone ghosts, D-162) draw at full strength unless in the way: 30% where one stands in front of a unit or of the cell looked at, 85% under the selected unit and under the cell looked at. Only the faint ones get the glass outlines; a cell behind a solid one is outlined dashed through it.
+- **Checked:** the Financial District: eleven buildings solid, nine faint with their glass, every unit in view; on all four sides the map's top is the view's top-left edge and its right the top-right edge.
