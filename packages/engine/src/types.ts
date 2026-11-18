@@ -458,9 +458,10 @@ export interface WorldView extends ControllerView {
    * again, kept beside the plain tile. Replaces the previous cuts, in one
    * rotation of the view (what hides a place depends on the side it's seen
    * from; the tiles of the others, baked while idle, keep theirs) or all
-   * four; null for none.
+   * four; null for none. With `always`, a second set, replaced on its own:
+   * cut in the plain tiles as well, whether the cutaway shows or not (D-168).
    */
-  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void;
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts?: { always?: boolean }): void;
   /**
    * Whether the cuts show (default true). Off, the city stands whole; the
    * cutaway tiles are still baked and kept, so turning it on again shows

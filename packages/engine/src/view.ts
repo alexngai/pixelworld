@@ -136,8 +136,8 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const tileEdits = new TileEdits((i) => objectTiles(w, i), tileCells(w));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
-    // buildings cut down (D-159): only in the cutaway variant, kept beside the plain tile (D-167)
-    const cut = t.cutaway ? tileEdits.cutFor(t.tx, t.ty, t.rotation) : "";
+    // buildings cut down (D-159): those cut always (D-168), and the cutaway's own in its variant (D-167); none on the ground alone or the bare variant
+    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation, !!t.cutaway);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
       const cells = tileEdits.cellsFor(t.tx, t.ty);
@@ -338,7 +338,7 @@ class View implements WorldView {
         !failed &&
         ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
           (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
-          (res.cut ?? "") !== (res.cutaway ? this.tileEdits.cutFor(res.tx, res.ty, res.rotation) : ""));
+          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation, !!res.cutaway)));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
@@ -462,10 +462,12 @@ class View implements WorldView {
    * tiles whose bake reaches them bake again. In the rotation shown, each image stays on screen until its
    * new one is ready; in the others, and kept in the cache, they are let go.
    */
-  private edited(tiles: [number, number][], rotations: readonly Rotation[] = [0, 1, 2, 3], cutsOnly = false): void {
+  private edited(
+    tiles: [number, number][],
+    rotations: readonly Rotation[] = [0, 1, 2, 3],
+    variants: readonly ("plain" | "bare" | "cutaway")[] = ["plain", "bare", "cutaway"],
+  ): void {
     const r = this.cam.rotation;
-    // cuts change only the cutaway variants (D-167)
-    const variants = cutsOnly ? (["cutaway"] as const) : (["plain", "bare", "cutaway"] as const);
     for (const [tx, ty] of tiles)
       for (const rot of rotations)
         for (const v of variants) {
@@ -986,9 +988,11 @@ class View implements WorldView {
   }
 
 
-  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void {
-    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation]))
-      this.edited(tiles, [r as Rotation], true);
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts: { always?: boolean } = {}): void {
+    const always = !!opts.always;
+    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation], always))
+      // the cutaway's own change only its variants (D-167); those cut always, the plain tiles too (D-168)
+      this.edited(tiles, [r as Rotation], always ? ["plain", "cutaway"] : ["cutaway"]);
   }
 
   get cutaway(): boolean {

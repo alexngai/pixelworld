@@ -155,6 +155,19 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect([tiles.cutFor(2, 2, 1), tiles.cutFor(2, 2, 3)]).toEqual(["", "1:4.5"]);
   });
 
+  it("keeps the cuts made always apart from the cutaway's (D-167, D-168): the plain tile has the first, the cutaway both", () => {
+    const tiles = new TileEdits((i) => objectTiles(w, i));
+    tiles.setCuts(new Map([[1, 4.5]]), [0]);
+    tiles.setCuts(new Map([[1, 0.1], [3, 2]]), [0], true);
+    expect(tiles.cutFor(1, 1, 0, false)).toBe("1:0.1");
+    expect(tiles.cutFor(1, 1, 0)).toBe("1:0.1"); // the lower where both cut
+    expect([tiles.cutFor(2, 0, 0, false), tiles.cutFor(2, 0, 0)]).toEqual(["3:2", "3:2"]);
+    expect([tiles.hasCuts(1, 1, 0), tiles.hasCuts(2, 0, 0)]).toEqual([true, false]);
+    // replacing one set leaves the other
+    tiles.setCuts(new Map(), [0], true);
+    expect([tiles.cutFor(1, 1, 0, false), tiles.cutFor(1, 1, 0)]).toEqual(["", "1:4.5"]);
+  });
+
   it("each tile knows the removed objects its bake reaches", () => {
     const tiles = new TileEdits((i) => objectTiles(w, i));
     expect(sorted(tiles.apply({ op: "remove", objects: [2, 1] }))).toEqual(["0,2", "0,3", "1,1", "1,2", "1,3", "2,1", "2,2", "2,3", "3,2", "3,3"]);

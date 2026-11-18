@@ -157,16 +157,18 @@ export class TileEdits {
   /**
    * Buildings cut down (D-159), for each rotation of the view (what hides a
    * place depends on the side it's seen from): object → height (world steps),
-   * and the objects whose bake reaches each tile.
+   * and the objects whose bake reaches each tile. Two sets: those cut always
+   * (D-168), and the cutaway's own (D-167), drawn only in its variant.
    */
-  private cuts: Map<number, number>[] = [0, 1, 2, 3].map(() => new Map());
-  private readonly cutByTile: Map<string, Set<number>>[] = [0, 1, 2, 3].map(() => new Map());
+  private readonly cuts: Map<number, number>[][] = [0, 1].map(() => [0, 1, 2, 3].map(() => new Map()));
+  private readonly cutByTile: Map<string, Set<number>>[][] = [0, 1].map(() => [0, 1, 2, 3].map(() => new Map()));
 
-  /** Cut these objects down (or none) in these rotations; the tiles whose images change, by rotation. */
-  setCuts(cuts: ReadonlyMap<number, number>, rotations: readonly number[] = [0, 1, 2, 3]): [number, [number, number][]][] {
+  /** Cut these objects down (or none) in these rotations, always or in the cutaway; the tiles whose images change, by rotation. */
+  setCuts(cuts: ReadonlyMap<number, number>, rotations: readonly number[] = [0, 1, 2, 3], always = false): [number, [number, number][]][] {
+    const layer = always ? 0 : 1;
     return rotations.map((r) => {
-      const was = this.cuts[r]!;
-      const byTile = this.cutByTile[r]!;
+      const was = this.cuts[layer]![r]!;
+      const byTile = this.cutByTile[layer]![r]!;
       const touched = new Map<string, [number, number]>();
       const changed = new Set<number>();
       for (const [i, h] of cuts) if (was.get(i) !== h) changed.add(i);
@@ -184,20 +186,28 @@ export class TileEdits {
             if (!set.size) byTile.delete(at);
           }
         }
-      this.cuts[r] = new Map(cuts);
+      this.cuts[layer]![r] = new Map(cuts);
       return [r, [...touched.values()]] as [number, [number, number][]];
     });
   }
 
-  /** Whether any cut reaches a tile's bake in a rotation (cheap: asked every frame). */
+  /** Whether the cutaway's own cuts reach a tile's bake in a rotation: it has a cutaway variant (cheap: asked every frame). */
   hasCuts(tx: number, ty: number, rotation: number): boolean {
-    return !!this.cutByTile[rotation]?.has(`${tx},${ty}`);
+    return !!this.cutByTile[1]![rotation]?.has(`${tx},${ty}`);
   }
 
-  /** The cuts a tile's bake reaches in a rotation, "index:height,…" in order, or "" for none. */
-  cutFor(tx: number, ty: number, rotation: number): string {
-    const set = this.cutByTile[rotation]?.get(`${tx},${ty}`);
-    const cuts = this.cuts[rotation]!;
-    return set ? [...set].sort((a, b) => a - b).map((i) => `${i}:${cuts.get(i)}`).join(",") : "";
+  /** The cuts a tile's bake reaches in a rotation, "index:height,…" in order, or "" for none: those cut always, and in the cutaway its own (the lower where both cut one). */
+  cutFor(tx: number, ty: number, rotation: number, cutaway = true): string {
+    const at = `${tx},${ty}`;
+    const out = new Map<number, number>();
+    for (const layer of cutaway ? [0, 1] : [0])
+      for (const i of this.cutByTile[layer]![rotation]?.get(at) ?? []) {
+        const h = this.cuts[layer]![rotation]!.get(i)!;
+        out.set(i, Math.min(h, out.get(i) ?? Infinity));
+      }
+    return [...out]
+      .sort((a, b) => a[0] - b[0])
+      .map(([i, h]) => `${i}:${h}`)
+      .join(",");
   }
 }

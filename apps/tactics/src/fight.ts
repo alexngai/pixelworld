@@ -113,13 +113,17 @@ const STUMP_M = 0.5;
 
 /** One side of the view's cutaway (D-159): the buildings cut, the fight's among them (outlined), the cells still hidden with it and without. */
 interface Side {
+  /** What isn't the fight's and hides any of it: cut to the ground always (D-168). */
+  clear: Map<number, number>;
+  /** The fight's own buildings in front of another of its cells: cut to a stump in the cutaway (D-167). */
   cuts: Map<number, number>;
   /** The fight's buildings cut, far to near. */
   ghosts: number[];
   /** Per cell, the fight's buildings in front of it (ids). */
   blockers: number[][];
   hidden: Uint8Array;
-  hiddenWhole: Uint8Array;
+  /** The cells hidden with only what's outside the fight cut (the cutaway off). */
+  hiddenRest: Uint8Array;
   key: string;
 }
 const angle = (dir: number) => Math.atan2(DIRS[dir]![1], DIRS[dir]![0]);
@@ -178,7 +182,7 @@ export class Fight {
   private primed = false;
   /** The fight's own buildings cut down in front of a unit (their ids), shown whole as outlines; what the cuts are now. */
   private ghosts: number[] = [];
-  /** The cutaway showing now (D-167): while a rig is chosen, a move plays out, or a unit or a hidden cell is looked at; else the city whole. */
+  /** The cutaway showing now (D-167): while a rig is chosen, a move plays out, or a unit or a hidden cell is looked at; else the board's buildings whole (what's in front of the board is gone either way, D-168). */
   private cutting = false;
   /** V: the cutaway always. */
   private pinned = false;
@@ -412,6 +416,7 @@ export class Fight {
     const side = this.side(r);
     if (this.sent[r] === side.key) return;
     this.sent[r] = side.key;
+    this.view.cutDown(side.clear.size ? side.clear : null, r as Rotation, { always: true });
     this.view.cutDown(side.cuts.size ? side.cuts : null, r as Rotation);
   }
 
@@ -441,6 +446,7 @@ export class Fight {
       rays.push({ centre, all });
     }
     const { query } = this.view;
+    const clear = new Map<number, number>();
     const cuts = new Map<number, number>();
     const ghosts: number[] = [];
     const blockers: number[][] = rays.map((ray) => [...new Set([...ray.all].flatMap((o) => (own.has(o) ? [own.get(o)!] : [])))]);
@@ -448,13 +454,13 @@ export class Fight {
       const sid = structureAt(c, k);
       const mine = sid >= 0 ? a.structures[sid]!.object : -1;
       for (const o of rays[k]!.all) {
-        if (o === mine || cuts.has(o)) continue;
+        if (o === mine || cuts.has(o) || clear.has(o)) continue;
         const id = own.get(o);
         if (id === undefined) {
-          // not the fight's: gone, to the ground (D-162), so nothing outside the board stands in its way
+          // not the fight's: gone, to the ground, always (D-162, D-168), so nothing outside the board stands in its way
           const hit = query.object(o);
           if (!hit) continue;
-          cuts.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + 0.05);
+          clear.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + 0.05);
         } else if (c.structHp[id]! > 0) {
           // the fight's own: a stump, outlined whole as glass (a unit on its roof stands on the glass)
           cuts.set(o, a.height[a.structures[id]!.cells[0]!]! + stump);
@@ -462,24 +468,25 @@ export class Fight {
         }
       }
     }
-    // the cells still hidden (dashed on the glass): behind a building that isn't the cell's own and isn't cut, or any, the cutaway off
+    // the cells still hidden (dashed on the glass): behind a building that isn't the cell's own and isn't cut, the cutaway on or off
     const hidden = new Uint8Array(a.w * a.h);
-    const hiddenWhole = new Uint8Array(a.w * a.h);
+    const hiddenRest = new Uint8Array(a.w * a.h);
     for (let k = 0; k < a.w * a.h; k++) {
       const sid = structureAt(c, k);
       const mine = sid >= 0 ? a.structures[sid]!.object : -1;
       const front = [...rays[k]!.centre].filter((o) => o !== mine);
-      hidden[k] = front.some((o) => !cuts.has(o)) ? 1 : 0;
-      hiddenWhole[k] = front.length ? 1 : 0;
+      hidden[k] = front.some((o) => !cuts.has(o) && !clear.has(o)) ? 1 : 0;
+      hiddenRest[k] = front.some((o) => !clear.has(o)) ? 1 : 0;
     }
-    const key = [...cuts].map(([o, h]) => `${o}:${h.toFixed(2)}`).sort().join(",");
+    const keyOf = (m: Map<number, number>) => [...m].map(([o, h]) => `${o}:${h.toFixed(2)}`).sort().join(",");
+    const key = `${keyOf(clear)}|${keyOf(cuts)}`;
     // far to near (the nearer drawn over the farther in the opacity mask): along the way to the camera
     const depth = (id: number) => {
       const p = this.centre(a.structures[id]!.cells[0]!);
       return p.x * toward[0] + p.y * toward[1];
     };
     ghosts.sort((p, q) => depth(p) - depth(q));
-    return (this.sides[r] = { cuts, ghosts, blockers, hidden, hiddenWhole, key });
+    return (this.sides[r] = { clear, cuts, ghosts, blockers, hidden, hiddenRest, key });
   }
 
   /** A building fell (or stood again): every side's cuts afresh, this one's now, the others' a moment later. */
@@ -1057,7 +1064,7 @@ export class Fight {
   /** The cells hidden now (dashed on the glass): behind a building left whole, or one of the fight's drawn solid (D-166). */
   private hiddenNow(c: Combat, alphas: readonly number[]): Uint8Array {
     const side = this.side(this.view.camera.rotation);
-    if (!this.cutting) return side.hiddenWhole;
+    if (!this.cutting) return side.hiddenRest;
     const solid = new Set(this.ghosts.filter((_, n) => (alphas[n] ?? 1) >= GHOST_LIT));
     const out = new Uint8Array(side.hidden);
     for (let k = 0; k < out.length; k++) if (!out[k] && (side.blockers[k] ?? []).some((id) => id !== c.arena.struct[k] && solid.has(id))) out[k] = 1;
@@ -1065,13 +1072,13 @@ export class Fight {
   }
 
   /**
-   * Whether the cutaway shows (D-167): the city stands whole, a unit it
-   * hides seen as a silhouette, till the board is looked at closely: a rig
+   * Whether the cutaway shows (D-167): the board's buildings stand whole, a
+   * unit they hide seen as a silhouette, till it's looked at closely: a rig
    * chosen, a move playing out, a unit or a hidden cell under the pointer or
    * the cursor (or V, always). It stays a moment after.
    */
   private cutawayWanted(c: Combat, focus: number): boolean {
-    const hidden = this.side(this.view.camera.rotation).hiddenWhole;
+    const hidden = this.side(this.view.camera.rotation).hiddenRest;
     const want = this.pinned || this.selected >= 0 || this.phase === "busy" || (focus >= 0 && (c.occ[focus]! >= 0 || !!hidden[focus]));
     if (want || this.phase === "over") {
       this.cutTill = 0;
@@ -1471,6 +1478,7 @@ export class Fight {
     for (const e of this.entities) e?.remove();
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
+    this.view.cutDown(null, undefined, { always: true });
     this.view.cutDown(null);
     this.view.cutaway = true;
     this.view.setLoneGhosts(null);

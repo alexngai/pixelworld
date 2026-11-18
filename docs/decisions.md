@@ -175,6 +175,7 @@ Status values:
 | D-165 | The map laid out from the camera at every drawing | Accepted |
 | D-166 | The map a quarter turn clockwise; the board's buildings solid, faint only where in the way | Accepted |
 | D-167 | The city whole at rest, the cutaway while the board is looked at closely | Accepted |
+| D-168 | What hides the board gone always; only the board's own buildings whole at rest | Accepted |
 
 ---
 
@@ -2456,3 +2457,9 @@ The point is more room for visual interest; both halves are wanted.
 - **Instant, in the engine:** cuts used to be baked into the tile itself, so turning them off or on baked again or read the cache (0.2 s from the cache, seconds without, the tiles changing one by one). Now the cuts make a variant of each tile they reach (`TileRequest.cutaway`, its own key and cache entry), baked and kept beside the plain tile, asked for after the visible tiles and while idle in the other rotations; `view.cutaway` picks which is drawn, both kept as drawn so neither is evicted for the other. Changing the cuts bakes only the variants; the plain tiles stay. A side effect: a fight begins with nothing to bake again, and a turn of the camera draws the plain tiles it already had.
 - **In the fight:** the cutaway shows while a rig is chosen, while the fight is busy (a rig's move or strike, the invaders' turn), and while the pointer or the cursor is on a unit or on a cell the standing city hides; it stays 0.45 s after, so a sweep of the pointer doesn't flicker it. Otherwise the city stands whole, the units it hides drawn as the engine's checkered silhouettes (rigs in the style's colour, invaders red), the grid dashed where hidden. V keeps the cutaway on.
 - **Checked:** the Financial District: at rest the city whole with the rigs' silhouettes; the pointer on a rig cuts it away in the same frame, from the other sides too after a turn; the invaders' turn cut away throughout, back to the city whole half a second after.
+
+### D-168: What hides the board gone always; only the board's own buildings whole at rest (accepted)
+- **Why:** with the city whole at rest (D-167), the owner asked, for simplicity, to keep the board's own buildings whole but take away every building that stands in front of it.
+- **Engine:** `cutDown(cuts, rotation, { always: true })` keeps a second set of cuts, replaced on its own, made in the plain tiles as well as the cutaway variants (`TileEdits` keeps both sets per rotation; a tile's cut string is the plain one's set, or both for the cutaway, the lower height where both cut one). Changing that set bakes both variants; the cutaway's own still bakes only its variant.
+- **In the fight:** what isn't the fight's and hides any of its cells (D-162's cut to the ground) goes into the set cut always; the fight's own buildings in front of another of its cells into the cutaway's. At rest the board's buildings stand whole with nothing in front of them; the cells they hide are dashed and the units they hide are silhouettes.
+- **Checked:** the Financial District: at rest the board in plain view, its buildings whole, nothing outside it in front; the pointer on a rig still cuts the board's own away in the same frame; a turn of the camera drawn in 0.13 s, cleared on that side too.
