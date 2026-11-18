@@ -250,8 +250,8 @@ export class Fight {
     const a = this.c.arena;
     const p0 = toWorld(this.board, { x: 0, y: 0 });
     const p1 = toWorld(this.board, { x: a.w, y: a.h });
-    // about one art px a map px when the map is large
-    const px = Math.max(4, Math.round((TacticalMap.BIG * (window.devicePixelRatio || 1)) / this.board.cell));
+    // one art px a map px on the small map (the large one shows it at exactly twice), D-163
+    const px = Math.max(4, Math.round((TacticalMap.SMALL * (window.devicePixelRatio || 1)) / this.board.cell));
     void this.view.bakeTopDown(Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y), { px, shadows: false }).then((img) => {
       if (img && token === this.artToken && this.phase !== "over") this.map.setArt(img.rgba, img.width, img.height);
     });

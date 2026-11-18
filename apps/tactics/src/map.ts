@@ -98,10 +98,10 @@ export class TacticalMap {
     this.redraw();
   }
 
-  /** Map px a board cell (larger: about what the art is baked at). */
-  static readonly BIG = 56;
+  /** Map px a board cell: small, the art's own (baked at it, D-163); large, exactly twice, so it stays crisp. */
+  static readonly SMALL = 30;
   private get cell(): number {
-    return this.big ? TacticalMap.BIG : 26;
+    return this.big ? 2 * TacticalMap.SMALL : TacticalMap.SMALL;
   }
 
   /** The map's grid size; a board point (continuous) on it. */
@@ -147,7 +147,7 @@ export class TacticalMap {
     const { gw, gh, at } = this.grid();
     const cs = this.cell;
     const W = gw * cs + 2 * PAD;
-    const H = gh * cs + 2 * PAD;
+    const H = gh * cs + 2 * PAD + (this.big ? LEGEND : 0);
     const dpr = window.devicePixelRatio || 1;
     if (this.el.width !== Math.round(W * dpr) || this.el.height !== Math.round(H * dpr)) {
       this.el.width = Math.round(W * dpr);
@@ -191,11 +191,12 @@ export class TacticalMap {
       rect(k);
       g.stroke();
     }
-    g.strokeStyle = this.art ? "rgba(255,240,200,0.55)" : "rgba(14,13,22,0.9)";
-    g.lineWidth = this.art ? 1.5 : 2;
+    g.lineWidth = this.big ? 2.5 : 2;
     for (let k = 0; k < a.w * a.h; k++) {
       const sid = a.struct[k]!;
-      if (sid < 0) continue;
+      if (sid < 0 || c.structHp[sid]! <= 0) continue;
+      // each building outlined in its height's colour (D-163): what can climb onto it reads at a glance
+      g.strokeStyle = band(standAt(c, k) * a.metersPerStep).colour;
       const r = this.cellRect(k);
       const bi = k % a.w;
       const bj = Math.floor(k / a.w);
@@ -213,7 +214,7 @@ export class TacticalMap {
         g.stroke();
       }
     }
-    // how tall each building stands, when there's room to say
+    // how tall each building stands, on the large map (the small one has the colours)
     if (this.big) {
       g.font = "bold 11px ui-monospace, Menlo, monospace";
       g.textAlign = "left";
@@ -223,11 +224,12 @@ export class TacticalMap {
         const sid = a.struct[k]!;
         if (sid < 0 || done.has(sid) || c.structHp[sid]! <= 0) continue;
         done.add(sid);
+        const m = Math.round(standAt(c, k) * a.metersPerStep);
         const r = this.cellRect(k);
-        const text = `${Math.round(standAt(c, k) * a.metersPerStep)} m`;
-        g.fillStyle = "rgba(14,13,22,0.75)";
+        const text = `${m} m`;
+        g.fillStyle = "rgba(14,13,22,0.78)";
         g.fillRect(r.x + 2, r.y + 2, g.measureText(text).width + 6, 15);
-        g.fillStyle = "#e8dcbc";
+        g.fillStyle = band(m).colour;
         g.fillText(text, r.x + 5, r.y + 4);
       }
     }
@@ -316,11 +318,25 @@ export class TacticalMap {
       g.fillStyle = "#1e1c2b";
       g.font = font(r * 1.15);
       g.fillText(FIGHTERS[c.roster[u]!].name[0]!, p.cx, p.cy + 0.5);
-      // on a roof: a tick above
+      // on a roof: how high, in its height's colour
       if (a.struct[c.pos[u]!]! >= 0 && c.structHp[a.struct[c.pos[u]!]!]! > 0) {
-        g.fillStyle = "#e8dcbc";
-        g.font = font(r * 0.8);
-        g.fillText("▲", p.cx - r * 1.1, p.cy - r * 1.05);
+        const m = Math.round(standAt(c, c.pos[u]!) * a.metersPerStep);
+        g.font = font(this.big ? 11 : 9);
+        const text = `▲${m}`;
+        const tw = g.measureText(text).width + 4;
+        g.fillStyle = "rgba(14,13,22,0.85)";
+        g.fillRect(p.cx - r - tw + 2, p.cy - r * 1.1 - 6, tw, 12);
+        g.fillStyle = band(m).colour;
+        g.fillText(text, p.cx - r - tw / 2 + 2, p.cy - r * 1.1);
+      }
+      // its hit points, on the large map
+      if (this.big) {
+        const f = FIGHTERS[c.roster[u]!];
+        const pw = (2 * r) / f.hp;
+        for (let i = 0; i < f.hp; i++) {
+          g.fillStyle = i < c.hp[u]! ? (squad ? "#7fc8ff" : "#ff7a6b") : "rgba(14,13,22,0.8)";
+          g.fillRect(p.cx - r + i * pw + 0.5, p.cy + r + 3, pw - 1, 3);
+        }
       }
       const n = teamOf(c, u) === INVADERS ? s.order.get(u) : undefined;
       if (n) {
@@ -330,5 +346,30 @@ export class TacticalMap {
       }
       g.globalAlpha = 1;
     }
+    // the height colours, on the large map
+    if (this.big) {
+      g.font = "11px ui-monospace, Menlo, monospace";
+      g.textAlign = "left";
+      g.textBaseline = "middle";
+      let x = PAD;
+      const y = H - LEGEND / 2;
+      for (const b of BANDS) {
+        g.fillStyle = b.colour;
+        g.fillRect(x, y - 4, 10, 8);
+        g.fillStyle = "#c9bfa3";
+        g.fillText(b.name, x + 14, y);
+        x += 14 + g.measureText(b.name).width + 12;
+      }
+    }
   }
 }
+
+/** Height bands (D-163): low roofs, what a rig climbs onto (15 m), mid-rise, towers. */
+const BANDS = [
+  { upTo: 6, colour: "#8fe39a", name: "≤6 m" },
+  { upTo: 15, colour: "#6fd3c6", name: "≤15 m rigs climb" },
+  { upTo: 40, colour: "#9fb2ff", name: "≤40 m" },
+  { upTo: Infinity, colour: "#d39cff", name: "taller" },
+] as const;
+const band = (m: number) => BANDS.find((b) => m <= b.upTo)!;
+const LEGEND = 22;

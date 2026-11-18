@@ -170,6 +170,7 @@ Status values:
 | D-160 | What's cut down still shows faintly: the plain tiles blended over the cutaway | Superseded by D-162 |
 | D-161 | How much of each cut building shows: a mask painted by the app, nothing baked again | Superseded by D-162 |
 | D-162 | The fight's buildings shown faintly as themselves, each baked on its own; the foreground in the way hidden outright | Accepted |
+| D-163 | The tactical map as the overhead view: crisp at both sizes, heights in colour | Accepted |
 
 ---
 
@@ -2423,3 +2424,8 @@ The point is more room for visual interest; both halves are wanted.
 - **Drawn over the frame:** after the palette pass, each listed building's image is blended onto the canvas at its opacity, far to near, only where it stood in front of what the frame shows (its depth against the frame's own, kept beside each index); so a building looked at shows itself, the ones before it laid over it faintly in turn, and a unit or the street shows through.
 - **In the fight:** the buildings outside the board that hide any of it are cut to the ground (gone); the fight's own are cut to a plinth and listed as lone ghosts under the glass, at 30% where in front of a unit, 60% where hiding none (the back rows), 85% under the selected unit and the cell looked at. The plain-tile ghost and its mask (D-160, D-161) are taken out of the engine: nothing used them any more.
 - **Checked:** the Financial District: the twenty buildings baked alone in a few seconds, nine at 30%, ten at 60%, the 68 m tower a crawler stands on at 85% when looked at, showing itself; the foreground in front of the board gone; the golden renders unchanged; the budgets within their limits.
+
+### D-163: The tactical map as the overhead view: crisp at both sizes, heights in colour (accepted)
+- **Why:** discussing how to make the buildings read and their heights plain, the owner chose to rely on the tactical map, made finer, as the always-there overhead view (in the manner of Final Fantasy Tactics's raised camera), rather than a full-screen overhead render or a layer of level controls.
+- **Crisp:** the board is baked from above at the small map's own density (30 px a board cell, times the screen's pixel ratio), so the small map shows it pixel for pixel and the large one (M) at exactly twice, never smoothed (it was baked for the large one and smoothed down).
+- **Heights:** each building is outlined in its height band's colour: up to 6 m, up to 15 m (what the rigs climb), up to 40 m, taller; the large map labels each building in metres, in that colour, with a legend under it. A unit on a roof has its height beside it (▲68); the large map shows each unit's hit points.
