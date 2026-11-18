@@ -172,6 +172,7 @@ Status values:
 | D-162 | The fight's buildings shown faintly as themselves, each baked on its own; the foreground in the way hidden outright | Accepted |
 | D-163 | The tactical map as the overhead view: crisp at both sizes, heights in colour | Accepted |
 | D-164 | Finer bakes from above: short shadows from a high sun, the units' own models from above | Accepted |
+| D-165 | The map laid out from the camera at every drawing | Accepted |
 
 ---
 
@@ -2436,3 +2437,8 @@ The point is more room for visual interest; both halves are wanted.
 - **A sun of its own:** a bake can take its light's direction (`BakeOptions.sun`; `bakeTopDown`'s and the sprite bake's `sun`), the world's `SUN_DIR` by default. From above the world's sun cast towers' shadows a dozen cells across the streets, so the map had none; the fight now bakes it under the same sun set high (`[0.15, 0.27, 1.6]`): short shadows to the north-west, longer for taller buildings, a cue to height as much as to depth.
 - **Units from above:** `view.bakeSpriteTopDown(boxes, { px, sun })` bakes an entity model's boxes in the top-down projection (the sprite bake takes a projection now), north up, its top-left given from the model's origin. The fight bakes every kind of unit once a fight, from the same model the city view draws, at the map's art scale; the map draws each on a disc of its side's colour, turned in quarter turns to face its aim (an invader's) or east (a rig), crisp at both sizes.
 - **Checked:** the Financial District's map with its shadows and its six kinds of unit from above (the crane's boom, the crawlers' legs turned toward their aims); the golden renders unchanged; budgets raised with notes (every entry 130 KB, the package unpacked 3 MB).
+
+### D-165: The map laid out from the camera at every drawing (accepted)
+- **Why:** the owner saw a unit on the map facing a quarter turn off its facing in the city view: one facing the view's bottom-left edge faced the map's right edge, not its bottom. The map's layout (which board axis runs which way on it) was worked out when the fight noticed the camera had turned, from its frame callback; until that frame came (a frame late at best, a second or two with the frames held back, as for a page in the background), the map drew the new side with the last side's layout, and the units' facings with it.
+- **What:** the map asks the camera where the board's axes run on screen at every drawing (and every click it reads), so it can't lie a side behind; Q and E (the free camera's turns) lay the fight out for the new side at once (the arrow keys' directions, the cutaway's outlines), not at the next frame.
+- **Checked:** pressing Q four times, east in the view and on the map agree right after each press, on every side.

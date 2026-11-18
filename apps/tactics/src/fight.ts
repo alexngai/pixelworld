@@ -225,6 +225,7 @@ export class Fight {
       hover: (k) => this.pointer(away(k).x, away(k).y),
       back: () => this.back(),
     });
+    this.map.layOut(() => this.screenAxes());
     this.overlay = new BoardOverlay(s.board, { id: "fight", grid: false });
     this.glass = new BoardGlass(s.labels, s.view, s.board);
     this.tip = document.createElement("div");
@@ -314,19 +315,29 @@ export class Fight {
     camera.rotation = best;
   }
 
+  /** Where the board's axes run on screen in the city view now: a step along i, and along j, from its first cell. */
+  private screenAxes(): { di: { x: number; y: number }; dj: { x: number; y: number } } {
+    const { camera } = this.view;
+    const o = camera.project(this.centre(0).x, this.centre(0).y, 0);
+    const pi = camera.project(this.centre(1).x, this.centre(1).y, 0);
+    const pj = camera.project(this.centre(this.c.arena.w).x, this.centre(this.c.arena.w).y, 0);
+    return { di: { x: pi.x - o.x, y: pi.y - o.y }, dj: { x: pj.x - o.x, y: pj.y - o.y } };
+  }
+
+  /** The camera turned (Q, E): lay everything out for the new side at once, not at the next frame. */
+  relayout(): void {
+    this.clearView();
+  }
+
   /** Lay the map and the arrow keys as the view lies, and cut down what hides the board from this side (again when the camera turns). */
   private clearView(): void {
     const { camera } = this.view;
     if (camera.rotation === this.hiddenFor) return;
     this.hiddenFor = camera.rotation;
-    // the map turned as the view is
-    const o = camera.project(this.centre(0).x, this.centre(0).y, 0);
-    const pi = camera.project(this.centre(1).x, this.centre(1).y, 0);
-    const pj = camera.project(this.centre(this.c.arena.w).x, this.centre(this.c.arena.w).y, 0);
-    const di = { x: pi.x - o.x, y: pi.y - o.y };
-    const dj = { x: pj.x - o.x, y: pj.y - o.y };
-    this.map.orient(di, dj);
+    // the map turned as the view is (it asks the camera itself, at every drawing)
+    this.map.refresh();
     // the arrow keys: right along u, down along v, as the map lies
+    const { di, dj } = this.screenAxes();
     const along = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
     const [ai, aj] = [along(di), along(dj)];
     this.stepU = [ai[0], aj[0]];

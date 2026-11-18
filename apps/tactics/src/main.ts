@@ -183,6 +183,8 @@ async function operation(city: City): Promise<void> {
       return e.preventDefault();
     }
     if (fight?.key(k)) e.preventDefault();
+    // the camera turned (the free camera's Q and E): the map and the cutaway follow at once
+    if (k === "q" || k === "e") queueMicrotask(() => fight?.relayout());
   });
 
   // each block is made while the one before it is fought, on a worker of its own (the fight's outlook and hints keep theirs)

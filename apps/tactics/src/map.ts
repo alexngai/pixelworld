@@ -28,7 +28,15 @@ export class TacticalMap {
   readonly el: HTMLCanvasElement;
   private big = false;
   /** Board (i, j) → the map's grid: each board axis along one of its axes, either way. */
-  private axes: { i: [number, number]; j: [number, number] } = { i: [1, 0], j: [0, 1] };
+  /** Where the board's axes run on screen in the city view, asked at every drawing (D-165): never a side behind the camera. */
+  private screenAxes: () => { di: { x: number; y: number }; dj: { x: number; y: number } } = () => ({ di: { x: 1, y: 1 }, dj: { x: -1, y: 1 } });
+  /** Board (i, j) → the map's grid: each board axis along one of its axes, either way, as the view lies now. */
+  private get axes(): { i: [number, number]; j: [number, number] } {
+    // the map's +x is the view's u (down-right on screen), its +y the view's v (down-left)
+    const axis = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
+    const { di, dj } = this.screenAxes();
+    return { i: axis(di), j: axis(dj) };
+  }
   private last: MapState | null = null;
   private hover = -1;
   /** The board baked from above, board-aligned: `scale` of its px a board cell. */
@@ -67,11 +75,14 @@ export class TacticalMap {
     });
   }
 
-  /** Lay the map as the city view lies: the board axes' screen directions there (from the camera). */
-  orient(di: { x: number; y: number }, dj: { x: number; y: number }): void {
-    // the map's +x is the view's u (down-right on screen), its +y the view's v (down-left)
-    const axis = (d: { x: number; y: number }): [number, number] => (d.y > 0 ? (d.x > 0 ? [1, 0] : [0, 1]) : d.x < 0 ? [-1, 0] : [0, -1]);
-    this.axes = { i: axis(di), j: axis(dj) };
+  /** Lay the map as the city view lies: how to ask where the board's axes run on screen (from the camera, asked at every drawing). */
+  layOut(screenAxes: () => { di: { x: number; y: number }; dj: { x: number; y: number } }): void {
+    this.screenAxes = screenAxes;
+    this.redraw();
+  }
+
+  /** Draw again (the camera turned). */
+  refresh(): void {
     this.redraw();
   }
 
