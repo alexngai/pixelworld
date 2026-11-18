@@ -100,6 +100,10 @@ interface Label {
 type Phase = "pick" | "move" | "strike" | "busy" | "over";
 
 const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+/** How much of a building cut down still shows, where it stood in front (D-160). */
+const GHOST = 0.3;
+/** How high a building cut down stands (metres): a plinth, its footprint plain, a unit in the street behind it in view (the faint building shows the rest). */
+const STUMP_M = 0.5;
 
 /** One side of the view's cutaway (D-159): the buildings cut, the fight's among them (outlined), the cells still hidden with it and without. */
 interface Side {
@@ -354,6 +358,8 @@ export class Fight {
    */
   private updateCuts(): void {
     const r = this.view.camera.rotation;
+    // what's cut still shows faintly, under the glass (D-160)
+    this.view.cutGhost = this.cutting ? GHOST : 0;
     const side = this.side(r);
     this.ghosts = this.cutting ? side.ghosts : [];
     this.hiddenCells = this.cutting ? side.hidden : side.hiddenWhole;
@@ -384,7 +390,7 @@ export class Fight {
     const c = this.c;
     const a = c.arena;
     const toward = this.towardFrom(r);
-    const stump = 6 / a.metersPerStep;
+    const stump = STUMP_M / a.metersPerStep;
     const own = new Map(a.structures.map((st, id) => [st.object, id] as const));
     // what stands between each cell and the camera: from its middle and corners, at a unit's feet and head
     const rays: { centre: Set<number>; all: Set<number> }[] = [];
@@ -805,7 +811,7 @@ export class Fight {
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
     }
-    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach, hidden: this.hiddenCells, ghosts: this.ghosts, stump: 6 / c.arena.metersPerStep });
+    this.glass.set({ state: shown, marks, cursor: this.cursor, hover: this.hover, reach, hidden: this.hiddenCells, ghosts: this.ghosts, stump: STUMP_M / c.arena.metersPerStep });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
     // the overlay bakes again for new arrows only (a hover changes nothing there)
@@ -1361,6 +1367,7 @@ export class Fight {
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
     this.view.cutDown(null);
+    this.view.cutGhost = 0;
     this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();

@@ -136,11 +136,22 @@ uniform highp sampler2D uIndex;
 uniform highp sampler2D uPalette;
 uniform vec2 uCanvas;
 uniform int uLut;
+uniform highp sampler2D uGhost;  // the uncut tiles (D-160): index and depth, as the target holds them
+uniform float uGhostAlpha;       // how much of them shows where they stood in front, 0 for none
 out vec4 o;
 void main() {
   ivec2 q = ivec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y);  // the target's rows run top down
-  int index = int(texelFetch(uIndex, q, 0).r * 255.0 + 0.5);
+  vec4 m = texelFetch(uIndex, q, 0);
+  int index = int(m.r * 255.0 + 0.5);
   o = texelFetch(uPalette, ivec2(index, uLut), 0);
+  if (uGhostAlpha > 0.0) {
+    // a building cut down shows faintly where it stood in front of what's drawn now (its depth nearer)
+    vec4 g = texelFetch(uGhost, q, 0);
+    float zm = dot(floor(m.gba * 255.0 + 0.5), vec3(65536.0, 256.0, 1.0));
+    float zg = dot(floor(g.gba * 255.0 + 0.5), vec3(65536.0, 256.0, 1.0));
+    int gi = int(g.r * 255.0 + 0.5);
+    if (zg + 2.0 < zm && gi != index) o = mix(o, texelFetch(uPalette, ivec2(gi, uLut), 0), uGhostAlpha);
+  }
 }
 `;
 
@@ -209,6 +220,8 @@ export class Compositor {
     /** The fog passes' outputs, two to take turns, made when a frame first has fog. */
     fogColor: (WebGLTexture | null)[];
     fogFb: (WebGLFramebuffer | null)[];
+    /** The uncut tiles' own index, depth and depth buffer (D-160), made when a frame first has them. */
+    ghost: { color: WebGLTexture; depth: WebGLRenderbuffer; fb: WebGLFramebuffer } | null;
   } | null = null;
   /** A fog pass per layer that has one (the style's fog, a game's veil: D-125), by its id. */
   private readonly fogPasses = new Map<string, FogPass>();
@@ -254,6 +267,11 @@ export class Compositor {
     gl.deleteRenderbuffer(t.depth);
     for (const fb of t.fogFb) if (fb) gl.deleteFramebuffer(fb);
     for (const c of t.fogColor) if (c) gl.deleteTexture(c);
+    if (t.ghost) {
+      gl.deleteFramebuffer(t.ghost.fb);
+      gl.deleteTexture(t.ghost.color);
+      gl.deleteRenderbuffer(t.ghost.depth);
+    }
     this.target = null;
   }
 
@@ -287,7 +305,7 @@ export class Compositor {
     gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT32F, w, h);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-    this.target = { w, h, color, depth, fb, fogColor: [null, null], fogFb: [null, null] };
+    this.target = { w, h, color, depth, fb, fogColor: [null, null], fogFb: [null, null], ghost: null };
     return this.target;
   }
 
@@ -316,6 +334,7 @@ export class Compositor {
     fogs: readonly (FogDraw | SteamDraw)[] = [],
     bare: GpuImage[] = [],
     behind: GpuImage[] = [],
+    ghosts: { images: GpuImage[]; alpha: number } | null = null,
   ): void {
     const gl = this.gl;
     // the canvas's own pixels; the view's top-left in absolute art px, and target px per art px
@@ -404,6 +423,29 @@ export class Compositor {
     }
     gl.depthMask(true);
     gl.depthFunc(gl.LESS);
+
+    // Buildings cut down (D-159), shown faintly where they stood (D-160): the uncut tiles in a target of their own,
+    // nearest surface kept, cleared to the farthest depth; the palette pass blends them where they're nearer
+    const ghostOn = !!ghosts && ghosts.alpha > 0 && ghosts.images.length > 0;
+    if (ghostOn) {
+      if (!t.ghost) {
+        const color = rgba8Texture(gl, w, h);
+        const fb = framebuffer(gl, color, null);
+        const depth = gl.createRenderbuffer()!;
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT32F, w, h);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+        t.ghost = { color, depth, fb };
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.ghost.fb);
+      gl.viewport(0, 0, w, h);
+      gl.clearColor(0, 1, 1, 1);
+      gl.clearDepth(1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.uniform1i(u.loc("uRevealOn"), 0);
+      for (const tile of ghosts!.images) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 0);
+      gl.clearColor(0, 0, 0, 1);
+    }
     gl.disable(gl.DEPTH_TEST);
 
     // Atmosphere: fog dithered into the indices, from the depth beside them; each pass after the last, taking turns between two targets.
@@ -437,7 +479,12 @@ export class Compositor {
     gl.uniform1i(p.loc("uPalette"), 1);
     gl.uniform2f(p.loc("uCanvas"), this.canvas.width, this.canvas.height);
     gl.uniform1i(p.loc("uLut"), this.lut);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, ghostOn ? t.ghost!.color : null);
+    gl.uniform1i(p.loc("uGhost"), 2);
+    gl.uniform1f(p.loc("uGhostAlpha"), ghostOn ? ghosts!.alpha : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, null);
     gl.activeTexture(gl.TEXTURE0);
   }
 }

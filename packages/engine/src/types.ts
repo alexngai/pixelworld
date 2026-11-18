@@ -461,6 +461,13 @@ export interface WorldView extends ControllerView {
    */
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void;
   /**
+   * How much of the buildings cut down still shows (D-160), 0–1 (default 0):
+   * where one stood in front of what's drawn now, its pixels blended over at
+   * this opacity, so a cutaway keeps the sense of the solid building. The
+   * cut tiles' plain images are baked (or read from the cache) beside them.
+   */
+  cutGhost: number;
+  /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and
    * outlined as the tiles are, once and not kept. `px` screen px per world

@@ -15,8 +15,8 @@ import {
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean): TileKey =>
-  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean, uncut?: boolean): TileKey =>
+  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}${uncut ? ":uncut" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
@@ -33,9 +33,14 @@ export interface TileRequest {
    * answers with it instead (`whole`).
    */
   ground?: boolean;
+  /**
+   * The tile as it stands, its buildings not cut down (D-159): drawn faintly
+   * over a cut tile where they stood in front (D-160). The plain tile's image.
+   */
+  uncut?: boolean;
 }
 
-const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.uncut);
 
 /**
  * What `prepare` hands back: a cached image, or a terrain slice to bake.
@@ -446,7 +451,7 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
+      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : t.uncut ? { uncut: true } : {};
       const removed = p.removed ? { removed: p.removed } : {};
       const cells = p.cells ? { cells: p.cells } : {};
       const cut = p.cut ? { cut: p.cut } : {};

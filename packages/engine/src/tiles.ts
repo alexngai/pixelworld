@@ -300,7 +300,7 @@ export function bakeOrder(
   const seen = new Set<string>();
   const out: TileRequest[] = [];
   const push = (t: TileRequest) => {
-    const k = tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
+    const k = tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.uncut);
     if (seen.has(k)) return;
     seen.add(k);
     out.push(t);

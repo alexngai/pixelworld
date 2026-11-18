@@ -134,7 +134,8 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
     // buildings cut down (D-159): not on the ground alone, nor the bare variant (no buildings there)
-    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation);
+    // the uncut variant (D-160) is the plain tile, kept under the plain tile's key
+    const cut = t.ground || t.bare || t.uncut ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
       const cells = tileEdits.cellsFor(t.tx, t.ty);
@@ -316,8 +317,8 @@ class View implements WorldView {
         const { meshMs, bakeMs, vertices } = res.stats;
         this.bakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
       }
-      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : res.ground ? { ground: true } : {}) };
-      const whole = !res.bare && !res.ground;
+      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : res.ground ? { ground: true } : res.uncut ? { uncut: true } : {}) };
+      const whole = !res.bare && !res.ground && !res.uncut;
       // the ground came after the whole tile: not needed
       if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
       // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
@@ -328,7 +329,7 @@ class View implements WorldView {
         !failed &&
         ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
           (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
-          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation)));
+          (res.cut ?? "") !== (res.bare || res.uncut ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation)));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
@@ -456,8 +457,8 @@ class View implements WorldView {
     const r = this.cam.rotation;
     for (const [tx, ty] of tiles)
       for (const rot of rotations)
-        for (const bare of [false, true]) {
-          const key = tileKey(rot, tx, ty, bare);
+        for (const [bare, uncut] of [[false, false], [true, false], [false, true]] as const) {
+          const key = tileKey(rot, tx, ty, bare, false, uncut);
           this.idleDone.delete(key);
           if (rot === r && this.gpu.has(key)) {
             this.stale.add(key);
@@ -466,7 +467,7 @@ class View implements WorldView {
             this.drop(key);
             this.service.forget(key);
             // a ground request answered with the whole tile is done too: its ground shows first again
-            if (!bare) {
+            if (!bare && !uncut) {
               this.service.forget(tileKey(rot, tx, ty, false, true));
               this.baked.set(rot, tx, ty, false);
             }
@@ -604,7 +605,7 @@ class View implements WorldView {
     const ground = this.groundFirst
       ? order.filter((t) => t.visible && !this.gpu.has(tileKey(r, t.tx, t.ty))).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, ground: true }))
       : [];
-    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, this.bareWanted(r, order), ground);
+    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, [...this.bareWanted(r, order), ...this.uncutWanted(r, order)], ground);
     // a tile baked while idle and wanted now: asked for again, the cache has it
     if (this.idleDone.size)
       for (const t of this.wanted) {
@@ -614,7 +615,7 @@ class View implements WorldView {
     // nothing else waiting and the camera still: one tile at a time for later (another rotation, around
     // the view); while it moves, the look-ahead has the tiles that matter
     const still = Math.hypot(this.motion.vx, this.motion.vy) < IDLE_SPEED;
-    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground)));
+    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.uncut)));
     const idle = this.idleBake && !busy ? this.nextIdle(r, info) : null;
     if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty));
     this.service.want(idle ? [...this.wanted, idle] : this.wanted);
@@ -623,6 +624,7 @@ class View implements WorldView {
     const drawTiles: GpuImage[] = [];
     // tiles' ground alone, under everything while they bake (a whole tile leaves holes where its neighbours' buildings stand)
     const grounds: GpuImage[] = [];
+    const ghostImages: GpuImage[] = [];
     let complete = true;
     let missingTiles = 0;
     for (const t of order) {
@@ -638,6 +640,14 @@ class View implements WorldView {
       if (ground) {
         ground.lastDrawn = this.frameNo;
         if (ground.img) grounds.push(ground.img);
+      }
+      // a cut tile's buildings as they stand, shown faintly (D-160)
+      if (this.cutGhost > 0 && this.tileEdits.cutFor(t.tx, t.ty, r)) {
+        const whole = this.gpu.get(tileKey(r, t.tx, t.ty, false, false, true));
+        if (whole) {
+          whole.lastDrawn = this.frameNo;
+          if (whole.img) ghostImages.push(whole.img);
+        }
       }
     }
     // every visible tile whole: the grounds have done their part
@@ -708,7 +718,8 @@ class View implements WorldView {
           zoom: cam.zoom,
           depthRange: this.depthRange,
         };
-        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds);
+        const ghosts = ghostImages.length ? { images: ghostImages, alpha: this.cutGhost } : null;
+        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds, ghosts);
         this.redrawLast();
         this.renderMs = performance.now() - t0;
         this.dirty = !complete; // keep redrawing while tiles stream in
@@ -745,6 +756,12 @@ class View implements WorldView {
     for (let k = 1; k < 4; k++) for (const q of this.prefetchTiles(((r + k) % 4) as Rotation, at)) if (fresh(q)) return q;
     for (const q of this.tiles.around(r, at.x, at.y, IDLE_RADIUS)) if (fresh(q)) return q;
     return null;
+  }
+
+  /** The uncut variants (D-160) of the visible tiles with buildings cut down, while they're shown faintly. */
+  private uncutWanted(r: Rotation, order: readonly TileInView[]): TileRequest[] {
+    if (this.cutGhost <= 0) return [];
+    return order.filter((t) => t.visible && this.tileEdits.cutFor(t.tx, t.ty, r)).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, uncut: true }));
   }
 
   /** Bare variants of the tiles drawn under last frame's reveals, and a little around them (they move). */
@@ -852,7 +869,7 @@ class View implements WorldView {
       groundTiles: t.ground,
       tilesFromCache: t.fromCache,
       tilesPerRotation: this.tiles.count,
-      tilesPending: this.wanted.filter((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground))).length,
+      tilesPending: this.wanted.filter((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.uncut))).length,
       ...chunkStats(this.w.store),
       gpuTiles: [...this.gpu.values()].filter((e) => e.img).length,
       gpuMB: this.gpuBytes / (1024 * 1024),
@@ -905,6 +922,15 @@ class View implements WorldView {
       out.push(img ? { rotation: r, ...img } : null);
     }
     return out;
+  }
+
+  private ghostAlpha = 0;
+  get cutGhost(): number {
+    return this.ghostAlpha;
+  }
+  set cutGhost(a: number) {
+    this.ghostAlpha = Math.min(1, Math.max(0, a));
+    this.dirty = true;
   }
 
   cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation): void {
