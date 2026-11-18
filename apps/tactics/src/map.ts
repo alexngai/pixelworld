@@ -1,4 +1,4 @@
-import { A_WATER, FIGHTERS, FIRE_ASH, isBurning, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { A_WATER, DIRS, FIGHTERS, FIRE_ASH, isBurning, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
  * The board from above (D-154, D-155): the city baked straight down
@@ -33,6 +33,8 @@ export class TacticalMap {
   private hover = -1;
   /** The board baked from above, board-aligned: `scale` of its px a board cell. */
   private art: { image: HTMLCanvasElement; scale: number } | null = null;
+  /** Each kind of unit from above (D-164), at the art's scale, facing east; where its top-left is from its middle. */
+  private readonly unitArt = new Map<string, { image: HTMLCanvasElement; left: number; top: number }>();
 
   constructor(
     parent: HTMLElement,
@@ -80,6 +82,16 @@ export class TacticalMap {
     image.height = height;
     image.getContext("2d")!.putImageData(new ImageData(rgba, width, height), 0, 0);
     this.art = { image, scale: width / this.w };
+    this.redraw();
+  }
+
+  /** A kind of unit from above, at the art's scale (its middle at the origin, facing east). */
+  setUnitArt(kind: string, rgba: Uint8ClampedArray<ArrayBuffer>, width: number, height: number, left: number, top: number): void {
+    const image = document.createElement("canvas");
+    image.width = width;
+    image.height = height;
+    image.getContext("2d")!.putImageData(new ImageData(rgba, width, height), 0, 0);
+    this.unitArt.set(kind, { image, left, top });
     this.redraw();
   }
 
@@ -307,17 +319,41 @@ export class TacticalMap {
       const p = this.cellRect(c.pos[u]!);
       const squad = teamOf(c, u) === SQUAD;
       const r = cs * 0.34;
+      const art = this.unitArt.get(c.roster[u]!);
       g.globalAlpha = squad && s.acted.has(u) ? 0.55 : 1;
-      g.fillStyle = squad ? "#7fc8ff" : "#ff7a6b";
-      g.strokeStyle = u === s.striking ? "#ffffff" : "rgba(14,13,22,0.9)";
-      g.lineWidth = u === s.striking ? 3 : 1.5;
-      g.beginPath();
-      g.arc(p.cx, p.cy, r, 0, 2 * Math.PI);
-      g.fill();
-      g.stroke();
-      g.fillStyle = "#1e1c2b";
-      g.font = font(r * 1.15);
-      g.fillText(FIGHTERS[c.roster[u]!].name[0]!, p.cx, p.cy + 0.5);
+      if (art && this.art) {
+        // its model from above (D-164), on a disc of its side's colour, facing its aim
+        g.fillStyle = squad ? "rgba(127,200,255,0.35)" : "rgba(255,122,107,0.35)";
+        g.strokeStyle = u === s.striking ? "#ffffff" : squad ? "#7fc8ff" : "#ff7a6b";
+        g.lineWidth = u === s.striking ? 3 : 1.5;
+        g.beginPath();
+        g.arc(p.cx, p.cy, r * 1.15, 0, 2 * Math.PI);
+        g.fill();
+        g.stroke();
+        const { i, j } = this.axes;
+        const [ox, oy] = at(0, 0);
+        const k = (cs / this.art.scale) * dpr;
+        const pos = c.pos[u]!;
+        const d = teamOf(c, u) === INVADERS && c.aim[u]! >= 0 ? DIRS[c.aim[u]!]! : ([1, 0] as const);
+        g.save();
+        g.setTransform(k * i[0], k * i[1], k * j[0], k * j[1], dpr * (PAD + ox * cs), dpr * (PAD + oy * cs));
+        g.translate(((pos % a.w) + 0.5) * this.art.scale, (Math.floor(pos / a.w) + 0.5) * this.art.scale);
+        g.rotate(Math.atan2(d[1], d[0]));
+        g.imageSmoothingEnabled = false;
+        g.drawImage(art.image, art.left, art.top);
+        g.restore();
+      } else {
+        g.fillStyle = squad ? "#7fc8ff" : "#ff7a6b";
+        g.strokeStyle = u === s.striking ? "#ffffff" : "rgba(14,13,22,0.9)";
+        g.lineWidth = u === s.striking ? 3 : 1.5;
+        g.beginPath();
+        g.arc(p.cx, p.cy, r, 0, 2 * Math.PI);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#1e1c2b";
+        g.font = font(r * 1.15);
+        g.fillText(FIGHTERS[c.roster[u]!].name[0]!, p.cx, p.cy + 0.5);
+      }
       // on a roof: how high, in its height's colour
       if (a.struct[c.pos[u]!]! >= 0 && c.structHp[a.struct[c.pos[u]!]!]! > 0) {
         const m = Math.round(standAt(c, c.pos[u]!) * a.metersPerStep);

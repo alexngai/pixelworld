@@ -50,6 +50,8 @@ export interface BakeOptions {
    * isn't drawn, and the inside of their far walls shows dark, as solid.
    */
   cut?: { x0: number; y0: number; w: number; h: number; heights: Float32Array };
+  /** Where the light comes from, in (u, v, h) (default the world's `SUN_DIR`): a high one for short shadows from above (D-164). */
+  sun?: readonly [number, number, number];
 }
 
 export interface StyleParams {
@@ -443,7 +445,12 @@ export class Baker {
           "occlusion will clamp (reduce vertical exaggeration or tile size)",
       );
     const rot = rotationMat2(rotation);
-    const basis = lightBasis(SUN_DIR);
+    const sun = options.sun ? (() => {
+      const [x, y, z] = options.sun;
+      const l = Math.hypot(x, y, z) || 1;
+      return [x / l, y / l, z / l] as const;
+    })() : SUN_DIR;
+    const basis = lightBasis(sun);
     const draws = [...scene.meshes.map((m) => this.upload(m)), ...scene.batches.map((b) => this.uploadBatch(b))];
     const fields = scene.fields ?? [];
     fields.forEach((f) => this.uploadField(f)); // AO prepasses before any pass state is set

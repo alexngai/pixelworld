@@ -1,5 +1,5 @@
 import type { Rotation } from "@pixelworlds/grid";
-import type { BakedImage } from "@pixelworlds/bake";
+import type { BakedImage, Projection } from "@pixelworlds/bake";
 import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworlds/generators";
 import { BakeHost } from "./bakeHost";
 import { ModelFailures } from "./modelFailures";
@@ -133,7 +133,7 @@ export class BakeService {
   private disposed = false;
   private pluginJobs = new Map<number, { resolve: (p: PluginReport[]) => void; reject: (e: Error) => void }>();
   private spriteQueue: (
-    | { id: number; rotation: Rotation; boxes: Box[] }
+    | { id: number; rotation: Rotation; boxes: Box[]; projection?: Projection; sun?: [number, number, number] }
     | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
     | Omit<BakeAreaMessage, "type">
     | Omit<BakeLoneMessage, "type">
@@ -296,12 +296,12 @@ export class BakeService {
     this.done.delete(key);
   }
 
-  bakeSprite(rotation: Rotation, boxes: Box[]): Promise<BakedImage | null> {
+  bakeSprite(rotation: Rotation, boxes: Box[], opts: { projection?: Projection; sun?: [number, number, number] } = {}): Promise<BakedImage | null> {
     if (this.disposed) return Promise.resolve(null);
     return new Promise((resolve) => {
       const id = this.nextId++;
       this.spriteJobs.set(id, resolve);
-      this.spriteQueue.push({ id, rotation, boxes });
+      this.spriteQueue.push({ id, rotation, boxes, ...opts });
       this.pump();
     });
   }

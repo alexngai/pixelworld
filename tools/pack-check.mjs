@@ -29,7 +29,7 @@ export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.met
  */
 export const BUDGETS = {
   tarball: 820 * 1024, // gzipped .tgz, with source maps (769.3 KB with the national parks, D-136–D-141; 803.4 KB with D-147–D-158's edits, boards and top-down bakes)
-  unpacked: 2.9 * 1024 * 1024, // everything, as installed (2870.5 KB with D-147/D-148's terrain edits and boards)
+  unpacked: 3 * 1024 * 1024, // everything, as installed (2870.5 KB with D-147/D-148's terrain edits and boards; 2970 KB with D-155–D-164's top-down bakes, cutaways, lone buildings and top-down sprites)
   js: 790 * 1024, // dist/*.js without maps: the library chunks and the worker (702.8 KB with D-124/D-125's edits, cells and veil; 754.6 KB with D-147/D-148's terrain edits and boards; 773.1 KB with D-154–D-159's reveals, top-down bakes and cut-down buildings)
   worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
 };

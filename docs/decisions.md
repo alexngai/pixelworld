@@ -171,6 +171,7 @@ Status values:
 | D-161 | How much of each cut building shows: a mask painted by the app, nothing baked again | Superseded by D-162 |
 | D-162 | The fight's buildings shown faintly as themselves, each baked on its own; the foreground in the way hidden outright | Accepted |
 | D-163 | The tactical map as the overhead view: crisp at both sizes, heights in colour | Accepted |
+| D-164 | Finer bakes from above: short shadows from a high sun, the units' own models from above | Accepted |
 
 ---
 
@@ -2429,3 +2430,9 @@ The point is more room for visual interest; both halves are wanted.
 - **Why:** discussing how to make the buildings read and their heights plain, the owner chose to rely on the tactical map, made finer, as the always-there overhead view (in the manner of Final Fantasy Tactics's raised camera), rather than a full-screen overhead render or a layer of level controls.
 - **Crisp:** the board is baked from above at the small map's own density (30 px a board cell, times the screen's pixel ratio), so the small map shows it pixel for pixel and the large one (M) at exactly twice, never smoothed (it was baked for the large one and smoothed down).
 - **Heights:** each building is outlined in its height band's colour: up to 6 m, up to 15 m (what the rigs climb), up to 40 m, taller; the large map labels each building in metres, in that colour, with a legend under it. A unit on a roof has its height beside it (▲68); the large map shows each unit's hit points.
+
+### D-164: Finer bakes from above: short shadows from a high sun, the units' own models from above (accepted)
+- **Why:** the owner asked for more fidelity in the view from above, the units included. The board is baked at about the voxel models' own detail already (30 px a world cell), so more pixels would add little; depth would.
+- **A sun of its own:** a bake can take its light's direction (`BakeOptions.sun`; `bakeTopDown`'s and the sprite bake's `sun`), the world's `SUN_DIR` by default. From above the world's sun cast towers' shadows a dozen cells across the streets, so the map had none; the fight now bakes it under the same sun set high (`[0.15, 0.27, 1.6]`): short shadows to the north-west, longer for taller buildings, a cue to height as much as to depth.
+- **Units from above:** `view.bakeSpriteTopDown(boxes, { px, sun })` bakes an entity model's boxes in the top-down projection (the sprite bake takes a projection now), north up, its top-left given from the model's origin. The fight bakes every kind of unit once a fight, from the same model the city view draws, at the map's art scale; the map draws each on a disc of its side's colour, turned in quarter turns to face its aim (an invader's) or east (a rig), crisp at both sizes.
+- **Checked:** the Financial District's map with its shadows and its six kinds of unit from above (the crane's boom, the crawlers' legs turned toward their aims); the golden renders unchanged; budgets raised with notes (every entry 130 KB, the package unpacked 3 MB).

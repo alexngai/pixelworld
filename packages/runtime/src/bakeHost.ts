@@ -88,7 +88,7 @@ export class BakeHost {
           const t0 = performance.now();
           const mesh = buildBoxesMesh(msg.boxes);
           const meshMs = performance.now() - t0;
-          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: true });
+          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: true, ...(msg.projection ? { projection: msg.projection } : {}), ...(msg.sun ? { sun: msg.sun } : {}) });
           this.baker.releaseScene(mesh);
           this.reply(msg.id, res, meshMs, mesh.vertexCount);
           break;
@@ -249,7 +249,7 @@ export class BakeHost {
     const t0 = performance.now();
     const scene = this.buildScene(init, msg.slice, msg.owned, msg.removed ?? []);
     const meshMs = performance.now() - t0;
-    const res = this.baker.bake(scene, 0, msg.owned, { shadows: msg.shadows, projection: msg.projection });
+    const res = this.baker.bake(scene, 0, msg.owned, { shadows: msg.shadows, projection: msg.projection, ...(msg.sun ? { sun: msg.sun } : {}) });
     this.baker.releaseScene(scene);
     this.reply(msg.id, res, meshMs, scene.meshes.reduce((n, m) => n + m.vertexCount, 0), this.sceneFailures.get(scene));
   }

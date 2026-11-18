@@ -87,6 +87,9 @@ export interface BakeSpriteMessage {
   id: number;
   rotation: Rotation;
   boxes: Box[];
+  /** Another layout (D-164: from above), and its own sun. */
+  projection?: Projection;
+  sun?: [number, number, number];
 }
 
 /** Bake object instances alone (a hero landmark, offline), on the slice's terrain heights. */
@@ -111,6 +114,7 @@ export interface BakeAreaMessage {
   removed?: number[];
   projection: Projection;
   shadows: boolean;
+  sun?: [number, number, number];
 }
 
 /**

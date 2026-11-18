@@ -102,6 +102,8 @@ type Phase = "pick" | "move" | "strike" | "busy" | "over";
 const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 /** How much of a building cut down still shows, where it stood in front (D-160). */
 const GHOST = 0.3;
+/** The sun for bakes from above (D-164): where the world's is, but high, for short shadows. */
+const TOP_SUN: [number, number, number] = [0.15, 0.27, 1.6];
 /** …where nothing of the fight's stands behind it (D-161); and under the selected unit or the cell looked at. */
 const GHOST_CLEAR = 0.6;
 const GHOST_LIT = 0.85;
@@ -234,6 +236,7 @@ export class Fight {
     this.clearView();
     this.frameBoard();
     this.refreshArt();
+    this.bakeUnitArt();
     for (let u = 0; u < this.c.roster.length; u++) this.spawnEntity(u);
     this.offFrame = this.view.onFrame((e) => this.frame(e.now));
     this.checkOutlook();
@@ -252,9 +255,23 @@ export class Fight {
     const p1 = toWorld(this.board, { x: a.w, y: a.h });
     // one art px a map px on the small map (the large one shows it at exactly twice), D-163
     const px = Math.max(4, Math.round((TacticalMap.SMALL * (window.devicePixelRatio || 1)) / this.board.cell));
-    void this.view.bakeTopDown(Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y), { px, shadows: false }).then((img) => {
+    // short shadows from a high sun (D-164): the taller a building, the further its shadow, without burying the streets
+    void this.view.bakeTopDown(Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y), { px, shadows: true, sun: TOP_SUN }).then((img) => {
       if (img && token === this.artToken && this.phase !== "over") this.map.setArt(img.rgba, img.width, img.height);
     });
+  }
+
+  /** Every kind of unit from above (D-164), once a fight, at the map's art scale: the map draws them in place of discs. */
+  private bakeUnitArt(): void {
+    const rs = this.view.world.renderScale;
+    const px = (TacticalMap.SMALL * (window.devicePixelRatio || 1)) / (this.board.cell * rs);
+    for (const kind of Object.keys(FIGHTERS) as (keyof typeof FIGHTERS)[]) {
+      const model = entityModel(kind, this.ramps, { scale: this.board.cell, renderScale: rs });
+      if (!("boxes" in model)) continue;
+      void this.view.bakeSpriteTopDown(model.boxes, { px, sun: TOP_SUN }).then((img) => {
+        if (img && this.phase !== "over") this.map.setUnitArt(kind, img.rgba, img.width, img.height, img.left, img.top);
+      });
+    }
   }
 
   /**

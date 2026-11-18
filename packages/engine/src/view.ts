@@ -32,6 +32,7 @@ import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "
 import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
   TopDownImage,
+  TopDownSprite,
   ControllerHost,
   EntityList,
   FrameEvent,
@@ -959,7 +960,13 @@ class View implements WorldView {
     for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation])) this.edited(tiles, [r as Rotation]);
   }
 
-  async bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean } = {}): Promise<TopDownImage | null> {
+  async bakeTopDown(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean; sun?: [number, number, number] } = {},
+  ): Promise<TopDownImage | null> {
     const { manifest, store } = this.w;
     const px = opts.px ?? 8;
     const owned = { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
@@ -985,7 +992,7 @@ class View implements WorldView {
     // kept with the tiles (D-158): the tile key's world, style and bake code (all but its last part, the tile's own), the
     // area's, and the edits its slice holds: objects taken out, terrain edited (D-147)
     const cells = store.editsIn(sx0, sy0, sx1, sy1);
-    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}`, ...(removed.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|") : null;
+    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}${opts.sun ? `:${opts.sun.join("/")}` : ""}`, ...(removed.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|") : null;
     const kept = key ? await this.cache!.get(key) : null;
     if (kept) return { width: kept.width, height: kept.height, rgba: paletteImage(kept, this.w.palette), image: kept, px, x: owned.x0, y: owned.y0 };
     // the whole slice drawn (an object anchored in the margin reaches into the rectangle too), then cut to the rectangle
@@ -996,6 +1003,7 @@ class View implements WorldView {
       // in render units: px per render cell, and per render step
       projection: topDownProjection(px / rs, tilt / rs),
       shadows,
+      ...(opts.sun ? { sun: opts.sun } : {}),
     });
     if (!whole) return null;
     // screen x = px·x and y = px·y on the ground (h = 0): the rectangle's pixels of the image
@@ -1014,6 +1022,12 @@ class View implements WorldView {
     const image = { left, top, width, height, depthBase: whole.depthBase, pixels };
     if (key) void this.cache!.put(key, image);
     return { width, height, rgba: paletteImage(image, this.w.palette), image, px, x: owned.x0, y: owned.y0 };
+  }
+
+  async bakeSpriteTopDown(boxes: Box[], opts: { px?: number; sun?: [number, number, number] } = {}): Promise<TopDownSprite | null> {
+    const px = opts.px ?? 8;
+    const img = await this.service.bakeSprite(0, boxes, { projection: topDownProjection(px), ...(opts.sun ? { sun: opts.sun } : {}) });
+    return img ? { width: img.width, height: img.height, rgba: paletteImage(img, this.w.palette), left: img.left, top: img.top } : null;
   }
 
   serialize(): ViewState {

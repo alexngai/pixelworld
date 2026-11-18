@@ -478,7 +478,20 @@ export interface WorldView extends ControllerView {
    * (x + i / px, y + j / px) of `TopDownImage`. `cache` keeps it with the
    * view's tiles (D-158). Null where nothing is there.
    */
-  bakeTopDown(x0: number, y0: number, x1: number, y1: number, opts?: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean }): Promise<TopDownImage | null>;
+  bakeTopDown(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts?: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean; sun?: [number, number, number] },
+  ): Promise<TopDownImage | null>;
+  /**
+   * An entity model's boxes (render units, as `EntitySpec.model` takes them)
+   * drawn from above, north up (D-164): `px` px a render unit, lit by `sun`
+   * (default the world's). The image's pixel (i, j) is at (left + i, top + j)
+   * px from the model's origin; turn it in 2D for a heading.
+   */
+  bakeSpriteTopDown(boxes: Box[], opts?: { px?: number; sun?: [number, number, number] }): Promise<TopDownSprite | null>;
   /** Called after every animation frame (from the start, before `ready()`); `dt` is game time. */
   onFrame(listener: (e: FrameEvent) => void): () => void;
   /** The camera, every layer's state and the controller's (where it has `serialize`). */
@@ -674,6 +687,15 @@ export interface EntitySpec {
    * hold the view up, and each shows once its first sprite is baked.
    */
   wait?: boolean;
+}
+
+/** A model from above (`WorldView.bakeSpriteTopDown`, D-164): RGBA, and where its top-left pixel is from the model's origin. */
+export interface TopDownSprite {
+  width: number;
+  height: number;
+  rgba: Uint8ClampedArray<ArrayBuffer>;
+  left: number;
+  top: number;
 }
 
 /** A rectangle of the world from above (`WorldView.bakeTopDown`, D-155). */
