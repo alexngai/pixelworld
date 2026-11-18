@@ -328,9 +328,10 @@ export class Fight {
   /**
    * What hides the fight is cut down to a stump (D-159), drawn so; the
    * queries still have it whole. Every building between the camera and the
-   * board that isn't the fight's own; and the fight's own where they stand in
-   * front of a unit (not one a unit stands on). The cut board buildings are
-   * shown whole as outlines (the glass); cells still hidden are dashed there.
+   * board that isn't the fight's own, and every one of the fight's own in
+   * front of another of its cells. The fight's are drawn whole as glass on the
+   * glass layer, and a unit on one's roof stands on the glass. It changes only
+   * when the camera turns or a building falls, never as units move.
    */
   private updateCuts(): void {
     const c = this.c;
@@ -362,8 +363,6 @@ export class Fight {
       const p0 = toWorld(this.board, { x: 0, y: 0 });
       const p1 = toWorld(this.board, { x: a.w, y: a.h });
       const [bx0, by0, bx1, by1] = [Math.min(p0.x, p1.x), Math.min(p0.y, p1.y), Math.max(p0.x, p1.x), Math.max(p0.y, p1.y)];
-      const stoodOn = new Set<number>();
-      for (let u = 0; u < c.roster.length; u++) if (c.hp[u]! > 0 && structureAt(c, c.pos[u]!) >= 0) stoodOn.add(a.structures[structureAt(c, c.pos[u]!)]!.object);
       this.ghosts = [];
       for (let k = 0; k < a.w * a.h; k++) {
         const sid = structureAt(c, k);
@@ -377,8 +376,8 @@ export class Fight {
             if (!hit) continue;
             const onBoard = (hit.fp ?? [[hit.x, hit.y] as [number, number]]).some(([x, y]) => x > bx0 && x < bx1 && y > by0 && y < by1);
             cuts.set(o, (query.heightAt(hit.x, hit.y) ?? 0) + (onBoard ? 0.05 : stump));
-          } else if (!stoodOn.has(o) && c.structHp[id]! > 0) {
-            // the fight's own: a stump, outlined whole
+          } else if (c.structHp[id]! > 0) {
+            // the fight's own: a stump, outlined whole as glass (a unit on its roof stands on the glass)
             cuts.set(o, a.height[a.structures[id]!.cells[0]!]! + stump);
             this.ghosts.push(id);
           }
