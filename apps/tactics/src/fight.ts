@@ -5,7 +5,6 @@ import {
   FIRE_ASH,
   HIGH_GROUND_M,
   isBurning,
-  BoardOverlay,
   DIRS,
   DIR_NAMES,
   FIGHTERS,
@@ -16,6 +15,7 @@ import {
   cloneCombat,
   endRound,
   entityModel,
+  movePath,
   movesOf,
   moveUnit,
   outcome,
@@ -36,7 +36,7 @@ import {
   type Strike,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
-import { BoardGlass } from "./glass";
+import { BoardGlass, type Shot } from "./glass";
 import { TacticalMap, mapAxis } from "./map";
 import type { Outlook } from "./worker";
 
@@ -182,7 +182,16 @@ export class Fight {
   private readonly tip: HTMLElement;
   private tipAt = -1;
   private hover = -1;
-  private arrowsShown = "";
+  /** Buildings struck, by when (D-171): they flash on the glass. Shots in flight. */
+  private readonly flashes = new Map<number, number>();
+  private readonly shots: Shot[] = [];
+  /** Each unit's idle rise now (steps, D-171), on top of where the timeline or the state puts it; when each was chosen (it hops). */
+  private readonly idleDh: number[] = [];
+  private readonly hopAt = new Map<number, number>();
+  /** The world shaken (D-171): how hard (px), from when, till when. */
+  private shakePx = 0;
+  private shakeFrom = 0;
+  private shakeTill = 0;
   /** A board step along the view's u (down-right on screen) and v (down-left): what the arrow keys move by. */
   private stepU: [number, number] = [1, 0];
   private stepV: [number, number] = [0, 1];
@@ -191,7 +200,6 @@ export class Fight {
   private razed: number[] = [];
   private razedThisTurn: number[] = [];
   private readonly entities: (Entity | null)[] = [];
-  private readonly overlay: BoardOverlay;
   private readonly map: TacticalMap;
   /** The rotation the view was laid out for. */
   private hiddenFor = -1;
@@ -252,13 +260,11 @@ export class Fight {
       back: () => this.back(),
     });
     this.map.layOut(() => this.screenAxes());
-    this.overlay = new BoardOverlay(s.board, { id: "fight", grid: false });
     this.glass = new BoardGlass(s.labels, s.view, s.board);
     this.tip = document.createElement("div");
     this.tip.className = "tip";
     this.tip.hidden = true;
     s.labels.append(this.tip);
-    void this.view.layers.add(this.overlay);
     this.bestRotation();
     this.clearView();
     this.frameBoard();
@@ -502,6 +508,7 @@ export class Fight {
   }
 
   private spawnEntity(u: number, h?: number): void {
+    this.idleDh[u] = 0;
     const k = this.c.pos[u]!;
     const p = this.centre(k);
     this.entities[u] = this.view.entities.add({
@@ -544,14 +551,50 @@ export class Fight {
       l = { el, x: p.x, y: p.y, h: 0, dy };
       this.labels.set(id ?? `float-${Math.random()}`, l);
     }
-    l.el.className = `label ${cls}`;
+    l.el.className = `label ${cls}${id ? "" : " rise"}`;
     l.el.textContent = text;
     Object.assign(l, { x: p.x, y: p.y, h: h ?? standAt(this.c, k), dy });
     if (!id) Object.assign(l, { born: this.now, until: this.now + 1100 });
   }
 
+  /** A unit's entity put somewhere by the timeline: its idle rise stays on top (D-171). */
   private place(u: number, x: number, y: number, h: number): void {
-    this.entities[u]?.moveTo(x, y, h);
+    this.entities[u]?.moveTo(x, y, h + (this.idleDh[u] ?? 0));
+  }
+
+  /** Where a unit's entity stands, without its idle rise. */
+  private baseH(u: number): number {
+    return (this.entities[u]?.h ?? 0) - (this.idleDh[u] ?? 0);
+  }
+
+  /**
+   * Idle (D-171): flyers hover, the other invaders breathe, the chosen rig
+   * bounces, a rig just chosen hops. A rise on top of wherever the unit is
+   * put, so it carries on through moves and strikes.
+   */
+  private idleMotion(now: number): void {
+    const c = this.c;
+    for (let u = 0; u < c.roster.length; u++) {
+      const e = this.entities[u];
+      if (!e || c.hp[u]! <= 0) continue;
+      const f = FIGHTERS[c.roster[u]!];
+      const t = now / 1000 + u * 0.7;
+      let dh = f.flying ? 0.35 * Math.sin(t * 2.2) : teamOf(c, u) === INVADERS ? 0.12 * Math.sin(t * 3) : 0;
+      if (u === this.selected && this.phase !== "busy") dh += 0.25 * Math.abs(Math.sin(t * 3.4));
+      const hop = now - (this.hopAt.get(u) ?? -Infinity);
+      if (hop < 280) dh += 0.9 * Math.sin((Math.PI * hop) / 280);
+      const was = this.idleDh[u] ?? 0;
+      if (Math.abs(dh - was) < 0.01) continue;
+      this.idleDh[u] = dh;
+      e.moveTo(e.x, e.y, e.h - was + dh);
+    }
+  }
+
+  /** Shake the world (the view, the glass, the labels) a moment, as hard as asked (px) or the shake on now, whichever is harder. */
+  private shake(px: number, ms: number): void {
+    const left = this.shakeTill > this.now ? (this.shakePx * (this.shakeTill - this.now)) / (this.shakeTill - this.shakeFrom) : 0;
+    if (px < left) return;
+    [this.shakePx, this.shakeFrom, this.shakeTill] = [px, this.now, this.now + ms];
   }
 
   /** Every unit's entity where the state has it, the fallen gone; the fires; the invaders facing their aims. */
@@ -562,7 +605,7 @@ export class Fight {
       const e = this.entities[u]!;
       e.visible = c.hp[u]! > 0;
       const p = this.centre(c.pos[u]!);
-      e.moveTo(p.x, p.y, standAt(c, c.pos[u]!));
+      e.moveTo(p.x, p.y, standAt(c, c.pos[u]!) + (this.idleDh[u] ?? 0));
       if (teamOf(c, u) === INVADERS && c.aim[u]! >= 0) e.heading = angle(c.aim[u]!);
     }
     for (let k = 0; k < c.fire.length; k++) {
@@ -609,6 +652,19 @@ export class Fight {
       step.end?.();
       this.current = null;
     }
+    if (this.phase !== "over") this.idleMotion(now);
+    // the world shaken: a fading jolt
+    const els = [this.view.canvas, this.glass.el, this.labelRoot];
+    if (this.shakeTill > now) {
+      const k = (this.shakePx * (this.shakeTill - now)) / (this.shakeTill - this.shakeFrom);
+      const tf = `translate(${(Math.sin(now / 17) * k).toFixed(1)}px, ${(Math.cos(now / 23) * k * 0.6).toFixed(1)}px)`;
+      for (const el of els) el.style.transform = tf;
+    } else if (this.shakePx) {
+      this.shakePx = 0;
+      for (const el of els) el.style.transform = "";
+    }
+    for (const [id, t0] of this.flashes) if (now - t0 > 600) this.flashes.delete(id);
+    for (let i = this.shots.length - 1; i >= 0; i--) if (now > this.shots[i]!.t0 + this.shots[i]!.ms) this.shots.splice(i, 1);
     // effects: cycle their frames, and let go of the spent
     const frame = Math.floor(now / 160);
     for (const f of this.fx) {
@@ -639,62 +695,132 @@ export class Fight {
     return new Promise((r) => this.idle.push(r));
   }
 
-  /** The steps that show what a log of events did, in order, from where the entities stood. */
+  /**
+   * The steps that show what a log of events did, in order, from where the
+   * entities stood (D-171, after Into the Breach): a move walks its path cell
+   * by cell with a hop and dust where it lands; a shot flies along its arc; a
+   * unit hit flashes and shakes; a building hit flashes; big blows shake the
+   * world.
+   */
   private animate(log: readonly CombatEvent[]): Step[] {
     const c = this.c;
     const steps: Step[] = [];
-    const tween = (u: number, from: number, to: number, ms: number, lift = 0): Step => {
-      const a = this.centre(from);
+    // from where the entity is when the step starts (an earlier step may have moved it)
+    const tween = (u: number, from: number, to: number, ms: number, lift = 0, ease = false): Step => {
       const b = this.centre(to);
-      const ha = this.entities[u]?.h ?? standAt(c, from);
       const hb = standAt(c, to);
+      let a = { x: b.x, y: b.y };
+      let ha = hb;
       return {
         ms,
-        tick: (t) => this.place(u, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, ha + (hb - ha) * t + lift * Math.sin(Math.PI * t)),
+        start: () => {
+          const e = this.entities[u];
+          a = e ? { x: e.x, y: e.y } : this.centre(from);
+          ha = e ? this.baseH(u) : standAt(c, from);
+        },
+        tick: (t) => {
+          const f = ease ? t * t * (3 - 2 * t) : t;
+          this.place(u, a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, ha + (hb - ha) * f + lift * Math.sin(Math.PI * t));
+        },
       };
     };
     const nudge = (u: number, at: number, ms: number): Step => {
-      const e = this.entities[u];
-      const x0 = e?.x ?? 0;
-      const y0 = e?.y ?? 0;
-      const h0 = e?.h ?? 0;
+      let x0 = 0;
+      let y0 = 0;
+      let h0 = 0;
       const b = this.centre(at);
-      return { ms, tick: (t) => this.place(u, x0 + (b.x - x0) * 0.3 * Math.sin(Math.PI * t), y0 + (b.y - y0) * 0.3 * Math.sin(Math.PI * t), h0), end: () => this.place(u, x0, y0, h0) };
+      return {
+        ms,
+        start: () => {
+          const e = this.entities[u];
+          [x0, y0, h0] = [e?.x ?? b.x, e?.y ?? b.y, this.baseH(u)];
+        },
+        tick: (t) => this.place(u, x0 + (b.x - x0) * 0.3 * Math.sin(Math.PI * t), y0 + (b.y - y0) * 0.3 * Math.sin(Math.PI * t), h0),
+        end: () => this.place(u, x0, y0, h0),
+      };
     };
+    // hit: a white flash, then red, and a shudder across the screen
+    const hit = (u: number, ms: number): Step => {
+      let x0 = 0;
+      let y0 = 0;
+      let h0 = 0;
+      const [tx, ty] = towardCamera(this.view, this.view.camera.rotation);
+      const [sx, sy] = [ty * 0.09, -tx * 0.09];
+      return {
+        ms,
+        start: () => {
+          const e = this.entities[u];
+          [x0, y0, h0] = [e?.x ?? 0, e?.y ?? 0, this.baseH(u)];
+          if (e) e.outline = [255, 255, 255];
+          this.shake(3, 180);
+        },
+        tick: (t) => {
+          const k = Math.sin(t * Math.PI * 7) * (1 - t);
+          this.place(u, x0 + sx * k, y0 + sy * k, h0);
+          const e = this.entities[u];
+          if (e && t > 0.3) e.outline = THREATENED;
+        },
+        end: () => {
+          this.place(u, x0, y0, h0);
+          const e = this.entities[u];
+          if (e) e.outline = null;
+        },
+      };
+    };
+    const dust = (k: number): Step => ({ ms: 0, start: () => void this.effect("smoke", k, 2, 0.35) });
     const word = (k: number, text: string, cls: string): Step => ({ ms: 0, start: () => this.label(null, k, text, cls) });
     let lastAt = -1;
     for (const e of log) {
       switch (e.t) {
         case "move": {
-          // roof to roof: a leap, arcing over the street
-          const leap = structureAt(c, e.from) >= 0 && structureAt(c, e.to) >= 0 && manhattan(c.arena.w, e.from, e.to) >= 2;
-          steps.push(tween(e.unit, e.from, e.to, Math.min(500, 130 * manhattan(c.arena.w, e.from, e.to)), leap ? 6 : 0));
+          const f = FIGHTERS[c.roster[e.unit]!];
+          if (f.flying) {
+            // a flyer glides there over everything
+            steps.push(tween(e.unit, e.from, e.to, Math.min(650, 160 * manhattan(c.arena.w, e.from, e.to)), 1.2, true));
+            break;
+          }
+          // cell by cell along its path, a hop each; roof to roof, a leap arcing over the street
+          const path = movePath(c, e.unit, e.from, e.to);
+          for (let n = 1; n < path.length; n++) {
+            const leap = manhattan(c.arena.w, path[n - 1]!, path[n]!) >= 2;
+            steps.push(tween(e.unit, path[n - 1]!, path[n]!, leap ? 380 : path.length > 2 ? 115 : 160, leap ? 6 : 0.35));
+          }
+          steps.push(dust(e.to));
           break;
         }
         case "strike": {
           lastAt = e.at;
           const w = FIGHTERS[c.roster[e.unit]!].weapons[e.weapon]!;
+          const from = c.pos[e.unit]!;
           steps.push(nudge(e.unit, e.at, 160));
+          // a shot flies to what's struck from further than the next cell
+          if (w.kind !== "hoist" && w.kind !== "evacuate" && manhattan(c.arena.w, from, e.at) > 1) {
+            const ms = 160 + 45 * manhattan(c.arena.w, from, e.at);
+            steps.push({ ms, start: () => void this.shots.push({ from, to: e.at, t0: this.now, ms, kind: teamOf(c, e.unit) === INVADERS ? "attack" : "info" }) });
+          }
           if (w.kind !== "hoist" && w.kind !== "evacuate") steps.push({ ms: 120, start: () => this.effect(w.douses ? "jet" : "blast", e.at, 3, 0.45) });
           break;
         }
         case "push":
-          steps.push(tween(e.unit, e.from, e.to, 150));
+          steps.push(tween(e.unit, e.from, e.to, 170, 0.2, true), dust(e.to));
           break;
         case "bump":
-          steps.push(nudge(e.unit, e.at, 170), word(e.at, "bump", "hurt"));
+          steps.push(nudge(e.unit, e.at, 170), { ms: 0, start: () => this.shake(3, 160) }, word(e.at, "bump", "hurt"));
           break;
         case "fall":
           steps.push({ ms: 0 }, word(c.pos[e.unit]!, `falls ${Math.round(e.drop * c.arena.metersPerStep)} m`, "hurt"));
           break;
         case "damage":
-          steps.push(word(c.pos[e.unit]!, `−${e.amount}`, "hurt"));
+          steps.push(word(c.pos[e.unit]!, `−${e.amount}`, "hurt"), hit(e.unit, 320));
           break;
         case "down": {
           const at = e.at;
           steps.push({
             ms: 220,
-            start: () => this.effect(c.arena.flags[at]! & A_WATER && structureAt(c, at) < 0 ? "jet" : "blast", at, 4, 0.9),
+            start: () => {
+              this.effect(c.arena.flags[at]! & A_WATER && structureAt(c, at) < 0 ? "jet" : "blast", at, 4, 0.9);
+              this.shake(6, 300);
+            },
             end: () => {
               const ent = this.entities[e.unit];
               if (ent) ent.visible = false;
@@ -706,13 +832,20 @@ export class Fight {
         case "structure": {
           const s = c.arena.structures[e.id]!;
           const at = s.cells.includes(lastAt) ? lastAt : s.cells[0]!;
-          steps.push(word(at, e.people >= 0.5 ? `−${Math.round(e.people)} people` : `−${e.amount}`, "lost"));
+          steps.push(word(at, e.people >= 0.5 ? `−${Math.round(e.people)} people` : `−${e.amount}`, "lost"), {
+            ms: 0,
+            start: () => {
+              this.flashes.set(e.id, performance.now());
+              this.shake(e.destroyed ? 0 : 3, 160);
+            },
+          });
           if (e.destroyed)
             steps.push({
               ms: 260,
               start: () => {
                 for (const k of s.cells) this.effect("rubble", k, 1, Infinity, c.arena.height[k]);
                 this.effect("blast", at, 4, 0.9);
+                this.shake(8, 420);
                 if (s.object >= 0) {
                   this.view.edits.remove([s.object]);
                   this.razed.push(s.object);
@@ -725,7 +858,7 @@ export class Fight {
           break;
         }
         case "topple":
-          steps.push(word(e.cells[0] ?? lastAt, "topples!", "lost"));
+          steps.push(word(e.cells[0] ?? lastAt, "topples!", "lost"), { ms: 0, start: () => this.shake(10, 600) });
           for (const k of e.cells) steps.push({ ms: 90, start: () => this.effect("blast", k, 3, 0.6) });
           break;
         case "hoist":
@@ -741,11 +874,16 @@ export class Fight {
               this.spawnEntity(e.unit, standAt(c, e.at) + 14);
               this.label(null, e.at, `${FIGHTERS[c.roster[e.unit]!].name} arrives`, "hurt");
             },
+            // falling faster and faster, then a jolt and dust on landing
             tick: (t) => {
               const p = this.centre(e.at);
-              this.place(e.unit, p.x, p.y, standAt(c, e.at) + 14 * (1 - t));
+              this.place(e.unit, p.x, p.y, standAt(c, e.at) + 14 * (1 - t * t));
             },
-            end: () => void this.effect("blast", e.at, 3, 0.5),
+            end: () => {
+              this.effect("blast", e.at, 3, 0.5);
+              this.effect("smoke", e.at, 2, 0.5);
+              this.shake(5, 260);
+            },
           });
           break;
         case "blocked":
@@ -870,15 +1008,13 @@ export class Fight {
       // glass outlines on the faint ones only: a solid building needs none
       ghosts: this.ghosts.filter((_, n) => (alphas[n] ?? 1) < 1),
       stump: STUMP_M / c.arena.metersPerStep,
+      arrows: [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint],
+      arrivals: arriving(shown).map((x) => x.at),
+      flashes: this.flashes,
+      shots: this.shots,
     });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
-    // the overlay bakes again for new arrows only (a hover changes nothing there)
-    const arrowsKey = JSON.stringify(arrows);
-    if (arrowsKey !== this.arrowsShown) {
-      this.arrowsShown = arrowsKey;
-      this.overlay.setArrows(arrows);
-    }
     this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown), cursor: this.cursor });
 
     // labels: hit points over every unit, the invaders' order, arrivals, what a hovered strike would do
@@ -1002,6 +1138,7 @@ export class Fight {
     const c = this.c;
     if (this.phase === "busy" || this.phase === "over" || teamOf(c, u) !== SQUAD || c.hp[u]! <= 0 || this.acted.has(u)) return;
     if (this.phase === "strike" && u !== this.selected) this.cancelMove();
+    if (u !== this.selected) this.hopAt.set(u, this.now);
     this.selected = u;
     this.moveFrom = c.pos[u]!;
     this.weapon = 0;
@@ -1482,7 +1619,6 @@ export class Fight {
     this.view.cutDown(null);
     this.view.cutaway = true;
     this.view.setLoneGhosts(null);
-    this.view.layers.remove("fight");
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();
     this.hud.remove();

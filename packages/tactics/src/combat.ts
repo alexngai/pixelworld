@@ -416,9 +416,28 @@ function enterable(c: Combat, u: number, from: number, k: number): boolean {
  * leap from roof to roof across a street two (D-157).
  */
 export function movesOf(c: Combat, u: number): number[] {
+  return search(c, u, c.pos[u]!).out;
+}
+
+/**
+ * The cells a unit's move from one cell to another passes through, both
+ * included, as `movesOf` finds them (a leap's middle cell left out): for
+ * showing the move cell by cell. Just the two where the move isn't one it
+ * could make from there.
+ */
+export function movePath(c: Combat, u: number, from: number, to: number): number[] {
+  const { prev } = search(c, u, from);
+  if (from === to || prev[to]! < 0) return from === to ? [from] : [from, to];
+  const path = [to];
+  for (let k = to; k !== from; ) path.push((k = prev[k]!));
+  return path.reverse();
+}
+
+/** The moves out from a cell: the cells a unit could stop on, and each reached cell's cell before. */
+function search(c: Combat, u: number, start: number): { out: number[]; prev: Int16Array } {
   const a = c.arena;
   const dist = new Int8Array(a.w * a.h).fill(-1);
-  const start = c.pos[u]!;
+  const prev = new Int16Array(a.w * a.h).fill(-1);
   const team = teamOf(c, u);
   const f = FIGHTERS[c.roster[u]!];
   const queue = [start];
@@ -430,10 +449,11 @@ export function movesOf(c: Combat, u: number): number[] {
     const nd = dist[k]! + cost;
     if (nd > f.move || (dist[nk]! >= 0 && dist[nk]! <= nd)) return;
     const o = c.occ[nk]!;
-    if (o >= 0 && teamOf(c, o) !== team) return;
+    if (o >= 0 && o !== u && teamOf(c, o) !== team) return;
     dist[nk] = nd;
+    prev[nk] = k;
     queue.push(nk);
-    if (o < 0 && !seen[nk]) {
+    if ((o < 0 || o === u) && !seen[nk]) {
       seen[nk] = 1;
       out.push(nk);
     }
@@ -449,7 +469,7 @@ export function movesOf(c: Combat, u: number): number[] {
       }
     }
   }
-  return out;
+  return { out, prev };
 }
 
 /** A leap from roof k over cell mid to roof far: a street between (lower than both), and the roofs within LEAP_M of each other. */

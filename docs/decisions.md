@@ -178,6 +178,7 @@ Status values:
 | D-168 | What hides the board gone always; only the board's own buildings whole at rest | Accepted |
 | D-169 | Boards chosen for how little their own buildings hide; the fight begins from the clearest side | Accepted |
 | D-170 | Units outlined by what's happening to them; struck cells striped, struck buildings outlined red | Accepted |
+| D-171 | Arrows drawn as arcs with heads; the fight in motion: idling, choosing, arriving, moving, hitting | Accepted |
 
 ---
 
@@ -2479,3 +2480,12 @@ The point is more room for visual interest; both halves are wanted.
 - **In the fight:** green for the rig chosen; yellow for what it could strike (the units on its targets), what the move pointed at would let it strike, and what the strike pointed at would hurt or push; red for what the invaders will hurt (a unit on a cell of theirs). Chosen over aimed over threatened.
 - **Struck cells:** a cell the invaders will strike is striped red (bands along the edge of it that runs up to the right on screen, every other one filled, on the roof where a unit would stand) and edged red as before; a building of the fight among them is outlined red whole, from the ground to its roof (the roof's edge glowing, its corners down, barely filled, over the glass if it's cut down).
 - **Checked:** the Financial District: at rest the wrecker an invader aims at outlined red, the two towers the invaders will strike outlined red with striped roofs; the wrecker chosen turns green, and in its strike the crane on one of its targets yellow; the outlines one art pixel wide at first, too thin at the fight's zoom, now about six screen pixels. The size budgets within their limits (the package's JS 788 KB of 790).
+
+### D-171: Arrows drawn as arcs with heads; the fight in motion: idling, choosing, arriving, moving, hitting (accepted)
+- **Why:** the owner asked for idle animations, animations for invaders arriving and for choosing, a proper arrow in place of the blocks that made one, and the feel of Into the Breach when units move and take damage.
+- **Arrows:** drawn on the glass layer (D-156), no longer baked as boxes into the world by the board overlay: each an arc in the world (from above where a unit stands to the cell struck, high for a shot, low for a push or a move), projected each frame: a dark outline, the colour (an invader's aim red, a push blue, a hint's strike yellow), a dash running along it, a head. Nothing bakes when they change, so a hovered strike's arrows show at once. The fight no longer adds the overlay at all.
+- **Idle:** a rise on top of wherever a unit is put (by the state or the timeline), so it carries on through moves and strikes: flyers hover, the other invaders breathe, the chosen rig bounces, a rig hops when chosen. The chosen cell's outline breathes.
+- **Arriving:** where invaders land at the round's end, rings close in on the cell and marks fall to it down a beam from the sky; a landing falls faster and faster, then dust and a jolt.
+- **Moving:** `movePath` (in `@pixelworlds/tactics`, the moves' search shared with `movesOf`) gives the cells a move passes; a walker goes cell by cell with a hop each, a leap arcs over the street, a flyer glides, dust where it lands; a push slides, eased, with dust.
+- **Hitting:** a strike from further than the next cell sends a shot along its arrow's arc; a unit hit flashes white then red and shudders across the screen, its damage popping out before it rises; a building hit flashes white on the glass; the world shakes (the view, the glass and the labels moved together), lightly for a hit or a bump, harder for a unit down, a landing, a building down, hardest for a topple.
+- **Checked:** the Financial District: the invaders' aims as red arcs with heads, the flyer's landing beaconed; the crane's move walked its three cells with a hop each; the invaders' turn sent a shot, flashed a building and a unit, shook the world (and left it still); no errors; the frame rate the same with the idling on or off.

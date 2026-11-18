@@ -12,6 +12,8 @@ import {
   greedyTurn,
   hiddenFrom,
   mechanicsOf,
+  movePath,
+  moveUnit,
   movesOf,
   newCombat,
   outcome,
@@ -462,6 +464,22 @@ describe("a fight over several rounds (D-152)", () => {
       d = after(d, plan);
     }
   }, 60_000);
+});
+
+describe("a move shown cell by cell (D-171)", () => {
+  it("goes round what it can't cross, through its own side, and ends where the move did", () => {
+    const a = arena(["....", ".~~.", "....", "...."]);
+    const c = newCombat(a, units(a, [["wrecker", 0, 0], ["pumper", 1, 0], ["crawler", 3, 3]]));
+    // round the water, through the pumper's cell
+    expect(movePath(c, 0, cell(a, 0, 0), cell(a, 2, 0))).toEqual([cell(a, 0, 0), cell(a, 1, 0), cell(a, 2, 0)]);
+    const path = movePath(c, 0, cell(a, 0, 0), cell(a, 0, 2));
+    expect([path[0], path.at(-1), path.length]).toEqual([cell(a, 0, 0), cell(a, 0, 2), 3]);
+    // after the move (the unit on its new cell), the same path
+    moveUnit(c, 0, cell(a, 0, 2));
+    expect(movePath(c, 0, cell(a, 0, 0), cell(a, 0, 2))).toEqual(path);
+    // out of reach: just the two ends
+    expect(movePath(c, 0, cell(a, 0, 0), cell(a, 3, 3))).toEqual([cell(a, 0, 0), cell(a, 3, 3)]);
+  });
 });
 
 describe("what a board's own buildings hide (D-169)", () => {

@@ -359,6 +359,18 @@ kbd {
 .label.good {
   color: var(--good);
 }
+/* a word that rises and fades (a hit's damage, a building's loss) pops out first (D-171) */
+.label.rise {
+  animation: rise-pop 0.26s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes rise-pop {
+  from {
+    scale: 2;
+  }
+  to {
+    scale: 1;
+  }
+}
 
 @media (max-width: 760px) {
   .fight .squad,
