@@ -1,0 +1,878 @@
+{
+ "world": "tokyo-walk",
+ "zoning": "character",
+ "zones": 29,
+ "candidates": 10248,
+ "passed": 1464,
+ "sites": [
+  {
+   "x0": 52,
+   "y0": 44,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.724,
+   "parts": {
+    "readability": 0.798,
+    "interactables": 0.95,
+    "character": 0.373
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.643,
+    "clearance": 0.621,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.21,
+    "signature": 0.417,
+    "richness": 0.438,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 8,
+    "water": 1,
+    "burnable": 9,
+    "cut": 97,
+    "landmark": "tokyo-metropolitan-government-building",
+    "typology": "building.commercial"
+   },
+   "zone": 0,
+   "name": "commercial blocks",
+   "lon": 139.694,
+   "lat": 35.693
+  },
+  {
+   "x0": 152,
+   "y0": 152,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.706,
+   "parts": {
+    "readability": 0.857,
+    "interactables": 0.633,
+    "character": 0.613
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.615,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.792,
+    "richness": 0.311,
+    "age": 0.387
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 0,
+    "cut": 7,
+    "landmark": "ntt-docomo-yoyogi-building",
+    "typology": "building.kodate"
+   },
+   "zone": 8,
+   "name": "by the NTT Docomo Yoyogi Building",
+   "lon": 139.705,
+   "lat": 35.684
+  },
+  {
+   "x0": 160,
+   "y0": 200,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.704,
+   "parts": {
+    "readability": 0.868,
+    "interactables": 0.65,
+    "character": 0.576
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.782,
+    "clearance": 0.734,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.626,
+    "signature": 0.753,
+    "richness": 0.349,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 0,
+    "cut": 17,
+    "landmark": "ntt-docomo-yoyogi-building",
+    "typology": "building.kodate"
+   },
+   "zone": 12,
+   "name": "kodate blocks",
+   "lon": 139.706,
+   "lat": 35.68
+  },
+  {
+   "x0": 52,
+   "y0": 112,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.692,
+   "parts": {
+    "readability": 0.828,
+    "interactables": 0.65,
+    "character": 0.583
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.706,
+    "clearance": 0.926,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0.781,
+    "signature": 0.632,
+    "richness": 0.339,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 11,
+    "water": 2,
+    "burnable": 7,
+    "cut": 19,
+    "landmark": "tokyo-metropolitan-government-building",
+    "typology": "building.office"
+   },
+   "zone": 4,
+   "name": "office blocks",
+   "lon": 139.694,
+   "lat": 35.687
+  },
+  {
+   "x0": 172,
+   "y0": 444,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.692,
+   "parts": {
+    "readability": 0.908,
+    "interactables": 0.783,
+    "character": 0.333
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.797,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.104,
+    "signature": 0.563,
+    "richness": 0.336,
+    "age": 0.327
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 15,
+    "cut": 8,
+    "landmark": "shibuya-109",
+    "typology": "building.civic"
+   },
+   "zone": 27,
+   "name": "civic blocks",
+   "lon": 139.707,
+   "lat": 35.658
+  },
+  {
+   "x0": 132,
+   "y0": 352,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.688,
+   "parts": {
+    "readability": 0.883,
+    "interactables": 0.783,
+    "character": 0.35
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.674,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.09,
+    "signature": 0.615,
+    "richness": 0.369,
+    "age": 0.31
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 16,
+    "cut": 5,
+    "landmark": "shibuya-109",
+    "typology": "building.office"
+   },
+   "zone": 22,
+   "name": "office blocks near Harajuku",
+   "area": "Harajuku",
+   "lon": 139.702,
+   "lat": 35.666
+  },
+  {
+   "x0": 124,
+   "y0": 416,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.681,
+   "parts": {
+    "readability": 0.815,
+    "interactables": 0.733,
+    "character": 0.466
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.695,
+    "clearance": 0.625,
+    "water": 1,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.304,
+    "signature": 0.821,
+    "richness": 0.441,
+    "age": 0.118
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 3,
+    "water": 6,
+    "burnable": 2,
+    "cut": 24,
+    "landmark": "shibuya-109",
+    "typology": "building.zakkyo"
+   },
+   "zone": 24,
+   "name": "by the Shibuya 109",
+   "lon": 139.702,
+   "lat": 35.66
+  },
+  {
+   "x0": 32,
+   "y0": 140,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.679,
+   "parts": {
+    "readability": 0.925,
+    "interactables": 0.683,
+    "character": 0.388
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.843,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.202,
+    "signature": 0.64,
+    "richness": 0.24,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 3,
+    "cut": 7,
+    "landmark": "tokyo-metropolitan-government-building",
+    "typology": "building.tower.shinjuku"
+   },
+   "zone": 11,
+   "name": "towers",
+   "lon": 139.691,
+   "lat": 35.685
+  },
+  {
+   "x0": 148,
+   "y0": 104,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.668,
+   "parts": {
+    "readability": 0.925,
+    "interactables": 0.615,
+    "character": 0.431
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.763,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.222,
+    "signature": 0.88,
+    "richness": 0.28,
+    "age": 0.204
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 18,
+    "cut": 1,
+    "landmark": "ntt-docomo-yoyogi-building",
+    "typology": "building.kodate"
+   },
+   "zone": 5,
+   "name": "kodate blocks",
+   "lon": 139.704,
+   "lat": 35.688
+  },
+  {
+   "x0": 120,
+   "y0": 28,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.642,
+   "parts": {
+    "readability": 0.778,
+    "interactables": 0.7,
+    "character": 0.416
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.376,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.892,
+    "richness": 0.292,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 36,
+    "typology": "building.zakkyo"
+   },
+   "zone": 2,
+   "name": "zakkyo blocks",
+   "lon": 139.702,
+   "lat": 35.695
+  },
+  {
+   "x0": 44,
+   "y0": 144,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.642,
+   "parts": {
+    "readability": 0.914,
+    "interactables": 0.583,
+    "character": 0.392
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.83,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.184,
+    "signature": 0.534,
+    "richness": 0.408,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 15,
+    "cut": 9,
+    "landmark": "tokyo-metropolitan-government-building",
+    "typology": "building.zakkyo"
+   },
+   "zone": 10,
+   "name": "zakkyo blocks",
+   "lon": 139.693,
+   "lat": 35.685
+  },
+  {
+   "x0": 108,
+   "y0": 124,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.626,
+   "parts": {
+    "readability": 0.856,
+    "interactables": 0.65,
+    "character": 0.33
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.668,
+    "clearance": 0.824,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.265,
+    "signature": 0.235,
+    "richness": 0.421,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 1,
+    "cut": 45,
+    "landmark": "ntt-docomo-yoyogi-building",
+    "typology": "building.tower"
+   },
+   "zone": 7,
+   "name": "towers",
+   "lon": 139.7,
+   "lat": 35.686
+  },
+  {
+   "x0": 144,
+   "y0": 428,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.623,
+   "parts": {
+    "readability": 0.851,
+    "interactables": 0.6,
+    "character": 0.385
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.653,
+    "clearance": 0.895,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.209,
+    "signature": 0.534,
+    "richness": 0.349,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 3,
+    "cut": 27,
+    "landmark": "shibuya-109",
+    "typology": "building.zakkyo"
+   },
+   "zone": 28,
+   "name": "zakkyo blocks",
+   "lon": 139.704,
+   "lat": 35.659
+  },
+  {
+   "x0": 84,
+   "y0": 412,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.613,
+   "parts": {
+    "readability": 0.836,
+    "interactables": 0.383,
+    "character": 0.621
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.57,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.865,
+    "signature": 0.784,
+    "richness": 0.207,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 0,
+    "cut": 9,
+    "landmark": "shibuya-109",
+    "typology": "building.zakkyo"
+   },
+   "zone": 26,
+   "name": "by the Shibuya 109",
+   "lon": 139.697,
+   "lat": 35.661
+  },
+  {
+   "x0": 168,
+   "y0": 44,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.604,
+   "parts": {
+    "readability": 0.924,
+    "interactables": 0.517,
+    "character": 0.333
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.777,
+    "clearance": 0.965,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.713,
+    "richness": 0.335,
+    "age": 0.237
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 9,
+    "typology": "building.zakkyo"
+   },
+   "zone": 3,
+   "name": "zakkyo blocks",
+   "lon": 139.707,
+   "lat": 35.693
+  },
+  {
+   "x0": 184,
+   "y0": 380,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.589,
+   "parts": {
+    "readability": 0.829,
+    "interactables": 0.533,
+    "character": 0.373
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.453,
+    "clearance": 0.973,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.019,
+    "signature": 0.765,
+    "richness": 0.346,
+    "age": 0.339
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 2,
+    "cut": 7,
+    "landmark": "shibuya-109",
+    "typology": "building.zakkyo.quiet"
+   },
+   "zone": 20,
+   "name": "zakkyo blocks",
+   "lon": 139.709,
+   "lat": 35.663
+  },
+  {
+   "x0": 48,
+   "y0": 448,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.587,
+   "parts": {
+    "readability": 0.817,
+    "interactables": 0.517,
+    "character": 0.401
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.625,
+    "clearance": 0.719,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.165,
+    "signature": 0.837,
+    "richness": 0.277,
+    "age": 0.208
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 4,
+    "cut": 18,
+    "landmark": "shibuya-109",
+    "typology": "building.kodate"
+   },
+   "zone": 25,
+   "name": "kodate blocks",
+   "lon": 139.693,
+   "lat": 35.657
+  },
+  {
+   "x0": 136,
+   "y0": 300,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.587,
+   "parts": {
+    "readability": 0.868,
+    "interactables": 0.333,
+    "character": 0.554
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.59,
+    "clearance": 0.965,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.693,
+    "signature": 0.778,
+    "richness": 0.294,
+    "age": 0.262
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 2,
+    "cut": 9,
+    "landmark": "meiji-jingu-otorii",
+    "typology": "building.zakkyo"
+   },
+   "zone": 17,
+   "name": "Harajuku",
+   "area": "Harajuku",
+   "lon": 139.703,
+   "lat": 35.67
+  },
+  {
+   "x0": 108,
+   "y0": 240,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.449,
+   "parts": {
+    "readability": 0.936,
+    "interactables": 0.217,
+    "character": 0.152
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.788,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0.319,
+    "signature": 0.13,
+    "richness": 0,
+    "age": 0.115
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 38,
+    "cut": 0,
+    "landmark": "meiji-jingu-otorii",
+    "typology": "building.shrine"
+   },
+   "zone": 13,
+   "name": "by the Meiji Jingu Otorii",
+   "area": "Harajuku",
+   "lon": 139.7,
+   "lat": 35.676
+  },
+  {
+   "x0": 88,
+   "y0": 352,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.433,
+   "parts": {
+    "readability": 0.73,
+    "interactables": 0.415,
+    "character": 0.108
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.679,
+    "clearance": 0.305,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.13,
+    "signature": 0.046,
+    "richness": 0.165,
+    "age": 0.097
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 18,
+    "cut": 178,
+    "landmark": "shibuya-109",
+    "typology": "building.commercial"
+   },
+   "zone": 19,
+   "name": "commercial blocks near Harajuku",
+   "area": "Harajuku",
+   "lon": 139.698,
+   "lat": 35.666
+  }
+ ],
+ "references": [
+  {
+   "name": "Harajuku",
+   "score": 0.659,
+   "rank": 0.042
+  }
+ ]
+}

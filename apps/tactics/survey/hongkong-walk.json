@@ -1,0 +1,975 @@
+{
+ "world": "hongkong-walk",
+ "zoning": "character",
+ "zones": 29,
+ "candidates": 9496,
+ "passed": 1128,
+ "sites": [
+  {
+   "x0": 172,
+   "y0": 376,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.767,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.85,
+    "character": 0.521
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.801,
+    "clearance": 0.82,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.455,
+    "richness": 0.279,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 46,
+    "landmark": "the-peninsula",
+    "typology": "building.commercial"
+   },
+   "zone": 23,
+   "name": "by The Peninsula",
+   "area": "Tsim Sha Tsui",
+   "lon": 114.173,
+   "lat": 22.295
+  },
+  {
+   "x0": 24,
+   "y0": 308,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.715,
+   "parts": {
+    "readability": 0.932,
+    "interactables": 0.85,
+    "character": 0.303
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.773,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.304,
+    "signature": 0.302,
+    "richness": 0.185,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 9,
+    "cut": 0,
+    "landmark": "international-commerce-centre",
+    "typology": "building.commercial"
+   },
+   "zone": 18,
+   "name": "by the International Commerce Centre",
+   "lon": 114.159,
+   "lat": 22.302
+  },
+  {
+   "x0": 124,
+   "y0": 136,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.691,
+   "parts": {
+    "readability": 0.855,
+    "interactables": 0.8,
+    "character": 0.373
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.7,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.804,
+    "richness": 0.225,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 5,
+    "cut": 14,
+    "typology": "building.tonglau"
+   },
+   "zone": 10,
+   "name": "Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.168,
+   "lat": 22.317
+  },
+  {
+   "x0": 160,
+   "y0": 352,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.689,
+   "parts": {
+    "readability": 0.843,
+    "interactables": 0.633,
+    "character": 0.576
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.775,
+    "clearance": 0.641,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.645,
+    "signature": 0.797,
+    "richness": 0.272,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 23,
+    "landmark": "tsim-sha-tsui-clock-tower",
+    "typology": "building.composite"
+   },
+   "zone": 23,
+   "name": "Tsim Sha Tsui",
+   "area": "Tsim Sha Tsui",
+   "lon": 114.172,
+   "lat": 22.298
+  },
+  {
+   "x0": 112,
+   "y0": 140,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.683,
+   "parts": {
+    "readability": 0.886,
+    "interactables": 0.717,
+    "character": 0.408
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.854,
+    "clearance": 0.719,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.933,
+    "richness": 0.213,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 18,
+    "typology": "building.tonglau"
+   },
+   "zone": 10,
+   "name": "Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.167,
+   "lat": 22.317
+  },
+  {
+   "x0": 140,
+   "y0": 376,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.648,
+   "parts": {
+    "readability": 0.788,
+    "interactables": 0.6,
+    "character": 0.541
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.532,
+    "clearance": 0.715,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.8,
+    "signature": 0.538,
+    "richness": 0.256,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 4,
+    "cut": 73,
+    "landmark": "hong-kong-cultural-centre",
+    "typology": "building.commercial"
+   },
+   "zone": 23,
+   "name": "by the Hong Kong Cultural Centre",
+   "area": "Tsim Sha Tsui",
+   "lon": 114.17,
+   "lat": 22.295
+  },
+  {
+   "x0": 128,
+   "y0": 188,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.648,
+   "parts": {
+    "readability": 0.822,
+    "interactables": 0.683,
+    "character": 0.403
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.539,
+    "clearance": 0.84,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.82,
+    "richness": 0.328,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 3,
+    "cut": 41,
+    "typology": "building.tonglau"
+   },
+   "zone": 15,
+   "name": "tonglau blocks near Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.169,
+   "lat": 22.312
+  },
+  {
+   "x0": 180,
+   "y0": 292,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.644,
+   "parts": {
+    "readability": 0.821,
+    "interactables": 0.733,
+    "character": 0.334
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.807,
+    "clearance": 0.516,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.033,
+    "signature": 0.713,
+    "richness": 0.288,
+    "age": 0.256
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 2,
+    "cut": 31,
+    "landmark": "the-peninsula",
+    "typology": "building.tonglau"
+   },
+   "zone": 19,
+   "name": "tonglau blocks near Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.174,
+   "lat": 22.303
+  },
+  {
+   "x0": 172,
+   "y0": 128,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.626,
+   "parts": {
+    "readability": 0.859,
+    "interactables": 0.633,
+    "character": 0.345
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.829,
+    "clearance": 0.641,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.706,
+    "richness": 0.233,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 23,
+    "typology": "building.tonglau"
+   },
+   "zone": 8,
+   "name": "Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.173,
+   "lat": 22.318
+  },
+  {
+   "x0": 96,
+   "y0": 228,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.623,
+   "parts": {
+    "readability": 0.951,
+    "interactables": 0.583,
+    "character": 0.286
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.838,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.062,
+    "signature": 0.785,
+    "richness": 0.129,
+    "age": 0
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 4,
+    "cut": 0,
+    "landmark": "international-commerce-centre",
+    "typology": "building.tower.residential"
+   },
+   "zone": 13,
+   "name": "towers near Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.166,
+   "lat": 22.309
+  },
+  {
+   "x0": 36,
+   "y0": 92,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.622,
+   "parts": {
+    "readability": 0.755,
+    "interactables": 0.7,
+    "character": 0.374
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.611,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.784,
+    "richness": 0.256,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 4,
+    "cut": 16,
+    "typology": "building.estate"
+   },
+   "zone": 5,
+   "name": "estate blocks",
+   "lon": 114.16,
+   "lat": 22.321
+  },
+  {
+   "x0": 160,
+   "y0": 168,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.617,
+   "parts": {
+    "readability": 0.845,
+    "interactables": 0.7,
+    "character": 0.256
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.638,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.387,
+    "richness": 0.259,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 12,
+    "cut": 48,
+    "typology": "building.commercial"
+   },
+   "zone": 14,
+   "name": "commercial blocks near Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.172,
+   "lat": 22.314
+  },
+  {
+   "x0": 68,
+   "y0": 264,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.616,
+   "parts": {
+    "readability": 0.82,
+    "interactables": 0.633,
+    "character": 0.358
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.748,
+    "clearance": 0.844,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.244,
+    "signature": 0.877,
+    "richness": 0.028,
+    "age": 0.1
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 4,
+    "cut": 10,
+    "landmark": "international-commerce-centre",
+    "typology": "building.tower.residential"
+   },
+   "zone": 17,
+   "name": "towers near Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.163,
+   "lat": 22.306
+  },
+  {
+   "x0": 16,
+   "y0": 124,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.608,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.733,
+    "character": 0.14
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.615,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.235,
+    "richness": 0.224,
+    "age": 0.088
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 11,
+    "cut": 0,
+    "typology": "building.tower.residential"
+   },
+   "zone": 9,
+   "name": "towers",
+   "lon": 114.158,
+   "lat": 22.318
+  },
+  {
+   "x0": 64,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.605,
+   "parts": {
+    "readability": 0.871,
+    "interactables": 0.6,
+    "character": 0.302
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.647,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.545,
+    "richness": 0.253,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 16,
+    "cut": 6,
+    "typology": "building.tonglau"
+   },
+   "zone": 1,
+   "name": "tonglau blocks",
+   "lon": 114.163,
+   "lat": 22.325
+  },
+  {
+   "x0": 72,
+   "y0": 132,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.603,
+   "parts": {
+    "readability": 0.91,
+    "interactables": 0.633,
+    "character": 0.21
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.745,
+    "clearance": 0.945,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.419,
+    "richness": 0.249,
+    "age": 0.146
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 10,
+    "cut": 14,
+    "typology": "building.tower.residential"
+   },
+   "zone": 9,
+   "name": "towers near Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.164,
+   "lat": 22.317
+  },
+  {
+   "x0": 52,
+   "y0": 296,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.579,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.317,
+    "character": 0.517
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.673,
+    "clearance": 0.973,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.88,
+    "signature": 0.8,
+    "richness": 0.054,
+    "age": 0
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 1,
+    "cut": 7,
+    "landmark": "international-commerce-centre",
+    "typology": "building.tower.residential"
+   },
+   "zone": 18,
+   "name": "by the International Commerce Centre",
+   "lon": 114.162,
+   "lat": 22.303
+  },
+  {
+   "x0": 192,
+   "y0": 292,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.777,
+    "interactables": 0.6,
+    "character": 0.305
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.803,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.019,
+    "signature": 0.54,
+    "richness": 0.248,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 11,
+    "cut": 1,
+    "landmark": "the-peninsula",
+    "typology": "building.commercial"
+   },
+   "zone": 20,
+   "name": "commercial blocks near Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.175,
+   "lat": 22.303
+  },
+  {
+   "x0": 128,
+   "y0": 276,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.553,
+   "parts": {
+    "readability": 0.928,
+    "interactables": 0.31,
+    "character": 0.399
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.787,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 0.625,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0.043,
+    "signature": 0.819,
+    "richness": 0.259,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 22,
+    "cut": 2,
+    "landmark": "international-commerce-centre",
+    "typology": "building.tonglau"
+   },
+   "zone": 15,
+   "name": "Yau Ma Tei",
+   "area": "Yau Ma Tei",
+   "lon": 114.169,
+   "lat": 22.305
+  },
+  {
+   "x0": 156,
+   "y0": 88,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.548,
+   "parts": {
+    "readability": 0.856,
+    "interactables": 0.417,
+    "character": 0.341
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.558,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.692,
+    "richness": 0.278,
+    "age": 0.428
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 3,
+    "cut": 12,
+    "typology": "building.tonglau"
+   },
+   "zone": 4,
+   "name": "Mong Kok",
+   "area": "Mong Kok",
+   "lon": 114.172,
+   "lat": 22.321
+  },
+  {
+   "x0": 196,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.526,
+   "parts": {
+    "readability": 0.661,
+    "interactables": 0.583,
+    "character": 0.301
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.869,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.545,
+    "richness": 0.248,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 0,
+    "cut": 12,
+    "typology": "building.residential"
+   },
+   "zone": 2,
+   "name": "residential blocks",
+   "lon": 114.175,
+   "lat": 22.325
+  },
+  {
+   "x0": 204,
+   "y0": 64,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.509,
+   "parts": {
+    "readability": 0.935,
+    "interactables": 0.45,
+    "character": 0.082
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.809,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.134,
+    "richness": 0.127,
+    "age": 0.067
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 10,
+    "cut": 2,
+    "typology": "building.residential"
+   },
+   "zone": 6,
+   "name": "residential blocks",
+   "lon": 114.176,
+   "lat": 22.324
+  }
+ ],
+ "references": [
+  {
+   "name": "Mong Kok",
+   "score": 0.51,
+   "rank": 0.584
+  },
+  {
+   "name": "Tsim Sha Tsui",
+   "score": 0.68,
+   "rank": 0.008
+  },
+  {
+   "name": "Yau Ma Tei",
+   "score": 0.607,
+   "rank": 0.131
+  }
+ ]
+}

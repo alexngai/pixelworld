@@ -1,0 +1,1059 @@
+{
+ "world": "kyoto-walk",
+ "zoning": "character",
+ "zones": 28,
+ "candidates": 9622,
+ "passed": 1129,
+ "sites": [
+  {
+   "x0": 184,
+   "y0": 56,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.729,
+   "parts": {
+    "readability": 0.904,
+    "interactables": 0.667,
+    "character": 0.596
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.68,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.631,
+    "signature": 0.732,
+    "richness": 0.582,
+    "age": 0.276
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 2,
+    "water": 9,
+    "burnable": 7,
+    "cut": 0,
+    "landmark": "yasaka-shrine-west-gate",
+    "typology": "building.machiya"
+   },
+   "zone": 7,
+   "name": "Pontochō",
+   "area": "Pontochō",
+   "lon": 135.773,
+   "lat": 35.007
+  },
+  {
+   "x0": 44,
+   "y0": 228,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.722,
+   "parts": {
+    "readability": 0.944,
+    "interactables": 0.583,
+    "character": 0.624
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.813,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.744,
+    "signature": 0.667,
+    "richness": 0.576,
+    "age": 0.378
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 9,
+    "cut": 0,
+    "landmark": "kyoto-tower",
+    "typology": "building.temple"
+   },
+   "zone": 22,
+   "name": "temple blocks",
+   "lon": 135.758,
+   "lat": 34.991
+  },
+  {
+   "x0": 176,
+   "y0": 104,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.713,
+   "parts": {
+    "readability": 0.902,
+    "interactables": 0.733,
+    "character": 0.47
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.673,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.289,
+    "signature": 0.592,
+    "richness": 0.566,
+    "age": 0.43
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 2,
+    "water": 3,
+    "burnable": 10,
+    "cut": 0,
+    "landmark": "gion-torii-west",
+    "typology": "building.machiya"
+   },
+   "zone": 7,
+   "name": "by the Gion Torii",
+   "area": "Pontochō",
+   "lon": 135.772,
+   "lat": 35.002
+  },
+  {
+   "x0": 236,
+   "y0": 56,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.678,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.467,
+    "character": 0.597
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.874,
+    "clearance": 0.992,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.783,
+    "signature": 0.571,
+    "richness": 0.603,
+    "age": 0.267
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 15,
+    "cut": 2,
+    "landmark": "chion-in-sanmon",
+    "typology": "building.residential"
+   },
+   "zone": 3,
+   "name": "residential blocks near Gion",
+   "area": "Gion",
+   "lon": 135.779,
+   "lat": 35.006
+  },
+  {
+   "x0": 144,
+   "y0": 264,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.675,
+   "parts": {
+    "readability": 0.915,
+    "interactables": 0.667,
+    "character": 0.406
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.715,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.07,
+    "signature": 0.706,
+    "richness": 0.543,
+    "age": 0.25
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 6,
+    "water": 7,
+    "burnable": 11,
+    "cut": 0,
+    "landmark": "kyoto-tower",
+    "typology": "building.machiya"
+   },
+   "zone": 26,
+   "name": "machiya blocks",
+   "lon": 135.768,
+   "lat": 34.988
+  },
+  {
+   "x0": 156,
+   "y0": 124,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.663,
+   "parts": {
+    "readability": 0.92,
+    "interactables": 0.517,
+    "character": 0.534
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.735,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0.304,
+    "signature": 0.901,
+    "richness": 0.449,
+    "age": 0.403
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 8,
+    "water": 6,
+    "burnable": 10,
+    "cut": 0,
+    "landmark": "gion-torii-west",
+    "typology": "building.midrise"
+   },
+   "zone": 14,
+   "name": "by the Gion Torii",
+   "area": "Shijō-Kawaramachi",
+   "lon": 135.77,
+   "lat": 35
+  },
+  {
+   "x0": 104,
+   "y0": 236,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.659,
+   "parts": {
+    "readability": 0.854,
+    "interactables": 0.698,
+    "character": 0.386
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.645,
+    "clearance": 0.844,
+    "water": 1,
+    "fire": 0.875,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.187,
+    "signature": 0.427,
+    "richness": 0.604,
+    "age": 0.338
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 3,
+    "water": 12,
+    "burnable": 18,
+    "cut": 10,
+    "landmark": "kyoto-tower",
+    "typology": "building.residential"
+   },
+   "zone": 23,
+   "name": "residential blocks",
+   "lon": 135.764,
+   "lat": 34.99
+  },
+  {
+   "x0": 28,
+   "y0": 92,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.656,
+   "parts": {
+    "readability": 0.781,
+    "interactables": 0.783,
+    "character": 0.363
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.71,
+    "clearance": 0.547,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.593,
+    "richness": 0.507,
+    "age": 0.386
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 4,
+    "cut": 29,
+    "typology": "building.residential"
+   },
+   "zone": 10,
+   "name": "residential blocks",
+   "lon": 135.755,
+   "lat": 35.003
+  },
+  {
+   "x0": 92,
+   "y0": 24,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.654,
+   "parts": {
+    "readability": 0.825,
+    "interactables": 0.683,
+    "character": 0.42
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.582,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.807,
+    "richness": 0.522,
+    "age": 0.319
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 8,
+    "typology": "building.midrise"
+   },
+   "zone": 1,
+   "name": "midrise blocks",
+   "lon": 135.763,
+   "lat": 35.01
+  },
+  {
+   "x0": 52,
+   "y0": 252,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.649,
+   "parts": {
+    "readability": 0.939,
+    "interactables": 0.317,
+    "character": 0.698
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.826,
+    "clearance": 0.965,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.912,
+    "signature": 0.731,
+    "richness": 0.57,
+    "age": 0.417
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 0,
+    "cut": 9,
+    "landmark": "kyoto-tower",
+    "typology": "building.midrise"
+   },
+   "zone": 22,
+   "name": "by the Kyoto Tower",
+   "lon": 135.759,
+   "lat": 34.989
+  },
+  {
+   "x0": 24,
+   "y0": 168,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.647,
+   "parts": {
+    "readability": 0.822,
+    "interactables": 0.683,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.794,
+    "clearance": 0.797,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.657,
+    "richness": 0.487,
+    "age": 0.54
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 4,
+    "cut": 13,
+    "typology": "building.residential"
+   },
+   "zone": 10,
+   "name": "residential blocks",
+   "lon": 135.755,
+   "lat": 34.997
+  },
+  {
+   "x0": 236,
+   "y0": 92,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.645,
+   "parts": {
+    "readability": 0.924,
+    "interactables": 0.517,
+    "character": 0.47
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.747,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.465,
+    "richness": 0.33,
+    "age": 0.053
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 13,
+    "cut": 0,
+    "landmark": "yasaka-shrine-west-gate",
+    "typology": "building.midrise"
+   },
+   "zone": 9,
+   "name": "by the Yasaka Shrine West Gate",
+   "area": "Gion",
+   "lon": 135.778,
+   "lat": 35.003
+  },
+  {
+   "x0": 216,
+   "y0": 180,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.634,
+   "parts": {
+    "readability": 0.884,
+    "interactables": 0.517,
+    "character": 0.478
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.613,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.22,
+    "signature": 0.817,
+    "richness": 0.535,
+    "age": 0.22
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "landmark": "yasaka-pagoda",
+    "typology": "building.house.gabled"
+   },
+   "zone": 19,
+   "name": "house blocks",
+   "lon": 135.776,
+   "lat": 34.995
+  },
+  {
+   "x0": 48,
+   "y0": 168,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.633,
+   "parts": {
+    "readability": 0.75,
+    "interactables": 0.683,
+    "character": 0.437
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.66,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.872,
+    "richness": 0.465,
+    "age": 0.393
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 4,
+    "cut": 9,
+    "typology": "building.midrise"
+   },
+   "zone": 17,
+   "name": "midrise blocks",
+   "lon": 135.758,
+   "lat": 34.997
+  },
+  {
+   "x0": 276,
+   "y0": 184,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.616,
+   "parts": {
+    "readability": 0.961,
+    "interactables": 0.292,
+    "character": 0.591
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.869,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.5,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0.8,
+    "signature": 0.606,
+    "richness": 0.499,
+    "age": 0.294
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 24,
+    "cut": 0,
+    "landmark": "kiyomizu-dera-pagoda",
+    "typology": "building.midrise"
+   },
+   "zone": 15,
+   "name": "by the Kiyomizu Dera Pagoda",
+   "lon": 135.783,
+   "lat": 34.995
+  },
+  {
+   "x0": 252,
+   "y0": 108,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.612,
+   "parts": {
+    "readability": 0.857,
+    "interactables": 0.517,
+    "character": 0.437
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.577,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.279,
+    "signature": 0.653,
+    "richness": 0.494,
+    "age": 0.227
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 15,
+    "cut": 4,
+    "landmark": "yasaka-shrine-west-gate",
+    "typology": "building.house.gabled"
+   },
+   "zone": 9,
+   "name": "house blocks near Gion",
+   "area": "Gion",
+   "lon": 135.78,
+   "lat": 35.002
+  },
+  {
+   "x0": 80,
+   "y0": 48,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.602,
+   "parts": {
+    "readability": 0.847,
+    "interactables": 0.533,
+    "character": 0.397
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.603,
+    "clearance": 0.863,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.708,
+    "richness": 0.493,
+    "age": 0.406
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 11,
+    "cut": 35,
+    "typology": "building.midrise"
+   },
+   "zone": 5,
+   "name": "midrise blocks near Shijō-Kawaramachi",
+   "area": "Shijō-Kawaramachi",
+   "lon": 135.762,
+   "lat": 35.007
+  },
+  {
+   "x0": 260,
+   "y0": 180,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.593,
+   "parts": {
+    "readability": 0.949,
+    "interactables": 0.367,
+    "character": 0.441
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.894,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.292,
+    "signature": 0.689,
+    "richness": 0.449,
+    "age": 0.232
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 0,
+    "cut": 5,
+    "landmark": "kiyomizu-dera-pagoda",
+    "typology": "building.house.gabled"
+   },
+   "zone": 15,
+   "name": "by the Kiyomizu Dera Pagoda",
+   "lon": 135.781,
+   "lat": 34.995
+  },
+  {
+   "x0": 144,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.578,
+   "parts": {
+    "readability": 0.841,
+    "interactables": 0.483,
+    "character": 0.381
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.602,
+    "clearance": 0.844,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.052,
+    "signature": 0.66,
+    "richness": 0.462,
+    "age": 0.347
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 3,
+    "cut": 10,
+    "landmark": "gion-torii-west",
+    "typology": "building.midrise"
+   },
+   "zone": 1,
+   "name": "Pontochō",
+   "area": "Pontochō",
+   "lon": 135.768,
+   "lat": 35.007
+  },
+  {
+   "x0": 20,
+   "y0": 68,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.576,
+   "parts": {
+    "readability": 0.592,
+    "interactables": 0.683,
+    "character": 0.434
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.574,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.785,
+    "richness": 0.579,
+    "age": 0.355
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 8,
+    "cut": 7,
+    "typology": "building.midrise"
+   },
+   "zone": 0,
+   "name": "midrise blocks",
+   "lon": 135.755,
+   "lat": 35.006
+  },
+  {
+   "x0": 240,
+   "y0": 176,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.719,
+    "interactables": 0.517,
+    "character": 0.47
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.648,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.276,
+    "signature": 0.692,
+    "richness": 0.509,
+    "age": 0.351
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 12,
+    "cut": 16,
+    "landmark": "yasaka-pagoda",
+    "typology": "building.house.gabled"
+   },
+   "zone": 19,
+   "name": "house blocks",
+   "lon": 135.779,
+   "lat": 34.996
+  },
+  {
+   "x0": 272,
+   "y0": 140,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.567,
+   "parts": {
+    "readability": 0.926,
+    "interactables": 0.32,
+    "character": 0.437
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.753,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.688,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.654,
+    "signature": 0.606,
+    "richness": 0.204,
+    "age": 0.054
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 21,
+    "cut": 0,
+    "landmark": "jishu-jinja-torii",
+    "typology": "building.house.gabled"
+   },
+   "zone": 15,
+   "name": "house blocks",
+   "lon": 135.782,
+   "lat": 34.999
+  },
+  {
+   "x0": 248,
+   "y0": 240,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.554,
+   "parts": {
+    "readability": 0.802,
+    "interactables": 0.517,
+    "character": 0.309
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.73,
+    "clearance": 0.531,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.128,
+    "signature": 0.439,
+    "richness": 0.448,
+    "age": 0.183
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 13,
+    "cut": 30,
+    "landmark": "kiyomizu-dera-pagoda",
+    "typology": "building.residential"
+   },
+   "zone": 24,
+   "name": "residential blocks",
+   "lon": 135.78,
+   "lat": 34.99
+  },
+  {
+   "x0": 24,
+   "y0": 108,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.552,
+   "parts": {
+    "readability": 0.652,
+    "interactables": 0.583,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.371,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.686,
+    "richness": 0.572,
+    "age": 0.344
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 9,
+    "cut": 12,
+    "typology": "building.midrise"
+   },
+   "zone": 10,
+   "name": "midrise blocks",
+   "lon": 135.755,
+   "lat": 35.002
+  }
+ ],
+ "references": [
+  {
+   "name": "Pontochō",
+   "score": 0.722,
+   "rank": 0.005
+  },
+  {
+   "name": "Gion",
+   "score": 0.586,
+   "rank": 0.408
+  },
+  {
+   "name": "Shijō-Kawaramachi",
+   "score": 0.653,
+   "rank": 0.092
+  }
+ ]
+}

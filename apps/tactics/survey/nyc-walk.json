@@ -1,0 +1,8291 @@
+{
+ "world": "nyc-walk",
+ "zoning": "character",
+ "zones": 192,
+ "candidates": 80810,
+ "passed": 11069,
+ "sites": [
+  {
+   "x0": 244,
+   "y0": 972,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.757,
+   "parts": {
+    "readability": 0.944,
+    "interactables": 0.913,
+    "character": 0.357
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.876,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0.75,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.167,
+    "signature": 0.362,
+    "richness": 0.22,
+    "age": 0.954
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 10,
+    "water": 9,
+    "burnable": 20,
+    "cut": 0,
+    "landmark": "manhattan-bridge",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 163,
+   "name": "commercial blocks",
+   "lon": -73.99,
+   "lat": 40.704
+  },
+  {
+   "x0": 404,
+   "y0": 516,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.754,
+   "parts": {
+    "readability": 0.979,
+    "interactables": 0.933,
+    "character": 0.281
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.93,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.073,
+    "signature": 0.3,
+    "richness": 0.348,
+    "age": 0.55
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 6,
+    "water": 7,
+    "burnable": 8,
+    "cut": 0,
+    "landmark": "chrysler-building",
+    "typology": "building.tower.glass"
+   },
+   "zone": 85,
+   "name": "towers",
+   "lon": -73.971,
+   "lat": 40.745
+  },
+  {
+   "x0": 432,
+   "y0": 868,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.738,
+   "parts": {
+    "readability": 0.953,
+    "interactables": 0.85,
+    "character": 0.357
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.844,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.253,
+    "signature": 0.413,
+    "richness": 0.261,
+    "age": 0.614
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 6,
+    "burnable": 3,
+    "cut": 0,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.tower.glass"
+   },
+   "zone": 144,
+   "name": "towers",
+   "lon": -73.968,
+   "lat": 40.713
+  },
+  {
+   "x0": 540,
+   "y0": 400,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.732,
+   "parts": {
+    "readability": 0.98,
+    "interactables": 0.8,
+    "character": 0.361
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.934,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.047,
+    "richness": 0.129,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 11,
+    "burnable": 14,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.commercial"
+   },
+   "zone": 70,
+   "name": "by the Queensboro Bridge",
+   "lon": -73.955,
+   "lat": 40.755
+  },
+  {
+   "x0": 64,
+   "y0": 776,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.728,
+   "parts": {
+    "readability": 0.927,
+    "interactables": 0.867,
+    "character": 0.334
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.842,
+    "clearance": 0.898,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.018,
+    "signature": 0.45,
+    "richness": 0.4,
+    "age": 0.625
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 12,
+    "cut": 26,
+    "landmark": "one-world-trade-center",
+    "typology": "building.tower.postmodern"
+   },
+   "zone": 122,
+   "name": "towers near SoHo",
+   "area": "SoHo",
+   "lon": -74.011,
+   "lat": 40.721
+  },
+  {
+   "x0": 544,
+   "y0": 376,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.721,
+   "parts": {
+    "readability": 0.928,
+    "interactables": 0.774,
+    "character": 0.416
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.864,
+    "clearance": 0.875,
+    "water": 1,
+    "fire": 0.938,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.6,
+    "signature": 0.215,
+    "richness": 0.387,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 6,
+    "water": 10,
+    "burnable": 17,
+    "cut": 32,
+    "landmark": "queensboro-bridge",
+    "typology": "building.commercial"
+   },
+   "zone": 57,
+   "name": "by the Queensboro Bridge",
+   "lon": -73.955,
+   "lat": 40.757
+  },
+  {
+   "x0": 272,
+   "y0": 456,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.72,
+   "parts": {
+    "readability": 0.738,
+    "interactables": 0.8,
+    "character": 0.606
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.72,
+    "clearance": 0.289,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.838,
+    "signature": 0.452,
+    "richness": 0.371,
+    "age": 0.843
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 2,
+    "cut": 182,
+    "landmark": "empire-state-building",
+    "typology": "building.tower.deco"
+   },
+   "zone": 76,
+   "name": "by the Empire State Building",
+   "lon": -73.987,
+   "lat": 40.75
+  },
+  {
+   "x0": 20,
+   "y0": 848,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.718,
+   "parts": {
+    "readability": 0.932,
+    "interactables": 0.722,
+    "character": 0.463
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.797,
+    "clearance": 0.973,
+    "water": 1,
+    "fire": 0.813,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.769,
+    "signature": 0.359,
+    "richness": 0.198,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 8,
+    "burnable": 19,
+    "cut": 7,
+    "landmark": "one-world-trade-center",
+    "typology": "building.tower.postmodern"
+   },
+   "zone": 140,
+   "name": "towers",
+   "lon": -74.017,
+   "lat": 40.715
+  },
+  {
+   "x0": 272,
+   "y0": 968,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.717,
+   "parts": {
+    "readability": 0.931,
+    "interactables": 0.867,
+    "character": 0.292
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.875,
+    "clearance": 0.875,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.156,
+    "signature": 0.323,
+    "richness": 0.185,
+    "age": 0.682
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 13,
+    "cut": 8,
+    "landmark": "manhattan-bridge",
+    "typology": "building.commercial"
+   },
+   "zone": 163,
+   "name": "commercial blocks",
+   "lon": -73.987,
+   "lat": 40.705
+  },
+  {
+   "x0": 276,
+   "y0": 592,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.712,
+   "parts": {
+    "readability": 0.899,
+    "interactables": 0.633,
+    "character": 0.586
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.844,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.751,
+    "signature": 0.369,
+    "richness": 0.427,
+    "age": 0.958
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 15,
+    "cut": 14,
+    "landmark": "flatiron-building",
+    "typology": "building.brownstone"
+   },
+   "zone": 100,
+   "name": "brownstone blocks",
+   "lon": -73.987,
+   "lat": 40.738
+  },
+  {
+   "x0": 60,
+   "y0": 908,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.711,
+   "parts": {
+    "readability": 0.927,
+    "interactables": 0.75,
+    "character": 0.413
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.755,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.259,
+    "signature": 0.281,
+    "richness": 0.478,
+    "age": 0.875
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "landmark": "one-world-trade-center",
+    "typology": "building.commercial"
+   },
+   "zone": 154,
+   "name": "commercial blocks near the Financial District",
+   "area": "the Financial District",
+   "lon": -74.012,
+   "lat": 40.71
+  },
+  {
+   "x0": 92,
+   "y0": 976,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.709,
+   "parts": {
+    "readability": 0.914,
+    "interactables": 0.85,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.712,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.002,
+    "signature": 0.425,
+    "richness": 0.395,
+    "age": 0.515
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 7,
+    "water": 3,
+    "burnable": 2,
+    "cut": 0,
+    "landmark": "woolworth-building",
+    "typology": "building.tower.postmodern"
+   },
+   "zone": 169,
+   "name": "towers near the Financial District",
+   "area": "the Financial District",
+   "lon": -74.008,
+   "lat": 40.703
+  },
+  {
+   "x0": 492,
+   "y0": 280,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.705,
+   "parts": {
+    "readability": 0.849,
+    "interactables": 0.8,
+    "character": 0.427
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.613,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.713,
+    "richness": 0.267,
+    "age": 0.976
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 12,
+    "cut": 9,
+    "typology": "building.brownstone"
+   },
+   "zone": 52,
+   "name": "brownstone blocks",
+   "lon": -73.961,
+   "lat": 40.766
+  },
+  {
+   "x0": 240,
+   "y0": 900,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.692,
+   "parts": {
+    "readability": 0.7,
+    "interactables": 0.9,
+    "character": 0.439
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.844,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.085,
+    "richness": 0.396,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 15,
+    "water": 3,
+    "burnable": 14,
+    "cut": 0,
+    "landmark": "manhattan-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 157,
+   "name": "by the Manhattan Bridge",
+   "lon": -73.991,
+   "lat": 40.71
+  },
+  {
+   "x0": 568,
+   "y0": 276,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.691,
+   "parts": {
+    "readability": 0.933,
+    "interactables": 0.783,
+    "character": 0.3
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.802,
+    "clearance": 0.969,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.304,
+    "richness": 0.428,
+    "age": 0.682
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 5,
+    "cut": 8,
+    "typology": "building.residential"
+   },
+   "zone": 47,
+   "name": "residential blocks",
+   "lon": -73.952,
+   "lat": 40.766
+  },
+  {
+   "x0": 96,
+   "y0": 568,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.688,
+   "parts": {
+    "readability": 0.888,
+    "interactables": 0.75,
+    "character": 0.383
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.696,
+    "clearance": 0.918,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.469,
+    "richness": 0.442,
+    "age": 0.882
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 6,
+    "cut": 21,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 93,
+   "name": "commercial blocks",
+   "lon": -74.008,
+   "lat": 40.74
+  },
+  {
+   "x0": 216,
+   "y0": 396,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.688,
+   "parts": {
+    "readability": 0.9,
+    "interactables": 0.733,
+    "character": 0.386
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.85,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.656,
+    "richness": 0.247,
+    "age": 0.852
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 6,
+    "cut": 14,
+    "typology": "building.tenement"
+   },
+   "zone": 69,
+   "name": "tenement blocks near Midtown",
+   "area": "Midtown",
+   "lon": -73.994,
+   "lat": 40.756
+  },
+  {
+   "x0": 212,
+   "y0": 992,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.685,
+   "parts": {
+    "readability": 0.907,
+    "interactables": 0.783,
+    "character": 0.31
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.743,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.22,
+    "signature": 0.229,
+    "richness": 0.271,
+    "age": 0.718
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 7,
+    "cut": 4,
+    "landmark": "brooklyn-bridge",
+    "typology": "building.house"
+   },
+   "zone": 175,
+   "name": "house blocks",
+   "lon": -73.994,
+   "lat": 40.702
+  },
+  {
+   "x0": 228,
+   "y0": 1084,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.684,
+   "parts": {
+    "readability": 0.832,
+    "interactables": 0.8,
+    "character": 0.377
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.702,
+    "clearance": 0.688,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.587,
+    "richness": 0.253,
+    "age": 0.917
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 13,
+    "cut": 20,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 180,
+   "name": "commercial blocks",
+   "lon": -73.993,
+   "lat": 40.694
+  },
+  {
+   "x0": 92,
+   "y0": 512,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.682,
+   "parts": {
+    "readability": 0.861,
+    "interactables": 0.9,
+    "character": 0.22
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.629,
+    "clearance": 0.965,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.187,
+    "richness": 0.274,
+    "age": 0.636
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 2,
+    "burnable": 7,
+    "cut": 9,
+    "typology": "building.commercial"
+   },
+   "zone": 93,
+   "name": "commercial blocks",
+   "lon": -74.008,
+   "lat": 40.745
+  },
+  {
+   "x0": 536,
+   "y0": 488,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.682,
+   "parts": {
+    "readability": 0.851,
+    "interactables": 0.933,
+    "character": 0.192
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.503,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.189,
+    "richness": 0.239,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 9,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 91,
+   "name": "industrial blocks",
+   "lon": -73.956,
+   "lat": 40.747
+  },
+  {
+   "x0": 428,
+   "y0": 896,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.682,
+   "parts": {
+    "readability": 0.906,
+    "interactables": 0.733,
+    "character": 0.36
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.712,
+    "clearance": 0.969,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.217,
+    "signature": 0.277,
+    "richness": 0.326,
+    "age": 0.865
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 2,
+    "burnable": 4,
+    "cut": 8,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 158,
+   "name": "residential blocks",
+   "lon": -73.968,
+   "lat": 40.711
+  },
+  {
+   "x0": 464,
+   "y0": 792,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.68,
+   "parts": {
+    "readability": 0.958,
+    "interactables": 0.833,
+    "character": 0.177
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.86,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.004,
+    "signature": 0.219,
+    "richness": 0.14,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 7,
+    "water": 11,
+    "burnable": 16,
+    "cut": 0,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.tower.glass"
+   },
+   "zone": 132,
+   "name": "towers",
+   "lon": -73.964,
+   "lat": 40.72
+  },
+  {
+   "x0": 508,
+   "y0": 376,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.679,
+   "parts": {
+    "readability": 0.978,
+    "interactables": 0.59,
+    "character": 0.435
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.927,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0.375,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.234,
+    "signature": 0.635,
+    "richness": 0.196,
+    "age": 0.836
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 4,
+    "water": 7,
+    "burnable": 26,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.brownstone"
+   },
+   "zone": 70,
+   "name": "brownstone blocks",
+   "lon": -73.959,
+   "lat": 40.758
+  },
+  {
+   "x0": 524,
+   "y0": 308,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.679,
+   "parts": {
+    "readability": 0.846,
+    "interactables": 0.783,
+    "character": 0.361
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.825,
+    "clearance": 0.855,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.092,
+    "signature": 0.372,
+    "richness": 0.352,
+    "age": 0.895
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 7,
+    "cut": 37,
+    "landmark": "queensboro-bridge",
+    "typology": "building.tenement"
+   },
+   "zone": 52,
+   "name": "tenement blocks",
+   "lon": -73.957,
+   "lat": 40.764
+  },
+  {
+   "x0": 120,
+   "y0": 956,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.678,
+   "parts": {
+    "readability": 0.953,
+    "interactables": 0.633,
+    "character": 0.411
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.842,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.125,
+    "signature": 0.361,
+    "richness": 0.562,
+    "age": 0.833
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 6,
+    "water": 5,
+    "burnable": 15,
+    "cut": 0,
+    "landmark": "brooklyn-bridge",
+    "typology": "building.tower.deco"
+   },
+   "zone": 151,
+   "name": "towers near the Financial District",
+   "area": "the Financial District",
+   "lon": -74.005,
+   "lat": 40.705
+  },
+  {
+   "x0": 96,
+   "y0": 636,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.675,
+   "parts": {
+    "readability": 0.848,
+    "interactables": 0.783,
+    "character": 0.348
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.688,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.436,
+    "richness": 0.435,
+    "age": 0.727
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 7,
+    "cut": 15,
+    "typology": "building.residential"
+   },
+   "zone": 110,
+   "name": "residential blocks",
+   "lon": -74.008,
+   "lat": 40.734
+  },
+  {
+   "x0": 244,
+   "y0": 608,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.675,
+   "parts": {
+    "readability": 0.911,
+    "interactables": 0.633,
+    "character": 0.449
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.834,
+    "clearance": 0.844,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.216,
+    "signature": 0.47,
+    "richness": 0.459,
+    "age": 0.855
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 13,
+    "cut": 10,
+    "landmark": "flatiron-building",
+    "typology": "building.residential"
+   },
+   "zone": 106,
+   "name": "residential blocks",
+   "lon": -73.991,
+   "lat": 40.737
+  },
+  {
+   "x0": 200,
+   "y0": 852,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.675,
+   "parts": {
+    "readability": 0.861,
+    "interactables": 0.722,
+    "character": 0.403
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.595,
+    "clearance": 0.93,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.118,
+    "signature": 0.394,
+    "richness": 0.413,
+    "age": 0.973
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 19,
+    "cut": 18,
+    "landmark": "manhattan-bridge",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 142,
+   "name": "commercial blocks",
+   "lon": -73.995,
+   "lat": 40.715
+  },
+  {
+   "x0": 228,
+   "y0": 1040,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.673,
+   "parts": {
+    "readability": 0.858,
+    "interactables": 0.75,
+    "character": 0.367
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.721,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.018,
+    "signature": 0.512,
+    "richness": 0.293,
+    "age": 0.9
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 10,
+    "cut": 15,
+    "landmark": "brooklyn-bridge",
+    "typology": "building.tenement"
+   },
+   "zone": 175,
+   "name": "tenement blocks",
+   "lon": -73.993,
+   "lat": 40.698
+  },
+  {
+   "x0": 444,
+   "y0": 316,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.672,
+   "parts": {
+    "readability": 0.915,
+    "interactables": 0.65,
+    "character": 0.413
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.746,
+    "clearance": 0.965,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.546,
+    "richness": 0.474,
+    "age": 0.873
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 11,
+    "cut": 9,
+    "typology": "building.tenement"
+   },
+   "zone": 51,
+   "name": "tenement blocks",
+   "lon": -73.967,
+   "lat": 40.763
+  },
+  {
+   "x0": 488,
+   "y0": 656,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.67,
+   "parts": {
+    "readability": 0.92,
+    "interactables": 0.833,
+    "character": 0.187
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.734,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.223,
+    "richness": 0.181,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 8,
+    "burnable": 6,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 113,
+   "name": "residential blocks",
+   "lon": -73.961,
+   "lat": 40.732
+  },
+  {
+   "x0": 240,
+   "y0": 732,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.664,
+   "parts": {
+    "readability": 0.891,
+    "interactables": 0.674,
+    "character": 0.388
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.778,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.379,
+    "richness": 0.586,
+    "age": 0.855
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 17,
+    "cut": 6,
+    "typology": "building.residential"
+   },
+   "zone": 118,
+   "name": "residential blocks",
+   "lon": -73.991,
+   "lat": 40.726
+  },
+  {
+   "x0": 404,
+   "y0": 464,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.662,
+   "parts": {
+    "readability": 0.838,
+    "interactables": 0.557,
+    "character": 0.58
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.505,
+    "clearance": 0.945,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.713,
+    "signature": 0.495,
+    "richness": 0.429,
+    "age": 0.739
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 17,
+    "cut": 14,
+    "landmark": "chrysler-building",
+    "typology": "building.tower.slab"
+   },
+   "zone": 74,
+   "name": "towers",
+   "lon": -73.971,
+   "lat": 40.75
+  },
+  {
+   "x0": 204,
+   "y0": 476,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.662,
+   "parts": {
+    "readability": 0.863,
+    "interactables": 0.633,
+    "character": 0.462
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.776,
+    "clearance": 0.719,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.067,
+    "signature": 0.675,
+    "richness": 0.41,
+    "age": 0.913
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 0,
+    "cut": 18,
+    "landmark": "empire-state-building",
+    "typology": "building.tenement"
+   },
+   "zone": 89,
+   "name": "tenement blocks",
+   "lon": -73.995,
+   "lat": 40.749
+  },
+  {
+   "x0": 496,
+   "y0": 632,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.657,
+   "parts": {
+    "readability": 0.922,
+    "interactables": 0.783,
+    "character": 0.2
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.771,
+    "clearance": 0.961,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.214,
+    "richness": 0.241,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 5,
+    "cut": 10,
+    "typology": "building.residential"
+   },
+   "zone": 102,
+   "name": "residential blocks",
+   "lon": -73.96,
+   "lat": 40.734
+  },
+  {
+   "x0": 120,
+   "y0": 544,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.656,
+   "parts": {
+    "readability": 0.801,
+    "interactables": 0.85,
+    "character": 0.262
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.6,
+    "clearance": 0.758,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.247,
+    "richness": 0.448,
+    "age": 0.506
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 8,
+    "cut": 62,
+    "typology": "building.commercial"
+   },
+   "zone": 88,
+   "name": "commercial blocks",
+   "lon": -74.005,
+   "lat": 40.742
+  },
+  {
+   "x0": 120,
+   "y0": 784,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.656,
+   "parts": {
+    "readability": 0.827,
+    "interactables": 0.733,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.684,
+    "clearance": 0.688,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.002,
+    "signature": 0.445,
+    "richness": 0.452,
+    "age": 0.792
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 13,
+    "cut": 20,
+    "landmark": "woolworth-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 134,
+   "name": "SoHo",
+   "area": "SoHo",
+   "lon": -74.005,
+   "lat": 40.721
+  },
+  {
+   "x0": 104,
+   "y0": 848,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.655,
+   "parts": {
+    "readability": 0.878,
+    "interactables": 0.683,
+    "character": 0.363
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.8,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.265,
+    "signature": 0.457,
+    "richness": 0.245,
+    "age": 0.567
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 3,
+    "cut": 16,
+    "landmark": "woolworth-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 141,
+   "name": "commercial blocks",
+   "lon": -74.007,
+   "lat": 40.715
+  },
+  {
+   "x0": 360,
+   "y0": 736,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.654,
+   "parts": {
+    "readability": 0.898,
+    "interactables": 0.683,
+    "character": 0.334
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.739,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.362,
+    "richness": 0.354,
+    "age": 0.912
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 9,
+    "cut": 6,
+    "typology": "building.tenement"
+   },
+   "zone": 119,
+   "name": "tenement blocks",
+   "lon": -73.977,
+   "lat": 40.725
+  },
+  {
+   "x0": 520,
+   "y0": 920,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.651,
+   "parts": {
+    "readability": 0.908,
+    "interactables": 0.633,
+    "character": 0.374
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.783,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.627,
+    "richness": 0.255,
+    "age": 0.812
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 5,
+    "cut": 7,
+    "typology": "building.tenement"
+   },
+   "zone": 155,
+   "name": "tenement blocks",
+   "lon": -73.958,
+   "lat": 40.709
+  },
+  {
+   "x0": 152,
+   "y0": 332,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.651,
+   "parts": {
+    "readability": 0.938,
+    "interactables": 0.733,
+    "character": 0.218
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.794,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.217,
+    "richness": 0.263,
+    "age": 0.583
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 14,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 54,
+   "name": "residential blocks",
+   "lon": -74.001,
+   "lat": 40.761
+  },
+  {
+   "x0": 328,
+   "y0": 496,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.65,
+   "parts": {
+    "readability": 0.599,
+    "interactables": 0.733,
+    "character": 0.611
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.751,
+    "clearance": 0.707,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.677,
+    "signature": 0.607,
+    "richness": 0.437,
+    "age": 0.779
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 6,
+    "cut": 75,
+    "landmark": "empire-state-building",
+    "typology": "building.tower.slab"
+   },
+   "zone": 90,
+   "name": "towers",
+   "lon": -73.98,
+   "lat": 40.747
+  },
+  {
+   "x0": 132,
+   "y0": 836,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.65,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.717,
+    "character": 0.285
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.739,
+    "clearance": 0.895,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.171,
+    "signature": 0.234,
+    "richness": 0.266,
+    "age": 0.65
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 3,
+    "cut": 27,
+    "landmark": "woolworth-building",
+    "typology": "building.commercial"
+   },
+   "zone": 134,
+   "name": "commercial blocks near SoHo",
+   "area": "SoHo",
+   "lon": -74.003,
+   "lat": 40.716
+  },
+  {
+   "x0": 596,
+   "y0": 212,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.649,
+   "parts": {
+    "readability": 0.71,
+    "interactables": 0.783,
+    "character": 0.42
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.538,
+    "clearance": 0.844,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.667,
+    "richness": 0.334,
+    "age": 0.912
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 4,
+    "cut": 10,
+    "typology": "building.tenement"
+   },
+   "zone": 30,
+   "name": "tenement blocks",
+   "lon": -73.949,
+   "lat": 40.773
+  },
+  {
+   "x0": 276,
+   "y0": 776,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.647,
+   "parts": {
+    "readability": 0.841,
+    "interactables": 0.683,
+    "character": 0.38
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.885,
+    "clearance": 0.5,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.603,
+    "richness": 0.28,
+    "age": 0.86
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 2,
+    "cut": 32,
+    "typology": "building.tenement"
+   },
+   "zone": 131,
+   "name": "tenement blocks",
+   "lon": -73.987,
+   "lat": 40.722
+  },
+  {
+   "x0": 308,
+   "y0": 84,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.647,
+   "parts": {
+    "readability": 0.879,
+    "interactables": 0.667,
+    "character": 0.352
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.775,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.626,
+    "richness": 0.245,
+    "age": 0.688
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 15,
+    "cut": 9,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 11,
+   "name": "apartment blocks",
+   "lon": -73.983,
+   "lat": 40.784
+  },
+  {
+   "x0": 372,
+   "y0": 100,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.646,
+   "parts": {
+    "readability": 0.78,
+    "interactables": 0.7,
+    "character": 0.428
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.643,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.7,
+    "richness": 0.282,
+    "age": 0.982
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 7,
+    "cut": 12,
+    "typology": "building.brownstone"
+   },
+   "zone": 12,
+   "name": "brownstone blocks",
+   "lon": -73.976,
+   "lat": 40.783
+  },
+  {
+   "x0": 268,
+   "y0": 640,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.645,
+   "parts": {
+    "readability": 0.897,
+    "interactables": 0.6,
+    "character": 0.403
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.798,
+    "clearance": 0.832,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.066,
+    "signature": 0.418,
+    "richness": 0.512,
+    "age": 0.862
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 3,
+    "cut": 43,
+    "landmark": "flatiron-building",
+    "typology": "building.tower.deco"
+   },
+   "zone": 106,
+   "name": "towers",
+   "lon": -73.987,
+   "lat": 40.734
+  },
+  {
+   "x0": 512,
+   "y0": 212,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.643,
+   "parts": {
+    "readability": 0.799,
+    "interactables": 0.75,
+    "character": 0.336
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.706,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.449,
+    "richness": 0.318,
+    "age": 0.813
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 2,
+    "cut": 0,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 38,
+   "name": "commercial blocks",
+   "lon": -73.959,
+   "lat": 40.773
+  },
+  {
+   "x0": 376,
+   "y0": 592,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.643,
+   "parts": {
+    "readability": 0.922,
+    "interactables": 0.7,
+    "character": 0.25
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.812,
+    "clearance": 0.914,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.141,
+    "richness": 0.229,
+    "age": 1
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 5,
+    "cut": 22,
+    "typology": "building.commercial"
+   },
+   "zone": 95,
+   "name": "commercial blocks",
+   "lon": -73.975,
+   "lat": 40.738
+  },
+  {
+   "x0": 68,
+   "y0": 696,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.642,
+   "parts": {
+    "readability": 0.886,
+    "interactables": 0.8,
+    "character": 0.174
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.654,
+    "clearance": 0.961,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.318,
+    "richness": 0.187,
+    "age": 0.213
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 0,
+    "water": 3,
+    "burnable": 16,
+    "cut": 10,
+    "typology": "building.tower.deco"
+   },
+   "zone": 115,
+   "name": "towers",
+   "lon": -74.011,
+   "lat": 40.729
+  },
+  {
+   "x0": 384,
+   "y0": 536,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.642,
+   "parts": {
+    "readability": 0.865,
+    "interactables": 0.7,
+    "character": 0.313
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.711,
+    "clearance": 0.809,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.023,
+    "signature": 0.432,
+    "richness": 0.279,
+    "age": 0.714
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 3,
+    "cut": 49,
+    "landmark": "chrysler-building",
+    "typology": "building.tenement"
+   },
+   "zone": 95,
+   "name": "tenement blocks",
+   "lon": -73.974,
+   "lat": 40.743
+  },
+  {
+   "x0": 172,
+   "y0": 376,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.641,
+   "parts": {
+    "readability": 0.911,
+    "interactables": 0.7,
+    "character": 0.258
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.818,
+    "clearance": 0.863,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.286,
+    "richness": 0.216,
+    "age": 0.786
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 5,
+    "cut": 35,
+    "typology": "building.residential"
+   },
+   "zone": 69,
+   "name": "residential blocks",
+   "lon": -73.999,
+   "lat": 40.757
+  },
+  {
+   "x0": 296,
+   "y0": 100,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.641,
+   "parts": {
+    "readability": 0.964,
+    "interactables": 0.59,
+    "character": 0.324
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.88,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.375,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.514,
+    "richness": 0.199,
+    "age": 0.798
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 26,
+    "cut": 0,
+    "typology": "building.tenement"
+   },
+   "zone": 11,
+   "name": "tenement blocks",
+   "lon": -73.985,
+   "lat": 40.783
+  },
+  {
+   "x0": 504,
+   "y0": 568,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.639,
+   "parts": {
+    "readability": 0.928,
+    "interactables": 0.733,
+    "character": 0.19
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.799,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.232,
+    "richness": 0.183,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 12,
+    "typology": "building.residential"
+   },
+   "zone": 98,
+   "name": "residential blocks",
+   "lon": -73.959,
+   "lat": 40.74
+  },
+  {
+   "x0": 220,
+   "y0": 560,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.636,
+   "parts": {
+    "readability": 0.742,
+    "interactables": 0.683,
+    "character": 0.457
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.791,
+    "clearance": 0.219,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.269,
+    "signature": 0.644,
+    "richness": 0.281,
+    "age": 0.754
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 5,
+    "cut": 50,
+    "landmark": "flatiron-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 94,
+   "name": "commercial blocks",
+   "lon": -73.994,
+   "lat": 40.741
+  },
+  {
+   "x0": 240,
+   "y0": 512,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.635,
+   "parts": {
+    "readability": 0.742,
+    "interactables": 0.7,
+    "character": 0.434
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.737,
+    "clearance": 0.281,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.19,
+    "signature": 0.539,
+    "richness": 0.351,
+    "age": 0.848
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 5,
+    "cut": 46,
+    "landmark": "flatiron-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 89,
+   "name": "commercial blocks",
+   "lon": -73.991,
+   "lat": 40.746
+  },
+  {
+   "x0": 256,
+   "y0": 260,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.635,
+   "parts": {
+    "readability": 0.848,
+    "interactables": 0.567,
+    "character": 0.465
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.651,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.605,
+    "richness": 0.555,
+    "age": 0.963
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 5,
+    "cut": 48,
+    "typology": "building.tenement"
+   },
+   "zone": 44,
+   "name": "tenement blocks",
+   "lon": -73.989,
+   "lat": 40.768
+  },
+  {
+   "x0": 192,
+   "y0": 496,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.634,
+   "parts": {
+    "readability": 0.884,
+    "interactables": 0.6,
+    "character": 0.381
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.705,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.039,
+    "signature": 0.498,
+    "richness": 0.305,
+    "age": 0.958
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 7,
+    "landmark": "flatiron-building",
+    "typology": "building.residential"
+   },
+   "zone": 89,
+   "name": "residential blocks",
+   "lon": -73.997,
+   "lat": 40.747
+  },
+  {
+   "x0": 168,
+   "y0": 1088,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.633,
+   "parts": {
+    "readability": 0.913,
+    "interactables": 0.683,
+    "character": 0.248
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.865,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.359,
+    "richness": 0.159,
+    "age": 0.671
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 7,
+    "cut": 7,
+    "typology": "building.tower.deco"
+   },
+   "zone": 190,
+   "name": "towers",
+   "lon": -74,
+   "lat": 40.694
+  },
+  {
+   "x0": 180,
+   "y0": 620,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.633,
+   "parts": {
+    "readability": 0.882,
+    "interactables": 0.583,
+    "character": 0.401
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.789,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.03,
+    "signature": 0.576,
+    "richness": 0.431,
+    "age": 0.741
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 9,
+    "cut": 14,
+    "landmark": "flatiron-building",
+    "typology": "building.tenement"
+   },
+   "zone": 105,
+   "name": "tenement blocks",
+   "lon": -73.998,
+   "lat": 40.736
+  },
+  {
+   "x0": 68,
+   "y0": 808,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.633,
+   "parts": {
+    "readability": 0.779,
+    "interactables": 0.65,
+    "character": 0.442
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.572,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.139,
+    "signature": 0.527,
+    "richness": 0.41,
+    "age": 0.931
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 15,
+    "cut": 28,
+    "landmark": "one-world-trade-center",
+    "typology": "building.brownstone"
+   },
+   "zone": 141,
+   "name": "brownstone blocks near SoHo",
+   "area": "SoHo",
+   "lon": -74.011,
+   "lat": 40.719
+  },
+  {
+   "x0": 300,
+   "y0": 232,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.632,
+   "parts": {
+    "readability": 0.869,
+    "interactables": 0.681,
+    "character": 0.3
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.673,
+    "clearance": 0.867,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.311,
+    "richness": 0.381,
+    "age": 0.74
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 18,
+    "cut": 34,
+    "typology": "building.tower.slab"
+   },
+   "zone": 42,
+   "name": "towers",
+   "lon": -73.984,
+   "lat": 40.77
+  },
+  {
+   "x0": 224,
+   "y0": 264,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.631,
+   "parts": {
+    "readability": 0.905,
+    "interactables": 0.683,
+    "character": 0.251
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.706,
+    "clearance": 0.973,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.3,
+    "richness": 0.282,
+    "age": 0.603
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 9,
+    "cut": 7,
+    "typology": "building.tower.glass"
+   },
+   "zone": 44,
+   "name": "towers",
+   "lon": -73.993,
+   "lat": 40.768
+  },
+  {
+   "x0": 312,
+   "y0": 192,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.631,
+   "parts": {
+    "readability": 0.85,
+    "interactables": 0.733,
+    "character": 0.254
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.618,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.218,
+    "richness": 0.389,
+    "age": 0.611
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 5,
+    "cut": 36,
+    "typology": "building.residential"
+   },
+   "zone": 27,
+   "name": "residential blocks",
+   "lon": -73.982,
+   "lat": 40.774
+  },
+  {
+   "x0": 212,
+   "y0": 628,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.63,
+   "parts": {
+    "readability": 0.757,
+    "interactables": 0.733,
+    "character": 0.36
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.621,
+    "clearance": 0.484,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.093,
+    "signature": 0.406,
+    "richness": 0.361,
+    "age": 0.801
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 3,
+    "cut": 33,
+    "landmark": "flatiron-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 105,
+   "name": "commercial blocks",
+   "lon": -73.994,
+   "lat": 40.735
+  },
+  {
+   "x0": 496,
+   "y0": 692,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.628,
+   "parts": {
+    "readability": 0.923,
+    "interactables": 0.667,
+    "character": 0.239
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.744,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.489,
+    "richness": 0.235,
+    "age": 0.224
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 2,
+    "water": 8,
+    "burnable": 3,
+    "cut": 0,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 123,
+   "name": "commercial blocks",
+   "lon": -73.96,
+   "lat": 40.729
+  },
+  {
+   "x0": 216,
+   "y0": 228,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.628,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.733,
+    "character": 0.192
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.79,
+    "clearance": 0.832,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.172,
+    "richness": 0.263,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 5,
+    "cut": 43,
+    "typology": "building.residential"
+   },
+   "zone": 35,
+   "name": "residential blocks",
+   "lon": -73.994,
+   "lat": 40.771
+  },
+  {
+   "x0": 192,
+   "y0": 540,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.627,
+   "parts": {
+    "readability": 0.624,
+    "interactables": 0.733,
+    "character": 0.507
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.644,
+    "clearance": 0.563,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.141,
+    "signature": 0.707,
+    "richness": 0.564,
+    "age": 0.747
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 2,
+    "cut": 28,
+    "landmark": "flatiron-building",
+    "typology": "building.tenement"
+   },
+   "zone": 94,
+   "name": "tenement blocks",
+   "lon": -73.997,
+   "lat": 40.743
+  },
+  {
+   "x0": 140,
+   "y0": 564,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.627,
+   "parts": {
+    "readability": 0.816,
+    "interactables": 0.617,
+    "character": 0.418
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.47,
+    "clearance": 0.898,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.574,
+    "richness": 0.532,
+    "age": 0.753
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 3,
+    "cut": 26,
+    "typology": "building.tower.deco"
+   },
+   "zone": 88,
+   "name": "towers",
+   "lon": -74.003,
+   "lat": 40.741
+  },
+  {
+   "x0": 264,
+   "y0": 564,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.626,
+   "parts": {
+    "readability": 0.82,
+    "interactables": 0.455,
+    "character": 0.597
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.583,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.8,
+    "signature": 0.386,
+    "richness": 0.53,
+    "age": 0.725
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 19,
+    "cut": 14,
+    "landmark": "flatiron-building",
+    "typology": "building.commercial.historic"
+   },
+   "zone": 96,
+   "name": "by the Flatiron Building",
+   "lon": -73.988,
+   "lat": 40.741
+  },
+  {
+   "x0": 484,
+   "y0": 212,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.625,
+   "parts": {
+    "readability": 0.818,
+    "interactables": 0.667,
+    "character": 0.353
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.729,
+    "clearance": 0.672,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.565,
+    "richness": 0.316,
+    "age": 0.695
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 8,
+    "cut": 21,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 37,
+   "name": "apartment blocks",
+   "lon": -73.962,
+   "lat": 40.773
+  },
+  {
+   "x0": 512,
+   "y0": 784,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.624,
+   "parts": {
+    "readability": 0.901,
+    "interactables": 0.583,
+    "character": 0.35
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.695,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.526,
+    "richness": 0.326,
+    "age": 0.736
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 8,
+    "typology": "building.tenement"
+   },
+   "zone": 136,
+   "name": "tenement blocks",
+   "lon": -73.958,
+   "lat": 40.721
+  },
+  {
+   "x0": 296,
+   "y0": 1076,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.623,
+   "parts": {
+    "readability": 0.793,
+    "interactables": 0.8,
+    "character": 0.216
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.642,
+    "clearance": 0.602,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.204,
+    "richness": 0.23,
+    "age": 0.65
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 2,
+    "cut": 102,
+    "typology": "building.commercial"
+   },
+   "zone": 186,
+   "name": "commercial blocks",
+   "lon": -73.984,
+   "lat": 40.694
+  },
+  {
+   "x0": 560,
+   "y0": 220,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.62,
+   "parts": {
+    "readability": 0.858,
+    "interactables": 0.55,
+    "character": 0.424
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.814,
+    "clearance": 0.656,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.687,
+    "richness": 0.315,
+    "age": 0.929
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 12,
+    "cut": 22,
+    "typology": "building.tenement"
+   },
+   "zone": 46,
+   "name": "tenement blocks",
+   "lon": -73.953,
+   "lat": 40.772
+  },
+  {
+   "x0": 160,
+   "y0": 928,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.62,
+   "parts": {
+    "readability": 0.813,
+    "interactables": 0.683,
+    "character": 0.321
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.594,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.24,
+    "signature": 0.228,
+    "richness": 0.344,
+    "age": 0.627
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 6,
+    "cut": 0,
+    "landmark": "brooklyn-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 162,
+   "name": "residential blocks",
+   "lon": -74.001,
+   "lat": 40.708
+  },
+  {
+   "x0": 112,
+   "y0": 756,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.618,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.633,
+    "character": 0.288
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.743,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.351,
+    "richness": 0.402,
+    "age": 0.547
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 6,
+    "cut": 20,
+    "typology": "building.tower.deco"
+   },
+   "zone": 126,
+   "name": "SoHo",
+   "area": "SoHo",
+   "lon": -74.006,
+   "lat": 40.723
+  },
+  {
+   "x0": 356,
+   "y0": 552,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.617,
+   "parts": {
+    "readability": 0.814,
+    "interactables": 0.683,
+    "character": 0.311
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.705,
+    "clearance": 0.609,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.006,
+    "signature": 0.41,
+    "richness": 0.323,
+    "age": 0.703
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 3,
+    "cut": 25,
+    "landmark": "empire-state-building",
+    "typology": "building.tenement"
+   },
+   "zone": 95,
+   "name": "tenement blocks",
+   "lon": -73.977,
+   "lat": 40.742
+  },
+  {
+   "x0": 588,
+   "y0": 844,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.616,
+   "parts": {
+    "readability": 0.809,
+    "interactables": 0.633,
+    "character": 0.371
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.699,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.658,
+    "richness": 0.271,
+    "age": 0.703
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 2,
+    "cut": 9,
+    "typology": "building.tenement"
+   },
+   "zone": 149,
+   "name": "tenement blocks",
+   "lon": -73.95,
+   "lat": 40.716
+  },
+  {
+   "x0": 480,
+   "y0": 848,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.615,
+   "parts": {
+    "readability": 0.854,
+    "interactables": 0.633,
+    "character": 0.315
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.629,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.069,
+    "signature": 0.43,
+    "richness": 0.26,
+    "age": 0.668
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 10,
+    "cut": 9,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 148,
+   "name": "residential blocks",
+   "lon": -73.963,
+   "lat": 40.715
+  },
+  {
+   "x0": 400,
+   "y0": 300,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.614,
+   "parts": {
+    "readability": 0.862,
+    "interactables": 0.583,
+    "character": 0.359
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.683,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.463,
+    "richness": 0.297,
+    "age": 0.972
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 5,
+    "cut": 11,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 56,
+   "name": "apartment blocks",
+   "lon": -73.972,
+   "lat": 40.765
+  },
+  {
+   "x0": 200,
+   "y0": 660,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.614,
+   "parts": {
+    "readability": 0.779,
+    "interactables": 0.7,
+    "character": 0.319
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.483,
+    "clearance": 0.738,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.306,
+    "richness": 0.43,
+    "age": 0.8
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 14,
+    "cut": 67,
+    "typology": "building.residential"
+   },
+   "zone": 116,
+   "name": "residential blocks",
+   "lon": -73.995,
+   "lat": 40.732
+  },
+  {
+   "x0": 224,
+   "y0": 384,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.613,
+   "parts": {
+    "readability": 0.889,
+    "interactables": 0.55,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.812,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.55,
+    "richness": 0.254,
+    "age": 0.917
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 1,
+    "cut": 14,
+    "typology": "building.tenement"
+   },
+   "zone": 67,
+   "name": "tenement blocks near Midtown",
+   "area": "Midtown",
+   "lon": -73.993,
+   "lat": 40.757
+  },
+  {
+   "x0": 432,
+   "y0": 48,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.613,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.533,
+    "character": 0.39
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.655,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.621,
+    "richness": 0.258,
+    "age": 0.927
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 3,
+    "typology": "building.brownstone"
+   },
+   "zone": 7,
+   "name": "brownstone blocks",
+   "lon": -73.968,
+   "lat": 40.787
+  },
+  {
+   "x0": 372,
+   "y0": 64,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.612,
+   "parts": {
+    "readability": 0.853,
+    "interactables": 0.583,
+    "character": 0.365
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.55,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.657,
+    "richness": 0.312,
+    "age": 0.598
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 12,
+    "typology": "building.tenement"
+   },
+   "zone": 12,
+   "name": "tenement blocks",
+   "lon": -73.975,
+   "lat": 40.786
+  },
+  {
+   "x0": 368,
+   "y0": 752,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.612,
+   "parts": {
+    "readability": 0.862,
+    "interactables": 0.633,
+    "character": 0.294
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.758,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.336,
+    "richness": 0.427,
+    "age": 0.579
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 12,
+    "cut": 12,
+    "typology": "building.residential"
+   },
+   "zone": 130,
+   "name": "residential blocks",
+   "lon": -73.976,
+   "lat": 40.724
+  },
+  {
+   "x0": 364,
+   "y0": 160,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.612,
+   "parts": {
+    "readability": 0.875,
+    "interactables": 0.617,
+    "character": 0.298
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.72,
+    "clearance": 0.91,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.395,
+    "richness": 0.181,
+    "age": 0.897
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 13,
+    "cut": 23,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 27,
+   "name": "apartment blocks",
+   "lon": -73.976,
+   "lat": 40.777
+  },
+  {
+   "x0": 596,
+   "y0": 772,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.611,
+   "parts": {
+    "readability": 0.917,
+    "interactables": 0.633,
+    "character": 0.228
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.736,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.241,
+    "richness": 0.271,
+    "age": 0.585
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 1,
+    "cut": 1,
+    "typology": "building.residential"
+   },
+   "zone": 137,
+   "name": "residential blocks",
+   "lon": -73.949,
+   "lat": 40.722
+  },
+  {
+   "x0": 500,
+   "y0": 348,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.611,
+   "parts": {
+    "readability": 0.72,
+    "interactables": 0.75,
+    "character": 0.321
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.724,
+    "clearance": 0.848,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.176,
+    "signature": 0.229,
+    "richness": 0.432,
+    "age": 0.607
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 10,
+    "cut": 39,
+    "landmark": "queensboro-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 64,
+   "name": "residential blocks",
+   "lon": -73.96,
+   "lat": 40.76
+  },
+  {
+   "x0": 268,
+   "y0": 812,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.609,
+   "parts": {
+    "readability": 0.81,
+    "interactables": 0.65,
+    "character": 0.326
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.64,
+    "clearance": 0.746,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.255,
+    "richness": 0.549,
+    "age": 0.75
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 1,
+    "cut": 65,
+    "typology": "building.commercial"
+   },
+   "zone": 135,
+   "name": "commercial blocks",
+   "lon": -73.987,
+   "lat": 40.718
+  },
+  {
+   "x0": 260,
+   "y0": 772,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.608,
+   "parts": {
+    "readability": 0.857,
+    "interactables": 0.583,
+    "character": 0.347
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.717,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.493,
+    "richness": 0.296,
+    "age": 0.835
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 13,
+    "cut": 15,
+    "typology": "building.tenement"
+   },
+   "zone": 118,
+   "name": "tenement blocks",
+   "lon": -73.989,
+   "lat": 40.722
+  },
+  {
+   "x0": 344,
+   "y0": 792,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.608,
+   "parts": {
+    "readability": 0.843,
+    "interactables": 0.633,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.799,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.024,
+    "signature": 0.345,
+    "richness": 0.354,
+    "age": 0.698
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 15,
+    "cut": 8,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.residential"
+   },
+   "zone": 130,
+   "name": "residential blocks",
+   "lon": -73.979,
+   "lat": 40.72
+  },
+  {
+   "x0": 340,
+   "y0": 960,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.608,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.733,
+    "character": 0.051
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.865,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.062,
+    "age": 0.234
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 6,
+    "water": 4,
+    "burnable": 0,
+    "cut": 0,
+    "typology": "building.commercial"
+   },
+   "zone": 159,
+   "name": "commercial blocks",
+   "lon": -73.979,
+   "lat": 40.705
+  },
+  {
+   "x0": 560,
+   "y0": 480,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.607,
+   "parts": {
+    "readability": 0.949,
+    "interactables": 0.667,
+    "character": 0.138
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.831,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.005,
+    "signature": 0.232,
+    "richness": 0.202,
+    "age": 0.113
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 0,
+    "water": 4,
+    "burnable": 3,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.industrial"
+   },
+   "zone": 91,
+   "name": "industrial blocks",
+   "lon": -73.953,
+   "lat": 40.748
+  },
+  {
+   "x0": 504,
+   "y0": 720,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.607,
+   "parts": {
+    "readability": 0.838,
+    "interactables": 0.75,
+    "character": 0.17
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.461,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.133,
+    "richness": 0.222,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 121,
+   "name": "residential blocks",
+   "lon": -73.959,
+   "lat": 40.727
+  },
+  {
+   "x0": 328,
+   "y0": 976,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.604,
+   "parts": {
+    "readability": 0.857,
+    "interactables": 0.633,
+    "character": 0.275
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.73,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.247,
+    "richness": 0.302,
+    "age": 0.833
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 11,
+    "typology": "building.residential"
+   },
+   "zone": 166,
+   "name": "residential blocks",
+   "lon": -73.981,
+   "lat": 40.704
+  },
+  {
+   "x0": 216,
+   "y0": 784,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.603,
+   "parts": {
+    "readability": 0.798,
+    "interactables": 0.633,
+    "character": 0.341
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.768,
+    "clearance": 0.469,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.415,
+    "richness": 0.37,
+    "age": 0.831
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 3,
+    "cut": 34,
+    "typology": "building.residential"
+   },
+   "zone": 128,
+   "name": "residential blocks",
+   "lon": -73.994,
+   "lat": 40.721
+  },
+  {
+   "x0": 428,
+   "y0": 420,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.603,
+   "parts": {
+    "readability": 0.801,
+    "interactables": 0.583,
+    "character": 0.394
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.791,
+    "clearance": 0.453,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.143,
+    "signature": 0.504,
+    "richness": 0.38,
+    "age": 0.7
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 35,
+    "landmark": "chrysler-building",
+    "typology": "building.tenement"
+   },
+   "zone": 60,
+   "name": "tenement blocks",
+   "lon": -73.969,
+   "lat": 40.754
+  },
+  {
+   "x0": 452,
+   "y0": 368,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.6,
+   "parts": {
+    "readability": 0.75,
+    "interactables": 0.633,
+    "character": 0.386
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.656,
+    "clearance": 0.676,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.027,
+    "signature": 0.478,
+    "richness": 0.432,
+    "age": 0.845
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 11,
+    "cut": 83,
+    "landmark": "queensboro-bridge",
+    "typology": "building.tenement"
+   },
+   "zone": 60,
+   "name": "tenement blocks",
+   "lon": -73.966,
+   "lat": 40.758
+  },
+  {
+   "x0": 536,
+   "y0": 924,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.6,
+   "parts": {
+    "readability": 0.893,
+    "interactables": 0.56,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.721,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 0.625,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.407,
+    "richness": 0.241,
+    "age": 0.81
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 22,
+    "cut": 6,
+    "typology": "building.tenement"
+   },
+   "zone": 161,
+   "name": "tenement blocks",
+   "lon": -73.956,
+   "lat": 40.708
+  },
+  {
+   "x0": 580,
+   "y0": 892,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.6,
+   "parts": {
+    "readability": 0.901,
+    "interactables": 0.517,
+    "character": 0.345
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.771,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.606,
+    "richness": 0.297,
+    "age": 0.593
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 3,
+    "typology": "building.tenement"
+   },
+   "zone": 149,
+   "name": "tenement blocks",
+   "lon": -73.951,
+   "lat": 40.711
+  },
+  {
+   "x0": 368,
+   "y0": 452,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.599,
+   "parts": {
+    "readability": 0.692,
+    "interactables": 0.533,
+    "character": 0.568
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.807,
+    "clearance": 0,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.408,
+    "richness": 0.298,
+    "age": 0.875
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 1,
+    "cut": 115,
+    "landmark": "chrysler-building",
+    "typology": "building.tower.deco"
+   },
+   "zone": 79,
+   "name": "by the Chrysler Building",
+   "lon": -73.976,
+   "lat": 40.751
+  },
+  {
+   "x0": 212,
+   "y0": 1080,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.599,
+   "parts": {
+    "readability": 0.794,
+    "interactables": 0.633,
+    "character": 0.332
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.571,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.605,
+    "richness": 0.237,
+    "age": 0.607
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 16,
+    "cut": 3,
+    "typology": "building.brownstone"
+   },
+   "zone": 180,
+   "name": "brownstone blocks",
+   "lon": -73.994,
+   "lat": 40.694
+  },
+  {
+   "x0": 96,
+   "y0": 436,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.598,
+   "parts": {
+    "readability": 0.954,
+    "interactables": 0.572,
+    "character": 0.213
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.845,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0.813,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.331,
+    "richness": 0.232,
+    "age": 0.373
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 3,
+    "water": 4,
+    "burnable": 19,
+    "cut": 0,
+    "typology": "building.tower.deco"
+   },
+   "zone": 72,
+   "name": "towers",
+   "lon": -74.008,
+   "lat": 40.752
+  },
+  {
+   "x0": 440,
+   "y0": 280,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.598,
+   "parts": {
+    "readability": 0.876,
+    "interactables": 0.517,
+    "character": 0.368
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.796,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.525,
+    "richness": 0.305,
+    "age": 0.893
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 5,
+    "cut": 16,
+    "typology": "building.brownstone"
+   },
+   "zone": 45,
+   "name": "brownstone blocks",
+   "lon": -73.967,
+   "lat": 40.766
+  },
+  {
+   "x0": 424,
+   "y0": 1060,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.597,
+   "parts": {
+    "readability": 0.91,
+    "interactables": 0.533,
+    "character": 0.307
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.698,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.508,
+    "richness": 0.262,
+    "age": 0.596
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 13,
+    "cut": 0,
+    "typology": "building.brownstone"
+   },
+   "zone": 181,
+   "name": "brownstone blocks",
+   "lon": -73.969,
+   "lat": 40.696
+  },
+  {
+   "x0": 548,
+   "y0": 64,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.597,
+   "parts": {
+    "readability": 0.866,
+    "interactables": 0.533,
+    "character": 0.357
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.614,
+    "clearance": 0.926,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.406,
+    "richness": 0.412,
+    "age": 0.881
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 9,
+    "cut": 19,
+    "typology": "building.brownstone"
+   },
+   "zone": 17,
+   "name": "brownstone blocks",
+   "lon": -73.954,
+   "lat": 40.786
+  },
+  {
+   "x0": 472,
+   "y0": 220,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.596,
+   "parts": {
+    "readability": 0.803,
+    "interactables": 0.583,
+    "character": 0.37
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.709,
+    "clearance": 0.563,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.51,
+    "richness": 0.269,
+    "age": 1
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 10,
+    "cut": 28,
+    "typology": "building.brownstone"
+   },
+   "zone": 37,
+   "name": "brownstone blocks",
+   "lon": -73.964,
+   "lat": 40.772
+  },
+  {
+   "x0": 284,
+   "y0": 316,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.594,
+   "parts": {
+    "readability": 0.654,
+    "interactables": 0.7,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.681,
+    "clearance": 0,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.528,
+    "richness": 0.435,
+    "age": 0.882
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 3,
+    "cut": 66,
+    "typology": "building.tenement"
+   },
+   "zone": 50,
+   "name": "tenement blocks near Midtown",
+   "area": "Midtown",
+   "lon": -73.986,
+   "lat": 40.763
+  },
+  {
+   "x0": 508,
+   "y0": 1100,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.594,
+   "parts": {
+    "readability": 0.88,
+    "interactables": 0.555,
+    "character": 0.305
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.698,
+    "clearance": 0.883,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.531,
+    "richness": 0.247,
+    "age": 0.559
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 19,
+    "cut": 30,
+    "typology": "building.tenement"
+   },
+   "zone": 182,
+   "name": "tenement blocks",
+   "lon": -73.959,
+   "lat": 40.692
+  },
+  {
+   "x0": 512,
+   "y0": 96,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.593,
+   "parts": {
+    "readability": 0.908,
+    "interactables": 0.567,
+    "character": 0.255
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.757,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.272,
+    "richness": 0.23,
+    "age": 0.776
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 5,
+    "typology": "building.commercial"
+   },
+   "zone": 17,
+   "name": "commercial blocks",
+   "lon": -73.959,
+   "lat": 40.783
+  },
+  {
+   "x0": 176,
+   "y0": 568,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.592,
+   "parts": {
+    "readability": 0.632,
+    "interactables": 0.65,
+    "character": 0.477
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.591,
+    "clearance": 0.656,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.093,
+    "signature": 0.619,
+    "richness": 0.588,
+    "age": 0.778
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 3,
+    "cut": 22,
+    "landmark": "flatiron-building",
+    "typology": "building.tenement"
+   },
+   "zone": 94,
+   "name": "tenement blocks",
+   "lon": -73.999,
+   "lat": 40.741
+  },
+  {
+   "x0": 560,
+   "y0": 904,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.592,
+   "parts": {
+    "readability": 0.889,
+    "interactables": 0.517,
+    "character": 0.333
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.695,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.651,
+    "richness": 0.245,
+    "age": 0.507
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 5,
+    "typology": "building.tenement"
+   },
+   "zone": 155,
+   "name": "tenement blocks",
+   "lon": -73.953,
+   "lat": 40.71
+  },
+  {
+   "x0": 136,
+   "y0": 592,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.59,
+   "parts": {
+    "readability": 0.611,
+    "interactables": 0.733,
+    "character": 0.397
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.651,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.696,
+    "richness": 0.304,
+    "age": 0.747
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 4,
+    "cut": 8,
+    "typology": "building.tenement"
+   },
+   "zone": 101,
+   "name": "tenement blocks",
+   "lon": -74.003,
+   "lat": 40.738
+  },
+  {
+   "x0": 532,
+   "y0": 848,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.589,
+   "parts": {
+    "readability": 0.945,
+    "interactables": 0.467,
+    "character": 0.318
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.841,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.56,
+    "richness": 0.23,
+    "age": 0.616
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 2,
+    "typology": "building.tenement"
+   },
+   "zone": 148,
+   "name": "tenement blocks",
+   "lon": -73.957,
+   "lat": 40.715
+  },
+  {
+   "x0": 232,
+   "y0": 716,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.588,
+   "parts": {
+    "readability": 0.7,
+    "interactables": 0.667,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.504,
+    "clearance": 0.656,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.503,
+    "richness": 0.41,
+    "age": 0.753
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 13,
+    "cut": 22,
+    "typology": "building.residential"
+   },
+   "zone": 118,
+   "name": "residential blocks",
+   "lon": -73.992,
+   "lat": 40.727
+  },
+  {
+   "x0": 364,
+   "y0": 364,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.587,
+   "parts": {
+    "readability": 0.709,
+    "interactables": 0.633,
+    "character": 0.391
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.569,
+    "clearance": 0.617,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.134,
+    "signature": 0.386,
+    "richness": 0.528,
+    "age": 0.689
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 6,
+    "cut": 98,
+    "landmark": "grand-central-terminal",
+    "typology": "building.tower.slab"
+   },
+   "zone": 62,
+   "name": "towers",
+   "lon": -73.976,
+   "lat": 40.759
+  },
+  {
+   "x0": 332,
+   "y0": 828,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.587,
+   "parts": {
+    "readability": 0.897,
+    "interactables": 0.633,
+    "character": 0.17
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.657,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.086,
+    "signature": 0.127,
+    "richness": 0.208,
+    "age": 0.358
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "landmark": "williamsburg-bridge",
+    "typology": "building.commercial"
+   },
+   "zone": 143,
+   "name": "commercial blocks",
+   "lon": -73.98,
+   "lat": 40.717
+  },
+  {
+   "x0": 228,
+   "y0": 872,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.586,
+   "parts": {
+    "readability": 0.91,
+    "interactables": 0.433,
+    "character": 0.384
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.744,
+    "clearance": 0.949,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.227,
+    "signature": 0.349,
+    "richness": 0.37,
+    "age": 0.796
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 11,
+    "cut": 13,
+    "landmark": "manhattan-bridge",
+    "typology": "building.tenement"
+   },
+   "zone": 152,
+   "name": "tenement blocks",
+   "lon": -73.992,
+   "lat": 40.713
+  },
+  {
+   "x0": 428,
+   "y0": 448,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.586,
+   "parts": {
+    "readability": 0.797,
+    "interactables": 0.633,
+    "character": 0.283
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.603,
+    "clearance": 0.664,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.152,
+    "signature": 0.225,
+    "richness": 0.381,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 8,
+    "cut": 86,
+    "landmark": "chrysler-building",
+    "typology": "building.commercial"
+   },
+   "zone": 80,
+   "name": "commercial blocks",
+   "lon": -73.968,
+   "lat": 40.751
+  },
+  {
+   "x0": 584,
+   "y0": 64,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.585,
+   "parts": {
+    "readability": 0.785,
+    "interactables": 0.6,
+    "character": 0.336
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.69,
+    "clearance": 0.773,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.309,
+    "richness": 0.499,
+    "age": 0.789
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 13,
+    "cut": 58,
+    "typology": "building.residential"
+   },
+   "zone": 10,
+   "name": "residential blocks",
+   "lon": -73.95,
+   "lat": 40.786
+  },
+  {
+   "x0": 476,
+   "y0": 260,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.661,
+    "interactables": 0.633,
+    "character": 0.437
+   },
+   "terms": {
+    "hidden": 0.542,
+    "terraced": 0.662,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.725,
+    "richness": 0.295,
+    "age": 0.974
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 14,
+    "water": 0,
+    "burnable": 11,
+    "cut": 8,
+    "typology": "building.brownstone"
+   },
+   "zone": 45,
+   "name": "brownstone blocks",
+   "lon": -73.963,
+   "lat": 40.768
+  },
+  {
+   "x0": 568,
+   "y0": 360,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.963,
+    "interactables": 0.473,
+    "character": 0.271
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.877,
+    "clearance": 1,
+    "water": 1,
+    "fire": 0.375,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.269,
+    "signature": 0.164,
+    "richness": 0.412,
+    "age": 0.252
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 11,
+    "burnable": 26,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.tower.glass"
+   },
+   "zone": 63,
+   "name": "towers",
+   "lon": -73.952,
+   "lat": 40.759
+  },
+  {
+   "x0": 404,
+   "y0": 56,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.82,
+    "interactables": 0.517,
+    "character": 0.385
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.698,
+    "clearance": 0.719,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.681,
+    "richness": 0.286,
+    "age": 0.731
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 18,
+    "typology": "building.tenement"
+   },
+   "zone": 7,
+   "name": "tenement blocks",
+   "lon": -73.972,
+   "lat": 40.787
+  },
+  {
+   "x0": 368,
+   "y0": 24,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.821,
+    "interactables": 0.567,
+    "character": 0.327
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.621,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.419,
+    "richness": 0.272,
+    "age": 0.886
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 12,
+    "typology": "building.brownstone"
+   },
+   "zone": 6,
+   "name": "brownstone blocks",
+   "lon": -73.976,
+   "lat": 40.79
+  },
+  {
+   "x0": 588,
+   "y0": 820,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.583,
+   "parts": {
+    "readability": 0.843,
+    "interactables": 0.517,
+    "character": 0.356
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.475,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.637,
+    "richness": 0.304,
+    "age": 0.593
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 7,
+    "cut": 0,
+    "typology": "building.tenement"
+   },
+   "zone": 138,
+   "name": "tenement blocks",
+   "lon": -73.95,
+   "lat": 40.718
+  },
+  {
+   "x0": 212,
+   "y0": 740,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.582,
+   "parts": {
+    "readability": 0.828,
+    "interactables": 0.583,
+    "character": 0.293
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.647,
+    "clearance": 0.734,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.356,
+    "richness": 0.343,
+    "age": 0.665
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 7,
+    "cut": 17,
+    "typology": "building.residential"
+   },
+   "zone": 128,
+   "name": "residential blocks",
+   "lon": -73.994,
+   "lat": 40.725
+  },
+  {
+   "x0": 188,
+   "y0": 780,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.581,
+   "parts": {
+    "readability": 0.827,
+    "interactables": 0.583,
+    "character": 0.293
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.71,
+    "clearance": 0.656,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.383,
+    "richness": 0.305,
+    "age": 0.676
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 5,
+    "cut": 22,
+    "typology": "building.tenement"
+   },
+   "zone": 128,
+   "name": "tenement blocks near SoHo",
+   "area": "SoHo",
+   "lon": -73.997,
+   "lat": 40.721
+  },
+  {
+   "x0": 332,
+   "y0": 548,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.58,
+   "parts": {
+    "readability": 0.876,
+    "interactables": 0.483,
+    "character": 0.348
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.771,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.08,
+    "signature": 0.366,
+    "richness": 0.477,
+    "age": 0.637
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 10,
+    "cut": 14,
+    "landmark": "empire-state-building",
+    "typology": "building.residential"
+   },
+   "zone": 90,
+   "name": "residential blocks",
+   "lon": -73.98,
+   "lat": 40.742
+  },
+  {
+   "x0": 184,
+   "y0": 320,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.58,
+   "parts": {
+    "readability": 0.914,
+    "interactables": 0.5,
+    "character": 0.285
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.811,
+    "clearance": 0.957,
+    "water": 0,
+    "fire": 0,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.234,
+    "richness": 0.323,
+    "age": 0.893
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 0,
+    "cut": 11,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 54,
+   "name": "commercial blocks",
+   "lon": -73.997,
+   "lat": 40.763
+  },
+  {
+   "x0": 536,
+   "y0": 888,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.579,
+   "parts": {
+    "readability": 0.926,
+    "interactables": 0.467,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.754,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.463,
+    "richness": 0.282,
+    "age": 0.633
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 11,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 148,
+   "name": "residential blocks",
+   "lon": -73.956,
+   "lat": 40.712
+  },
+  {
+   "x0": 336,
+   "y0": 108,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.839,
+    "interactables": 0.483,
+    "character": 0.382
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.632,
+    "clearance": 0.797,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.553,
+    "richness": 0.315,
+    "age": 0.918
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 4,
+    "cut": 13,
+    "typology": "building.tenement"
+   },
+   "zone": 22,
+   "name": "tenement blocks",
+   "lon": -73.98,
+   "lat": 40.782
+  },
+  {
+   "x0": 512,
+   "y0": 544,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.797,
+    "interactables": 0.7,
+    "character": 0.178
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.443,
+    "clearance": 0.855,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.126,
+    "richness": 0.209,
+    "age": 0.583
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 3,
+    "cut": 37,
+    "typology": "building.residential"
+   },
+   "zone": 98,
+   "name": "residential blocks",
+   "lon": -73.958,
+   "lat": 40.742
+  },
+  {
+   "x0": 280,
+   "y0": 284,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.86,
+    "interactables": 0.467,
+    "character": 0.375
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.551,
+    "clearance": 0.98,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.577,
+    "richness": 0.295,
+    "age": 0.857
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 6,
+    "cut": 5,
+    "typology": "building.tenement"
+   },
+   "zone": 50,
+   "name": "tenement blocks",
+   "lon": -73.986,
+   "lat": 40.766
+  },
+  {
+   "x0": 372,
+   "y0": 1040,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.88,
+    "interactables": 0.583,
+    "character": 0.215
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.735,
+    "clearance": 0.836,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.206,
+    "richness": 0.305,
+    "age": 0.517
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 5,
+    "cut": 42,
+    "typology": "building.commercial"
+   },
+   "zone": 176,
+   "name": "commercial blocks",
+   "lon": -73.975,
+   "lat": 40.698
+  },
+  {
+   "x0": 608,
+   "y0": 488,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.517,
+    "character": 0.278
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.628,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.459,
+    "richness": 0.296,
+    "age": 0.443
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 1,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 81,
+   "name": "commercial blocks",
+   "lon": -73.948,
+   "lat": 40.748
+  },
+  {
+   "x0": 256,
+   "y0": 688,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.772,
+    "interactables": 0.567,
+    "character": 0.35
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.762,
+    "clearance": 0.375,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.497,
+    "richness": 0.356,
+    "age": 0.746
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 9,
+    "cut": 40,
+    "typology": "building.tenement"
+   },
+   "zone": 117,
+   "name": "tenement blocks",
+   "lon": -73.989,
+   "lat": 40.73
+  },
+  {
+   "x0": 552,
+   "y0": 1088,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.573,
+   "parts": {
+    "readability": 0.906,
+    "interactables": 0.517,
+    "character": 0.248
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.747,
+    "clearance": 0.93,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.378,
+    "richness": 0.309,
+    "age": 0.384
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 7,
+    "cut": 18,
+    "typology": "building.residential"
+   },
+   "zone": 188,
+   "name": "residential blocks",
+   "lon": -73.954,
+   "lat": 40.693
+  },
+  {
+   "x0": 308,
+   "y0": 412,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.572,
+   "parts": {
+    "readability": 0.973,
+    "interactables": 0.417,
+    "character": 0.285
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.908,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.185,
+    "signature": 0.236,
+    "richness": 0.213,
+    "age": 0.7
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "landmark": "grand-central-terminal",
+    "typology": "building.commercial"
+   },
+   "zone": 73,
+   "name": "commercial blocks near Midtown",
+   "area": "Midtown",
+   "lon": -73.983,
+   "lat": 40.755
+  },
+  {
+   "x0": 228,
+   "y0": 364,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.572,
+   "parts": {
+    "readability": 0.701,
+    "interactables": 0.633,
+    "character": 0.349
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.679,
+    "clearance": 0.188,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.457,
+    "richness": 0.368,
+    "age": 0.8
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 5,
+    "cut": 52,
+    "typology": "building.tenement"
+   },
+   "zone": 66,
+   "name": "tenement blocks near Midtown",
+   "area": "Midtown",
+   "lon": -73.993,
+   "lat": 40.759
+  },
+  {
+   "x0": 332,
+   "y0": 220,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.568,
+   "parts": {
+    "readability": 0.924,
+    "interactables": 0.489,
+    "character": 0.247
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.748,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.267,
+    "richness": 0.183,
+    "age": 0.806
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 19,
+    "cut": 0,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 42,
+   "name": "apartment blocks",
+   "lon": -73.98,
+   "lat": 40.772
+  },
+  {
+   "x0": 120,
+   "y0": 440,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.568,
+   "parts": {
+    "readability": 0.8,
+    "interactables": 0.6,
+    "character": 0.261
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.492,
+    "clearance": 0.809,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.161,
+    "richness": 0.455,
+    "age": 0.658
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 1,
+    "cut": 49,
+    "typology": "building.commercial"
+   },
+   "zone": 78,
+   "name": "commercial blocks",
+   "lon": -74.005,
+   "lat": 40.752
+  },
+  {
+   "x0": 144,
+   "y0": 680,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.568,
+   "parts": {
+    "readability": 0.863,
+    "interactables": 0.467,
+    "character": 0.341
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.644,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.331,
+    "richness": 0.534,
+    "age": 0.723
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 10,
+    "cut": 3,
+    "typology": "building.residential"
+   },
+   "zone": 114,
+   "name": "residential blocks",
+   "lon": -74.003,
+   "lat": 40.73
+  },
+  {
+   "x0": 380,
+   "y0": 20,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.567,
+   "parts": {
+    "readability": 0.685,
+    "interactables": 0.667,
+    "character": 0.313
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.493,
+    "clearance": 0.609,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.429,
+    "richness": 0.284,
+    "age": 0.752
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 2,
+    "cut": 25,
+    "typology": "building.tenement"
+   },
+   "zone": 6,
+   "name": "tenement blocks",
+   "lon": -73.975,
+   "lat": 40.79
+  },
+  {
+   "x0": 384,
+   "y0": 488,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.567,
+   "parts": {
+    "readability": 0.483,
+    "interactables": 0.75,
+    "character": 0.451
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.389,
+    "clearance": 0.676,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.208,
+    "signature": 0.49,
+    "richness": 0.549,
+    "age": 0.693
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 7,
+    "cut": 83,
+    "landmark": "chrysler-building",
+    "typology": "building.residential"
+   },
+   "zone": 83,
+   "name": "residential blocks",
+   "lon": -73.974,
+   "lat": 40.747
+  },
+  {
+   "x0": 500,
+   "y0": 1052,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.565,
+   "parts": {
+    "readability": 0.907,
+    "interactables": 0.517,
+    "character": 0.224
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.689,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.312,
+    "richness": 0.32,
+    "age": 0.338
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 172,
+   "name": "industrial blocks",
+   "lon": -73.96,
+   "lat": 40.697
+  },
+  {
+   "x0": 448,
+   "y0": 1044,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.564,
+   "parts": {
+    "readability": 0.839,
+    "interactables": 0.583,
+    "character": 0.222
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.746,
+    "clearance": 0.66,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.206,
+    "richness": 0.28,
+    "age": 0.603
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 8,
+    "cut": 87,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 172,
+   "name": "commercial blocks",
+   "lon": -73.966,
+   "lat": 40.697
+  },
+  {
+   "x0": 360,
+   "y0": 420,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.563,
+   "parts": {
+    "readability": 0.618,
+    "interactables": 0.533,
+    "character": 0.533
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.542,
+    "clearance": 0.66,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.227,
+    "richness": 0.301,
+    "age": 1
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 0,
+    "cut": 87,
+    "landmark": "grand-central-terminal",
+    "typology": "building.tower.deco"
+   },
+   "zone": 68,
+   "name": "by the Grand Central Terminal",
+   "lon": -73.976,
+   "lat": 40.754
+  },
+  {
+   "x0": 572,
+   "y0": 684,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.563,
+   "parts": {
+    "readability": 0.874,
+    "interactables": 0.474,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.683,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.468,
+    "richness": 0.304,
+    "age": 0.582
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 17,
+    "cut": 8,
+    "typology": "building.residential"
+   },
+   "zone": 121,
+   "name": "residential blocks",
+   "lon": -73.952,
+   "lat": 40.73
+  },
+  {
+   "x0": 308,
+   "y0": 1104,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.562,
+   "parts": {
+    "readability": 0.754,
+    "interactables": 0.7,
+    "character": 0.177
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.545,
+    "clearance": 0.563,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.167,
+    "richness": 0.208,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 3,
+    "cut": 28,
+    "typology": "building.tower.glass"
+   },
+   "zone": 185,
+   "name": "towers",
+   "lon": -73.983,
+   "lat": 40.692
+  },
+  {
+   "x0": 544,
+   "y0": 1040,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.561,
+   "parts": {
+    "readability": 0.834,
+    "interactables": 0.633,
+    "character": 0.16
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.508,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.184,
+    "richness": 0.175,
+    "age": 0.408
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 0,
+    "cut": 0,
+    "typology": "building.commercial"
+   },
+   "zone": 168,
+   "name": "commercial blocks",
+   "lon": -73.955,
+   "lat": 40.698
+  },
+  {
+   "x0": 68,
+   "y0": 992,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.56,
+   "parts": {
+    "readability": 0.919,
+    "interactables": 0.467,
+    "character": 0.25
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.758,
+    "clearance": 0.965,
+    "water": 1,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.258,
+    "richness": 0.354,
+    "age": 0.563
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 4,
+    "burnable": 1,
+    "cut": 9,
+    "typology": "building.commercial"
+   },
+   "zone": 164,
+   "name": "commercial blocks near the Financial District",
+   "area": "the Financial District",
+   "lon": -74.011,
+   "lat": 40.702
+  },
+  {
+   "x0": 608,
+   "y0": 768,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.56,
+   "parts": {
+    "readability": 0.826,
+    "interactables": 0.517,
+    "character": 0.3
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.447,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.527,
+    "richness": 0.305,
+    "age": 0.435
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 6,
+    "cut": 2,
+    "typology": "building.tenement"
+   },
+   "zone": 124,
+   "name": "tenement blocks",
+   "lon": -73.948,
+   "lat": 40.723
+  },
+  {
+   "x0": 412,
+   "y0": 88,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.56,
+   "parts": {
+    "readability": 0.9,
+    "interactables": 0.517,
+    "character": 0.213
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.668,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.177,
+    "richness": 0.181,
+    "age": 0.763
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 7,
+   "name": "residential blocks",
+   "lon": -73.971,
+   "lat": 40.784
+  },
+  {
+   "x0": 296,
+   "y0": 484,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.559,
+   "parts": {
+    "readability": 0.888,
+    "interactables": 0.267,
+    "character": 0.517
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.771,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.8,
+    "signature": 0.377,
+    "richness": 0.219,
+    "age": 0.725
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 0,
+    "cut": 11,
+    "landmark": "empire-state-building",
+    "typology": "building.tower.deco"
+   },
+   "zone": 73,
+   "name": "by the Empire State Building",
+   "lon": -73.985,
+   "lat": 40.748
+  },
+  {
+   "x0": 520,
+   "y0": 744,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.559,
+   "parts": {
+    "readability": 0.961,
+    "interactables": 0.5,
+    "character": 0.159
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.87,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.225,
+    "richness": 0.263,
+    "age": 0.169
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 0,
+    "water": 8,
+    "burnable": 12,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 133,
+   "name": "industrial blocks",
+   "lon": -73.958,
+   "lat": 40.724
+  },
+  {
+   "x0": 552,
+   "y0": 832,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.559,
+   "parts": {
+    "readability": 0.891,
+    "interactables": 0.433,
+    "character": 0.317
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.642,
+    "clearance": 0.992,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.517,
+    "richness": 0.256,
+    "age": 0.655
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 4,
+    "cut": 2,
+    "typology": "building.tenement"
+   },
+   "zone": 146,
+   "name": "tenement blocks",
+   "lon": -73.954,
+   "lat": 40.716
+  },
+  {
+   "x0": 572,
+   "y0": 252,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.558,
+   "parts": {
+    "readability": 0.769,
+    "interactables": 0.533,
+    "character": 0.341
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.37,
+    "clearance": 0.832,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.392,
+    "richness": 0.361,
+    "age": 0.889
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 5,
+    "cut": 43,
+    "typology": "building.residential"
+   },
+   "zone": 46,
+   "name": "residential blocks",
+   "lon": -73.951,
+   "lat": 40.769
+  },
+  {
+   "x0": 568,
+   "y0": 452,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.558,
+   "parts": {
+    "readability": 0.835,
+    "interactables": 0.667,
+    "character": 0.106
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.451,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.106,
+    "signature": 0.088,
+    "richness": 0.174,
+    "age": 0.031
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 0,
+    "water": 1,
+    "burnable": 11,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.industrial"
+   },
+   "zone": 77,
+   "name": "industrial blocks",
+   "lon": -73.952,
+   "lat": 40.751
+  },
+  {
+   "x0": 568,
+   "y0": 32,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.556,
+   "parts": {
+    "readability": 0.917,
+    "interactables": 0.483,
+    "character": 0.221
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.879,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.225,
+    "richness": 0.312,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 12,
+    "typology": "building.commercial"
+   },
+   "zone": 9,
+   "name": "commercial blocks",
+   "lon": -73.952,
+   "lat": 40.789
+  },
+  {
+   "x0": 548,
+   "y0": 36,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.556,
+   "parts": {
+    "readability": 0.821,
+    "interactables": 0.517,
+    "character": 0.292
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.57,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.424,
+    "richness": 0.316,
+    "age": 0.576
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 5,
+    "cut": 8,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 9,
+   "name": "apartment blocks",
+   "lon": -73.955,
+   "lat": 40.788
+  },
+  {
+   "x0": 576,
+   "y0": 660,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.55,
+   "parts": {
+    "readability": 0.874,
+    "interactables": 0.467,
+    "character": 0.269
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.581,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.551,
+    "richness": 0.249,
+    "age": 0.276
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 7,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 108,
+   "name": "industrial blocks",
+   "lon": -73.951,
+   "lat": 40.732
+  },
+  {
+   "x0": 256,
+   "y0": 876,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.548,
+   "parts": {
+    "readability": 0.762,
+    "interactables": 0.448,
+    "character": 0.416
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.596,
+    "clearance": 0.531,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.208,
+    "signature": 0.584,
+    "richness": 0.293,
+    "age": 0.702
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 18,
+    "cut": 30,
+    "landmark": "manhattan-bridge",
+    "typology": "building.tenement"
+   },
+   "zone": 147,
+   "name": "tenement blocks",
+   "lon": -73.989,
+   "lat": 40.713
+  },
+  {
+   "x0": 580,
+   "y0": 908,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.546,
+   "parts": {
+    "readability": 0.933,
+    "interactables": 0.417,
+    "character": 0.247
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.84,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.359,
+    "richness": 0.267,
+    "age": 0.483
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 5,
+    "cut": 5,
+    "typology": "building.residential"
+   },
+   "zone": 155,
+   "name": "residential blocks",
+   "lon": -73.951,
+   "lat": 40.71
+  },
+  {
+   "x0": 444,
+   "y0": 1088,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.545,
+   "parts": {
+    "readability": 0.878,
+    "interactables": 0.418,
+    "character": 0.304
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.669,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 0.563,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.375,
+    "richness": 0.286,
+    "age": 0.8
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 23,
+    "cut": 1,
+    "typology": "building.brownstone"
+   },
+   "zone": 181,
+   "name": "brownstone blocks",
+   "lon": -73.967,
+   "lat": 40.694
+  },
+  {
+   "x0": 532,
+   "y0": 1032,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.543,
+   "parts": {
+    "readability": 0.898,
+    "interactables": 0.533,
+    "character": 0.141
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.867,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.132,
+    "richness": 0.264,
+    "age": 0.237
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 7,
+    "cut": 16,
+    "typology": "building.residential"
+   },
+   "zone": 167,
+   "name": "residential blocks",
+   "lon": -73.957,
+   "lat": 40.699
+  },
+  {
+   "x0": 304,
+   "y0": 728,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.539,
+   "parts": {
+    "readability": 0.856,
+    "interactables": 0.417,
+    "character": 0.31
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.703,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.541,
+    "richness": 0.226,
+    "age": 0.608
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 15,
+    "cut": 14,
+    "typology": "building.tenement"
+   },
+   "zone": 129,
+   "name": "tenement blocks",
+   "lon": -73.984,
+   "lat": 40.726
+  },
+  {
+   "x0": 172,
+   "y0": 456,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.538,
+   "parts": {
+    "readability": 0.936,
+    "interactables": 0.317,
+    "character": 0.332
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.79,
+    "clearance": 0.996,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.368,
+    "richness": 0.419,
+    "age": 0.781
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 11,
+    "cut": 1,
+    "typology": "building.tenement"
+   },
+   "zone": 84,
+   "name": "tenement blocks",
+   "lon": -73.999,
+   "lat": 40.75
+  },
+  {
+   "x0": 608,
+   "y0": 1044,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.537,
+   "parts": {
+    "readability": 0.886,
+    "interactables": 0.467,
+    "character": 0.212
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.699,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.373,
+    "richness": 0.31,
+    "age": 0.151
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 12,
+    "cut": 6,
+    "typology": "building.house"
+   },
+   "zone": 177,
+   "name": "house blocks",
+   "lon": -73.948,
+   "lat": 40.698
+  },
+  {
+   "x0": 552,
+   "y0": 1056,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.536,
+   "parts": {
+    "readability": 0.928,
+    "interactables": 0.417,
+    "character": 0.218
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.761,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.482,
+    "richness": 0.12,
+    "age": 0.286
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 6,
+    "cut": 0,
+    "typology": "building.commercial.historic"
+   },
+   "zone": 168,
+   "name": "commercial blocks",
+   "lon": -73.954,
+   "lat": 40.697
+  },
+  {
+   "x0": 520,
+   "y0": 976,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.531,
+   "parts": {
+    "readability": 0.905,
+    "interactables": 0.367,
+    "character": 0.285
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.736,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.452,
+    "richness": 0.27,
+    "age": 0.545
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 10,
+    "cut": 4,
+    "typology": "building.tenement"
+   },
+   "zone": 167,
+   "name": "tenement blocks",
+   "lon": -73.958,
+   "lat": 40.704
+  },
+  {
+   "x0": 524,
+   "y0": 188,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.529,
+   "parts": {
+    "readability": 0.654,
+    "interactables": 0.517,
+    "character": 0.398
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.357,
+    "clearance": 0.84,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.595,
+    "richness": 0.354,
+    "age": 0.872
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 2,
+    "cut": 41,
+    "typology": "building.tenement"
+   },
+   "zone": 38,
+   "name": "tenement blocks",
+   "lon": -73.957,
+   "lat": 40.774
+  },
+  {
+   "x0": 484,
+   "y0": 1088,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.529,
+   "parts": {
+    "readability": 0.823,
+    "interactables": 0.533,
+    "character": 0.18
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.62,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.119,
+    "richness": 0.238,
+    "age": 0.568
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 8,
+    "cut": 16,
+    "typology": "building.residential"
+   },
+   "zone": 191,
+   "name": "residential blocks",
+   "lon": -73.962,
+   "lat": 40.694
+  },
+  {
+   "x0": 104,
+   "y0": 668,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.526,
+   "parts": {
+    "readability": 0.672,
+    "interactables": 0.498,
+    "character": 0.388
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.528,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.559,
+    "richness": 0.434,
+    "age": 0.747
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 18,
+    "cut": 28,
+    "typology": "building.brownstone"
+   },
+   "zone": 114,
+   "name": "brownstone blocks",
+   "lon": -74.007,
+   "lat": 40.731
+  },
+  {
+   "x0": 104,
+   "y0": 68,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.522,
+   "parts": {
+    "readability": 0.846,
+    "interactables": 0.533,
+    "character": 0.131
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.485,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.224,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 2,
+   "name": "residential blocks",
+   "lon": -74.007,
+   "lat": 40.785
+  },
+  {
+   "x0": 416,
+   "y0": 1108,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.521,
+   "parts": {
+    "readability": 0.69,
+    "interactables": 0.517,
+    "character": 0.328
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.722,
+    "clearance": 0.094,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.637,
+    "richness": 0.2,
+    "age": 0.578
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 8,
+    "cut": 58,
+    "typology": "building.brownstone"
+   },
+   "zone": 187,
+   "name": "brownstone blocks",
+   "lon": -73.97,
+   "lat": 40.692
+  },
+  {
+   "x0": 148,
+   "y0": 20,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.519,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.467,
+    "character": 0.065
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.867,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.161,
+    "age": 0.166
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 2,
+   "name": "residential blocks",
+   "lon": -74.002,
+   "lat": 40.79
+  },
+  {
+   "x0": 356,
+   "y0": 992,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.513,
+   "parts": {
+    "readability": 0.896,
+    "interactables": 0.517,
+    "character": 0.062
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.652,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.178,
+    "age": 0.114
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 7,
+    "water": 7,
+    "burnable": 3,
+    "cut": 0,
+    "typology": "building.commercial"
+   },
+   "zone": 171,
+   "name": "commercial blocks",
+   "lon": -73.977,
+   "lat": 40.702
+  },
+  {
+   "x0": 492,
+   "y0": 132,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.502,
+   "parts": {
+    "readability": 0.678,
+    "interactables": 0.5,
+    "character": 0.298
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.761,
+    "clearance": 0,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.441,
+    "richness": 0.249,
+    "age": 0.688
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 9,
+    "cut": 467,
+    "typology": "building.apartment.prewar"
+   },
+   "zone": 28,
+   "name": "apartment blocks",
+   "lon": -73.961,
+   "lat": 40.78
+  },
+  {
+   "x0": 504,
+   "y0": 180,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.495,
+   "parts": {
+    "readability": 0.454,
+    "interactables": 0.683,
+    "character": 0.323
+   },
+   "terms": {
+    "hidden": 0.229,
+    "terraced": 0.727,
+    "clearance": 0.531,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.393,
+    "richness": 0.325,
+    "age": 0.827
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 17,
+    "water": 0,
+    "burnable": 14,
+    "cut": 30,
+    "typology": "building.residential"
+   },
+   "zone": 37,
+   "name": "residential blocks",
+   "lon": -73.96,
+   "lat": 40.775
+  },
+  {
+   "x0": 16,
+   "y0": 20,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.493,
+   "parts": {
+    "readability": 0.872,
+    "interactables": 0.517,
+    "character": 0.024
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.653,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.065,
+    "age": 0.054
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 14,
+    "cut": 6,
+    "typology": "building.residential"
+   },
+   "zone": 1,
+   "name": "residential blocks",
+   "lon": -74.018,
+   "lat": 40.79
+  },
+  {
+   "x0": 32,
+   "y0": 68,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.493,
+   "parts": {
+    "readability": 0.875,
+    "interactables": 0.517,
+    "character": 0.02
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.611,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.044,
+    "age": 0.059
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 16,
+    "cut": 2,
+    "typology": "building.residential"
+   },
+   "zone": 0,
+   "name": "residential blocks",
+   "lon": -74.016,
+   "lat": 40.786
+  },
+  {
+   "x0": 152,
+   "y0": 416,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.489,
+   "parts": {
+    "readability": 0.618,
+    "interactables": 0.567,
+    "character": 0.248
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.776,
+    "clearance": 0.754,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.397,
+    "richness": 0.216,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 14,
+    "cut": 63,
+    "typology": "building.tower.glass"
+   },
+   "zone": 65,
+   "name": "towers",
+   "lon": -74.001,
+   "lat": 40.754
+  },
+  {
+   "x0": 92,
+   "y0": 48,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.483,
+   "parts": {
+    "readability": 0.887,
+    "interactables": 0.467,
+    "character": 0.031
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.622,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.079,
+    "age": 0.074
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 15,
+   "name": "residential blocks",
+   "lon": -74.009,
+   "lat": 40.787
+  },
+  {
+   "x0": 80,
+   "y0": 60,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.479,
+   "parts": {
+    "readability": 0.874,
+    "interactables": 0.457,
+    "character": 0.042
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.633,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.126,
+    "age": 0.068
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 17,
+    "cut": 4,
+    "typology": "building.residential"
+   },
+   "zone": 15,
+   "name": "residential blocks",
+   "lon": -74.01,
+   "lat": 40.786
+  },
+  {
+   "x0": 68,
+   "y0": 68,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.478,
+   "parts": {
+    "readability": 0.875,
+    "interactables": 0.457,
+    "character": 0.04
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.621,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.132,
+    "age": 0.048
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 17,
+    "cut": 3,
+    "typology": "building.residential"
+   },
+   "zone": 15,
+   "name": "residential blocks",
+   "lon": -74.012,
+   "lat": 40.786
+  },
+  {
+   "x0": 600,
+   "y0": 564,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.473,
+   "parts": {
+    "readability": 0.875,
+    "interactables": 0.367,
+    "character": 0.127
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.583,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.185,
+    "richness": 0.149,
+    "age": 0.228
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 97,
+   "name": "industrial blocks",
+   "lon": -73.948,
+   "lat": 40.741
+  },
+  {
+   "x0": 48,
+   "y0": 124,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.471,
+   "parts": {
+    "readability": 0.892,
+    "interactables": 0.383,
+    "character": 0.08
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.837,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.216,
+    "age": 0.177
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 8,
+    "cut": 15,
+    "typology": "building.residential"
+   },
+   "zone": 21,
+   "name": "residential blocks",
+   "lon": -74.014,
+   "lat": 40.781
+  },
+  {
+   "x0": 64,
+   "y0": 28,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.47,
+   "parts": {
+    "readability": 0.8,
+    "interactables": 0.517,
+    "character": 0.031
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.424,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.078,
+    "age": 0.078
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 16,
+    "cut": 7,
+    "typology": "building.residential"
+   },
+   "zone": 1,
+   "name": "residential blocks",
+   "lon": -74.012,
+   "lat": 40.789
+  },
+  {
+   "x0": 20,
+   "y0": 48,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.468,
+   "parts": {
+    "readability": 0.88,
+    "interactables": 0.417,
+    "character": 0.047
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.599,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.156,
+    "age": 0.055
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 2,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 0,
+   "name": "residential blocks",
+   "lon": -74.017,
+   "lat": 40.787
+  },
+  {
+   "x0": 20,
+   "y0": 76,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.468,
+   "parts": {
+    "readability": 0.85,
+    "interactables": 0.467,
+    "character": 0.023
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.501,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.026,
+    "age": 0.111
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 13,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 0,
+   "name": "residential blocks",
+   "lon": -74.017,
+   "lat": 40.785
+  },
+  {
+   "x0": 36,
+   "y0": 140,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.467,
+   "parts": {
+    "readability": 0.969,
+    "interactables": 0.317,
+    "character": 0.055
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.897,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.183,
+    "age": 0.062
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 2,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "zone": 25,
+   "name": "residential blocks",
+   "lon": -74.015,
+   "lat": 40.779
+  },
+  {
+   "x0": 604,
+   "y0": 984,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.465,
+   "parts": {
+    "readability": 0.87,
+    "interactables": 0.367,
+    "character": 0.106
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.762,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.129,
+    "richness": 0.248,
+    "age": 0.038
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 8,
+    "cut": 15,
+    "typology": "building.residential"
+   },
+   "zone": 165,
+   "name": "residential blocks",
+   "lon": -73.948,
+   "lat": 40.703
+  },
+  {
+   "x0": 564,
+   "y0": 1064,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.464,
+   "parts": {
+    "readability": 0.827,
+    "interactables": 0.367,
+    "character": 0.154
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.424,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.237,
+    "richness": 0.22,
+    "age": 0.185
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 4,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "zone": 183,
+   "name": "industrial blocks",
+   "lon": -73.953,
+   "lat": 40.696
+  }
+ ],
+ "references": [
+  {
+   "name": "the Financial District",
+   "score": 0.56,
+   "rank": 0.182
+  },
+  {
+   "name": "Midtown",
+   "score": 0.523,
+   "rank": 0.354
+  },
+  {
+   "name": "SoHo",
+   "score": 0.663,
+   "rank": 0.009
+  }
+ ]
+}
