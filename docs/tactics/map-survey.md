@@ -184,9 +184,10 @@ offline on a few hundred finalists, in worker threads.
 
 - **References:** the old hand-picked sites are known to be good; they should
   score in the top tenth of their zones.
-- **Gallery:** a dev page shows the top candidates of each city from above and
-  from their starting side, with each term. Rating them (good, fine, bad) gives
-  labels to fit the weights to, and checks that the ranking agrees.
+- **Gallery:** a dev page shows each city's pool and calibration samples from
+  above and from their starting side, with each term. Rating them (good, fine,
+  bad) gives labels to fit the weights to, and checks that the ranking agrees.
+  See [The gallery](#the-gallery).
 
 ## Output
 
@@ -244,11 +245,38 @@ scores well on character. Generic towers and commercial blocks still win
 overall where they read and play well: the character weights are the first
 thing the gallery's ratings should tune.
 
+## The gallery
+
+```
+pnpm --filter @pixelworlds/tactics-game exec vite --config gallery.config.ts
+```
+
+then <http://localhost:5301/survey.html> (the launch config `tactics-survey`
+does the same). The game's own server keeps port 5300.
+
+- **Cards:** the city's pool (best first), its calibration samples (about 40
+  positions that pass the gates, spread evenly over the range of scores, not
+  elected), or everything unrated. Each card is the board from above with a
+  margin round it: the board outlined, and a marker at the corner the starting
+  side's camera looks from.
+- **The chosen one** in the city view from its starting side, the buildings in
+  front cut away as the game cuts them (each site lists them: `cutObjects`), the
+  board's grid on it; its score, each part and term with its weight, and the
+  facts behind them. Click the view to pan (WASD) and turn it (Q, E).
+- **Rating:** `1` good, `2` fine, `3` bad (then on to the next); tags for why
+  (great view, landmark, character, interesting terrain, good puzzle space,
+  boring, too dense, too open, occluded, ugly cut, edge of data) and a note.
+  `J`/`K` or the arrows step through, `N` jumps to the next unrated.
+- **Kept** in `apps/tactics/survey/ratings.json`, by world and position, with
+  the score and terms at the time of rating, so the weights can be fitted to
+  them even after the survey changes.
+
 ## Build order
 
 1. **Survey tool:** raster, candidates, gates, scores, character zones,
    election, the JSON pool; a summary to read. *(done, D-174)*
-2. **Gallery:** the dev page to review and rate the pool.
-3. **Simulation:** the bots and interaction measures, reranking finalists.
-4. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
-5. **The game draws from the pool**, with the runs and loadouts.
+2. **Gallery:** the dev page to review and rate the pool. *(done, D-175)*
+3. **Fit the weights** to the ratings.
+4. **Simulation:** the bots and interaction measures, reranking finalists.
+5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
+6. **The game draws from the pool**, with the runs and loadouts.

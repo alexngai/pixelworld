@@ -182,6 +182,7 @@ Status values:
 | D-172 | Preset squads, weapons in slots, a depot between blocks, cores for upgrades; runs that unlock squads | Accepted |
 | D-173 | Squads balanced by measuring how often each holds the same positions; the dozer charges | Accepted |
 | D-174 | Boards found by surveying the whole city: scored, zoned by character, elected into a pool | Accepted |
+| D-175 | A gallery to rate the survey's sites, the ratings kept in the repo | Accepted |
 
 ---
 
@@ -2515,3 +2516,9 @@ The point is more room for visual interest; both halves are wanted.
 - **Design:** the scores, zones, election, rooftop maps with chasms, simulation and validation are in [docs/tactics/map-survey.md](tactics/map-survey.md), the first of the game's own docs (`docs/tactics/`).
 - **Checked:** all six cities in about 11 s: 439 sites (New York 195, San Francisco 113, Paris 65, Kyoto 24, Hong Kong 22, Tokyo 20); the old hand-picked sites mostly in their city's top tenth; New York's top site a waterfront park with buildings rising behind, a brownstone square with towers behind high on character, both looked at in the city view.
 - **Next:** a gallery to rate the pool and fit the weights; simulation; rooftop maps; the game drawing from the pool.
+
+### D-175: A gallery to rate the survey's sites, the ratings kept in the repo (accepted)
+- **Why:** the survey's weights (D-174) are a first guess; the owner chose to rate its sites in a gallery and fit the weights to the ratings.
+- **What:** a dev page (`apps/tactics/survey.html`, `src/gallery.ts`) on the game's server run with `gallery.config.ts` (port 5301, the game's config merged with an endpoint that keeps the ratings in `apps/tactics/survey/ratings.json`). A city's pool or its calibration samples as cards seen from above (the board outlined, the corner its camera looks from marked); the one chosen in the city view from its starting side, with the buildings in front cut away as the game cuts them and the board's grid; every part and term with its weight; ratings good, fine or bad by key, with tags and a note, saved with the score and terms of the moment.
+- **The survey's output** now lists each site's buildings cut away in front (`cutObjects`) and about 40 calibration samples per city: positions that pass the gates, spread evenly over the scores, not elected, so the ratings cover bad positions as well as good ones.
+- **Checked:** New York's pool and samples (228 cards) baked from above in the background; the chosen site's view from its side, its cut buildings gone (and back when uncut); a rating saved to the file with its tags, the card marked, the next site chosen; no errors.

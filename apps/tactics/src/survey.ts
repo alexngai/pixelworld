@@ -44,6 +44,8 @@ export interface SurveyOptions {
   fine?: number;
   /** The least score a site is elected with (default 0.4). */
   floor?: number;
+  /** Calibration samples to keep (default 40). */
+  samples?: number;
   onProgress?: (msg: string) => void;
 }
 
@@ -79,6 +81,10 @@ export interface Site {
   parts: { readability: number; interactables: number; character: number };
   terms: Terms;
   facts: { buildings: number; hiddenCells: number; water: number; burnable: number; cut: number; landmark?: string; typology: string };
+  /** The buildings outside the board cut away to see it from its side (object indices): what the game cuts (D-168). */
+  cutObjects: number[];
+  /** A calibration sample, not elected: any position that passes the gates, scored by the coarse pass only. */
+  sample?: boolean;
 }
 
 export interface SurveyResult {
@@ -90,6 +96,8 @@ export interface SurveyResult {
   sites: Site[];
   /** The named places (the old hand-picked sites): the best position passing the gates round each, and where it ranks of all that pass (0 the best, 1 the worst). */
   references: { name: string; score: number | null; rank: number | null }[];
+  /** Positions that pass the gates, not elected, spread evenly over the range of scores: for rating, to fit the weights to. */
+  samples: Site[];
 }
 
 /** The weights of each part and term (doc: Scores). */
@@ -251,7 +259,17 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
     const rank = best === null ? null : all.findIndex((s) => s <= best!) / Math.max(1, all.length - 1);
     return { name: p.name, score: best, rank };
   });
-  return { world: m.id, zoning: zoning.mode, zones: zoning.count, candidates, passed, sites: elected, references };
+  // calibration samples: evenly over the ranks of everything that passed, away from the elected
+  const pool = [...byZone.values()].flat().sort((p, q) => q.score - p.score);
+  const samples: Site[] = [];
+  const want = Math.min(opts.samples ?? 40, pool.length);
+  for (let n = 0; n < want; n++) {
+    const c = pool[Math.floor(((n + 0.5) / want) * pool.length)]!;
+    const span = SIZE * c.cell;
+    if ([...elected, ...samples].some((e) => Math.hypot(e.x0 + (SIZE * e.cell) / 2 - c.x0 - span / 2, e.y0 + (SIZE * e.cell) / 2 - c.y0 - span / 2) < span)) continue;
+    samples.push({ ...named(c), sample: true });
+  }
+  return { world: m.id, zoning: zoning.mode, zones: zoning.count, candidates, passed, sites: elected, references, samples };
 
   // ------------------------------------------------------------------ the parts
 
@@ -341,7 +359,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
     const stand = Array.from({ length: n }, (_, k) => g.roof[k]!);
     const back = Array.from({ length: n }, (_, k) => -((k % SIZE) * tx + Math.floor(k / SIZE) * ty));
     const terraced = clamp((spearman(stand, back) + 1) / 2);
-    const cut = cutAway(x0, y0, cell, stand, toward, !board);
+    const { area: cut, objects: cutObjects } = cutAway(x0, y0, cell, stand, toward, !board);
     const clearance = clamp(1 - cut / (n * cell * cell));
 
     // interactables
@@ -459,6 +477,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       parts,
       terms,
       facts: { buildings, hiddenCells, water: wet, burnable, cut, ...(landmarkId ? { landmark: landmarkId } : {}), typology },
+      cutObjects,
     };
   }
 
@@ -467,7 +486,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
    * side (D-168): those standing above the view rays from its cells. Rays from
    * every cell (from the front edges alone in the coarse pass).
    */
-  function cutAway(x0: number, y0: number, cell: number, stand: readonly number[], [tx, ty]: readonly [number, number], quick: boolean): number {
+  function cutAway(x0: number, y0: number, cell: number, stand: readonly number[], [tx, ty]: readonly [number, number], quick: boolean): { area: number; objects: number[] } {
     const span = SIZE * cell;
     const objects = new Set<number>();
     for (let k = 0; k < SIZE * SIZE; k++) {
@@ -489,7 +508,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
     }
     let area = 0;
     for (const o of objects) area += wallCells.get(o) ?? 1;
-    return area;
+    return { area, objects: [...objects].sort((p, q) => p - q) };
   }
 
   function named(c: Candidate): Site {
