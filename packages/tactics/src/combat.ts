@@ -43,9 +43,10 @@ export interface Weapon {
    * roofs lower than the shooter); `lob` a cell 2+ away along a line, over
    * what lies between; `hoist` lifts the unit on the next cell onto a cell
    * within two (`Strike.to`); `evacuate` empties the next cell's building of
-   * its people by the round's end.
+   * its people by the round's end; `charge` drives along a line over open
+   * ground into the first unit there and strikes it as a melee blow (D-173).
    */
-  kind: "melee" | "shot" | "lob" | "hoist" | "evacuate";
+  kind: "melee" | "shot" | "lob" | "hoist" | "evacuate" | "charge";
   damage: number;
   /** Melee and shots push what they strike on along the line; a lob pushes what stands round its target outward. */
   push: boolean;
@@ -94,8 +95,8 @@ export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
     weapons: [{ name: "drop", kind: "lob", damage: 1, push: true, range: [2, 4] }, { name: "hoist", kind: "hoist", damage: 0, push: false }, EVACUATE],
   },
   // heavy and slow, it climbs only onto low roofs (D-172)
-  dozer: { name: "Dozer", team: SQUAD, hp: 4, move: 2, climb: 6, weapons: [{ name: "blade", kind: "melee", damage: 1, push: true }, EVACUATE] },
-  ladder: { name: "Ladder", team: SQUAD, hp: 2, move: 3, climb: 15, weapons: [{ name: "deluge", kind: "lob", damage: 1, push: true, douses: true, range: [2, 3] }, EVACUATE] },
+  dozer: { name: "Dozer", team: SQUAD, hp: 4, move: 3, climb: 6, weapons: [{ name: "blade", kind: "charge", damage: 2, push: true }, EVACUATE] },
+  ladder: { name: "Ladder", team: SQUAD, hp: 2, move: 3, climb: 30, weapons: [{ name: "deluge", kind: "lob", damage: 2, push: true, douses: true, range: [2, 4] }, EVACUATE] },
   // tougher than a turn's strikes can bring down, mostly: the squad turns them, drowns them, drops them and puts them out of line
   crawler: { name: "Crawler", team: INVADERS, leaps: true, hp: 3, move: 3, climb: Infinity, weapons: [{ name: "bite", kind: "melee", damage: 1, push: false }] },
   brute: { name: "Brute", team: INVADERS, hp: 4, move: 2, climb: 4, weapons: [{ name: "slam", kind: "melee", damage: 2, push: true }] },
@@ -525,6 +526,10 @@ export function strikesOf(c: Combat, u: number): Strike[] {
         for (let r = w.range![0]; r <= w.range![1]; r++) if (step(c.arena, from, dir, r) >= 0) out.push({ weapon, dir, range: r });
         continue;
       }
+      if (w.kind === "charge") {
+        if (chargeEnd(c, u, dir)[1] >= 0) out.push({ weapon, dir, range: 1 });
+        continue;
+      }
       const t = step(c.arena, from, dir);
       if (t < 0) continue;
       if (w.kind === "hoist") {
@@ -550,7 +555,19 @@ export function shotStop(c: Combat, from: number, dir: number, height: number): 
 export function strikeCell(c: Combat, u: number, s: Strike): number {
   const w = weaponsOf(c, u)[s.weapon]!;
   const from = c.pos[u]!;
+  if (w.kind === "charge") return chargeEnd(c, u, s.dir)[1];
   return w.kind === "shot" ? shotStop(c, from, s.dir, standAt(c, from)) : step(c.arena, from, s.dir, w.kind === "lob" ? s.range : 1);
+}
+
+/** Where a charge stops (the last cell it drives onto, or where it stands) and the unit it strikes (or −1: nothing in its way it can reach). */
+function chargeEnd(c: Combat, u: number, dir: number): [number, number] {
+  let at = c.pos[u]!;
+  for (let k = step(c.arena, at, dir); k >= 0; k = step(c.arena, k, dir)) {
+    if (c.occ[k]! >= 0) return [at, Math.abs(standAt(c, k) - standAt(c, at)) <= c.arena.reach ? k : -1];
+    if (!enterable(c, u, at, k)) break;
+    at = k;
+  }
+  return [at, -1];
 }
 
 /** An invader's aimed strike. */
@@ -654,9 +671,11 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   if (c.hp[u]! <= 0) return;
   const a = c.arena;
   const w = weaponsOf(c, u)[s.weapon]!;
-  const from = c.pos[u]!;
   const k = strikeCell(c, u, s);
   if (k < 0) return;
+  // a charge drives up to what it strikes first
+  if (w.kind === "charge") moveUnit(c, u, chargeEnd(c, u, s.dir)[0], log);
+  const from = c.pos[u]!;
   log?.push({ t: "strike", unit: u, at: k, weapon: s.weapon });
   if (w.kind === "evacuate") {
     const sid = structureAt(c, k);
@@ -684,7 +703,7 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   }
   const v = c.occ[k]!;
   // a melee strike reaches a unit only so far up or down: past that, it strikes the wall of the building under it
-  const reaches = v >= 0 && (w.kind !== "melee" || Math.abs(standAt(c, k) - standAt(c, from)) <= a.reach);
+  const reaches = v >= 0 && ((w.kind !== "melee" && w.kind !== "charge") || Math.abs(standAt(c, k) - standAt(c, from)) <= a.reach);
   if (reaches) {
     // from high ground, a point more
     const above = w.damage > 0 && (standAt(c, from) - standAt(c, k)) * a.metersPerStep >= HIGH_GROUND_M;

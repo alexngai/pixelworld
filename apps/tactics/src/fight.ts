@@ -1640,7 +1640,7 @@ export class Fight {
 export function weaponWhat(w: Weapon): string {
   if (w.kind === "hoist") return "lifts the unit beside it up to 2 cells";
   if (w.kind === "evacuate") return "empties the building beside it by the round's end";
-  const where = w.range ? `${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? "first thing in line" : "next cell";
+  const where = w.range ? `${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? "first thing in line" : w.kind === "charge" ? "drives into the first unit in line" : "next cell";
   return `${w.damage ? `${w.damage} damage` : "no damage"}${w.push ? ", pushes" : ""}, ${where}${w.ignites ? ", sets alight" : ""}${w.douses ? ", douses" : ""}`;
 }
 
@@ -1648,7 +1648,7 @@ export function weaponWhat(w: Weapon): string {
 export function weaponShort(w: Weapon): string {
   if (w.kind === "hoist") return "lift ⤴ 2";
   if (w.kind === "evacuate") return "empty a building";
-  const where = w.range ? `${w.range[0]}–${w.range[1]}` : w.kind === "shot" ? "line" : "1";
+  const where = w.range ? `${w.range[0]}–${w.range[1]}` : w.kind === "shot" ? "line" : w.kind === "charge" ? "charge" : "1";
   return [w.damage ? "■".repeat(w.damage) : "0", w.push ? "push" : "", `↦ ${where}`, w.ignites ? "fire" : "", w.douses ? "water" : ""].filter(Boolean).join(" · ");
 }
 

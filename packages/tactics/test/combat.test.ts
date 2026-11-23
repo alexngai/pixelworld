@@ -29,6 +29,8 @@ import {
   solveTurn,
   standAt,
   strike,
+  strikesOf,
+  strikeCell,
   type Arena,
   type CombatEvent,
   type FighterKind,
@@ -492,6 +494,26 @@ describe("loadouts (D-172)", () => {
     expect([c.hp[2], c.pos[2]]).toEqual([0, cell(a, 2, 1)]);
     // a clone keeps its arms
     expect(weaponsOf(cloneCombat(c), 1)[0]!.damage).toBe(4);
+  });
+
+  it("a charge drives along open ground into the first unit, strikes and shoves it; water stops it short", () => {
+    const a = arena(["......", "..~...", "......"]);
+    const c = newCombat(a, [
+      { kind: "dozer", at: cell(a, 0, 0) },
+      { kind: "crawler", at: cell(a, 4, 0) },
+      { kind: "crawler", at: cell(a, 2, 2) },
+    ]);
+    const blade = { weapon: 0, dir: EAST, range: 1 };
+    expect(strikeCell(c, 0, blade)).toBe(cell(a, 4, 0));
+    const log: CombatEvent[] = [];
+    strike(c, 0, blade, log);
+    // it drove to the cell before the crawler, struck it for 2 and shoved it on
+    expect([c.pos[0], c.hp[1], c.pos[1]]).toEqual([cell(a, 3, 0), 1, cell(a, 5, 0)]);
+    expect(log.map((e) => e.t).slice(0, 3)).toEqual(["move", "strike", "damage"]);
+    // south from (2, 0): water at (2, 1) stops it before the crawler beyond, so there's no strike that way
+    const d = newCombat(a, [{ kind: "dozer", at: cell(a, 2, 0) }, { kind: "crawler", at: cell(a, 2, 2) }]);
+    expect(strikeCell(d, 0, { weapon: 0, dir: SOUTH, range: 1 })).toBe(-1);
+    expect(strikesOf(d, 0).some((x) => x.weapon === 0 && x.dir === SOUTH)).toBe(false);
   });
 
   it("every preset squad has three rigs, its weapons in the catalogue", () => {

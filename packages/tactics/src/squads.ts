@@ -32,11 +32,11 @@ export const WEAPONS = {
   waterCannon: { weapon: FIGHTERS.pumper.weapons[0]!, about: "Shoots the first thing along a line, pushes it on, puts out fire.", cost: 2, upgrades: [HARDER] },
   drop: { weapon: FIGHTERS.crane.weapons[0]!, about: "Drops a load on a cell along a line, over what's between; what stands round it is pushed out.", cost: 3, upgrades: [HARDER, FURTHER] },
   hoist: { weapon: FIGHTERS.crane.weapons[1]!, about: "Lifts the unit on the next cell and sets it down within two.", cost: 3, upgrades: [] },
-  blade: { weapon: FIGHTERS.dozer.weapons[0]!, about: "Shoves the next cell's unit on, a light blow.", cost: 2, upgrades: [HARDER] },
+  blade: { weapon: FIGHTERS.dozer.weapons[0]!, about: "Drives along a line over open ground into the first unit there, strikes it and shoves it on.", cost: 2, upgrades: [HARDER] },
   deluge: { weapon: FIGHTERS.ladder.weapons[0]!, about: "Pours water on a cell from above, puts out fire; what stands round it is pushed out.", cost: 3, upgrades: [HARDER, FURTHER] },
   foam: { weapon: { name: "foam cannon", kind: "shot", damage: 0, push: true, douses: true }, about: "Pushes the first thing along a line on and puts out fire, harming nothing.", cost: 2, upgrades: [HARDER] },
-  pileDriver: { weapon: { name: "pile driver", kind: "melee", damage: 3, push: false }, about: "A heavy blow to the next cell; it pushes nothing.", cost: 3, upgrades: [HARDER] },
-  wreckingBall: { weapon: { name: "wrecking ball", kind: "lob", damage: 2, push: false, range: [2, 3] }, about: "Swings onto a cell along a line, over what's between.", cost: 3, upgrades: [SHOVES, FURTHER] },
+  pileDriver: { weapon: { name: "pile driver", kind: "melee", damage: 3, push: false }, about: "A heavy blow to the next cell; it pushes nothing.", cost: 3, upgrades: [HARDER, SHOVES] },
+  wreckingBall: { weapon: { name: "wrecking ball", kind: "lob", damage: 2, push: true, range: [2, 3] }, about: "Swings onto a cell along a line, over what's between; what stands round it is knocked away.", cost: 3, upgrades: [HARDER, FURTHER] },
   flare: { weapon: { name: "flare", kind: "shot", damage: 1, push: false, ignites: true }, about: "Shoots the first thing along a line and sets lawns and woods there alight.", cost: 2, upgrades: [HARDER] },
 } satisfies Record<string, WeaponDef>;
 
@@ -78,9 +78,9 @@ export const SQUADS: readonly Squad[] = [
   {
     id: "brigade",
     name: "Fire Brigade",
-    about: "Foam from the street, water from above, a blade to shove: they move invaders more than they hurt them.",
+    about: "Water from the street and from above (the ladder climbs onto roofs 30 m up), and a dozer that charges in: a crew for fires and high places.",
     rigs: [
-      { kind: "pumper", slots: ["foam", null] },
+      { kind: "pumper", slots: ["waterCannon", null] },
       { kind: "ladder", slots: ["deluge", null] },
       { kind: "dozer", slots: ["blade", null] },
     ],
@@ -89,7 +89,7 @@ export const SQUADS: readonly Squad[] = [
   {
     id: "heavy",
     name: "Heavy Works",
-    about: "Heavy blows that leave invaders where they stand, and a crane to put them where they're wanted.",
+    about: "Heavy blows: a pile driver that leaves invaders where they stand, a wrecking ball that knocks them about, a dozer that charges in.",
     rigs: [
       { kind: "wrecker", slots: ["pileDriver", null] },
       { kind: "crane", slots: ["wreckingBall", "hoist"] },
