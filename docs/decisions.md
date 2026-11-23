@@ -183,6 +183,7 @@ Status values:
 | D-173 | Squads balanced by measuring how often each holds the same positions; the dozer charges | Accepted |
 | D-174 | Boards found by surveying the whole city: scored, zoned by character, elected into a pool | Accepted |
 | D-175 | A gallery to rate the survey's sites, the ratings kept in the repo | Accepted |
+| D-176 | The survey's weights fitted to the ratings: pairs ordered as rated, near the weights now | Accepted |
 
 ---
 
@@ -2522,3 +2523,8 @@ The point is more room for visual interest; both halves are wanted.
 - **What:** a dev page (`apps/tactics/survey.html`, `src/gallery.ts`) on the game's server run with `gallery.config.ts` (port 5301, the game's config merged with an endpoint that keeps the ratings in `apps/tactics/survey/ratings.json`). A city's pool or its calibration samples as cards seen from above (the board outlined, the corner its camera looks from marked); the one chosen in the city view from its starting side, with the buildings in front cut away as the game cuts them and the board's grid; every part and term with its weight; ratings good, fine or bad by key, with tags and a note, saved with the score and terms of the moment.
 - **The survey's output** now lists each site's buildings cut away in front (`cutObjects`) and about 40 calibration samples per city: positions that pass the gates, spread evenly over the scores, not elected, so the ratings cover bad positions as well as good ones.
 - **Checked:** New York's pool and samples (228 cards) baked from above in the background; the chosen site's view from its side, its cut buildings gone (and back when uncut); a rating saved to the file with its tags, the card marked, the next site chosen; no errors.
+
+### D-176: The survey's weights fitted to the ratings: pairs ordered as rated, near the weights now (accepted)
+- **Why:** the owner will rate the survey's sites in the gallery (D-175) and asked for the weights to be fitted to the ratings.
+- **What:** the weights move out of the code into `apps/tactics/survey/weights.json`, which the survey reads. `tools/survey-fit.mjs` fits them: a pairwise logistic loss over every pair of sites rated differently (good above fine above bad), the weights projected onto the simplex (non-negative, summing to one) and pulled toward the weights now, so few ratings move them little. It reports how many pairs the weights now and the fitted order as rated, overall and held out (five folds), the weights side by side, and which terms set apart the sites given each tag; `--write` writes the fitted weights, and the survey is run again with them.
+- **Checked:** on 277 synthetic ratings from a rater weighing character 60 %, readability 30 % and topples 10 %, the fit moved character from 0.30 to 0.47 and interactables from 0.35 to 0.21 (topples most of theirs), and held-out agreement from 92 % to 98 %; written, the weights changed Kyoto's ranking toward its landmarks; with no ratings it says so. The real weights are unchanged until there are real ratings.

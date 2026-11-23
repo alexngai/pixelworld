@@ -1,5 +1,6 @@
 import { Boards, CELL_TREES, CELL_WATER, readCells, type Board, type OpenedWorld } from "@pixelworlds/engine";
 import { arenaFromBoard, hiddenFrom, type Arena } from "@pixelworlds/tactics";
+import weights from "../survey/weights.json";
 
 /**
  * The map survey (docs/tactics/map-survey.md, D-174): every 8 × 8 board
@@ -100,13 +101,17 @@ export interface SurveyResult {
   samples: Site[];
 }
 
-/** The weights of each part and term (doc: Scores). */
-export const WEIGHTS = {
-  parts: { readability: 0.35, interactables: 0.35, character: 0.3 },
-  readability: { hidden: 0.45, terraced: 0.3, clearance: 0.25 },
-  interactables: { water: 0.15, fire: 0.15, topples: 0.2, leaps: 0.15, bands: 0.2, chokepoints: 0.15 },
-  character: { landmark: 0.3, signature: 0.3, richness: 0.25, age: 0.15 },
-};
+/**
+ * The weights of each part and term (doc: Scores), each set summing to 1:
+ * first guesses, then fitted to the gallery's ratings (`tools/survey-fit.mjs
+ * --write`, D-176).
+ */
+export const WEIGHTS: {
+  parts: Record<"readability" | "interactables" | "character", number>;
+  readability: Record<"hidden" | "terraced" | "clearance", number>;
+  interactables: Record<"water" | "fire" | "topples" | "leaps" | "bands" | "chokepoints", number>;
+  character: Record<"landmark" | "signature" | "richness" | "age", number>;
+} = weights;
 
 const DIAGONALS: readonly (readonly [number, number])[] = [
   [1, 1],

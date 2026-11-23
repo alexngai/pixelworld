@@ -271,12 +271,37 @@ does the same). The game's own server keeps port 5300.
   the score and terms at the time of rating, so the weights can be fitted to
   them even after the survey changes.
 
+## Fitting the weights
+
+```
+node tools/survey-fit.mjs            # how well the weights now and the fitted agree with the ratings
+node tools/survey-fit.mjs --write    # and write the fitted ones
+node tools/survey-sites.mjs          # then score the cities again
+```
+
+The weights live in `apps/tactics/survey/weights.json` (each set summing to
+one), read by the survey. The fit looks for the weights that order every pair of
+sites rated differently as rated (good above fine above bad): a pairwise
+logistic loss over the terms, the weights kept non-negative and summing to one,
+and pulled toward the weights now (`--pull`, default 0.3), so a few ratings
+move them a little and many move them more. It reports the share of pairs the
+weights now and the fitted ones order as rated, on all of them and held out
+(fitted on four fifths of the sites, judged on the fifth left out), the weights
+side by side, and for each tag given three times or more the terms that set its
+sites apart (what "boring" sites lack, say: a hint for a missing term).
+
+Checked on 277 synthetic ratings from a rater who cares most for character
+(60 %), then readability (30 %) and topples (10 %): character rose from 0.30 to
+0.47, interactables fell from 0.35 to 0.21 with topples taking most of theirs,
+and the pairs held out ordered as rated went from 92 % to 98 %.
+
 ## Build order
 
 1. **Survey tool:** raster, candidates, gates, scores, character zones,
    election, the JSON pool; a summary to read. *(done, D-174)*
 2. **Gallery:** the dev page to review and rate the pool. *(done, D-175)*
-3. **Fit the weights** to the ratings.
+3. **Fit the weights** to the ratings. *(the tool is done, D-176; it waits on
+   ratings)*
 4. **Simulation:** the bots and interaction measures, reranking finalists.
 5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
 6. **The game draws from the pool**, with the runs and loadouts.
