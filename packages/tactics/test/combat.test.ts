@@ -11,6 +11,11 @@ import {
   generatePuzzle,
   greedyTurn,
   hiddenFrom,
+  SQUADS,
+  WEAPONS,
+  armed,
+  loadoutOf,
+  weaponsOf,
   mechanicsOf,
   movePath,
   moveUnit,
@@ -464,6 +469,37 @@ describe("a fight over several rounds (D-152)", () => {
       d = after(d, plan);
     }
   }, 60_000);
+});
+
+describe("loadouts (D-172)", () => {
+  it("a unit strikes with its loadout's weapons; an upgrade powers one; a weapon of no damage leaves a building whole", () => {
+    const a = arena(["....", ".#..", "....", "...."]);
+    const foam = loadoutOf("pumper", [{ id: "foam", ups: [] }, null]);
+    const piled = loadoutOf("wrecker", [{ id: "pileDriver", ups: [0] }, null]);
+    expect(foam.arms.map((w) => w.name)).toEqual(["foam cannon", "evacuate"]);
+    expect(armed({ id: "pileDriver", ups: [0] }).damage).toBe(4);
+    const c = newCombat(a, [
+      { kind: "pumper", at: cell(a, 0, 1), arms: foam.arms },
+      { kind: "wrecker", at: cell(a, 2, 2), arms: piled.arms },
+      { kind: "brute", at: cell(a, 2, 1) },
+    ]);
+    expect(weaponsOf(c, 2)[0]!.name).toBe("slam");
+    // foam east hits the building next to it: nothing lost
+    strike(c, 0, S(EAST));
+    expect([c.structHp[0], c.lost]).toEqual([a.structures[0]!.hp, 0]);
+    // the upgraded pile driver north: 4 damage to the brute, no push
+    strike(c, 1, S(NORTH));
+    expect([c.hp[2], c.pos[2]]).toEqual([0, cell(a, 2, 1)]);
+    // a clone keeps its arms
+    expect(weaponsOf(cloneCombat(c), 1)[0]!.damage).toBe(4);
+  });
+
+  it("every preset squad has three rigs, its weapons in the catalogue", () => {
+    for (const sq of SQUADS) {
+      expect(sq.rigs).toHaveLength(3);
+      for (const r of sq.rigs) for (const id of r.slots) if (id) expect(WEAPONS[id]).toBeDefined();
+    }
+  });
 });
 
 describe("a move shown cell by cell (D-171)", () => {

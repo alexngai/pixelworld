@@ -5,11 +5,12 @@ import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type BoardSpec, type WorldView } from "@pixelworlds/engine";
-import { arenaFromBoard, hiddenFrom, type Puzzle } from "@pixelworlds/tactics";
+import { SQUAD, SQUADS, arenaFromBoard, cloneCombat, hiddenFrom, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { CityMap } from "./cityMap";
 import { Fight, towardCamera, type FightOutcome } from "./fight";
 import "./game.css";
+import { depot, isUnlocked, loadProfile, loadouts, newRun, pickSquad, reward, saveProfile, type Run } from "./runs";
 import { CITIES, type City, type Site } from "./sites";
 
 /**
@@ -69,7 +70,7 @@ function note(html: string): { set(html: string): void; close(): void } {
 async function title(): Promise<City> {
   await screen(
     `<h1>Hold the Block</h1>
-     <p>Invaders are landing in the cities. Your squad of three rigs — a wrecker, a pumper and a crane — holds one block at a time.</p>
+     <p>Invaders are landing in the cities. Your squad of three rigs holds one block at a time; between blocks, the depot arms it with what the blocks held have earned.</p>
      <p>Every invader shows where it will strike before you move. Push them, drown them, drop them off roofs, bring towers down on them: whatever keeps the people in the buildings alive.</p>
      <button data-go="start">Start</button>`,
     "title",
@@ -106,7 +107,15 @@ async function openCity(city: City): Promise<WorldView> {
  * fight. It needs no camera there, so the next block is made while this one
  * is fought.
  */
-async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, seed: number, progress: (tried: number) => void): Promise<{ board: Board; puzzle: Puzzle } | null> {
+async function scout(
+  view: WorldView,
+  boards: Boards,
+  brain: Brain,
+  site: Site,
+  squad: Loadout[],
+  seed: number,
+  progress: (tried: number) => void,
+): Promise<{ board: Board; puzzle: Puzzle } | null> {
   const at = view.query.lonLatToCell(site.lon, site.lat);
   if (!at) return null;
   const cx = Math.floor(at[0]);
@@ -129,7 +138,7 @@ async function scout(view: WorldView, boards: Boards, brain: Brain, site: Site, 
   tries.sort((p, q) => p.score - q.score);
   for (const { spec } of tries) {
     const board = await boards.add(spec);
-    const puzzle = await brain.generate(arenaOf(board), { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1 }, progress);
+    const puzzle = await brain.generate(arenaOf(board), { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1, squad }, progress);
     if (puzzle) return { board, puzzle };
     boards.remove(board);
   }
@@ -141,7 +150,20 @@ interface Played {
   outcome: FightOutcome | null;
 }
 
-async function operation(city: City): Promise<void> {
+/** A puzzle fought with the squad's weapons as they are now (the depot may have changed them since it was made). */
+function armedNow(p: Puzzle, run: Run): Puzzle {
+  const c = cloneCombat(p.combat);
+  const arms = loadouts(run);
+  let i = 0;
+  for (let u = 0; u < c.roster.length; u++) if (teamOf(c, u) === SQUAD && arms[i]) c.arms[u] = arms[i++]!.arms;
+  return { ...p, combat: c };
+}
+
+async function operation(city: City, squad: Squad): Promise<void> {
+  const profile = loadProfile();
+  profile.runs++;
+  saveProfile(profile);
+  const run = newRun(squad);
   const view = await openCity(city);
   const boards = new Boards(view);
   const brain = new Brain();
@@ -209,7 +231,7 @@ async function operation(city: City): Promise<void> {
   let waiting: { set(html: string): void } | null = null;
   const make = (i: number) => {
     tried = 0;
-    return scout(view, boards, maker, city.sites[i]!, i + 1, (n) => {
+    return scout(view, boards, maker, city.sites[i]!, loadouts(run), i + 1, (n) => {
       tried = n;
       waiting?.set(`<h2>${city.sites[i]!.name}</h2><p>Working out the invaders' landing… ${n} positions tried</p>`);
     });
@@ -230,20 +252,34 @@ async function operation(city: City): Promise<void> {
     }
     board = found.board;
     for (;;) {
-      fight = new Fight({ view, board, puzzle: found.puzzle, brain, ui, labels, title: `${city.name} · ${site.name}`, rounds: ROUNDS, resets: RESETS, hints: HINTS });
+      fight = new Fight({ view, board, puzzle: armedNow(found.puzzle, run), brain, ui, labels, title: `${city.name} · ${site.name}`, rounds: ROUNDS, resets: RESETS, hints: HINTS });
       const o = await fight.done;
       fight.dispose();
       fight = null;
       const last = i === city.sites.length - 1;
+      const pay = reward(o);
       const go = await screen(
         `<h2>${o.held ? "Block held" : o.squadDown ? "Squad down" : "Block lost"}</h2>
          <p>${site.name}: ${o.held ? "nobody lost" : `${Math.round(o.lost)} of ${Math.round(o.atStake)} people lost`} · ${o.invadersDown} invader${o.invadersDown === 1 ? "" : "s"} down · ${o.roundsHeld} of ${o.rounds} round${o.rounds === 1 ? "" : "s"} without loss${o.razed.length ? ` · ${o.razed.length} building${o.razed.length === 1 ? "" : "s"} down` : ""}</p>
+         <p class="wallet">Moving on pays <b>★ ${pay.reputation}</b> reputation${pay.cores ? ` and <b>◆ ${pay.cores}</b> core` : ""}.</p>
          <button data-go="retry">Retry this block</button>
          <button data-go="next">${last ? "End the operation" : "Next block"}</button>`,
         o.held ? "won" : "lost",
       );
       if (go === "next") {
         played.push({ site, outcome: o });
+        run.reputation += pay.reputation;
+        run.cores += pay.cores;
+        if (o.held) profile.blocksHeld++;
+        saveProfile(profile);
+        if (!last)
+          await depot(
+            ui,
+            run,
+            site.name,
+            `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Next: ${city.sites[i + 1]!.name}.`,
+            i + 1,
+          );
         break;
       }
       // the block as it was: its fallen buildings stand again
@@ -255,10 +291,16 @@ async function operation(city: City): Promise<void> {
 
   const held = played.filter((p) => p.outcome?.held).length;
   const lost = played.reduce((n, p) => n + (p.outcome?.lost ?? 0), 0);
+  // the run's end: an operation held to its last block counts, and squads may unlock
+  const before = SQUADS.filter((s) => isUnlocked(profile, s));
+  if (held === played.length && played.length) profile.operationsHeld++;
+  saveProfile(profile);
+  const fresh = SQUADS.filter((s) => isUnlocked(profile, s) && !before.includes(s));
   await screen(
     `<h2>${city.name}: ${held === played.length ? "every block held" : `${held} of ${played.length} blocks held`}</h2>
      <ul class="summary">${played.map((p) => `<li>${p.site.name}: ${!p.outcome ? "no fight" : p.outcome.held ? "held" : `${Math.round(p.outcome.lost)} people lost`}</li>`).join("")}</ul>
-     <p>${Math.round(lost)} people lost in all.</p>
+     <p>${Math.round(lost)} people lost in all. The ${squad.name} ends the run with ★ ${run.reputation} and ◆ ${run.cores} unspent.</p>
+     ${fresh.map((s) => `<p class="unlock">New squad unlocked: <b>${s.name}</b>. ${s.about}</p>`).join("")}
      <button data-go="cities">Another city</button>`,
   );
   location.search = "";
@@ -267,7 +309,11 @@ async function operation(city: City): Promise<void> {
 async function main() {
   const i = params.get("city");
   const city = i !== null && CITIES[Number(i)] ? CITIES[Number(i)]! : await title();
-  await operation(city);
+  // a squad given in the address (`squad=1`) skips the choosing, as `city=` does
+  const sq = params.get("squad");
+  const profile = loadProfile();
+  const squad = sq !== null && SQUADS[Number(sq)] && isUnlocked(profile, SQUADS[Number(sq)]!) ? SQUADS[Number(sq)]! : sq !== null ? SQUADS[0]! : await pickSquad(ui, profile);
+  await operation(city, squad);
 }
 
 main().catch((e: unknown) => {

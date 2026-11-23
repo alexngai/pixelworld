@@ -72,9 +72,15 @@ export interface Fighter {
   weapons: Weapon[];
 }
 
-export type FighterKind = "wrecker" | "pumper" | "crane" | "crawler" | "brute" | "flyer";
+export type FighterKind = "wrecker" | "pumper" | "crane" | "dozer" | "ladder" | "crawler" | "brute" | "flyer";
 
-const EVACUATE: Weapon = { name: "evacuate", kind: "evacuate", damage: 0, push: false };
+/** A squad unit as a loadout gives it (D-172): its kind and its weapons (a preset squad's, and what the run bought and powered). */
+export interface Loadout {
+  kind: FighterKind;
+  arms: readonly Weapon[];
+}
+
+export const EVACUATE: Weapon = { name: "evacuate", kind: "evacuate", damage: 0, push: false };
 
 export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
   wrecker: { name: "Wrecker", team: SQUAD, leaps: true, hp: 3, move: 3, climb: 15, weapons: [{ name: "ram", kind: "melee", damage: 2, push: true }, EVACUATE] },
@@ -87,6 +93,9 @@ export const FIGHTERS: Readonly<Record<FighterKind, Fighter>> = {
     climb: 15,
     weapons: [{ name: "drop", kind: "lob", damage: 1, push: true, range: [2, 4] }, { name: "hoist", kind: "hoist", damage: 0, push: false }, EVACUATE],
   },
+  // heavy and slow, it climbs only onto low roofs (D-172)
+  dozer: { name: "Dozer", team: SQUAD, hp: 4, move: 2, climb: 6, weapons: [{ name: "blade", kind: "melee", damage: 1, push: true }, EVACUATE] },
+  ladder: { name: "Ladder", team: SQUAD, hp: 2, move: 3, climb: 15, weapons: [{ name: "deluge", kind: "lob", damage: 1, push: true, douses: true, range: [2, 3] }, EVACUATE] },
   // tougher than a turn's strikes can bring down, mostly: the squad turns them, drowns them, drops them and puts them out of line
   crawler: { name: "Crawler", team: INVADERS, leaps: true, hp: 3, move: 3, climb: Infinity, weapons: [{ name: "bite", kind: "melee", damage: 1, push: false }] },
   brute: { name: "Brute", team: INVADERS, hp: 4, move: 2, climb: 4, weapons: [{ name: "slam", kind: "melee", damage: 2, push: true }] },
@@ -235,6 +244,8 @@ export interface Arrival {
 export interface Combat {
   readonly arena: Arena;
   roster: FighterKind[];
+  /** Each unit's weapons (D-172): a squad unit's from its loadout, an invader's its kind's. The arrays are shared, never changed. */
+  arms: (readonly Weapon[])[];
   /**
    * Who arrives at the end of each round (`schedule[r]` at round r's end,
    * the first round 0), shown a round ahead: a unit standing on the cell
@@ -289,12 +300,17 @@ export type CombatEvent =
 
 type Log = CombatEvent[] | undefined;
 
-export function newCombat(arena: Arena, units: readonly { kind: FighterKind; at: number }[], schedule: readonly (readonly Arrival[])[] = []): Combat {
+export function newCombat(
+  arena: Arena,
+  units: readonly { kind: FighterKind; at: number; arms?: readonly Weapon[] }[],
+  schedule: readonly (readonly Arrival[])[] = [],
+): Combat {
   const n = arena.w * arena.h;
   const ns = arena.structures.length;
   const c: Combat = {
     arena,
     roster: units.map((u) => u.kind),
+    arms: units.map((u) => u.arms ?? FIGHTERS[u.kind].weapons),
     schedule,
     round: 0,
     pos: Int16Array.from(units.map((u) => u.at)),
@@ -320,6 +336,7 @@ export function cloneCombat(c: Combat): Combat {
   return {
     arena: c.arena,
     roster: c.roster.slice(),
+    arms: c.arms.slice(),
     schedule: c.schedule,
     round: c.round,
     pos: c.pos.slice(),
@@ -338,6 +355,9 @@ export function cloneCombat(c: Combat): Combat {
 
 export const teamOf = (c: Combat, u: number) => FIGHTERS[c.roster[u]!].team;
 
+/** A unit's weapons in a fight (D-172); an invader aims its first. */
+export const weaponsOf = (c: Combat, u: number): readonly Weapon[] => c.arms[u]!;
+
 /** The invaders arriving at this round's end. */
 export const arriving = (c: Combat): readonly Arrival[] => c.schedule[c.round] ?? [];
 
@@ -351,6 +371,7 @@ export function addUnit(c: Combat, kind: FighterKind, at: number): number {
     return b;
   };
   c.roster.push(kind);
+  c.arms.push(FIGHTERS[kind].weapons);
   c.pos = grow(c.pos, at);
   c.hp = grow(c.hp, FIGHTERS[kind].hp);
   c.aim = grow(c.aim, -1);
@@ -496,10 +517,9 @@ export function hoistCells(c: Combat, from: number): number[] {
 
 /** A unit's strikes from where it stands, every weapon's (those that land on the arena; a hoist's for each cell it may set down on). */
 export function strikesOf(c: Combat, u: number): Strike[] {
-  const f = FIGHTERS[c.roster[u]!];
   const from = c.pos[u]!;
   const out: Strike[] = [];
-  f.weapons.forEach((w, weapon) => {
+  weaponsOf(c, u).forEach((w, weapon) => {
     for (let dir = 0; dir < 4; dir++) {
       if (w.kind === "lob") {
         for (let r = w.range![0]; r <= w.range![1]; r++) if (step(c.arena, from, dir, r) >= 0) out.push({ weapon, dir, range: r });
@@ -528,7 +548,7 @@ export function shotStop(c: Combat, from: number, dir: number, height: number): 
 
 /** Where a unit's strike lands from where it stands now: its target cell, or −1 (a shot that meets nothing). */
 export function strikeCell(c: Combat, u: number, s: Strike): number {
-  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
+  const w = weaponsOf(c, u)[s.weapon]!;
   const from = c.pos[u]!;
   return w.kind === "shot" ? shotStop(c, from, s.dir, standAt(c, from)) : step(c.arena, from, s.dir, w.kind === "lob" ? s.range : 1);
 }
@@ -633,7 +653,7 @@ function push(c: Combat, k: number, dir: number, log: Log): void {
 export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
   if (c.hp[u]! <= 0) return;
   const a = c.arena;
-  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
+  const w = weaponsOf(c, u)[s.weapon]!;
   const from = c.pos[u]!;
   const k = strikeCell(c, u, s);
   if (k < 0) return;
@@ -672,7 +692,7 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
     if (w.kind !== "lob" && w.push && c.hp[v]! > 0) push(c, k, s.dir, log);
   } else {
     const sid = structureAt(c, k);
-    if (sid >= 0) hurtStructure(c, sid, w.damage, s.dir, k, log);
+    if (sid >= 0 && w.damage > 0) hurtStructure(c, sid, w.damage, s.dir, k, log);
   }
   if (w.kind === "lob" && w.push)
     for (let d = 0; d < 4; d++) {

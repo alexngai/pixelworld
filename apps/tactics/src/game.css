@@ -191,6 +191,11 @@ kbd {
   padding: 1px 6px;
   font-size: 12px;
 }
+.fight .weapon small {
+  display: block;
+  color: var(--dim);
+  font-size: 10px;
+}
 .fight .weapon.on {
   border-color: var(--warn);
   color: var(--warn);
@@ -378,5 +383,128 @@ kbd {
     width: auto;
     max-width: calc(50vw - 24px);
     font-size: 11px;
+  }
+}
+
+/* squads, the depot (D-172) */
+.screen .box.wide {
+  max-width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.screen h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: var(--dim);
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.dim {
+  color: var(--dim);
+}
+.wallet b {
+  color: var(--warn);
+}
+.unlock b {
+  color: var(--good);
+}
+.squads {
+  display: grid;
+  gap: 8px;
+}
+.squads .squad-card {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  margin: 0 !important;
+  padding: 10px 12px;
+}
+.squad-card > b {
+  font-size: 15px;
+  color: var(--rig);
+}
+.squad-card > span,
+.squad-card em {
+  color: var(--dim);
+}
+.squad-card em {
+  color: var(--warn);
+  font-style: normal;
+}
+.rigs,
+.hangar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.rig {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.rig > b {
+  color: var(--rig);
+}
+.rig small,
+.weapon-card small {
+  display: block;
+  color: var(--dim);
+  font-size: 11px;
+}
+.weapon-card {
+  padding: 6px 8px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: rgba(232, 220, 188, 0.05);
+  cursor: pointer;
+}
+.weapon-card.empty {
+  color: var(--dim);
+  border-style: dashed;
+}
+.weapon-card.held {
+  border-color: var(--warn);
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.4);
+}
+.weapon-card.target,
+.store.target {
+  border-color: var(--good);
+}
+.weapon-card button {
+  margin-top: 4px;
+}
+.store,
+.sale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+}
+.sale .weapon-card,
+.store .weapon-card {
+  width: 170px;
+}
+.ups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.ups .up {
+  font-size: 11px;
+  padding: 1px 6px;
+  margin: 0 !important;
+}
+.ups .up.on {
+  color: var(--warn);
+}
+@media (max-width: 760px) {
+  .rigs,
+  .hangar {
+    grid-template-columns: 1fr;
   }
 }

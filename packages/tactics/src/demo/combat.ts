@@ -25,6 +25,7 @@ import {
   strikesOf,
   structureAt,
   teamOf,
+  weaponsOf,
   moveUnit,
   isBurning,
   type Arrow,
@@ -213,7 +214,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
     const out = new Map<number, Strike>();
     for (const s of strikesOf(c, u)) {
       if (s.weapon !== weapon) continue;
-      if (FIGHTERS[c.roster[u]!].weapons[weapon]!.kind === "hoist") {
+      if (weaponsOf(c, u)[weapon]!.kind === "hoist") {
         if (lift < 0) out.set(strikeCell(c, u, s), { ...s, to: -1 });
         else if (s.dir === lift) out.set(s.to!, s);
         continue;
@@ -267,7 +268,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       const f = FIGHTERS[c.roster[u]!];
       if (teamOf(c, u) !== SQUAD) continue;
       const roof = a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " · on a roof" : "";
-      const arm = u === selected && phase === "strike" ? ` · ${f.weapons[weapon]!.name} (Tab: ${f.weapons.map((w) => w.name).join(", ")})` : "";
+      const arm = u === selected && phase === "strike" ? ` · ${weaponsOf(c, u)[weapon]!.name} (Tab: ${weaponsOf(c, u).map((w) => w.name).join(", ")})` : "";
       lines.push(`${f.name} ${c.hp[u]}/${f.hp}${c.hp[u]! <= 0 ? " down" : acted.has(u) ? " · done" : ""}${roof}${arm}`);
     }
     for (let u = 0, order = 1; u < c.roster.length; u++) {
@@ -278,7 +279,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
       const st = sid >= 0 ? a.structures[sid]! : null;
       const people = st ? (c.evacuated[sid] ? "empty" : `${st.people} people${c.evacuating[sid] ? ", evacuating" : ""}`) : "";
       const at = st ? `${st.name.replace("building.", "")} (${people}${st.topple ? `, topples ${st.topple}` : ""})` : t >= 0 && c.occ[t]! >= 0 ? FIGHTERS[c.roster[c.occ[t]!]!].name : "nothing";
-      lines.push(`${order++}. ${f.name} ${c.hp[u]}/${f.hp}${a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " (on a roof)" : ""} → ${f.weapons[0]!.name} at ${at}`);
+      lines.push(`${order++}. ${f.name} ${c.hp[u]}/${f.hp}${a.struct[c.pos[u]!]! >= 0 && structureAt(c, c.pos[u]!) >= 0 ? " (on a roof)" : ""} → ${weaponsOf(c, u)[0]!.name} at ${at}`);
     }
     const o = outcome(start, c);
     lines.push(`Fight: ${phase === "over" ? "over" : verdict}`);
@@ -428,7 +429,7 @@ function play(env: CombatEnv, board: Board, puzzle: Puzzle): CombatMode {
         return true;
       }
       if (k === "tab" && phase === "strike") {
-        weapon = (weapon + 1) % FIGHTERS[c.roster[selected]!].weapons.length;
+        weapon = (weapon + 1) % weaponsOf(c, selected).length;
         lift = -1;
         draw();
         return true;

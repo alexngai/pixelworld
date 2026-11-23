@@ -23,7 +23,10 @@ import {
   strikesOf,
   structureAt,
   teamOf,
+  weaponsOf,
   type Arena,
+  type Loadout,
+  type Weapon,
   type Combat,
   type CombatEvent,
   type FighterKind,
@@ -97,7 +100,7 @@ function mattering(c: Combat, rig: number): Uint8Array {
     if (teamOf(c, u) !== INVADERS || c.hp[u]! <= 0) continue;
     for (let d = 0; d < 4; d++) mark(step(a, c.pos[u]!, d));
     if (c.aim[u]! < 0) continue;
-    const w = FIGHTERS[c.roster[u]!].weapons[0]!;
+    const w = weaponsOf(c, u)[0]!;
     if (w.kind === "shot") {
       const end = shotStop(c, c.pos[u]!, c.aim[u]!, standAt(c, c.pos[u]!));
       for (let k = step(a, c.pos[u]!, c.aim[u]!); k >= 0; k = step(a, k, c.aim[u]!)) {
@@ -125,7 +128,7 @@ function mattering(c: Combat, rig: number): Uint8Array {
  * tower that would topple is tried, for the rounds after.
  */
 function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null, evacuate = false): boolean {
-  const w = FIGHTERS[c.roster[u]!].weapons[s.weapon]!;
+  const w = weaponsOf(c, u)[s.weapon]!;
   if (w.kind === "evacuate") {
     const sid = evacuate ? structureAt(c, strikeCell(c, u, s)) : -1;
     return sid >= 0 && c.arena.structures[sid]!.topple > 0;
@@ -370,7 +373,7 @@ export function describePlan(start: Combat, plan: readonly Action[]): string[] {
     const s = a.strike;
     let what = "";
     if (s) {
-      const w = f.weapons[s.weapon]!;
+      const w = weaponsOf(c, a.unit)[s.weapon]!;
       const k = strikeCell(c, a.unit, s);
       if (w.kind === "hoist") what = `, hoists the ${FIGHTERS[c.roster[c.occ[k]!]!].name} ${DIR_NAMES[s.dir]} of it to ${at(s.to!)}`;
       else if (w.kind === "evacuate") what = `, evacuates ${c.arena.structures[c.arena.struct[k]!]!.name.replace("building.", "")} ${DIR_NAMES[s.dir]} of it`;
@@ -456,7 +459,8 @@ export interface Puzzle {
 }
 
 export interface PuzzleOptions {
-  squad?: FighterKind[];
+  /** The squad: kinds (their own weapons) or loadouts (D-172); default the wrecker, the pumper and the crane. */
+  squad?: (FighterKind | Loadout)[];
   /** The invaders' kinds, or how many to pick (default 2–3). */
   invaders?: FighterKind[] | number;
   seed?: number;
@@ -502,7 +506,7 @@ function openCells(a: Arena): number[] {
 }
 
 /** Try one position: the squad round a cell, invaders near it and near buildings, and those arriving later; null where it is no puzzle. */
-function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: FighterKind[], arrivals: FighterKind[][] = []): Combat | null {
+function position(a: Arena, rand: () => number, squad: (FighterKind | Loadout)[], invaders: FighterKind[], arrivals: FighterKind[][] = []): Combat | null {
   const open = openCells(a);
   if (open.length < squad.length + invaders.length + 4) return null;
   const pick = <T>(xs: T[]) => xs[Math.floor(rand() * xs.length)]!;
@@ -516,13 +520,13 @@ function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: 
   };
   const centre = pick(open);
   const used = new Set<number>();
-  const units: { kind: FighterKind; at: number }[] = [];
-  for (const kind of squad) {
+  const units: { kind: FighterKind; at: number; arms?: readonly Weapon[] }[] = [];
+  for (const one of squad) {
     const near = open.filter((k) => !used.has(k) && cheb(k, centre) <= 2);
     if (!near.length) return null;
     const at = pick(near);
     used.add(at);
-    units.push({ kind, at });
+    units.push(typeof one === "string" ? { kind: one, at } : { kind: one.kind, at, arms: one.arms });
   }
   const roofs: number[] = [];
   for (let k = 0; k < a.w * a.h; k++) if (a.struct[k]! >= 0) roofs.push(k);
@@ -560,7 +564,7 @@ function position(a: Arena, rand: () => number, squad: FighterKind[], invaders: 
  */
 export async function generatePuzzle(a: Arena, opts: PuzzleOptions = {}): Promise<Puzzle | null> {
   const rand = mulberry(opts.seed ?? 1);
-  const squad = opts.squad ?? ["wrecker", "pumper", "crane"];
+  const squad: (FighterKind | Loadout)[] = opts.squad ?? ["wrecker", "pumper", "crane"];
   const kinds: FighterKind[] = ["crawler", "brute", "flyer"];
   const t0 = performance.now();
   const target = opts.target ?? 12;

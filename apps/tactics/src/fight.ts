@@ -27,6 +27,7 @@ import {
   strikesOf,
   structureAt,
   teamOf,
+  weaponsOf,
   type Arrow,
   type Combat,
   type CombatEvent,
@@ -34,6 +35,7 @@ import {
   type Mark,
   type Puzzle,
   type Strike,
+  type Weapon,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
 import { BoardGlass, type Shot } from "./glass";
@@ -790,7 +792,7 @@ export class Fight {
         }
         case "strike": {
           lastAt = e.at;
-          const w = FIGHTERS[c.roster[e.unit]!].weapons[e.weapon]!;
+          const w = weaponsOf(c, e.unit)[e.weapon]!;
           const from = c.pos[e.unit]!;
           steps.push(nudge(e.unit, e.at, 160));
           // a shot flies to what's struck from further than the next cell
@@ -927,7 +929,7 @@ export class Fight {
 
   private targets(u: number): Map<number, Strike> {
     const out = new Map<number, Strike>();
-    const w = FIGHTERS[this.c.roster[u]!].weapons[this.weapon]!;
+    const w = weaponsOf(this.c, u)[this.weapon]!;
     for (const s of strikesOf(this.c, u)) {
       if (s.weapon !== this.weapon) continue;
       if (w.kind === "hoist") {
@@ -1055,8 +1057,12 @@ export class Fight {
         const f = FIGHTERS[k];
         const state = c.hp[u]! <= 0 ? "down" : this.acted.has(u) ? "done" : u === this.selected ? "selected" : "";
         const roof = structureAt(c, c.pos[u]!) >= 0 ? `<span class="tag">on a roof</span>` : "";
-        const weapons = f.weapons
-          .map((w, i) => `<button class="weapon${u === this.selected && i === this.weapon && this.phase === "strike" ? " on" : ""}" data-rig="${u}" data-weapon="${i}">${w.name}</button>`)
+        // each weapon a card (D-172): its name, what it does in short, the whole on hover
+        const weapons = weaponsOf(c, u)
+          .map(
+            (w, i) =>
+              `<button class="weapon${u === this.selected && i === this.weapon && this.phase === "strike" ? " on" : ""}" data-rig="${u}" data-weapon="${i}" title="${w.name}: ${weaponWhat(w)}">${w.name}<small>${weaponShort(w)}</small></button>`,
+          )
           .join("");
         return `<div class="card ${state}" data-rig="${u}"><b>${f.name}</b> <span class="hp">${pips(c.hp[u]!, f.hp)}</span> ${roof}<div class="weapons">${weapons}</div></div>`;
       })
@@ -1073,7 +1079,7 @@ export class Fight {
           : t >= 0 && c.occ[t]! >= 0
             ? FIGHTERS[c.roster[c.occ[t]!]!].name
             : "nothing";
-        return `<div class="threat"><b>${n}</b> ${f.name} <span class="hp">${pips(c.hp[u]!, f.hp)}</span> → ${f.weapons[0]!.name} ${DIR_NAMES[c.aim[u]!]}: ${at}</div>`;
+        return `<div class="threat"><b>${n}</b> ${f.name} <span class="hp">${pips(c.hp[u]!, f.hp)}</span> → ${weaponsOf(c, u)[0]!.name} ${DIR_NAMES[c.aim[u]!]}: ${at}</div>`;
       })
       .join("");
     const arrivals = arriving(c)
@@ -1160,7 +1166,7 @@ export class Fight {
   }
 
   private strikePrompt(): string {
-    const w = FIGHTERS[this.c.roster[this.selected]!].weapons[this.weapon]!;
+    const w = weaponsOf(this.c, this.selected)[this.weapon]!;
     if (w.kind === "hoist") return this.lift >= 0 ? "Click where to set it down." : "Hoist: click the unit beside the crane to lift.";
     if (w.kind === "evacuate") return "Evacuate: click the building beside it (its people are out by the round's end).";
     return `${w.name}: hover a target to see what it does, click to strike. Tab for another weapon, X to hold fire, right-click to take the move back.`;
@@ -1252,12 +1258,9 @@ export class Fight {
       const squad = teamOf(c, u) === SQUAD;
       lines.push(`<b class="${squad ? "rig" : "invader"}">${f.name}</b> ${pips(c.hp[u]!, f.hp)}${squad && this.acted.has(u) ? " · done" : ""}`);
       lines.push(`moves ${f.move} · ${f.flying ? "flies" : f.climb >= 1e3 ? "climbs any wall" : `climbs ${f.climb} m`}${f.leaps ? " · leaps roof to roof" : ""}`);
-      for (const w of squad ? f.weapons : f.weapons.slice(0, 1)) {
-        const what =
-          w.kind === "hoist" ? "lifts the unit beside it up to 2 cells" : w.kind === "evacuate" ? "empties the building beside it by the round's end" : `${w.damage} damage${w.push ? ", pushes" : ""}${w.range ? `, ${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? ", first thing in line" : ", next cell"}${w.ignites ? ", sets alight" : ""}${w.douses ? ", douses" : ""}`;
-        lines.push(`· ${w.name}: ${what}`);
-      }
-      if (f.weapons.some((w) => w.damage > 0)) lines.push(`a point more striking from ${HIGH_GROUND_M} m above`);
+      const arms = weaponsOf(c, u);
+      for (const w of squad ? arms : arms.slice(0, 1)) lines.push(`· ${w.name}: ${weaponWhat(w)}`);
+      if (arms.some((w) => w.damage > 0)) lines.push(`a point more striking from ${HIGH_GROUND_M} m above`);
       if (!squad && c.aim[u]! >= 0) {
         const t = strikeCell(c, u, aimOf(c, u));
         const sid = t >= 0 ? structureAt(c, t) : -1;
@@ -1456,7 +1459,7 @@ export class Fight {
       return true;
     }
     if (k === "tab" && this.phase === "strike") {
-      this.chooseWeapon(this.selected, (this.weapon + 1) % FIGHTERS[this.c.roster[this.selected]!].weapons.length);
+      this.chooseWeapon(this.selected, (this.weapon + 1) % weaponsOf(this.c, this.selected).length);
       return true;
     }
     if (k === "x" && this.phase === "strike") {
@@ -1503,7 +1506,7 @@ export class Fight {
           moveUnit(d, x.unit, x.dest);
           const t = x.strike ? strikeCell(d, x.unit, x.strike) : -1;
           if (t >= 0) this.hint.push({ from: this.ij(x.dest), to: this.ij(x.strike?.to ?? t), kind: "info" });
-          words.push(`${f.name}: ${x.strike ? f.weapons[x.strike.weapon]!.name : "stand"}`);
+          words.push(`${f.name}: ${x.strike ? weaponsOf(d, x.unit)[x.strike.weapon]!.name : "stand"}`);
           if (x.strike) strike(d, x.unit, x.strike);
         }
         const holds = { fight: "keeps the whole fight winnable", round: "holds this round (no turn keeps every later round safe)", best: "loses the fewest (no turn loses nobody)" }[h.holds];
@@ -1631,6 +1634,22 @@ export class Fight {
   get source(): Puzzle {
     return this.puzzle;
   }
+}
+
+/** What a weapon does, said whole (D-172). */
+export function weaponWhat(w: Weapon): string {
+  if (w.kind === "hoist") return "lifts the unit beside it up to 2 cells";
+  if (w.kind === "evacuate") return "empties the building beside it by the round's end";
+  const where = w.range ? `${w.range[0]}–${w.range[1]} cells` : w.kind === "shot" ? "first thing in line" : "next cell";
+  return `${w.damage ? `${w.damage} damage` : "no damage"}${w.push ? ", pushes" : ""}, ${where}${w.ignites ? ", sets alight" : ""}${w.douses ? ", douses" : ""}`;
+}
+
+/** What a weapon does, in a few marks for its card: damage, a push, where it reaches. */
+export function weaponShort(w: Weapon): string {
+  if (w.kind === "hoist") return "lift ⤴ 2";
+  if (w.kind === "evacuate") return "empty a building";
+  const where = w.range ? `${w.range[0]}–${w.range[1]}` : w.kind === "shot" ? "line" : "1";
+  return [w.damage ? "■".repeat(w.damage) : "0", w.push ? "push" : "", `↦ ${where}`, w.ignites ? "fire" : "", w.douses ? "water" : ""].filter(Boolean).join(" · ");
 }
 
 function manhattan(w: number, p: number, q: number): number {
