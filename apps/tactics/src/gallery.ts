@@ -7,6 +7,7 @@ import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type Rotation, type WorldView } from "@pixelworlds/engine";
 import { BoardOverlay } from "@pixelworlds/tactics";
 import "./gallery.css";
+import { CITIES } from "./sites";
 import { hiddenPenalty, WEIGHTS, type Site, type SurveyResult, type Terms } from "./survey";
 
 /**
@@ -62,6 +63,8 @@ const pct = (v: number) => `${Math.round(v * 100)}`;
 
 const data = (await (await fetch(`/survey/${world}.json?t=${Date.now()}`)).json()) as SurveyResult;
 const ratings = (await (await fetch("/__survey/ratings")).json()) as Record<string, Rating>;
+/** Whether a fight could be made on each board (tools/survey-play.mjs, D-178). */
+const play = (await fetch(`/survey/play.json?t=${Date.now()}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))) as Record<string, { ok: boolean; tried: number; ms: number }>;
 const all: Site[] = [...data.sites, ...data.samples];
 const list = (show === "samples" ? data.samples : show === "unrated" ? all.filter((s) => !ratings[keyOf(s)]) : data.sites).slice();
 let at = Math.min(list.length - 1, Math.max(0, Number(params.get("at") ?? 0)));
@@ -212,6 +215,9 @@ async function select(i: number): Promise<void> {
   await lookAt(list[i]!);
 }
 
+const fightNote = (p: { ok: boolean; tried: number; ms: number } | undefined) =>
+  !p ? "fight not tried" : p.ok ? `a fight made (${p.tried} positions, ${(p.ms / 1000).toFixed(1)} s)` : `<span class="nofight">no fight could be made</span>`;
+
 function info(): void {
   const s = list[at]!;
   const r = ratings[keyOf(s)];
@@ -223,7 +229,7 @@ function info(): void {
   const f = s.facts;
   $("info").innerHTML = `
     <h2>${s.name}${s.sample ? ' <small class="sample">sample</small>' : ""}</h2>
-    <p class="where">${s.area ? `${s.area} · ` : ""}${s.lat !== undefined ? `${s.lat}, ${s.lon} · ` : ""}cells ${s.x0},${s.y0} · ${s.cell === 2 ? "20" : "10"} m a board cell · zone ${s.zone}</p>
+    <p class="where">${s.area ? `${s.area} · ` : ""}${s.lat !== undefined ? `${s.lat}, ${s.lon} · ` : ""}cells ${s.x0},${s.y0} · ${s.cell === 2 ? "20" : "10"} m a board cell · zone ${s.zone} · ${fightNote(play[keyOf(s)])} · <a class="play" href="/?city=${CITIES.findIndex((c) => c.world === world)}&board=${s.x0},${s.y0},${s.cell}" target="_blank">play this board</a></p>
     <div class="total">${bar("score", s.score)}</div>
     <div class="parts">${part("readability", WEIGHTS.readability)}${part("interactables", WEIGHTS.interactables)}${part("character", WEIGHTS.character)}</div>
     <p class="facts">${f.buildings} buildings · ${f.hiddenCells} cells hidden (score −${pct(hiddenPenalty(f.hiddenCells))}) ·${f.water} water · ${f.burnable} burnable · ${f.cut} cells cut away in front · ${f.typology.replace("building.", "")}${f.landmark ? ` · ${f.landmark}` : ""}</p>

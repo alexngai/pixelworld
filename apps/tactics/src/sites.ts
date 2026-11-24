@@ -1,10 +1,11 @@
 /**
- * Where fights happen (D-153): each city's walking level, and the blocks in
- * it that make a board (enough buildings, enough open ground), with the
- * board's cell size: two world cells where buildings are big, one where
- * they are small. An operation is a city's sites, fought in order.
+ * Where fights happen (D-153): each city's walking level, with places named in
+ * it (the survey names its boards after them and ranks the best round each).
+ * An operation is three blocks drawn from the city's surveyed boards (D-178,
+ * docs/tactics/map-survey.md).
  */
 
+/** A named place, with the board cell size that suits it: two world cells where buildings are big, one where they are small. */
 export interface Site {
   name: string;
   lon: number;
@@ -18,6 +19,55 @@ export interface City {
   /** The walking level's world package. */
   world: string;
   sites: Site[];
+}
+
+/** A surveyed board (apps/tactics/survey/boards.json, written by tools/survey-boards.mjs). */
+export interface Block {
+  name: string;
+  /** The survey's character zone. */
+  zone: number;
+  x0: number;
+  y0: number;
+  /** World cells a board cell. */
+  cell: number;
+  /** The survey's score, with the ratings' (D-177, D-178). */
+  score: number;
+}
+
+/** The blocks an operation holds. */
+export const BLOCKS = 3;
+/** How much likelier a board is than one scoring 0.05 less: e (the draw's temperature). */
+const TEMPERATURE = 0.05;
+
+const middle = (b: Block) => [b.x0 + 4 * b.cell, b.y0 + 4 * b.cell] as const;
+
+/**
+ * A board drawn for an operation (D-178): likelier the better it scores, never
+ * on or by one already drawn, from a zone and of a name not yet drawn while
+ * any such is left. Null when none is left. `skip` are boards tried and
+ * given up on (no fight could be made on them).
+ */
+export function drawBlock(pool: readonly Block[], drawn: readonly Block[], random: () => number, skip: readonly Block[] = []): Block | null {
+  const free = pool.filter((b) => !skip.includes(b) && drawn.every((d) => d !== b && Math.hypot(middle(b)[0] - middle(d)[0], middle(b)[1] - middle(d)[1]) >= 12 * Math.max(b.cell, d.cell)));
+  const fresh = free.filter((b) => drawn.every((d) => d.zone !== b.zone && d.name !== b.name));
+  const from = fresh.length ? fresh : free;
+  if (!from.length) return null;
+  const top = Math.max(...from.map((b) => b.score));
+  const weights = from.map((b) => Math.exp((b.score - top) / TEMPERATURE));
+  let r = random() * weights.reduce((p, q) => p + q, 0);
+  for (let i = 0; i < from.length; i++) if ((r -= weights[i]!) < 0) return from[i]!;
+  return from[from.length - 1]!;
+}
+
+/** An operation's blocks: drawn, then fought from the least to the best (the best last, a finale). */
+export function drawOperation(pool: readonly Block[], random: () => number, n = BLOCKS): Block[] {
+  const drawn: Block[] = [];
+  while (drawn.length < n) {
+    const b = drawBlock(pool, drawn, random);
+    if (!b) break;
+    drawn.push(b);
+  }
+  return drawn.sort((p, q) => p.score - q.score);
 }
 
 export const CITIES: City[] = [

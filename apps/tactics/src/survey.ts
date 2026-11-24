@@ -47,6 +47,12 @@ export interface SurveyOptions {
   floor?: number;
   /** Calibration samples to keep (default 40). */
   samples?: number;
+  /**
+   * The gallery's ratings by "x0,y0,cell" (D-178): a position rated good that
+   * passes the gates is elected whatever its zone's quota, the floor or its
+   * neighbours; one rated bad never is.
+   */
+  ratings?: ReadonlyMap<string, "good" | "fine" | "bad">;
   onProgress?: (msg: string) => void;
 }
 
@@ -244,19 +250,26 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
   const fine = opts.fine ?? 4;
   const floor = opts.floor ?? 0.4;
   const elected: Site[] = [];
+  const rating = (c: { x0: number; y0: number; cell: number }) => opts.ratings?.get(`${c.x0},${c.y0},${c.cell}`);
   const zones = [...byZone].map(([zone, list]) => ({ zone, list: list.sort((p, q) => q.score - p.score) })).sort((p, q) => q.list[0]!.score - p.list[0]!.score);
   for (const { zone, list } of zones) {
     const rescored: Candidate[] = [];
-    for (const c of list.slice(0, fine)) {
+    for (const c of [...list.slice(0, fine), ...list.slice(fine).filter((c) => rating(c) === "good")]) {
       const board = await boards.add({ x0: c.x0, y0: c.y0, w: SIZE, h: SIZE, cell: c.cell });
       const a = arenaFromBoard(board, w.query, surfaces, { metersPerCell: mpc });
       boards.remove(board);
       const again = score(c.x0, c.y0, c.cell, a, board);
       if (again) rescored.push({ ...again, zone });
     }
-    rescored.sort((p, q) => q.score - p.score);
+    // the ones rated good first, and taken whatever the quota
+    rescored.sort((p, q) => Number(rating(q) === "good") - Number(rating(p) === "good") || q.score - p.score);
     let quota = 1 + Math.floor(zoning.size(zone) / 8);
     for (const c of rescored) {
+      if (rating(c) === "bad") continue;
+      if (rating(c) === "good") {
+        elected.push(named(c));
+        continue;
+      }
       if (quota <= 0 || c.score < floor) break;
       const span = SIZE * c.cell;
       const near = elected.some((e) => Math.hypot(e.x0 + (SIZE * e.cell) / 2 - c.x0 - span / 2, e.y0 + (SIZE * e.cell) / 2 - c.y0 - span / 2) < 1.5 * Math.max(span, SIZE * e.cell));

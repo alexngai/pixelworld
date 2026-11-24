@@ -2,17 +2,22 @@
 /**
  * The map survey (docs/tactics/map-survey.md, D-174): every board position in
  * each walking-level city scored, the city split into character zones, each
- * zone's best elected; one pool of sites per city written to
- * apps/tactics/survey/<world>.json, and a summary printed.
+ * zone's best elected (with the sites rated good in the gallery, without those
+ * rated bad); one pool of sites per city written to
+ * apps/tactics/survey/<world>.json, a summary printed; then a fight tried on
+ * each board not tried before (tools/survey-play.mjs) and the boards the game
+ * draws from written (tools/survey-boards.mjs).
  *
  *   node tools/survey-sites.mjs                 # every city
  *   node tools/survey-sites.mjs nyc-walk        # one
  *   node tools/survey-sites.mjs --step 8        # a coarser scan, quicker
+ *   node tools/survey-sites.mjs --no-play       # without trying fights on the new boards
  *
  * The worlds are read from fixtures/; the TypeScript (apps/tactics/src/survey.ts
  * and the packages it uses) is loaded through Vite.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { createServer } from "vite";
@@ -46,6 +51,8 @@ globalThis.fetch = async (url) => {
     return new Response("not found", { status: 404 });
   }
 };
+const RATINGS = `${REPO}apps/tactics/survey/ratings.json`;
+const rated = existsSync(RATINGS) ? JSON.parse(readFileSync(RATINGS, "utf8")) : {};
 const style = (id) => JSON.parse(readFileSync(`${REPO}worlds/_styles/${id}/style.json`, "utf8"));
 
 const server = await createServer({
@@ -68,7 +75,10 @@ try {
       const at = w.query.lonLatToCell(s.lon, s.lat);
       return at ? [{ name: s.name, x: at[0], y: at[1] }] : [];
     });
+    // the gallery's ratings of this city's positions (D-178)
+    const ratings = new Map(Object.entries(rated).flatMap(([k, v]) => (k.startsWith(`${world}:`) ? [[k.slice(world.length + 1), v.rating]] : [])));
     const r = await surveyCity(w, {
+      ratings,
       objects: objectsOf(world),
       idf,
       cities: WORLDS.length,
@@ -90,3 +100,7 @@ try {
 } finally {
   await server.close();
 }
+// whether a fight can be made on each board not yet tried, then the boards the game draws from, with the ratings applied
+console.log("");
+if (!process.argv.includes("--no-play")) spawnSync(process.execPath, [fileURLToPath(new URL("./survey-play.mjs", import.meta.url)), ...only], { stdio: "inherit" });
+await import("./survey-boards.mjs");

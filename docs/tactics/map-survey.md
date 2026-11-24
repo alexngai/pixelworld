@@ -222,15 +222,64 @@ offline on a few hundred finalists, in worker threads.
 ## Running it
 
 ```
-node tools/survey-sites.mjs                # every walking-level city
+node tools/survey-sites.mjs                # every walking-level city, the whole pipeline
 node tools/survey-sites.mjs nyc-walk       # one
 node tools/survey-sites.mjs --step 8       # a coarser scan
+node tools/survey-sites.mjs --no-play      # without trying fights on new boards
 ```
 
 The worlds are read from `fixtures/`; the survey (`apps/tactics/src/survey.ts`)
 and the packages it uses are loaded through Vite. It prints each city's top
 sites, with their parts, and where the old hand-picked sites rank among every
-position that passes the gates.
+position that passes the gates. Then it runs the rest of the pipeline (D-178):
+
+1. **Election with the ratings.** A position rated good in the gallery that
+   passes the gates is elected whatever its zone's quota, the floor or its
+   neighbours; one rated bad never is.
+2. **Fights tried** (`tools/survey-play.mjs`): a puzzle made on every site and
+   sample as the game makes one (the first squad, three rounds, six seconds),
+   in ten processes. The outcome is kept by board in
+   `apps/tactics/survey/play.json`, so only boards not tried before are tried
+   (`--again` tries them all).
+3. **The boards the game draws from** (`tools/survey-boards.mjs`):
+   `apps/tactics/survey/boards.json`, each city's sites (name, zone, position,
+   score) less those rated bad and those no fight came of, with the samples
+   rated good; a site rated good scores 0.05 more. Run alone after rating, it
+   applies new ratings without surveying again.
+
+The whole loop: rate in the gallery, `node tools/survey-fit.mjs --write` when
+the fit holds up held out, `node tools/survey-sites.mjs`.
+
+## Drawing an operation's boards
+
+An operation is three blocks drawn from the city's boards each run
+(`drawOperation` in `apps/tactics/src/sites.ts`): each board's chance is
+`e^((score − best) / 0.05)`, so one scoring 0.05 below the best left is drawn
+a third as often; never on or within one and a half spans of a board drawn;
+from a zone and of a name not drawn yet while any is left. They are fought from
+the lowest scoring to the highest, the best a finale. When no fight can be
+made on a block (a new seed, another squad), another is drawn in its place, up
+to four times. The first block's puzzle is looked for twelve seconds, the rest
+six (as the survey tried them): the first is made on a cold worker, a few
+times slower than once warm, and boards known to make fights came to nothing
+in six.
+
+First run of the fights tried (275 s in ten processes, plus Tokyo's 30 s): a
+fight came of 505 of the 610 sites and samples. Of the elected sites the game
+draws from, the ones without a fight left out:
+
+| City | Elected | No fight | Boards drawn from |
+|---|---|---|---|
+| New York | 202 | 34 | 168 |
+| San Francisco | 103 | 17 | 86 |
+| Paris | 66 | 11 | 55 |
+| Kyoto | 25 | 2 | 23 |
+| Tokyo | 24 | 5 | 19 |
+| Hong Kong | 20 | 7 | 13 |
+
+Seven of the 42 New York sites rated good make no fight. `?city=0&board=x0,y0,cell` plays one board: the gallery's
+"play this board" link. The old search round each hand-picked place (D-169)
+is gone; the places remain to name the boards by.
 
 ## First results
 
@@ -313,4 +362,5 @@ and the pairs held out ordered as rated went from 92 % to 98 %.
    hidden penalty added by hand. *(D-177)*
 4. **Simulation:** the bots and interaction measures, reranking finalists.
 5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
-6. **The game draws from the pool**, with the runs and loadouts.
+6. **The game draws from the pool**, with the runs and loadouts. *(done,
+   D-178: the pipeline above, and the draw)*

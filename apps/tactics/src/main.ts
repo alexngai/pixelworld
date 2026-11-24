@@ -4,21 +4,23 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { Boards, createWorldView, roverController, type Board, type BoardSpec, type WorldView } from "@pixelworlds/engine";
-import { SQUAD, SQUADS, arenaFromBoard, cloneCombat, hiddenFrom, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
+import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
+import { SQUAD, SQUADS, arenaFromBoard, cloneCombat, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { CityMap } from "./cityMap";
-import { Fight, towardCamera, type FightOutcome } from "./fight";
+import { Fight, type FightOutcome } from "./fight";
 import "./game.css";
 import { depot, isUnlocked, loadProfile, loadouts, newRun, pickSquad, reward, saveProfile, type Run } from "./runs";
-import { CITIES, type City, type Site } from "./sites";
+import { BLOCKS, CITIES, drawBlock, drawOperation, type Block, type City } from "./sites";
 
 /**
  * The tactics game (D-153): pick a city, then hold its blocks one fight at a
- * time against invaders, on boards cut from the real streets. Puzzles are made
- * and checked in a worker; buildings a fight brings down stay down for the
- * rest of the operation. `?city=0` (an index into CITIES) skips the title.
- * The console has `__tactics`.
+ * time against invaders, on boards cut from the real streets: three drawn
+ * from the city's surveyed boards each run (D-178). Puzzles are made and
+ * checked in a worker; buildings a fight brings down stay down for the rest
+ * of the operation. `?city=0` (an index into CITIES) skips the title;
+ * `&board=x0,y0,cell` plays that one board (the survey gallery's link). The
+ * console has `__tactics`.
  */
 
 const PACKS = [sanFrancisco, newYork, paris, kyoto, tokyo, hongKong];
@@ -34,10 +36,18 @@ const ROUNDS = 3;
 const RESETS = 1;
 const HINTS = 1;
 const SIZE = 8;
-/** The most of a board its own buildings may hide from its clearest side (D-169): a board hiding more is tried only when none clearer makes a fight. */
-const MAX_HIDDEN = 0.15;
-/** Where boards are tried round a site, in spans (a board's width): a grid at half spans. */
-const OFFSETS = [-1, -0.5, 0, 0.5, 1].flatMap((dx) => [-1, -0.5, 0, 0.5, 1].map((dy) => [dx, dy] as const));
+/** Boards drawn for a block before it is given up: another is drawn when no fight can be made on one. */
+const DRAWS = 4;
+/**
+ * How long a block's puzzle is looked for (ms). The first block's longer: its
+ * worker is cold, a few times slower than once warm, and boards a fight is
+ * made on in the survey (tools/survey-play.mjs, six seconds) came to nothing.
+ */
+const MAKE_MS = 6000;
+const FIRST_MAKE_MS = 12000;
+/** The surveyed boards by world (tools/survey-boards.mjs). */
+const POOLS = import("../survey/boards.json").then((m) => m.default as unknown as Record<string, Block[]>);
+const middle = (b: Block) => ({ x: b.x0 + (SIZE * b.cell) / 2, y: b.y0 + (SIZE * b.cell) / 2 });
 
 const ui = document.getElementById("ui")!;
 const labels = document.getElementById("labels")!;
@@ -67,7 +77,7 @@ function note(html: string): { set(html: string): void; close(): void } {
   return { set: (h) => void (el.querySelector(".box")!.innerHTML = h), close: () => el.remove() };
 }
 
-async function title(): Promise<City> {
+async function title(pools: Record<string, Block[]>): Promise<City> {
   await screen(
     `<h1>Hold the Block</h1>
      <p>Invaders are landing in the cities. Your squad of three rigs holds one block at a time; between blocks, the depot arms it with what the blocks held have earned.</p>
@@ -77,7 +87,7 @@ async function title(): Promise<City> {
   );
   const go = await screen(
     `<h2>Choose a city</h2>
-     <div class="cities">${CITIES.map((c, i) => `<button data-go="${i}"><b>${c.name}</b><span>${c.sites.length} block${c.sites.length === 1 ? "" : "s"}: ${c.sites.map((s) => s.name).join(", ")}</span></button>`).join("")}</div>`,
+     <div class="cities">${CITIES.map((c, i) => `<button data-go="${i}"><b>${c.name}</b><span>${BLOCKS} blocks drawn from ${pools[c.world]?.length ?? 0} surveyed, anew each run</span></button>`).join("")}</div>`,
   );
   return CITIES[Number(go)]!;
 }
@@ -99,54 +109,31 @@ async function openCity(city: City): Promise<WorldView> {
 }
 
 /**
- * A board round a site with buildings enough for a fight, and a puzzle made on
- * it; null when none comes of it. Boards are tried round the site, each
- * scored by how much of it its own buildings hide from its clearest side
- * (D-169), clearest first (the site's own cell size and its middle preferred
- * a little); one hiding more than `MAX_HIDDEN` only when none clearer makes a
- * fight. It needs no camera there, so the next block is made while this one
- * is fought.
+ * A fight on a surveyed board (D-178): the board added and a puzzle made on
+ * it; null when none comes of it. It needs no camera there, so the next block
+ * is made while this one is fought.
  */
-async function scout(
+async function fightOn(
   view: WorldView,
   boards: Boards,
   brain: Brain,
-  site: Site,
+  block: Block,
   squad: Loadout[],
   seed: number,
+  timeMs: number,
   progress: (tried: number) => void,
 ): Promise<{ board: Board; puzzle: Puzzle } | null> {
-  const at = view.query.lonLatToCell(site.lon, site.lat);
-  if (!at) return null;
-  const cx = Math.floor(at[0]);
-  const cy = Math.floor(at[1]);
   const mpc = view.world.manifest.scale.metersPerCell;
-  const arenaOf = (board: Board) => arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
-  const towards = [0, 1, 2, 3].map((r) => towardCamera(view, r));
-  const tries: { spec: BoardSpec; score: number }[] = [];
-  for (const cell of [site.cell, site.cell === 1 ? 2 : 1])
-    for (const [dx, dy] of OFFSETS) {
-      const span = SIZE * cell;
-      const spec = { x0: Math.round(cx - span / 2 + dx * span), y0: Math.round(cy - span / 2 + dy * span), w: SIZE, h: SIZE, cell };
-      const board = await boards.add(spec);
-      const arena = arenaOf(board);
-      boards.remove(board);
-      if (arena.structures.length < 5) continue;
-      const hidden = Math.min(...towards.map((t) => hiddenFrom(board, arena, t).reduce((n, v) => n + v, 0))) / (SIZE * SIZE);
-      tries.push({ spec, score: hidden + (hidden > MAX_HIDDEN ? 1 : 0) + (cell === site.cell ? 0 : 0.1) + 0.03 * Math.hypot(dx, dy) });
-    }
-  tries.sort((p, q) => p.score - q.score);
-  for (const { spec } of tries) {
-    const board = await boards.add(spec);
-    const puzzle = await brain.generate(arenaOf(board), { seed, timeMs: 6000, attempts: 400, rounds: ROUNDS, arrivals: 1, squad }, progress);
-    if (puzzle) return { board, puzzle };
-    boards.remove(board);
-  }
+  const board = await boards.add({ x0: block.x0, y0: block.y0, w: SIZE, h: SIZE, cell: block.cell });
+  const arena = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
+  const puzzle = await brain.generate(arena, { seed, timeMs, attempts: 400, rounds: ROUNDS, arrivals: 1, squad }, progress);
+  if (puzzle) return { board, puzzle };
+  boards.remove(board);
   return null;
 }
 
 interface Played {
-  site: Site;
+  site: Block;
   outcome: FightOutcome | null;
 }
 
@@ -159,7 +146,8 @@ function armedNow(p: Puzzle, run: Run): Puzzle {
   return { ...p, combat: c };
 }
 
-async function operation(city: City, squad: Squad): Promise<void> {
+/** An operation: the blocks fought in order, each redrawn from the pool when no fight can be made on it. */
+async function operation(city: City, squad: Squad, pool: readonly Block[], blocks: Block[]): Promise<void> {
   const profile = loadProfile();
   profile.runs++;
   saveProfile(profile);
@@ -171,10 +159,7 @@ async function operation(city: City, squad: Squad): Promise<void> {
   let fight: Fight | null = null;
   let board: Board | null = null;
   // the city from above (D-158): the operation's blocks on it, and the board being fought
-  const places = city.sites.flatMap((s) => {
-    const at = view.query.lonLatToCell(s.lon, s.lat);
-    return at ? [{ name: s.name, x: at[0], y: at[1] }] : [];
-  });
+  const places = blocks.map((b) => ({ name: b.name, ...middle(b) }));
   const cityMap = new CityMap(ui, view, places, () => {
     if (!board) return null;
     const x0 = board.origin[0];
@@ -229,22 +214,37 @@ async function operation(city: City, squad: Squad): Promise<void> {
   const maker = new Brain();
   let tried = 0;
   let waiting: { set(html: string): void } | null = null;
-  const make = (i: number) => {
-    tried = 0;
-    return scout(view, boards, maker, city.sites[i]!, loadouts(run), i + 1, (n) => {
-      tried = n;
-      waiting?.set(`<h2>${city.sites[i]!.name}</h2><p>Working out the invaders' landing… ${n} positions tried</p>`);
-    });
+  const given: Block[] = [];
+  const make = async (i: number) => {
+    for (let d = 0; d < DRAWS; d++) {
+      tried = 0;
+      const block = blocks[i]!;
+      const found = await fightOn(view, boards, maker, block, loadouts(run), i + 1, i === 0 && d === 0 ? FIRST_MAKE_MS : MAKE_MS, (n) => {
+        tried = n;
+        waiting?.set(`<h2>${block.name}</h2><p>Working out the invaders' landing… ${n} positions tried</p>`);
+      });
+      if (found) return found;
+      // no fight on this one: another in its place
+      given.push(block);
+      const again = drawBlock(pool, blocks.filter((b) => b !== block), Math.random, given);
+      if (!again) return null;
+      blocks[i] = again;
+      places[i] = { name: again.name, ...middle(again) };
+    }
+    return null;
   };
   let next = make(0);
-  for (let i = 0; i < city.sites.length; i++) {
-    const site = city.sites[i]!;
-    const n = note(`<h2>${site.name}</h2><p>${tried ? `Working out the invaders' landing… ${tried} positions tried` : "Scouting the block…"}</p>`);
+  for (let i = 0; i < blocks.length; i++) {
+    const n = note(`<h2>${blocks[i]!.name}</h2><p>${tried ? `Working out the invaders' landing… ${tried} positions tried` : "Scouting the block…"}</p>`);
     waiting = n;
-    const [found] = await Promise.all([next, view.camera.lookAt({ lon: site.lon, lat: site.lat })]);
+    const drawn = blocks[i]!;
+    const [found] = await Promise.all([next, view.camera.lookAt(middle(drawn))]);
+    // drawn again while the camera went
+    const site = blocks[i]!;
+    if (site !== drawn) await view.camera.lookAt(middle(site));
     waiting = null;
     n.close();
-    if (i + 1 < city.sites.length) next = make(i + 1);
+    if (i + 1 < blocks.length) next = make(i + 1);
     if (!found) {
       played.push({ site, outcome: null });
       await screen(`<h2>${site.name}</h2><p>No fight could be made on this block.</p><button data-go="next">Move on</button>`);
@@ -256,7 +256,7 @@ async function operation(city: City, squad: Squad): Promise<void> {
       const o = await fight.done;
       fight.dispose();
       fight = null;
-      const last = i === city.sites.length - 1;
+      const last = i === blocks.length - 1;
       const pay = reward(o);
       const go = await screen(
         `<h2>${o.held ? "Block held" : o.squadDown ? "Squad down" : "Block lost"}</h2>
@@ -277,7 +277,7 @@ async function operation(city: City, squad: Squad): Promise<void> {
             ui,
             run,
             site.name,
-            `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Next: ${city.sites[i + 1]!.name}.`,
+            `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Next: ${blocks[i + 1]!.name}.`,
             i + 1,
           );
         break;
@@ -307,13 +307,19 @@ async function operation(city: City, squad: Squad): Promise<void> {
 }
 
 async function main() {
+  const pools = await POOLS;
   const i = params.get("city");
-  const city = i !== null && CITIES[Number(i)] ? CITIES[Number(i)]! : await title();
+  const city = i !== null && CITIES[Number(i)] ? CITIES[Number(i)]! : await title(pools);
+  const pool = pools[city.world] ?? [];
+  // one board given in the address (the gallery's link), else an operation drawn
+  const at = params.get("board")?.split(",").map(Number);
+  const given = at && pool.find((b) => b.x0 === at[0] && b.y0 === at[1] && b.cell === at[2]);
+  const blocks = at ? [given || { name: "The surveyed board", zone: -1, x0: at[0]!, y0: at[1]!, cell: at[2] ?? 2, score: 0 }] : drawOperation(pool, Math.random);
   // a squad given in the address (`squad=1`) skips the choosing, as `city=` does
   const sq = params.get("squad");
   const profile = loadProfile();
   const squad = sq !== null && SQUADS[Number(sq)] && isUnlocked(profile, SQUADS[Number(sq)]!) ? SQUADS[Number(sq)]! : sq !== null ? SQUADS[0]! : await pickSquad(ui, profile);
-  await operation(city, squad);
+  await operation(city, squad, at ? [] : pool, blocks);
 }
 
 main().catch((e: unknown) => {

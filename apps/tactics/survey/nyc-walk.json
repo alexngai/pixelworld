@@ -51,47 +51,49 @@
   },
   {
    "x0": 544,
-   "y0": 396,
+   "y0": 376,
    "cell": 2,
    "toward": [
-    1,
-    1
+    -1,
+    -1
    ],
-   "score": 0.708,
+   "score": 0.696,
    "parts": {
-    "readability": 0.983,
-    "interactables": 0.75,
-    "character": 0.394
+    "readability": 0.928,
+    "interactables": 0.774,
+    "character": 0.416
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.943,
-    "clearance": 1,
+    "terraced": 0.864,
+    "clearance": 0.875,
     "water": 1,
-    "fire": 1,
+    "fire": 0.938,
     "topples": 1,
-    "leaps": 0.333,
-    "bands": 1,
-    "chokepoints": 0,
-    "landmark": 0.8,
-    "signature": 0.135,
-    "richness": 0.154,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.6,
+    "signature": 0.215,
+    "richness": 0.387,
     "age": 0.5
    },
    "facts": {
-    "buildings": 7,
-    "hiddenCells": 5,
-    "water": 11,
-    "burnable": 16,
-    "cut": 0,
+    "buildings": 6,
+    "hiddenCells": 6,
+    "water": 10,
+    "burnable": 17,
+    "cut": 32,
     "landmark": "queensboro-bridge",
     "typology": "building.commercial"
    },
-   "cutObjects": [],
-   "zone": 70,
+   "cutObjects": [
+    157258
+   ],
+   "zone": 57,
    "name": "by the Queensboro Bridge",
    "lon": -73.955,
-   "lat": 40.756
+   "lat": 40.757
   },
   {
    "x0": 276,
@@ -142,51 +144,6 @@
    "lat": 40.738
   },
   {
-   "x0": 60,
-   "y0": 776,
-   "cell": 2,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.69,
-   "parts": {
-    "readability": 0.968,
-    "interactables": 0.755,
-    "character": 0.309
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.893,
-    "clearance": 1,
-    "water": 1,
-    "fire": 0.813,
-    "topples": 1,
-    "leaps": 0.667,
-    "bands": 0.667,
-    "chokepoints": 0.333,
-    "landmark": 0.021,
-    "signature": 0.4,
-    "richness": 0.376,
-    "age": 0.594
-   },
-   "facts": {
-    "buildings": 6,
-    "hiddenCells": 3,
-    "water": 9,
-    "burnable": 19,
-    "cut": 0,
-    "landmark": "one-world-trade-center",
-    "typology": "building.tower.postmodern"
-   },
-   "cutObjects": [],
-   "zone": 122,
-   "name": "towers near SoHo",
-   "area": "SoHo",
-   "lon": -74.012,
-   "lat": 40.721
-  },
-  {
    "x0": 244,
    "y0": 972,
    "cell": 2,
@@ -231,56 +188,94 @@
    "lat": 40.704
   },
   {
-   "x0": 60,
-   "y0": 884,
+   "x0": 540,
+   "y0": 400,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.688,
+   "parts": {
+    "readability": 0.98,
+    "interactables": 0.8,
+    "character": 0.361
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.934,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.047,
+    "richness": 0.129,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 11,
+    "burnable": 14,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [],
+   "zone": 70,
+   "name": "by the Queensboro Bridge",
+   "lon": -73.955,
+   "lat": 40.755
+  },
+  {
+   "x0": 20,
+   "y0": 848,
    "cell": 2,
    "toward": [
     -1,
     -1
    ],
-   "score": 0.684,
+   "score": 0.685,
    "parts": {
-    "readability": 0.808,
-    "interactables": 0.733,
-    "character": 0.485
+    "readability": 0.932,
+    "interactables": 0.722,
+    "character": 0.463
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.68,
-    "clearance": 0.617,
+    "terraced": 0.797,
+    "clearance": 0.973,
     "water": 1,
-    "fire": 1,
+    "fire": 0.813,
     "topples": 1,
     "leaps": 0,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0.8,
-    "signature": 0.294,
-    "richness": 0.326,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.769,
+    "signature": 0.359,
+    "richness": 0.198,
     "age": 0.5
    },
    "facts": {
-    "buildings": 6,
-    "hiddenCells": 1,
-    "water": 10,
-    "burnable": 12,
-    "cut": 98,
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 8,
+    "burnable": 19,
+    "cut": 7,
     "landmark": "one-world-trade-center",
-    "typology": "building.commercial"
+    "typology": "building.tower.postmodern"
    },
    "cutObjects": [
-    14591,
-    14717,
-    47311,
-    47312,
-    47317,
-    157215
+    50581
    ],
-   "zone": 154,
-   "name": "by the One World Trade Center",
-   "area": "the Financial District",
-   "lon": -74.012,
-   "lat": 40.712
+   "zone": 140,
+   "name": "towers",
+   "lon": -74.017,
+   "lat": 40.715
   },
   {
    "x0": 432,
@@ -464,52 +459,52 @@
    "lat": 40.703
   },
   {
-   "x0": 24,
-   "y0": 864,
+   "x0": 64,
+   "y0": 776,
    "cell": 2,
    "toward": [
     -1,
-    1
+    -1
    ],
-   "score": 0.675,
+   "score": 0.673,
    "parts": {
-    "readability": 0.96,
-    "interactables": 0.741,
-    "character": 0.347
+    "readability": 0.927,
+    "interactables": 0.867,
+    "character": 0.334
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.925,
-    "clearance": 0.93,
+    "terraced": 0.842,
+    "clearance": 0.898,
     "water": 1,
-    "fire": 0.938,
+    "fire": 1,
     "topples": 1,
-    "leaps": 0,
-    "bands": 1,
-    "chokepoints": 0.333,
-    "landmark": 0.305,
-    "signature": 0.333,
-    "richness": 0.322,
-    "age": 0.5
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.018,
+    "signature": 0.45,
+    "richness": 0.4,
+    "age": 0.625
    },
    "facts": {
-    "buildings": 10,
-    "hiddenCells": 6,
-    "water": 10,
-    "burnable": 17,
-    "cut": 18,
+    "buildings": 6,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 12,
+    "cut": 26,
     "landmark": "one-world-trade-center",
     "typology": "building.tower.postmodern"
    },
    "cutObjects": [
-    39539,
-    39540,
-    39544
+    4275,
+    61315
    ],
-   "zone": 140,
-   "name": "by the One World Trade Center",
-   "lon": -74.016,
-   "lat": 40.714
+   "zone": 122,
+   "name": "towers near SoHo",
+   "area": "SoHo",
+   "lon": -74.011,
+   "lat": 40.721
   },
   {
    "x0": 492,
@@ -555,52 +550,6 @@
    "name": "brownstone blocks",
    "lon": -73.961,
    "lat": 40.766
-  },
-  {
-   "x0": 276,
-   "y0": 964,
-   "cell": 2,
-   "toward": [
-    1,
-    -1
-   ],
-   "score": 0.669,
-   "parts": {
-    "readability": 0.949,
-    "interactables": 0.733,
-    "character": 0.325
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.849,
-    "clearance": 0.977,
-    "water": 1,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0.135,
-    "signature": 0.335,
-    "richness": 0.275,
-    "age": 0.769
-   },
-   "facts": {
-    "buildings": 7,
-    "hiddenCells": 5,
-    "water": 7,
-    "burnable": 10,
-    "cut": 6,
-    "landmark": "manhattan-bridge",
-    "typology": "building.commercial.historic"
-   },
-   "cutObjects": [
-    28823
-   ],
-   "zone": 163,
-   "name": "commercial blocks",
-   "lon": -73.986,
-   "lat": 40.705
   },
   {
    "x0": 508,
@@ -693,49 +642,6 @@
    "name": "by the One World Trade Center",
    "lon": -74.013,
    "lat": 40.714
-  },
-  {
-   "x0": 488,
-   "y0": 652,
-   "cell": 2,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.666,
-   "parts": {
-    "readability": 0.946,
-    "interactables": 0.833,
-    "character": 0.178
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.821,
-    "clearance": 1,
-    "water": 1,
-    "fire": 1,
-    "topples": 0.5,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0,
-    "signature": 0.199,
-    "richness": 0.175,
-    "age": 0.5
-   },
-   "facts": {
-    "buildings": 6,
-    "hiddenCells": 4,
-    "water": 5,
-    "burnable": 7,
-    "cut": 0,
-    "typology": "building.residential"
-   },
-   "cutObjects": [],
-   "zone": 113,
-   "name": "residential blocks",
-   "lon": -73.961,
-   "lat": 40.733
   },
   {
    "x0": 272,
@@ -838,6 +744,52 @@
    "lat": 40.756
   },
   {
+   "x0": 272,
+   "y0": 968,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.662,
+   "parts": {
+    "readability": 0.931,
+    "interactables": 0.867,
+    "character": 0.292
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.875,
+    "clearance": 0.875,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.156,
+    "signature": 0.323,
+    "richness": 0.185,
+    "age": 0.682
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 13,
+    "cut": 8,
+    "landmark": "manhattan-bridge",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    40125
+   ],
+   "zone": 163,
+   "name": "commercial blocks",
+   "lon": -73.987,
+   "lat": 40.705
+  },
+  {
    "x0": 244,
    "y0": 608,
    "cell": 1,
@@ -882,6 +834,51 @@
    "name": "residential blocks",
    "lon": -73.991,
    "lat": 40.737
+  },
+  {
+   "x0": 60,
+   "y0": 908,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.656,
+   "parts": {
+    "readability": 0.927,
+    "interactables": 0.75,
+    "character": 0.413
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.755,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.259,
+    "signature": 0.281,
+    "richness": 0.478,
+    "age": 0.875
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "landmark": "one-world-trade-center",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [],
+   "zone": 154,
+   "name": "commercial blocks near the Financial District",
+   "area": "the Financial District",
+   "lon": -74.012,
+   "lat": 40.71
   },
   {
    "x0": 120,
@@ -1204,49 +1201,6 @@
    "lat": 40.749
   },
   {
-   "x0": 540,
-   "y0": 488,
-   "cell": 2,
-   "toward": [
-    1,
-    1
-   ],
-   "score": 0.645,
-   "parts": {
-    "readability": 0.867,
-    "interactables": 0.883,
-    "character": 0.19
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.558,
-    "clearance": 1,
-    "water": 1,
-    "fire": 1,
-    "topples": 1,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0,
-    "signature": 0.204,
-    "richness": 0.213,
-    "age": 0.5
-   },
-   "facts": {
-    "buildings": 11,
-    "hiddenCells": 6,
-    "water": 3,
-    "burnable": 9,
-    "cut": 0,
-    "typology": "building.industrial"
-   },
-   "cutObjects": [],
-   "zone": 91,
-   "name": "industrial blocks",
-   "lon": -73.955,
-   "lat": 40.747
-  },
-  {
    "x0": 68,
    "y0": 696,
    "cell": 2,
@@ -1385,92 +1339,48 @@
    "lat": 40.702
   },
   {
-   "x0": 236,
-   "y0": 904,
-   "cell": 2,
-   "toward": [
-    1,
-    1
-   ],
-   "score": 0.639,
-   "parts": {
-    "readability": 0.94,
-    "interactables": 0.633,
-    "character": 0.439
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.844,
-    "clearance": 0.945,
-    "water": 1,
-    "fire": 1,
-    "topples": 1,
-    "leaps": 0,
-    "bands": 0.667,
-    "chokepoints": 0,
-    "landmark": 0.8,
-    "signature": 0.159,
-    "richness": 0.307,
-    "age": 0.5
-   },
-   "facts": {
-    "buildings": 5,
-    "hiddenCells": 8,
-    "water": 11,
-    "burnable": 12,
-    "cut": 14,
-    "landmark": "manhattan-bridge",
-    "typology": "building.commercial"
-   },
-   "cutObjects": [
-    62389
-   ],
-   "zone": 157,
-   "name": "by the Manhattan Bridge",
-   "lon": -73.991,
-   "lat": 40.71
-  },
-  {
-   "x0": 572,
+   "x0": 568,
    "y0": 276,
    "cell": 2,
    "toward": [
     1,
     1
    ],
-   "score": 0.638,
+   "score": 0.636,
    "parts": {
-    "readability": 0.971,
-    "interactables": 0.633,
-    "character": 0.291
+    "readability": 0.933,
+    "interactables": 0.783,
+    "character": 0.3
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.903,
-    "clearance": 1,
+    "terraced": 0.802,
+    "clearance": 0.969,
     "water": 1,
-    "fire": 0.667,
+    "fire": 1,
     "topples": 1,
     "leaps": 0,
     "bands": 0.667,
-    "chokepoints": 0.333,
+    "chokepoints": 1,
     "landmark": 0,
-    "signature": 0.286,
-    "richness": 0.41,
-    "age": 0.688
+    "signature": 0.304,
+    "richness": 0.428,
+    "age": 0.682
    },
    "facts": {
-    "buildings": 7,
-    "hiddenCells": 4,
-    "water": 7,
-    "burnable": 2,
-    "cut": 0,
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 5,
+    "cut": 8,
     "typology": "building.residential"
    },
-   "cutObjects": [],
+   "cutObjects": [
+    9723
+   ],
    "zone": 47,
    "name": "residential blocks",
-   "lon": -73.951,
+   "lon": -73.952,
    "lat": 40.766
   },
   {
@@ -1566,6 +1476,51 @@
    "name": "tenement blocks",
    "lon": -73.998,
    "lat": 40.755
+  },
+  {
+   "x0": 504,
+   "y0": 568,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.632,
+   "parts": {
+    "readability": 0.928,
+    "interactables": 0.733,
+    "character": 0.19
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.799,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.232,
+    "richness": 0.183,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 12,
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    14813
+   ],
+   "zone": 98,
+   "name": "residential blocks",
+   "lon": -73.959,
+   "lat": 40.74
   },
   {
    "x0": 376,
@@ -1802,6 +1757,49 @@
    "lat": 40.725
   },
   {
+   "x0": 536,
+   "y0": 488,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.627,
+   "parts": {
+    "readability": 0.851,
+    "interactables": 0.933,
+    "character": 0.192
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.503,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.189,
+    "richness": 0.239,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 9,
+    "water": 1,
+    "burnable": 9,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 91,
+   "name": "industrial blocks",
+   "lon": -73.956,
+   "lat": 40.747
+  },
+  {
    "x0": 520,
    "y0": 920,
    "cell": 1,
@@ -1845,6 +1843,49 @@
    "name": "tenement blocks",
    "lon": -73.958,
    "lat": 40.709
+  },
+  {
+   "x0": 488,
+   "y0": 656,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.627,
+   "parts": {
+    "readability": 0.92,
+    "interactables": 0.833,
+    "character": 0.187
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.734,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.223,
+    "richness": 0.181,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 8,
+    "burnable": 6,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "cutObjects": [],
+   "zone": 113,
+   "name": "residential blocks",
+   "lon": -73.961,
+   "lat": 40.732
   },
   {
    "x0": 152,
@@ -2027,6 +2068,51 @@
    "name": "commercial blocks",
    "lon": -73.994,
    "lat": 40.741
+  },
+  {
+   "x0": 496,
+   "y0": 632,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.623,
+   "parts": {
+    "readability": 0.922,
+    "interactables": 0.783,
+    "character": 0.2
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.771,
+    "clearance": 0.961,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.214,
+    "richness": 0.241,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 5,
+    "cut": 10,
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    2869
+   ],
+   "zone": 102,
+   "name": "residential blocks",
+   "lon": -73.96,
+   "lat": 40.734
   },
   {
    "x0": 96,
@@ -2224,6 +2310,53 @@
    "lat": 40.763
   },
   {
+   "x0": 92,
+   "y0": 512,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.615,
+   "parts": {
+    "readability": 0.861,
+    "interactables": 0.9,
+    "character": 0.22
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.629,
+    "clearance": 0.965,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.187,
+    "richness": 0.274,
+    "age": 0.636
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 10,
+    "water": 2,
+    "burnable": 7,
+    "cut": 9,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    19373,
+    19375,
+    19579
+   ],
+   "zone": 93,
+   "name": "commercial blocks",
+   "lon": -74.008,
+   "lat": 40.745
+  },
+  {
    "x0": 276,
    "y0": 776,
    "cell": 1,
@@ -2267,6 +2400,56 @@
    "name": "tenement blocks",
    "lon": -73.987,
    "lat": 40.722
+  },
+  {
+   "x0": 120,
+   "y0": 784,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.613,
+   "parts": {
+    "readability": 0.827,
+    "interactables": 0.733,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.684,
+    "clearance": 0.688,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.002,
+    "signature": 0.445,
+    "richness": 0.452,
+    "age": 0.792
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 13,
+    "cut": 20,
+    "landmark": "woolworth-building",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    885,
+    4312,
+    25345,
+    54783
+   ],
+   "zone": 134,
+   "name": "SoHo",
+   "area": "SoHo",
+   "lon": -74.005,
+   "lat": 40.721
   },
   {
    "x0": 140,
@@ -2564,6 +2747,50 @@
    "area": "Midtown",
    "lon": -73.993,
    "lat": 40.757
+  },
+  {
+   "x0": 560,
+   "y0": 480,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.607,
+   "parts": {
+    "readability": 0.949,
+    "interactables": 0.667,
+    "character": 0.138
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.831,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.005,
+    "signature": 0.232,
+    "richness": 0.202,
+    "age": 0.113
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 0,
+    "water": 4,
+    "burnable": 3,
+    "cut": 0,
+    "landmark": "queensboro-bridge",
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 91,
+   "name": "industrial blocks",
+   "lon": -73.953,
+   "lat": 40.748
   },
   {
    "x0": 224,
@@ -3286,6 +3513,54 @@
    "name": "commercial blocks",
    "lon": -73.956,
    "lat": 40.698
+  },
+  {
+   "x0": 524,
+   "y0": 308,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.597,
+   "parts": {
+    "readability": 0.846,
+    "interactables": 0.783,
+    "character": 0.361
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.825,
+    "clearance": 0.855,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.092,
+    "signature": 0.372,
+    "richness": 0.352,
+    "age": 0.895
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 7,
+    "cut": 37,
+    "landmark": "queensboro-bridge",
+    "typology": "building.tenement"
+   },
+   "cutObjects": [
+    12113,
+    29453,
+    47145
+   ],
+   "zone": 52,
+   "name": "tenement blocks",
+   "lon": -73.957,
+   "lat": 40.764
   },
   {
    "x0": 240,
@@ -4098,6 +4373,51 @@
    "lat": 40.75
   },
   {
+   "x0": 308,
+   "y0": 84,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.579,
+   "parts": {
+    "readability": 0.879,
+    "interactables": 0.667,
+    "character": 0.352
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.775,
+    "clearance": 0.859,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.626,
+    "richness": 0.245,
+    "age": 0.688
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 15,
+    "cut": 9,
+    "typology": "building.apartment.prewar"
+   },
+   "cutObjects": [
+    27900
+   ],
+   "zone": 11,
+   "name": "apartment blocks",
+   "lon": -73.983,
+   "lat": 40.784
+  },
+  {
    "x0": 300,
    "y0": 232,
    "cell": 2,
@@ -4143,56 +4463,6 @@
    "name": "towers",
    "lon": -73.984,
    "lat": 40.77
-  },
-  {
-   "x0": 124,
-   "y0": 788,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.577,
-   "parts": {
-    "readability": 0.788,
-    "interactables": 0.583,
-    "character": 0.406
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.696,
-    "clearance": 0.516,
-    "water": 0,
-    "fire": 1,
-    "topples": 1,
-    "leaps": 0.667,
-    "bands": 0.667,
-    "chokepoints": 0,
-    "landmark": 0.013,
-    "signature": 0.423,
-    "richness": 0.574,
-    "age": 0.882
-   },
-   "facts": {
-    "buildings": 12,
-    "hiddenCells": 6,
-    "water": 0,
-    "burnable": 3,
-    "cut": 31,
-    "landmark": "woolworth-building",
-    "typology": "building.commercial.historic"
-   },
-   "cutObjects": [
-    4311,
-    4312,
-    22379,
-    48713
-   ],
-   "zone": 134,
-   "name": "SoHo",
-   "area": "SoHo",
-   "lon": -74.005,
-   "lat": 40.721
   },
   {
    "x0": 312,
@@ -4961,49 +5231,6 @@
    "name": "commercial blocks",
    "lon": -73.959,
    "lat": 40.783
-  },
-  {
-   "x0": 304,
-   "y0": 88,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.559,
-   "parts": {
-    "readability": 0.946,
-    "interactables": 0.41,
-    "character": 0.364
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.819,
-    "clearance": 1,
-    "water": 0,
-    "fire": 0.625,
-    "topples": 1,
-    "leaps": 0.333,
-    "bands": 0.333,
-    "chokepoints": 0,
-    "landmark": 0,
-    "signature": 0.632,
-    "richness": 0.234,
-    "age": 0.771
-   },
-   "facts": {
-    "buildings": 8,
-    "hiddenCells": 6,
-    "water": 0,
-    "burnable": 22,
-    "cut": 0,
-    "typology": "building.tenement"
-   },
-   "cutObjects": [],
-   "zone": 11,
-   "name": "tenement blocks",
-   "lon": -73.984,
-   "lat": 40.784
   },
   {
    "x0": 520,
@@ -6577,6 +6804,50 @@
    "lat": 40.758
   },
   {
+   "x0": 240,
+   "y0": 900,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.539,
+   "parts": {
+    "readability": 0.7,
+    "interactables": 0.9,
+    "character": 0.439
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.844,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.085,
+    "richness": 0.396,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 15,
+    "water": 3,
+    "burnable": 14,
+    "cut": 0,
+    "landmark": "manhattan-bridge",
+    "typology": "building.residential"
+   },
+   "cutObjects": [],
+   "zone": 157,
+   "name": "by the Manhattan Bridge",
+   "lon": -73.991,
+   "lat": 40.71
+  },
+  {
    "x0": 360,
    "y0": 372,
    "cell": 1,
@@ -7742,6 +8013,57 @@
    "name": "tenement blocks",
    "lon": -73.994,
    "lat": 40.765
+  },
+  {
+   "x0": 232,
+   "y0": 716,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.506,
+   "parts": {
+    "readability": 0.7,
+    "interactables": 0.667,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.504,
+    "clearance": 0.656,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.503,
+    "richness": 0.41,
+    "age": 0.753
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 13,
+    "cut": 22,
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    12181,
+    43212,
+    44784,
+    44914,
+    51496,
+    52275,
+    61150
+   ],
+   "zone": 118,
+   "name": "residential blocks",
+   "lon": -73.992,
+   "lat": 40.727
   },
   {
    "x0": 304,
@@ -9511,6 +9833,65 @@
    "area": "Midtown",
    "lon": -73.99,
    "lat": 40.752,
+   "sample": true
+  },
+  {
+   "x0": 64,
+   "y0": 880,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.485,
+   "parts": {
+    "readability": 0.66,
+    "interactables": 0.517,
+    "character": 0.516
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.639,
+    "clearance": 0.336,
+    "water": 1,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0.8,
+    "signature": 0.289,
+    "richness": 0.457,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 11,
+    "water": 8,
+    "burnable": 4,
+    "cut": 170,
+    "landmark": "one-world-trade-center",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    14717,
+    28788,
+    28791,
+    47311,
+    47312,
+    47317,
+    53640,
+    53649,
+    53650,
+    62695,
+    62696,
+    157215
+   ],
+   "zone": 154,
+   "name": "by the One World Trade Center",
+   "area": "the Financial District",
+   "lon": -74.011,
+   "lat": 40.712,
    "sample": true
   },
   {
