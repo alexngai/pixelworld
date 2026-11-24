@@ -7,7 +7,7 @@ import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type Rotation, type WorldView } from "@pixelworlds/engine";
 import { BoardOverlay } from "@pixelworlds/tactics";
 import "./gallery.css";
-import { WEIGHTS, type Site, type SurveyResult, type Terms } from "./survey";
+import { hiddenPenalty, WEIGHTS, type Site, type SurveyResult, type Terms } from "./survey";
 
 /**
  * The map survey's gallery (D-175, docs/tactics/map-survey.md): a city's pool
@@ -47,6 +47,8 @@ interface Rating {
   note: string;
   score: number;
   terms: Terms;
+  /** For the hidden penalty (D-177), which is not a term. */
+  hiddenCells: number;
   sample: boolean;
   at: string;
 }
@@ -224,7 +226,7 @@ function info(): void {
     <p class="where">${s.area ? `${s.area} · ` : ""}${s.lat !== undefined ? `${s.lat}, ${s.lon} · ` : ""}cells ${s.x0},${s.y0} · ${s.cell === 2 ? "20" : "10"} m a board cell · zone ${s.zone}</p>
     <div class="total">${bar("score", s.score)}</div>
     <div class="parts">${part("readability", WEIGHTS.readability)}${part("interactables", WEIGHTS.interactables)}${part("character", WEIGHTS.character)}</div>
-    <p class="facts">${f.buildings} buildings · ${f.hiddenCells} cells hidden · ${f.water} water · ${f.burnable} burnable · ${f.cut} cells cut away in front · ${f.typology.replace("building.", "")}${f.landmark ? ` · ${f.landmark}` : ""}</p>
+    <p class="facts">${f.buildings} buildings · ${f.hiddenCells} cells hidden (score −${pct(hiddenPenalty(f.hiddenCells))}) ·${f.water} water · ${f.burnable} burnable · ${f.cut} cells cut away in front · ${f.typology.replace("building.", "")}${f.landmark ? ` · ${f.landmark}` : ""}</p>
     <div class="rate">
       ${(["good", "fine", "bad"] as const).map((g, n) => `<button data-grade="${g}" class="${r?.rating === g ? "on" : ""}"><kbd>${n + 1}</kbd> ${g}</button>`).join("")}
     </div>
@@ -260,7 +262,7 @@ function rate(g: Grade): void {
   // tags chosen before the grade come with it
   const tags = [...$("info").querySelectorAll<HTMLButtonElement>("[data-tag].on")].map((b) => b.dataset.tag!);
   const note = $("info").querySelector("textarea")!.value;
-  ratings[k] = { rating: g, tags, note, score: s.score, terms: s.terms, sample: !!s.sample, at: new Date().toISOString() };
+  ratings[k] = { rating: g, tags, note, score: s.score, terms: s.terms, hiddenCells: s.facts.hiddenCells, sample: !!s.sample, at: new Date().toISOString() };
   grade(at);
   save();
   void select(Math.min(list.length - 1, at + 1));

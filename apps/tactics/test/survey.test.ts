@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { characterZones, spearman, titleOf, typologyOf, type ObjectRecord } from "../src/survey";
+import { characterZones, hiddenPenalty, spearman, titleOf, typologyOf, WEIGHTS, type ObjectRecord } from "../src/survey";
 
 /** The map survey's pieces (D-174, docs/tactics/map-survey.md). */
 describe("the map survey", () => {
@@ -7,6 +7,12 @@ describe("the map survey", () => {
     expect(spearman([1, 2, 3, 4], [10, 20, 30, 40])).toBeCloseTo(1);
     expect(spearman([4, 3, 2, 1], [10, 20, 30, 40])).toBeCloseTo(-1);
     expect(spearman([5, 5, 5, 5], [1, 2, 3, 4])).toBe(0);
+  });
+
+  it("takes more off for each hidden cell than for the one before (D-177)", () => {
+    expect(hiddenPenalty(0)).toBe(0);
+    expect(hiddenPenalty(8)).toBeGreaterThan(2 * hiddenPenalty(4));
+    expect(hiddenPenalty(0.3 * 64)).toBeCloseTo(WEIGHTS.penalty.hidden);
   });
 
   it("zones a city by character where its building types tell places apart, a grid where they can't", () => {

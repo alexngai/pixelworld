@@ -104,14 +104,26 @@ export interface SurveyResult {
 /**
  * The weights of each part and term (doc: Scores), each set summing to 1:
  * first guesses, then fitted to the gallery's ratings (`tools/survey-fit.mjs
- * --write`, D-176).
+ * --write`, D-176). The penalty is not fitted (D-177).
  */
 export const WEIGHTS: {
   parts: Record<"readability" | "interactables" | "character", number>;
   readability: Record<"hidden" | "terraced" | "clearance", number>;
   interactables: Record<"water" | "fire" | "topples" | "leaps" | "bands" | "chokepoints", number>;
   character: Record<"landmark" | "signature" | "richness" | "age", number>;
+  penalty: { hidden: number };
 } = weights;
+
+/** The most of a board that may be hidden from its clearest side (a gate). */
+const HIDDEN_MAX = 0.3;
+
+/**
+ * Taken off a site's score for the cells hidden from its clearest side
+ * (D-177): growing with the square of their share, from the first hidden cell
+ * to the whole penalty at the gate, so each cell hidden costs more than the
+ * one before. `tools/survey-fit.mjs` takes it off the same way.
+ */
+export const hiddenPenalty = (hiddenCells: number): number => WEIGHTS.penalty.hidden * (hiddenCells / (HIDDEN_MAX * SIZE * SIZE)) ** 2;
 
 const DIAGONALS: readonly (readonly [number, number])[] = [
   [1, 1],
@@ -356,11 +368,11 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       const hid = hiddenFrom(b, a, d).reduce((s, v) => s + v, 0);
       if (hid < hiddenCells) [toward, hiddenCells] = [d, hid];
     }
-    if (hiddenCells > 0.3 * n) return null;
+    if (hiddenCells > HIDDEN_MAX * n) return null;
     const [tx, ty] = toward;
 
     // readability
-    const hidden = clamp((0.3 - hiddenCells / n) / 0.15);
+    const hidden = clamp((HIDDEN_MAX - hiddenCells / n) / 0.15);
     const stand = Array.from({ length: n }, (_, k) => g.roof[k]!);
     const back = Array.from({ length: n }, (_, k) => -((k % SIZE) * tx + Math.floor(k / SIZE) * ty));
     const terraced = clamp((spearman(stand, back) + 1) / 2);
@@ -472,7 +484,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
     const terms: Terms = { hidden, terraced, clearance, water: waterT, fire, topples: Math.min(1, topples / 2), leaps: Math.min(1, leaps / 3), bands: (bands.size - 1) / 3, chokepoints: Math.min(1, chokepoints / 3), landmark, signature, richness, age };
     const part = <K extends keyof typeof WEIGHTS>(k: K) => Object.entries(WEIGHTS[k]).reduce((s, [t, wt]) => s + wt * terms[t as keyof Terms], 0);
     const parts = { readability: part("readability"), interactables: part("interactables"), character: part("character") };
-    const total = WEIGHTS.parts.readability * parts.readability + WEIGHTS.parts.interactables * parts.interactables + WEIGHTS.parts.character * parts.character;
+    const total = WEIGHTS.parts.readability * parts.readability + WEIGHTS.parts.interactables * parts.interactables + WEIGHTS.parts.character * parts.character - hiddenPenalty(hiddenCells);
     return {
       x0,
       y0,

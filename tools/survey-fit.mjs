@@ -42,6 +42,7 @@ const nest = (beta) => {
     out.parts[p] = sum;
     out[p] = Object.fromEntries(idx.map((i) => [TERMS[i][1], sum > 0 ? beta[i] / sum : now[p][TERMS[i][1]]]));
   }
+  out.penalty = now.penalty;
   return out;
 };
 
@@ -52,7 +53,9 @@ try {
   console.log(`No ratings yet (${ratingsFile}): rate some sites in the gallery first.`);
   process.exit(0);
 }
-const rows = ratings.map(([key, r]) => ({ key, y: GRADE[r.rating], x: TERMS.map(([, t]) => r.terms[t] ?? 0), tags: r.tags ?? [] }));
+/** The hidden penalty, as apps/tactics/src/survey.ts `hiddenPenalty` takes it off (D-177): not fitted, a board of 8 × 8, 30 % hidden at most. */
+const penalty = (hiddenCells = 0) => now.penalty.hidden * (hiddenCells / (0.3 * 64)) ** 2;
+const rows = ratings.map(([key, r]) => ({ key, y: GRADE[r.rating], x: TERMS.map(([, t]) => r.terms[t] ?? 0), pen: penalty(r.hiddenCells), tags: r.tags ?? [] }));
 const counts = Object.fromEntries(Object.keys(GRADE).map((g) => [g, rows.filter((r) => r.y === GRADE[g]).length]));
 console.log(`${rows.length} ratings: ${counts.good} good, ${counts.fine} fine, ${counts.bad} bad (${[...new Set(rows.map((r) => r.key.split(":")[0]))].join(", ")})`);
 
@@ -61,7 +64,7 @@ const pairsOf = (rs) => {
   for (const a of rs) for (const b of rs) if (a.y > b.y) out.push([a, b]);
   return out;
 };
-const score = (beta, r) => r.x.reduce((s, v, i) => s + v * beta[i], 0);
+const score = (beta, r) => r.x.reduce((s, v, i) => s + v * beta[i], 0) - r.pen;
 /** The share of differently rated pairs the weights order as the ratings do (ties count half). */
 const agreement = (beta, pairs) => pairs.reduce((s, [a, b]) => s + (score(beta, a) > score(beta, b) ? 1 : score(beta, a) === score(beta, b) ? 0.5 : 0), 0) / (pairs.length || 1);
 

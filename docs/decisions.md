@@ -184,6 +184,7 @@ Status values:
 | D-174 | Boards found by surveying the whole city: scored, zoned by character, elected into a pool | Accepted |
 | D-175 | A gallery to rate the survey's sites, the ratings kept in the repo | Accepted |
 | D-176 | The survey's weights fitted to the ratings: pairs ordered as rated, near the weights now | Accepted |
+| D-177 | The survey takes off more for each hidden cell than for the one before | Accepted |
 
 ---
 
@@ -2528,3 +2529,8 @@ The point is more room for visual interest; both halves are wanted.
 - **Why:** the owner will rate the survey's sites in the gallery (D-175) and asked for the weights to be fitted to the ratings.
 - **What:** the weights move out of the code into `apps/tactics/survey/weights.json`, which the survey reads. `tools/survey-fit.mjs` fits them: a pairwise logistic loss over every pair of sites rated differently (good above fine above bad), the weights projected onto the simplex (non-negative, summing to one) and pulled toward the weights now, so few ratings move them little. It reports how many pairs the weights now and the fitted order as rated, overall and held out (five folds), the weights side by side, and which terms set apart the sites given each tag; `--write` writes the fitted weights, and the survey is run again with them.
 - **Checked:** on 277 synthetic ratings from a rater weighing character 60 %, readability 30 % and topples 10 %, the fit moved character from 0.30 to 0.47 and interactables from 0.35 to 0.21 (topples most of theirs), and held-out agreement from 92 % to 98 %; written, the weights changed Kyoto's ranking toward its landmarks; with no ratings it says so. The real weights are unchanged until there are real ratings.
+
+### D-177: The survey takes off more for each hidden cell than for the one before (accepted)
+- **Why:** the owner asked for boards to be penalised more heavily the more of their cells are hidden. The Hidden term was 1 up to 15 % hidden, where most of the pool sits, so hiding barely ranked the pool.
+- **What:** a penalty off the weighted sum, `penalty.hidden × (share / 30 %)²` (0.25 in `weights.json`), from the first hidden cell to the gate. Not a term and not fitted: the weights stay as they were. The gallery keeps each rated site's hidden cells and shows the penalty; the fit takes it off the same way, and the 64 ratings made before were filled in from the pool.
+- **Checked:** across the six cities the top ten's mean hidden cells fell (New York 7.8 to 4.8, Kyoto 5.1 to 3.6) and the most hidden in a pool from 15 to 18 cells to 10 to 14 (Tokyo's 11 to 12); the pools are much the same size. On the owner's 64 ratings of New York, which favoured hidden cells little, the weights now order 73 % of the pairs as rated, from 76 %.

@@ -91,6 +91,14 @@ guess, to be fitted to ratings (see [Validation](#validation)).
 | Terraced | 0.30 | On that side, how far roof height rises from front to back: the rank correlation of each cell's stand height with its depth along the view, from −1 (tall in front) to 1. |
 | Front clearance | 0.25 | How much of the city in front has to be cut away to see the board (D-168): the world cells, outside the board, whose buildings stand above the view rays from its cells, as a share of the board's area. None is 1; a board's worth is 0. A board opening onto a park, water or an avenue scores well, and its cut looks natural. Coarse pass: estimated from the raster; fine pass: exact. |
 
+**Hidden penalty.** Taken off the weighted sum, not one of the terms: a share
+of the cells hidden from the clearest side costs `0.25 × (share / 30 %)²`. It
+starts at the first hidden cell, where the Hidden term is still 1 up to 15 %,
+and grows with the square, so each cell hidden costs more than the one before:
+3 cells cost 0.006, 6 cells 0.024, 10 cells 0.068, 19 cells (the gate) 0.25.
+Its size is `penalty.hidden` in `weights.json`; the fit leaves it as it is and
+takes it off the same way (D-177).
+
 **Interactables (35 %)**
 
 | Term | Weight | Measure |
@@ -301,7 +309,8 @@ and the pairs held out ordered as rated went from 92 % to 98 %.
    election, the JSON pool; a summary to read. *(done, D-174)*
 2. **Gallery:** the dev page to review and rate the pool. *(done, D-175)*
 3. **Fit the weights** to the ratings. *(the tool is done, D-176; it waits on
-   ratings)*
+   more ratings: 64 of New York's, none bad, fit no better held out)*. The
+   hidden penalty added by hand. *(D-177)*
 4. **Simulation:** the bots and interaction measures, reranking finalists.
 5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
 6. **The game draws from the pool**, with the runs and loadouts.
