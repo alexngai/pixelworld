@@ -1,5 +1,5 @@
 import { joinRoom } from "@pixelworlds/multiplayer";
-import { frontAct, newFront, type Front, type FrontMessage } from "@pixelworlds/tactics";
+import { frontAct, newFront, toWire, type Action, type Combat, type Front, type FrontMessage } from "@pixelworlds/tactics";
 import { sitesOf, type Block } from "./sites";
 
 /**
@@ -15,8 +15,23 @@ export interface Crew {
   squad: string;
 }
 
-/** A page to a co-op room: who it is and which city, first; then the front's messages. */
-export type CoopIn = ({ k: "hello"; world: string } & Crew) | FrontMessage;
+/**
+ * A page to a co-op room: who it is and which city, first; then the front's
+ * messages, but a fight reported as its start and moves (`fought`, both as
+ * `toWire` carries them), which the room replays (D-186).
+ */
+export type CoopIn = ({ k: "hello"; world: string } & Crew) | Exclude<FrontMessage, { k: "report" }> | { k: "fought"; threat: number; start: unknown; turns: unknown; razed: number[] };
+
+/** Rounds a block's fight lasts: the page's fights and the room's replays (D-186). */
+export const FIGHT_ROUNDS = 3;
+
+/** What a fought block reports: its outcome, and the moves that led there. */
+export interface Fought {
+  held: boolean;
+  lost: number;
+  razed: number[];
+  turns: Action[][];
+}
 /**
  * A co-op room to a page: the city's boards, once, as the room has them (its
  * front's sites are places in this list, so the page takes the room's, not
@@ -38,7 +53,9 @@ export interface Campaign {
   readonly pool: readonly Block[];
   readonly front: Front;
   readonly crews: Readonly<Record<string, Crew>>;
-  send(m: FrontMessage): void;
+  send(m: Exclude<FrontMessage, { k: "report" }>): void;
+  /** A block fought: reported as it went alone; in a room, as its start and moves, which the room replays (D-186). */
+  fought(threat: number, start: Combat, o: Fought): void;
   /** Called after every change; returns its undoing. */
   listen(f: () => void): () => void;
   /** Why the room's connection was lost, or null. */
@@ -64,6 +81,11 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
   const ls = new Listeners();
   const sites = sitesOf(pool);
   const front = newFront(sites, { seed });
+  const apply = (m: FrontMessage) => {
+    const why = frontAct(front, sites, [me], me, m);
+    if (why) console.warn(`the front: ${why}`);
+    ls.tell();
+  };
   return {
     me,
     room: null,
@@ -72,11 +94,8 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
     crews: { [me]: crew },
     lost: null,
     chooseBy: null,
-    send(m) {
-      const why = frontAct(front, sites, [me], me, m);
-      if (why) console.warn(`the front: ${why}`);
-      ls.tell();
-    },
+    send: apply,
+    fought: (threat, _start, o) => apply({ k: "report", threat, held: o.held, lost: o.lost, razed: o.razed }),
     listen: (f) => ls.listen(f),
   };
 }
@@ -107,6 +126,7 @@ export async function coopCampaign(room: string, hello: { world: string } & Crew
       return c.chooseBy;
     },
     send: (m) => r.send(m satisfies CoopIn),
+    fought: (threat, start, o) => r.send({ k: "fought", threat, start: toWire(start), turns: o.turns, razed: o.razed } satisfies CoopIn),
     listen: (f) => ls.listen(f),
   };
   return new Promise((resolve, reject) => {

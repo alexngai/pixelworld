@@ -193,6 +193,7 @@ Status values:
 | D-183 | A rooftop board drawn as a plane at its floor; cells picked up the view ray | Accepted |
 | D-184 | Hold the Block on play.pixelworld.site: the game at /tactics/ and its co-op rooms on the demos' server | Accepted |
 | D-185 | Fights made ahead while the squad looks over the city | Accepted |
+| D-186 | A co-op room takes a squad's fight as its moves replay, not as the page says it went | Accepted |
 
 ---
 
@@ -2590,4 +2591,10 @@ The point is more room for visual interest; both halves are wanted.
 - **What:** `Ahead` (`apps/tactics/src/ahead.ts`): whenever the squad isn't fighting (looking over the city, or at the depot) and the front changes, the fights for the wave's open blocks (none another squad has taken) are made one after another on the maker's worker, the most pressed first. Taking a block takes its fight as made, or waits for the one being made and makes it next; never two at once on the worker. The others made are let go, their boards taken off; the next look over the city makes them again if they're still open. A fight made ahead is armed with the squad's weapons as they are when it's fought (D-172), as before.
 - **Checked:** tests (`apps/tactics/test/ahead.test.ts`): one at a time in the order wanted, a taken one ready, a taken one not yet made made next after the one being made, the rest let go. In the browser, alone in New York: twenty seconds over the city, then the second block's fight began 253 ms after Defend, with one board left in the world.
 - **Not yet:** a fight made ahead is made on the city as it was; a squad bringing buildings down on that block meanwhile (rare: it's another district) leaves it a little out of date.
+
+### D-186: A co-op room takes a squad's fight as its moves replay, not as the page says it went (accepted)
+- **Why:** D-179's room took each page's word on its fight (held or not, people lost), and a squad's fight moves the whole city's front. The owner asked for D-179's open points to be worked through.
+- **What:** the fight keeps each turn's rig actions as taken (`FightOutcome.turns`: the cell it acted from, then its strike or none; a reset empties the turn). `replayFight` (`packages/tactics/src/replay.ts`) runs them from the fight's start through the rules, the invaders' turns between as the fight runs them, to the fight's end: null when an action isn't one the rules allow then (a move it can't make, a strike it hasn't got, a rig acting twice, an invader moved) or the turns stop short. In a room a page reports a fought block as its start and moves (`fought`: the start through `toWire`, typed arrays as tagged arrays; messages up to 256 KB); the room replays it (`FIGHT_ROUNDS`, the same for both) and moves the front by the replay's result; a bare report is refused. Alone, the page reports as before.
+- **Checked:** tests: a fight played by the solver replayed the same from a start sent through the wire; moves it can't make, an invader moved, a rig acting twice, a strike it hasn't got and turns stopping short each refused; in a room, fights reported by moves (one held, one lost), a bare report refused, a fight whose moves don't replay refused. In the browser, a room's fight played through the fight's own actions (a ram, a hoist set down, a water cannon) over three rounds: the room's replay had 2 people lost, as the page's result screen did.
+- **Not yet:** the fight's start is the page's (the room has no world to make it from), so a page could send an easy one; making or checking the start on the server needs the city's world there.
 

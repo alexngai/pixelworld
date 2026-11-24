@@ -1,8 +1,29 @@
 import type { HostedRoom } from "@pixelworlds/multiplayer/server";
-import { CALM } from "@pixelworlds/tactics";
+import { CALM, newCombat, planInvaders, toWire, type Arena } from "@pixelworlds/tactics";
 import { describe, expect, it, vi } from "vitest";
 import type { CoopOut } from "../src/coop";
 import { CHOOSE_MS, CoopRoom } from "../src/coopServer";
+
+/** A row of open ground with a low building (100 people) at its fifth cell. */
+const ROW: Arena = (() => {
+  const n = 6;
+  const a: Arena = { w: n, h: 1, flags: new Uint8Array(n), height: new Float32Array(n), roof: new Float32Array(n), struct: new Int16Array(n).fill(-1), structures: [], metersPerStep: 3, climb: 1, fall: 2, reach: 2 };
+  a.struct[4] = 0;
+  a.roof[4] = 2;
+  a.structures.push({ object: -1, name: "#", hp: 1, people: 100, flammable: false, cells: [4], topple: 0 });
+  return a;
+})();
+
+/**
+ * A fight as a page reports it (D-186): held, a rig with no invader about (it
+ * ends after a turn); lost, a brute beside the building, left to strike it for
+ * the fight's three rounds.
+ */
+function fought(threat: number, held: boolean, razed: number[] = []) {
+  const start = newCombat(ROW, held ? [{ kind: "wrecker", at: 0 }] : [{ kind: "wrecker", at: 0 }, { kind: "brute", at: 3 }]);
+  planInvaders(start);
+  return { k: "fought", threat, start: toWire(start), turns: held ? [[]] : [[], [], []], razed };
+}
 
 /** A co-op room (D-179) with pages that only listen: what it broadcast last, and what it sent each one. */
 function room() {
@@ -45,12 +66,15 @@ describe("co-op rooms (D-179)", () => {
     r.host.message("b", { k: "claim", threat: ta!.id });
     expect(r.sent.b?.at(-1)).toEqual({ k: "no", why: "another squad is on it" });
     r.host.message("b", { k: "claim", threat: tb!.id });
-    r.host.message("a", { k: "report", threat: ta!.id, held: true, lost: 0, razed: [12, 40] });
+    r.host.message("a", fought(ta!.id, true, [12, 40]));
     expect(r.last().front.wave).toBe(1);
     // nonsense is dropped
-    r.host.message("b", { k: "report", threat: tb!.id, held: "yes" });
+    r.host.message("b", { k: "report", threat: tb!.id, held: true, lost: 0, razed: [] });
+    expect(r.sent.b?.at(-1)).toEqual({ k: "no", why: "a fight is reported by its moves" });
+    r.host.message("b", { ...fought(tb!.id, true), turns: [[{ unit: 0, dest: 5, strike: null }]] });
+    expect(r.sent.b?.at(-1)).toEqual({ k: "no", why: "that fight doesn't replay" });
     expect(r.last().front.wave).toBe(1);
-    r.host.message("b", { k: "report", threat: tb!.id, held: false, lost: 3, razed: [40, 41] });
+    r.host.message("b", fought(tb!.id, false, [40, 41]));
     const g = r.last().front;
     expect(g.wave).toBe(2);
     expect(g.razed).toEqual([12, 40, 41]);
@@ -65,7 +89,7 @@ describe("co-op rooms (D-179)", () => {
     const [ta, tb] = r.last().front.threats;
     r.host.message("a", { k: "claim", threat: ta!.id });
     r.host.message("b", { k: "claim", threat: tb!.id });
-    r.host.message("a", { k: "report", threat: ta!.id, held: true, lost: 0, razed: [] });
+    r.host.message("a", fought(ta!.id, true));
     r.host.leave("b");
     expect(r.last().front.wave).toBe(2);
     expect(Object.keys(r.last().crews)).toEqual(["a"]);
@@ -83,7 +107,7 @@ describe("co-op rooms (D-179)", () => {
     vi.advanceTimersByTime(CHOOSE_MS);
     expect(r.last().front.passed).toEqual(["b"]);
     expect(r.last().choose).toBeNull();
-    r.host.message("a", { k: "report", threat: ta!.id, held: true, lost: 0, razed: [] });
+    r.host.message("a", fought(ta!.id, true));
     expect(r.last().front.wave).toBe(2);
     r.host.close();
     vi.useRealTimers();

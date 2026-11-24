@@ -36,6 +36,7 @@ import {
   type Mark,
   type Puzzle,
   type Strike,
+  type Action,
   type Weapon,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
@@ -79,6 +80,8 @@ export interface FightOutcome {
   invadersDown: number;
   /** World objects (buildings) the fight brought down. */
   razed: number[];
+  /** Each turn's rig actions as taken, a reset's undone (D-186): `replayFight` from the fight's start plays it again. */
+  turns: Action[][];
 }
 
 interface Step {
@@ -164,6 +167,8 @@ export class Fight {
   private c: Combat;
   private readonly start: Combat;
   private turnStart: Combat;
+  /** Each turn's rig actions (D-186). */
+  private turns: Action[][] = [[]];
   private roundsHeld = 0;
   private acted = new Set<number>();
   private selected = -1;
@@ -1411,6 +1416,8 @@ export class Fight {
   private act(s: Strike | null): Promise<void> {
     const u = this.selected;
     const log: CombatEvent[] = [];
+    // where it struck from: a charge moves it on
+    this.turns[this.turns.length - 1]!.push({ unit: u, dest: this.c.pos[u]!, strike: s });
     if (s) strike(this.c, u, s, log);
     this.acted.add(u);
     this.selected = -1;
@@ -1495,6 +1502,7 @@ export class Fight {
     if (k === "u" && this.resets > 0) {
       this.resets--;
       this.c = cloneCombat(this.turnStart);
+      this.turns[this.turns.length - 1] = [];
       if (this.razedThisTurn.length) {
         this.view.edits.restore(this.razedThisTurn);
         this.resetSides();
@@ -1608,6 +1616,7 @@ export class Fight {
     this.sync();
     this.struck.clear();
     this.turnStart = cloneCombat(this.c);
+    this.turns.push([]);
     this.acted = new Set();
     this.razedThisTurn = [];
     this.phase = "pick";
@@ -1628,6 +1637,7 @@ export class Fight {
       rounds: this.c.round,
       invadersDown: this.c.roster.filter((_, u) => teamOf(this.c, u) === INVADERS && this.c.hp[u]! <= 0).length,
       razed: [...this.razed],
+      turns: this.turns.map((t) => [...t]),
     };
     this.paint();
     setTimeout(() => this.finish(result), 700);

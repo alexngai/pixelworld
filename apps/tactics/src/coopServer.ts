@@ -1,9 +1,9 @@
 import type { Server } from "node:http";
 import { cleanName } from "@pixelworlds/multiplayer";
 import { attachRelay, type HostedRoom, type Relay, type RelayOptions, type RoomHost } from "@pixelworlds/multiplayer/server";
-import { choosing, frontAct, frontJoined, frontLeft, frontMessage, newFront, type Front, type FrontSite } from "@pixelworlds/tactics";
+import { choosing, frontAct, frontJoined, frontLeft, frontMessage, fromWire, newFront, replayFight, type Action, type Combat, type Front, type FrontSite } from "@pixelworlds/tactics";
 import boards from "../survey/boards.json";
-import { COOP_PATH, type CoopOut, type Crew } from "./coop";
+import { COOP_PATH, FIGHT_ROUNDS, type CoopOut, type Crew } from "./coop";
 import { sitesOf, type Block } from "./sites";
 
 /**
@@ -14,9 +14,13 @@ import { sitesOf, type Block } from "./sites";
  * page after each change. A page that leaves lets
  * go of the block it took and hadn't fought.
  *
- * ponytail: a page's report of its fight is taken as it says; replaying the
- * fight's moves from its seed on the server would check it, once strangers
- * play together.
+ * A squad's fight comes as its start and its rigs' moves, and the room
+ * replays them through the rules (D-186): the block is held or not, and so
+ * many people lost, as the replay has it, not as the page says.
+ *
+ * ponytail: the fight's start is the page's own (the room has no world to
+ * make it from), so a page could send an easy one; making or checking the
+ * start on the server needs the city's world loaded there.
  */
 
 const POOLS = boards as unknown as Record<string, Block[]>;
@@ -50,11 +54,26 @@ export class CoopRoom implements RoomHost {
       frontJoined(this.front, this.sites, this.ids());
       return this.tell();
     }
-    const msg = frontMessage(data);
-    if (!this.front || !this.crews.has(id) || !msg) return;
+    if (!this.front || !this.crews.has(id)) return;
+    const msg = m?.k === "fought" ? this.replay(m) : frontMessage(data);
+    if (!msg) return this.room.send(id, { k: "no", why: m?.k === "fought" ? "that fight doesn't replay" : "not a message the room takes" } satisfies CoopOut);
+    // a page's own word on a fight isn't taken: its moves are
+    if (msg.k === "report" && m?.k !== "fought") return this.room.send(id, { k: "no", why: "a fight is reported by its moves" } satisfies CoopOut);
     const why = frontAct(this.front, this.sites, this.ids(), id, msg);
     if (why) this.room.send(id, { k: "no", why } satisfies CoopOut);
     this.tell();
+  }
+
+  /** A fought block replayed (D-186): the report as the rules have it, or null when the moves don't replay. */
+  private replay(m: Record<string, unknown>) {
+    if (!Number.isInteger(m.threat)) return null;
+    try {
+      const r = replayFight(fromWire<Combat>(m.start), fromWire<Action[][]>(m.turns), FIGHT_ROUNDS);
+      const razed = Array.isArray(m.razed) ? m.razed.filter((x): x is number => Number.isInteger(x) && x >= 0).slice(0, 400) : [];
+      return r && ({ k: "report", threat: m.threat as number, held: r.held, lost: r.lost, razed } as const);
+    } catch {
+      return null;
+    }
   }
 
   leave(id: string): void {
@@ -111,5 +130,6 @@ export class CoopRoom implements RoomHost {
  * pages, D-184).
  */
 export function attachCoop(server: Server, opts: Pick<RelayOptions, "sameOrigin" | "lag" | "log"> = {}): Relay {
-  return attachRelay(server, { ...opts, path: COOP_PATH, maxPlayers: 6, idle: { named: 10 * 60_000 }, host: (room) => new CoopRoom(room) });
+  // a fight's start and moves (D-186) are tens of kilobytes
+  return attachRelay(server, { ...opts, path: COOP_PATH, maxPlayers: 6, maxMessage: 256 * 1024, idle: { named: 10 * 60_000 }, host: (room) => new CoopRoom(room) });
 }

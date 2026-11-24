@@ -5,11 +5,11 @@ import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
-import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
+import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, type Combat, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { Ahead } from "./ahead";
 import { CityMap } from "./cityMap";
-import { coopCampaign, roomCode, soloCampaign } from "./coop";
+import { FIGHT_ROUNDS, coopCampaign, roomCode, soloCampaign } from "./coop";
 import { Fight, type FightOutcome } from "./fight";
 import "./game.css";
 import { chooseThreat, drawFront } from "./overworld";
@@ -36,7 +36,7 @@ const STYLES: Record<string, () => Promise<{ default: object }>> = {
   tokyo: () => import("../../../worlds/_styles/tokyo/style.json"),
   hongkong: () => import("../../../worlds/_styles/hongkong/style.json"),
 };
-const ROUNDS = 3;
+const ROUNDS = FIGHT_ROUNDS;
 const RESETS = 1;
 const HINTS = 1;
 const SIZE = 8;
@@ -253,7 +253,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   lookAhead();
 
   /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it. */
-  const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>): Promise<FightOutcome | null> => {
+  const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>): Promise<{ o: FightOutcome; start: Combat } | null> => {
     const n = note(`<h2>${site.name}</h2><p>Scouting the block…</p>`);
     const [found] = await Promise.all([making((tried) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`)), view.camera.lookAt(middle(site))]);
     n.close();
@@ -262,8 +262,9 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       return null;
     }
     board = found.board;
+    const puzzle = armedNow(found.puzzle, run);
     for (;;) {
-      fight = new Fight({ view, board, puzzle: armedNow(found.puzzle, run), brain, ui, labels, title: `${city.name} · ${site.name}`, rounds: ROUNDS, resets: RESETS, hints: HINTS });
+      fight = new Fight({ view, board, puzzle, brain, ui, labels, title: `${city.name} · ${site.name}`, rounds: ROUNDS, resets: RESETS, hints: HINTS });
       const o = await fight.done;
       fight.dispose();
       fight = null;
@@ -284,7 +285,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
         run.cores += pay.cores;
         if (o.held) profile.blocksHeld++;
         saveProfile(profile);
-        return o;
+        return { o, start: puzzle.combat };
       }
       // the block as it was: its fallen buildings stand again
       if (o.razed.length) view.edits.restore(o.razed);
@@ -292,7 +293,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   };
 
   if (!campaign) {
-    played.push({ site: opts.board!, outcome: await play(opts.board!, (progress) => make(opts.board!, progress)) });
+    played.push({ site: opts.board!, outcome: (await play(opts.board!, (progress) => make(opts.board!, progress)))?.o ?? null });
   } else {
     // the front: a block taken on the overworld each wave, fought, reported, then the depot
     for (;;) {
@@ -304,16 +305,17 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       const t = campaign.front.threats.find((x) => x.id === id)!;
       const site = pool[t.site]!;
       fighting = true;
-      const o = await play(site, (progress) => {
+      const r = await play(site, (progress) => {
         ahead!.onProgress = (s, tried) => s === t.site && progress(tried);
         return ahead!.take(t.site);
       });
       fighting = false;
-      if (!o) {
+      if (!r) {
         campaign.send({ k: "swap", threat: id });
         continue;
       }
-      campaign.send({ k: "report", threat: id, held: o.held, lost: o.lost, razed: o.razed });
+      const o = r.o;
+      campaign.fought(id, r.start, o);
       if (campaign.front.over) break;
       const pay = reward(o);
       await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++);

@@ -11,3 +11,4 @@ export * from "./combat";
 export { actionsOf, describePlan, generatePuzzle, greedyTurn, mechanicsOf, playOut, solveFight, solveTurn, type Action, type FightOptions, type FightResult, type Mechanic, type Puzzle, type PuzzleOptions, type Solution, type SolveOptions, type SolveResult } from "./solver";
 export { SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type Squad, type SquadRig, type Upgrade, type WeaponDef, type WeaponId } from "./squads";
 export * from "./front";
+export * from "./replay";
