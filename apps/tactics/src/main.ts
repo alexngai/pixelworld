@@ -7,6 +7,7 @@ import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
 import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
+import { Ahead } from "./ahead";
 import { CityMap } from "./cityMap";
 import { coopCampaign, roomCode, soloCampaign } from "./coop";
 import { Fight, type FightOutcome } from "./fight";
@@ -233,16 +234,28 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     if (k === "q" || k === "e") queueMicrotask(() => fight?.relayout());
   });
 
-  /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it. */
+  // fights are made on a worker of their own (the fight's outlook and hints keep theirs); the first on a cold worker, given longer
   const maker = new Brain();
-  let first = true;
-  const play = async (site: Block): Promise<FightOutcome | null> => {
+  let cold = true;
+  const make = (site: Block, progress: (tried: number) => void) => {
+    const timeMs = cold ? FIRST_MAKE_MS : MAKE_MS;
+    cold = false;
+    return fightOn(view, boards, maker, site, loadouts(run), seed++, timeMs, progress);
+  };
+  // the wave's open blocks made ahead while the squad isn't fighting (D-185): looking over the city, or at the depot
+  const ahead = campaign ? new Ahead<{ board: Board; puzzle: Puzzle }>((i, progress) => make(pool[i]!, progress), (f) => boards.remove(f.board)) : null;
+  let fighting = false;
+  const lookAhead = () => {
+    if (!campaign || !ahead || fighting || campaign.front.over) return;
+    ahead.want(campaign.front.threats.filter((t) => !t.result && (!t.by || t.by === campaign.me)).map((t) => t.site));
+  };
+  campaign?.listen(lookAhead);
+  lookAhead();
+
+  /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it. */
+  const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>): Promise<FightOutcome | null> => {
     const n = note(`<h2>${site.name}</h2><p>Scouting the block…</p>`);
-    const [found] = await Promise.all([
-      fightOn(view, boards, maker, site, loadouts(run), seed++, first ? FIRST_MAKE_MS : MAKE_MS, (tried) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`)),
-      view.camera.lookAt(middle(site)),
-    ]);
-    first = false;
+    const [found] = await Promise.all([making((tried) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`)), view.camera.lookAt(middle(site))]);
     n.close();
     if (!found) {
       await screen(`<h2>${site.name}</h2><p>No fight could be made on this block.</p><button data-go="next">Move on</button>`);
@@ -279,7 +292,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   };
 
   if (!campaign) {
-    played.push({ site: opts.board!, outcome: await play(opts.board!) });
+    played.push({ site: opts.board!, outcome: await play(opts.board!, (progress) => make(opts.board!, progress)) });
   } else {
     // the front: a block taken on the overworld each wave, fought, reported, then the depot
     for (;;) {
@@ -290,7 +303,12 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       if (id === null) break;
       const t = campaign.front.threats.find((x) => x.id === id)!;
       const site = pool[t.site]!;
-      const o = await play(site);
+      fighting = true;
+      const o = await play(site, (progress) => {
+        ahead!.onProgress = (s, tried) => s === t.site && progress(tried);
+        return ahead!.take(t.site);
+      });
+      fighting = false;
       if (!o) {
         campaign.send({ k: "swap", threat: id });
         continue;

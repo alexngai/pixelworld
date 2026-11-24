@@ -192,6 +192,7 @@ Status values:
 | D-182 | Sitting a wave out, and a clock for the squads still choosing once one has chosen | Accepted |
 | D-183 | A rooftop board drawn as a plane at its floor; cells picked up the view ray | Accepted |
 | D-184 | Hold the Block on play.pixelworld.site: the game at /tactics/ and its co-op rooms on the demos' server | Accepted |
+| D-185 | Fights made ahead while the squad looks over the city | Accepted |
 
 ---
 
@@ -2583,4 +2584,10 @@ The point is more room for visual interest; both halves are wanted.
 - **What:** the demos' build (`pnpm --filter @pixelworlds/multiplayer demos:build`, D-143) also builds the game (`apps/tactics`, `--mode play`: no world packages of its own) into `/tactics/`, and copies the three cities it needs that the demos weren't on (sf-walk, paris-walk, tokyo-walk: 8 MB). The demos' server attaches the co-op rooms at `/hold` (`attachCoop` takes the relay's `sameOrigin` and `lag`; `COOP_LAG`), refusing other sites' pages; the game's pages don't send the build, so no build check. The page and its rooms share an origin, so nothing in the game changes: it fetches the worlds at the root and joins `/hold`. The demos' landing page links it. It deploys with the demos on the next push to main (D-144).
 - **Checked:** the production build run locally (`demos:start`, a `demos-play-local` preview): the game at `/tactics/`, New York loaded from the root, two pages in one room with the invite link keeping `/tactics/`.
 - **Not yet:** pixelworld.site's games page doesn't link it.
+
+### D-185: Fights made ahead while the squad looks over the city (accepted)
+- **Why:** D-179 made a block's fight only once the squad took it: two to twelve seconds of "working out the invaders' landing" after every choice (before D-179 the next block was made while this one was fought, but the front's next block isn't known until it's chosen). The owner asked for D-179's open points to be worked through.
+- **What:** `Ahead` (`apps/tactics/src/ahead.ts`): whenever the squad isn't fighting (looking over the city, or at the depot) and the front changes, the fights for the wave's open blocks (none another squad has taken) are made one after another on the maker's worker, the most pressed first. Taking a block takes its fight as made, or waits for the one being made and makes it next; never two at once on the worker. The others made are let go, their boards taken off; the next look over the city makes them again if they're still open. A fight made ahead is armed with the squad's weapons as they are when it's fought (D-172), as before.
+- **Checked:** tests (`apps/tactics/test/ahead.test.ts`): one at a time in the order wanted, a taken one ready, a taken one not yet made made next after the one being made, the rest let go. In the browser, alone in New York: twenty seconds over the city, then the second block's fight began 253 ms after Defend, with one board left in the world.
+- **Not yet:** a fight made ahead is made on the city as it was; a squad bringing buildings down on that block meanwhile (rare: it's another district) leaves it a little out of date.
 
