@@ -11,7 +11,7 @@ import { weaponShort, weaponWhat } from "./fight";
  */
 
 export interface Profile {
-  /** Blocks held over every run, operations held to the last block, runs begun. */
+  /** Blocks held over every run, cities held to their last wave (D-179), runs begun. */
   blocksHeld: number;
   operationsHeld: number;
   runs: number;
@@ -39,7 +39,7 @@ export function saveProfile(p: Profile): void {
 export const isUnlocked = (p: Profile, s: Squad) => !s.unlock || (p.blocksHeld >= (s.unlock.blocksHeld ?? 0) && p.operationsHeld >= (s.unlock.operationsHeld ?? 0));
 
 const unlockText = (s: Squad) =>
-  s.unlock?.operationsHeld ? `Hold every block of an operation to unlock.` : s.unlock?.blocksHeld ? `Hold ${s.unlock.blocksHeld} blocks to unlock.` : "";
+  s.unlock?.operationsHeld ? `Hold a city to its last wave to unlock.` : s.unlock?.blocksHeld ? `Hold ${s.unlock.blocksHeld} blocks to unlock.` : "";
 
 export interface RunRig {
   kind: FighterKind;

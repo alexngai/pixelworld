@@ -96,6 +96,9 @@ importers:
       '@pixelworlds/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@pixelworlds/multiplayer':
+        specifier: workspace:*
+        version: link:../../packages/multiplayer
       '@pixelworlds/tactics':
         specifier: workspace:*
         version: link:../../packages/tactics

@@ -283,17 +283,16 @@ the fit holds up held out, `node tools/survey-sites.mjs`.
 
 ## Drawing an operation's boards
 
-An operation is three blocks drawn from the city's boards each run
-(`drawOperation` in `apps/tactics/src/sites.ts`): each board's chance is
-`e^((score − best) / 0.05)`, so one scoring 0.05 below the best left is drawn
-a third as often; never on or within one and a half spans of a board drawn;
-from a zone and of a name not drawn yet while any is left. They are fought from
-the lowest scoring to the highest, the best a finale. When no fight can be
-made on a block (a new seed, another squad), another is drawn in its place, up
-to four times. The first block's puzzle is looked for twelve seconds, the rest
-six (as the survey tried them): the first is made on a cold worker, a few
-times slower than once warm, and boards known to make fights came to nothing
-in six.
+An operation is the city's front (D-179, `packages/tactics/src/front.ts`):
+the city's boards grouped into districts, and each wave's threats opened on
+boards in the districts under most pressure. A district's board is drawn with
+chance `e^((score − best) / 0.05)`, so one scoring 0.05 below the best left is
+drawn a third as often; never one fought or given up on; the last wave's is
+its district's best, a finale. When no fight can be made on a board (a new
+seed, another squad), another in its district takes its place. The first
+block's puzzle is looked for twelve seconds, the rest six (as the survey tried
+them): the first is made on a cold worker, a few times slower than once warm,
+and boards known to make fights came to nothing in six.
 
 First run of the fights tried (275 s in ten processes, plus Tokyo's 30 s): a
 fight came of 505 of the 610 sites and samples. Of the elected sites the game

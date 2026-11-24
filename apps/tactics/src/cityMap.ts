@@ -29,6 +29,8 @@ export class CityMap {
   private cy = 0;
   private k = 2;
   private drag: { x: number; y: number; cx: number; cy: number } | null = null;
+  /** More drawn over the city (the front, D-179): `at` takes world cells to the canvas, `k` is px a cell. */
+  decorate: ((g: CanvasRenderingContext2D, at: (x: number, y: number) => [number, number], k: number) => void) | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -83,6 +85,18 @@ export class CityMap {
     this.el.hidden = true;
   }
 
+  /** Open it on a place (world cells), at a scale (px a cell) when given. */
+  show(x: number, y: number, k?: number): void {
+    [this.cx, this.cy] = [x, y];
+    if (k) this.k = k;
+    this.el.hidden = false;
+    this.draw();
+  }
+
+  redraw(): void {
+    this.draw();
+  }
+
   /** After the world was edited there (a building down), bake those tiles again. */
   forget(x0: number, y0: number, x1: number, y1: number): void {
     this.top.forget(x0, y0, x1, y1);
@@ -128,6 +142,7 @@ export class CityMap {
       g.strokeRect(bx, by, (b.x1 - b.x0) * k, (b.y1 - b.y0) * k);
       g.shadowBlur = 0;
     }
+    this.decorate?.(g, at, k);
     g.font = "bold 12px ui-monospace, Menlo, monospace";
     g.textAlign = "left";
     g.textBaseline = "middle";

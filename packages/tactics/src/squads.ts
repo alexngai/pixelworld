@@ -60,7 +60,7 @@ export interface Squad {
   name: string;
   about: string;
   rigs: readonly SquadRig[];
-  /** What unlocks it: blocks held over every run, or operations held to the last block. None: open from the start. */
+  /** What unlocks it: blocks held over every run, or cities held to their last wave. None: open from the start. */
   unlock?: { blocksHeld?: number; operationsHeld?: number };
 }
 

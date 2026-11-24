@@ -508,3 +508,107 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+/* the overworld: the city's front beside the map (D-179) */
+.front-panel {
+  position: fixed;
+  top: 48px;
+  right: 32px;
+  bottom: 78px;
+  width: 340px;
+  max-width: calc(100vw - 64px);
+  overflow-y: auto;
+  z-index: 9;
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+}
+.front-panel h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.front-panel h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+}
+.front-panel p,
+.front-panel .news {
+  color: var(--dim);
+  font-size: 12px;
+}
+.front-panel .news,
+.screen .news {
+  margin: 6px 0;
+  padding-left: 16px;
+}
+.front-panel .trust b {
+  color: #8fb996;
+  letter-spacing: 0.1em;
+}
+.front-panel .threats,
+.front-panel .crews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.front-panel .threats li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.front-panel .threats li:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.front-panel .threats li.mine {
+  outline: 2px solid #ffd166;
+}
+.front-panel .pin {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #0e0d16;
+  font-weight: bold;
+  font-size: 12px;
+}
+.front-panel .threats small {
+  display: block;
+  color: var(--dim);
+}
+.front-panel em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--dim);
+}
+.front-panel em.good {
+  color: var(--good);
+}
+.front-panel em.bad {
+  color: var(--enemy);
+}
+.front-panel .crews li {
+  font-size: 12px;
+  padding: 2px 0;
+}
+.front-panel input {
+  width: 100%;
+  margin-top: 4px;
+  font: inherit;
+  font-size: 11px;
+}
+@media (max-width: 720px) {
+  .front-panel {
+    top: auto;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+    height: 45vh;
+  }
+}

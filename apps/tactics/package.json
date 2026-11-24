@@ -10,13 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pixelworlds/engine": "workspace:*",
-    "@pixelworlds/tactics": "workspace:*",
     "@pixelworlds/city-hongkong": "workspace:*",
     "@pixelworlds/city-kyoto": "workspace:*",
     "@pixelworlds/city-nyc": "workspace:*",
     "@pixelworlds/city-paris": "workspace:*",
     "@pixelworlds/city-sf": "workspace:*",
-    "@pixelworlds/city-tokyo": "workspace:*"
+    "@pixelworlds/city-tokyo": "workspace:*",
+    "@pixelworlds/engine": "workspace:*",
+    "@pixelworlds/multiplayer": "workspace:*",
+    "@pixelworlds/tactics": "workspace:*"
   }
 }
