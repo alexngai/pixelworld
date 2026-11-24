@@ -3,7 +3,7 @@
  "zoning": "character",
  "zones": 55,
  "candidates": 20166,
- "passed": 2360,
+ "passed": 2423,
  "sites": [
   {
    "x0": 408,
@@ -733,6 +733,58 @@
    "area": "Le Marais",
    "lon": 2.354,
    "lat": 48.855
+  },
+  {
+   "x0": 92,
+   "y0": 200,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.608,
+   "parts": {
+    "readability": 0.837,
+    "interactables": 0.567,
+    "character": 0.391
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.651,
+    "clearance": 0.766,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.294,
+    "signature": 0.56,
+    "richness": 0.217,
+    "age": 0.535
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 15,
+    "landmark": "eiffel-tower",
+    "typology": "building.haussmann"
+   },
+   "cutObjects": [
+    5096,
+    9608,
+    14887,
+    16866,
+    23713,
+    23950
+   ],
+   "floor": 17.6,
+   "zone": 31,
+   "name": "rooftops by the Eiffel Tower",
+   "lon": 2.298,
+   "lat": 48.859
   },
   {
    "x0": 60,
@@ -2745,6 +2797,56 @@
    "lat": 48.864
   },
   {
+   "x0": 376,
+   "y0": 40,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.465,
+   "parts": {
+    "readability": 0.805,
+    "interactables": 0.3,
+    "character": 0.262
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.481,
+    "clearance": 0.844,
+    "water": 1,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 0,
+    "landmark": 0.233,
+    "signature": 0.194,
+    "richness": 0.301,
+    "age": 0.392
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 40,
+    "landmark": "palais-garnier",
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    1981,
+    8437,
+    15551,
+    20989
+   ],
+   "floor": 18.6,
+   "zone": 7,
+   "name": "tower rooftops",
+   "lon": 2.337,
+   "lat": 48.873
+  },
+  {
    "x0": 248,
    "y0": 16,
    "cell": 2,
@@ -3078,335 +3180,291 @@
   {
    "name": "Le Marais",
    "score": 0.559,
-   "rank": 0.07
+   "rank": 0.068
   }
  ],
  "samples": [
   {
-   "x0": 164,
-   "y0": 212,
+   "x0": 188,
+   "y0": 152,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.587,
+   "parts": {
+    "readability": 0.917,
+    "interactables": 0.483,
+    "character": 0.342
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.724,
+    "clearance": 1,
+    "water": 0.9,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.121,
+    "richness": 0.188,
+    "age": 0.126
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 13,
+    "burnable": 18,
+    "cut": 0,
+    "landmark": "pont-alexandre-iii",
+    "typology": "building.residential"
+   },
+   "cutObjects": [],
+   "zone": 28,
+   "name": "by the Pont Alexandre Iii",
+   "lon": 2.312,
+   "lat": 48.863,
+   "sample": true
+  },
+  {
+   "x0": 104,
+   "y0": 48,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.539,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.367,
+    "character": 0.435
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.697,
+    "clearance": 0.945,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.717,
+    "signature": 0.083,
+    "richness": 0.414,
+    "age": 0.608
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 8,
+    "cut": 14,
+    "landmark": "arc-de-triomphe",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    8508,
+    20457
+   ],
+   "zone": 2,
+   "name": "commercial blocks",
+   "lon": 2.3,
+   "lat": 48.872,
+   "sample": true
+  },
+  {
+   "x0": 508,
+   "y0": 240,
    "cell": 1,
    "toward": [
     -1,
     -1
    ],
-   "score": 0.619,
+   "score": 0.53,
    "parts": {
-    "readability": 0.872,
-    "interactables": 0.533,
-    "character": 0.505
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.757,
-    "clearance": 0.781,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 0.667,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0.699,
-    "signature": 0.488,
-    "richness": 0.287,
-    "age": 0.515
-   },
-   "facts": {
-    "buildings": 9,
-    "hiddenCells": 6,
-    "water": 0,
-    "burnable": 4,
-    "cut": 14,
-    "landmark": "invalides-dome",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [
-    4440,
-    5505,
-    7887,
-    17326,
-    22625
-   ],
-   "zone": 34,
-   "name": "haussmann blocks",
-   "lon": 2.308,
-   "lat": 48.858,
-   "sample": true
-  },
-  {
-   "x0": 432,
-   "y0": 208,
-   "cell": 1,
-   "toward": [
-    -1,
-    1
-   ],
-   "score": 0.588,
-   "parts": {
-    "readability": 0.97,
-    "interactables": 0.55,
-    "character": 0.331
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.901,
-    "clearance": 1,
-    "water": 1,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0,
-    "chokepoints": 0.667,
-    "landmark": 0.329,
-    "signature": 0.318,
-    "richness": 0.231,
-    "age": 0.529
-   },
-   "facts": {
-    "buildings": 7,
-    "hiddenCells": 8,
-    "water": 6,
-    "burnable": 4,
-    "cut": 0,
-    "landmark": "pont-neuf-north",
-    "typology": "building.residential"
-   },
-   "cutObjects": [],
-   "zone": 33,
-   "name": "by the Pont Neuf",
-   "lon": 2.344,
-   "lat": 48.858,
-   "sample": true
-  },
-  {
-   "x0": 404,
-   "y0": 196,
-   "cell": 1,
-   "toward": [
-    -1,
-    1
-   ],
-   "score": 0.566,
-   "parts": {
-    "readability": 0.94,
+    "readability": 0.809,
     "interactables": 0.517,
-    "character": 0.298
+    "character": 0.3
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.8,
-    "clearance": 1,
+    "terraced": 0.468,
+    "clearance": 0.875,
     "water": 0,
     "fire": 1,
     "topples": 0,
     "leaps": 1,
     "bands": 0.333,
     "chokepoints": 1,
-    "landmark": 0.333,
-    "signature": 0.187,
-    "richness": 0.252,
-    "age": 0.529
+    "landmark": 0.228,
+    "signature": 0.331,
+    "richness": 0.243,
+    "age": 0.479
    },
    "facts": {
-    "buildings": 10,
-    "hiddenCells": 7,
+    "buildings": 11,
+    "hiddenCells": 6,
     "water": 0,
     "burnable": 9,
-    "cut": 0,
-    "landmark": "pont-neuf-north",
+    "cut": 8,
+    "landmark": "notre-dame",
     "typology": "building.residential"
    },
-   "cutObjects": [],
-   "zone": 25,
-   "name": "by the Pont Neuf",
-   "lon": 2.341,
-   "lat": 48.859,
+   "cutObjects": [
+    6139,
+    14745
+   ],
+   "zone": 43,
+   "name": "residential blocks near Le Marais",
+   "area": "Le Marais",
+   "lon": 2.355,
+   "lat": 48.855,
    "sample": true
   },
   {
-   "x0": 476,
-   "y0": 216,
+   "x0": 496,
+   "y0": 124,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.513,
+   "parts": {
+    "readability": 0.887,
+    "interactables": 0.417,
+    "character": 0.3
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.793,
+    "clearance": 0.797,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.486,
+    "richness": 0.318,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 13,
+    "typology": "building.haussmann"
+   },
+   "cutObjects": [
+    11498,
+    15014,
+    16526,
+    17419
+   ],
+   "zone": 20,
+   "name": "haussmann blocks",
+   "lon": 2.353,
+   "lat": 48.866,
+   "sample": true
+  },
+  {
+   "x0": 156,
+   "y0": 128,
    "cell": 2,
    "toward": [
     1,
     1
    ],
-   "score": 0.53,
+   "score": 0.501,
    "parts": {
-    "readability": 0.919,
-    "interactables": 0.4,
-    "character": 0.287
+    "readability": 0.945,
+    "interactables": 0.282,
+    "character": 0.259
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.771,
-    "clearance": 0.949,
+    "terraced": 0.815,
+    "clearance": 1,
     "water": 0,
-    "fire": 1,
+    "fire": 0.438,
     "topples": 0,
     "leaps": 0.667,
-    "bands": 0,
-    "chokepoints": 1,
-    "landmark": 0.223,
-    "signature": 0.269,
-    "richness": 0.241,
-    "age": 0.524
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0.239,
+    "signature": 0.206,
+    "richness": 0.232,
+    "age": 0.454
    },
    "facts": {
-    "buildings": 8,
-    "hiddenCells": 5,
+    "buildings": 11,
+    "hiddenCells": 3,
     "water": 0,
-    "burnable": 6,
-    "cut": 13,
-    "landmark": "notre-dame",
-    "typology": "building.haussmann"
+    "burnable": 25,
+    "cut": 0,
+    "landmark": "grand-palais",
+    "typology": "building.commercial"
    },
-   "cutObjects": [
-    5079
-   ],
-   "zone": 33,
-   "name": "haussmann blocks near Le Marais",
-   "area": "Le Marais",
-   "lon": 2.351,
-   "lat": 48.857,
+   "cutObjects": [],
+   "zone": 28,
+   "name": "commercial blocks",
+   "lon": 2.307,
+   "lat": 48.865,
    "sample": true
   },
   {
-   "x0": 124,
+   "x0": 132,
    "y0": 152,
    "cell": 2,
    "toward": [
     -1,
     -1
    ],
-   "score": 0.522,
+   "score": 0.495,
    "parts": {
-    "readability": 0.917,
-    "interactables": 0.46,
-    "character": 0.134
+    "readability": 0.935,
+    "interactables": 0.364,
+    "character": 0.135
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.724,
-    "clearance": 1,
-    "water": 0.7,
-    "fire": 0.813,
+    "terraced": 0.799,
+    "clearance": 0.98,
+    "water": 1,
+    "fire": 0.313,
     "topples": 0,
-    "leaps": 0.333,
-    "bands": 0.667,
-    "chokepoints": 0.333,
-    "landmark": 0.086,
-    "signature": 0.139,
-    "richness": 0.205,
-    "age": 0.102
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.117,
+    "signature": 0.147,
+    "richness": 0.171,
+    "age": 0.09
    },
    "facts": {
-    "buildings": 5,
+    "buildings": 7,
     "hiddenCells": 0,
-    "water": 15,
-    "burnable": 19,
-    "cut": 0,
+    "water": 12,
+    "burnable": 27,
+    "cut": 5,
     "landmark": "pont-alexandre-iii",
     "typology": "building.commercial"
    },
-   "cutObjects": [],
+   "cutObjects": [
+    4809
+   ],
    "zone": 27,
    "name": "commercial blocks",
-   "lon": 2.303,
+   "lon": 2.304,
    "lat": 48.863,
-   "sample": true
-  },
-  {
-   "x0": 48,
-   "y0": 280,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.514,
-   "parts": {
-    "readability": 0.854,
-    "interactables": 0.483,
-    "character": 0.336
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.684,
-    "clearance": 0.797,
-    "water": 0,
-    "fire": 0.667,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0.09,
-    "signature": 0.673,
-    "richness": 0.188,
-    "age": 0.403
-   },
-   "facts": {
-    "buildings": 12,
-    "hiddenCells": 9,
-    "water": 0,
-    "burnable": 2,
-    "cut": 13,
-    "landmark": "eiffel-tower",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [
-    1155,
-    1537
-   ],
-   "zone": 50,
-   "name": "haussmann blocks",
-   "lon": 2.292,
-   "lat": 48.852,
-   "sample": true
-  },
-  {
-   "x0": 148,
-   "y0": 160,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.502,
-   "parts": {
-    "readability": 0.914,
-    "interactables": 0.383,
-    "character": 0.216
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.712,
-    "clearance": 1,
-    "water": 0,
-    "fire": 0,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0.161,
-    "signature": 0.319,
-    "richness": 0.203,
-    "age": 0.14
-   },
-   "facts": {
-    "buildings": 8,
-    "hiddenCells": 5,
-    "water": 0,
-    "burnable": 40,
-    "cut": 0,
-    "landmark": "pont-alexandre-iii",
-    "typology": "building.hbm"
-   },
-   "cutObjects": [],
-   "zone": 27,
-   "name": "hbm blocks",
-   "lon": 2.306,
-   "lat": 48.862,
    "sample": true
   },
   {
@@ -3460,56 +3518,7 @@
   },
   {
    "x0": 164,
-   "y0": 292,
-   "cell": 2,
-   "toward": [
-    1,
-    1
-   ],
-   "score": 0.484,
-   "parts": {
-    "readability": 0.903,
-    "interactables": 0.355,
-    "character": 0.256
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.711,
-    "clearance": 0.957,
-    "water": 0,
-    "fire": 0.813,
-    "topples": 0,
-    "leaps": 0.667,
-    "bands": 0.667,
-    "chokepoints": 0,
-    "landmark": 0.149,
-    "signature": 0.242,
-    "richness": 0.302,
-    "age": 0.42
-   },
-   "facts": {
-    "buildings": 10,
-    "hiddenCells": 7,
-    "water": 0,
-    "burnable": 19,
-    "cut": 11,
-    "landmark": "invalides-dome",
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    2853,
-    6953,
-    23949
-   ],
-   "zone": 44,
-   "name": "residential blocks",
-   "lon": 2.308,
-   "lat": 48.85,
-   "sample": true
-  },
-  {
-   "x0": 580,
-   "y0": 132,
+   "y0": 40,
    "cell": 1,
    "toward": [
     -1,
@@ -3517,98 +3526,48 @@
    ],
    "score": 0.477,
    "parts": {
-    "readability": 0.804,
-    "interactables": 0.483,
-    "character": 0.232
+    "readability": 0.856,
+    "interactables": 0.292,
+    "character": 0.272
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.41,
-    "clearance": 0.922,
+    "terraced": 0.688,
+    "clearance": 0.797,
     "water": 0,
-    "fire": 0.667,
+    "fire": 0.5,
     "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0,
-    "signature": 0.296,
-    "richness": 0.239,
-    "age": 0.558
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0.063,
+    "signature": 0.392,
+    "richness": 0.223,
+    "age": 0.529
    },
    "facts": {
-    "buildings": 11,
-    "hiddenCells": 8,
+    "buildings": 12,
+    "hiddenCells": 3,
     "water": 0,
-    "burnable": 2,
-    "cut": 5,
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    393
-   ],
-   "zone": 26,
-   "name": "residential blocks",
-   "lon": 2.365,
-   "lat": 48.865,
-   "sample": true
-  },
-  {
-   "x0": 172,
-   "y0": 108,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.47,
-   "parts": {
-    "readability": 0.721,
-    "interactables": 0.433,
-    "character": 0.496
-   },
-   "terms": {
-    "hidden": 0.854,
-    "terraced": 0.743,
-    "clearance": 0.453,
-    "water": 0,
-    "fire": 0,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0.82,
-    "signature": 0.45,
-    "richness": 0.189,
-    "age": 0.45
-   },
-   "facts": {
-    "buildings": 13,
-    "hiddenCells": 11,
-    "water": 0,
-    "burnable": 0,
-    "cut": 35,
+    "burnable": 24,
+    "cut": 13,
     "landmark": "grand-palais",
-    "typology": "building.commercial"
+    "typology": "building.haussmann"
    },
    "cutObjects": [
-    2850,
-    4294,
-    7772,
-    9392,
-    14196,
-    16953,
-    21674
+    7427,
+    18607,
+    21558
    ],
-   "zone": 21,
-   "name": "by the Grand Palais",
-   "lon": 2.309,
-   "lat": 48.867,
+   "zone": 2,
+   "name": "haussmann blocks",
+   "lon": 2.308,
+   "lat": 48.873,
    "sample": true
   },
   {
-   "x0": 480,
-   "y0": 76,
+   "x0": 568,
+   "y0": 248,
    "cell": 1,
    "toward": [
     -1,
@@ -3616,94 +3575,102 @@
    ],
    "score": 0.466,
    "parts": {
-    "readability": 0.76,
-    "interactables": 0.583,
-    "character": 0.21
+    "readability": 0.864,
+    "interactables": 0.367,
+    "character": 0.2
    },
    "terms": {
-    "hidden": 0.958,
-    "terraced": 0.615,
-    "clearance": 0.578,
+    "hidden": 1,
+    "terraced": 0.704,
+    "clearance": 0.813,
     "water": 0,
-    "fire": 1,
+    "fire": 0,
     "topples": 0,
     "leaps": 1,
-    "bands": 0.667,
+    "bands": 0.333,
     "chokepoints": 1,
-    "landmark": 0,
-    "signature": 0.197,
-    "richness": 0.253,
-    "age": 0.588
+    "landmark": 0.011,
+    "signature": 0.296,
+    "richness": 0.145,
+    "age": 0.475
    },
    "facts": {
     "buildings": 13,
-    "hiddenCells": 10,
+    "hiddenCells": 6,
     "water": 0,
-    "burnable": 13,
-    "cut": 27,
+    "burnable": 0,
+    "cut": 12,
+    "landmark": "notre-dame",
     "typology": "building.residential"
    },
    "cutObjects": [
-    11292,
-    20801
+    2646,
+    3466,
+    3748,
+    3920,
+    7640,
+    17651,
+    23601
    ],
-   "zone": 12,
-   "name": "residential blocks",
-   "lon": 2.351,
-   "lat": 48.87,
+   "zone": 37,
+   "name": "residential blocks near Le Marais",
+   "area": "Le Marais",
+   "lon": 2.363,
+   "lat": 48.854,
    "sample": true
   },
   {
-   "x0": 580,
-   "y0": 116,
-   "cell": 1,
+   "x0": 136,
+   "y0": 56,
+   "cell": 2,
    "toward": [
     1,
     1
    ],
-   "score": 0.454,
+   "score": 0.46,
    "parts": {
-    "readability": 0.856,
-    "interactables": 0.267,
-    "character": 0.239
+    "readability": 0.884,
+    "interactables": 0.283,
+    "character": 0.207
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.624,
-    "clearance": 0.875,
+    "terraced": 0.704,
+    "clearance": 0.891,
     "water": 0,
     "fire": 1,
     "topples": 0,
-    "leaps": 0.333,
-    "bands": 0.333,
+    "leaps": 0,
+    "bands": 0.667,
     "chokepoints": 0,
-    "landmark": 0,
-    "signature": 0.239,
-    "richness": 0.333,
-    "age": 0.558
+    "landmark": 0.1,
+    "signature": 0.165,
+    "richness": 0.293,
+    "age": 0.365
    },
    "facts": {
-    "buildings": 10,
+    "buildings": 14,
     "hiddenCells": 4,
     "water": 0,
-    "burnable": 14,
-    "cut": 8,
-    "typology": "building.residential"
+    "burnable": 9,
+    "cut": 28,
+    "landmark": "arc-de-triomphe",
+    "typology": "building.commercial"
    },
    "cutObjects": [
-    5429,
-    15137,
-    23013
+    5050,
+    8477,
+    12355
    ],
-   "zone": 23,
-   "name": "residential blocks",
-   "lon": 2.365,
-   "lat": 48.866,
+   "zone": 2,
+   "name": "commercial blocks",
+   "lon": 2.305,
+   "lat": 48.871,
    "sample": true
   },
   {
-   "x0": 232,
-   "y0": 20,
+   "x0": 216,
+   "y0": 24,
    "cell": 1,
    "toward": [
     -1,
@@ -3711,870 +3678,836 @@
    ],
    "score": 0.448,
    "parts": {
-    "readability": 0.851,
-    "interactables": 0.317,
-    "character": 0.276
+    "readability": 0.737,
+    "interactables": 0.483,
+    "character": 0.255
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.66,
-    "clearance": 0.813,
+    "terraced": 0.513,
+    "clearance": 0.531,
     "water": 0,
     "fire": 1,
     "topples": 0,
     "leaps": 0.333,
-    "bands": 0.333,
-    "chokepoints": 0.333,
-    "landmark": 0,
-    "signature": 0.423,
-    "richness": 0.255,
-    "age": 0.57
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.02,
+    "signature": 0.4,
+    "richness": 0.214,
+    "age": 0.503
    },
    "facts": {
-    "buildings": 14,
-    "hiddenCells": 8,
+    "buildings": 9,
+    "hiddenCells": 9,
     "water": 0,
-    "burnable": 14,
-    "cut": 12,
+    "burnable": 4,
+    "cut": 30,
+    "landmark": "grand-palais",
     "typology": "building.haussmann"
    },
    "cutObjects": [
-    2268,
-    16229,
-    23747
+    2070,
+    2100,
+    3464,
+    13117
    ],
    "zone": 4,
    "name": "haussmann blocks",
-   "lon": 2.317,
+   "lon": 2.315,
    "lat": 48.875,
    "sample": true
   },
   {
-   "x0": 228,
-   "y0": 64,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.436,
-   "parts": {
-    "readability": 0.84,
-    "interactables": 0.267,
-    "character": 0.221
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.726,
-    "clearance": 0.688,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 0,
-    "bands": 0.333,
-    "chokepoints": 0.333,
-    "landmark": 0.154,
-    "signature": 0.124,
-    "richness": 0.232,
-    "age": 0.529
-   },
-   "facts": {
-    "buildings": 6,
-    "hiddenCells": 5,
-    "water": 0,
-    "burnable": 9,
-    "cut": 20,
-    "landmark": "grand-palais",
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    9439,
-    15319,
-    19941,
-    21253,
-    22996
-   ],
-   "zone": 16,
-   "name": "residential blocks",
-   "lon": 2.317,
-   "lat": 48.871,
-   "sample": true
-  },
-  {
-   "x0": 52,
-   "y0": 92,
-   "cell": 1,
-   "toward": [
-    1,
-    -1
-   ],
-   "score": 0.43,
-   "parts": {
-    "readability": 0.729,
-    "interactables": 0.517,
-    "character": 0.305
-   },
-   "terms": {
-    "hidden": 0.75,
-    "terraced": 0.642,
-    "clearance": 0.797,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.333,
-    "chokepoints": 1,
-    "landmark": 0.151,
-    "signature": 0.473,
-    "richness": 0.219,
-    "age": 0.423
-   },
-   "facts": {
-    "buildings": 11,
-    "hiddenCells": 12,
-    "water": 0,
-    "burnable": 14,
-    "cut": 13,
-    "landmark": "arc-de-triomphe",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [
-    1674,
-    5978,
-    9586,
-    19570,
-    22329
-   ],
-   "zone": 17,
-   "name": "haussmann blocks",
-   "lon": 2.293,
-   "lat": 48.868,
-   "sample": true
-  },
-  {
-   "x0": 456,
-   "y0": 68,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.423,
-   "parts": {
-    "readability": 0.817,
-    "interactables": 0.267,
-    "character": 0.229
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.597,
-    "clearance": 0.75,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 0.333,
-    "bands": 0.333,
-    "chokepoints": 0,
-    "landmark": 0,
-    "signature": 0.228,
-    "richness": 0.342,
-    "age": 0.5
-   },
-   "facts": {
-    "buildings": 6,
-    "hiddenCells": 6,
-    "water": 0,
-    "burnable": 5,
-    "cut": 16,
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    1399,
-    3221,
-    15637,
-    17541,
-    18648,
-    19761
-   ],
-   "zone": 12,
-   "name": "residential blocks",
-   "lon": 2.348,
-   "lat": 48.871,
-   "sample": true
-  },
-  {
-   "x0": 508,
-   "y0": 220,
-   "cell": 1,
+   "x0": 404,
+   "y0": 76,
+   "cell": 2,
    "toward": [
     1,
     1
    ],
-   "score": 0.415,
+   "score": 0.443,
    "parts": {
-    "readability": 0.687,
-    "interactables": 0.317,
-    "character": 0.358
+    "readability": 0.806,
+    "interactables": 0.367,
+    "character": 0.254
    },
    "terms": {
     "hidden": 1,
-    "terraced": 0.789,
-    "clearance": 0,
+    "terraced": 0.517,
+    "clearance": 0.805,
     "water": 0,
     "fire": 0,
     "topples": 0,
     "leaps": 1,
     "bands": 0.333,
-    "chokepoints": 0.667,
-    "landmark": 0.174,
-    "signature": 0.577,
-    "richness": 0.237,
-    "age": 0.489
-   },
-   "facts": {
-    "buildings": 11,
-    "hiddenCells": 8,
-    "water": 0,
-    "burnable": 0,
-    "cut": 86,
-    "landmark": "notre-dame",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [
-    3826,
-    17091,
-    20569
-   ],
-   "zone": 43,
-   "name": "Le Marais",
-   "area": "Le Marais",
-   "lon": 2.355,
-   "lat": 48.857,
-   "sample": true
-  },
-  {
-   "x0": 208,
-   "y0": 292,
-   "cell": 1,
-   "toward": [
-    1,
-    -1
-   ],
-   "score": 0.409,
-   "parts": {
-    "readability": 0.892,
-    "interactables": 0.132,
-    "character": 0.224
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.639,
-    "clearance": 1,
-    "water": 0,
-    "fire": 0.438,
-    "topples": 0,
-    "leaps": 0,
-    "bands": 0.333,
-    "chokepoints": 0,
-    "landmark": 0.193,
-    "signature": 0.187,
-    "richness": 0.171,
-    "age": 0.45
-   },
-   "facts": {
-    "buildings": 5,
-    "hiddenCells": 5,
-    "water": 0,
-    "burnable": 25,
-    "cut": 0,
-    "landmark": "invalides-dome",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [],
-   "zone": 45,
-   "name": "haussmann blocks",
-   "lon": 2.314,
-   "lat": 48.85,
-   "sample": true
-  },
-  {
-   "x0": 436,
-   "y0": 244,
-   "cell": 1,
-   "toward": [
-    1,
-    1
-   ],
-   "score": 0.401,
-   "parts": {
-    "readability": 0.708,
-    "interactables": 0.383,
-    "character": 0.388
-   },
-   "terms": {
-    "hidden": 0.75,
-    "terraced": 0.765,
-    "clearance": 0.563,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 0,
-    "bands": 0.667,
-    "chokepoints": 0.667,
-    "landmark": 0.761,
-    "signature": 0.089,
-    "richness": 0.205,
-    "age": 0.546
-   },
-   "facts": {
-    "buildings": 8,
-    "hiddenCells": 12,
-    "water": 0,
-    "burnable": 16,
-    "cut": 28,
-    "landmark": "pont-neuf-south",
-    "typology": "building.commercial"
-   },
-   "cutObjects": [
-    2166,
-    3020
-   ],
-   "zone": 49,
-   "name": "commercial blocks",
-   "lon": 2.345,
-   "lat": 48.855,
-   "sample": true
-  },
-  {
-   "x0": 116,
-   "y0": 96,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.392,
-   "parts": {
-    "readability": 0.689,
-    "interactables": 0.333,
-    "character": 0.298
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.537,
-    "clearance": 0.313,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 0.333,
-    "bands": 0.667,
-    "chokepoints": 0,
-    "landmark": 0.087,
-    "signature": 0.552,
-    "richness": 0.202,
-    "age": 0.371
-   },
-   "facts": {
-    "buildings": 7,
-    "hiddenCells": 9,
-    "water": 0,
-    "burnable": 8,
-    "cut": 44,
-    "landmark": "arc-de-triomphe",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [
-    1244,
-    19909
-   ],
-   "zone": 18,
-   "name": "haussmann blocks",
-   "lon": 2.301,
-   "lat": 48.868,
-   "sample": true
-  },
-  {
-   "x0": 280,
-   "y0": 96,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.381,
-   "parts": {
-    "readability": 0.85,
-    "interactables": 0.167,
-    "character": 0.227
-   },
-   "terms": {
-    "hidden": 1,
-    "terraced": 0.645,
-    "clearance": 0.828,
-    "water": 0,
-    "fire": 0,
-    "topples": 0,
-    "leaps": 0.333,
-    "bands": 0.333,
-    "chokepoints": 0.333,
-    "landmark": 0.105,
-    "signature": 0.155,
-    "richness": 0.259,
-    "age": 0.558
-   },
-   "facts": {
-    "buildings": 8,
-    "hiddenCells": 8,
-    "water": 0,
-    "burnable": 0,
-    "cut": 11,
-    "landmark": "palais-garnier",
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    6731,
-    8400,
-    10069,
-    11607,
-    22233
-   ],
-   "zone": 16,
-   "name": "residential blocks",
-   "lon": 2.324,
-   "lat": 48.868,
-   "sample": true
-  },
-  {
-   "x0": 268,
-   "y0": 40,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.373,
-   "parts": {
-    "readability": 0.668,
-    "interactables": 0.417,
-    "character": 0.303
-   },
-   "terms": {
-    "hidden": 0.75,
-    "terraced": 0.595,
-    "clearance": 0.609,
-    "water": 0,
-    "fire": 0.333,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.333,
     "chokepoints": 1,
-    "landmark": 0.112,
-    "signature": 0.427,
-    "richness": 0.282,
-    "age": 0.472
+    "landmark": 0.102,
+    "signature": 0.321,
+    "richness": 0.291,
+    "age": 0.363
    },
    "facts": {
     "buildings": 12,
-    "hiddenCells": 12,
+    "hiddenCells": 8,
     "water": 0,
-    "burnable": 1,
-    "cut": 25,
+    "burnable": 0,
+    "cut": 50,
     "landmark": "palais-garnier",
-    "typology": "building.haussmann"
+    "typology": "building.residential"
    },
    "cutObjects": [
-    2899,
-    6951,
-    7503,
-    11580,
-    14755,
-    20958,
-    23844
+    987,
+    11780,
+    12497,
+    15897,
+    18659,
+    19413
    ],
-   "zone": 4,
-   "name": "haussmann blocks",
-   "lon": 2.322,
-   "lat": 48.873,
+   "zone": 15,
+   "name": "residential blocks",
+   "lon": 2.341,
+   "lat": 48.87,
    "sample": true
   },
   {
-   "x0": 68,
-   "y0": 116,
+   "x0": 412,
+   "y0": 120,
    "cell": 1,
    "toward": [
     -1,
     1
    ],
-   "score": 0.364,
+   "score": 0.432,
    "parts": {
-    "readability": 0.799,
-    "interactables": 0.267,
-    "character": 0.195
+    "readability": 0.875,
+    "interactables": 0.367,
+    "character": 0.217
    },
    "terms": {
     "hidden": 0.958,
-    "terraced": 0.534,
-    "clearance": 0.828,
+    "terraced": 0.686,
+    "clearance": 0.953,
     "water": 0,
-    "fire": 1,
+    "fire": 0,
     "topples": 0,
-    "leaps": 0.333,
+    "leaps": 1,
     "bands": 0.333,
-    "chokepoints": 0,
-    "landmark": 0.066,
-    "signature": 0.246,
-    "richness": 0.264,
-    "age": 0.24
+    "chokepoints": 1,
+    "landmark": 0.043,
+    "signature": 0.25,
+    "richness": 0.182,
+    "age": 0.558
    },
    "facts": {
     "buildings": 9,
     "hiddenCells": 10,
     "water": 0,
-    "burnable": 15,
-    "cut": 11,
-    "landmark": "arc-de-triomphe",
-    "typology": "building.commercial"
+    "burnable": 0,
+    "cut": 3,
+    "landmark": "pont-neuf-north",
+    "typology": "building.residential"
    },
    "cutObjects": [
-    10009,
-    12637
+    19461
    ],
-   "zone": 13,
-   "name": "commercial blocks",
-   "lon": 2.295,
+   "zone": 22,
+   "name": "residential blocks",
+   "lon": 2.342,
    "lat": 48.866,
    "sample": true
   },
   {
-   "x0": 80,
-   "y0": 92,
-   "cell": 1,
-   "toward": [
-    -1,
-    1
-   ],
-   "score": 0.353,
-   "parts": {
-    "readability": 0.65,
-    "interactables": 0.433,
-    "character": 0.357
-   },
-   "terms": {
-    "hidden": 0.542,
-    "terraced": 0.521,
-    "clearance": 1,
-    "water": 0,
-    "fire": 0,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0.159,
-    "signature": 0.638,
-    "richness": 0.21,
-    "age": 0.438
-   },
-   "facts": {
-    "buildings": 12,
-    "hiddenCells": 14,
-    "water": 0,
-    "burnable": 0,
-    "cut": 0,
-    "landmark": "arc-de-triomphe",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [],
-   "zone": 13,
-   "name": "haussmann blocks",
-   "lon": 2.296,
-   "lat": 48.868,
-   "sample": true
-  },
-  {
-   "x0": 324,
-   "y0": 240,
-   "cell": 1,
-   "toward": [
-    -1,
-    -1
-   ],
-   "score": 0.329,
-   "parts": {
-    "readability": 0.6,
-    "interactables": 0.583,
-    "character": 0.295
-   },
-   "terms": {
-    "hidden": 0.333,
-    "terraced": 0.665,
-    "clearance": 1,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 1,
-    "landmark": 0.069,
-    "signature": 0.407,
-    "richness": 0.295,
-    "age": 0.521
-   },
-   "facts": {
-    "buildings": 13,
-    "hiddenCells": 16,
-    "water": 0,
-    "burnable": 3,
-    "cut": 0,
-    "landmark": "pont-neuf-south",
-    "typology": "building.haussmann"
-   },
-   "cutObjects": [],
-   "zone": 35,
-   "name": "haussmann blocks",
-   "lon": 2.33,
-   "lat": 48.855,
-   "sample": true
-  },
-  {
-   "x0": 268,
-   "y0": 24,
+   "x0": 440,
+   "y0": 288,
    "cell": 1,
    "toward": [
     1,
     1
    ],
-   "score": 0.316,
+   "score": 0.425,
    "parts": {
-    "readability": 0.703,
-    "interactables": 0.283,
-    "character": 0.285
+    "readability": 0.833,
+    "interactables": 0.217,
+    "character": 0.339
    },
    "terms": {
-    "hidden": 0.646,
-    "terraced": 0.684,
-    "clearance": 0.828,
+    "hidden": 1,
+    "terraced": 0.547,
+    "clearance": 0.875,
     "water": 0,
     "fire": 1,
     "topples": 0,
     "leaps": 0,
-    "bands": 0.667,
+    "bands": 0.333,
     "chokepoints": 0,
-    "landmark": 0.094,
-    "signature": 0.377,
-    "richness": 0.252,
-    "age": 0.537
+    "landmark": 0.239,
+    "signature": 0.411,
+    "richness": 0.257,
+    "age": 0.529
    },
    "facts": {
-    "buildings": 14,
-    "hiddenCells": 13,
+    "buildings": 11,
+    "hiddenCells": 8,
     "water": 0,
-    "burnable": 13,
-    "cut": 11,
-    "landmark": "palais-garnier",
+    "burnable": 5,
+    "cut": 8,
+    "landmark": "notre-dame",
     "typology": "building.haussmann"
    },
    "cutObjects": [
-    373,
-    3729
+    5391,
+    11166,
+    11552
    ],
-   "zone": 5,
+   "zone": 49,
    "name": "haussmann blocks",
-   "lon": 2.322,
-   "lat": 48.875,
+   "lon": 2.345,
+   "lat": 48.851,
    "sample": true
   },
   {
-   "x0": 524,
-   "y0": 28,
+   "x0": 180,
+   "y0": 44,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.417,
+   "parts": {
+    "readability": 0.663,
+    "interactables": 0.517,
+    "character": 0.34
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.615,
+    "clearance": 0.563,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.099,
+    "signature": 0.544,
+    "richness": 0.274,
+    "age": 0.523
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 4,
+    "cut": 28,
+    "landmark": "grand-palais",
+    "typology": "building.haussmann"
+   },
+   "cutObjects": [
+    0,
+    965,
+    11693,
+    18914,
+    23887
+   ],
+   "zone": 3,
+   "name": "haussmann blocks",
+   "lon": 2.31,
+   "lat": 48.873,
+   "sample": true
+  },
+  {
+   "x0": 540,
+   "y0": 156,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.395,
+   "parts": {
+    "readability": 0.744,
+    "interactables": 0.2,
+    "character": 0.216
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.367,
+    "clearance": 0.734,
+    "water": 1,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.318,
+    "richness": 0.193,
+    "age": 0.48
+   },
+   "facts": {
+    "buildings": 3,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 17,
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    1447,
+    8739,
+    14766,
+    15907,
+    18359,
+    20168
+   ],
+   "floor": 19.12,
+   "zone": 26,
+   "name": "rooftops near Le Marais",
+   "area": "Le Marais",
+   "lon": 2.359,
+   "lat": 48.863,
+   "sample": true
+  },
+  {
+   "x0": 388,
+   "y0": 52,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.385,
+   "parts": {
+    "readability": 0.686,
+    "interactables": 0.483,
+    "character": 0.243
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.467,
+    "clearance": 0.836,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.188,
+    "signature": 0.097,
+    "richness": 0.286,
+    "age": 0.574
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 1,
+    "cut": 42,
+    "landmark": "palais-garnier",
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    5310,
+    7866,
+    10045,
+    18345
+   ],
+   "zone": 7,
+   "name": "residential blocks",
+   "lon": 2.339,
+   "lat": 48.872,
+   "sample": true
+  },
+  {
+   "x0": 156,
+   "y0": 108,
    "cell": 1,
    "toward": [
     -1,
     -1
    ],
-   "score": 0.297,
+   "score": 0.375,
    "parts": {
-    "readability": 0.67,
-    "interactables": 0.267,
-    "character": 0.278
+    "readability": 0.793,
+    "interactables": 0.217,
+    "character": 0.297
    },
    "terms": {
-    "hidden": 0.646,
-    "terraced": 0.496,
-    "clearance": 0.922,
+    "hidden": 0.958,
+    "terraced": 0.686,
+    "clearance": 0.625,
     "water": 0,
     "fire": 1,
     "topples": 0,
     "leaps": 0,
     "bands": 0.333,
-    "chokepoints": 0.333,
-    "landmark": 0,
-    "signature": 0.373,
-    "richness": 0.348,
-    "age": 0.529
+    "chokepoints": 0,
+    "landmark": 0.23,
+    "signature": 0.308,
+    "richness": 0.28,
+    "age": 0.436
    },
    "facts": {
     "buildings": 9,
-    "hiddenCells": 13,
+    "hiddenCells": 10,
     "water": 0,
-    "burnable": 11,
-    "cut": 5,
-    "typology": "building.haussmann"
+    "burnable": 16,
+    "cut": 24,
+    "landmark": "grand-palais",
+    "typology": "building.commercial"
    },
    "cutObjects": [
-    13310,
-    13331
+    10422,
+    11812,
+    12850,
+    23164
    ],
-   "zone": 11,
-   "name": "haussmann blocks",
-   "lon": 2.357,
-   "lat": 48.874,
+   "zone": 18,
+   "name": "commercial blocks",
+   "lon": 2.307,
+   "lat": 48.867,
    "sample": true
   },
   {
-   "x0": 472,
-   "y0": 248,
+   "x0": 112,
+   "y0": 60,
    "cell": 1,
    "toward": [
-    -1,
+    1,
     1
    ],
-   "score": 0.278,
+   "score": 0.356,
    "parts": {
-    "readability": 0.559,
-    "interactables": 0.317,
-    "character": 0.412
+    "readability": 0.634,
+    "interactables": 0.433,
+    "character": 0.451
    },
    "terms": {
     "hidden": 0.437,
-    "terraced": 0.543,
-    "clearance": 0.797,
+    "terraced": 0.729,
+    "clearance": 0.875,
     "water": 0,
-    "fire": 0.333,
+    "fire": 1,
     "topples": 0,
-    "leaps": 1,
-    "bands": 0.333,
+    "leaps": 0.667,
+    "bands": 0.667,
     "chokepoints": 0.333,
-    "landmark": 0.338,
-    "signature": 0.46,
-    "richness": 0.375,
-    "age": 0.529
+    "landmark": 0.667,
+    "signature": 0.27,
+    "richness": 0.382,
+    "age": 0.5
    },
    "facts": {
     "buildings": 11,
     "hiddenCells": 15,
     "water": 0,
-    "burnable": 1,
-    "cut": 13,
-    "landmark": "notre-dame",
-    "typology": "building.haussmann"
+    "burnable": 3,
+    "cut": 8,
+    "landmark": "arc-de-triomphe",
+    "typology": "building.commercial"
    },
    "cutObjects": [
-    1034,
-    11880,
-    23778
+    8508
    ],
-   "zone": 40,
-   "name": "by the Notre Dame",
-   "area": "Le Marais",
-   "lon": 2.35,
-   "lat": 48.854,
-   "sample": true
-  },
-  {
-   "x0": 220,
-   "y0": 64,
-   "cell": 1,
-   "toward": [
-    1,
-    1
-   ],
-   "score": 0.258,
-   "parts": {
-    "readability": 0.535,
-    "interactables": 0.467,
-    "character": 0.272
-   },
-   "terms": {
-    "hidden": 0.333,
-    "terraced": 0.566,
-    "clearance": 0.859,
-    "water": 0,
-    "fire": 1,
-    "topples": 0,
-    "leaps": 1,
-    "bands": 0.333,
-    "chokepoints": 0.667,
-    "landmark": 0.168,
-    "signature": 0.265,
-    "richness": 0.278,
-    "age": 0.481
-   },
-   "facts": {
-    "buildings": 14,
-    "hiddenCells": 16,
-    "water": 0,
-    "burnable": 4,
-    "cut": 9,
-    "landmark": "grand-palais",
-    "typology": "building.residential"
-   },
-   "cutObjects": [
-    22215
-   ],
-   "zone": 16,
-   "name": "residential blocks",
-   "lon": 2.315,
+   "zone": 13,
+   "name": "commercial blocks",
+   "lon": 2.301,
    "lat": 48.871,
    "sample": true
   },
   {
-   "x0": 496,
-   "y0": 208,
+   "x0": 136,
+   "y0": 76,
    "cell": 1,
    "toward": [
     -1,
-    -1
+    1
    ],
-   "score": 0.197,
+   "score": 0.332,
    "parts": {
-    "readability": 0.503,
-    "interactables": 0.333,
-    "character": 0.26
+    "readability": 0.769,
+    "interactables": 0.15,
+    "character": 0.262
    },
    "terms": {
-    "hidden": 0.333,
-    "terraced": 0.603,
+    "hidden": 0.958,
+    "terraced": 0.553,
     "clearance": 0.688,
     "water": 0,
     "fire": 0,
     "topples": 0,
     "leaps": 1,
-    "bands": 0.667,
-    "chokepoints": 0.333,
-    "landmark": 0.158,
-    "signature": 0.267,
-    "richness": 0.179,
-    "age": 0.588
+    "bands": 0,
+    "chokepoints": 0,
+    "landmark": 0.104,
+    "signature": 0.393,
+    "richness": 0.134,
+    "age": 0.529
    },
    "facts": {
-    "buildings": 11,
-    "hiddenCells": 16,
+    "buildings": 9,
+    "hiddenCells": 10,
     "water": 0,
     "burnable": 0,
     "cut": 20,
+    "landmark": "grand-palais",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    18187,
+    21688,
+    22568
+   ],
+   "zone": 2,
+   "name": "commercial blocks",
+   "lon": 2.304,
+   "lat": 48.87,
+   "sample": true
+  },
+  {
+   "x0": 240,
+   "y0": 192,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.319,
+   "parts": {
+    "readability": 0.562,
+    "interactables": 0.467,
+    "character": 0.442
+   },
+   "terms": {
+    "hidden": 0.333,
+    "terraced": 0.619,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 0.667,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.615,
+    "signature": 0.493,
+    "richness": 0.18,
+    "age": 0.433
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 16,
+    "water": 0,
+    "burnable": 2,
+    "cut": 6,
+    "landmark": "pont-alexandre-iii",
+    "typology": "building.haussmann"
+   },
+   "cutObjects": [
+    18761,
+    21195
+   ],
+   "zone": 32,
+   "name": "haussmann blocks",
+   "lon": 2.318,
+   "lat": 48.859,
+   "sample": true
+  },
+  {
+   "x0": 316,
+   "y0": 28,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.302,
+   "parts": {
+    "readability": 0.671,
+    "interactables": 0.25,
+    "character": 0.258
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.604,
+    "clearance": 0.609,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 0.667,
+    "landmark": 0.267,
+    "signature": 0.308,
+    "richness": 0.185,
+    "age": 0.263
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 0,
+    "cut": 25,
+    "landmark": "palais-garnier",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    5460
+   ],
+   "zone": 6,
+   "name": "commercial blocks",
+   "lon": 2.329,
+   "lat": 48.874,
+   "sample": true
+  },
+  {
+   "x0": 356,
+   "y0": 28,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.28,
+   "parts": {
+    "readability": 0.406,
+    "interactables": 0.433,
+    "character": 0.461
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.542,
+    "clearance": 0.188,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.804,
+    "signature": 0.275,
+    "richness": 0.2,
+    "age": 0.582
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 0,
+    "cut": 52,
+    "landmark": "palais-garnier",
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    555,
+    948,
+    10302,
+    22341
+   ],
+   "zone": 7,
+   "name": "by the Palais Garnier",
+   "lon": 2.334,
+   "lat": 48.874,
+   "sample": true
+  },
+  {
+   "x0": 380,
+   "y0": 292,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.261,
+   "parts": {
+    "readability": 0.542,
+    "interactables": 0.417,
+    "character": 0.26
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.462,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.115,
+    "signature": 0.322,
+    "richness": 0.192,
+    "age": 0.537
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 1,
+    "cut": 11,
+    "landmark": "pont-neuf-south",
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    3143,
+    6108,
+    12331,
+    14539,
+    21204
+   ],
+   "zone": 39,
+   "name": "residential blocks",
+   "lon": 2.337,
+   "lat": 48.85,
+   "sample": true
+  },
+  {
+   "x0": 328,
+   "y0": 92,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.235,
+   "parts": {
+    "readability": 0.553,
+    "interactables": 0.167,
+    "character": 0.327
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.655,
+    "clearance": 0.266,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.234,
+    "signature": 0.367,
+    "richness": 0.281,
+    "age": 0.508
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 0,
+    "cut": 47,
+    "landmark": "palais-garnier",
+    "typology": "building.haussmann"
+   },
+   "cutObjects": [
+    4854,
+    7399,
+    15741
+   ],
+   "zone": 19,
+   "name": "haussmann blocks",
+   "lon": 2.33,
+   "lat": 48.868,
+   "sample": true
+  },
+  {
+   "x0": 384,
+   "y0": 28,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.2,
+   "parts": {
+    "readability": 0.383,
+    "interactables": 0.367,
+    "character": 0.445
+   },
+   "terms": {
+    "hidden": 0.229,
+    "terraced": 0.543,
+    "clearance": 0.469,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.661,
+    "signature": 0.377,
+    "richness": 0.321,
+    "age": 0.358
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 17,
+    "water": 0,
+    "burnable": 0,
+    "cut": 34,
+    "landmark": "palais-garnier",
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    563,
+    924,
+    4238,
+    8621
+   ],
+   "zone": 7,
+   "name": "residential blocks",
+   "lon": 2.338,
+   "lat": 48.874,
+   "sample": true
+  },
+  {
+   "x0": 496,
+   "y0": 184,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.138,
+   "parts": {
+    "readability": 0.502,
+    "interactables": 0.283,
+    "character": 0.195
+   },
+   "terms": {
+    "hidden": 0.229,
+    "terraced": 0.55,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.067,
+    "signature": 0.161,
+    "richness": 0.251,
+    "age": 0.425
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 17,
+    "water": 0,
+    "burnable": 0,
+    "cut": 4,
     "landmark": "notre-dame",
     "typology": "building.residential"
    },
    "cutObjects": [
-    9008,
-    11989,
-    23614
+    3588,
+    8166
    ],
-   "zone": 37,
+   "zone": 33,
    "name": "Le Marais",
    "area": "Le Marais",
    "lon": 2.353,
-   "lat": 48.858,
+   "lat": 48.86,
    "sample": true
   }
  ]

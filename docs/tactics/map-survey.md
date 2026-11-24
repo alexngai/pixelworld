@@ -153,16 +153,35 @@ comes out as one zone or as mostly single tiles), zones are a plain grid of
 
 ## Rooftop maps and chasms
 
-Where a board's heights split in two (towers far above the street), the survey
-also tries it as a rooftop map: a floor height is chosen, the roofs above it are
-the playable cells, and every cell below is a **chasm**. Walkers can't enter a
-chasm, and anything that isn't flying pushed or knocked into one falls in and
-is lost, as drowning is. Flyers cross chasms freely, and rigs leap the narrow
-gaps between roofs. Both versions are scored and the better one kept.
+Where a board splits into towers and the street, the survey also tries it as a
+rooftop map (D-180): the roofs above a floor height are the playable cells, and
+every cell below is a **chasm**.
 
-This needs a chasm cell in the rules (`A_CHASM` beside `A_WATER`), the arena
-built with a floor height, and the cutaway and glass to treat the street below
-as a void. It comes after the loadouts work in the combat rules lands.
+**The rules** (`packages/tactics/src/combat.ts`). A rooftop arena
+(`rooftop(arena, floor)`) keeps the structures whose roofs are all at the floor
+or above; the rest are gone, and every cell is flagged `A_CHASM` (no water, nothing
+to burn). A chasm is a cell flagged so where no structure stands:
+
+- walkers can't enter it; flyers cross it;
+- one pushed into it, lifted into it by the crane, or standing on a tower
+  brought down falls in and is lost, as drowning is (a `fall`, then `down`);
+- every walker leaps a gap one cell wide between roofs within 6 m of each
+  other (on the ground only the wrecker, the pumper and the crawler do), else
+  the crane and the brute would be stuck on their towers;
+- an invader due to arrive on a roof that has fallen doesn't come;
+- puzzles place the squad and invaders on the roofs.
+
+**The floor** (`rooftopFloor`): the towers stand 15 m or more above the street,
+three or more of them, their roofs 30 to 70 % of the board; of the floors that
+do, the one with the widest gap below it. The survey looks for it on every
+position, scores the rooftop arena beside the flat one and keeps the better.
+On a rooftop the roofs are the open ground for the gates (three to fourteen
+buildings, roofs joined by leaps as one region), only the roofs count as
+hidden, and the water term is 1 (the chasm is everywhere to push into); the
+fine pass finds the floor again on the real roofs. A rooftop site carries its
+`floor` (steps) into the pool, `boards.json` and the game; it is named
+"rooftops by" its landmark, "of" or "near" its place, or "tower rooftops".
+Its fight is tried and simulated as its own (`play.json` keys it with `^floor`).
 
 ## Simulation
 
@@ -375,5 +394,7 @@ and the pairs held out ordered as rated went from 92 % to 98 %.
 4. **Simulation:** the bots and interaction measures, reranking the boards.
    *(done, D-181)*
 5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
+   *(done, D-180; the game builds a rooftop board's arena with `rooftop` in
+   its fight making)*
 6. **The game draws from the pool**, with the runs and loadouts. *(done,
    D-178: the pipeline above, and the draw)*

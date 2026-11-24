@@ -242,10 +242,10 @@ function info(): void {
   const f = s.facts;
   $("info").innerHTML = `
     <h2>${s.name}${s.sample ? ' <small class="sample">sample</small>' : ""}</h2>
-    <p class="where">${s.area ? `${s.area} · ` : ""}${s.lat !== undefined ? `${s.lat}, ${s.lon} · ` : ""}cells ${s.x0},${s.y0} · ${s.cell === 2 ? "20" : "10"} m a board cell · zone ${s.zone} · ${fightNote(play[keyOf(s)])} · <a class="play" href="/?city=${CITIES.findIndex((c) => c.world === world)}&board=${s.x0},${s.y0},${s.cell}" target="_blank">play this board</a></p>
+    <p class="where">${s.area ? `${s.area} · ` : ""}${s.lat !== undefined ? `${s.lat}, ${s.lon} · ` : ""}cells ${s.x0},${s.y0} · ${s.cell === 2 ? "20" : "10"} m a board cell · zone ${s.zone} · ${fightNote(play[`${keyOf(s)}${s.floor === undefined ? "" : `^${s.floor}`}`])} · <a class="play" href="/?city=${CITIES.findIndex((c) => c.world === world)}&board=${s.x0},${s.y0},${s.cell}" target="_blank">play this board</a></p>
     <div class="total">${bar("score", s.score)}</div>
     <div class="parts">${part("readability", WEIGHTS.readability)}${part("interactables", WEIGHTS.interactables)}${part("character", WEIGHTS.character)}</div>
-    <p class="facts">${f.buildings} buildings · ${f.hiddenCells} cells hidden (score −${pct(hiddenPenalty(f.hiddenCells))}) ·${f.water} water · ${f.burnable} burnable · ${f.cut} cells cut away in front · ${f.typology.replace("building.", "")}${f.landmark ? ` · ${f.landmark}` : ""}</p>
+    <p class="facts">${s.floor !== undefined ? `<b>rooftops</b>: the roofs ${Math.round(s.floor * view.world.manifest.scale.metersPerStep)} m up and above, the street a chasm · ` : ""}${f.buildings} buildings · ${f.hiddenCells} cells hidden (score −${pct(hiddenPenalty(f.hiddenCells))}) · ${f.water} water · ${f.burnable} burnable · ${f.cut} cells cut away in front · ${f.typology.replace("building.", "")}${f.landmark ? ` · ${f.landmark}` : ""}</p>
     <div class="rate">
       ${(["good", "fine", "bad"] as const).map((g, n) => `<button data-grade="${g}" class="${r?.rating === g ? "on" : ""}"><kbd>${n + 1}</kbd> ${g}</button>`).join("")}
     </div>

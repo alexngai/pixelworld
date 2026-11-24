@@ -28,9 +28,11 @@ for (const world of WORLDS) {
   const pool = JSON.parse(readFileSync(`${DIR}${world}.json`, "utf8"));
   const key = (s) => `${world}:${s.x0},${s.y0},${s.cell}`;
   const rated = (s) => ratings[key(s)]?.rating;
+  // a rooftop map's fight is its own (D-180)
+  const tried = (s) => play[`${key(s)}${s.floor === undefined ? "" : `^${s.floor}`}`];
   const listed = [...pool.sites.filter((s) => rated(s) !== "bad"), ...pool.samples.filter((s) => rated(s) === "good")];
   // boards not yet tried are kept: the game draws another when no fight comes of one
-  const sites = listed.filter((s) => play[key(s)]?.ok !== false);
+  const sites = listed.filter((s) => tried(s)?.ok !== false);
   out[world] = sites
     .map((s) => ({
       name: s.name[0].toUpperCase() + s.name.slice(1),
@@ -38,11 +40,12 @@ for (const world of WORLDS) {
       x0: s.x0,
       y0: s.y0,
       cell: s.cell,
-      score: Math.round(((1 - SIM) * s.score + SIM * (play[key(s)]?.sim?.score ?? s.score) + (rated(s) === "good" ? GOOD : 0)) * 1000) / 1000,
+      ...(s.floor !== undefined ? { floor: s.floor } : {}),
+      score: Math.round(((1 - SIM) * s.score + SIM * (tried(s)?.sim?.score ?? s.score) + (rated(s) === "good" ? GOOD : 0)) * 1000) / 1000,
     }))
     .sort((a, b) => b.score - a.score);
   const n = (g) => pool.sites.concat(pool.samples).filter((s) => rated(s) === g).length;
-  const untried = sites.filter((s) => !play[key(s)]).length;
+  const untried = sites.filter((s) => !tried(s)).length;
   console.log(`${world}: ${out[world].length} boards (${pool.sites.length} elected, ${n("bad")} rated bad left out, ${n("good")} rated good, ${listed.length - sites.length} without a fight left out${untried ? `, ${untried} not tried` : ""})`);
 }
 // a board a line, so the file diffs as the ratings and weights change

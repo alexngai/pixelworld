@@ -1,5 +1,5 @@
 import { Boards, CELL_TREES, CELL_WATER, readCells, type Board, type OpenedWorld } from "@pixelworlds/engine";
-import { arenaFromBoard, hiddenFrom, type Arena } from "@pixelworlds/tactics";
+import { arenaFromBoard, hiddenFrom, rooftop, rooftopFloor, type Arena } from "@pixelworlds/tactics";
 import weights from "../survey/weights.json";
 
 /**
@@ -76,6 +76,8 @@ export interface Site {
   x0: number;
   y0: number;
   cell: number;
+  /** A rooftop map's floor (steps, D-180): the roofs at it and above are played on, the street below is a chasm. */
+  floor?: number;
   /** The diagonal the clearest side's camera looks from (a world cell across each way, toward it). */
   toward: [number, number];
   zone: number;
@@ -159,6 +161,8 @@ interface Ground {
   roof: Float32Array;
   struct: Int16Array;
   structures: { cells: number[]; topple: number }[];
+  /** A rooftop map's (D-180). */
+  floor?: number;
 }
 
 export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<SurveyResult> {
@@ -234,7 +238,11 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       for (let x0 = MARGIN; x0 + span + MARGIN <= W; x0 += step) {
         candidates++;
         const g = coarseGround(x0, y0, cell);
-        const c = score(x0, y0, cell, g, null);
+        // as it is, and as rooftops where it splits into towers and the street (D-180): the better kept
+        const flat = score(x0, y0, cell, g, null);
+        const f = rooftopFloor(g, mps);
+        const roofs = f === null ? null : score(x0, y0, cell, rooftop(g, f), null);
+        const c = roofs && (!flat || roofs.score > flat.score) ? roofs : flat;
         if (!c) continue;
         passed++;
         const zone = zoning.zoneAt(x0 + span / 2, y0 + span / 2);
@@ -258,7 +266,9 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       const board = await boards.add({ x0: c.x0, y0: c.y0, w: SIZE, h: SIZE, cell: c.cell });
       const a = arenaFromBoard(board, w.query, surfaces, { metersPerCell: mpc });
       boards.remove(board);
-      const again = score(c.x0, c.y0, c.cell, a, board);
+      // a rooftop's floor found again on the real roofs
+      const f = c.floor === undefined ? undefined : rooftopFloor(a, mps);
+      const again = f === null ? null : score(c.x0, c.y0, c.cell, f === undefined ? a : rooftop(a, f), board);
       if (again) rescored.push({ ...again, zone });
     }
     // the ones rated good first, and taken whatever the quota
@@ -357,10 +367,12 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
   /** A position's gates and scores on an arena (the coarse one, or the game's with its board); null where it fails a gate. */
   function score(x0: number, y0: number, cell: number, g: Ground | Arena, board: Board | null): Omit<Candidate, "zone"> | null {
     const n = SIZE * SIZE;
-    const isWater = (k: number) => g.struct[k]! < 0 && !!(g.flags[k]! & A_WATER);
-    const open = (k: number) => g.struct[k]! < 0 && !isWater(k);
+    // on a rooftop map (D-180) the roofs are the open ground, and there is no water: the chasm is everywhere
+    const onRoofs = g.floor !== undefined;
+    const isWater = (k: number) => !onRoofs && g.struct[k]! < 0 && !!(g.flags[k]! & A_WATER);
+    const open = (k: number) => (onRoofs ? g.struct[k]! >= 0 : g.struct[k]! < 0 && !isWater(k));
     const buildings = g.structures.length;
-    if (buildings < 5 || buildings > 14) return null;
+    if (buildings < (onRoofs ? 3 : 5) || buildings > 14) return null;
     let openN = 0;
     let wet = 0;
     let burnable = 0;
@@ -370,15 +382,16 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       if (g.struct[k]! < 0 && g.flags[k]! & A_BURNS) burnable++;
     }
     if (openN < 0.3 * n || openN > 0.7 * n || wet > 0.25 * n) return null;
-    // the open ground one region
-    if (largestRegion(open) < 0.85 * openN) return null;
+    // the open ground one region (roofs joined by leaps too)
+    if (largestRegion(open, onRoofs) < 0.85 * openN) return null;
     // hidden from each side: the clearest
     const b = board ?? ({ origin: [x0, y0], cell, w: SIZE, h: SIZE } as unknown as Board);
     const a = g as unknown as Arena;
     let toward = DIAGONALS[0]!;
     let hiddenCells = Infinity;
     for (const d of DIAGONALS) {
-      const hid = hiddenFrom(b, a, d).reduce((s, v) => s + v, 0);
+      // on rooftops, the roofs hidden: the chasm has nobody to hide
+      const hid = hiddenFrom(b, a, d).reduce((s, v, k) => s + (onRoofs && !open(k) ? 0 : v), 0);
       if (hid < hiddenCells) [toward, hiddenCells] = [d, hid];
     }
     if (hiddenCells > HIDDEN_MAX * n) return null;
@@ -393,7 +406,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
     const clearance = clamp(1 - cut / (n * cell * cell));
 
     // interactables
-    const waterT = wet === 0 ? 0 : wet <= 12 ? 1 : clamp(1 - (wet - 12) / 10);
+    const waterT = onRoofs ? 1 : wet === 0 ? 0 : wet <= 12 ? 1 : clamp(1 - (wet - 12) / 10);
     const fire = burnable >= 3 && burnable <= 16 ? 1 : burnable < 3 ? burnable / 3 : clamp(1 - (burnable - 16) / 16);
     let topples = 0;
     let leaps = 0;
@@ -508,6 +521,7 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       terms,
       facts: { buildings, hiddenCells, water: wet, burnable, cut, ...(landmarkId ? { landmark: landmarkId } : {}), typology },
       cutObjects,
+      ...(onRoofs ? { floor: g.floor } : {}),
     };
   }
 
@@ -553,18 +567,19 @@ export async function surveyCity(w: OpenedWorld, opts: SurveyOptions): Promise<S
       if (d < nearest) [area, nearest] = [p.name, d];
     }
     const l = c.facts.landmark ? landmarks.find((x) => x.id === c.facts.landmark) : undefined;
+    const by = l && Math.hypot(l.x - cx, l.y - cy) <= 30 ? `by ${/^the /i.test(titleOf(l.id)) ? "" : "the "}${titleOf(l.id)}` : null;
     const name =
-      l && Math.hypot(l.x - cx, l.y - cy) <= 30
-        ? `by ${/^the /i.test(titleOf(l.id)) ? "" : "the "}${titleOf(l.id)}`
-        : area && nearest <= 40
-          ? area
-          : `${typologyOf(c.facts.typology)}${area ? ` near ${area}` : ""}`;
+      c.floor !== undefined
+        ? by || area
+          ? `rooftops ${by ?? `${nearest <= 40 ? "of" : "near"} ${area}`}`
+          : "tower rooftops"
+        : (by ?? (area && nearest <= 40 ? area : `${typologyOf(c.facts.typology)}${area ? ` near ${area}` : ""}`));
     return { ...c, name, ...(area ? { area } : {}), ...(ll ? { lon: +ll[0].toFixed(5), lat: +ll[1].toFixed(5) } : {}) };
   }
 }
 
-/** The largest 4-connected region of an 8 × 8 board's cells that pass. */
-function largestRegion(pass: (k: number) => boolean): number {
+/** The largest 4-connected region of an 8 × 8 board's cells that pass; with `leaps`, joined across a cell that doesn't too. */
+function largestRegion(pass: (k: number) => boolean, leaps = false): number {
   const seen = new Uint8Array(SIZE * SIZE);
   let best = 0;
   for (let s = 0; s < SIZE * SIZE; s++) {
@@ -576,7 +591,9 @@ function largestRegion(pass: (k: number) => boolean): number {
       const k = queue.pop()!;
       size++;
       const i = k % SIZE;
-      for (const nk of [k - SIZE, k + SIZE, i > 0 ? k - 1 : -1, i < SIZE - 1 ? k + 1 : -1])
+      const near = [k - SIZE, k + SIZE, i > 0 ? k - 1 : -1, i < SIZE - 1 ? k + 1 : -1];
+      if (leaps) near.push(k - 2 * SIZE, k + 2 * SIZE, i > 1 ? k - 2 : -1, i < SIZE - 2 ? k + 2 : -1);
+      for (const nk of near)
         if (nk >= 0 && nk < SIZE * SIZE && !seen[nk] && pass(nk)) {
           seen[nk] = 1;
           queue.push(nk);

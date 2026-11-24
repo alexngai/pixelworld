@@ -30,12 +30,13 @@ const jobs = Number(opt("jobs", "10"));
 const part = opt("part", null);
 const again = args.includes("--again");
 const worlds = args.filter((a) => !a.startsWith("--"));
-const keyOf = (world, s) => `${world}:${s.x0},${s.y0},${s.cell}`;
+/** A board's key: its position, and a rooftop map's floor (D-180), which plays another fight there. */
+const keyOf = (world, s) => `${world}:${s.x0},${s.y0},${s.cell}${s.floor === undefined ? "" : `^${s.floor}`}`;
 const done = existsSync(FILE) ? JSON.parse(readFileSync(FILE, "utf8")) : {};
 const todo = (worlds.length ? worlds : WORLDS).flatMap((world) => {
   if (!existsSync(`${DIR}${world}.json`)) return [];
   const pool = JSON.parse(readFileSync(`${DIR}${world}.json`, "utf8"));
-  return pool.sites.concat(pool.samples).flatMap((s) => (again || !done[keyOf(world, s)] ? [{ world, x0: s.x0, y0: s.y0, cell: s.cell }] : []));
+  return pool.sites.concat(pool.samples).flatMap((s) => (again || !done[keyOf(world, s)] ? [{ world, x0: s.x0, y0: s.y0, cell: s.cell, floor: s.floor }] : []));
 });
 
 if (part === null) {
@@ -89,7 +90,7 @@ const server = await createServer({
 const out = {};
 try {
   const { openWorld, Boards } = await server.ssrLoadModule("/packages/engine/src/index.ts");
-  const { arenaFromBoard, generatePuzzle, SQUADS } = await server.ssrLoadModule("/packages/tactics/src/index.ts");
+  const { arenaFromBoard, generatePuzzle, rooftop, SQUADS } = await server.ssrLoadModule("/packages/tactics/src/index.ts");
   const { newRun, loadouts } = await server.ssrLoadModule("/apps/tactics/src/runs.ts");
   const { simulate } = await server.ssrLoadModule("/apps/tactics/src/sim.ts");
   const r2 = (v) => Math.round(v * 100) / 100;
@@ -102,7 +103,9 @@ try {
     }
     const { w, boards } = opened.get(b.world);
     const board = await boards.add({ x0: b.x0, y0: b.y0, w: 8, h: 8, cell: b.cell });
-    const arena = arenaFromBoard(board, w.query, w.world.manifest.surfaces, { metersPerCell: w.world.manifest.scale.metersPerCell });
+    const flat = arenaFromBoard(board, w.query, w.world.manifest.surfaces, { metersPerCell: w.world.manifest.scale.metersPerCell });
+    // a rooftop map's (D-180)
+    const arena = b.floor === undefined ? flat : rooftop(flat, b.floor);
     boards.remove(board);
     const t0 = performance.now();
     let tried = 0;
