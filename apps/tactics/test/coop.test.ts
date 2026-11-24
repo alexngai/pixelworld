@@ -1,8 +1,8 @@
 import type { HostedRoom } from "@pixelworlds/multiplayer/server";
 import { CALM } from "@pixelworlds/tactics";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CoopOut } from "../src/coop";
-import { CoopRoom } from "../src/coopServer";
+import { CHOOSE_MS, CoopRoom } from "../src/coopServer";
 
 /** A co-op room (D-179) with pages that only listen: what it broadcast last, and what it sent each one. */
 function room() {
@@ -69,5 +69,23 @@ describe("co-op rooms (D-179)", () => {
     r.host.leave("b");
     expect(r.last().front.wave).toBe(2);
     expect(Object.keys(r.last().crews)).toEqual(["a"]);
+  });
+
+  it("gives the squads still choosing a while once one has chosen, then sits them out (D-182)", () => {
+    vi.useFakeTimers();
+    const r = room();
+    r.host.message("a", { k: "hello", world: "sf-walk", name: "Ana", squad: "Demolition Crew" });
+    r.host.message("b", { k: "hello", world: "sf-walk", name: "Bo", squad: "Demolition Crew" });
+    expect(r.last().choose).toBeNull();
+    const [ta] = r.last().front.threats;
+    r.host.message("a", { k: "claim", threat: ta!.id });
+    expect(r.last().choose).toBe(CHOOSE_MS);
+    vi.advanceTimersByTime(CHOOSE_MS);
+    expect(r.last().front.passed).toEqual(["b"]);
+    expect(r.last().choose).toBeNull();
+    r.host.message("a", { k: "report", threat: ta!.id, held: true, lost: 0, razed: [] });
+    expect(r.last().front.wave).toBe(2);
+    r.host.close();
+    vi.useRealTimers();
   });
 });

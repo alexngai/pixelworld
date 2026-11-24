@@ -1,4 +1,4 @@
-import { OVERRUN, PRESSURE, type Front } from "@pixelworlds/tactics";
+import { OVERRUN, PRESSURE, choosing, type Front } from "@pixelworlds/tactics";
 import type { CityMap } from "./cityMap";
 import type { Campaign } from "./coop";
 import type { Block } from "./sites";
@@ -89,8 +89,13 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 function panel(f: Front, c: Campaign, pool: readonly Block[], city: string): string {
   const mine = f.threats.find((t) => t.by === c.me);
   const crewOf = (id: string) => c.crews[id] ?? { name: "A squad that left", squad: "" };
-  const fighting = f.threats.filter((t) => t.by && t.by !== c.me && !t.result);
   const ids = Object.keys(c.crews);
+  const sat = f.passed.includes(c.me);
+  // who the wave waits on: squads fighting, and squads still choosing (D-182)
+  const awaited = [
+    ...f.threats.flatMap((t) => (t.by && t.by !== c.me && !t.result ? [`${crewOf(t.by).name} (fighting)`] : [])),
+    ...choosing(f, ids).flatMap((id) => (id !== c.me ? [`${crewOf(id).name} (choosing)`] : [])),
+  ];
   const status = (t: Front["threats"][number]) =>
     t.result
       ? `<em class="${t.result.held ? "good" : "bad"}">${t.result.held ? "held" : `fought: ${Math.round(t.result.lost)} lost`}${t.by && t.by !== c.me ? ` by ${crewOf(t.by).name}` : ""}</em>`
@@ -98,7 +103,7 @@ function panel(f: Front, c: Campaign, pool: readonly Block[], city: string): str
         ? `<em>your squad</em>`
         : t.by
           ? `<em>${crewOf(t.by).name}'s ${crewOf(t.by).squad}</em>`
-          : mine
+          : mine || sat
             ? ""
             : `<button data-claim="${t.id}">Defend</button>`;
   const link = c.room ? `${location.origin}${location.pathname}?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), room: c.room })}` : "";
@@ -106,7 +111,8 @@ function panel(f: Front, c: Campaign, pool: readonly Block[], city: string): str
     <h2>${city} · wave ${f.wave} of ${f.waves}</h2>
     <p class="trust" title="The city's trust: lost when a block fought isn't held and when a district is overrun; at none, the operation is lost">Trust <b>${"●".repeat(f.trust)}</b> ${f.trust}</p>
     ${f.news.length ? `<ul class="news">${f.news.map((n) => `<li>${n}</li>`).join("")}</ul>` : `<p class="dim">Invaders are landing at the city's edge. Each wave, every squad takes one block to hold; the districts nobody defends are pressed harder, and one overrun spreads.</p>`}
-    <h3>${c.lost ? "The room is gone" : mine?.result ? (fighting.length ? `Waiting for ${fighting.map((t) => crewOf(t.by!).name).join(", ")}` : "Waiting for the other squads to choose") : mine ? "Your squad is on its way" : "Choose a block to defend"}</h3>
+    <h3>${c.lost ? "The room is gone" : mine?.result || sat ? `${sat ? "Your squad sits this wave out. " : ""}Waiting for ${awaited.join(", ") || "the other squads"}` : mine ? "Your squad is on its way" : "Choose a block to defend"}</h3>
+    ${c.room && !c.lost && !mine && !sat ? `<p class="choose">${c.chooseBy ? `<b data-left></b> to choose, or your squad sits this wave out. ` : ""}<button data-pass>Sit this wave out</button></p>` : ""}
     ${c.lost ? `<p>${c.lost}</p><button data-leave>Back to the title</button>` : ""}
     <ol class="threats">${f.threats
       .map(
@@ -149,6 +155,7 @@ export function chooseThreat(ui: HTMLElement, map: CityMap, c: Campaign, pool: r
       if (finished) return;
       finished = true;
       off();
+      clearInterval(tick);
       el.remove();
       done(v);
     };
@@ -161,10 +168,18 @@ export function chooseThreat(ui: HTMLElement, map: CityMap, c: Campaign, pool: r
       map.redraw();
     };
     const off = c.listen(render);
+    // the choosing clock, counted down in place (D-182)
+    const tick = setInterval(() => {
+      const left = el.querySelector<HTMLElement>("[data-left]");
+      if (!left || !c.chooseBy) return;
+      const s = Math.max(0, Math.ceil((c.chooseBy - Date.now()) / 1000));
+      left.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    }, 250);
     el.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
       const claim = t.closest<HTMLElement>("[data-claim]")?.dataset.claim;
       if (claim) return c.send({ k: "claim", threat: Number(claim) });
+      if (t.closest("[data-pass]")) return c.send({ k: "pass" });
       if (t.closest("[data-leave]")) return void (location.search = "");
       const at = t.closest<HTMLElement>("[data-at]")?.dataset.at;
       if (at) map.show(...middle(pool[Number(at)]!));

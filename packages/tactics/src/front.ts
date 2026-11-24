@@ -71,6 +71,8 @@ export interface Front {
   spent: number[];
   /** The level's objects brought down in every fight so far: each page takes them out of its world. */
   razed: number[];
+  /** The squads sitting this wave out (D-182). */
+  passed: string[];
   /** What the last wave's end did, a line each. */
   news: string[];
   over: "held" | "lost" | null;
@@ -83,7 +85,9 @@ export type FrontMessage =
   | { k: "claim"; threat: number }
   /** No fight could be made on its site: another in the district instead. */
   | { k: "swap"; threat: number }
-  | { k: "report"; threat: number; held: boolean; lost: number; razed: number[] };
+  | { k: "report"; threat: number; held: boolean; lost: number; razed: number[] }
+  /** The squad sits this wave out (D-182): it takes no block, and the wave needn't wait for it. */
+  | { k: "pass" };
 
 /** The front's tuning (D-179). */
 export const FRONT = {
@@ -176,6 +180,7 @@ export function newFront(sites: readonly FrontSite[], opts: { seed: number; play
     threats: [],
     spent: [],
     razed: [],
+    passed: [],
     news: [],
     over: null,
     next: 1,
@@ -232,11 +237,17 @@ function offer(f: Front, sites: readonly FrontSite[], want: number): void {
   }
 }
 
-/** Every claimed threat fought, and every player has fought one or has none left to take. */
+/** Every claimed threat fought, and every player has fought one, sat the wave out, or has none left to take. */
 export function waveDone(f: Front, players: readonly string[]): boolean {
-  if (f.threats.some((t) => t.by && !t.result)) return false;
+  if (!players.length || f.threats.some((t) => t.by && !t.result)) return false;
   const free = f.threats.some((t) => !t.by);
-  return players.every((p) => f.threats.some((t) => t.by === p) || !free) && f.threats.some((t) => t.result);
+  return players.every((p) => f.threats.some((t) => t.by === p) || f.passed.includes(p) || !free);
+}
+
+/** The players the wave waits on to choose: neither a block taken nor sat out, while a block is left to take (D-182). */
+export function choosing(f: Front, players: readonly string[]): string[] {
+  if (f.over || !f.threats.some((t) => !t.by)) return [];
+  return players.filter((p) => !f.passed.includes(p) && !f.threats.some((t) => t.by === p));
 }
 
 /** The wave's end: districts calmed, pressed and overrun, trust spent, invaders landing anew; then the next wave, or the end. */
@@ -272,6 +283,7 @@ function closeWave(f: Front, sites: readonly FrontSite[], players: readonly stri
     news.push(`${name(d)} overrun (trust −${FRONT.overrunCost})${n >= 0 ? `; it spreads to ${name(n)}` : ""}.`);
   }
   f.threats = [];
+  f.passed = [];
   if (f.trust <= 0) {
     f.trust = 0;
     f.over = "lost";
@@ -315,11 +327,18 @@ export function frontLeft(f: Front, sites: readonly FrontSite[], players: readon
 /** A player's message carried out: null, or why it couldn't be. */
 export function frontAct(f: Front, sites: readonly FrontSite[], players: readonly string[], by: string, m: FrontMessage): string | null {
   if (f.over) return "the operation is over";
+  if (m.k === "pass") {
+    if (f.threats.some((o) => o.by === by)) return "your squad has its block this wave";
+    if (!f.passed.includes(by)) f.passed.push(by);
+    settle(f, sites, players);
+    return null;
+  }
   const t = f.threats.find((o) => o.id === m.threat);
   if (!t) return "that threat is gone";
   if (m.k === "claim") {
     if (t.by) return "another squad is on it";
     if (f.threats.some((o) => o.by === by)) return "your squad has its block this wave";
+    if (f.passed.includes(by)) return "your squad sits this wave out";
     t.by = by;
     return null;
   }
@@ -345,6 +364,7 @@ export function frontAct(f: Front, sites: readonly FrontSite[], players: readonl
 /** A message from a page, checked (a server takes them from anyone): null when it isn't one. */
 export function frontMessage(m: unknown): FrontMessage | null {
   const o = m as Record<string, unknown> | null;
+  if (o && typeof o === "object" && o.k === "pass") return { k: "pass" };
   if (!o || typeof o !== "object" || !Number.isInteger(o.threat)) return null;
   const threat = o.threat as number;
   if (o.k === "claim" || o.k === "swap") return { k: o.k, threat };

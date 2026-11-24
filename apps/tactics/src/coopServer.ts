@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import { cleanName } from "@pixelworlds/multiplayer";
 import { attachRelay, type HostedRoom, type Relay, type RoomHost } from "@pixelworlds/multiplayer/server";
-import { frontAct, frontJoined, frontLeft, frontMessage, newFront, type Front, type FrontSite } from "@pixelworlds/tactics";
+import { choosing, frontAct, frontJoined, frontLeft, frontMessage, newFront, type Front, type FrontSite } from "@pixelworlds/tactics";
 import boards from "../survey/boards.json";
 import { COOP_PATH, type CoopOut, type Crew } from "./coop";
 import { sitesOf, type Block } from "./sites";
@@ -20,12 +20,17 @@ import { sitesOf, type Block } from "./sites";
  */
 
 const POOLS = boards as unknown as Record<string, Block[]>;
+/** Once a squad has chosen its block, how long the others have to choose theirs before they sit the wave out (D-182). */
+export const CHOOSE_MS = 90_000;
 
 export class CoopRoom implements RoomHost {
   private front: Front | null = null;
   private sites: FrontSite[] = [];
   private world = "";
   private readonly crews = new Map<string, Crew>();
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  /** When the squads still choosing sit the wave out (ms since the epoch), or 0. */
+  private due = 0;
 
   constructor(private readonly room: HostedRoom) {}
 
@@ -58,6 +63,10 @@ export class CoopRoom implements RoomHost {
     this.tell();
   }
 
+  close(): void {
+    if (this.timer) clearTimeout(this.timer);
+  }
+
   info(): object {
     return { world: this.world, wave: this.front?.wave ?? 0 };
   }
@@ -66,8 +75,32 @@ export class CoopRoom implements RoomHost {
     return [...this.crews.keys()];
   }
 
+  /** The choosing clock (D-182): running while some squads have chosen and others haven't; at its end, those sit the wave out. */
+  private clock(): void {
+    const f = this.front;
+    const waiting = f ? choosing(f, this.ids()) : [];
+    const chosen = !!f && (f.passed.length > 0 || f.threats.some((t) => t.by));
+    if (!waiting.length || !chosen) {
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = null;
+      this.due = 0;
+      return;
+    }
+    if (this.timer) return;
+    this.due = Date.now() + CHOOSE_MS;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.due = 0;
+      if (!this.front) return;
+      for (const id of choosing(this.front, this.ids())) frontAct(this.front, this.sites, this.ids(), id, { k: "pass" });
+      this.tell();
+    }, CHOOSE_MS);
+  }
+
   private tell(): void {
-    if (this.front) this.room.broadcast({ k: "front", front: this.front, crews: Object.fromEntries(this.crews) } satisfies CoopOut);
+    if (!this.front) return;
+    this.clock();
+    this.room.broadcast({ k: "front", front: this.front, crews: Object.fromEntries(this.crews), choose: this.due ? this.due - Date.now() : null } satisfies CoopOut);
   }
 }
 

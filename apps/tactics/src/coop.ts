@@ -21,9 +21,10 @@ export type CoopIn = ({ k: "hello"; world: string } & Crew) | FrontMessage;
  * A co-op room to a page: the city's boards, once, as the room has them (its
  * front's sites are places in this list, so the page takes the room's, not
  * its own, which a newer survey may have changed); the front after every
- * change, with who's defending it; or why a message wasn't taken.
+ * change, with who's defending it and how long the squads still choosing
+ * have left (ms, D-182); or why a message wasn't taken.
  */
-export type CoopOut = { k: "pool"; pool: Block[] } | { k: "front"; front: Front; crews: Record<string, Crew> } | { k: "no"; why: string };
+export type CoopOut = { k: "pool"; pool: Block[] } | { k: "front"; front: Front; crews: Record<string, Crew>; choose: number | null } | { k: "no"; why: string };
 
 /** The rooms' WebSocket path on the game's server. */
 export const COOP_PATH = "/hold";
@@ -42,6 +43,8 @@ export interface Campaign {
   listen(f: () => void): () => void;
   /** Why the room's connection was lost, or null. */
   readonly lost: string | null;
+  /** When the squads still choosing sit the wave out (this page's clock, ms), or null (D-182). */
+  readonly chooseBy: number | null;
 }
 
 class Listeners {
@@ -68,6 +71,7 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
     front,
     crews: { [me]: crew },
     lost: null,
+    chooseBy: null,
     send(m) {
       const why = frontAct(front, sites, [me], me, m);
       if (why) console.warn(`the front: ${why}`);
@@ -81,7 +85,7 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
 export async function coopCampaign(room: string, hello: { world: string } & Crew): Promise<Campaign> {
   const r = await joinRoom(new URL(COOP_PATH, location.href), room);
   const ls = new Listeners();
-  const c = { me: r.id, room, pool: [] as Block[], front: null as unknown as Front, crews: {} as Record<string, Crew>, lost: null as string | null };
+  const c = { me: r.id, room, pool: [] as Block[], front: null as unknown as Front, crews: {} as Record<string, Crew>, lost: null as string | null, chooseBy: null as number | null };
   const campaign: Campaign = {
     get me() {
       return c.me;
@@ -99,6 +103,9 @@ export async function coopCampaign(room: string, hello: { world: string } & Crew
     get lost() {
       return c.lost;
     },
+    get chooseBy() {
+      return c.chooseBy;
+    },
     send: (m) => r.send(m satisfies CoopIn),
     listen: (f) => ls.listen(f),
   };
@@ -109,6 +116,7 @@ export async function coopCampaign(room: string, hello: { world: string } & Crew
       if (m.k === "pool") return void (c.pool = m.pool);
       c.front = m.front;
       c.crews = m.crews;
+      c.chooseBy = m.choose === null ? null : Date.now() + m.choose;
       resolve(campaign);
       ls.tell();
     };

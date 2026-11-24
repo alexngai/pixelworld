@@ -612,3 +612,6 @@ kbd {
     height: 45vh;
   }
 }
+.front-panel .choose b {
+  color: var(--warn);
+}

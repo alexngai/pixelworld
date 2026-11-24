@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATTACKED, CALM, OVERRUN, THREATENED, districtsOf, frontAct, frontJoined, frontLeft, frontMessage, newFront, waveDone, type FrontSite } from "../src/front";
+import { ATTACKED, CALM, OVERRUN, THREATENED, choosing, districtsOf, frontAct, frontJoined, frontLeft, frontMessage, newFront, waveDone, type FrontSite } from "../src/front";
 
 // 72 sites on a 12 × 6 grid, 40 cells apart, named after three places
 const SITES: FrontSite[] = Array.from({ length: 72 }, (_, i) => ({
@@ -95,10 +95,29 @@ describe("the city's front (D-179)", () => {
     expect(g.over).toBe("lost");
   });
 
+  it("lets a squad sit a wave out (D-182): the wave waits only on those choosing", () => {
+    const f = newFront(SITES, { seed: 9, players: 2 });
+    const [a] = f.threats;
+    frontAct(f, SITES, ["p", "q"], "p", { k: "claim", threat: a!.id });
+    expect(choosing(f, ["p", "q"])).toEqual(["q"]);
+    frontAct(f, SITES, ["p", "q"], "p", { k: "report", threat: a!.id, held: true, lost: 0, razed: [] });
+    expect(f.wave).toBe(1);
+    expect(frontAct(f, SITES, ["p", "q"], "p", { k: "pass" })).toMatch(/its block/);
+    frontAct(f, SITES, ["p", "q"], "q", { k: "pass" });
+    expect(f.wave).toBe(2);
+    expect(f.passed).toEqual([]);
+    // a squad that sat out can't then take one
+    frontAct(f, SITES, ["p", "q"], "q", { k: "pass" });
+    expect(frontAct(f, SITES, ["p", "q"], "q", { k: "claim", threat: f.threats[0]!.id })).toMatch(/sits this wave out/);
+    // nobody left: the wave doesn't close on its own
+    expect(waveDone(f, [])).toBe(false);
+  });
+
   it("checks what a page sends", () => {
     expect(frontMessage({ k: "claim", threat: 3 })).toEqual({ k: "claim", threat: 3 });
     expect(frontMessage({ k: "claim", threat: "3" })).toBeNull();
     expect(frontMessage({ k: "report", threat: 1, held: true, lost: -2, razed: [1, -1, 2.5, "x", 4] })).toEqual({ k: "report", threat: 1, held: true, lost: 0, razed: [1, 4] });
     expect(frontMessage({ k: "nuke", threat: 1 })).toBeNull();
+    expect(frontMessage({ k: "pass" })).toEqual({ k: "pass" });
   });
 });

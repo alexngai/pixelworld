@@ -189,6 +189,7 @@ Status values:
 | D-179 | The city's front: districts, waves of threats, trust; an overworld between fights, and co-op rooms where squads defend one city, each fighting its own blocks | Accepted |
 | D-180 | Rooftop maps: chasm cells in the rules, the survey trying towers as rooftops above the street | Accepted |
 | D-181 | The survey's boards played by four bots and measured: variety, depth, room, the city's share | Accepted |
+| D-182 | Sitting a wave out, and a clock for the squads still choosing once one has chosen | Accepted |
 
 ---
 
@@ -2564,3 +2565,9 @@ The point is more room for visual interest; both halves are wanted.
 - **Why:** the map survey's plan (D-174) has a simulation phase: play each finalist with several bots so unique interactions show, and rerank by them; the owner asked for the rest of the plan to be built.
 - **What:** `apps/tactics/src/sim.ts` plays a board's puzzle to its last round with an optimal bot (the puzzle's line), a greedy one (`greedyTurn`), an environmental one (greedy with the city's damage counted double) and a random one, and measures from their event logs: variety (kinds of the city's events), depth (how far greedy falls short of optimal), room (perfect first turns that keep the fight), and the share of invader damage the city does. `tools/survey-play.mjs` runs it on each board it makes a fight on and keeps the measures in `play.json`; `tools/survey-boards.mjs` scores a board three quarters survey, a quarter simulation; the gallery shows the measures. docs/tactics/map-survey.md "Simulation".
 - **Checked:** 496 boards simulated; the optimal line held every one and no other bot any, so the replay is faithful and the puzzles beat greedy play. Scores 0.47 to 0.79 (tenth to ninetieth percentile); reranked, each city's top ten kept four to nine of its boards. Tests for the measures on event logs (weapon vs city damage, the kinds, room).
+
+### D-182: Sitting a wave out, and a clock for the squads still choosing once one has chosen (accepted)
+- **Why:** D-179 left a co-op wave waiting on every squad: one that never took a block (away from the keyboard, or with nothing it wanted) held the others up. The owner asked for D-179's open points to be worked through.
+- **What:** in the front, a squad can sit a wave out (`{ k: "pass" }`) while it has no block; the wave waits only on squads fighting and squads still choosing (`choosing`), and closes once nobody is left either way (never with nobody in the room). A co-op room runs a clock: once any squad has chosen (a block or sitting out), the squads still choosing have 90 seconds (`CHOOSE_MS`), then sit the wave out. The front each page gets says how long is left; the panel counts it down beside a "Sit this wave out" button, and names who the wave is waiting on (fighting, or choosing). Fights in progress have no clock: a page that leaves lets go of its block (D-179).
+- **Checked:** rules test (a squad that sat out can't take a block, the wave closing on the one that fought); room test on a made-up clock (the clock starting when the first squad chooses, the other sat out at 90 s, the wave closing on the first's report). In the browser, two pages in one room: the second's block shown on the first with 1:25 left, and the first sitting out to wait on the second's fight.
+
