@@ -5,11 +5,11 @@ import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
-import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, type Combat, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
+import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, toWire, fromWire, type Combat, type Loadout, type Puzzle, type Squad, type Threat } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { Ahead } from "./ahead";
 import { CityMap } from "./cityMap";
-import { FIGHT_ROUNDS, coopCampaign, roomCode, soloCampaign } from "./coop";
+import { FIGHT_ROUNDS, coopCampaign, roomCode, soloCampaign, type JointOut } from "./coop";
 import { Fight, type FightOutcome } from "./fight";
 import "./game.css";
 import { chooseThreat, drawFront } from "./overworld";
@@ -292,6 +292,102 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     }
   };
 
+  /**
+   * A joint finale (D-187): the lead's page makes the fight and sends its
+   * start, the second squad's page sends its rigs; the room sets both squads
+   * on the board and sends the fight to both. Null when it doesn't begin (the
+   * other squad gone, or the block changed): back to the city.
+   */
+  const playJoint = async (t: Threat): Promise<FightOutcome | null> => {
+    const c = campaign!;
+    const site = pool[t.site]!;
+    const lead = t.by === c.me;
+    const partner = c.crews[(lead ? t.with : t.by)!]?.name ?? "the other squad";
+    const n = note(`<h2>${site.name}: the finale</h2><p>${lead ? "Working out the invaders' landing…" : `Waiting for ${partner}'s squad to scout the block…`}</p>`);
+    const begun = new Promise<Extract<JointOut, { k: "j-begin" }> | null>((done) => {
+      const end = (m: Extract<JointOut, { k: "j-begin" }> | null) => {
+        offJ();
+        offF();
+        done(m);
+      };
+      const offJ = c.onJoint((m) => {
+        if (m.k === "j-begin" && m.threat === t.id) end(m);
+      });
+      // the other squad gone, or the block changed, before it begins
+      const offF = c.listen(() => {
+        const x = c.front.threats.find((y) => y.id === t.id);
+        if (!x || !x.with || x.site !== t.site || x.result) end(null);
+      });
+    });
+    let found: { board: Board; puzzle: Puzzle } | null = null;
+    if (lead) {
+      ahead!.onProgress = (s, tried) => s === t.site && n.set(`<h2>${site.name}: the finale</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`);
+      found = await ahead!.take(t.site);
+      if (!found) {
+        n.close();
+        c.send({ k: "swap", threat: t.id });
+        return null;
+      }
+      c.joint({ k: "j-start", threat: t.id, start: toWire(armedNow(found.puzzle, run).combat) });
+    } else {
+      ahead!.clear();
+      c.joint({ k: "j-squad", threat: t.id, rigs: run.rigs.map((r) => ({ kind: r.kind, slots: r.slots })) });
+    }
+    const [b] = await Promise.all([begun, view.camera.lookAt(middle(site))]);
+    n.close();
+    if (!b) {
+      if (found) boards.remove(found.board);
+      return null;
+    }
+    board = found?.board ?? (await boards.add({ x0: site.x0, y0: site.y0, w: SIZE, h: SIZE, cell: site.cell }));
+    fight = new Fight({
+      view,
+      board,
+      puzzle: { combat: fromWire<Combat>(b.start) },
+      brain,
+      ui,
+      labels,
+      title: `${city.name} · ${site.name} · with ${partner}`,
+      rounds: ROUNDS,
+      resets: 0,
+      hints: HINTS,
+      joint: {
+        mine: new Set(b.units[c.me] ?? []),
+        partner,
+        take: (unit) => c.joint({ k: "j-take", threat: t.id, unit }),
+        act: (action) => c.joint({ k: "j-act", threat: t.id, action }),
+        cancel: () => c.joint({ k: "j-cancel", threat: t.id }),
+        end: () => c.joint({ k: "j-end", threat: t.id }),
+      },
+    });
+    const off = c.onJoint((m) => {
+      if (m.threat !== t.id || !fight) return;
+      if (m.k === "j-baton") fight.jointBaton(m.by === null ? null : m.by === c.me);
+      else if (m.k === "j-act" && m.by !== c.me) fight.jointAct(m.action);
+      else if (m.k === "j-turn") fight.jointTurn();
+    });
+    const o = await fight.done;
+    off();
+    fight.dispose();
+    fight = null;
+    boards.remove(board);
+    board = null;
+    const pay = reward(o);
+    await screen(
+      `<h2>${o.held ? "Finale held" : o.squadDown ? "Squads down" : "Finale lost"}</h2>
+       <p>${site.name}, with ${partner}: ${o.held ? "nobody lost" : `${Math.round(o.lost)} of ${Math.round(o.atStake)} people lost`} · ${o.invadersDown} invader${o.invadersDown === 1 ? "" : "s"} down · ${o.roundsHeld} of ${o.rounds} round${o.rounds === 1 ? "" : "s"} without loss</p>
+       <p class="wallet">It pays <b>★ ${pay.reputation}</b> reputation${pay.cores ? ` and <b>◆ ${pay.cores}</b> core` : ""}.</p>
+       <button data-go="next">Back to the city</button>`,
+      o.held ? "won" : "lost",
+    );
+    played.push({ site, outcome: o });
+    run.reputation += pay.reputation;
+    run.cores += pay.cores;
+    if (o.held) profile.blocksHeld++;
+    saveProfile(profile);
+    return o;
+  };
+
   if (!campaign) {
     played.push({ site: opts.board!, outcome: (await play(opts.board!, (progress) => make(opts.board!, progress)))?.o ?? null });
   } else {
@@ -304,6 +400,18 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       if (id === null) break;
       const t = campaign.front.threats.find((x) => x.id === id)!;
       const site = pool[t.site]!;
+      // the finale with nobody to join it: fought alone; with a second squad, together (D-187)
+      if (t.joint && !t.with) campaign.send({ k: "alone", threat: id });
+      if (t.joint && t.with) {
+        fighting = true;
+        const o = await playJoint(t);
+        fighting = false;
+        if (!o) continue;
+        if (campaign.front.over) break;
+        const pay = reward(o);
+        await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++);
+        continue;
+      }
       fighting = true;
       const r = await play(site, (progress) => {
         ahead!.onProgress = (s, tried) => s === t.site && progress(tried);

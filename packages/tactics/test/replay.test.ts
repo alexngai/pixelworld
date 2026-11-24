@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cloneCombat, fromWire, moveUnit, newCombat, planInvaders, replayFight, resolveInvaders, endRound, solveTurn, strike, toWire, type Action, type Arena, type Combat } from "../src/index";
+import { INVADERS, SQUAD, aimOf, cloneCombat, fromWire, joinSquad, reinforce, loadoutOf, moveUnit, strikeCell, teamOf, newCombat, planInvaders, replayFight, resolveInvaders, endRound, solveTurn, strike, toWire, type Action, type Arena, type Combat } from "../src/index";
 
 /** A small arena: open ground, `#` a low building (1 hp, 100 people). */
 function arena(rows: string[]): Arena {
@@ -20,12 +20,16 @@ function played(start: Combat, rounds: number): Action[][] {
   const c = cloneCombat(start);
   const turns: Action[][] = [];
   for (let r = 0; r < rounds; r++) {
+    // the solver's best turn, but for a rig an earlier action that turn has downed (a page can't act with one)
     const plan = solveTurn(c, { mode: "best", maxNodes: 20_000 }).best?.plan ?? [];
-    turns.push(plan);
+    const turn: Action[] = [];
     for (const a of plan) {
+      if (c.hp[a.unit]! <= 0) continue;
+      turn.push(a);
       if (a.dest !== c.pos[a.unit]) moveUnit(c, a.unit, a.dest);
       if (a.strike) strike(c, a.unit, a.strike);
     }
+    turns.push(turn);
     resolveInvaders(c);
     endRound(c);
     planInvaders(c);
@@ -62,5 +66,28 @@ describe("a fight replayed (D-186)", () => {
     expect(replayFight(start, [[{ unit: 3, dest: start.pos[3]!, strike: null }], []], 2)).toBeNull();
     expect(replayFight(start, [[{ unit: 0, dest: start.pos[0]!, strike: null }, { unit: 0, dest: start.pos[0]!, strike: null }], []], 2)).toBeNull();
     expect(replayFight(start, [[{ unit: 0, dest: start.pos[0]!, strike: { weapon: 0, dir: 2, range: 9 } }], []], 2)).toBeNull();
+  });
+
+  it("joins a second squad's rigs on free cells out of the invaders' way (D-187), and the fight goes on with them", () => {
+    const c = cloneCombat(start);
+    const rigs = [loadoutOf("pumper", [{ id: "waterCannon", ups: [0] }, null]), loadoutOf("ladder", [{ id: "deluge", ups: [] }, null])];
+    const added = joinSquad(c, rigs);
+    expect(added).toEqual([5, 6]);
+    for (const u of added) {
+      expect(teamOf(c, u)).toBe(SQUAD);
+      expect(c.occ[c.pos[u]!]).toBe(u);
+    }
+    expect(c.arms[5]![0]!.damage).toBe(2);
+    const struck = c.roster.flatMap((_, u) => (teamOf(c, u) === INVADERS && c.aim[u]! >= 0 ? [strikeCell(c, u, aimOf(c, u))] : []));
+    for (const u of added) expect(struck).not.toContain(c.pos[u]);
+    expect(replayFight(c, played(c, 2), 2)).not.toBeNull();
+    // and two more invaders, each beside a building it aims at, out of the rigs' reach
+    const more = reinforce(c, 2);
+    expect(more).toHaveLength(2);
+    for (const u of more) {
+      expect(teamOf(c, u)).toBe(INVADERS);
+      expect(c.arena.struct[strikeCell(c, u, aimOf(c, u))]).toBeGreaterThanOrEqual(0);
+    }
+    expect(replayFight(c, played(c, 2), 2)).not.toBeNull();
   });
 });

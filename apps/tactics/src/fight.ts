@@ -54,10 +54,28 @@ import type { Outlook } from "./worker";
  * that falls is taken out of the world.
  */
 
+/**
+ * A joint finale's link to the room (D-187): the rigs this page commands, the
+ * other squad's name, and what goes to the room (a rig asked for, its action,
+ * the rig handed back, the turn ended). What comes back reaches the fight by
+ * `jointBaton`, `jointAct` and `jointTurn`.
+ */
+export interface JointLink {
+  mine: ReadonlySet<number>;
+  partner: string;
+  take(u: number): void;
+  act(a: Action): void;
+  cancel(): void;
+  end(): void;
+}
+
 export interface FightSetup {
   view: WorldView;
   board: Board;
-  puzzle: Puzzle;
+  /** The position (a joint finale's has no solution of its own). */
+  puzzle: Pick<Puzzle, "combat" | "fight">;
+  /** Fought with another squad (D-187). */
+  joint?: JointLink;
   brain: Brain;
   /** Where the fight's panels go, and the labels over the world. */
   ui: HTMLElement;
@@ -160,7 +178,11 @@ export class Fight {
   private readonly view: WorldView;
   private readonly board: Board;
   private readonly brain: Brain;
-  private readonly puzzle: Puzzle;
+  private readonly puzzle: Pick<Puzzle, "combat" | "fight">;
+  /** A joint finale's link (D-187), whether the other squad is acting, and whether this page has ended the turn and waits on it. */
+  private readonly joint: JointLink | null;
+  private partnerActing = false;
+  private waiting = false;
   private readonly rounds: number;
   private readonly title: string;
   private readonly ramps: ReturnType<typeof rampsFor>;
@@ -249,6 +271,7 @@ export class Fight {
     this.board = s.board;
     this.brain = s.brain;
     this.puzzle = s.puzzle;
+    this.joint = s.joint ?? null;
     this.rounds = s.rounds;
     this.title = s.title;
     this.resets = s.resets;
@@ -1072,7 +1095,9 @@ export class Fight {
               `<button class="weapon${u === this.selected && i === this.weapon && this.phase === "strike" ? " on" : ""}" data-rig="${u}" data-weapon="${i}" title="${w.name}: ${weaponWhat(w)}">${w.name}<small>${weaponShort(w)}</small></button>`,
           )
           .join("");
-        return `<div class="card ${state}" data-rig="${u}"><b>${f.name}</b> <span class="hp">${pips(c.hp[u]!, f.hp)}</span> ${roof}<div class="weapons">${weapons}</div></div>`;
+        // a joint finale (D-187): the other squad's rigs named as theirs
+        const theirs = this.joint && !this.joint.mine.has(u) ? ` <small class="theirs">${this.joint.partner}</small>` : "";
+        return `<div class="card ${state}${theirs ? " partner" : ""}" data-rig="${u}"><b>${f.name}</b>${theirs} <span class="hp">${pips(c.hp[u]!, f.hp)}</span> ${roof}<div class="weapons">${weapons}</div></div>`;
       })
       .join("");
     const order = this.order(c);
@@ -1151,7 +1176,13 @@ export class Fight {
   private select(u: number): void {
     const c = this.c;
     if (this.phase === "busy" || this.phase === "over" || teamOf(c, u) !== SQUAD || c.hp[u]! <= 0 || this.acted.has(u)) return;
+    // a joint finale (D-187): this squad's rigs, one rig at a time across both squads
+    if (this.joint && (!this.joint.mine.has(u) || this.partnerActing)) {
+      this.say(!this.joint.mine.has(u) ? `That's ${this.joint.partner}'s rig.` : `${this.joint.partner} is acting: a moment.`);
+      return this.paint();
+    }
     if (this.phase === "strike" && u !== this.selected) this.cancelMove();
+    this.joint?.take(u);
     if (u !== this.selected) this.hopAt.set(u, this.now);
     this.selected = u;
     this.moveFrom = c.pos[u]!;
@@ -1183,6 +1214,7 @@ export class Fight {
   /** Take back the selected rig's move this activation. */
   private cancelMove(): void {
     if (this.selected < 0) return;
+    this.joint?.cancel();
     if (this.phase === "strike" && this.moveFrom >= 0) {
       moveUnit(this.c, this.selected, this.moveFrom);
       this.sync();
@@ -1417,7 +1449,9 @@ export class Fight {
     const u = this.selected;
     const log: CombatEvent[] = [];
     // where it struck from: a charge moves it on
-    this.turns[this.turns.length - 1]!.push({ unit: u, dest: this.c.pos[u]!, strike: s });
+    const a: Action = { unit: u, dest: this.c.pos[u]!, strike: s };
+    this.turns[this.turns.length - 1]!.push(a);
+    this.joint?.act(a);
     if (s) strike(this.c, u, s, log);
     this.acted.add(u);
     this.selected = -1;
@@ -1430,7 +1464,7 @@ export class Fight {
       this.sync();
       this.phase = "pick";
       this.checkOutlook();
-      const left = this.c.roster.some((_, v) => teamOf(this.c, v) === SQUAD && this.c.hp[v]! > 0 && !this.acted.has(v));
+      const left = this.c.roster.some((_, v) => teamOf(this.c, v) === SQUAD && this.c.hp[v]! > 0 && !this.acted.has(v) && (!this.joint || this.joint.mine.has(v)));
       this.say(left ? "Click another rig, or end the turn." : "Every rig has acted: end the turn.");
       this.paint();
     });
@@ -1563,14 +1597,61 @@ export class Fight {
   private async askEndTurn(): Promise<void> {
     if (this.phase === "strike") await this.act(null);
     else if (this.phase === "move") this.cancelMove();
-    const idle = this.c.roster.filter((_, u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u)).length;
+    const idle = this.c.roster.filter((_, u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u) && (!this.joint || this.joint.mine.has(u))).length;
     if (idle && !this.confirmEnd) {
       this.confirmEnd = true;
       this.say(`${idle === 1 ? "A rig hasn't" : `${idle} rigs haven't`} acted: Enter again to end the turn anyway.`);
       return this.paint();
     }
     this.confirmEnd = false;
+    if (this.joint) {
+      // the invaders' turn comes once the other squad has ended its turn too (`jointTurn`)
+      this.waiting = true;
+      this.phase = "busy";
+      this.say(`Waiting for ${this.joint.partner} to end the turn…`);
+      this.paint();
+      return this.joint.end();
+    }
     await this.endTurn();
+  }
+
+  /** Who has the baton in a joint finale (D-187): this page, the other squad, or nobody. */
+  jointBaton(mine: boolean | null): void {
+    this.partnerActing = mine === false;
+    // the other squad asked first: this page's rig put back
+    if (mine === false && this.selected >= 0 && !this.waiting) {
+      if (this.phase === "strike" && this.moveFrom >= 0) moveUnit(this.c, this.selected, this.moveFrom);
+      this.selected = -1;
+      this.phase = "pick";
+      this.preview = null;
+      this.sync();
+      this.say(`${this.joint?.partner ?? "The other squad"} is acting: a moment.`);
+    }
+    this.paint();
+  }
+
+  /** The other squad's rig acted (D-187): its move and strike, shown. */
+  jointAct(a: Action): void {
+    this.partnerActing = false;
+    const log: CombatEvent[] = [];
+    if (a.dest !== this.c.pos[a.unit]) moveUnit(this.c, a.unit, a.dest, log);
+    if (a.strike) strike(this.c, a.unit, a.strike, log);
+    this.acted.add(a.unit);
+    this.turns[this.turns.length - 1]!.push(a);
+    void this.steps(this.animate(log)).then(() => {
+      this.sync();
+      this.checkOutlook();
+      this.paint();
+    });
+    this.paint();
+  }
+
+  /** Both squads have ended the turn (D-187): the invaders' turn. */
+  jointTurn(): void {
+    this.waiting = false;
+    this.partnerActing = false;
+    this.phase = "pick";
+    void this.endTurn();
   }
 
   private async endTurn(): Promise<void> {
@@ -1663,7 +1744,7 @@ export class Fight {
   }
 
   /** The puzzle, for a retry. */
-  get source(): Puzzle {
+  get source(): Pick<Puzzle, "combat" | "fight"> {
     return this.puzzle;
   }
 }

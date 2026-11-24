@@ -1,5 +1,5 @@
 import { joinRoom } from "@pixelworlds/multiplayer";
-import { frontAct, newFront, toWire, type Action, type Combat, type Front, type FrontMessage } from "@pixelworlds/tactics";
+import { frontAct, newFront, toWire, type Action, type Armed, type Combat, type FighterKind, type Front, type FrontMessage } from "@pixelworlds/tactics";
 import { sitesOf, type Block } from "./sites";
 
 /**
@@ -20,7 +20,33 @@ export interface Crew {
  * messages, but a fight reported as its start and moves (`fought`, both as
  * `toWire` carries them), which the room replays (D-186).
  */
-export type CoopIn = ({ k: "hello"; world: string } & Crew) | Exclude<FrontMessage, { k: "report" }> | { k: "fought"; threat: number; start: unknown; turns: unknown; razed: number[] };
+export type CoopIn = ({ k: "hello"; world: string } & Crew) | Exclude<FrontMessage, { k: "report" }> | { k: "fought"; threat: number; start: unknown; turns: unknown; razed: number[] } | JointIn;
+
+/** A rig as a page's run has it: its kind and the weapons in its slots. */
+export interface JointRig {
+  kind: FighterKind;
+  slots: (Armed | null)[];
+}
+
+/**
+ * A joint finale's messages (D-187), page to room: the lead's fight (its
+ * start), the second squad's rigs; a rig asked for (the baton: one acts at a
+ * time), its action, the baton handed back, the turn ended.
+ */
+export type JointIn =
+  | { k: "j-start"; threat: number; start: unknown }
+  | { k: "j-squad"; threat: number; rigs: JointRig[] }
+  | { k: "j-take"; threat: number; unit: number }
+  | { k: "j-act"; threat: number; action: Action }
+  | { k: "j-cancel"; threat: number }
+  | { k: "j-end"; threat: number };
+
+/** Room to page: the fight both squads fight (its start, and whose rigs are whose), who has the baton, an action taken, the invaders' turn. */
+export type JointOut =
+  | { k: "j-begin"; threat: number; start: unknown; units: Record<string, number[]> }
+  | { k: "j-baton"; threat: number; by: string | null }
+  | { k: "j-act"; threat: number; by: string; action: Action }
+  | { k: "j-turn"; threat: number };
 
 /** Rounds a block's fight lasts: the page's fights and the room's replays (D-186). */
 export const FIGHT_ROUNDS = 3;
@@ -39,7 +65,7 @@ export interface Fought {
  * change, with who's defending it and how long the squads still choosing
  * have left (ms, D-182); or why a message wasn't taken.
  */
-export type CoopOut = { k: "pool"; pool: Block[] } | { k: "front"; front: Front; crews: Record<string, Crew>; choose: number | null } | { k: "no"; why: string };
+export type CoopOut = { k: "pool"; pool: Block[] } | { k: "front"; front: Front; crews: Record<string, Crew>; choose: number | null } | { k: "no"; why: string } | JointOut;
 
 /** The rooms' WebSocket path on the game's server. */
 export const COOP_PATH = "/hold";
@@ -58,6 +84,9 @@ export interface Campaign {
   fought(threat: number, start: Combat, o: Fought): void;
   /** Called after every change; returns its undoing. */
   listen(f: () => void): () => void;
+  /** A joint finale's message to the room, and the room's to this page (D-187); alone, there are none. */
+  joint(m: JointIn): void;
+  onJoint(f: (m: JointOut) => void): () => void;
   /** Why the room's connection was lost, or null. */
   readonly lost: string | null;
   /** When the squads still choosing sit the wave out (this page's clock, ms), or null (D-182). */
@@ -97,6 +126,8 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
     send: apply,
     fought: (threat, _start, o) => apply({ k: "report", threat, held: o.held, lost: o.lost, razed: o.razed }),
     listen: (f) => ls.listen(f),
+    joint: () => {},
+    onJoint: () => () => {},
   };
 }
 
@@ -104,6 +135,7 @@ export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): 
 export async function coopCampaign(room: string, hello: { world: string } & Crew): Promise<Campaign> {
   const r = await joinRoom(new URL(COOP_PATH, location.href), room);
   const ls = new Listeners();
+  const joints = new Set<(m: JointOut) => void>();
   const c = { me: r.id, room, pool: [] as Block[], front: null as unknown as Front, crews: {} as Record<string, Crew>, lost: null as string | null, chooseBy: null as number | null };
   const campaign: Campaign = {
     get me() {
@@ -128,12 +160,22 @@ export async function coopCampaign(room: string, hello: { world: string } & Crew
     send: (m) => r.send(m satisfies CoopIn),
     fought: (threat, start, o) => r.send({ k: "fought", threat, start: toWire(start), turns: o.turns, razed: o.razed } satisfies CoopIn),
     listen: (f) => ls.listen(f),
+    joint: (m) => r.send(m satisfies CoopIn),
+    onJoint: (f) => {
+      joints.add(f);
+      return () => joints.delete(f);
+    },
   };
   return new Promise((resolve, reject) => {
     r.onMessage = (_from, data) => {
       const m = data as CoopOut;
       if (m.k === "no") return console.warn(`the room: ${m.why}`);
       if (m.k === "pool") return void (c.pool = m.pool);
+      if (m.k.startsWith("j-")) {
+        for (const f of joints) f(m as JointOut);
+        return;
+      }
+      if (m.k !== "front") return;
       c.front = m.front;
       c.crews = m.crews;
       c.chooseBy = m.choose === null ? null : Date.now() + m.choose;

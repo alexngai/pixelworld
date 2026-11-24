@@ -615,3 +615,12 @@ kbd {
 .front-panel .choose b {
   color: var(--warn);
 }
+.front-panel .threats li.joint small {
+  color: var(--warn);
+}
+.card.partner {
+  opacity: 0.7;
+}
+.card .theirs {
+  color: var(--warn);
+}

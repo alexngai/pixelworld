@@ -113,6 +113,32 @@ describe("the city's front (D-179)", () => {
     expect(waveDone(f, [])).toBe(false);
   });
 
+  it("makes the last wave's most pressed threat a finale for two squads (D-187)", () => {
+    const ids = ["p", "q", "r"];
+    const f = newFront(SITES, { seed: 4, players: 3, waves: 2 });
+    expect(f.threats.some((t) => t.joint)).toBe(false);
+    for (const [i, p] of ids.entries()) frontAct(f, SITES, ids, p, { k: "claim", threat: f.threats[i]!.id });
+    for (const p of ids) frontAct(f, SITES, ids, p, { k: "report", threat: f.threats.find((t) => t.by === p)!.id, held: true, lost: 0, razed: [] });
+    expect(f.wave).toBe(2);
+    const fin = f.threats[0]!;
+    expect(fin.joint).toBe(true);
+    expect(f.threats.filter((t) => t.joint)).toHaveLength(1);
+    frontAct(f, SITES, ids, "p", { k: "claim", threat: fin.id });
+    expect(choosing(f, ids)).toEqual(["q", "r"]);
+    frontAct(f, SITES, ids, "q", { k: "claim", threat: fin.id });
+    expect(fin.with).toBe("q");
+    expect(frontAct(f, SITES, ids, "r", { k: "claim", threat: fin.id })).toMatch(/another squad/);
+    // the lead leaves: the second leads
+    frontLeft(f, SITES, ["q", "r"], "p");
+    expect([fin.by, fin.with]).toEqual(["q", null]);
+    // nobody to join: q fights it alone
+    frontAct(f, SITES, ["q", "r"], "r", { k: "pass" });
+    expect(frontAct(f, SITES, ["q", "r"], "q", { k: "alone", threat: fin.id })).toBeNull();
+    expect(fin.joint).toBe(false);
+    frontAct(f, SITES, ["q", "r"], "q", { k: "report", threat: fin.id, held: true, lost: 0, razed: [] });
+    expect(f.over).toBe("held");
+  });
+
   it("checks what a page sends", () => {
     expect(frontMessage({ k: "claim", threat: 3 })).toEqual({ k: "claim", threat: 3 });
     expect(frontMessage({ k: "claim", threat: "3" })).toBeNull();

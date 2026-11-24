@@ -31,12 +31,17 @@ export class Ahead<T> {
 
   /** A site's fight: made, being made, or made next; the rest let go. */
   take(site: number): Promise<T | null> {
-    this.queue = [];
     const mine = this.made.get(site) ?? this.start(site);
     this.made.delete(site);
+    this.clear();
+    return mine;
+  }
+
+  /** Every fight made or being made let go, and nothing more made till wanted. */
+  clear(): void {
+    this.queue = [];
     for (const p of this.made.values()) void p.then((f) => f && this.drop(f));
     this.made.clear();
-    return mine;
   }
 
   private start(site: number): Promise<T | null> {

@@ -26,7 +26,7 @@ function fought(threat: number, held: boolean, razed: number[] = []) {
 }
 
 /** A co-op room (D-179) with pages that only listen: what it broadcast last, and what it sent each one. */
-function room() {
+function room(waves?: number) {
   const sent: Record<string, CoopOut[]> = {};
   const kicked: Record<string, string> = {};
   let last: Extract<CoopOut, { k: "front" }> | null = null;
@@ -44,7 +44,7 @@ function room() {
     },
     log() {},
   } satisfies HostedRoom;
-  return { host: new CoopRoom(hosted), sent, kicked, last: () => last! };
+  return { host: new CoopRoom(hosted, waves), sent, kicked, last: () => last! };
 }
 
 describe("co-op rooms (D-179)", () => {
@@ -111,5 +111,42 @@ describe("co-op rooms (D-179)", () => {
     expect(r.last().front.wave).toBe(2);
     r.host.close();
     vi.useRealTimers();
+  });
+
+  it("fights a joint finale in the room (D-187): both squads on one board, one rig at a time, the invaders when both end the turn", () => {
+    const r = room(1);
+    r.host.message("a", { k: "hello", world: "sf-walk", name: "Ana", squad: "Demolition Crew" });
+    r.host.message("b", { k: "hello", world: "sf-walk", name: "Bo", squad: "Fire Brigade" });
+    const fin = r.last().front.threats.find((t) => t.joint)!;
+    expect(fin).toBeDefined();
+    r.host.message("a", { k: "claim", threat: fin.id });
+    r.host.message("b", { k: "claim", threat: fin.id });
+    expect(r.last().front.threats.find((t) => t.joint)!.with).toBe("b");
+    const start = newCombat(ROW, [{ kind: "wrecker", at: 0 }, { kind: "brute", at: 3 }]);
+    planInvaders(start);
+    r.host.message("a", { k: "j-start", threat: fin.id, start: toWire(start) });
+    // a rig that isn't a squad's, refused: nothing begins
+    r.host.message("b", { k: "j-squad", threat: fin.id, rigs: [{ kind: "brute", slots: [] }] });
+    expect(r.sent.a?.some((m) => m.k === "j-begin")).toBe(false);
+    r.host.message("b", { k: "j-squad", threat: fin.id, rigs: [{ kind: "pumper", slots: [{ id: "waterCannon", ups: [0] }, null] }] });
+    const begin = r.sent.b!.find((m) => m.k === "j-begin")!;
+    expect(begin).toMatchObject({ units: { a: [0], b: [2] } });
+    // one rig at a time
+    r.host.message("a", { k: "j-take", threat: fin.id, unit: 0 });
+    r.host.message("b", { k: "j-take", threat: fin.id, unit: 2 });
+    expect(r.sent.b!.at(-1)).toEqual({ k: "j-baton", threat: fin.id, by: "a" });
+    r.host.message("b", { k: "j-take", threat: fin.id, unit: 0 });
+    r.host.message("a", { k: "j-act", threat: fin.id, action: { unit: 0, dest: 0, strike: null } });
+    expect(r.sent.b!.at(-1)).toEqual({ k: "j-act", threat: fin.id, by: "a", action: { unit: 0, dest: 0, strike: null } });
+    // the invaders strike only once both have ended the turn; three rounds, the brute at the building
+    const turns = () => r.sent.a!.filter((m) => m.k === "j-turn").length;
+    for (let round = 0; round < 3; round++) {
+      r.host.message("a", { k: "j-end", threat: fin.id });
+      expect(turns()).toBe(round);
+      r.host.message("b", { k: "j-end", threat: fin.id });
+    }
+    expect(r.sent.a!.filter((m) => m.k === "j-turn")).toHaveLength(3);
+    expect(r.last().front.over).toBe("held");
+    expect(r.last().front.news[0]).toMatch(/fought, 100 people lost/);
   });
 });

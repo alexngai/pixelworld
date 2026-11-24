@@ -68,9 +68,18 @@ export function drawFront(g: CanvasRenderingContext2D, at: (x: number, y: number
     g.arc(x, y, 11, 0, 2 * Math.PI);
     g.fillStyle = t.result ? "#3a3650" : TINT[f.pressure[t.district]!]!;
     g.fill();
-    g.lineWidth = t.by === c.me ? 3 : 1.5;
-    g.strokeStyle = t.by === c.me ? GOLD : "#0e0d16";
+    const ours = t.by === c.me || t.with === c.me;
+    g.lineWidth = ours ? 3 : 1.5;
+    g.strokeStyle = ours ? GOLD : "#0e0d16";
     g.stroke();
+    if (t.joint) {
+      // the finale (D-187): a second ring, for the second squad
+      g.beginPath();
+      g.arc(x, y, 15, 0, 2 * Math.PI);
+      g.lineWidth = 2;
+      g.strokeStyle = t.with ? (ours ? GOLD : "#e8dcbc") : "rgba(232,220,188,0.5)";
+      g.stroke();
+    }
     g.fillStyle = t.result ? "#e8dcbc" : "#0e0d16";
     g.font = "bold 12px ui-monospace, Menlo, monospace";
     g.fillText(t.result ? (t.result.held ? "✓" : "✗") : String(n + 1), x, y + 1);
@@ -87,7 +96,7 @@ export function drawFront(g: CanvasRenderingContext2D, at: (x: number, y: number
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function panel(f: Front, c: Campaign, pool: readonly Block[], city: string): string {
-  const mine = f.threats.find((t) => t.by === c.me);
+  const mine = f.threats.find((t) => t.by === c.me || t.with === c.me);
   const crewOf = (id: string) => c.crews[id] ?? { name: "A squad that left", squad: "" };
   const ids = Object.keys(c.crews);
   const sat = f.passed.includes(c.me);
@@ -96,29 +105,29 @@ function panel(f: Front, c: Campaign, pool: readonly Block[], city: string): str
     ...f.threats.flatMap((t) => (t.by && t.by !== c.me && !t.result ? [`${crewOf(t.by).name} (fighting)`] : [])),
     ...choosing(f, ids).flatMap((id) => (id !== c.me ? [`${crewOf(id).name} (choosing)`] : [])),
   ];
+  const who = (id: string) => (id === c.me ? "your squad" : `${crewOf(id).name}'s ${crewOf(id).squad}`);
   const status = (t: Front["threats"][number]) =>
     t.result
       ? `<em class="${t.result.held ? "good" : "bad"}">${t.result.held ? "held" : `fought: ${Math.round(t.result.lost)} lost`}${t.by && t.by !== c.me ? ` by ${crewOf(t.by).name}` : ""}</em>`
-      : t.by === c.me
-        ? `<em>your squad</em>`
-        : t.by
-          ? `<em>${crewOf(t.by).name}'s ${crewOf(t.by).squad}</em>`
-          : mine || sat
-            ? ""
-            : `<button data-claim="${t.id}">Defend</button>`;
+      : t.by
+        ? // a finale (D-187): its lead, and the squad joining it or a place for one
+          `<em>${who(t.by)}${t.with ? ` and ${who(t.with)}` : t.joint ? ", a place for another" : ""}</em>${t.joint && !t.with && t.by !== c.me && !mine && !sat ? ` <button data-claim="${t.id}">Join</button>` : ""}`
+        : mine || sat
+          ? ""
+          : `<button data-claim="${t.id}">Defend</button>`;
   const link = c.room ? `${location.origin}${location.pathname}?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), room: c.room })}` : "";
   return `
     <h2>${city} · wave ${f.wave} of ${f.waves}</h2>
     <p class="trust" title="The city's trust: lost when a block fought isn't held and when a district is overrun; at none, the operation is lost">Trust <b>${"●".repeat(f.trust)}</b> ${f.trust}</p>
     ${f.news.length ? `<ul class="news">${f.news.map((n) => `<li>${n}</li>`).join("")}</ul>` : `<p class="dim">Invaders are landing at the city's edge. Each wave, every squad takes one block to hold; the districts nobody defends are pressed harder, and one overrun spreads.</p>`}
-    <h3>${c.lost ? "The room is gone" : mine?.result || sat ? `${sat ? "Your squad sits this wave out. " : ""}Waiting for ${awaited.join(", ") || "the other squads"}` : mine ? "Your squad is on its way" : "Choose a block to defend"}</h3>
+    <h3>${c.lost ? "The room is gone" : mine?.result || sat ? `${sat ? "Your squad sits this wave out. " : ""}Waiting for ${awaited.join(", ") || "the other squads"}` : mine?.joint && !mine.with ? "Waiting for a second squad to join the finale" : mine ? "Your squad is on its way" : "Choose a block to defend"}</h3>
     ${c.room && !c.lost && !mine && !sat ? `<p class="choose">${c.chooseBy ? `<b data-left></b> to choose, or your squad sits this wave out. ` : ""}<button data-pass>Sit this wave out</button></p>` : ""}
     ${c.lost ? `<p>${c.lost}</p><button data-leave>Back to the title</button>` : ""}
     <ol class="threats">${f.threats
       .map(
-        (t, n) => `<li data-at="${t.site}" class="${t.by === c.me ? "mine" : ""}">
+        (t, n) => `<li data-at="${t.site}" class="${t.by === c.me || t.with === c.me ? "mine" : ""}${t.joint ? " joint" : ""}">
           <span class="pin" style="background:${t.result ? "#3a3650" : TINT[f.pressure[t.district]!]}">${n + 1}</span>
-          <div><b>${pool[t.site]!.name}</b><small>${f.districts[t.district]!.name} · ${PRESSURE[f.pressure[t.district]!]}</small></div>
+          <div><b>${pool[t.site]!.name}</b><small>${t.joint ? "The finale, for two squads · " : ""}${f.districts[t.district]!.name} · ${PRESSURE[f.pressure[t.district]!]}</small></div>
           ${status(t)}
         </li>`,
       )
@@ -161,9 +170,10 @@ export function chooseThreat(ui: HTMLElement, map: CityMap, c: Campaign, pool: r
     };
     const render = () => {
       const f = c.front;
-      const mine = f.threats.find((t) => t.by === c.me && !t.result);
+      const mine = f.threats.find((t) => (t.by === c.me || t.with === c.me) && !t.result);
       if (f.over) return finish(null);
-      if (mine) return finish(mine.id);
+      // a finale waits for a second squad while any squad could still join it (D-187)
+      if (mine && (!mine.joint || mine.with || !choosing(f, Object.keys(c.crews)).length)) return finish(mine.id);
       el.innerHTML = panel(f, c, pool, city);
       map.redraw();
     };

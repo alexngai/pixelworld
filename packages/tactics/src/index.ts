@@ -12,3 +12,4 @@ export { actionsOf, describePlan, generatePuzzle, greedyTurn, mechanicsOf, playO
 export { SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type Squad, type SquadRig, type Upgrade, type WeaponDef, type WeaponId } from "./squads";
 export * from "./front";
 export * from "./replay";
+export * from "./joint";
