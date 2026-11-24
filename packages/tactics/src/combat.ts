@@ -469,6 +469,16 @@ export function standAt(c: Combat, k: number): number {
 }
 
 /**
+ * Where a cell of the board is drawn (steps): where one stands, but a rooftop
+ * arena's chasm at its floor (D-180), so the board is a plane at the roofs
+ * with the street far below it. For the grid, marks and labels only: what
+ * falls in falls to the street (`standAt`).
+ */
+export function planeAt(c: Combat, k: number): number {
+  return c.arena.floor !== undefined && structureAt(c, k) < 0 ? c.arena.floor : standAt(c, k);
+}
+
+/**
  * The cells of an arena its own buildings hide from one side of the city
  * view (D-169), as they stand: down each cell's view ray, from where a unit
  * there would stand toward the camera (`toward`: the diagonal the view looks

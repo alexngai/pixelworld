@@ -40,6 +40,8 @@ export interface BoardOverlayOptions {
   id?: string;
   /** Draw the board's grid (default true). */
   grid?: boolean;
+  /** A rooftop board's floor (steps, D-180): what lies lower is drawn at it, the board a plane at the roofs. */
+  floor?: number;
 }
 
 /** Steps above the ground a mark floats, so the slopes under it don't swallow it. */
@@ -54,6 +56,7 @@ export class BoardOverlay implements Layer {
   private marks: Mark[] = [];
   private arrows: Arrow[] = [];
   private grid: boolean;
+  private floor: number;
   private sprite: Sprite | null = null;
   /** What the sprite shows (rotation and a count of changes), and what is baking. */
   private shown = "";
@@ -66,6 +69,7 @@ export class BoardOverlay implements Layer {
   ) {
     this.id = opts.id ?? "board-overlay";
     this.grid = opts.grid ?? true;
+    this.floor = opts.floor ?? -Infinity;
   }
 
   setEnabled(on: boolean): void {
@@ -139,14 +143,14 @@ export class BoardOverlay implements Layer {
   private standAt(query: WorldQuery, i: number, j: number): number {
     const b = this.board;
     const k = j * b.w + i;
-    if (b.flags[k]! & CELL_WALL) return b.top[k]!;
+    if (b.flags[k]! & CELL_WALL) return Math.max(this.floor, b.top[k]!);
     const [x0, y0, x1, y1] = boardRect(b, k);
     let hi = b.height[k]!;
     for (const [x, y] of [[x0, y0], [x1 - 1e-3, y0], [x0, y1 - 1e-3], [x1 - 1e-3, y1 - 1e-3], [(x0 + x1) / 2, (y0 + y1) / 2]] as const) {
       const h = query.heightAt(x, y);
       if (h !== null) hi = Math.max(hi, h);
     }
-    return hi;
+    return Math.max(this.floor, hi);
   }
 
   /** The overlay's boxes (render units, from the board's corner at height 0). */

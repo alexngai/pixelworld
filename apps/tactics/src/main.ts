@@ -203,17 +203,17 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
 
   // the pointer and keys go to the fight on
   const canvas = view.canvas;
-  let pointer: { x: number; y: number; object?: number } | null = null;
+  let pointer: { x: number; y: number; h: number; object?: number } | null = null;
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener("pointermove", (e) => {
     const object = view.query.pickObject(e.offsetX, e.offsetY);
     const ground = view.query.pick(e.offsetX, e.offsetY);
-    pointer = ground ? { x: ground.x, y: ground.y, ...(object && object.index >= 0 ? { object: object.index } : {}) } : null;
-    if (pointer) fight?.pointer(pointer.x, pointer.y, pointer.object);
+    pointer = ground ? { x: ground.x, y: ground.y, h: ground.h, ...(object && object.index >= 0 ? { object: object.index } : {}) } : null;
+    if (pointer) fight?.pointer(pointer.x, pointer.y, pointer.object, pointer.h);
   });
   canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerup", (e) => {
-    if (e.button === 0 && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && pointer) fight?.click(pointer.x, pointer.y, pointer.object);
+    if (e.button === 0 && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && pointer) fight?.click(pointer.x, pointer.y, pointer.object, pointer.h);
     down = null;
   });
   canvas.addEventListener("contextmenu", (e) => {

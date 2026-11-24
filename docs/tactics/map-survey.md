@@ -183,6 +183,18 @@ fine pass finds the floor again on the real roofs. A rooftop site carries its
 "rooftops by" its landmark, "of" or "near" its place, or "tower rooftops".
 Its fight is tried and simulated as its own (`play.json` keys it with `^floor`).
 
+**Drawn and picked** (D-183). A rooftop board is a plane at its floor: the
+glass's grid, marks, arrows and labels sit on each cell's `planeAt` (where one
+stands, but a chasm at the floor), the camera frames the board there, and the
+gallery's board outline does the same. Units stand where they stand; one that
+falls in drops to the street below the plane. The pointer's pick sees only the
+ground, through buildings, so a cell is found up the view ray from it: the first
+cell whose drawn top it meets from the camera's side (a roof, the floor over a
+chasm, else the ground). On the Chrysler rooftop board every cell's middle
+picks itself or the taller roof in front of it (53 and 11 of 64; before, every
+chasm cell and every roof picked another); on a flat board 58 of 64 pick
+themselves where 52 did.
+
 ## Simulation
 
 Each board a fight is made on is played to its last round by four bots

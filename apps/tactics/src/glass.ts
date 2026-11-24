@@ -1,5 +1,5 @@
 import { toWorld, type Board, type WorldView } from "@pixelworlds/engine";
-import { standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { planeAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
  * The board over the city view in the screen's own pixels (D-156). Every cell
@@ -134,8 +134,8 @@ export class BoardGlass {
     const arc = (ka: number, kb: number, high: boolean) => {
       const pa = centre(ka);
       const pb = centre(kb);
-      const ha = standAt(c, ka) + 1;
-      const hb = standAt(c, kb) + 0.3;
+      const ha = planeAt(c, ka) + 1;
+      const hb = planeAt(c, kb) + 0.3;
       const len = Math.hypot(pb.x - pa.x, pb.y - pa.y);
       const up = high ? Math.max(1.5, len * 0.8) + Math.abs(hb - ha) * 0.3 : 0.5 + Math.abs(hb - ha) * 0.3;
       return (f: number) => {
@@ -161,7 +161,7 @@ export class BoardGlass {
     // the grid: faint, dashed through a building
     g.lineWidth = 1;
     for (let k = 0; k < a.w * a.h; k++) {
-      path(quad(k, standAt(c, k) + lift));
+      path(quad(k, planeAt(c, k) + lift));
       g.setLineDash(s.hidden[k] ? [3, 3] : []);
       g.strokeStyle = s.hidden[k] ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)";
       g.stroke();
@@ -218,7 +218,7 @@ export class BoardGlass {
       const k = m.j * a.w + m.i;
       const rgb = COLOUR[m.kind];
       const fill = FILL[m.kind];
-      const pts = quad(k, standAt(c, k) + lift, 0.04);
+      const pts = quad(k, planeAt(c, k) + lift, 0.04);
       path(pts);
       if (fill) {
         g.fillStyle = `rgba(${rgb},${s.hidden[k] ? fill * 0.7 : fill})`;
@@ -245,7 +245,7 @@ export class BoardGlass {
     g.restore();
     // where invaders land at the round's end: rings closing in on the cell, and marks falling to it from the sky
     for (const k of s.arrivals) {
-      const h = standAt(c, k) + lift;
+      const h = planeAt(c, k) + lift;
       g.save();
       g.lineWidth = 2;
       g.shadowColor = "rgba(255,170,60,0.9)";
@@ -365,7 +365,7 @@ export class BoardGlass {
     g.lineWidth = 1.5;
     g.strokeStyle = "rgba(242,193,78,0.85)";
     for (const k of s.reach) {
-      path(quad(k, standAt(c, k) + lift, 0.18));
+      path(quad(k, planeAt(c, k) + lift, 0.18));
       g.stroke();
     }
     g.restore();
@@ -375,7 +375,7 @@ export class BoardGlass {
       [s.cursor, "255,209,102", 2.5],
     ] as const) {
       if (k < 0) continue;
-      const h = standAt(c, k) + lift;
+      const h = planeAt(c, k) + lift;
       const top = quad(k, h, 0.02);
       g.save();
       g.shadowColor = `rgba(${rgb},1)`;

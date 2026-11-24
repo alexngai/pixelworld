@@ -125,7 +125,7 @@ async function lookAt(s: Site): Promise<void> {
     boards.remove(board);
   }
   board = await boards.add({ x0: s.x0, y0: s.y0, w: SIZE, h: SIZE, cell: s.cell });
-  await view.layers.add(new BoardOverlay(board, { id: "survey-board" }));
+  await view.layers.add(new BoardOverlay(board, { id: "survey-board", ...(s.floor !== undefined ? { floor: s.floor } : {}) }));
   const span = SIZE * s.cell;
   await cam.lookAt({ x: s.x0 + span / 2, y: s.y0 + span / 2 });
   // the board about half the view's width

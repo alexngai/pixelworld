@@ -21,6 +21,7 @@ import {
   outcome,
   planInvaders,
   rampsFor,
+  planeAt,
   standAt,
   strike,
   strikeCell,
@@ -427,7 +428,7 @@ export class Fight {
     // what stands between each cell and the camera: from its middle and corners, at a unit's feet and head
     const rays: { centre: Set<number>; all: Set<number> }[] = [];
     for (let k = 0; k < a.w * a.h; k++) {
-      const h = standAt(c, k) + 0.1;
+      const h = planeAt(c, k) + 0.1;
       const centre = new Set<number>();
       const all = new Set<number>();
       for (const [di, dj] of [[0.5, 0.5], [0.05, 0.05], [0.95, 0.05], [0.95, 0.95], [0.05, 0.95]] as const)
@@ -495,8 +496,10 @@ export class Fight {
     const { camera, query, canvas } = this.view;
     const a = this.c.arena;
     const middle = toWorld(this.board, { x: a.w / 2, y: a.h / 2 });
-    camera.setFocus(middle.x, middle.y, query.heightAt(middle.x, middle.y) ?? 0);
-    const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, query.heightAt(p.x, p.y) ?? 0));
+    // a rooftop board's plane is its floor (D-180), not the street
+    const at = (x: number, y: number) => Math.max(a.floor ?? -Infinity, query.heightAt(x, y) ?? 0);
+    camera.setFocus(middle.x, middle.y, at(middle.x, middle.y));
+    const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, at(p.x, p.y)));
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
     const fit = Math.min((0.7 * canvas.clientWidth) / (Math.max(...xs) - Math.min(...xs)), (0.6 * canvas.clientHeight) / (Math.max(...ys) - Math.min(...ys)));
@@ -533,7 +536,7 @@ export class Fight {
         model: entityModel(kind, this.ramps, { renderScale: this.view.world.renderScale, frame, seed: k, scale: this.board.cell }),
         x: p.x,
         y: p.y,
-        h: h ?? standAt(this.c, k),
+        h: h ?? planeAt(this.c, k),
         wait: false,
         visible: frame === 0,
         headings: 1,
@@ -555,7 +558,7 @@ export class Fight {
     }
     l.el.className = `label ${cls}${id ? "" : " rise"}`;
     l.el.textContent = text;
-    Object.assign(l, { x: p.x, y: p.y, h: h ?? standAt(this.c, k), dy });
+    Object.assign(l, { x: p.x, y: p.y, h: h ?? planeAt(this.c, k), dy });
     if (!id) Object.assign(l, { born: this.now, until: this.now + 1100 });
   }
 
@@ -633,7 +636,7 @@ export class Fight {
     this.glass.frame();
     if (!this.tip.hidden && this.tipAt >= 0) {
       const p = this.centre(this.tipAt);
-      const q = this.view.camera.project(p.x, p.y, standAt(this.c, this.tipAt));
+      const q = this.view.camera.project(p.x, p.y, planeAt(this.c, this.tipAt));
       this.tip.style.transform = `translate(${Math.round(q.x + 26)}px, ${Math.round(q.y - 10)}px)`;
     }
     // the timeline
@@ -1298,9 +1301,9 @@ export class Fight {
     return u >= 0 ? this.c.pos[u]! : 0;
   }
 
-  /** The pointer over a world point: in the strike phase, what the strike there would do. */
-  pointer(x: number, y: number, object?: number): void {
-    const hk = this.cellUnder(x, y, object);
+  /** The pointer over a world point (and its height, as picked): in the strike phase, what the strike there would do. */
+  pointer(x: number, y: number, object?: number, h?: number): void {
+    const hk = this.cellUnder(x, y, object, h);
     if (hk !== this.hover) {
       this.hover = hk;
       this.paint();
@@ -1312,7 +1315,7 @@ export class Fight {
       }
       return;
     }
-    const k = this.cellUnder(x, y, object);
+    const k = hk;
     const s = k >= 0 ? this.targets(this.selected).get(k) : undefined;
     if (!s || s.to === -1) {
       if (this.preview) {
@@ -1339,8 +1342,27 @@ export class Fight {
   }
 
   /** The cell a click or hover means: the ground's, or for a building's face, the cell of it a strike lands on. */
-  private cellUnder(x: number, y: number, object?: number): number {
+  /**
+   * The board's cell under a picked point (the ground's, and its height): up
+   * the view ray from it, the first cell whose drawn top it meets, from the
+   * camera's side: a roof, a rooftop board's floor over its chasm (D-180),
+   * else the ground. The pick sees only the ground, through buildings.
+   */
+  private cellUnder(x: number, y: number, object?: number, h?: number): number {
     let k = boardCellAt(this.board, x, y);
+    if (h !== undefined) {
+      const c = this.c;
+      const [tx, ty] = towardCamera(this.view, this.view.camera.rotation);
+      let top = h;
+      for (let q = 0; q < c.arena.w * c.arena.h; q++) top = Math.max(top, planeAt(c, q));
+      for (let t = (top - h) / 2; t > 0; t -= 0.05) {
+        const q = boardCellAt(this.board, x + t * tx, y + t * ty);
+        if (q >= 0 && h + 2 * t <= planeAt(c, q)) {
+          k = q;
+          break;
+        }
+      }
+    }
     if (this.phase === "strike" && object !== undefined)
       for (const t of this.targets(this.selected).keys()) {
         const sid = this.c.arena.struct[t]!;
@@ -1349,10 +1371,10 @@ export class Fight {
     return k;
   }
 
-  click(x: number, y: number, object?: number): void {
+  click(x: number, y: number, object?: number, h?: number): void {
     if (this.phase === "busy" || this.phase === "over") return;
     const c = this.c;
-    const k = this.cellUnder(x, y, object);
+    const k = this.cellUnder(x, y, object, h);
     if (k < 0) return;
     const u = c.occ[k]!;
     if (u >= 0 && teamOf(c, u) === SQUAD && !this.acted.has(u) && !(this.phase === "move" && u === this.selected) && (this.phase !== "strike" || (this.lift < 0 && !this.targets(this.selected).has(k)))) return this.select(u);
