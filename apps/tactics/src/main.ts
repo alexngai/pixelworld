@@ -5,7 +5,7 @@ import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
-import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
+import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, type Loadout, type Puzzle, type Squad } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { CityMap } from "./cityMap";
 import { coopCampaign, roomCode, soloCampaign } from "./coop";
@@ -126,7 +126,8 @@ async function fightOn(
 ): Promise<{ board: Board; puzzle: Puzzle } | null> {
   const mpc = view.world.manifest.scale.metersPerCell;
   const board = await boards.add({ x0: block.x0, y0: block.y0, w: SIZE, h: SIZE, cell: block.cell });
-  const arena = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
+  const flat = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
+  const arena = block.floor === undefined ? flat : rooftop(flat, block.floor);
   const puzzle = await brain.generate(arena, { seed, timeMs, attempts: 400, rounds: ROUNDS, arrivals: 1, squad }, progress);
   if (puzzle) return { board, puzzle };
   boards.remove(board);

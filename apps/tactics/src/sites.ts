@@ -32,6 +32,8 @@ export interface Block {
   y0: number;
   /** World cells a board cell. */
   cell: number;
+  /** A rooftop map's floor (steps, D-180): the roofs at it and above are played on, the street below is a chasm. */
+  floor?: number;
   /** The survey's score, with the ratings' (D-177, D-178). */
   score: number;
 }
