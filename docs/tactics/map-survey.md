@@ -166,27 +166,39 @@ as a void. It comes after the loadouts work in the combat rules lands.
 
 ## Simulation
 
-Phase 2 plays each finalist with several bots, so the measures aren't one
-strategy's habits:
+Each board a fight is made on is played to its last round by four bots
+(`apps/tactics/src/sim.ts`, D-181), so the measures aren't one strategy's
+habits:
 
-- **optimal**: the solver (`solveTurn`, `solveFight`);
-- **greedy**: the most damage now (`greedyTurn`);
-- **environmental**: prefers drowning, toppling, burning and dropping invaders;
-- **random**: a baseline.
+- **optimal**: the solver's line, the puzzle's turn for each round that holds
+  the fight;
+- **greedy**: each rig's best action alone (`greedyTurn`);
+- **environmental**: the same, with the damage the city does to the invaders
+  counted double;
+- **random**: any action.
 
-Measures per board:
+Measures per board, from the fights' event logs:
 
-- **variety:** how many kinds of event come up (drown, topple, fire spread,
-  fall, bump, leap, crush);
-- **depth:** how far greedy falls short of optimal (if greedy also holds the
-  block, the map is too easy);
-- **room:** how many distinct perfect turns there are (one is a pure puzzle,
-  dozens trivial);
-- **environment share:** the share of damage the city does rather than the
-  weapons.
+| Term | Weight | Measure |
+|---|---|---|
+| Variety | 0.3 | Kinds of the city's events in any bot's fight (drown, fall, bump, topple, crush, fire, an invader struck by its own side, douse): five or more is 1. Lifting an invader and blocking an arrival are the squad's, not counted. |
+| Depth | 0.3 | How far greedy falls short of the optimal line (outcome scores, 500 apart is 1); 0 where greedy holds the fight too (too easy). |
+| Room | 0.2 | Perfect first turns after which the fight can still be held: one is a pure puzzle (0.5), two to eight 1, falling to 0 at 64. |
+| Environment | 0.2 | The share of the invaders' damage the city did in the optimal and environmental fights: a damage point straight after a rig's strike is the weapon's, any other (a bump, a fall, a crush, fire, water, their own side) the city's. |
 
-These feed a fourth score family and rerank the finalists. The solver is run
-offline on a few hundred finalists, in worker threads.
+The simulation's score is their weighted sum; a board's score in
+`boards.json` is three quarters the survey's and a quarter the simulation's.
+It runs with the fights tried (`tools/survey-play.mjs`), each board's measures
+kept in `play.json` beside its outcome, and the gallery shows them.
+
+First run, 496 boards with a fight (of 610, 298 s in ten processes): the
+optimal line held every one and no other bot held any (the puzzles are made so
+that greedy play loses). Simulation scores run from 0.47 to 0.79 (tenth to
+ninetieth percentile); depth is high nearly everywhere (mean 0.91), so variety
+(0.44) and the city's share of the damage (0.22) tell boards apart. Kinds
+seen: bump on 355 boards, an invader struck by its own side 289, topple 167,
+fall 140, fire 74, drown 29, crush 28. Reranked, each city's top ten kept
+four (San Francisco) to nine (Hong Kong, Kyoto) of its boards.
 
 ## Validation
 
@@ -360,7 +372,8 @@ and the pairs held out ordered as rated went from 92 % to 98 %.
 3. **Fit the weights** to the ratings. *(the tool is done, D-176; it waits on
    more ratings: 64 of New York's, none bad, fit no better held out)*. The
    hidden penalty added by hand. *(D-177)*
-4. **Simulation:** the bots and interaction measures, reranking finalists.
+4. **Simulation:** the bots and interaction measures, reranking the boards.
+   *(done, D-181)*
 5. **Rooftop maps:** chasm cells in the rules, the rooftop variant in the survey.
 6. **The game draws from the pool**, with the runs and loadouts. *(done,
    D-178: the pipeline above, and the draw)*

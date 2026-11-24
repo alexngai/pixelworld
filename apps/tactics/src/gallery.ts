@@ -64,7 +64,14 @@ const pct = (v: number) => `${Math.round(v * 100)}`;
 const data = (await (await fetch(`/survey/${world}.json?t=${Date.now()}`)).json()) as SurveyResult;
 const ratings = (await (await fetch("/__survey/ratings")).json()) as Record<string, Rating>;
 /** Whether a fight could be made on each board (tools/survey-play.mjs, D-178). */
-const play = (await fetch(`/survey/play.json?t=${Date.now()}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))) as Record<string, { ok: boolean; tried: number; ms: number }>;
+interface Tried {
+  ok: boolean;
+  tried: number;
+  ms: number;
+  /** The simulation's measures (D-181). */
+  sim?: { score: number; kinds: string[]; held: string[]; room: number; terms: Record<string, number> };
+}
+const play = (await fetch(`/survey/play.json?t=${Date.now()}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))) as Record<string, Tried>;
 const all: Site[] = [...data.sites, ...data.samples];
 const list = (show === "samples" ? data.samples : show === "unrated" ? all.filter((s) => !ratings[keyOf(s)]) : data.sites).slice();
 let at = Math.min(list.length - 1, Math.max(0, Number(params.get("at") ?? 0)));
@@ -215,8 +222,14 @@ async function select(i: number): Promise<void> {
   await lookAt(list[i]!);
 }
 
-const fightNote = (p: { ok: boolean; tried: number; ms: number } | undefined) =>
-  !p ? "fight not tried" : p.ok ? `a fight made (${p.tried} positions, ${(p.ms / 1000).toFixed(1)} s)` : `<span class="nofight">no fight could be made</span>`;
+const fightNote = (p: Tried | undefined) =>
+  !p
+    ? "fight not tried"
+    : !p.ok
+      ? `<span class="nofight">no fight could be made</span>`
+      : p.sim
+        ? `simulated ${pct(p.sim.score)}: ${p.sim.kinds.join(", ") || "nothing but weapons"}; ${p.sim.room} way${p.sim.room === 1 ? "" : "s"} to hold it, the city ${pct(p.sim.terms.environment ?? 0)}% of the damage, held by ${p.sim.held.join(", ")}`
+        : `a fight made (${p.tried} positions, ${(p.ms / 1000).toFixed(1)} s)`;
 
 function info(): void {
   const s = list[at]!;

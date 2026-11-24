@@ -2,9 +2,11 @@
 /**
  * Can a fight be made on each surveyed board (D-178, docs/tactics/map-survey.md)?
  * A puzzle made on each board in the pools as the game makes one (the first
- * squad, three rounds, six seconds), the outcome kept by board in
- * apps/tactics/survey/play.json; boards already tried are not tried again.
- * tools/survey-boards.mjs leaves out the boards no fight came of.
+ * squad, three rounds, six seconds), and the fight played by the
+ * simulation's bots and measured (apps/tactics/src/sim.ts, D-181); the
+ * outcome kept by board in apps/tactics/survey/play.json, boards already
+ * tried not tried again. tools/survey-boards.mjs leaves out the boards no
+ * fight came of and reranks the rest with the simulation.
  *
  *   node tools/survey-play.mjs                    # every city, 10 processes
  *   node tools/survey-play.mjs kyoto-walk --jobs 4
@@ -89,6 +91,8 @@ try {
   const { openWorld, Boards } = await server.ssrLoadModule("/packages/engine/src/index.ts");
   const { arenaFromBoard, generatePuzzle, SQUADS } = await server.ssrLoadModule("/packages/tactics/src/index.ts");
   const { newRun, loadouts } = await server.ssrLoadModule("/apps/tactics/src/runs.ts");
+  const { simulate } = await server.ssrLoadModule("/apps/tactics/src/sim.ts");
+  const r2 = (v) => Math.round(v * 100) / 100;
   const squad = loadouts(newRun(SQUADS[0]));
   const opened = new Map();
   for (const b of mine) {
@@ -104,7 +108,24 @@ try {
     let tried = 0;
     // as the game makes its first block's (apps/tactics/src/main.ts)
     const puzzle = await generatePuzzle(arena, { seed: 1, timeMs: 6000, attempts: 400, rounds: 3, arrivals: 1, squad, onProgress: (t) => (tried = t) });
-    out[keyOf(b.world, b)] = { ok: !!puzzle, tried, ms: Math.round(performance.now() - t0) };
+    const ms = Math.round(performance.now() - t0);
+    if (!puzzle) {
+      out[keyOf(b.world, b)] = { ok: false, tried, ms };
+      continue;
+    }
+    const s = simulate(puzzle);
+    out[keyOf(b.world, b)] = {
+      ok: true,
+      tried,
+      ms,
+      sim: {
+        score: r2(s.score),
+        kinds: s.kinds,
+        held: Object.entries(s.bots).flatMap(([bot, f]) => (f.held ? [bot] : [])),
+        room: s.room,
+        terms: Object.fromEntries(Object.entries(s.terms).map(([k, v]) => [k, r2(v)])),
+      },
+    };
   }
 } finally {
   await server.close();

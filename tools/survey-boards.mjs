@@ -4,7 +4,8 @@
  * city's surveyed pool with the gallery's ratings applied, written to
  * apps/tactics/survey/boards.json. A site rated bad is left out, and one no
  * fight could be made on (tools/survey-play.mjs); one rated good is drawn more
- * often, and a sample (not elected) rated good is put in.
+ * often, and a sample (not elected) rated good is put in. A board's score is
+ * the survey's and the simulation's (D-181) together.
  *
  *   node tools/survey-boards.mjs     # after rating; tools/survey-sites.mjs runs it too
  */
@@ -15,6 +16,8 @@ const DIR = fileURLToPath(new URL("../apps/tactics/survey/", import.meta.url));
 const WORLDS = ["nyc-walk", "hongkong-walk", "kyoto-walk", "paris-walk", "sf-walk", "tokyo-walk"];
 /** Added to the score of a site rated good: about one rank in ten of a city's pool. */
 const GOOD = 0.05;
+/** The simulation's share of a board's score (its bots' fights measured, apps/tactics/src/sim.ts); the survey's is the rest. */
+const SIM = 0.25;
 
 const read = (f) => (existsSync(`${DIR}${f}`) ? JSON.parse(readFileSync(`${DIR}${f}`, "utf8")) : {});
 const ratings = read("ratings.json");
@@ -35,7 +38,7 @@ for (const world of WORLDS) {
       x0: s.x0,
       y0: s.y0,
       cell: s.cell,
-      score: Math.round((s.score + (rated(s) === "good" ? GOOD : 0)) * 1000) / 1000,
+      score: Math.round(((1 - SIM) * s.score + SIM * (play[key(s)]?.sim?.score ?? s.score) + (rated(s) === "good" ? GOOD : 0)) * 1000) / 1000,
     }))
     .sort((a, b) => b.score - a.score);
   const n = (g) => pool.sites.concat(pool.samples).filter((s) => rated(s) === g).length;
