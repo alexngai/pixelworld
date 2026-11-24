@@ -1,4 +1,5 @@
 import {
+  A_CHASM,
   A_WATER,
   DIR_NAMES,
   FIGHTERS,
@@ -133,7 +134,7 @@ function touches(c: Combat, u: number, s: Strike, where: Uint8Array | null, evac
     const sid = evacuate ? structureAt(c, strikeCell(c, u, s)) : -1;
     return sid >= 0 && c.arena.structures[sid]!.topple > 0;
   }
-  if (w.kind === "hoist") return !where || where[s.to!] === 1 || !!(c.arena.flags[s.to!]! & A_WATER) || c.arena.struct[s.to!]! >= 0;
+  if (w.kind === "hoist") return !where || where[s.to!] === 1 || !!(c.arena.flags[s.to!]! & (A_WATER | A_CHASM)) || c.arena.struct[s.to!]! >= 0;
   const k = strikeCell(c, u, s);
   if (k < 0) return false;
   if (c.occ[k]! >= 0 || structureAt(c, k) >= 0 || isBurning(c, k)) return true;
@@ -498,10 +499,10 @@ function mulberry(seed: number): () => number {
   };
 }
 
-/** Open cells: no standing structure, and no water for what walks. */
+/** Open cells: no standing structure, and no water for what walks; on a rooftop arena (D-180), the roofs. */
 function openCells(a: Arena): number[] {
   const out: number[] = [];
-  for (let k = 0; k < a.w * a.h; k++) if (a.struct[k]! < 0 && !(a.flags[k]! & A_WATER)) out.push(k);
+  for (let k = 0; k < a.w * a.h; k++) if (a.floor !== undefined ? a.struct[k]! >= 0 : a.struct[k]! < 0 && !(a.flags[k]! & A_WATER)) out.push(k);
   return out;
 }
 

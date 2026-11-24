@@ -114,6 +114,12 @@ export const TOPPLE_MAX = 4;
 export const A_WATER = 1;
 /** Lawn, woods, scrub: fire takes there. */
 export const A_BURNS = 2;
+/**
+ * A chasm (D-180): on a rooftop arena, every cell is one where no structure
+ * stands (the street far below, a fallen building). Walkers can't enter it;
+ * one pushed, lifted or dropped into it falls and is lost; flyers cross it.
+ */
+export const A_CHASM = 4;
 
 /**
  * Fire (D-157): a cell burns for two rounds' ends (`Combat.fire` 1, then 2),
@@ -159,7 +165,69 @@ export interface Arena {
   climb: number;
   fall: number;
   reach: number;
+  /** A rooftop arena's floor (steps, D-180): the roofs at it and above are the ground, the rest a chasm, and every walker leaps. */
+  floor?: number;
 }
+
+/** What `rooftop` and `rooftopFloor` need of an arena: the survey's coarse one has as much. */
+export interface RoofLike {
+  w: number;
+  h: number;
+  flags: Uint8Array;
+  height: Float32Array;
+  roof: Float32Array;
+  struct: Int16Array;
+  structures: { cells: number[] }[];
+}
+
+/**
+ * Where a board splits into towers and the street (D-180): the floor height
+ * (steps) above which the roofs make a rooftop arena, or null. The towers
+ * stand 15 m or more above the street, three or more of them, their roofs
+ * 30 to 70 % of the board; of the floors that do, the one with the widest
+ * gap below it (between the lowest roof kept and the highest left out).
+ */
+export function rooftopFloor(a: RoofLike, metersPerStep: number): number | null {
+  const n = a.w * a.h;
+  const ground = [...a.height].sort((p, q) => p - q)[n >> 1]!;
+  const tops = a.structures.map((s) => Math.min(...s.cells.map((k) => a.roof[k]!)));
+  const heights = [...new Set(tops)].sort((p, q) => p - q);
+  let best: number | null = null;
+  let gap = 0;
+  for (let i = 0; i < heights.length; i++) {
+    const floor = heights[i]!;
+    if ((floor - ground) * metersPerStep < 15) continue;
+    const kept = a.structures.filter((_, j) => tops[j]! >= floor);
+    const cells = kept.reduce((sum, s) => sum + s.cells.length, 0);
+    if (kept.length < 3 || cells < 0.3 * n || cells > 0.7 * n) continue;
+    const below = floor - (i ? heights[i - 1]! : ground);
+    if (below > gap) [best, gap] = [floor, below];
+  }
+  return best;
+}
+
+/**
+ * An arena as a rooftop map (D-180): the structures whose roofs are all at the
+ * floor or above kept, the rest gone, every cell a chasm where none stands
+ * (no water to drown in, nothing to burn down there).
+ */
+export function rooftop<T extends RoofLike>(a: T, floor: number): T & { floor: number } {
+  const keep = a.structures.map((s) => s.cells.every((k) => a.roof[k]! >= floor));
+  const index = new Map<number, number>();
+  const structures = a.structures.filter((s, i) => keep[i] && index.set(i, index.size));
+  const struct = Int16Array.from(a.struct, (s) => (s >= 0 && keep[s] ? index.get(s)! : -1));
+  return {
+    ...a,
+    flags: Uint8Array.from(a.flags, () => A_CHASM),
+    roof: Float32Array.from(a.roof, (r, k) => (struct[k]! >= 0 ? r : a.height[k]!)),
+    struct,
+    structures,
+    floor,
+  };
+}
+
+/** A cell a walker falls into: a chasm where no structure stands. */
+const chasmAt = (c: Combat, k: number): boolean => !!(c.arena.flags[k]! & A_CHASM) && structureAt(c, k) < 0;
 
 /** Structure hit points by material strength (wood 1 … steel 4). */
 const hpOf = (strength: number) => Math.max(1, Math.min(4, Math.round(strength)));
@@ -429,6 +497,7 @@ function enterable(c: Combat, u: number, from: number, k: number): boolean {
   const f = FIGHTERS[c.roster[u]!];
   if (f.flying) return true;
   if (c.arena.flags[k]! & A_WATER && structureAt(c, k) < 0) return false;
+  if (chasmAt(c, k)) return false;
   return Math.abs(standAt(c, k) - standAt(c, from)) * c.arena.metersPerStep <= f.climb;
 }
 
@@ -485,7 +554,7 @@ function search(c: Combat, u: number, start: number): { out: number[]; prev: Int
     for (let d = 0; d < 4; d++) {
       const nk = step(a, k, d);
       if (nk >= 0 && enterable(c, u, k, nk)) reach(k, nk, 1);
-      if (f.leaps && !f.flying) {
+      if ((f.leaps || a.floor !== undefined) && !f.flying) {
         const far = nk >= 0 ? step(a, nk, d) : -1;
         if (far >= 0 && leapable(c, k, nk, far)) reach(k, far, 2);
       }
@@ -594,7 +663,13 @@ function hurt(c: Combat, u: number, amount: number, log: Log, drowned = false): 
 /** A unit drops from one height to a lower one: a point of damage each `fall` steps (fliers glide down). */
 function drop(c: Combat, u: number, from: number, to: number, log: Log): void {
   const d = from - to;
-  if (FIGHTERS[c.roster[u]!].flying || d < c.arena.fall) return;
+  if (FIGHTERS[c.roster[u]!].flying) return;
+  if (chasmAt(c, c.pos[u]!)) {
+    // into the chasm: lost, as drowned
+    log?.push({ t: "fall", unit: u, drop: d });
+    return hurt(c, u, c.hp[u]!, log);
+  }
+  if (d < c.arena.fall) return;
   log?.push({ t: "fall", unit: u, drop: d });
   hurt(c, u, Math.floor(d / c.arena.fall), log);
 }
@@ -694,6 +769,7 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
     c.pos[v] = to;
     log?.push({ t: "hoist", unit: v, from: k, to });
     if (!FIGHTERS[c.roster[v]!].flying && a.flags[to]! & A_WATER && structureAt(c, to) < 0) hurt(c, v, c.hp[v]!, log, true);
+    else if (chasmAt(c, to)) drop(c, v, standAt(c, k), standAt(c, to), log);
     else if (isBurning(c, to)) hurt(c, v, 1, log);
     return;
   }
@@ -775,7 +851,7 @@ export function endRound(c: Combat, log?: Log): void {
     if (u >= 0) {
       log?.push({ t: "blocked", unit: u, at });
       hurt(c, u, 1, log);
-    } else if (structureAt(c, at) < 0) {
+    } else if (structureAt(c, at) < 0 && !chasmAt(c, at)) {
       const v = addUnit(c, kind, at); // not inside the log's push: with no log, `?.` would skip it
       log?.push({ t: "arrive", unit: v, at });
     }
