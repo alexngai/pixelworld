@@ -191,6 +191,7 @@ Status values:
 | D-181 | The survey's boards played by four bots and measured: variety, depth, room, the city's share | Accepted |
 | D-182 | Sitting a wave out, and a clock for the squads still choosing once one has chosen | Accepted |
 | D-183 | A rooftop board drawn as a plane at its floor; cells picked up the view ray | Accepted |
+| D-184 | Hold the Block on play.pixelworld.site: the game at /tactics/ and its co-op rooms on the demos' server | Accepted |
 
 ---
 
@@ -2576,3 +2577,10 @@ The point is more room for visual interest; both halves are wanted.
 - **Why:** the owner asked whether a rooftop board's ground plane is drawn at its height rather than at the street. It wasn't: the glass drew each cell where one stands, so the chasm's grid, marks and labels lay on the street, 30 m below the roofs, and the camera framed the board there. Looking into it, the pointer's pick sees only the ground, through buildings: no roof cell, and on a rooftop board no chasm cell, picked itself.
 - **What:** `planeAt(c, k)` in `packages/tactics/src/combat.ts`: where one stands, but on a rooftop arena a cell with no structure standing is at the floor. The glass (grid, marks, arrows, arrivals, reach, cursor), the fight's labels, effects, tooltip and hidden-cell rays use it; `standAt` stays for the rules and the units (a leap needs the street lower than the roofs; what falls in drops to the street). The camera frames the board at the floor. The gallery's `BoardOverlay` takes the floor (`floor` option). The fight finds the cell under the pointer up the view ray from the picked ground (`towardCamera`: a world cell across, two steps up): the first board cell whose drawn top the ray meets from the camera's side; `main.ts` passes the pick's height.
 - **Checked:** in the game, on the Chrysler rooftop board, each cell's middle projected at its drawn height and picked back: 53 of 64 pick themselves and 11 the taller roof in front of them, none another (before: none of the 37 chasm cells, none of the 27 roofs). On a flat board (New York's towers by the river) 58 of 64 pick themselves and 6 the roof in front (52 did before). The board framed at the floor, the arrival mark on the plane between the towers. Tests pass.
+
+### D-184: Hold the Block on play.pixelworld.site: the game at /tactics/ and its co-op rooms on the demos' server (accepted)
+- **Why:** D-179's co-op rooms ran only on the game's dev server; the owner asked for D-179's open points to be worked through. The tactics game wasn't deployed anywhere.
+- **What:** the demos' build (`pnpm --filter @pixelworlds/multiplayer demos:build`, D-143) also builds the game (`apps/tactics`, `--mode play`: no world packages of its own) into `/tactics/`, and copies the three cities it needs that the demos weren't on (sf-walk, paris-walk, tokyo-walk: 8 MB). The demos' server attaches the co-op rooms at `/hold` (`attachCoop` takes the relay's `sameOrigin` and `lag`; `COOP_LAG`), refusing other sites' pages; the game's pages don't send the build, so no build check. The page and its rooms share an origin, so nothing in the game changes: it fetches the worlds at the root and joins `/hold`. The demos' landing page links it. It deploys with the demos on the next push to main (D-144).
+- **Checked:** the production build run locally (`demos:start`, a `demos-play-local` preview): the game at `/tactics/`, New York loaded from the root, two pages in one room with the invite link keeping `/tactics/`.
+- **Not yet:** pixelworld.site's games page doesn't link it.
+

@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { cleanName } from "@pixelworlds/multiplayer";
-import { attachRelay, type HostedRoom, type Relay, type RoomHost } from "@pixelworlds/multiplayer/server";
+import { attachRelay, type HostedRoom, type Relay, type RelayOptions, type RoomHost } from "@pixelworlds/multiplayer/server";
 import { choosing, frontAct, frontJoined, frontLeft, frontMessage, newFront, type Front, type FrontSite } from "@pixelworlds/tactics";
 import boards from "../survey/boards.json";
 import { COOP_PATH, type CoopOut, type Crew } from "./coop";
@@ -104,7 +104,12 @@ export class CoopRoom implements RoomHost {
   }
 }
 
-/** The co-op rooms on a server, at `COOP_PATH?room=`: a room opens when a page names it, and stays ten minutes after its last page goes. */
-export function attachCoop(server: Server): Relay {
-  return attachRelay(server, { path: COOP_PATH, maxPlayers: 6, idle: { named: 10 * 60_000 }, host: (room) => new CoopRoom(room) });
+/**
+ * The co-op rooms on a server, at `COOP_PATH?room=`: a room opens when a page
+ * names it, and stays ten minutes after its last page goes. `sameOrigin` and
+ * `lag` as the relay takes them (play.pixelworld.site refuses other sites'
+ * pages, D-184).
+ */
+export function attachCoop(server: Server, opts: Pick<RelayOptions, "sameOrigin" | "lag" | "log"> = {}): Relay {
+  return attachRelay(server, { ...opts, path: COOP_PATH, maxPlayers: 6, idle: { named: 10 * 60_000 }, host: (room) => new CoopRoom(room) });
 }

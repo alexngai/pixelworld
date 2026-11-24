@@ -15,12 +15,16 @@ const rooms: Plugin = {
   },
 };
 
-/** The tactics game (D-153): `pnpm --filter @pixelworlds/tactics-game dev`, http://localhost:5300. */
-export default defineConfig({
+/**
+ * The tactics game (D-153): `pnpm --filter @pixelworlds/tactics-game dev`, http://localhost:5300.
+ * `--mode play` builds it for play.pixelworld.site (D-184): without the world
+ * packages, which that server's build copies beside it.
+ */
+export default defineConfig(({ mode }) => ({
   // the committed world packages, served as static files (/nyc-walk/, /kyoto-walk/, …)
-  publicDir: fileURLToPath(new URL("../../fixtures", import.meta.url)),
+  publicDir: mode === "play" ? false : fileURLToPath(new URL("../../fixtures", import.meta.url)),
   server: { port: 5300, strictPort: true },
   preview: { port: 4300, strictPort: true },
   worker: { format: "es" },
   plugins: [bakeCode(), rooms], // the bake code's identity keys the tile cache (D-072)
-});
+}));
