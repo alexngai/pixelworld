@@ -150,14 +150,19 @@ export function chooseThreat(ui: HTMLElement, map: CityMap, c: Campaign, pool: r
   const el = document.createElement("div");
   el.className = "front-panel";
   ui.append(el);
-  // the whole city in view, beside the panel
+  // the whole city in view, in the part of the map the panel leaves: beside it on a wide screen, above it on a narrow one
   const ms = pool.map(middle);
   const [x0, x1] = [Math.min(...ms.map((m) => m[0])) - REACH, Math.max(...ms.map((m) => m[0])) + REACH];
   const [y0, y1] = [Math.min(...ms.map((m) => m[1])) - REACH, Math.max(...ms.map((m) => m[1])) + REACH];
   map.show((x0 + x1) / 2, (y0 + y1) / 2);
-  const room = Math.max(200, map.el.clientWidth - 380);
-  const k = Math.min(4, room / (x1 - x0), map.el.clientHeight / (y1 - y0));
-  map.show((x0 + x1) / 2 + 190 / k, (y0 + y1) / 2, k);
+  const m = map.el.getBoundingClientRect();
+  const p = el.getBoundingClientRect();
+  const beside = p.left > m.left + m.width / 2;
+  const w = Math.max(120, beside ? p.left - m.left - 16 : m.width);
+  const h = Math.max(120, beside ? m.height : p.top - m.top - 16);
+  const k = Math.min(4, w / (x1 - x0), h / (y1 - y0));
+  // the city's middle at the middle of that part
+  map.show((x0 + x1) / 2 + (m.width - w) / 2 / k, (y0 + y1) / 2 + (m.height - h) / 2 / k, k);
   return new Promise((done) => {
     let finished = false;
     const finish = (v: number | null) => {
