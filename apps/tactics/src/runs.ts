@@ -1,5 +1,7 @@
 import { FIGHTERS, SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type FighterKind, type Loadout, type Squad, type WeaponId } from "@pixelworlds/tactics";
+import type { Front } from "@pixelworlds/tactics";
 import { weaponShort, weaponWhat } from "./fight";
+import type { Block } from "./sites";
 
 /**
  * Runs and what they unlock (D-172), after Into the Breach: an operation (a
@@ -115,7 +117,7 @@ export function pickSquad(ui: HTMLElement, profile: Profile): Promise<Squad> {
  * the store or a slot) goes, swapping with what's there; and each weapon's
  * upgrades, a core each. Resolves when the squad moves on.
  */
-export function depot(ui: HTMLElement, run: Run, title: string, paid: string, seed: number): Promise<void> {
+export function depot(ui: HTMLElement, run: Run, title: string, paid: string, seed: number, go = "On to the next block"): Promise<void> {
   const owned = new Set([...run.rigs.flatMap((r) => r.slots.flatMap((s) => (s ? [s.id] : []))), ...run.store.map((s) => s.id)]);
   let r = seed >>> 0 || 1;
   const rand = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -166,7 +168,7 @@ export function depot(ui: HTMLElement, run: Run, title: string, paid: string, se
         })
         .join("")}<div class="weapon-card"><b>Core</b><small>powers an upgrade</small><button data-core ${run.reputation >= CORE_COST ? "" : "disabled"}>Buy ★ ${CORE_COST}</button></div></div>
       <p class="dim">Click a weapon to take it, then a slot to put it in (or the store). Every rig can evacuate besides.</p>
-      <button data-go>On to the next block</button>
+      <button data-go>${go}</button>
     </div>`;
   };
   const slotAt = (where: string): { get(): Armed | null; set(a: Armed | null): void } => {
@@ -232,3 +234,45 @@ export function depot(ui: HTMLElement, run: Run, title: string, paid: string, se
     }),
   );
 }
+
+/**
+ * A run kept across reloads (D-188): its city and room (null alone), the
+ * squad, its rigs and wallet, the blocks fought, and alone the city's front
+ * (a room keeps its own). One at a time: a new run overwrites it, and the end
+ * of a run clears it.
+ */
+export interface SavedRun {
+  world: string;
+  /** Boards in the city's pool when it was saved: a front's sites are places in it, so another pool can't resume it. */
+  boards: number;
+  room: string | null;
+  squad: string;
+  name: string;
+  rigs: RunRig[];
+  reputation: number;
+  cores: number;
+  store: Armed[];
+  played: { site: Block; outcome: { held: boolean; lost: number } | null }[];
+  front?: Front;
+}
+
+const SAVE = "pixelworld.tactics.run";
+
+export function saveRun(s: SavedRun | null): void {
+  try {
+    if (s) localStorage.setItem(SAVE, JSON.stringify(s));
+    else localStorage.removeItem(SAVE);
+  } catch {
+    // no storage: the run isn't kept
+  }
+}
+
+export function loadRun(): SavedRun | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE) ?? "null") as SavedRun | null;
+    return s && typeof s.world === "string" && Array.isArray(s.rigs) && Array.isArray(s.played) ? s : null;
+  } catch {
+    return null;
+  }
+}
+

@@ -99,6 +99,9 @@ importers:
       '@pixelworlds/multiplayer':
         specifier: workspace:*
         version: link:../../packages/multiplayer
+      '@pixelworlds/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
       '@pixelworlds/tactics':
         specifier: workspace:*
         version: link:../../packages/tactics

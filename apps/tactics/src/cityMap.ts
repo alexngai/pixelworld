@@ -1,4 +1,4 @@
-import { TopDownMap, viewOnGround, type WorldView } from "@pixelworlds/engine";
+import { TopDownMap, viewOnGround, type MinimapRoads, type WorldView } from "@pixelworlds/engine";
 
 /**
  * The city from above (D-158): the world in top-down tiles (`TopDownMap`),
@@ -24,6 +24,8 @@ export class CityMap {
   readonly el: HTMLDivElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly top: TopDownMap;
+  /** The city's roads drawn once at a pixel a cell: the map's ground while its tiles bake, so the whole city shows at once. */
+  private roads: HTMLCanvasElement | null = null;
   /** The cell at the map's middle, and screen px a cell. */
   private cx = 0;
   private cy = 0;
@@ -97,6 +99,33 @@ export class CityMap {
     this.draw();
   }
 
+  /** The city's roads (its routes), drawn under the baked tiles. */
+  setRoads(r: MinimapRoads | null): void {
+    if (!r) return;
+    const { cellsX, cellsY } = this.view.world.manifest;
+    const c = document.createElement("canvas");
+    [c.width, c.height] = [cellsX, cellsY];
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#2b2938";
+    g.fillRect(0, 0, cellsX, cellsY);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    const major: Record<string, string> = { motorway: "#c9a45a", trunk: "#b88d55", primary: "#9c8f74", secondary: "#7d786b" };
+    // the small roads first, the big ones over them
+    for (const big of [false, true])
+      for (const route of r.routes) {
+        if (route.net !== "road" || !!major[route.cls] !== big) continue;
+        g.strokeStyle = major[route.cls] ?? "#55526a";
+        g.lineWidth = big ? 2.5 : 1.5;
+        g.beginPath();
+        g.moveTo(route.pts[0]!, route.pts[1]!);
+        for (let i = 3; i < route.pts.length; i += 3) g.lineTo(route.pts[i]!, route.pts[i + 1]!);
+        g.stroke();
+      }
+    this.roads = c;
+    this.draw();
+  }
+
   /** After the world was edited there (a building down), bake those tiles again. */
   forget(x0: number, y0: number, x1: number, y1: number): void {
     this.top.forget(x0, y0, x1, y1);
@@ -119,6 +148,10 @@ export class CityMap {
     const x0 = this.cx - W / 2 / k;
     const y0 = this.cy - H / 2 / k;
     const at = (x: number, y: number): [number, number] => [(x - x0) * k, (y - y0) * k];
+    if (this.roads) {
+      g.imageSmoothingEnabled = true;
+      g.drawImage(this.roads, ...at(0, 0), this.roads.width * k, this.roads.height * k);
+    }
     const tiles = this.top.tiles(x0, y0, x0 + W / k, y0 + H / k);
     g.imageSmoothingEnabled = k < this.top.px;
     for (const t of tiles) g.drawImage(t.image, ...at(t.x, t.y), t.w * k, t.h * k);

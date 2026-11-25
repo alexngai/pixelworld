@@ -624,3 +624,17 @@ kbd {
 .card .theirs {
   color: var(--warn);
 }
+/* the choosing clock outside the overworld (D-188) */
+.choose-clock {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  font-size: 12px;
+}

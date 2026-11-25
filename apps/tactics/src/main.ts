@@ -7,13 +7,14 @@ import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
 import { Boards, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
 import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, toWire, fromWire, type Combat, type Loadout, type Puzzle, type Squad, type Threat } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
+import { loadRoutes } from "@pixelworlds/sim";
 import { Ahead } from "./ahead";
 import { CityMap } from "./cityMap";
 import { FIGHT_ROUNDS, coopCampaign, roomCode, soloCampaign, type JointOut } from "./coop";
 import { Fight, type FightOutcome } from "./fight";
 import "./game.css";
 import { chooseThreat, drawFront } from "./overworld";
-import { depot, isUnlocked, loadProfile, loadouts, newRun, pickSquad, reward, saveProfile, type Run } from "./runs";
+import { depot, isUnlocked, loadProfile, loadRun, loadouts, newRun, pickSquad, reward, saveProfile, saveRun, type Run, type SavedRun } from "./runs";
 import { CITIES, type Block, type City } from "./sites";
 
 /**
@@ -79,19 +80,22 @@ function note(html: string): { set(html: string): void; close(): void } {
   return { set: (h) => void (el.querySelector(".box")!.innerHTML = h), close: () => el.remove() };
 }
 
-async function title(pools: Record<string, Block[]>): Promise<City> {
-  await screen(
+/** The title, and the city chosen; or the run kept from before a reload (D-188), continued. */
+async function title(pools: Record<string, Block[]>, kept: SavedRun | null): Promise<{ city: City; resume: SavedRun | null }> {
+  const keptCity = kept && CITIES.find((c) => c.world === kept.world);
+  const go0 = await screen(
     `<h1>Hold the Block</h1>
      <p>Invaders are landing in the cities. Your squad of three rigs holds one block at a time while the front spreads through the city's districts; between blocks, the depot arms it with what the blocks held have earned. Defend a city alone, or with other squads.</p>
      <p>Every invader shows where it will strike before you move. Push them, drown them, drop them off roofs, bring towers down on them: whatever keeps the people in the buildings alive.</p>
-     <button data-go="start">Start</button>`,
+     <button data-go="start">Start</button>${keptCity ? `<button data-go="continue">Continue in ${keptCity.name}: wave ${kept!.front?.wave ?? 1} of ${kept!.front?.waves ?? 4}</button>` : ""}`,
     "title",
   );
+  if (go0 === "continue" && keptCity) return { city: keptCity, resume: kept };
   const go = await screen(
     `<h2>Choose a city</h2>
      <div class="cities">${CITIES.map((c, i) => `<button data-go="${i}"><b>${c.name}</b><span>${pools[c.world]?.length ?? 0} surveyed blocks to defend</span></button>`).join("")}</div>`,
   );
-  return CITIES[Number(go)]!;
+  return { city: CITIES[Number(go)]!, resume: null };
 }
 
 async function openCity(city: City): Promise<WorldView> {
@@ -137,7 +141,7 @@ async function fightOn(
 
 interface Played {
   site: Block;
-  outcome: FightOutcome | null;
+  outcome: Pick<FightOutcome, "held" | "lost"> | null;
 }
 
 /** A puzzle fought with the squad's weapons as they are now (the depot may have changed them since it was made). */
@@ -154,20 +158,41 @@ function armedNow(p: Puzzle, run: Run): Puzzle {
  * the squad takes a block on the overworld, fights it, is paid, and visits
  * the depot. One board given (the gallery's link) is fought on its own.
  */
-async function operation(city: City, squad: Squad, cityPool: readonly Block[], opts: { board?: Block; room?: string; name?: string }): Promise<void> {
+async function operation(city: City, squad: Squad, cityPool: readonly Block[], opts: { board?: Block; room?: string; name?: string; resume?: SavedRun }): Promise<void> {
   const profile = loadProfile();
-  profile.runs++;
+  const resume = opts.resume;
+  if (!resume) profile.runs++;
   saveProfile(profile);
-  const run = newRun(squad);
+  // a run resumed after a reload (D-188): its rigs and wallet as they were
+  const run: Run = resume ? { squad, rigs: resume.rigs, reputation: resume.reputation, cores: resume.cores, store: resume.store } : newRun(squad);
   let seed = (Math.random() * 2 ** 31) >>> 0;
   const crew = { name: opts.name ?? "You", squad: squad.name };
-  const campaign = opts.board ? null : opts.room ? await coopCampaign(opts.room, { world: city.world, ...crew }) : soloCampaign(cityPool, crew, seed);
+  const campaign = opts.board ? null : opts.room ? await coopCampaign(opts.room, { world: city.world, ...crew }) : soloCampaign(cityPool, crew, seed, resume?.front);
   // the boards the front's sites are places in: a room's own (a newer survey may have changed this page's)
   const pool = campaign?.pool ?? cityPool;
   const view = await openCity(city);
   const boards = new Boards(view);
   const brain = new Brain();
-  const played: Played[] = [];
+  const played: Played[] = resume?.played ?? [];
+  // the run kept as it goes (D-188), so a reload picks it up again
+  const persist = () => {
+    if (!campaign || campaign.front.over) return;
+    saveRun({
+      world: city.world,
+      boards: cityPool.length,
+      room: campaign.room,
+      squad: squad.id,
+      name: crew.name,
+      rigs: run.rigs,
+      reputation: run.reputation,
+      cores: run.cores,
+      store: run.store,
+      played: played.map((p) => ({ site: p.site, outcome: p.outcome && { held: p.outcome.held, lost: p.outcome.lost } })),
+      ...(campaign.room ? {} : { front: campaign.front }),
+    });
+  };
+  campaign?.listen(persist);
+  persist();
   let fight: Fight | null = null;
   let board: Board | null = null;
   let choosing = false;
@@ -178,6 +203,8 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     const y0 = board.origin[1];
     return { x0, y0, x1: x0 + board.w * board.cell, y1: y0 + board.h * board.cell };
   });
+  // the city's roads under its map, drawn at once while the tiles from above bake
+  void loadRoutes(view.world.url, view.world.manifest).then((r) => cityMap.setRoads(r), () => {});
   view.edits.onChange((e) => {
     // the tiles under what was edited bake again: objects' footprints, terrain cells
     const pts = e.op === "cells" ? e.cells.map((c) => [c.x, c.y] as const) : e.objects.flatMap((i) => {
@@ -200,21 +227,40 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     campaign.listen(sync);
     sync();
   }
+  // the choosing clock where the overworld isn't open (D-188): at the depot, or reading a fight's result
+  if (campaign) {
+    const clock = document.createElement("div");
+    clock.className = "choose-clock";
+    clock.hidden = true;
+    ui.append(clock);
+    setInterval(() => {
+      const f = campaign.front;
+      // this squad has its block this wave (or sits it out): no clock for it
+      const settled = f.passed.includes(campaign.me) || f.threats.some((t) => t.by === campaign.me || t.with === campaign.me);
+      const left = campaign.chooseBy ? Math.max(0, Math.ceil((campaign.chooseBy - Date.now()) / 1000)) : 0;
+      clock.hidden = choosing || settled || !left || !!f.over;
+      if (!clock.hidden) clock.textContent = `Another squad has taken its block: ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} to choose yours, or your squad sits this wave out.`;
+    }, 500);
+  }
   Object.assign(window, { __tactics: { view, boards, brain, fight: () => fight, board: () => board, played, cityMap, campaign } });
 
   // the pointer and keys go to the fight on
   const canvas = view.canvas;
   let pointer: { x: number; y: number; h: number; object?: number } | null = null;
   let down: { x: number; y: number } | null = null;
-  canvas.addEventListener("pointermove", (e) => {
+  // what's under the pointer, picked where it is now: a tap has no move before it
+  const pick = (e: PointerEvent) => {
     const object = view.query.pickObject(e.offsetX, e.offsetY);
     const ground = view.query.pick(e.offsetX, e.offsetY);
     pointer = ground ? { x: ground.x, y: ground.y, h: ground.h, ...(object && object.index >= 0 ? { object: object.index } : {}) } : null;
     if (pointer) fight?.pointer(pointer.x, pointer.y, pointer.object, pointer.h);
-  });
+    return pointer;
+  };
+  canvas.addEventListener("pointermove", pick);
   canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerup", (e) => {
-    if (e.button === 0 && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && pointer) fight?.click(pointer.x, pointer.y, pointer.object, pointer.h);
+    const p = down && e.button === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 ? pick(e) : null;
+    if (p) fight?.click(p.x, p.y, p.object, p.h);
     down = null;
   });
   canvas.addEventListener("contextmenu", (e) => {
@@ -285,6 +331,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
         run.cores += pay.cores;
         if (o.held) profile.blocksHeld++;
         saveProfile(profile);
+        persist();
         return { o, start: puzzle.combat };
       }
       // the block as it was: its fallen buildings stand again
@@ -385,6 +432,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     run.cores += pay.cores;
     if (o.held) profile.blocksHeld++;
     saveProfile(profile);
+    persist();
     return o;
   };
 
@@ -409,7 +457,8 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
         if (!o) continue;
         if (campaign.front.over) break;
         const pay = reward(o);
-        await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++);
+        await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++, "Back to the city");
+        persist();
         continue;
       }
       fighting = true;
@@ -426,11 +475,13 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       campaign.fought(id, r.start, o);
       if (campaign.front.over) break;
       const pay = reward(o);
-      await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++);
+      await depot(ui, run, site.name, `${o.held ? "Block held" : "Block lost"}: ★ ${pay.reputation} reputation${pay.cores ? `, ◆ ${pay.cores} core` : ""}. Back to the city next.`, seed++, "Back to the city");
+      persist();
     }
   }
 
-  // the run's end: a city held counts, and squads may unlock
+  // the run's end: a city held counts, and squads may unlock; the kept run is done with
+  saveRun(null);
   const f = campaign?.front;
   const before = SQUADS.filter((s) => isUnlocked(profile, s));
   if (f?.over === "held") profile.operationsHeld++;
@@ -488,21 +539,41 @@ function together(room: string | null): Promise<{ room: string; name: string } |
 
 async function main() {
   const pools = await POOLS;
+  // a run kept from before a reload (D-188), if its city's pool is the one it was kept with
+  const saved = loadRun();
+  const kept = saved && pools[saved.world]?.length === saved.boards ? saved : null;
   const i = params.get("city");
-  const city = i !== null && CITIES[Number(i)] ? CITIES[Number(i)]! : await title(pools);
+  const linked = params.get("room");
+  // a link to the room the kept run is in: rejoined as it was; alone, the title offers to continue it
+  const start = i !== null && CITIES[Number(i)] ? { city: CITIES[Number(i)]!, resume: kept && linked && kept.room === linked ? kept : null } : await title(pools, kept && !kept.room ? kept : null);
+  const city = start.city;
+  const resume = start.resume?.world === city.world ? start.resume : null;
   const pool = pools[city.world] ?? [];
   // one board given in the address (the gallery's link), else the city's front: alone, or in the room the link names
   const at = params.get("board")?.split(",").map(Number);
   const given = at && pool.find((b) => b.x0 === at[0] && b.y0 === at[1] && b.cell === at[2]);
   const board = at ? given || { name: "The surveyed board", zone: -1, x0: at[0]!, y0: at[1]!, cell: at[2] ?? 2, score: 0 } : undefined;
-  const linked = params.get("room");
-  const coop = board ? null : linked ? await together(linked) : i === null && (await screen(`<h2>${city.name}</h2><p>Defend the city alone, or with other squads, each fighting its own blocks while the city's front is everyone's.</p><button data-go="alone">Alone</button><button data-go="together">With other squads</button>`)) === "together" ? await together(null) : null;
+  const coop = board
+    ? null
+    : resume
+      ? resume.room && { room: resume.room, name: resume.name }
+      : linked
+        ? await together(linked)
+        : i === null && (await screen(`<h2>${city.name}</h2><p>Defend the city alone, or with other squads, each fighting its own blocks while the city's front is everyone's.</p><button data-go="alone">Alone</button><button data-go="together">With other squads</button>`)) === "together"
+          ? await together(null)
+          : null;
   if (coop) history.replaceState(null, "", `?${new URLSearchParams({ city: String(CITIES.indexOf(city)), room: coop.room })}`);
-  // a squad given in the address (`squad=1`) skips the choosing, as `city=` does
+  // a squad given in the address (`squad=1`) skips the choosing, as `city=` does; a resumed run keeps its own
   const sq = params.get("squad");
   const profile = loadProfile();
-  const squad = sq !== null && SQUADS[Number(sq)] && isUnlocked(profile, SQUADS[Number(sq)]!) ? SQUADS[Number(sq)]! : sq !== null ? SQUADS[0]! : await pickSquad(ui, profile);
-  await operation(city, squad, pool, { board, ...(coop ?? {}) });
+  const squad = resume
+    ? (SQUADS.find((s) => s.id === resume.squad) ?? SQUADS[0]!)
+    : sq !== null && SQUADS[Number(sq)] && isUnlocked(profile, SQUADS[Number(sq)]!)
+      ? SQUADS[Number(sq)]!
+      : sq !== null
+        ? SQUADS[0]!
+        : await pickSquad(ui, profile);
+  await operation(city, squad, pool, { board, ...(coop || {}), ...(resume ? { resume } : {}) });
 }
 
 main().catch((e: unknown) => {

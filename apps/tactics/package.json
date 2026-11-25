@@ -18,6 +18,7 @@
     "@pixelworlds/city-tokyo": "workspace:*",
     "@pixelworlds/engine": "workspace:*",
     "@pixelworlds/multiplayer": "workspace:*",
+    "@pixelworlds/sim": "workspace:*",
     "@pixelworlds/tactics": "workspace:*"
   }
 }
