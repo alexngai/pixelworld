@@ -21,6 +21,7 @@ import {
   outcome,
   planInvaders,
   rampsFor,
+  resolveInvaders,
   planeAt,
   standAt,
   strike,
@@ -228,7 +229,19 @@ export class Fight {
   private stepU: [number, number] = [1, 0];
   private stepV: [number, number] = [0, 1];
   /** A strike under the pointer, played on a copy: what it would do. */
-  private preview: { state: Combat; arrows: Arrow[]; tags: { k: number; text: string; cls: string }[] } | null = null;
+  /**
+   * A strike looked at (D-191): the fight after it, its arrows and words over the board, the buildings it hurts (pulsing) and the
+   * units it moves (sliding), what it does in words, and which strike it is (to work it out once).
+   */
+  private preview: {
+    state: Combat;
+    arrows: Arrow[];
+    tags: { k: number; text: string; cls: string }[];
+    hurt: number[];
+    slides: { from: number; to: number }[];
+    text: string;
+    key: string;
+  } | null = null;
   private razed: number[] = [];
   private razedThisTurn: number[] = [];
   private readonly entities: (Entity | null)[] = [];
@@ -1047,6 +1060,8 @@ export class Fight {
       arrivals: arriving(shown).map((x) => x.at),
       flashes: this.flashes,
       shots: this.shots,
+      hurt: this.preview?.hurt ?? [],
+      slides: this.preview?.slides ?? [],
     });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
@@ -1069,14 +1084,34 @@ export class Fight {
     });
     this.preview?.tags.forEach((t, i) => {
       keep.add(`tag-${i}`);
-      this.label(`tag-${i}`, t.k, t.text, t.cls, 52);
+      this.label(`tag-${i}`, t.k, t.text, `${t.cls} preview`, 52);
     });
+    // each building standing on the board (D-191): its hit points and the people in it; red when the invaders strike it, pulsing when
+    // the strike looked at hurts it, faint when it's empty
+    if (this.phase !== "over")
+      shown.arena.structures.forEach((st, id) => {
+        if (shown.structHp[id]! <= 0 || !st.cells.length) return;
+        const bid = `bld-${id}`;
+        keep.add(bid);
+        const at = this.middleCell(st.cells);
+        const people = shown.evacuated[id] ? "empty" : `${st.people >= 1000 ? `${(st.people / 1000).toFixed(1)}k` : st.people} people`;
+        const cls = this.preview?.hurt.includes(id) ? "building hurt preview" : st.cells.some((k) => danger.has(k)) ? "building threat" : shown.evacuated[id] ? "building empty" : "building";
+        this.label(bid, at, `${pips(shown.structHp[id]!, st.hp)} ${people}`, cls, 8);
+      });
     for (const [id, l] of this.labels)
       if (l.until === undefined && !keep.has(id)) {
         l.el.remove();
         this.labels.delete(id);
       }
     this.panels();
+  }
+
+  /** The cell of a building nearest its middle: where its label stands. */
+  private middleCell(cells: readonly number[]): number {
+    const w = this.c.arena.w;
+    const mx = cells.reduce((n, k) => n + (k % w), 0) / cells.length;
+    const my = cells.reduce((n, k) => n + Math.floor(k / w), 0) / cells.length;
+    return cells.reduce((a, b) => (Math.hypot((b % w) - mx, Math.floor(b / w) - my) < Math.hypot((a % w) - mx, Math.floor(a / w) - my) ? b : a));
   }
 
   private panels(): void {
@@ -1210,7 +1245,7 @@ export class Fight {
     const w = weaponsOf(this.c, this.selected)[this.weapon]!;
     if (w.kind === "hoist") return this.lift >= 0 ? "Click where to set it down." : "Hoist: click the unit beside the crane to lift.";
     if (w.kind === "evacuate") return "Evacuate: click the building beside it (its people are out by the round's end).";
-    return `${w.name}: hover a target to see what it does, click to strike. Tab for another weapon, X to hold fire, right-click to take the move back.`;
+    return `${w.name}: ${weaponWhat(w)}. Point at a target to see what it does, click to strike. Tab for another weapon, X to hold fire, right-click to take the move back.`;
   }
 
   /** Take back the selected rig's move this activation. */
@@ -1351,7 +1386,6 @@ export class Fight {
     if (this.phase === "strike" && k >= 0 && k !== this.tapped && this.targets(this.selected).has(k)) {
       this.tapped = k;
       this.pointer(x, y, object, h);
-      this.say("Tap it again to strike there, or another target.");
       return;
     }
     this.tapped = -1;
@@ -1376,16 +1410,22 @@ export class Fight {
     if (!s || s.to === -1) {
       if (this.preview) {
         this.preview = null;
+        this.say(this.strikePrompt());
         this.paint();
       }
       return;
     }
-    const d = cloneCombat(this.c);
+    const key = `${this.selected}:${this.weapon}:${k}:${s.dir}:${s.range}:${s.to ?? -1}`;
+    if (this.preview?.key === key) return;
+    const c = this.c;
+    const d = cloneCombat(c);
     const log: CombatEvent[] = [];
     strike(d, this.selected, s, log);
     const arrows: Arrow[] = [];
     const tags: { k: number; text: string; cls: string }[] = [];
+    const slides: { from: number; to: number }[] = [];
     for (const e of log) {
+      if (e.t === "push" || e.t === "hoist") slides.push({ from: e.from, to: e.to });
       if (e.t === "push" || e.t === "hoist") arrows.push({ from: this.ij(e.from), to: this.ij(e.to), kind: "move" });
       if (e.t === "damage") tags.push({ k: d.pos[e.unit]!, text: `−${e.amount}`, cls: "hurt" });
       if (e.t === "down") tags.push({ k: e.at, text: e.drowned ? "drowns" : "down", cls: "hurt" });
@@ -1393,8 +1433,45 @@ export class Fight {
       if (e.t === "structure") tags.push({ k: d.arena.structures[e.id]!.cells[0]!, text: e.people >= 0.5 ? `−${Math.round(e.people)} people` : `−${e.amount}`, cls: "lost" });
       if (e.t === "evacuate") tags.push({ k: d.arena.structures[e.id]!.cells[0]!, text: "evacuate", cls: "good" });
     }
-    this.preview = { state: d, arrows, tags };
+    const hurt = d.arena.structures.flatMap((_, id) => (d.structHp[id]! < c.structHp[id]! ? [id] : []));
+    const text = this.consequences(c, d, log);
+    this.preview = { state: d, arrows, tags, hurt, slides, text, key };
+    this.say(this.tapped === k ? `${text} Tap it again to strike.` : text);
     this.paint();
+  }
+
+  /**
+   * What a strike does, in words (D-191): each unit it hurts, downs or moves, each building it hurts or brings down and the people
+   * lost there; then the round's end if nothing else acts, with the people it loses against those lost without the strike.
+   */
+  private consequences(c: Combat, d: Combat, log: readonly CombatEvent[]): string {
+    const name = (u: number) => FIGHTERS[c.roster[u]!].name;
+    const said: string[] = [];
+    for (let u = 0; u < c.roster.length; u++) {
+      if (c.hp[u]! <= 0 || u === this.selected) continue;
+      const bits: string[] = [];
+      if (d.hp[u]! <= 0) bits.push(log.some((e) => e.t === "down" && e.unit === u && e.drowned) ? "drowns" : "down");
+      else if (d.hp[u]! < c.hp[u]!) bits.push(`${c.hp[u]}→${d.hp[u]} hp`);
+      if (d.hp[u]! > 0 && d.pos[u] !== c.pos[u]) bits.push("pushed");
+      if (bits.length) said.push(`${name(u)} ${bits.join(", ")}`);
+    }
+    d.arena.structures.forEach((st, id) => {
+      if (d.structHp[id]! >= c.structHp[id]!) return;
+      const people = log.reduce((n, e) => n + (e.t === "structure" && e.id === id ? e.people : 0), 0);
+      const what = st.name.replace(/^building\./, "").replace(/\./g, " ");
+      said.push(`${what} ${d.structHp[id]! <= 0 ? "comes down" : `${c.structHp[id]}→${d.structHp[id]} hp`}${people >= 0.5 ? `, ${Math.round(people)} people lost` : ""}`);
+    });
+    // the round played out from here, the invaders striking where they now aim
+    const lostBy = (from: Combat) => {
+      const e = cloneCombat(from);
+      resolveInvaders(e);
+      endRound(e);
+      return Math.round(e.lost - c.lost);
+    };
+    const withIt = lostBy(d);
+    const without = lostBy(c);
+    const end = withIt === without ? `the round ends with ${withIt} people lost, as without it` : `the round ends with ${withIt} people lost (${without} without it)`;
+    return `${said.length ? `${said.join(" · ")}. ` : "It hits nothing. "}If nothing else acts, ${end}.`;
   }
 
   /** The cell a click or hover means: the ground's, or for a building's face, the cell of it a strike lands on. */

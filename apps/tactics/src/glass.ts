@@ -37,6 +37,9 @@ export interface GlassState {
   flashes: ReadonlyMap<number, number>;
   /** Shots in flight: from a cell to a cell, from when, for how long (ms). */
   shots: readonly Shot[];
+  /** A strike looked at (D-191): the buildings it hurts (pulsing red), and the units it moves (a ghost sliding from cell to cell, again and again). */
+  hurt?: readonly number[];
+  slides?: readonly { from: number; to: number }[];
 }
 
 export interface Shot {
@@ -242,6 +245,9 @@ export class BoardGlass {
       const f = 1 - (now - t0) / FLASH_MS;
       if (f > 0) building(id, "255,255,255", { edge: f, glow: 16, width: 3, corner: f * 0.8, pane: 0.22 * f, roof: 0.3 * f }, (k) => a.height[k]!);
     }
+    // buildings the strike looked at would hurt (D-191): red, breathing
+    const breath = 0.5 + 0.5 * Math.sin(now / 160);
+    for (const id of s.hurt ?? []) building(id, "255,90,80", { edge: 0.6 + 0.4 * breath, glow: 8 + 10 * breath, width: 2.4, corner: 0.6, pane: 0.06 + 0.12 * breath, roof: 0.1 + 0.2 * breath }, (k) => a.height[k]!);
     g.restore();
     // where invaders land at the round's end: rings closing in on the cell, and marks falling to it from the sky
     for (const k of s.arrivals) {
@@ -330,6 +336,25 @@ export class BoardGlass {
       g.lineDashOffset = -(now / 30) % 16;
       g.strokeStyle = "rgba(255,255,255,0.6)";
       g.lineWidth = 1.6;
+      g.stroke();
+      g.restore();
+    }
+    // units the strike looked at would move (D-191): a ghost of each sliding along its arrow, easing in, again and again
+    for (const sl of s.slides ?? []) {
+      const at = arc(sl.from, sl.to, false);
+      const t = (now / 1100) % 1;
+      const f = t < 0.8 ? 1 - (1 - t / 0.8) ** 3 : 1;
+      const [x, y] = at(f);
+      g.save();
+      g.globalAlpha = t < 0.8 ? 0.9 : 0.9 * (1 - (t - 0.8) / 0.2);
+      g.beginPath();
+      g.arc(x, y, 8, 0, 2 * Math.PI);
+      g.fillStyle = "rgba(150,210,255,0.35)";
+      g.shadowColor = "rgba(150,210,255,0.9)";
+      g.shadowBlur = 12;
+      g.fill();
+      g.lineWidth = 2;
+      g.strokeStyle = "rgba(255,255,255,0.9)";
       g.stroke();
       g.restore();
     }
