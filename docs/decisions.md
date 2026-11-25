@@ -196,6 +196,7 @@ Status values:
 | D-186 | A co-op room takes a squad's fight as its moves replay, not as the page says it went | Accepted |
 | D-187 | Joint finales: two squads on one board, one rig at a time, fought in the room | Accepted |
 | D-188 | After the first live playtest: the play server's missing cities, taps, the city map's ground, the choosing clock everywhere, runs kept across reloads | Accepted |
+| D-190 | The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district | Accepted |
 
 ---
 
@@ -2622,4 +2623,20 @@ The point is more room for visual interest; both halves are wanted.
   - **A narrow screen** (found once live, in a narrow browser): the overworld fitted the city beside the panel even where the panel sits under the map, so the city was drawn behind it. The city is fitted to the part of the map the panel leaves, beside it or above it.
 - **Checked:** in the browser: a tap on a rig with no move before it chose it; Hong Kong's streets on the overworld six seconds after it opened, the tiles baking over them; alone, a run reloaded mid-city offered "Continue in New York: wave 2 of 4" and went on there with its news and its blocks fought; a room's link reloaded rejoined it at once. Co-op on the production image: a room opened from the title, joined from its link, both squads' fights replayed in the room as the pages had them (96 and 3,934 people lost), wave 2 opened; a fight's report was 4.9 KB (D-186's 256 KB limit, not the relay's 4 KB). The production build bundles; all tests pass.
 - **Seen and left (design, to decide):** a block counts as lost for any loss (11 of 4,000 people) and every lost block costs the same trust as one that lost thousands; the end screen names boards that share a name ("Rowhouse blocks" three times); two pages of one browser share its kept run, so the same room opened twice resumes the same squad twice.
+
+### D-190: The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district (accepted)
+- **Why:** the owner asked for another round of playtests after D-188 went live, for issues and optimizations. It ran on play.pixelworld.site (a city alone, a co-op room, New York's load measured, a fight played by hand, a phone's screen) and on the dev server (a rooftop board, the fixes).
+- **What it found, and what changed:**
+  - **The fight on a phone** couldn't be played: the rig panel, the invaders' list, the board map and the buttons covered nearly all of the board, and the title and the buttons ran off the screen. Under 720 px wide the panels are compact and placed round the board (the title across the top, the board map and the invaders under it, the rigs bottom left, the buttons wrapping along the bottom), and the keys' help and the weapons' small print are left out.
+  - **Strikes on a touch screen** were committed by the first tap, with no hover to show what they'd do first. A tap on a strike's target shows it (the arrows, the damage) and says to tap again; a second tap on it strikes (`Fight.tap`, for a touch pointer only; a mouse clicks as before).
+  - **A move out of reach** was passed over in silence. It's said now: how far the rig moves and climbs, and to click a green cell.
+  - **The end of a run** named its blocks by their boards, which share names ("Rowhouse blocks" three times). A block is named with its district where that tells it apart ("Rowhouse blocks, west"; "Commercial blocks (the Brooklyn Bridge)"), kept with the run (D-188).
+- **Checked:** live, after D-188's narrow-screen fix deployed: Paris's overworld at a phone's width with the city above the panel; New York's overworld 5.4 s after load (5.4 MB, 4 MB of it the city's objects), and a fight 4 s after an immediate Defend (the fight made ahead not yet done), at once after a few seconds' wait (D-185); a co-op room opened on the live server. On the dev server: the fight at 375 × 812 with the board between the panels; a strike's target tapped once (shown, not struck) and again (struck); a click out of the pumper's reach said so; the end's names.
+- **Seen and left (optimizations and design, to decide):**
+  - **Loading:** the overworld waits for the whole 3D city (New York's 4 MB of objects, about 5 s on a fast line), though it needs only the pool, the front and the roads; showing it first and loading the city behind would halve the wait.
+  - **The first fight:** an immediate Defend waits for the fight being made ahead (4 s); a page could make the most pressed block's fight first while the city loads.
+  - **Tooltips** sit beside the pointer and can hide the cell next to the one looked at.
+  - **Rooftop boards** read less clearly than street ones: which roofs are the board's cells is hard to see at a glance.
+  - **A reload mid-fight** makes that block's fight anew, so a hard fight can be dodged by reloading.
+  - From D-188: any loss counts as a block lost, every lost block costs the same trust, and one browser's two pages share its kept run.
 

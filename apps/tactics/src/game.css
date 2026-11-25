@@ -638,3 +638,74 @@ kbd {
   color: var(--warn);
   font-size: 12px;
 }
+
+/* the fight on a narrow screen (D-190): the panels compact and round the board, the keys' help gone (a phone has none) */
+@media (max-width: 720px) {
+  .fight > div {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .fight .top {
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    translate: none;
+    font-size: 10px;
+    white-space: normal;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px 6px;
+    text-align: center;
+  }
+  .fight .squad {
+    top: auto;
+    bottom: 128px;
+    left: 4px;
+    width: auto;
+    max-width: 48vw;
+    max-height: 28vh;
+    overflow-y: auto;
+    gap: 3px;
+  }
+  .fight .keys,
+  .fight .weapon small {
+    display: none;
+  }
+  .fight .threats {
+    top: 84px;
+    right: 4px;
+    width: auto;
+    max-width: 48vw;
+    max-height: 24vh;
+    overflow-y: auto;
+  }
+  .fight .bar {
+    bottom: 4px;
+    left: 4px;
+    right: 4px;
+    translate: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+  }
+  .fight .bar button {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+  .fight .say {
+    bottom: 82px;
+    font-size: 11px;
+  }
+  .map:not(.big) {
+    top: 84px;
+    left: 4px;
+    right: auto;
+    bottom: auto;
+    scale: 0.5;
+    transform-origin: top left;
+  }
+  .tip {
+    max-width: 70vw;
+    font-size: 11px;
+  }
+}

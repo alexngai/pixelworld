@@ -142,7 +142,12 @@ async function fightOn(
 interface Played {
   site: Block;
   outcome: Pick<FightOutcome, "held" | "lost"> | null;
+  /** Its district (D-190): boards share names ("Rowhouse blocks"), districts don't. */
+  where?: string;
 }
+
+/** A block as the end of a run names it: its board's name, and its district where that tells it apart. */
+const placeOf = (p: Played) => (!p.where || p.site.name.includes(p.where) ? p.site.name : p.where.startsWith(p.site.name) ? p.where : `${p.site.name} (${p.where})`);
 
 /** A puzzle fought with the squad's weapons as they are now (the depot may have changed them since it was made). */
 function armedNow(p: Puzzle, run: Run): Puzzle {
@@ -187,7 +192,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       reputation: run.reputation,
       cores: run.cores,
       store: run.store,
-      played: played.map((p) => ({ site: p.site, outcome: p.outcome && { held: p.outcome.held, lost: p.outcome.lost } })),
+      played: played.map((p) => ({ site: p.site, outcome: p.outcome && { held: p.outcome.held, lost: p.outcome.lost }, ...(p.where ? { where: p.where } : {}) })),
       ...(campaign.room ? {} : { front: campaign.front }),
     });
   };
@@ -259,8 +264,10 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   canvas.addEventListener("pointermove", pick);
   canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerup", (e) => {
-    const p = down && e.button === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 ? pick(e) : null;
-    if (p) fight?.click(p.x, p.y, p.object, p.h);
+    const p = down && e.button === 0 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8 ? pick(e) : null;
+    // a touch screen's tap: a strike is tapped twice, the first showing it (D-190)
+    if (p && e.pointerType === "touch") fight?.tap(p.x, p.y, p.object, p.h);
+    else if (p) fight?.click(p.x, p.y, p.object, p.h);
     down = null;
   });
   canvas.addEventListener("contextmenu", (e) => {
@@ -299,7 +306,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   lookAhead();
 
   /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it. */
-  const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>): Promise<{ o: FightOutcome; start: Combat } | null> => {
+  const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>, where?: string): Promise<{ o: FightOutcome; start: Combat } | null> => {
     const n = note(`<h2>${site.name}</h2><p>Scouting the block…</p>`);
     const [found] = await Promise.all([making((tried) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`)), view.camera.lookAt(middle(site))]);
     n.close();
@@ -326,7 +333,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       if (go === "next") {
         boards.remove(board);
         board = null;
-        played.push({ site, outcome: o });
+        played.push({ site, outcome: o, ...(where ? { where } : {}) });
         run.reputation += pay.reputation;
         run.cores += pay.cores;
         if (o.held) profile.blocksHeld++;
@@ -427,7 +434,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
        <button data-go="next">Back to the city</button>`,
       o.held ? "won" : "lost",
     );
-    played.push({ site, outcome: o });
+    played.push({ site, outcome: o, where: c.front.districts[t.district]?.name ?? "" });
     run.reputation += pay.reputation;
     run.cores += pay.cores;
     if (o.held) profile.blocksHeld++;
@@ -462,10 +469,14 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
         continue;
       }
       fighting = true;
-      const r = await play(site, (progress) => {
-        ahead!.onProgress = (s, tried) => s === t.site && progress(tried);
-        return ahead!.take(t.site);
-      });
+      const r = await play(
+        site,
+        (progress) => {
+          ahead!.onProgress = (s, tried) => s === t.site && progress(tried);
+          return ahead!.take(t.site);
+        },
+        campaign.front.districts[t.district]?.name,
+      );
       fighting = false;
       if (!r) {
         campaign.send({ k: "swap", threat: id });
@@ -494,7 +505,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
      ${f ? `<p>${f.wave} of ${f.waves} waves · trust ${f.trust} left · ${overrun.length ? `overrun: ${overrun.map((d) => d.name).join(", ")}` : "no district overrun"}</p>` : ""}
      ${f?.news.length ? `<ul class="news">${f.news.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}
      <h3>Your squad's blocks</h3>
-     <ul class="summary">${played.map((p) => `<li>${p.site.name}: ${!p.outcome ? "no fight" : p.outcome.held ? "held" : `${Math.round(p.outcome.lost)} people lost`}</li>`).join("")}</ul>
+     <ul class="summary">${played.map((p) => `<li>${placeOf(p)}: ${!p.outcome ? "no fight" : p.outcome.held ? "held" : `${Math.round(p.outcome.lost)} people lost`}</li>`).join("")}</ul>
      <p>${Math.round(lost)} people lost in your fights. The ${squad.name} ends the run with ★ ${run.reputation} and ◆ ${run.cores} unspent.</p>
      ${fresh.map((s) => `<p class="unlock">New squad unlocked: <b>${s.name}</b>. ${s.about}</p>`).join("")}
      <button data-go="cities">Another city</button>`,

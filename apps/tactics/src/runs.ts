@@ -252,7 +252,7 @@ export interface SavedRun {
   reputation: number;
   cores: number;
   store: Armed[];
-  played: { site: Block; outcome: { held: boolean; lost: number } | null }[];
+  played: { site: Block; outcome: { held: boolean; lost: number } | null; where?: string }[];
   front?: Front;
 }
 
