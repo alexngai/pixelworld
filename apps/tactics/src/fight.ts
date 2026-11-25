@@ -182,6 +182,8 @@ export class Fight {
   /** A joint finale's link (D-187), whether the other squad is acting, and whether this page has ended the turn and waits on it. */
   private readonly joint: JointLink | null;
   private partnerActing = false;
+  /** The strike target a tap last showed (D-190), or −1. */
+  private tapped = -1;
   private waiting = false;
   private readonly rounds: number;
   private readonly title: string;
@@ -1339,6 +1341,23 @@ export class Fight {
   }
 
   /** The pointer over a world point (and its height, as picked): in the strike phase, what the strike there would do. */
+  /**
+   * A tap on a touch screen (D-190): as a click, but a strike's target is
+   * tapped twice, the first showing what the strike does (there's no hover to
+   * show it).
+   */
+  tap(x: number, y: number, object?: number, h?: number): void {
+    const k = this.cellUnder(x, y, object, h);
+    if (this.phase === "strike" && k >= 0 && k !== this.tapped && this.targets(this.selected).has(k)) {
+      this.tapped = k;
+      this.pointer(x, y, object, h);
+      this.say("Tap it again to strike there, or another target.");
+      return;
+    }
+    this.tapped = -1;
+    this.click(x, y, object, h);
+  }
+
   pointer(x: number, y: number, object?: number, h?: number): void {
     const hk = this.cellUnder(x, y, object, h);
     if (hk !== this.hover) {
@@ -1433,6 +1452,12 @@ export class Fight {
         this.paint();
       });
       return;
+    }
+    // a cell it can't reach (D-190): said, not passed over in silence
+    if (this.phase === "move") {
+      const f = FIGHTERS[c.roster[this.selected]!];
+      this.say(`Out of reach: the ${f.name.toLowerCase()} moves ${f.move} and climbs ${f.climb} m. Click a green cell, or right-click to cancel.`);
+      return this.paint();
     }
     if (this.phase !== "strike") return;
     const s = this.targets(this.selected).get(k);
