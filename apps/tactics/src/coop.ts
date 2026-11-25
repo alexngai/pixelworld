@@ -105,11 +105,12 @@ class Listeners {
 }
 
 /** The front played alone: kept on this page. */
-export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number): Campaign {
+export function soloCampaign(pool: readonly Block[], crew: Crew, seed: number, saved?: Front): Campaign {
   const me = "me";
   const ls = new Listeners();
   const sites = sitesOf(pool);
-  const front = newFront(sites, { seed });
+  // a run resumed after a reload (D-188) goes on from its front as it was
+  const front = saved ?? newFront(sites, { seed });
   const apply = (m: FrontMessage) => {
     const why = frontAct(front, sites, [me], me, m);
     if (why) console.warn(`the front: ${why}`);

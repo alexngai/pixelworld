@@ -19,4 +19,8 @@ fixtures/*
 !fixtures/kyoto-walk
 !fixtures/hongkong-walk
 !fixtures/southwest-walk
+# Hold the Block's cities the demos weren't on (D-184)
+!fixtures/sf-walk
+!fixtures/paris-walk
+!fixtures/tokyo-walk
 **/.DS_Store

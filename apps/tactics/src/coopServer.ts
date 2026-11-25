@@ -98,8 +98,8 @@ function rigsOf(raw: unknown): Loadout[] | null {
 }
 
 const POOLS = boards as unknown as Record<string, Block[]>;
-/** Once a squad has chosen its block, how long the others have to choose theirs before they sit the wave out (D-182). */
-export const CHOOSE_MS = 90_000;
+/** Once a squad has chosen its block, how long the others have to choose theirs before they sit the wave out (D-182; long enough for a visit to the depot, D-188). */
+export const CHOOSE_MS = 150_000;
 
 export class CoopRoom implements RoomHost {
   private front: Front | null = null;
