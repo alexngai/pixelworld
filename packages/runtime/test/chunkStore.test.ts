@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TerrainGrid } from "@pixelworlds/grid";
+import { NO_WATER, TerrainGrid, emptyMicro } from "@pixelworlds/grid";
 import { DRAW_ONLY_LAYERS, encodeChunk, type WorldManifest } from "@pixelworlds/world-format";
 import { ChunkStore, loadManifest, loadObjects } from "../src/chunkStore";
 import { loadWorld } from "../src/world";
@@ -171,5 +171,62 @@ describe("a chunk store's memory budget (D-120)", () => {
     await store.ensureRect(4, 0, 12, 4);
     expect(store.isLoadedRect(4, 0, 12, 4)).toBe(true);
     expect(store.isLoadedRect(0, 0, 4, 4)).toBe(false);
+  });
+});
+
+describe("terrain edits in a chunk store (D-147)", () => {
+  /** Two chunks of 4 × 4 side by side, with micro-terrain (k = 2) or without; the ground at 0. */
+  function pair(micro: boolean) {
+    const m = {
+      ...manifest,
+      cellsX: 8,
+      chunks: [0, 1].map((x) => ({ x, y: 0, path: `c${x}.bin` })),
+      ...(micro ? { micro: { k: 2 } } : {}),
+    } as unknown as WorldManifest;
+    let loads = 0;
+    const store = new ChunkStore(m, "/pair", async (url) => {
+      loads++;
+      const x = Number(/c(\d)\.bin/.exec(url)![1]);
+      const terrain = new TerrainGrid(4, 4, micro ? { micro: emptyMicro(2, 4, 4) } : undefined);
+      return encodeChunk({ x, y: 0, size: 4, terrain });
+    });
+    return { store, loads: () => loads };
+  }
+
+  it("edits what is loaded at once, and a chunk let go comes back edited", async () => {
+    const { store, loads } = pair(false);
+    await store.ensureRect(0, 0, 8, 4);
+    store.editCells([{ x: 1, y: 1, surface: 3, water: 5 }, { x: 6, y: 2, height: 4 }, { x: 99, y: 0, surface: 1 }]);
+    expect(store.cell(1, 1)!.terrain.surface[store.cell(1, 1)!.i]).toBe(3);
+    expect(store.isWater(1.5, 1.5)).toBe(true);
+    expect(store.surfaceHeightAt(6.5, 2.5)).toBe(4);
+    // a later edit of the cell keeps the fields it doesn't name
+    store.editCells([{ x: 1, y: 1, water: NO_WATER }]);
+    expect(store.isWater(1.5, 1.5)).toBe(false);
+    expect(store.cell(1, 1)!.terrain.surface[store.cell(1, 1)!.i]).toBe(3);
+    // let both go, and load them again from the package
+    store.maxBytes = 0;
+    await store.ensure(0, 0);
+    await new Promise((r) => setTimeout(r, 0));
+    store.maxBytes = Infinity;
+    await store.ensureRect(0, 0, 8, 4);
+    expect(loads()).toBeGreaterThan(2);
+    expect(store.surfaceHeightAt(6.5, 2.5)).toBe(4);
+    expect(store.cell(1, 1)!.terrain.surface[store.cell(1, 1)!.i]).toBe(3);
+    // what a rectangle holds: the cells in it and the ring round it, in the order stamped
+    expect(store.editsIn(0, 0, 4, 4)).toBe(`1,1,3,${NO_WATER},`);
+    expect(store.editsIn(7, 0, 8, 4)).toBe("6,2,,,4");
+    expect(store.editsIn(0, 0, 8, 4)).toBe(`6,2,,,4;1,1,3,${NO_WATER},`);
+    expect(store.editsIn(3, 3, 4, 4)).toBe("");
+  });
+
+  it("levels micro-terrain at a chunk's edge in both chunks that hold its corners", async () => {
+    const { store } = pair(true);
+    await store.ensureRect(0, 0, 8, 4);
+    store.editCells([{ x: 3, y: 1, height: 2 }]); // the last column of chunk 0: its east corners are chunk 1's first
+    expect(store.surfaceHeightAt(3.5, 1.5)).toBe(2);
+    expect(store.slice(0, 0, 8, 4).grid.micro!.corners[2 * 17 + 8]).toBe(4); // micro-steps, from either chunk
+    expect(store.get(1, 0)!.terrain.micro!.corners[2 * 9 + 0]).toBe(4);
+    expect(store.surfaceHeightAt(4.05, 1.5)).toBeGreaterThan(0); // the neighbour slopes up to meet it
   });
 });

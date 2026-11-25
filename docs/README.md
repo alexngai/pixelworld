@@ -15,6 +15,7 @@
 | [style-guide.md](style-guide.md) | The art rules every baked pixel follows: palette, light, materials, outlines, dithering |
 | [world-format.md](world-format.md) | World package format v0: manifest and chunk binary layout |
 | [viewer.md](viewer.md) | The viewer's keys, every URL parameter, the `__pixelworld` debug API (`inspect`), and the model preview page |
+| [tactics/](tactics/README.md) | Hold the Block, the tactics game: its design docs (the map survey: finding good boards across a city) |
 
 To work on the code, start with [CONTRIBUTING.md](../CONTRIBUTING.md): setup, a map of the repo, the checks, golden images and the debugging tools.
 

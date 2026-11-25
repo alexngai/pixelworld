@@ -96,6 +96,19 @@ describe("a pool of bake workers", () => {
     svc.dispose();
   });
 
+  it("sends a tile's removed objects and terrain edits with its bake, and echoes them with its result (D-124, D-147)", async () => {
+    const { svc, made } = await pool(1, () => ({ slice, removed: [4], cells: "3,4,1,," }));
+    const results: { removed?: number[]; cells?: string }[] = [];
+    svc.onTile = (r) => results.push({ removed: r.removed, cells: r.cells });
+    svc.want([{ rotation: 0, tx: 0, ty: 0 }]);
+    await tick();
+    expect(made[0]!.sent.find((m) => m.type === "bakeTile")).toMatchObject({ removed: [4], cells: "3,4,1,," });
+    made[0]!.answer();
+    await tick();
+    expect(results).toEqual([{ removed: [4], cells: "3,4,1,," }]);
+    svc.dispose();
+  });
+
   it("starts one worker by default", async () => {
     const { svc, made } = await pool(1);
     expect([svc.workers, made.length]).toEqual([1, 1]);

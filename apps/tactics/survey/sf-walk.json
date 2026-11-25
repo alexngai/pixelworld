@@ -1,0 +1,6242 @@
+{
+ "world": "sf-walk",
+ "zoning": "character",
+ "zones": 101,
+ "candidates": 39458,
+ "passed": 8566,
+ "sites": [
+  {
+   "x0": 420,
+   "y0": 44,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.727,
+   "parts": {
+    "readability": 0.952,
+    "interactables": 0.646,
+    "character": 0.641
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.84,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.879,
+    "signature": 0.885,
+    "richness": 0.274,
+    "age": 0.286
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 20,
+    "cut": 0,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 15,
+   "name": "by the Coit Tower",
+   "lon": -122.407,
+   "lat": 37.804
+  },
+  {
+   "x0": 424,
+   "y0": 168,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.708,
+   "parts": {
+    "readability": 0.864,
+    "interactables": 0.633,
+    "character": 0.67
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.687,
+    "clearance": 0.832,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.8,
+    "signature": 0.701,
+    "richness": 0.317,
+    "age": 0.933
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 8,
+    "cut": 43,
+    "landmark": "dragon-gate",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    8441,
+    16540,
+    19149
+   ],
+   "zone": 33,
+   "name": "by the Dragon Gate",
+   "area": "North Beach",
+   "lon": -122.406,
+   "lat": 37.792
+  },
+  {
+   "x0": 292,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.694,
+   "parts": {
+    "readability": 0.957,
+    "interactables": 0.683,
+    "character": 0.436
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.856,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.933,
+    "richness": 0.246,
+    "age": 0.63
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 11,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 3,
+   "name": "Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.421,
+   "lat": 37.803
+  },
+  {
+   "x0": 356,
+   "y0": 188,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.688,
+   "parts": {
+    "readability": 0.931,
+    "interactables": 0.733,
+    "character": 0.463
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.796,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.099,
+    "signature": 0.736,
+    "richness": 0.301,
+    "age": 0.913
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 5,
+    "cut": 2,
+    "landmark": "dragon-gate",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    34052
+   ],
+   "zone": 32,
+   "name": "rowhouse blocks near North Beach",
+   "area": "North Beach",
+   "lon": -122.414,
+   "lat": 37.791
+  },
+  {
+   "x0": 292,
+   "y0": 412,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.687,
+   "parts": {
+    "readability": 0.953,
+    "interactables": 0.683,
+    "character": 0.417
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.843,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.007,
+    "signature": 0.782,
+    "richness": 0.305,
+    "age": 0.695
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "landmark": "sf-city-hall",
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [],
+   "zone": 71,
+   "name": "rowhouse blocks",
+   "lon": -122.421,
+   "lat": 37.771
+  },
+  {
+   "x0": 184,
+   "y0": 120,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.678,
+   "parts": {
+    "readability": 0.932,
+    "interactables": 0.683,
+    "character": 0.395
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.775,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.736,
+    "richness": 0.353,
+    "age": 0.572
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 11,
+    "cut": 0,
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [],
+   "zone": 19,
+   "name": "commercial blocks",
+   "lon": -122.434,
+   "lat": 37.797
+  },
+  {
+   "x0": 376,
+   "y0": 316,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.678,
+   "parts": {
+    "readability": 0.904,
+    "interactables": 0.75,
+    "character": 0.385
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.789,
+    "clearance": 0.871,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.126,
+    "signature": 0.462,
+    "richness": 0.258,
+    "age": 0.96
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 1,
+    "cut": 33,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    8667,
+    26789,
+    33109,
+    33862,
+    34631,
+    37785
+   ],
+   "zone": 60,
+   "name": "commercial blocks",
+   "lon": -122.411,
+   "lat": 37.779
+  },
+  {
+   "x0": 348,
+   "y0": 152,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.676,
+   "parts": {
+    "readability": 0.912,
+    "interactables": 0.683,
+    "character": 0.449
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.707,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.033,
+    "signature": 0.763,
+    "richness": 0.352,
+    "age": 0.811
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 6,
+    "cut": 0,
+    "landmark": "dragon-gate",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [],
+   "zone": 25,
+   "name": "rowhouse blocks near North Beach",
+   "area": "North Beach",
+   "lon": -122.415,
+   "lat": 37.794
+  },
+  {
+   "x0": 480,
+   "y0": 112,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.67,
+   "parts": {
+    "readability": 0.817,
+    "interactables": 0.8,
+    "character": 0.574
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.725,
+    "clearance": 0.672,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.761,
+    "signature": 0.607,
+    "richness": 0.272,
+    "age": 0.636
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 16,
+    "cut": 84,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [
+    10397,
+    23388
+   ],
+   "zone": 13,
+   "name": "apartment blocks near North Beach",
+   "area": "North Beach",
+   "lon": -122.4,
+   "lat": 37.797
+  },
+  {
+   "x0": 408,
+   "y0": 28,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.663,
+   "parts": {
+    "readability": 0.919,
+    "interactables": 0.489,
+    "character": 0.578
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.821,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.746,
+    "signature": 0.793,
+    "richness": 0.316,
+    "age": 0.247
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 19,
+    "cut": 7,
+    "landmark": "coit-tower",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [
+    23142
+   ],
+   "zone": 12,
+   "name": "apartment blocks",
+   "lon": -122.408,
+   "lat": 37.805
+  },
+  {
+   "x0": 16,
+   "y0": 364,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.659,
+   "parts": {
+    "readability": 0.988,
+    "interactables": 0.517,
+    "character": 0.44
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.961,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.685,
+    "richness": 0.42,
+    "age": 0.861
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [],
+   "zone": 65,
+   "name": "rowhouse blocks",
+   "lon": -122.452,
+   "lat": 37.775
+  },
+  {
+   "x0": 356,
+   "y0": 340,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.659,
+   "parts": {
+    "readability": 0.822,
+    "interactables": 0.617,
+    "character": 0.553
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.719,
+    "clearance": 0.625,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.663,
+    "signature": 0.6,
+    "richness": 0.26,
+    "age": 0.729
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 3,
+    "cut": 24,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    4346,
+    8671
+   ],
+   "zone": 60,
+   "name": "commercial blocks",
+   "lon": -122.414,
+   "lat": 37.777
+  },
+  {
+   "x0": 380,
+   "y0": 436,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.651,
+   "parts": {
+    "readability": 0.966,
+    "interactables": 0.683,
+    "character": 0.25
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.887,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.178,
+    "richness": 0.236,
+    "age": 0.917
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 3,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 76,
+   "name": "industrial blocks",
+   "lon": -122.411,
+   "lat": 37.768
+  },
+  {
+   "x0": 316,
+   "y0": 300,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.648,
+   "parts": {
+    "readability": 0.919,
+    "interactables": 0.633,
+    "character": 0.43
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.821,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.8,
+    "signature": 0.247,
+    "richness": 0.195,
+    "age": 0.45
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 13,
+    "cut": 28,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    11031
+   ],
+   "zone": 40,
+   "name": "by the SF City Hall",
+   "lon": -122.418,
+   "lat": 37.78
+  },
+  {
+   "x0": 196,
+   "y0": 96,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.632,
+   "parts": {
+    "readability": 0.967,
+    "interactables": 0.517,
+    "character": 0.396
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.891,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.886,
+    "richness": 0.3,
+    "age": 0.367
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 16,
+    "cut": 0,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [],
+   "zone": 20,
+   "name": "rowhouse blocks",
+   "lon": -122.432,
+   "lat": 37.799
+  },
+  {
+   "x0": 172,
+   "y0": 144,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.632,
+   "parts": {
+    "readability": 0.981,
+    "interactables": 0.533,
+    "character": 0.359
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.937,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.688,
+    "richness": 0.345,
+    "age": 0.438
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 14,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 29,
+   "name": "rowhouse blocks",
+   "lon": -122.435,
+   "lat": 37.795
+  },
+  {
+   "x0": 324,
+   "y0": 104,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.631,
+   "parts": {
+    "readability": 0.948,
+    "interactables": 0.533,
+    "character": 0.43
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.853,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.774,
+    "richness": 0.228,
+    "age": 0.938
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 12,
+    "cut": 2,
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    38948
+   ],
+   "zone": 16,
+   "name": "Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.418,
+   "lat": 37.798
+  },
+  {
+   "x0": 84,
+   "y0": 152,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.63,
+   "parts": {
+    "readability": 0.937,
+    "interactables": 0.507,
+    "character": 0.415
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.792,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.881,
+    "richness": 0.307,
+    "age": 0.495
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 17,
+    "cut": 0,
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [],
+   "zone": 18,
+   "name": "apartment blocks",
+   "lon": -122.445,
+   "lat": 37.794
+  },
+  {
+   "x0": 388,
+   "y0": 192,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.63,
+   "parts": {
+    "readability": 0.886,
+    "interactables": 0.533,
+    "character": 0.501
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.815,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.227,
+    "signature": 0.759,
+    "richness": 0.264,
+    "age": 0.933
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 8,
+    "cut": 15,
+    "landmark": "dragon-gate",
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [
+    12396,
+    42177
+   ],
+   "zone": 32,
+   "name": "apartment blocks near North Beach",
+   "area": "North Beach",
+   "lon": -122.411,
+   "lat": 37.79
+  },
+  {
+   "x0": 444,
+   "y0": 152,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.628,
+   "parts": {
+    "readability": 0.785,
+    "interactables": 0.467,
+    "character": 0.633
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.515,
+    "clearance": 0.723,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.8,
+    "signature": 0.632,
+    "richness": 0.266,
+    "age": 0.912
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 71,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    2379,
+    12062,
+    13581,
+    17396,
+    33401,
+    35513,
+    37027
+   ],
+   "floor": 13.02,
+   "zone": 33,
+   "name": "rooftops by the Transamerica Pyramid",
+   "area": "North Beach",
+   "lon": -122.404,
+   "lat": 37.794
+  },
+  {
+   "x0": 448,
+   "y0": 44,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.627,
+   "parts": {
+    "readability": 0.934,
+    "interactables": 0.479,
+    "character": 0.585
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.821,
+    "clearance": 0.949,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.833,
+    "signature": 0.624,
+    "richness": 0.366,
+    "age": 0.377
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 20,
+    "cut": 13,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    15904
+   ],
+   "zone": 13,
+   "name": "by the Coit Tower",
+   "lon": -122.403,
+   "lat": 37.803
+  },
+  {
+   "x0": 196,
+   "y0": 532,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.626,
+   "parts": {
+    "readability": 0.973,
+    "interactables": 0.507,
+    "character": 0.398
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.909,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.904,
+    "richness": 0.239,
+    "age": 0.444
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 17,
+    "cut": 0,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [],
+   "zone": 97,
+   "name": "rowhouse blocks",
+   "lon": -122.432,
+   "lat": 37.76
+  },
+  {
+   "x0": 36,
+   "y0": 348,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.626,
+   "parts": {
+    "readability": 0.966,
+    "interactables": 0.517,
+    "character": 0.377
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.905,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.72,
+    "richness": 0.315,
+    "age": 0.552
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 13,
+    "cut": 6,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    16306
+   ],
+   "zone": 64,
+   "name": "rowhouse blocks",
+   "lon": -122.45,
+   "lat": 37.776
+  },
+  {
+   "x0": 400,
+   "y0": 116,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.625,
+   "parts": {
+    "readability": 0.915,
+    "interactables": 0.583,
+    "character": 0.445
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.758,
+    "clearance": 0.949,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.176,
+    "signature": 0.881,
+    "richness": 0.148,
+    "age": 0.606
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 3,
+    "cut": 13,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    16862,
+    21187,
+    30574
+   ],
+   "zone": 22,
+   "name": "North Beach",
+   "area": "North Beach",
+   "lon": -122.409,
+   "lat": 37.797
+  },
+  {
+   "x0": 520,
+   "y0": 372,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.624,
+   "parts": {
+    "readability": 0.931,
+    "interactables": 0.629,
+    "character": 0.278
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.807,
+    "clearance": 0.957,
+    "water": 1,
+    "fire": 0.75,
+    "topples": 1,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.471,
+    "richness": 0.353,
+    "age": 0.325
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 3,
+    "water": 10,
+    "burnable": 20,
+    "cut": 11,
+    "typology": "building.tower.glass"
+   },
+   "cutObjects": [
+    27232
+   ],
+   "zone": 63,
+   "name": "towers",
+   "lon": -122.395,
+   "lat": 37.774
+  },
+  {
+   "x0": 252,
+   "y0": 364,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.623,
+   "parts": {
+    "readability": 0.953,
+    "interactables": 0.517,
+    "character": 0.397
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.869,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.093,
+    "signature": 0.759,
+    "richness": 0.242,
+    "age": 0.542
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 7,
+    "cut": 2,
+    "landmark": "sf-city-hall",
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    16910
+   ],
+   "zone": 57,
+   "name": "rowhouse blocks",
+   "lon": -122.426,
+   "lat": 37.775
+  },
+  {
+   "x0": 536,
+   "y0": 524,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.619,
+   "parts": {
+    "readability": 0.961,
+    "interactables": 0.498,
+    "character": 0.362
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.87,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.794,
+    "richness": 0.327,
+    "age": 0.279
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 18,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 91,
+   "name": "rowhouse blocks",
+   "lon": -122.394,
+   "lat": 37.761
+  },
+  {
+   "x0": 572,
+   "y0": 348,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.617,
+   "parts": {
+    "readability": 0.939,
+    "interactables": 0.736,
+    "character": 0.214
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.831,
+    "clearance": 0.957,
+    "water": 1,
+    "fire": 0.688,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.204,
+    "richness": 0.336,
+    "age": 0.46
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 7,
+    "water": 7,
+    "burnable": 21,
+    "cut": 11,
+    "typology": "building.residential"
+   },
+   "cutObjects": [
+    11661
+   ],
+   "zone": 70,
+   "name": "residential blocks",
+   "lon": -122.389,
+   "lat": 37.776
+  },
+  {
+   "x0": 524,
+   "y0": 240,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.616,
+   "parts": {
+    "readability": 0.866,
+    "interactables": 0.6,
+    "character": 0.365
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.692,
+    "clearance": 0.832,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.204,
+    "signature": 0.417,
+    "richness": 0.322,
+    "age": 0.656
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 9,
+    "cut": 43,
+    "landmark": "salesforce-tower",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    2197,
+    31707,
+    31709,
+    32896
+   ],
+   "zone": 49,
+   "name": "commercial blocks",
+   "lon": -122.395,
+   "lat": 37.786
+  },
+  {
+   "x0": 272,
+   "y0": 268,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.616,
+   "parts": {
+    "readability": 0.921,
+    "interactables": 0.683,
+    "character": 0.364
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.815,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.174,
+    "signature": 0.406,
+    "richness": 0.302,
+    "age": 0.763
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 15,
+    "cut": 24,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [
+    3157,
+    37131
+   ],
+   "zone": 40,
+   "name": "apartment blocks",
+   "lon": -122.423,
+   "lat": 37.783
+  },
+  {
+   "x0": 192,
+   "y0": 180,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.615,
+   "parts": {
+    "readability": 0.924,
+    "interactables": 0.536,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.768,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 0.688,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.624,
+    "richness": 0.308,
+    "age": 0.681
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 21,
+    "cut": 6,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    8047,
+    42727
+   ],
+   "zone": 37,
+   "name": "rowhouse blocks",
+   "lon": -122.432,
+   "lat": 37.791
+  },
+  {
+   "x0": 336,
+   "y0": 68,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.615,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.467,
+    "character": 0.406
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.931,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.024,
+    "signature": 0.892,
+    "richness": 0.261,
+    "age": 0.438
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 5,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    14601,
+    29037,
+    29688
+   ],
+   "zone": 16,
+   "name": "Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.416,
+   "lat": 37.802
+  },
+  {
+   "x0": 304,
+   "y0": 440,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.614,
+   "parts": {
+    "readability": 0.947,
+    "interactables": 0.517,
+    "character": 0.376
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.848,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.706,
+    "richness": 0.382,
+    "age": 0.46
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 6,
+    "cut": 8,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    23387,
+    31633,
+    33795
+   ],
+   "zone": 75,
+   "name": "rowhouse blocks",
+   "lon": -122.42,
+   "lat": 37.768
+  },
+  {
+   "x0": 164,
+   "y0": 208,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.614,
+   "parts": {
+    "readability": 0.962,
+    "interactables": 0.507,
+    "character": 0.389
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.9,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.856,
+    "richness": 0.275,
+    "age": 0.419
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 17,
+    "cut": 2,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    38464
+   ],
+   "zone": 37,
+   "name": "rowhouse blocks",
+   "lon": -122.436,
+   "lat": 37.789
+  },
+  {
+   "x0": 380,
+   "y0": 160,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.606,
+   "parts": {
+    "readability": 0.862,
+    "interactables": 0.433,
+    "character": 0.589
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.71,
+    "clearance": 0.797,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.603,
+    "signature": 0.671,
+    "richness": 0.309,
+    "age": 0.863
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 7,
+    "cut": 13,
+    "landmark": "dragon-gate",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    3922,
+    13399,
+    16990,
+    19160,
+    39995
+   ],
+   "zone": 32,
+   "name": "North Beach",
+   "area": "North Beach",
+   "lon": -122.411,
+   "lat": 37.793
+  },
+  {
+   "x0": 308,
+   "y0": 368,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.605,
+   "parts": {
+    "readability": 0.819,
+    "interactables": 0.65,
+    "character": 0.305
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.463,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.175,
+    "signature": 0.194,
+    "richness": 0.276,
+    "age": 0.833
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 1,
+    "cut": 20,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    12907,
+    13059
+   ],
+   "zone": 58,
+   "name": "commercial blocks",
+   "lon": -122.419,
+   "lat": 37.774
+  },
+  {
+   "x0": 100,
+   "y0": 424,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.605,
+   "parts": {
+    "readability": 0.945,
+    "interactables": 0.467,
+    "character": 0.39
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.843,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.769,
+    "richness": 0.315,
+    "age": 0.534
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 13,
+    "cut": 2,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    16350
+   ],
+   "zone": 74,
+   "name": "rowhouse blocks",
+   "lon": -122.443,
+   "lat": 37.77
+  },
+  {
+   "x0": 532,
+   "y0": 148,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.604,
+   "parts": {
+    "readability": 0.806,
+    "interactables": 0.6,
+    "character": 0.429
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.704,
+    "clearance": 0.578,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0.333,
+    "landmark": 0.8,
+    "signature": 0.094,
+    "richness": 0.269,
+    "age": 0.625
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 15,
+    "cut": 108,
+    "landmark": "ferry-building",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    81578,
+    81579
+   ],
+   "zone": 28,
+   "name": "by the Ferry Building",
+   "lon": -122.394,
+   "lat": 37.794
+  },
+  {
+   "x0": 496,
+   "y0": 484,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.603,
+   "parts": {
+    "readability": 0.948,
+    "interactables": 0.517,
+    "character": 0.323
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.828,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.663,
+    "richness": 0.296,
+    "age": 0.333
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [],
+   "zone": 91,
+   "name": "rowhouse blocks",
+   "lon": -122.398,
+   "lat": 37.764
+  },
+  {
+   "x0": 264,
+   "y0": 364,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.602,
+   "parts": {
+    "readability": 0.936,
+    "interactables": 0.517,
+    "character": 0.369
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.786,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.128,
+    "signature": 0.621,
+    "richness": 0.311,
+    "age": 0.442
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 7,
+    "cut": 0,
+    "landmark": "sf-city-hall",
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [],
+   "zone": 57,
+   "name": "rowhouse blocks",
+   "lon": -122.425,
+   "lat": 37.775
+  },
+  {
+   "x0": 468,
+   "y0": 548,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.602,
+   "parts": {
+    "readability": 0.894,
+    "interactables": 0.517,
+    "character": 0.396
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.687,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.869,
+    "richness": 0.301,
+    "age": 0.4
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 8,
+    "cut": 3,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    31092
+   ],
+   "zone": 94,
+   "name": "rowhouse blocks",
+   "lon": -122.401,
+   "lat": 37.758
+  },
+  {
+   "x0": 580,
+   "y0": 264,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.602,
+   "parts": {
+    "readability": 0.949,
+    "interactables": 0.667,
+    "character": 0.178
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.829,
+    "clearance": 1,
+    "water": 1,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.103,
+    "richness": 0.256,
+    "age": 0.551
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 5,
+    "water": 5,
+    "burnable": 14,
+    "cut": 0,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [],
+   "zone": 54,
+   "name": "commercial blocks",
+   "lon": -122.388,
+   "lat": 37.784
+  },
+  {
+   "x0": 580,
+   "y0": 556,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.601,
+   "parts": {
+    "readability": 0.911,
+    "interactables": 0.517,
+    "character": 0.345
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.723,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.665,
+    "richness": 0.348,
+    "age": 0.39
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 14,
+    "cut": 6,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    1772,
+    25360
+   ],
+   "zone": 95,
+   "name": "rowhouse blocks",
+   "lon": -122.388,
+   "lat": 37.757
+  },
+  {
+   "x0": 416,
+   "y0": 208,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.599,
+   "parts": {
+    "readability": 0.834,
+    "interactables": 0.75,
+    "character": 0.424
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.815,
+    "clearance": 0.82,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.302,
+    "signature": 0.428,
+    "richness": 0.234,
+    "age": 0.975
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 12,
+    "cut": 46,
+    "landmark": "dragon-gate",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    1552,
+    1644,
+    7229,
+    10800,
+    11955,
+    12323,
+    21603,
+    25376,
+    31384
+   ],
+   "zone": 45,
+   "name": "by the Dragon Gate",
+   "area": "North Beach",
+   "lon": -122.407,
+   "lat": 37.789
+  },
+  {
+   "x0": 260,
+   "y0": 40,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.598,
+   "parts": {
+    "readability": 0.948,
+    "interactables": 0.517,
+    "character": 0.295
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.846,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.504,
+    "richness": 0.297,
+    "age": 0.463
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 5,
+    "cut": 6,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    38126
+   ],
+   "zone": 11,
+   "name": "rowhouse blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.425,
+   "lat": 37.804
+  },
+  {
+   "x0": 360,
+   "y0": 252,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.597,
+   "parts": {
+    "readability": 0.84,
+    "interactables": 0.583,
+    "character": 0.41
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.869,
+    "clearance": 0.516,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.08,
+    "signature": 0.77,
+    "richness": 0.21,
+    "age": 0.685
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 6,
+    "cut": 31,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [
+    4392,
+    13119,
+    13417,
+    14941,
+    25305,
+    29266,
+    37796
+   ],
+   "zone": 44,
+   "name": "apartment blocks",
+   "lon": -122.414,
+   "lat": 37.785
+  },
+  {
+   "x0": 236,
+   "y0": 248,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.596,
+   "parts": {
+    "readability": 0.945,
+    "interactables": 0.646,
+    "character": 0.213
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.866,
+    "clearance": 0.941,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0.5,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.017,
+    "signature": 0.249,
+    "richness": 0.234,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 20,
+    "cut": 15,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [
+    26378,
+    37126
+   ],
+   "zone": 47,
+   "name": "apartment blocks",
+   "lon": -122.427,
+   "lat": 37.785
+  },
+  {
+   "x0": 96,
+   "y0": 156,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.596,
+   "parts": {
+    "readability": 0.941,
+    "interactables": 0.451,
+    "character": 0.397
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.803,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.563,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.887,
+    "richness": 0.286,
+    "age": 0.398
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 23,
+    "cut": 0,
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [],
+   "zone": 26,
+   "name": "apartment blocks",
+   "lon": -122.444,
+   "lat": 37.794
+  },
+  {
+   "x0": 68,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.595,
+   "parts": {
+    "readability": 0.947,
+    "interactables": 0.43,
+    "character": 0.38
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.824,
+    "clearance": 1,
+    "water": 0.9,
+    "fire": 0.188,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.908,
+    "richness": 0.171,
+    "age": 0.431
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 1,
+    "water": 13,
+    "burnable": 29,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 1,
+   "name": "rowhouse blocks",
+   "lon": -122.447,
+   "lat": 37.803
+  },
+  {
+   "x0": 428,
+   "y0": 232,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.595,
+   "parts": {
+    "readability": 0.779,
+    "interactables": 0.633,
+    "character": 0.334
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.537,
+    "clearance": 0.672,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.217,
+    "signature": 0.263,
+    "richness": 0.187,
+    "age": 0.958
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 84,
+    "landmark": "dragon-gate",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    2361,
+    3344,
+    18266,
+    27627,
+    31518,
+    34610
+   ],
+   "floor": 14.56,
+   "zone": 48,
+   "name": "tower rooftops",
+   "lon": -122.406,
+   "lat": 37.786
+  },
+  {
+   "x0": 540,
+   "y0": 400,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.594,
+   "parts": {
+    "readability": 0.905,
+    "interactables": 0.583,
+    "character": 0.301
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.685,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.589,
+    "richness": 0.247,
+    "age": 0.417
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "typology": "building.house"
+   },
+   "cutObjects": [],
+   "zone": 70,
+   "name": "house blocks",
+   "lon": -122.393,
+   "lat": 37.771
+  },
+  {
+   "x0": 172,
+   "y0": 132,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.593,
+   "parts": {
+    "readability": 0.967,
+    "interactables": 0.389,
+    "character": 0.397
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.917,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 0.813,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.889,
+    "richness": 0.222,
+    "age": 0.502
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 19,
+    "cut": 2,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    31473
+   ],
+   "zone": 19,
+   "name": "rowhouse blocks",
+   "lon": -122.435,
+   "lat": 37.796
+  },
+  {
+   "x0": 428,
+   "y0": 480,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.592,
+   "parts": {
+    "readability": 0.95,
+    "interactables": 0.4,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.833,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.901,
+    "richness": 0.24,
+    "age": 0.463
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 10,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 90,
+   "name": "rowhouse blocks",
+   "lon": -122.406,
+   "lat": 37.764
+  },
+  {
+   "x0": 60,
+   "y0": 268,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.589,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.45,
+    "character": 0.34
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.867,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.706,
+    "richness": 0.285,
+    "age": 0.381
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 42,
+   "name": "rowhouse blocks",
+   "lon": -122.448,
+   "lat": 37.784
+  },
+  {
+   "x0": 384,
+   "y0": 80,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.589,
+   "parts": {
+    "readability": 0.972,
+    "interactables": 0.367,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.908,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.199,
+    "signature": 0.636,
+    "richness": 0.296,
+    "age": 0.506
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 15,
+    "cut": 0,
+    "landmark": "coit-tower",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [],
+   "zone": 22,
+   "name": "chinatown blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.411,
+   "lat": 37.801
+  },
+  {
+   "x0": 236,
+   "y0": 372,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.586,
+   "parts": {
+    "readability": 0.949,
+    "interactables": 0.417,
+    "character": 0.379
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.896,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.023,
+    "signature": 0.818,
+    "richness": 0.219,
+    "age": 0.479
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 8,
+    "cut": 5,
+    "landmark": "sf-city-hall",
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    10488,
+    11282,
+    34496
+   ],
+   "zone": 67,
+   "name": "rowhouse blocks",
+   "lon": -122.428,
+   "lat": 37.774
+  },
+  {
+   "x0": 124,
+   "y0": 280,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.982,
+    "interactables": 0.42,
+    "character": 0.311
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.96,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 0.688,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.554,
+    "richness": 0.348,
+    "age": 0.385
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 21,
+    "cut": 6,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    33720
+   ],
+   "zone": 52,
+   "name": "rowhouse blocks",
+   "lon": -122.44,
+   "lat": 37.782
+  },
+  {
+   "x0": 20,
+   "y0": 200,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.919,
+    "interactables": 0.479,
+    "character": 0.372
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.768,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.767,
+    "richness": 0.274,
+    "age": 0.49
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 20,
+    "cut": 3,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    16229
+   ],
+   "zone": 39,
+   "name": "rowhouse blocks",
+   "lon": -122.452,
+   "lat": 37.79
+  },
+  {
+   "x0": 240,
+   "y0": 560,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.584,
+   "parts": {
+    "readability": 0.97,
+    "interactables": 0.442,
+    "character": 0.409
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.915,
+    "clearance": 0.984,
+    "water": 0,
+    "fire": 0.5,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.883,
+    "richness": 0.275,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 24,
+    "cut": 1,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    28944
+   ],
+   "zone": 100,
+   "name": "rowhouse blocks",
+   "lon": -122.427,
+   "lat": 37.757
+  },
+  {
+   "x0": 320,
+   "y0": 248,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.582,
+   "parts": {
+    "readability": 0.89,
+    "interactables": 0.533,
+    "character": 0.36
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.854,
+    "clearance": 0.734,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.127,
+    "signature": 0.509,
+    "richness": 0.285,
+    "age": 0.65
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 15,
+    "cut": 17,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    229,
+    9008,
+    10712,
+    21169,
+    27649
+   ],
+   "zone": 44,
+   "name": "commercial blocks",
+   "lon": -122.418,
+   "lat": 37.785
+  },
+  {
+   "x0": 188,
+   "y0": 136,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.581,
+   "parts": {
+    "readability": 0.919,
+    "interactables": 0.417,
+    "character": 0.416
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.782,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.896,
+    "richness": 0.317,
+    "age": 0.455
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 8,
+    "cut": 4,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    27756
+   ],
+   "zone": 29,
+   "name": "rowhouse blocks",
+   "lon": -122.433,
+   "lat": 37.795
+  },
+  {
+   "x0": 428,
+   "y0": 324,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.581,
+   "parts": {
+    "readability": 0.843,
+    "interactables": 0.583,
+    "character": 0.276
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.513,
+    "clearance": 0.957,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.408,
+    "richness": 0.362,
+    "age": 0.423
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 13,
+    "cut": 11,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    16404,
+    29476
+   ],
+   "zone": 59,
+   "name": "industrial blocks",
+   "lon": -122.406,
+   "lat": 37.778
+  },
+  {
+   "x0": 492,
+   "y0": 532,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.581,
+   "parts": {
+    "readability": 0.956,
+    "interactables": 0.401,
+    "character": 0.39
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.854,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.563,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.831,
+    "richness": 0.285,
+    "age": 0.462
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 23,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 91,
+   "name": "rowhouse blocks",
+   "lon": -122.399,
+   "lat": 37.76
+  },
+  {
+   "x0": 400,
+   "y0": 156,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.58,
+   "parts": {
+    "readability": 0.851,
+    "interactables": 0.483,
+    "character": 0.603
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.669,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.691,
+    "signature": 0.649,
+    "richness": 0.26,
+    "age": 0.908
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 1,
+    "cut": 8,
+    "landmark": "dragon-gate",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    5689,
+    14227,
+    33466
+   ],
+   "zone": 22,
+   "name": "North Beach",
+   "area": "North Beach",
+   "lon": -122.409,
+   "lat": 37.794
+  },
+  {
+   "x0": 304,
+   "y0": 260,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.578,
+   "parts": {
+    "readability": 0.948,
+    "interactables": 0.417,
+    "character": 0.37
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.828,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.175,
+    "signature": 0.618,
+    "richness": 0.158,
+    "age": 0.619
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 1,
+    "cut": 0,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [],
+   "zone": 44,
+   "name": "commercial blocks",
+   "lon": -122.42,
+   "lat": 37.784
+  },
+  {
+   "x0": 564,
+   "y0": 500,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.89,
+    "interactables": 0.517,
+    "character": 0.284
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.635,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.502,
+    "richness": 0.341,
+    "age": 0.317
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 9,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 92,
+   "name": "industrial blocks",
+   "lon": -122.39,
+   "lat": 37.762
+  },
+  {
+   "x0": 356,
+   "y0": 292,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.772,
+    "interactables": 0.6,
+    "character": 0.394
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.682,
+    "clearance": 0.469,
+    "water": 0,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 1,
+    "landmark": 0.199,
+    "signature": 0.44,
+    "richness": 0.233,
+    "age": 0.962
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 0,
+    "cut": 34,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    2782,
+    7111,
+    20016
+   ],
+   "zone": 53,
+   "name": "commercial blocks",
+   "lon": -122.414,
+   "lat": 37.781
+  },
+  {
+   "x0": 272,
+   "y0": 148,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.574,
+   "parts": {
+    "readability": 0.976,
+    "interactables": 0.417,
+    "character": 0.345
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.919,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.758,
+    "richness": 0.299,
+    "age": 0.283
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 6,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 31,
+   "name": "rowhouse blocks",
+   "lon": -122.424,
+   "lat": 37.794
+  },
+  {
+   "x0": 344,
+   "y0": 364,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.573,
+   "parts": {
+    "readability": 0.789,
+    "interactables": 0.533,
+    "character": 0.449
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.505,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.612,
+    "signature": 0.363,
+    "richness": 0.2,
+    "age": 0.709
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 4,
+    "cut": 16,
+    "landmark": "sf-city-hall",
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    4894,
+    11312,
+    27481
+   ],
+   "zone": 68,
+   "name": "industrial blocks",
+   "lon": -122.416,
+   "lat": 37.775
+  },
+  {
+   "x0": 188,
+   "y0": 36,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.573,
+   "parts": {
+    "readability": 0.946,
+    "interactables": 0.507,
+    "character": 0.251
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.871,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.524,
+    "richness": 0.314,
+    "age": 0.103
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 17,
+    "cut": 16,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    2043,
+    30762,
+    36378
+   ],
+   "zone": 11,
+   "name": "rowhouse blocks",
+   "lon": -122.433,
+   "lat": 37.804
+  },
+  {
+   "x0": 224,
+   "y0": 428,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.572,
+   "parts": {
+    "readability": 0.916,
+    "interactables": 0.45,
+    "character": 0.312
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.739,
+    "clearance": 0.977,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.522,
+    "richness": 0.349,
+    "age": 0.455
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 8,
+    "cut": 6,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    29133
+   ],
+   "zone": 72,
+   "name": "rowhouse blocks",
+   "lon": -122.429,
+   "lat": 37.769
+  },
+  {
+   "x0": 584,
+   "y0": 216,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.57,
+   "parts": {
+    "readability": 0.882,
+    "interactables": 0.633,
+    "character": 0.153
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.829,
+    "clearance": 0.734,
+    "water": 1,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0.07,
+    "signature": 0.145,
+    "richness": 0.175,
+    "age": 0.3
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 3,
+    "water": 3,
+    "burnable": 1,
+    "cut": 68,
+    "landmark": "salesforce-tower",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    14737
+   ],
+   "zone": 35,
+   "name": "commercial blocks",
+   "lon": -122.388,
+   "lat": 37.788
+  },
+  {
+   "x0": 552,
+   "y0": 168,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.57,
+   "parts": {
+    "readability": 0.871,
+    "interactables": 0.433,
+    "character": 0.489
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.689,
+    "clearance": 0.859,
+    "water": 1,
+    "fire": 0.333,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0.729,
+    "signature": 0.137,
+    "richness": 0.368,
+    "age": 0.917
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 7,
+    "water": 3,
+    "burnable": 1,
+    "cut": 36,
+    "landmark": "ferry-building",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    6745,
+    6747,
+    32680
+   ],
+   "zone": 38,
+   "name": "commercial blocks",
+   "lon": -122.391,
+   "lat": 37.792
+  },
+  {
+   "x0": 52,
+   "y0": 204,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.569,
+   "parts": {
+    "readability": 0.954,
+    "interactables": 0.379,
+    "character": 0.4
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.845,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.831,
+    "richness": 0.317,
+    "age": 0.477
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 20,
+    "cut": 0,
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [],
+   "zone": 42,
+   "name": "rowhouse blocks",
+   "lon": -122.449,
+   "lat": 37.789
+  },
+  {
+   "x0": 392,
+   "y0": 532,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.569,
+   "parts": {
+    "readability": 0.831,
+    "interactables": 0.507,
+    "character": 0.391
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.489,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 0.938,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.793,
+    "richness": 0.322,
+    "age": 0.486
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 17,
+    "cut": 16,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    2984,
+    14388,
+    25192
+   ],
+   "zone": 93,
+   "name": "rowhouse blocks",
+   "lon": -122.41,
+   "lat": 37.759
+  },
+  {
+   "x0": 268,
+   "y0": 384,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.568,
+   "parts": {
+    "readability": 0.871,
+    "interactables": 0.517,
+    "character": 0.418
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.662,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.075,
+    "signature": 0.857,
+    "richness": 0.231,
+    "age": 0.538
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 8,
+    "cut": 7,
+    "landmark": "sf-city-hall",
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    16573,
+    40649
+   ],
+   "zone": 71,
+   "name": "rowhouse blocks",
+   "lon": -122.424,
+   "lat": 37.773
+  },
+  {
+   "x0": 488,
+   "y0": 236,
+   "cell": 2,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.566,
+   "parts": {
+    "readability": 0.77,
+    "interactables": 0.417,
+    "character": 0.504
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.516,
+    "clearance": 0.66,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.707,
+    "signature": 0.321,
+    "richness": 0.254,
+    "age": 0.881
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 0,
+    "cut": 87,
+    "landmark": "salesforce-tower",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    7598,
+    8358,
+    19424,
+    25151,
+    42104,
+    42105,
+    42748,
+    43231
+   ],
+   "floor": 16.88,
+   "zone": 41,
+   "name": "tower rooftops",
+   "lon": -122.399,
+   "lat": 37.786
+  },
+  {
+   "x0": 340,
+   "y0": 520,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.561,
+   "parts": {
+    "readability": 0.898,
+    "interactables": 0.45,
+    "character": 0.308
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.688,
+    "clearance": 0.965,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.519,
+    "richness": 0.314,
+    "age": 0.495
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 15,
+    "cut": 9,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    12762,
+    18609,
+    43256
+   ],
+   "zone": 89,
+   "name": "rowhouse blocks",
+   "lon": -122.416,
+   "lat": 37.761
+  },
+  {
+   "x0": 24,
+   "y0": 428,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.561,
+   "parts": {
+    "readability": 0.842,
+    "interactables": 0.517,
+    "character": 0.368
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.524,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.77,
+    "richness": 0.25,
+    "age": 0.496
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 11,
+    "cut": 4,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    10774
+   ],
+   "zone": 73,
+   "name": "rowhouse blocks",
+   "lon": -122.452,
+   "lat": 37.769
+  },
+  {
+   "x0": 324,
+   "y0": 468,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.56,
+   "parts": {
+    "readability": 0.933,
+    "interactables": 0.417,
+    "character": 0.35
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.832,
+    "clearance": 0.934,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.641,
+    "richness": 0.352,
+    "age": 0.461
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 6,
+    "cut": 17,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    15202,
+    43250
+   ],
+   "zone": 75,
+   "name": "rowhouse blocks",
+   "lon": -122.417,
+   "lat": 37.765
+  },
+  {
+   "x0": 76,
+   "y0": 524,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.559,
+   "parts": {
+    "readability": 0.99,
+    "interactables": 0.347,
+    "character": 0.325
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.966,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.313,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.723,
+    "richness": 0.305,
+    "age": 0.213
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 27,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 96,
+   "name": "rowhouse blocks",
+   "lon": -122.446,
+   "lat": 37.761
+  },
+  {
+   "x0": 160,
+   "y0": 320,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.559,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.467,
+    "character": 0.367
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.668,
+    "clearance": 0.938,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.725,
+    "richness": 0.261,
+    "age": 0.558
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 16,
+    "cut": 4,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    30079
+   ],
+   "zone": 52,
+   "name": "rowhouse blocks",
+   "lon": -122.436,
+   "lat": 37.779
+  },
+  {
+   "x0": 292,
+   "y0": 132,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.558,
+   "parts": {
+    "readability": 0.955,
+    "interactables": 0.367,
+    "character": 0.34
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.851,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.672,
+    "richness": 0.274,
+    "age": 0.463
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 5,
+    "cut": 0,
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [],
+   "zone": 31,
+   "name": "commercial blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.421,
+   "lat": 37.796
+  },
+  {
+   "x0": 28,
+   "y0": 528,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.558,
+   "parts": {
+    "readability": 0.955,
+    "interactables": 0.319,
+    "character": 0.374
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.851,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.125,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.809,
+    "richness": 0.329,
+    "age": 0.326
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 30,
+    "cut": 0,
+    "typology": "building.house"
+   },
+   "cutObjects": [],
+   "zone": 82,
+   "name": "house blocks",
+   "lon": -122.451,
+   "lat": 37.76
+  },
+  {
+   "x0": 496,
+   "y0": 360,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.557,
+   "parts": {
+    "readability": 0.941,
+    "interactables": 0.467,
+    "character": 0.219
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.884,
+    "clearance": 0.902,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.292,
+    "richness": 0.242,
+    "age": 0.469
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 3,
+    "cut": 25,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    4170,
+    4173
+   ],
+   "zone": 61,
+   "name": "industrial blocks",
+   "lon": -122.398,
+   "lat": 37.775
+  },
+  {
+   "x0": 524,
+   "y0": 192,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.553,
+   "parts": {
+    "readability": 0.681,
+    "interactables": 0.55,
+    "character": 0.426
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.77,
+    "clearance": 0,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0.885,
+    "signature": 0.134,
+    "richness": 0.182,
+    "age": 0.5
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 10,
+    "cut": 105,
+    "landmark": "salesforce-tower",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    11586,
+    11587,
+    11588,
+    11589,
+    12596,
+    20924,
+    20926,
+    35289,
+    36122
+   ],
+   "zone": 34,
+   "name": "by the Salesforce Tower",
+   "lon": -122.395,
+   "lat": 37.79
+  },
+  {
+   "x0": 192,
+   "y0": 328,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.548,
+   "parts": {
+    "readability": 0.965,
+    "interactables": 0.414,
+    "character": 0.33
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.911,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 0.313,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.624,
+    "richness": 0.285,
+    "age": 0.48
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 27,
+    "cut": 8,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    28168
+   ],
+   "zone": 62,
+   "name": "rowhouse blocks",
+   "lon": -122.432,
+   "lat": 37.778
+  },
+  {
+   "x0": 348,
+   "y0": 328,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.544,
+   "parts": {
+    "readability": 0.882,
+    "interactables": 0.45,
+    "character": 0.295
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.855,
+    "clearance": 0.703,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0.247,
+    "signature": 0.256,
+    "richness": 0.126,
+    "age": 0.75
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 1,
+    "cut": 19,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    5744,
+    17818,
+    32647,
+    38501
+   ],
+   "zone": 53,
+   "name": "commercial blocks",
+   "lon": -122.415,
+   "lat": 37.778
+  },
+  {
+   "x0": 316,
+   "y0": 544,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.544,
+   "parts": {
+    "readability": 0.85,
+    "interactables": 0.467,
+    "character": 0.387
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.695,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.754,
+    "richness": 0.329,
+    "age": 0.525
+   },
+   "facts": {
+    "buildings": 10,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 11,
+    "cut": 15,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    3790,
+    9956,
+    20149
+   ],
+   "zone": 89,
+   "name": "rowhouse blocks",
+   "lon": -122.419,
+   "lat": 37.759
+  },
+  {
+   "x0": 456,
+   "y0": 216,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.542,
+   "parts": {
+    "readability": 0.783,
+    "interactables": 0.35,
+    "character": 0.485
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.789,
+    "clearance": 0.387,
+    "water": 1,
+    "fire": 0,
+    "topples": 0.5,
+    "leaps": 0.667,
+    "bands": 0,
+    "chokepoints": 0,
+    "landmark": 0.725,
+    "signature": 0.267,
+    "richness": 0.257,
+    "age": 0.821
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 157,
+    "landmark": "dragon-gate",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    5427,
+    5428,
+    7903,
+    18668,
+    25451,
+    26612,
+    28094,
+    28095,
+    29715,
+    38386,
+    42105
+   ],
+   "floor": 14.4,
+   "zone": 41,
+   "name": "tower rooftops",
+   "lon": -122.402,
+   "lat": 37.788
+  },
+  {
+   "x0": 420,
+   "y0": 292,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.542,
+   "parts": {
+    "readability": 0.848,
+    "interactables": 0.583,
+    "character": 0.282
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.7,
+    "clearance": 0.75,
+    "water": 0,
+    "fire": 1,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.336,
+    "richness": 0.184,
+    "age": 0.903
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 14,
+    "cut": 16,
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    24622,
+    24641,
+    38189
+   ],
+   "zone": 48,
+   "name": "commercial blocks",
+   "lon": -122.407,
+   "lat": 37.781
+  },
+  {
+   "x0": 152,
+   "y0": 220,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.541,
+   "parts": {
+    "readability": 0.918,
+    "interactables": 0.429,
+    "character": 0.377
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.804,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.8,
+    "richness": 0.228,
+    "age": 0.533
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 20,
+    "cut": 6,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [
+    1635,
+    19838,
+    33722,
+    35060
+   ],
+   "zone": 43,
+   "name": "rowhouse blocks",
+   "lon": -122.437,
+   "lat": 37.788
+  },
+  {
+   "x0": 84,
+   "y0": 448,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.539,
+   "parts": {
+    "readability": 0.951,
+    "interactables": 0.317,
+    "character": 0.375
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.836,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.783,
+    "richness": 0.295,
+    "age": 0.442
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 12,
+    "cut": 0,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [],
+   "zone": 74,
+   "name": "rowhouse blocks",
+   "lon": -122.445,
+   "lat": 37.767
+  },
+  {
+   "x0": 164,
+   "y0": 440,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.538,
+   "parts": {
+    "readability": 0.952,
+    "interactables": 0.278,
+    "character": 0.356
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.842,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.188,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.662,
+    "richness": 0.334,
+    "age": 0.494
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 29,
+    "cut": 0,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [],
+   "zone": 81,
+   "name": "rowhouse blocks",
+   "lon": -122.436,
+   "lat": 37.768
+  },
+  {
+   "x0": 292,
+   "y0": 540,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.535,
+   "parts": {
+    "readability": 0.942,
+    "interactables": 0.298,
+    "character": 0.394
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.845,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.81,
+    "richness": 0.307,
+    "age": 0.496
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 18,
+    "cut": 3,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    12984
+   ],
+   "zone": 89,
+   "name": "rowhouse blocks",
+   "lon": -122.421,
+   "lat": 37.759
+  },
+  {
+   "x0": 460,
+   "y0": 420,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.53,
+   "parts": {
+    "readability": 0.836,
+    "interactables": 0.517,
+    "character": 0.211
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.631,
+    "clearance": 0.785,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.404,
+    "richness": 0.249,
+    "age": 0.183
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 6,
+    "cut": 55,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    24666,
+    42297
+   ],
+   "zone": 79,
+   "name": "commercial blocks",
+   "lon": -122.402,
+   "lat": 37.77
+  },
+  {
+   "x0": 152,
+   "y0": 384,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.518,
+   "parts": {
+    "readability": 0.845,
+    "interactables": 0.417,
+    "character": 0.337
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.587,
+    "clearance": 0.875,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.582,
+    "richness": 0.335,
+    "age": 0.525
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 6,
+    "cut": 8,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    30351,
+    31368,
+    39288
+   ],
+   "zone": 66,
+   "name": "rowhouse blocks",
+   "lon": -122.437,
+   "lat": 37.773
+  },
+  {
+   "x0": 584,
+   "y0": 388,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.508,
+   "parts": {
+    "readability": 0.908,
+    "interactables": 0.517,
+    "character": 0.113
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.695,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.105,
+    "richness": 0.294,
+    "age": 0.054
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 9,
+    "cut": 0,
+    "typology": "building.residential"
+   },
+   "cutObjects": [],
+   "zone": 55,
+   "name": "residential blocks",
+   "lon": -122.388,
+   "lat": 37.772
+  },
+  {
+   "x0": 28,
+   "y0": 564,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.497,
+   "parts": {
+    "readability": 0.981,
+    "interactables": 0.216,
+    "character": 0.261
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.935,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.438,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.654,
+    "richness": 0.242,
+    "age": 0.025
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 25,
+    "cut": 0,
+    "typology": "building.house"
+   },
+   "cutObjects": [],
+   "zone": 99,
+   "name": "house blocks",
+   "lon": -122.451,
+   "lat": 37.757
+  },
+  {
+   "x0": 24,
+   "y0": 548,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.489,
+   "parts": {
+    "readability": 0.955,
+    "interactables": 0.197,
+    "character": 0.285
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.849,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.313,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.669,
+    "richness": 0.287,
+    "age": 0.086
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 27,
+    "cut": 0,
+    "typology": "building.house"
+   },
+   "cutObjects": [],
+   "zone": 99,
+   "name": "house blocks",
+   "lon": -122.452,
+   "lat": 37.758
+  },
+  {
+   "x0": 20,
+   "y0": 480,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.483,
+   "parts": {
+    "readability": 0.892,
+    "interactables": 0.267,
+    "character": 0.402
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.706,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.786,
+    "richness": 0.389,
+    "age": 0.46
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 16,
+    "cut": 5,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    32333,
+    33349
+   ],
+   "zone": 82,
+   "name": "rowhouse blocks",
+   "lon": -122.452,
+   "lat": 37.764
+  },
+  {
+   "x0": 528,
+   "y0": 348,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.482,
+   "parts": {
+    "readability": 0.863,
+    "interactables": 0.433,
+    "character": 0.131
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.688,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.039,
+    "richness": 0.214,
+    "age": 0.439
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 8,
+    "cut": 44,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    21473,
+    21476,
+    21477
+   ],
+   "zone": 63,
+   "name": "commercial blocks",
+   "lon": -122.394,
+   "lat": 37.776
+  },
+  {
+   "x0": 360,
+   "y0": 20,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.45,
+   "parts": {
+    "readability": 0.872,
+    "interactables": 0.3,
+    "character": 0.216
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.754,
+    "clearance": 0.781,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0,
+    "chokepoints": 0.333,
+    "landmark": 0.08,
+    "signature": 0.462,
+    "richness": 0.183,
+    "age": 0.052
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 6,
+    "water": 0,
+    "burnable": 5,
+    "cut": 14,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    13424,
+    26054,
+    32423,
+    40921
+   ],
+   "zone": 4,
+   "name": "rowhouse blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.414,
+   "lat": 37.806
+  },
+  {
+   "x0": 528,
+   "y0": 436,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.424,
+   "parts": {
+    "readability": 0.874,
+    "interactables": 0.333,
+    "character": 0.062
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.665,
+    "clearance": 0.898,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.214,
+    "age": 0.058
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 4,
+    "cut": 26,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    14450
+   ],
+   "zone": 77,
+   "name": "commercial blocks",
+   "lon": -122.394,
+   "lat": 37.768
+  },
+  {
+   "x0": 584,
+   "y0": 444,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.407,
+   "parts": {
+    "readability": 0.835,
+    "interactables": 0.3,
+    "character": 0.033
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.627,
+    "clearance": 0.789,
+    "water": 1,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0,
+    "richness": 0.062,
+    "age": 0.117
+   },
+   "facts": {
+    "buildings": 3,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 0,
+    "cut": 54,
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    4289,
+    18594
+   ],
+   "floor": 9.84,
+   "zone": 78,
+   "name": "tower rooftops",
+   "lon": -122.388,
+   "lat": 37.767
+  }
+ ],
+ "references": [
+  {
+   "name": "North Beach",
+   "score": 0.613,
+   "rank": 0.023
+  },
+  {
+   "name": "Russian Hill",
+   "score": 0.62,
+   "rank": 0.018
+  }
+ ],
+ "samples": [
+  {
+   "x0": 80,
+   "y0": 168,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.586,
+   "parts": {
+    "readability": 0.96,
+    "interactables": 0.401,
+    "character": 0.367
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.865,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.563,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.762,
+    "richness": 0.251,
+    "age": 0.506
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 23,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 26,
+   "name": "rowhouse blocks",
+   "lon": -122.446,
+   "lat": 37.793,
+   "sample": true
+  },
+  {
+   "x0": 396,
+   "y0": 52,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.577,
+   "parts": {
+    "readability": 0.918,
+    "interactables": 0.42,
+    "character": 0.474
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.803,
+    "clearance": 0.906,
+    "water": 0,
+    "fire": 0.688,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.262,
+    "signature": 0.854,
+    "richness": 0.234,
+    "age": 0.536
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 21,
+    "cut": 6,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    32895
+   ],
+   "zone": 15,
+   "name": "rowhouse blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.41,
+   "lat": 37.803,
+   "sample": true
+  },
+  {
+   "x0": 224,
+   "y0": 260,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.57,
+   "parts": {
+    "readability": 0.933,
+    "interactables": 0.498,
+    "character": 0.231
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.777,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.493,
+    "richness": 0.309,
+    "age": 0.039
+   },
+   "facts": {
+    "buildings": 5,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 18,
+    "cut": 0,
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [],
+   "zone": 47,
+   "name": "apartment blocks",
+   "lon": -122.429,
+   "lat": 37.784,
+   "sample": true
+  },
+  {
+   "x0": 360,
+   "y0": 112,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.557,
+   "parts": {
+    "readability": 0.985,
+    "interactables": 0.247,
+    "character": 0.419
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.948,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.313,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0.051,
+    "signature": 0.822,
+    "richness": 0.337,
+    "age": 0.485
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 27,
+    "cut": 0,
+    "landmark": "coit-tower",
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [],
+   "zone": 25,
+   "name": "apartment blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.414,
+   "lat": 37.798,
+   "sample": true
+  },
+  {
+   "x0": 180,
+   "y0": 500,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.551,
+   "parts": {
+    "readability": 0.882,
+    "interactables": 0.517,
+    "character": 0.388
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.671,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.757,
+    "richness": 0.32,
+    "age": 0.542
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 9,
+    "water": 0,
+    "burnable": 10,
+    "cut": 5,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    17110,
+    38033
+   ],
+   "zone": 81,
+   "name": "rowhouse blocks",
+   "lon": -122.434,
+   "lat": 37.763,
+   "sample": true
+  },
+  {
+   "x0": 376,
+   "y0": 24,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.545,
+   "parts": {
+    "readability": 0.895,
+    "interactables": 0.367,
+    "character": 0.366
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.714,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.143,
+    "signature": 0.687,
+    "richness": 0.316,
+    "age": 0.258
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 10,
+    "cut": 5,
+    "landmark": "coit-tower",
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    31328
+   ],
+   "zone": 12,
+   "name": "rowhouse blocks near Russian Hill",
+   "area": "Russian Hill",
+   "lon": -122.412,
+   "lat": 37.806,
+   "sample": true
+  },
+  {
+   "x0": 216,
+   "y0": 396,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.54,
+   "parts": {
+    "readability": 0.885,
+    "interactables": 0.517,
+    "character": 0.391
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.743,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.849,
+    "richness": 0.249,
+    "age": 0.494
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 14,
+    "cut": 5,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    6055,
+    24380
+   ],
+   "zone": 72,
+   "name": "rowhouse blocks",
+   "lon": -122.43,
+   "lat": 37.772,
+   "sample": true
+  },
+  {
+   "x0": 324,
+   "y0": 196,
+   "cell": 1,
+   "toward": [
+    -1,
+    1
+   ],
+   "score": 0.535,
+   "parts": {
+    "readability": 0.886,
+    "interactables": 0.517,
+    "character": 0.373
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.837,
+    "clearance": 0.813,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.728,
+    "richness": 0.283,
+    "age": 0.556
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 9,
+    "cut": 12,
+    "typology": "building.rowhouse.edwardian"
+   },
+   "cutObjects": [
+    7879,
+    11195,
+    24757
+   ],
+   "zone": 31,
+   "name": "rowhouse blocks",
+   "lon": -122.418,
+   "lat": 37.79,
+   "sample": true
+  },
+  {
+   "x0": 464,
+   "y0": 500,
+   "cell": 2,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.529,
+   "parts": {
+    "readability": 0.993,
+    "interactables": 0.228,
+    "character": 0.34
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.978,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.188,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.745,
+    "richness": 0.311,
+    "age": 0.259
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 0,
+    "water": 0,
+    "burnable": 29,
+    "cut": 0,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [],
+   "zone": 90,
+   "name": "rowhouse blocks",
+   "lon": -122.401,
+   "lat": 37.762,
+   "sample": true
+  },
+  {
+   "x0": 492,
+   "y0": 168,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.524,
+   "parts": {
+    "readability": 0.698,
+    "interactables": 0.417,
+    "character": 0.448
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.386,
+    "clearance": 0.527,
+    "water": 1,
+    "fire": 0,
+    "topples": 1,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0.802,
+    "signature": 0.178,
+    "richness": 0.226,
+    "age": 0.65
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 1,
+    "water": 0,
+    "burnable": 0,
+    "cut": 121,
+    "landmark": "salesforce-tower",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    2310,
+    16721,
+    20255,
+    22859,
+    28385,
+    28386,
+    28387,
+    28571,
+    34784,
+    43098,
+    43101,
+    43417,
+    81575
+   ],
+   "floor": 20.82,
+   "zone": 28,
+   "name": "rooftops by the Salesforce Tower",
+   "lon": -122.398,
+   "lat": 37.792,
+   "sample": true
+  },
+  {
+   "x0": 488,
+   "y0": 92,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.518,
+   "parts": {
+    "readability": 0.834,
+    "interactables": 0.517,
+    "character": 0.209
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.537,
+    "clearance": 0.891,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.177,
+    "signature": 0.051,
+    "richness": 0.222,
+    "age": 0.568
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 3,
+    "cut": 28,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.commercial"
+   },
+   "cutObjects": [
+    7855
+   ],
+   "zone": 13,
+   "name": "commercial blocks",
+   "lon": -122.399,
+   "lat": 37.799,
+   "sample": true
+  },
+  {
+   "x0": 456,
+   "y0": 312,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.513,
+   "parts": {
+    "readability": 0.826,
+    "interactables": 0.417,
+    "character": 0.297
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.489,
+    "clearance": 0.918,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.549,
+    "richness": 0.299,
+    "age": 0.383
+   },
+   "facts": {
+    "buildings": 13,
+    "hiddenCells": 4,
+    "water": 0,
+    "burnable": 11,
+    "cut": 21,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    3870,
+    40365
+   ],
+   "zone": 59,
+   "name": "industrial blocks",
+   "lon": -122.402,
+   "lat": 37.779,
+   "sample": true
+  },
+  {
+   "x0": 96,
+   "y0": 376,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.508,
+   "parts": {
+    "readability": 0.838,
+    "interactables": 0.498,
+    "character": 0.361
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.521,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.727,
+    "richness": 0.293,
+    "age": 0.467
+   },
+   "facts": {
+    "buildings": 14,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 18,
+    "cut": 0,
+    "typology": "building.rowhouse.victorian.pale"
+   },
+   "cutObjects": [],
+   "zone": 65,
+   "name": "rowhouse blocks",
+   "lon": -122.444,
+   "lat": 37.774,
+   "sample": true
+  },
+  {
+   "x0": 224,
+   "y0": 272,
+   "cell": 2,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.503,
+   "parts": {
+    "readability": 0.817,
+    "interactables": 0.423,
+    "character": 0.251
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.391,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.375,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.03,
+    "signature": 0.499,
+    "richness": 0.273,
+    "age": 0.158
+   },
+   "facts": {
+    "buildings": 11,
+    "hiddenCells": 3,
+    "water": 0,
+    "burnable": 26,
+    "cut": 0,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [],
+   "zone": 47,
+   "name": "apartment blocks",
+   "lon": -122.429,
+   "lat": 37.783,
+   "sample": true
+  },
+  {
+   "x0": 216,
+   "y0": 404,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.499,
+   "parts": {
+    "readability": 0.782,
+    "interactables": 0.517,
+    "character": 0.372
+   },
+   "terms": {
+    "hidden": 0.958,
+    "terraced": 0.402,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.818,
+    "richness": 0.22,
+    "age": 0.479
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 10,
+    "water": 0,
+    "burnable": 15,
+    "cut": 5,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    6795,
+    9472,
+    22196
+   ],
+   "zone": 72,
+   "name": "rowhouse blocks",
+   "lon": -122.43,
+   "lat": 37.771,
+   "sample": true
+  },
+  {
+   "x0": 372,
+   "y0": 504,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.493,
+   "parts": {
+    "readability": 0.847,
+    "interactables": 0.517,
+    "character": 0.197
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.492,
+    "clearance": 1,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.285,
+    "richness": 0.253,
+    "age": 0.325
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 4,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 86,
+   "name": "industrial blocks",
+   "lon": -122.412,
+   "lat": 37.762,
+   "sample": true
+  },
+  {
+   "x0": 308,
+   "y0": 408,
+   "cell": 2,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.488,
+   "parts": {
+    "readability": 0.906,
+    "interactables": 0.333,
+    "character": 0.191
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.725,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.667,
+    "chokepoints": 1,
+    "landmark": 0.015,
+    "signature": 0.18,
+    "richness": 0.261,
+    "age": 0.448
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 2,
+    "water": 0,
+    "burnable": 0,
+    "cut": 12,
+    "landmark": "sf-city-hall",
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    30242
+   ],
+   "zone": 71,
+   "name": "commercial blocks",
+   "lon": -122.419,
+   "lat": 37.771,
+   "sample": true
+  },
+  {
+   "x0": 36,
+   "y0": 488,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.471,
+   "parts": {
+    "readability": 0.829,
+    "interactables": 0.3,
+    "character": 0.396
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.495,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.86,
+    "richness": 0.255,
+    "age": 0.497
+   },
+   "facts": {
+    "buildings": 7,
+    "hiddenCells": 8,
+    "water": 0,
+    "burnable": 4,
+    "cut": 5,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    24172,
+    33049
+   ],
+   "zone": 83,
+   "name": "rowhouse blocks",
+   "lon": -122.451,
+   "lat": 37.764,
+   "sample": true
+  },
+  {
+   "x0": 348,
+   "y0": 244,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.465,
+   "parts": {
+    "readability": 0.698,
+    "interactables": 0.517,
+    "character": 0.457
+   },
+   "terms": {
+    "hidden": 0.75,
+    "terraced": 0.707,
+    "clearance": 0.594,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0.079,
+    "signature": 0.712,
+    "richness": 0.365,
+    "age": 0.859
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 12,
+    "water": 0,
+    "burnable": 4,
+    "cut": 26,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.bay"
+   },
+   "cutObjects": [
+    9650,
+    17132,
+    32380,
+    32381,
+    32707
+   ],
+   "zone": 44,
+   "name": "apartment blocks",
+   "lon": -122.415,
+   "lat": 37.786,
+   "sample": true
+  },
+  {
+   "x0": 572,
+   "y0": 492,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.459,
+   "parts": {
+    "readability": 0.805,
+    "interactables": 0.367,
+    "character": 0.274
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.493,
+    "clearance": 0.828,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.501,
+    "richness": 0.326,
+    "age": 0.28
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 6,
+    "cut": 11,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    19235
+   ],
+   "zone": 92,
+   "name": "industrial blocks",
+   "lon": -122.39,
+   "lat": 37.763,
+   "sample": true
+  },
+  {
+   "x0": 240,
+   "y0": 296,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.444,
+   "parts": {
+    "readability": 0.933,
+    "interactables": 0.175,
+    "character": 0.245
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.775,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0.5,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0,
+    "chokepoints": 0.333,
+    "landmark": 0.103,
+    "signature": 0.451,
+    "richness": 0.312,
+    "age": 0.01
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 5,
+    "water": 0,
+    "burnable": 24,
+    "cut": 0,
+    "landmark": "sf-city-hall",
+    "typology": "building.apartment.modern"
+   },
+   "cutObjects": [],
+   "zone": 47,
+   "name": "apartment blocks",
+   "lon": -122.427,
+   "lat": 37.781,
+   "sample": true
+  },
+  {
+   "x0": 68,
+   "y0": 416,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.437,
+   "parts": {
+    "readability": 0.809,
+    "interactables": 0.329,
+    "character": 0.401
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.649,
+    "clearance": 0.922,
+    "water": 0,
+    "fire": 0.75,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.851,
+    "richness": 0.268,
+    "age": 0.525
+   },
+   "facts": {
+    "buildings": 12,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 20,
+    "cut": 5,
+    "typology": "building.rowhouse.victorian"
+   },
+   "cutObjects": [
+    20806,
+    35094
+   ],
+   "zone": 74,
+   "name": "rowhouse blocks",
+   "lon": -122.447,
+   "lat": 37.77,
+   "sample": true
+  },
+  {
+   "x0": 168,
+   "y0": 40,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.429,
+   "parts": {
+    "readability": 0.735,
+    "interactables": 0.46,
+    "character": 0.31
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.57,
+    "clearance": 0.719,
+    "water": 0,
+    "fire": 0.625,
+    "topples": 0,
+    "leaps": 1,
+    "bands": 0.333,
+    "chokepoints": 1,
+    "landmark": 0,
+    "signature": 0.864,
+    "richness": 0.186,
+    "age": 0.025
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 22,
+    "cut": 18,
+    "typology": "building.rowhouse.stucco"
+   },
+   "cutObjects": [
+    3278,
+    12098,
+    25043,
+    30685,
+    35763
+   ],
+   "zone": 11,
+   "name": "rowhouse blocks",
+   "lon": -122.436,
+   "lat": 37.804,
+   "sample": true
+  },
+  {
+   "x0": 280,
+   "y0": 476,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.401,
+   "parts": {
+    "readability": 0.761,
+    "interactables": 0.317,
+    "character": 0.352
+   },
+   "terms": {
+    "hidden": 0.854,
+    "terraced": 0.462,
+    "clearance": 0.953,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0.333,
+    "landmark": 0,
+    "signature": 0.677,
+    "richness": 0.298,
+    "age": 0.498
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 11,
+    "water": 0,
+    "burnable": 9,
+    "cut": 3,
+    "typology": "building.commercial.historic"
+   },
+   "cutObjects": [
+    23150
+   ],
+   "zone": 85,
+   "name": "commercial blocks",
+   "lon": -122.423,
+   "lat": 37.765,
+   "sample": true
+  },
+  {
+   "x0": 476,
+   "y0": 336,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.376,
+   "parts": {
+    "readability": 0.889,
+    "interactables": 0.117,
+    "character": 0.19
+   },
+   "terms": {
+    "hidden": 1,
+    "terraced": 0.632,
+    "clearance": 1,
+    "water": 0,
+    "fire": 0,
+    "topples": 0,
+    "leaps": 0.333,
+    "bands": 0.333,
+    "chokepoints": 0,
+    "landmark": 0,
+    "signature": 0.224,
+    "richness": 0.233,
+    "age": 0.429
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 7,
+    "water": 0,
+    "burnable": 0,
+    "cut": 0,
+    "typology": "building.industrial"
+   },
+   "cutObjects": [],
+   "zone": 61,
+   "name": "industrial blocks",
+   "lon": -122.401,
+   "lat": 37.777,
+   "sample": true
+  },
+  {
+   "x0": 292,
+   "y0": 528,
+   "cell": 1,
+   "toward": [
+    -1,
+    -1
+   ],
+   "score": 0.342,
+   "parts": {
+    "readability": 0.62,
+    "interactables": 0.417,
+    "character": 0.373
+   },
+   "terms": {
+    "hidden": 0.542,
+    "terraced": 0.446,
+    "clearance": 0.969,
+    "water": 0,
+    "fire": 1,
+    "topples": 0,
+    "leaps": 0.667,
+    "bands": 0.333,
+    "chokepoints": 0.667,
+    "landmark": 0,
+    "signature": 0.777,
+    "richness": 0.274,
+    "age": 0.476
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 14,
+    "water": 0,
+    "burnable": 8,
+    "cut": 2,
+    "typology": "building.rowhouse.edwardian.painted"
+   },
+   "cutObjects": [
+    42234
+   ],
+   "zone": 89,
+   "name": "rowhouse blocks",
+   "lon": -122.421,
+   "lat": 37.76,
+   "sample": true
+  },
+  {
+   "x0": 460,
+   "y0": 144,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.317,
+   "parts": {
+    "readability": 0.375,
+    "interactables": 0.681,
+    "character": 0.642
+   },
+   "terms": {
+    "hidden": 0.021,
+    "terraced": 0.579,
+    "clearance": 0.766,
+    "water": 0,
+    "fire": 0.875,
+    "topples": 1,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0.667,
+    "landmark": 0.8,
+    "signature": 0.661,
+    "richness": 0.291,
+    "age": 0.875
+   },
+   "facts": {
+    "buildings": 9,
+    "hiddenCells": 19,
+    "water": 0,
+    "burnable": 18,
+    "cut": 15,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    31482,
+    42201
+   ],
+   "zone": 27,
+   "name": "by the Transamerica Pyramid",
+   "area": "North Beach",
+   "lon": -122.402,
+   "lat": 37.795,
+   "sample": true
+  },
+  {
+   "x0": 476,
+   "y0": 132,
+   "cell": 1,
+   "toward": [
+    1,
+    1
+   ],
+   "score": 0.284,
+   "parts": {
+    "readability": 0.464,
+    "interactables": 0.383,
+    "character": 0.34
+   },
+   "terms": {
+    "hidden": 0.646,
+    "terraced": 0.577,
+    "clearance": 0,
+    "water": 0,
+    "fire": 0.333,
+    "topples": 0.5,
+    "leaps": 0,
+    "bands": 0.667,
+    "chokepoints": 0.667,
+    "landmark": 0.317,
+    "signature": 0.393,
+    "richness": 0.203,
+    "age": 0.508
+   },
+   "facts": {
+    "buildings": 6,
+    "hiddenCells": 13,
+    "water": 0,
+    "burnable": 1,
+    "cut": 175,
+    "landmark": "transamerica-pyramid",
+    "typology": "building.chinatown"
+   },
+   "cutObjects": [
+    1890,
+    6086,
+    6087,
+    6088,
+    24100,
+    27169,
+    28385,
+    28386,
+    28387,
+    28388
+   ],
+   "zone": 28,
+   "name": "by the Transamerica Pyramid",
+   "area": "North Beach",
+   "lon": -122.401,
+   "lat": 37.796,
+   "sample": true
+  },
+  {
+   "x0": 324,
+   "y0": 376,
+   "cell": 1,
+   "toward": [
+    1,
+    -1
+   ],
+   "score": 0.241,
+   "parts": {
+    "readability": 0.354,
+    "interactables": 0.5,
+    "character": 0.316
+   },
+   "terms": {
+    "hidden": 0.437,
+    "terraced": 0.523,
+    "clearance": 0,
+    "water": 0,
+    "fire": 1,
+    "topples": 0.5,
+    "leaps": 0.333,
+    "bands": 1,
+    "chokepoints": 0,
+    "landmark": 0.154,
+    "signature": 0.234,
+    "richness": 0.35,
+    "age": 0.75
+   },
+   "facts": {
+    "buildings": 8,
+    "hiddenCells": 15,
+    "water": 0,
+    "burnable": 11,
+    "cut": 67,
+    "landmark": "sf-city-hall",
+    "typology": "building.industrial"
+   },
+   "cutObjects": [
+    13646,
+    38663,
+    38769,
+    38770
+   ],
+   "zone": 58,
+   "name": "industrial blocks",
+   "lon": -122.418,
+   "lat": 37.774,
+   "sample": true
+  }
+ ]
+}

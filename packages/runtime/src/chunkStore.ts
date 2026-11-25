@@ -120,6 +120,16 @@ function withSlash(url: string): string {
   return url.endsWith("/") ? url : url + "/";
 }
 
+/**
+ * A terrain edit's values for one cell (D-147): a surface id, a water level
+ * (steps; NO_WATER drains it), and a height to level the ground at (steps).
+ */
+export interface CellOverride {
+  surface?: number;
+  water?: number;
+  height?: number;
+}
+
 /** A loaded chunk, its objects (with `objectChunks`), its decoded size, and when it was last used (a count, for least recently used first). */
 interface Held {
   chunk: Chunk;
@@ -164,6 +174,12 @@ export class ChunkStore {
   /** How those objects files are fetched (`fetch` by default). */
   worldFetch: WorldFetch | undefined = undefined;
   private readonly objectRefs = new Map<number, { sha256?: string }>();
+  /**
+   * Terrain edits (D-147) by cell (`y × cellsX + x`), the last edited last:
+   * stamped into each chunk as it loads (an evicted one comes back edited)
+   * and into those loaded when made, so every read and slice sees them.
+   */
+  private readonly overrides = new Map<number, CellOverride>();
 
   constructor(
     readonly manifest: WorldManifest,
@@ -222,6 +238,8 @@ export class ChunkStore {
       oref ? loadObjectsFile(this.base + this.manifest.objectChunks!.path.replace("{x}", String(cx)).replace("{y}", String(cy)) + version(oref.sha256), `world objects of chunk ${cx},${cy}`, this.worldFetch) : null;
     const p = Promise.all([terrain(), objects()])
       .then(([chunk, objects]) => {
+        // ponytail: every edit is looked at for every chunk loaded; file them by chunk if worlds collect thousands
+        for (const [cell, o] of this.overrides) this.stamp(chunk, cx, cy, cell % this.cellsX, Math.floor(cell / this.cellsX), o);
         const bytes = chunkBytes(chunk, this.dropLayers);
         this.chunks[k] = { chunk, objects, bytes, used: ++this.uses };
         this.count++;
@@ -232,6 +250,71 @@ export class ChunkStore {
       .finally(() => this.pending.delete(k));
     this.pending.set(k, p);
     return p;
+  }
+
+  /**
+   * Edit cells' terrain (D-147): each cell's values merge into what earlier
+   * edits set it to, and it moves to the end of the order edits are stamped
+   * in (a height's corners are shared with the neighbours: the last edited
+   * wins them). Cells outside the world are left out.
+   */
+  editCells(cells: readonly ({ x: number; y: number } & CellOverride)[]): void {
+    for (const { x, y, ...v } of cells) {
+      if (!(x >= 0 && y >= 0 && x < this.cellsX && y < this.cellsY)) continue;
+      const cell = y * this.cellsX + x;
+      const merged = { ...this.overrides.get(cell), ...v };
+      this.overrides.delete(cell);
+      this.overrides.set(cell, merged);
+      // the chunks holding the cell, and its neighbours' (which share its corners)
+      const s = this.chunkSize;
+      for (let cy = Math.floor((y - 1) / s); cy <= Math.floor((y + 1) / s); cy++)
+        for (let cx = Math.floor((x - 1) / s); cx <= Math.floor((x + 1) / s); cx++) {
+          const chunk = this.chunks[this.key(cx, cy)]?.chunk;
+          if (chunk) this.stamp(chunk, cx, cy, x, y, merged);
+        }
+    }
+  }
+
+  /**
+   * The terrain edits a rectangle's cells (and the corners they share with
+   * the cells round it) are made of, in the order stamped: exactly what tells
+   * a slice of it apart from the package's, for a tile's cache key and kept
+   * scene (D-147). Empty where none are.
+   */
+  editsIn(x0: number, y0: number, x1: number, y1: number): string {
+    let out = "";
+    for (const [cell, o] of this.overrides) {
+      const x = cell % this.cellsX;
+      const y = Math.floor(cell / this.cellsX);
+      if (x < x0 - 1 || y < y0 - 1 || x > x1 || y > y1) continue;
+      out += `${out ? ";" : ""}${x},${y},${o.surface ?? ""},${o.water ?? ""},${o.height ?? ""}`;
+    }
+    return out;
+  }
+
+  /** Write one cell's edit into a chunk: the cell where the chunk has it, and on micro-terrain the micro-corners of it the chunk holds. */
+  private stamp(chunk: Chunk, cx: number, cy: number, x: number, y: number, o: CellOverride): void {
+    const s = this.chunkSize;
+    const t = chunk.terrain;
+    const lx = x - cx * s;
+    const ly = y - cy * s;
+    const inside = lx >= 0 && ly >= 0 && lx < t.width && ly < t.height;
+    if (inside) {
+      const i = t.index(lx, ly);
+      if (o.surface !== undefined) t.surface[i] = o.surface;
+      if (o.water !== undefined) t.water[i] = o.water;
+      if (o.height !== undefined && !t.micro) {
+        t.base[i] = Math.round(o.height);
+        t.shape[i] = 0;
+      }
+    }
+    const m = t.micro;
+    if (o.height === undefined || !m) return;
+    const k = m.k;
+    const row = t.width * k + 1;
+    const level = Math.round(o.height * k);
+    for (let my = Math.max(0, ly * k); my <= Math.min(t.height * k, (ly + 1) * k); my++)
+      for (let mx = Math.max(0, lx * k); mx <= Math.min(t.width * k, (lx + 1) * k); mx++) m.corners[my * row + mx] = level;
   }
 
   /** A loaded chunk, marked used now. */

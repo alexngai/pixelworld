@@ -88,6 +88,7 @@ export class FakeWorld {
         this.objects.filter((o) => x >= o.bounds[0] && y >= o.bounds[1] && x <= o.bounds[2] && y <= o.bounds[3]),
       landmarks: () => [],
       pickObject: () => null,
+      object: () => null,
     };
   }
 }
@@ -99,6 +100,7 @@ export function building(x0: number, y0: number, x1: number, y1: number, group =
 
 class FakeEntity implements Entity {
   reveal = null;
+  outline: readonly [number, number, number] | null = null;
   pitch = 0;
   roll = 0;
 

@@ -46,6 +46,9 @@ export const GBUFFER_VS = /* glsl */ `#version 300 es
 precision highp float;
 ${ATTRIBS}
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
+uniform vec3 uProjD;
 uniform vec2 uOrigin;      // screen px of the target's top-left corner
 uniform vec2 uSize;        // target size in px
 uniform vec2 uDepthRange;  // scene min/max depth
@@ -71,9 +74,11 @@ void main() {
   vec3 pos = aPos + aInstOffset;
   vec2 uv = uRot * pos.xy;
   float h = pos.z;
-  float sx = 16.0 * (uv.x - uv.y);
-  float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
-  float d = uv.x + uv.y + h / 3.0;
+  // the projection (D-155): iso, sx = 16(u − v), sy = 8(u + v) − 8h, d = u + v + h/3; or from above
+  vec3 q = vec3(uv, h);
+  float sx = dot(uProjX, q);
+  float sy = dot(uProjY, q);
+  float d = dot(uProjD, q);
   gl_Position = vec4(
     2.0 * (sx - uOrigin.x) / uSize.x - 1.0,
     2.0 * (sy - uOrigin.y) / uSize.y - 1.0,
@@ -115,6 +120,10 @@ in vec3 vShape;
 in vec2 vFaceUv;
 flat in vec4 vFaceRef;
 uniform highp usampler2D uFaceTexels;  // a ramp per voxel face of the faces drawn from texels (material 99)
+uniform int uCutOn;                    // buildings cut down (D-159): a height per owning cell
+uniform highp sampler2D uCutMask;      // R32F: the height (render steps) objects owned by a cell are cut at, 0 for none
+uniform ivec2 uCutOrigin;              // the cell of its texel (0, 0)
+uniform vec3 uToward;                  // towards the camera in (u, v, h): a face turned away shows only through a cut
 #endif
 
 uniform vec2 uOrigin;
@@ -272,6 +281,8 @@ bool piecesSimple(ivec2 c, int slot) {
 }
 
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
 uniform isampler2D uFieldRails;  // W × H: rails drawn in the street (M3.5): connections | kind << 12
 uniform int uRailRamp;           // -1: the style draws no rails
 
@@ -394,8 +405,8 @@ float bentWayDistance(vec2 local, ivec2 c, int mask, out vec2 dir) {
 float onePixel(vec2 dir) {
   vec2 d = uRot * dir;
   vec2 n = vec2(-d.y, d.x);
-  vec2 l = vec2(16.0 * (d.x - d.y), 8.0 * (d.x + d.y));  // screen px per render unit along
-  vec2 m = vec2(16.0 * (n.x - n.y), 8.0 * (n.x + n.y));  // and across
+  vec2 l = vec2(dot(uProjX.xy, d), dot(uProjY.xy, d));  // screen px per render unit along
+  vec2 m = vec2(dot(uProjX.xy, n), dot(uProjY.xy, n));  // and across
   float across = abs(l.x * m.y - l.y * m.x) / length(l);
   return 0.5 * max(abs(l.x), abs(l.y)) / length(l) / (across * uScale);
 }
@@ -712,6 +723,19 @@ void main() {
   int mat = int(vMat.x + 0.5);
   int kind = int(vMat.y + 0.5);
   bool vertical = kind == 2 || kind == 3;
+  // a building cut down (D-159): nothing above its cut, and the inside of its far walls dark, so it reads solid
+  bool cap = false;
+#ifndef FIELD_WAYS
+  if (uCutOn == 1) {
+    ivec2 cm = ivec2(floor(vCell)) - uCutOrigin;
+    ivec2 cs = textureSize(uCutMask, 0);
+    float cut = cm.x >= 0 && cm.y >= 0 && cm.x < cs.x && cm.y < cs.y ? texelFetch(uCutMask, cm, 0).r : 0.0;
+    if (cut > 0.0) {
+      if (vH > cut) discard;
+      cap = dot(vNormal, uToward) < 0.0;
+    }
+  }
+#endif
 #ifdef FIELD_WAYS
   if (kind < 2 && mat < 99) mat = groundSurface(mat, ivec2(floor(gl_FragCoord.xy)) + ivec2(uOrigin));
 #endif
@@ -863,6 +887,7 @@ void main() {
   if (kind == FACE_WATER && (vH < 1.0 || (vH < 2.0 && ((col + row) & 1) == 0))) level += 1.0;
   if (riser) level -= 1.0;  // a riser on pavement: the pavement's own colour, a shade darker
   else if (vertical && aboveBand < 0.14) level -= 1.0;  // strata bedding line
+  if (cap) level = 1.0;
   level = clamp(level, 1.0, 5.0);
 
   bool owned = vCell.x >= uOwned.x && vCell.y >= uOwned.y && vCell.x < uOwned.z && vCell.y < uOwned.w;
@@ -1187,6 +1212,9 @@ precision highp sampler2D;
 ${FIELD_COMMON}
 ${FIELD_VERTEX}
 uniform mat2 uRot;
+uniform vec3 uProjX;  // screen x, y and depth from (u, v, h) (D-155)
+uniform vec3 uProjY;
+uniform vec3 uProjD;
 uniform vec2 uOrigin;
 uniform vec2 uSize;
 uniform vec2 uDepthRange;
@@ -1251,9 +1279,10 @@ void main() {
 
   vec2 uv = uRot * pos.xy;
   float h = pos.z;
-  float sx = 16.0 * (uv.x - uv.y);
-  float sy = 8.0 * (uv.x + uv.y) - 8.0 * h;
-  float d = uv.x + uv.y + h / 3.0;
+  vec3 q = vec3(uv, h);
+  float sx = dot(uProjX, q);
+  float sy = dot(uProjY, q);
+  float d = dot(uProjD, q);
   gl_Position = vec4(
     2.0 * (sx - uOrigin.x) / uSize.x - 1.0,
     2.0 * (sy - uOrigin.y) / uSize.y - 1.0,

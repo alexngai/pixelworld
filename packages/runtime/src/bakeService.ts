@@ -1,5 +1,5 @@
 import type { Rotation } from "@pixelworlds/grid";
-import type { BakedImage } from "@pixelworlds/bake";
+import type { BakedImage, Projection } from "@pixelworlds/bake";
 import { loadPlugin, type Box, type ObjectInstance, type PluginReport } from "@pixelworlds/generators";
 import { BakeHost } from "./bakeHost";
 import { ModelFailures } from "./modelFailures";
@@ -9,13 +9,15 @@ import {
   type FromWorker,
   type InitMessage,
   type PluginRef,
+  type BakeAreaMessage,
+  type BakeLoneMessage,
   type TerrainSlice,
   type ToWorker,
 } from "./protocol";
 
 export type TileKey = string;
-export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean): TileKey =>
-  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}`;
+export const tileKey = (r: Rotation, tx: number, ty: number, bare?: boolean, ground?: boolean, cutaway?: boolean): TileKey =>
+  `${r}:${tx},${ty}${bare ? ":bare" : ""}${ground ? ":ground" : ""}${cutaway ? ":cutaway" : ""}`;
 
 export interface TileRequest {
   rotation: Rotation;
@@ -32,9 +34,14 @@ export interface TileRequest {
    * answers with it instead (`whole`).
    */
   ground?: boolean;
+  /**
+   * The tile with what's cut down cut (D-159, D-167), kept beside the plain
+   * tile, so the view switches between them at once (`WorldView.cutaway`).
+   */
+  cutaway?: boolean;
 }
 
-const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground);
+const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.cutaway);
 
 /**
  * What `prepare` hands back: a cached image, or a terrain slice to bake.
@@ -42,7 +49,7 @@ const requestKey = (t: TileRequest): TileKey => tileKey(t.rotation, t.tx, t.ty, 
  * the placed objects taken out of the world that the tile's bake leaves out
  * (D-124), echoed in its result.
  */
-export type PreparedTile = ({ cached: BakedImage | null; whole?: boolean } | { slice: TerrainSlice }) & { removed?: number[] };
+export type PreparedTile = ({ cached: BakedImage | null; whole?: boolean } | { slice: TerrainSlice }) & { removed?: number[]; cells?: string; cut?: string };
 
 export interface TileResult extends TileRequest {
   key: TileKey;
@@ -53,6 +60,10 @@ export interface TileResult extends TileRequest {
   modelsFailed: number;
   /** The removed objects its image was made without (`PreparedTile.removed`), if any. */
   removed?: number[];
+  /** The terrain edits its image was made with (`PreparedTile.cells`, D-147), if any. */
+  cells?: string;
+  /** The buildings cut down in its image (`PreparedTile.cut`, D-159), if any. */
+  cut?: string;
 }
 
 export interface BakeTotals {
@@ -95,7 +106,7 @@ interface Baker {
   transport: Transport;
   worker: Worker | null;
   /** A sprite or object bake, or a tile being prepared or baked; null while idle. */
-  job: { id: number; tile: (TileRequest & { key: TileKey; removed?: number[] }) | null } | null;
+  job: { id: number; tile: (TileRequest & { key: TileKey; removed?: number[]; cells?: string; cut?: string }) | null } | null;
   /** Tiles (tx,ty) whose meshes its BakeHost keeps, oldest first, as the host evicts them. */
   meshes: string[];
 }
@@ -127,8 +138,10 @@ export class BakeService {
   private disposed = false;
   private pluginJobs = new Map<number, { resolve: (p: PluginReport[]) => void; reject: (e: Error) => void }>();
   private spriteQueue: (
-    | { id: number; rotation: Rotation; boxes: Box[] }
+    | { id: number; rotation: Rotation; boxes: Box[]; projection?: Projection; sun?: [number, number, number] }
     | { id: number; rotation: Rotation; instances: ObjectInstance[]; slice: TerrainSlice }
+    | Omit<BakeAreaMessage, "type">
+    | Omit<BakeLoneMessage, "type">
   )[] = [];
   renderer = "pending";
   mode: "worker" | "inline" = "worker";
@@ -288,12 +301,12 @@ export class BakeService {
     this.done.delete(key);
   }
 
-  bakeSprite(rotation: Rotation, boxes: Box[]): Promise<BakedImage | null> {
+  bakeSprite(rotation: Rotation, boxes: Box[], opts: { projection?: Projection; sun?: [number, number, number] } = {}): Promise<BakedImage | null> {
     if (this.disposed) return Promise.resolve(null);
     return new Promise((resolve) => {
       const id = this.nextId++;
       this.spriteJobs.set(id, resolve);
-      this.spriteQueue.push({ id, rotation, boxes });
+      this.spriteQueue.push({ id, rotation, boxes, ...opts });
       this.pump();
     });
   }
@@ -305,6 +318,28 @@ export class BakeService {
       const id = this.nextId++;
       this.spriteJobs.set(id, resolve);
       this.spriteQueue.push({ id, rotation, instances, slice });
+      this.pump();
+    });
+  }
+
+  /** Bake placed objects on their own (D-162), by index, in a rotation, on a slice's ground. */
+  bakeLone(rotation: Rotation, objects: number[], slice: TerrainSlice): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const id = this.nextId++;
+      this.spriteJobs.set(id, resolve);
+      this.spriteQueue.push({ id, rotation, objects, slice });
+      this.pump();
+    });
+  }
+
+  /** Bake a rectangle of the world in another projection (D-155), once. */
+  bakeArea(area: Omit<BakeAreaMessage, "type" | "id">): Promise<BakedImage | null> {
+    if (this.disposed) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const id = this.nextId++;
+      this.spriteJobs.set(id, resolve);
+      this.spriteQueue.push({ id, ...area });
       this.pump();
     });
   }
@@ -333,6 +368,8 @@ export class BakeService {
       if (sprite) {
         b.job = { id: sprite.id, tile: null };
         if ("boxes" in sprite) b.transport.send({ type: "bakeSprite", ...sprite });
+        else if ("owned" in sprite) b.transport.send({ type: "bakeArea", ...sprite });
+        else if ("objects" in sprite) b.transport.send({ type: "bakeLone", ...sprite });
         else b.transport.send({ type: "bakeObjects", ...sprite });
         continue;
       }
@@ -344,20 +381,24 @@ export class BakeService {
   private startTile(b: Baker, t: TileRequest): void {
     const id = this.nextId++;
     const key = requestKey(t);
-    const tile = { ...t, key, removed: undefined as number[] | undefined };
+    const tile = { ...t, key, removed: undefined as number[] | undefined, cells: undefined as string | undefined, cut: undefined as string | undefined };
     b.job = { id, tile };
     this.inFlight.add(key);
     this.prepare(t).then(
       (prepared) => {
         tile.removed = prepared.removed?.length ? prepared.removed : undefined;
+        tile.cells = prepared.cells || undefined;
+        tile.cut = prepared.cut || undefined;
         if ("cached" in prepared) {
           this.finish(b, id, prepared.cached, null, true, 0, prepared.whole);
         } else {
           if (!t.ground) this.keepMeshes(b, t); // a ground bake keeps no meshes
           const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
           const removed = tile.removed ? { removed: tile.removed } : {};
+          const cells = tile.cells ? { cells: tile.cells } : {};
+          const cut = tile.cut ? { cut: tile.cut } : {};
           b.transport.send(
-            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, slice: prepared.slice, ...removed },
+            { type: "bakeTile", id, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, slice: prepared.slice, ...removed, ...cells, ...cut },
             sliceTransferables(prepared.slice),
           );
         }
@@ -424,9 +465,11 @@ export class BakeService {
         this.totals.bakeMs += stats.bakeMs;
         this.totals.maxTileMs = Math.max(this.totals.maxTileMs, stats.meshMs + stats.bakeMs);
       }
-      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : {};
+      const variant = t.bare ? { bare: true } : t.ground ? { ground: true } : t.cutaway ? { cutaway: true } : {};
       const removed = p.removed ? { removed: p.removed } : {};
-      this.onTile({ key, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, image, stats, fromCache, modelsFailed, ...removed });
+      const cells = p.cells ? { cells: p.cells } : {};
+      const cut = p.cut ? { cut: p.cut } : {};
+      this.onTile({ key, rotation: t.rotation, tx: t.tx, ty: t.ty, ...variant, image, stats, fromCache, modelsFailed, ...removed, ...cells, ...cut });
     }
     this.pump();
   }

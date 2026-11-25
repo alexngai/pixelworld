@@ -58,7 +58,7 @@
     "demo:dogfight": "vite --config src/demos/dogfight/vite.config.ts",
     "demo:race": "vite --config src/demos/race/vite.config.ts",
     "demo:rts": "vite --config src/demos/rts/vite.config.ts",
-    "demos:build": "vite build --config src/demos/vite.config.ts && vite build --config src/demos/vite.config.ts --ssr serve.ts",
+    "demos:build": "vite build --config src/demos/vite.config.ts && vite build ../../apps/tactics --config ../../apps/tactics/vite.config.ts --mode play --base /tactics/ --outDir ../../packages/multiplayer/src/demos/dist/client/tactics --emptyOutDir && vite build --config src/demos/vite.config.ts --ssr serve.ts",
     "demos:start": "node src/demos/dist/server/serve.js"
   },
   "dependencies": {

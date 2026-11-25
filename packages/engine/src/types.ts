@@ -1,5 +1,5 @@
 import type { BakedImage } from "@pixelworlds/bake";
-import type { Box, PluginDescriptor } from "@pixelworlds/generators";
+import type { Box, ObjectInstance, PluginDescriptor } from "@pixelworlds/generators";
 import type { Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
@@ -11,7 +11,7 @@ import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/wor
  * steps, screen positions in internal (render) pixels before the zoom.
  */
 
-export type { Box, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+export type { Box, ObjectInstance, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
 
 /** A baked sprite on the GPU (from `LayerContext.bakeSprite`); opaque to layers. */
 export type Sprite = GpuImage;
@@ -79,33 +79,59 @@ export interface OpenWorldOptions {
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
-  /** Placed objects taken out and put back (D-124): the queries agree at once; there is nothing to bake. */
+  /** Placed objects taken out and put back (D-124), and terrain edited (D-147): the queries agree at once; there is nothing to bake. */
   readonly edits: WorldEdits;
   /** The terrain it holds now: chunks loaded, of the world's, their megabytes, and how many the budget let go. */
   stats(): WorldStats;
 }
 
-/** A runtime edit to a world (D-124): placed objects taken out of it, or put back. */
-export interface WorldEdit {
+/** A runtime edit to a world: placed objects taken out of it or put back (D-124), or terrain cells edited (D-147). */
+export type WorldEdit = ObjectsEdit | CellsEdit;
+
+export interface ObjectsEdit {
   op: "remove" | "restore";
   /** The objects, by `ObjectHit.index`. */
   objects: number[];
 }
 
+export interface CellsEdit {
+  op: "cells";
+  cells: CellEdit[];
+}
+
+/** A change to one terrain cell (D-147). Fields left out stay as they are; a later edit of the cell overrides an earlier one's fields. */
+export interface CellEdit {
+  /** The cell (whole cells, inside the world). */
+  x: number;
+  y: number;
+  /** A surface the world has, by name (its manifest's `surfaces`): scorched ground as `rock`, say. */
+  surface?: string;
+  /**
+   * Water standing at this level (steps), or null to drain it. A world with
+   * `micro.shores` draws it as a plane at that level; others draw water where
+   * a cell's surface is `water`, so set that too.
+   */
+  water?: number | null;
+  /** Level the ground at this height (steps); the neighbours slope or step to meet it, and objects on it stand on it. */
+  height?: number;
+}
+
 /**
  * A world's runtime edits (D-124): its placed objects (buildings, trees,
- * landmarks) taken out and put back, as a log of ops a game can send and
- * replay. The queries (`objectsAt`, `pickObject`, `landmarks`) stop
- * answering for a removed object at once; a view bakes again the tiles whose
- * bake reaches it, the one it shows first, each kept on screen until its new
- * image is ready.
+ * landmarks) taken out and put back, and its terrain cells' surface, water
+ * and height (D-147), as a log of ops a game can send and replay. The
+ * queries (`objectsAt`, `pickObject`, `landmarks`, `heightAt`, `surfaceAt`)
+ * answer with them at once; a view bakes again the tiles an op reaches, the
+ * one it shows first, each kept on screen until its new image is ready.
  */
 export interface WorldEdits {
+  /** Edit terrain cells (D-147): the op, with the edits that applied (cells inside the world, surfaces it has, numbers), or null when none did. */
+  cells(cells: Iterable<CellEdit>): WorldEdit | null;
   /** Take objects out (`ObjectHit.index`): the op, with those that were standing, or null when none was. */
   remove(objects: Iterable<number>): WorldEdit | null;
   /** Put removed objects back (every one, by default): the op, or null when none was removed. */
   restore(objects?: Iterable<number>): WorldEdit | null;
-  /** Apply an op (from another page's `list`, or a server's): as `remove` or `restore` does; indices not in the world are left out. */
+  /** Apply an op (from another page's `list`, or a server's): as `remove`, `restore` or `cells` does; what isn't in the world is left out. */
   apply(edit: WorldEdit): WorldEdit | null;
   isRemoved(object: number): boolean;
   /** The objects removed now. */
@@ -423,6 +449,57 @@ export interface WorldView extends ControllerView {
   timeFrames(n: number): number;
   /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
   bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
+  /**
+   * Draw placed objects cut down (D-159): each object (its index, as
+   * `WorldEdits` names them) up to a height (world steps), what's above left
+   * out of the image and the inside of its far walls dark, as a cutaway. Only
+   * the drawing changes (the queries still answer with the whole building);
+   * the tiles they reach bake a cutaway variant (D-167), without meshing
+   * again, kept beside the plain tile. Replaces the previous cuts, in one
+   * rotation of the view (what hides a place depends on the side it's seen
+   * from; the tiles of the others, baked while idle, keep theirs) or all
+   * four; null for none. With `always`, a second set, replaced on its own:
+   * cut in the plain tiles as well, whether the cutaway shows or not (D-168).
+   */
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts?: { always?: boolean }): void;
+  /**
+   * Whether the cuts show (default true). Off, the city stands whole; the
+   * cutaway tiles are still baked and kept, so turning it on again shows
+   * them at once (D-167).
+   */
+  cutaway: boolean;
+  /**
+   * Placed objects drawn on their own over the finished frame (D-162), each
+   * at its opacity (0–1), far to near as listed, where it stands in front of
+   * what's drawn: with `cutDown`, the buildings cut away shown faintly as
+   * themselves, nothing of the buildings around them mixed in. Each is baked
+   * alone the first time it's listed in a rotation. Null for none.
+   */
+  setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void;
+  /**
+   * A rectangle of the world drawn from above, north up (D-155): its terrain,
+   * roads and placed objects (but those the edits removed), shaded and
+   * outlined as the tiles are, once and not kept. `px` screen px per world
+   * cell (default 8); `tilt` px of a south wall per step (default 0:
+   * straight down; a little shows the walls); shadows on by default. The
+   * rectangle is widened to whole cells: the image's pixel (i, j) shows cell
+   * (x + i / px, y + j / px) of `TopDownImage`. `cache` keeps it with the
+   * view's tiles (D-158). Null where nothing is there.
+   */
+  bakeTopDown(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts?: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean; sun?: [number, number, number] },
+  ): Promise<TopDownImage | null>;
+  /**
+   * An entity model's boxes (render units, as `EntitySpec.model` takes them)
+   * drawn from above, north up (D-164): `px` px a render unit, lit by `sun`
+   * (default the world's). The image's pixel (i, j) is at (left + i, top + j)
+   * px from the model's origin; turn it in 2D for a heading.
+   */
+  bakeSpriteTopDown(boxes: Box[], opts?: { px?: number; sun?: [number, number, number] }): Promise<TopDownSprite | null>;
   /** Called after every animation frame (from the start, before `ready()`); `dt` is game time. */
   onFrame(listener: (e: FrameEvent) => void): () => void;
   /** The camera, every layer's state and the controller's (where it has `serialize`). */
@@ -484,6 +561,12 @@ export interface WorldQuery {
    * there.
    */
   pickObject(screenX: number, screenY: number): ObjectHit | null;
+  /**
+   * A placed object's data (footprint, real height, storeys, year, facade…)
+   * by its index (`ObjectHit.index`), removed or not (`edits.isRemoved` says
+   * which); null where there is none, or the objects come by chunk (D-123).
+   */
+  object(index: number): Readonly<ObjectInstance> | null;
   /** Cell position of a lon/lat (worlds with a geo grid; null outside). */
   lonLatToCell(lon: number, lat: number): [number, number] | null;
   cellToLonLat(x: number, y: number): [number, number] | null;
@@ -595,12 +678,19 @@ export interface EntitySpec {
    */
   silhouetteRamp?: number;
   /**
+   * An outline round its sprite in this colour (0–255 each), a few pixels wide,
+   * drawn over everything, a building in front of it too (D-170): a game's
+   * way of saying a unit is chosen, threatened or aimed at. Default none.
+   */
+  outline?: readonly [number, number, number] | null;
+  /**
    * See through what stands in front of it (D-079), for a player among tall
    * buildings: within `margin` render px of its sprite (default 24),
    * buildings and landmarks in front of it are dithered away (`density` of
-   * their pixels, 0–1, default 0.75) to the ground behind. The tiles around
-   * it are baked a second time without their buildings for this. The first
-   * visible entity with `reveal` counts. Default off.
+   * their pixels, 0–1, default 0.75; at 1 a clean cut, D-154) to the ground
+   * behind. The tiles around it are baked a second time without their
+   * buildings for this. The first twelve visible entities with `reveal`
+   * count, each clearing its own ellipse. Default off.
    */
   reveal?: { margin?: number; density?: number };
   visible?: boolean;
@@ -611,6 +701,29 @@ export interface EntitySpec {
    * hold the view up, and each shows once its first sprite is baked.
    */
   wait?: boolean;
+}
+
+/** A model from above (`WorldView.bakeSpriteTopDown`, D-164): RGBA, and where its top-left pixel is from the model's origin. */
+export interface TopDownSprite {
+  width: number;
+  height: number;
+  rgba: Uint8ClampedArray<ArrayBuffer>;
+  left: number;
+  top: number;
+}
+
+/** A rectangle of the world from above (`WorldView.bakeTopDown`, D-155). */
+export interface TopDownImage {
+  width: number;
+  height: number;
+  /** RGBA in the world's day palette; empty pixels transparent. */
+  rgba: Uint8ClampedArray<ArrayBuffer>;
+  /** The baked image itself: palette indices (R) and local depth, for another palette. */
+  image: BakedImage;
+  /** Screen px per world cell, and the world cell at the image's top-left corner. */
+  px: number;
+  x: number;
+  y: number;
 }
 
 /** An entity's `reveal`, with its defaults. */
@@ -630,6 +743,8 @@ export interface Entity {
   roll: number;
   visible: boolean;
   silhouette: boolean;
+  /** Its outline's colour (`EntitySpec.outline`), or null for none. */
+  outline: readonly [number, number, number] | null;
   /** Seeing through what stands in front of it (`EntitySpec.reveal`, with its defaults), or null. */
   reveal: EntityReveal | null;
   /** Move (cells, steps); the height defaults to the ground there, or stays where it isn't loaded. */

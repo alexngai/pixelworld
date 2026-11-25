@@ -1,5 +1,5 @@
 import type { MicroLayers, Rotation, TerrainLayers } from "@pixelworlds/grid";
-import type { BakedImage, StyleParams } from "@pixelworlds/bake";
+import type { BakedImage, Projection, StyleParams } from "@pixelworlds/bake";
 import type { HeroPaint } from "./heroPaint";
 import { BIG_FOOTPRINT_CELLS, footprintBounds, type AssetCatalog, type Box, type ModelFailure, type ObjectInstance, type ScatterRules } from "@pixelworlds/generators";
 
@@ -69,6 +69,17 @@ export interface BakeTileMessage {
    * when they differ from the ones it was meshed without.
    */
   removed?: number[];
+  /**
+   * The terrain edits the slice holds (`ChunkStore.editsIn`, D-147): its
+   * kept scene is meshed again when they differ from those it was meshed with.
+   */
+  cells?: string;
+  /**
+   * Buildings cut down (D-159): "index:height,…", each placed object's index
+   * and the height (world steps) it is cut at. Only the bake changes: the
+   * kept scene is drawn with the cut, not meshed again.
+   */
+  cut?: string;
 }
 
 export interface BakeSpriteMessage {
@@ -76,6 +87,9 @@ export interface BakeSpriteMessage {
   id: number;
   rotation: Rotation;
   boxes: Box[];
+  /** Another layout (D-164: from above), and its own sun. */
+  projection?: Projection;
+  sun?: [number, number, number];
 }
 
 /** Bake object instances alone (a hero landmark, offline), on the slice's terrain heights. */
@@ -84,6 +98,35 @@ export interface BakeObjectsMessage {
   id: number;
   rotation: Rotation;
   instances: ObjectInstance[];
+  slice: TerrainSlice;
+}
+
+/**
+ * Bake a rectangle of the world in another projection (D-155: from above),
+ * once, nothing kept: its cells, on a slice with a margin of context that
+ * casts shadows into it, with its placed objects but those removed.
+ */
+export interface BakeAreaMessage {
+  type: "bakeArea";
+  id: number;
+  owned: { x0: number; y0: number; x1: number; y1: number };
+  slice: TerrainSlice;
+  removed?: number[];
+  projection: Projection;
+  shadows: boolean;
+  sun?: [number, number, number];
+}
+
+/**
+ * Placed objects on their own (D-162), by their indices in the world's
+ * objects, built as a tile builds them on the slice's ground heights and drawn
+ * in a rotation, nothing else in the scene: a building as it looks alone.
+ */
+export interface BakeLoneMessage {
+  type: "bakeLone";
+  id: number;
+  rotation: Rotation;
+  objects: number[];
   slice: TerrainSlice;
 }
 
@@ -104,7 +147,7 @@ export interface LoadPluginsMessage {
   plugins: PluginRef[];
 }
 
-export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | LoadPluginsMessage;
+export type ToWorker = InitMessage | BakeTileMessage | BakeSpriteMessage | BakeObjectsMessage | BakeAreaMessage | BakeLoneMessage | LoadPluginsMessage;
 
 export interface BakeStats {
   meshMs: number;

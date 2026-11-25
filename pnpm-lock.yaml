@@ -73,6 +73,36 @@ importers:
 
   apps/site: {}
 
+  apps/tactics:
+    dependencies:
+      '@pixelworlds/city-hongkong':
+        specifier: workspace:*
+        version: link:../../packages/city-hongkong
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../../packages/city-kyoto
+      '@pixelworlds/city-nyc':
+        specifier: workspace:*
+        version: link:../../packages/city-nyc
+      '@pixelworlds/city-paris':
+        specifier: workspace:*
+        version: link:../../packages/city-paris
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../../packages/city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../../packages/city-tokyo
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pixelworlds/multiplayer':
+        specifier: workspace:*
+        version: link:../../packages/multiplayer
+      '@pixelworlds/tactics':
+        specifier: workspace:*
+        version: link:../../packages/tactics
+
   apps/web:
     dependencies:
       '@pixelworlds/bake':
@@ -338,6 +368,31 @@ importers:
         version: link:../world-format
 
   packages/style: {}
+
+  packages/tactics:
+    dependencies:
+      '@pixelworlds/engine':
+        specifier: workspace:*
+        version: link:../engine
+    devDependencies:
+      '@pixelworlds/city-hongkong':
+        specifier: workspace:*
+        version: link:../city-hongkong
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../city-kyoto
+      '@pixelworlds/city-nyc':
+        specifier: workspace:*
+        version: link:../city-nyc
+      '@pixelworlds/city-paris':
+        specifier: workspace:*
+        version: link:../city-paris
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../city-tokyo
 
   packages/world-format:
     dependencies:

@@ -53,6 +53,83 @@ void main() {
 }
 `;
 
+// Buildings on their own (D-162), blended onto the canvas over the finished frame where they stand in front of it.
+const LONE_VS = /* glsl */ `#version 300 es
+precision highp float;
+uniform vec2 uRectOrigin;   // target px, top-left
+uniform vec2 uRectSize;     // art px
+uniform float uZoom;
+uniform vec2 uTarget;
+void main() {
+  vec2 unit = vec2(float(gl_VertexID == 1 || gl_VertexID == 2 || gl_VertexID == 4),
+                   float(gl_VertexID == 2 || gl_VertexID == 4 || gl_VertexID == 5));
+  vec2 n = 2.0 * (uRectOrigin + unit * uRectSize * uZoom) / uTarget - 1.0;
+  gl_Position = vec4(n.x, -n.y, 0.0, 1.0);  // onto the canvas, whose rows run bottom up
+}
+`;
+
+const LONE_FS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp sampler2D uImage;
+uniform highp sampler2D uFrame;    // the frame's index and depth
+uniform highp sampler2D uPalette;
+uniform vec2 uRectOrigin;
+uniform float uZoom;
+uniform float uDepthBase;
+uniform vec2 uDepthRange;
+uniform vec2 uCanvas;
+uniform int uLut;
+uniform float uAlpha;
+out vec4 o;
+void main() {
+  vec2 fc = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y);  // the target's rows run top down
+  vec4 t = texelFetch(uImage, ivec2(floor((fc - uRectOrigin) / uZoom)), 0);
+  if (t.a < 0.5) discard;
+  float d = uDepthBase + (floor(t.g * 255.0 + 0.5) * 256.0 + floor(t.b * 255.0 + 0.5)) / 256.0;
+  float z = clamp(1.0 - (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x), 0.0, 1.0);
+  float e = floor(z * 16777215.0 + 0.5);
+  vec4 m = texelFetch(uFrame, ivec2(fc), 0);
+  float em = dot(floor(m.gba * 255.0 + 0.5), vec3(65536.0, 256.0, 1.0));
+  if (e + 2.0 >= em) discard;  // only where it stood in front of what's drawn
+  o = vec4(texelFetch(uPalette, ivec2(int(t.r * 255.0 + 0.5), uLut), 0).rgb, uAlpha);
+}
+`;
+
+// A sprite's outline (D-170): a few art pixels round its shape (about 6 target px at any zoom), in its colour, over everything (a unit
+// hidden behind a building too).
+const OUTLINE_FS = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp sampler2D uImage;
+uniform vec2 uRectOrigin;   // target px of the rect uWidth art px larger each way than the image
+uniform float uZoom;
+uniform vec2 uCanvas;
+uniform vec4 uColor;
+uniform int uWidth;         // art px
+out vec4 o;
+bool solid(ivec2 p) {
+  ivec2 n = textureSize(uImage, 0);
+  return p.x >= 0 && p.y >= 0 && p.x < n.x && p.y < n.y && texelFetch(uImage, p, 0).a >= 0.5;
+}
+void main() {
+  vec2 fc = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y);
+  ivec2 p = ivec2(floor((fc - uRectOrigin) / uZoom)) - uWidth;
+  if (solid(p)) discard;
+  float r = float(uWidth * uWidth) + 0.5 * float(uWidth);
+  for (int dy = -3; dy <= 3; dy++)
+    for (int dx = -3; dx <= 3; dx++)
+      if (abs(dx) <= uWidth && abs(dy) <= uWidth && float(dx * dx + dy * dy) <= r && solid(p + ivec2(dx, dy))) {
+        o = uColor;
+        return;
+      }
+  discard;
+}
+`;
+
+/** How many sprites can see through what stands in front of them at once (D-154). */
+export const MAX_REVEALS = 12;
+
 const QUAD_FS = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
@@ -65,9 +142,10 @@ uniform vec2 uDepthRange;
 uniform int uMode;          // 0 = normal, 1 = occluded silhouette, 2 = bare tile inside the reveal
 uniform float uSilhouette;  // palette index / 255
 uniform int uRevealOn;      // tiles in front of a player see-through (normal mode)
-uniform vec4 uReveal;       // the reveal ellipse: centre, radii (absolute art px)
-uniform float uRevealS;     // the player's u + v
-uniform float uRevealDensity;
+uniform int uRevealCount;
+uniform vec4 uReveal[${MAX_REVEALS}];       // each reveal's ellipse: centre, radii (absolute art px)
+uniform float uRevealS[${MAX_REVEALS}];     // its sprite's u + v
+uniform float uRevealDensity[${MAX_REVEALS}];
 out vec4 o;
 
 const float BAYER[16] = float[16](
@@ -87,18 +165,23 @@ void main() {
   float d = uDepthBase + local;
   float z = clamp(1.0 - (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x), 0.0, 1.0);
   if (uRevealOn == 1 || uMode == 2) {
-    float r = length((art - uReveal.xy) / uReveal.zw);
-    if (uMode == 2) {
-      if (r >= 1.0) discard;  // a bare tile fills only the reveal, where the tiles let it through
-    } else if (r < 1.0) {
-      // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
-      float s = art.y / 32.0 + 0.75 * d;
-      if (s > uRevealS + 0.5) {
-        ivec2 ap = ivec2(floor(art));
-        float k = uRevealDensity * smoothstep(1.0, 0.7, r);  // a dithered edge
-        if ((BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0 < k) discard;
+    // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
+    float s = art.y / 32.0 + 0.75 * d;
+    ivec2 ap = ivec2(floor(art));
+    float dither = (BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0;
+    bool inside = false;
+    for (int i = 0; i < ${MAX_REVEALS}; i++) {
+      if (i >= uRevealCount) break;
+      float r = length((art - uReveal[i].xy) / uReveal[i].zw);
+      if (r >= 1.0) continue;
+      inside = true;
+      if (uMode != 2 && s > uRevealS[i] + 0.5) {
+        // a dithered edge, or at full density a clean cut
+        float k = uRevealDensity[i] >= 1.0 ? 1.0 : uRevealDensity[i] * smoothstep(1.0, 0.7, r);
+        if (dither < k) discard;
       }
     }
+    if (uMode == 2 && !inside) discard;  // a bare tile fills only the reveals, where the tiles let it through
   }
   gl_FragDepth = z;
   if (uMode == 1) {
@@ -152,10 +235,13 @@ export interface SpriteInstance {
   silhouetteIndex?: number;
   /**
    * Show what this sprite stands behind (D-079): within `margin` px of it,
-   * world pixels in front of it are dithered away (`density` of them, 0–1)
-   * over the bare tiles (`TileRequest.bare`). The first such sprite of a frame counts.
+   * world pixels in front of it are dithered away (`density` of them, 0–1;
+   * at 1 a clean cut) over the bare tiles (`TileRequest.bare`). The first
+   * `MAX_REVEALS` such sprites of a frame count.
    */
   reveal?: Reveal | null;
+  /** An outline round it in this colour (0–255 each), drawn over everything (D-170), or none. */
+  outline?: readonly [number, number, number] | null;
 }
 
 export interface Reveal {
@@ -190,6 +276,10 @@ export class Compositor {
   private palU: Uniforms;
   private vao: WebGLVertexArrayObject;
   private paletteTex: WebGLTexture | null = null;
+  private readonly loneProg: WebGLProgram;
+  private readonly loneU: Uniforms;
+  private readonly outlineProg: WebGLProgram;
+  private readonly outlineU: Uniforms;
   private target: {
     w: number;
     h: number;
@@ -218,6 +308,10 @@ export class Compositor {
     this.palProg = compileProgram(gl, PALETTE_VS, PALETTE_FS);
     this.quadU = new Uniforms(gl, this.quadProg);
     this.palU = new Uniforms(gl, this.palProg);
+    this.loneProg = compileProgram(gl, LONE_VS, LONE_FS);
+    this.loneU = new Uniforms(gl, this.loneProg);
+    this.outlineProg = compileProgram(gl, LONE_VS, OUTLINE_FS);
+    this.outlineU = new Uniforms(gl, this.outlineProg);
     this.vao = gl.createVertexArray()!;
   }
 
@@ -264,6 +358,8 @@ export class Compositor {
     this.steamPass = null;
     gl.deleteProgram(this.quadProg);
     gl.deleteProgram(this.palProg);
+    gl.deleteProgram(this.loneProg);
+    gl.deleteProgram(this.outlineProg);
     gl.deleteVertexArray(this.vao);
   }
 
@@ -294,9 +390,9 @@ export class Compositor {
   }
 
   /**
-   * Draw a frame. With `bare` tiles (those under a revealing sprite, all of
-   * them baked), the first sprite with `reveal` sees through what stands in
-   * front of it. `behind` (tiles' ground alone, while they bake) fills only
+   * Draw a frame. With `bare` tiles (those under the revealing sprites, all
+   * of them baked), the first `MAX_REVEALS` sprites with `reveal` see through
+   * what stands in front of them. `behind` (tiles' ground alone, while they bake) fills only
    * what nothing else covers: drawn a little further back than it stands.
    */
   render(
@@ -306,6 +402,7 @@ export class Compositor {
     fogs: readonly (FogDraw | SteamDraw)[] = [],
     bare: GpuImage[] = [],
     behind: GpuImage[] = [],
+    lone: readonly { image: GpuImage; alpha: number }[] = [],
   ): void {
     const gl = this.gl;
     // the canvas's own pixels; the view's top-left in absolute art px, and target px per art px
@@ -354,13 +451,23 @@ export class Compositor {
         s.sy + s.sprite.image.top,
         s.depth + s.sprite.image.depthBase,
       ] as const;
-    const rv = bare.length ? sprites.find((s) => s.reveal) : undefined;
-    const box = rv && revealRect(rv);
+    const reveals = bare.length ? sprites.filter((s) => s.reveal).slice(0, MAX_REVEALS) : [];
+    const box = reveals.length > 0;
     if (box) {
-      // the ellipse in absolute art px
-      gl.uniform4f(u.loc("uReveal"), (box.left + box.right) / 2, (box.top + box.bottom) / 2, (box.right - box.left) / 2, (box.bottom - box.top) / 2);
-      gl.uniform1f(u.loc("uRevealS"), rv!.sy / 32 + 0.75 * rv!.depth); // its u + v, as the shader works it out
-      gl.uniform1f(u.loc("uRevealDensity"), Math.min(1, Math.max(0, rv!.reveal!.density)));
+      const ellipses = new Float32Array(4 * MAX_REVEALS);
+      const fronts = new Float32Array(MAX_REVEALS);
+      const densities = new Float32Array(MAX_REVEALS);
+      reveals.forEach((rv, i) => {
+        // the ellipse in absolute art px; the sprite's u + v, as the shader works it out
+        const b = revealRect(rv)!;
+        ellipses.set([(b.left + b.right) / 2, (b.top + b.bottom) / 2, (b.right - b.left) / 2, (b.bottom - b.top) / 2], 4 * i);
+        fronts[i] = rv.sy / 32 + 0.75 * rv.depth;
+        densities[i] = Math.min(1, Math.max(0, rv.reveal!.density));
+      });
+      gl.uniform4fv(u.loc("uReveal"), ellipses);
+      gl.uniform1fv(u.loc("uRevealS"), fronts);
+      gl.uniform1fv(u.loc("uRevealDensity"), densities);
+      gl.uniform1i(u.loc("uRevealCount"), reveals.length);
     }
     gl.uniform1i(u.loc("uRevealOn"), box ? 1 : 0);
     for (const tile of tiles) draw(tile, tile.image.left, tile.image.top, tile.image.depthBase, 0);
@@ -384,6 +491,7 @@ export class Compositor {
     }
     gl.depthMask(true);
     gl.depthFunc(gl.LESS);
+
     gl.disable(gl.DEPTH_TEST);
 
     // Atmosphere: fog dithered into the indices, from the depth beside them; each pass after the last, taking turns between two targets.
@@ -419,5 +527,70 @@ export class Compositor {
     gl.uniform1i(p.loc("uLut"), this.lut);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.activeTexture(gl.TEXTURE0);
+
+    // Buildings on their own (D-162), far to near, each at its opacity, where it stood in front of what's drawn
+    if (lone.length) {
+      gl.useProgram(this.loneProg);
+      const L = this.loneU;
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, shown);
+      gl.uniform1i(L.loc("uFrame"), 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+      gl.uniform1i(L.loc("uPalette"), 2);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1i(L.loc("uImage"), 0);
+      gl.uniform2f(L.loc("uTarget"), w, h);
+      gl.uniform2f(L.loc("uCanvas"), this.canvas.width, this.canvas.height);
+      gl.uniform1f(L.loc("uZoom"), k);
+      gl.uniform2fv(L.loc("uDepthRange"), frame.depthRange);
+      gl.uniform1i(L.loc("uLut"), this.lut);
+      for (const { image: img, alpha } of lone) {
+        const x = (img.image.left - ox) * k;
+        const y = (img.image.top - oy) * k;
+        if (alpha <= 0 || x >= w || y >= h || x + img.image.width * k <= 0 || y + img.image.height * k <= 0) continue;
+        gl.bindTexture(gl.TEXTURE_2D, img.texture);
+        gl.uniform2f(L.loc("uRectOrigin"), x, y);
+        gl.uniform2f(L.loc("uRectSize"), img.image.width, img.image.height);
+        gl.uniform1f(L.loc("uDepthBase"), img.image.depthBase);
+        gl.uniform1f(L.loc("uAlpha"), alpha);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
+      gl.disable(gl.BLEND);
+      for (const unit of [2, 1, 0]) {
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
+    }
+
+    // Outlines round sprites (D-170), over everything
+    const outlined = sprites.filter((s) => s.outline);
+    if (outlined.length) {
+      gl.useProgram(this.outlineProg);
+      const O = this.outlineU;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1i(O.loc("uImage"), 0);
+      gl.uniform2f(O.loc("uTarget"), w, h);
+      gl.uniform2f(O.loc("uCanvas"), this.canvas.width, this.canvas.height);
+      gl.uniform1f(O.loc("uZoom"), k);
+      const m = Math.min(3, Math.max(1, Math.round(6 / k)));
+      gl.uniform1i(O.loc("uWidth"), m);
+      for (const s of outlined) {
+        const [left, top] = spriteAt(s);
+        const img = s.sprite;
+        const x = (left - m - ox) * k;
+        const y = (top - m - oy) * k;
+        if (x >= w || y >= h || x + (img.image.width + 2 * m) * k <= 0 || y + (img.image.height + 2 * m) * k <= 0) continue;
+        const [r, g, b] = s.outline!;
+        gl.bindTexture(gl.TEXTURE_2D, img.texture);
+        gl.uniform2f(O.loc("uRectOrigin"), x, y);
+        gl.uniform2f(O.loc("uRectSize"), img.image.width + 2 * m, img.image.height + 2 * m);
+        gl.uniform4f(O.loc("uColor"), r / 255, g / 255, b / 255, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
   }
 }

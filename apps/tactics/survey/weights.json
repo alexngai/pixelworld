@@ -1,0 +1,7 @@
+{
+ "parts": { "readability": 0.35, "interactables": 0.35, "character": 0.3 },
+ "readability": { "hidden": 0.45, "terraced": 0.3, "clearance": 0.25 },
+ "interactables": { "water": 0.15, "fire": 0.15, "topples": 0.2, "leaps": 0.15, "bands": 0.2, "chokepoints": 0.15 },
+ "character": { "landmark": 0.3, "signature": 0.3, "richness": 0.25, "age": 0.15 },
+ "penalty": { "hidden": 0.25 }
+}

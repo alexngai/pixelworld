@@ -251,6 +251,7 @@ interface WorldView {
   isDrawn(x, y): boolean; prefetch(x, y, radius?): Promise<void>;      // baking ahead (D-073)
   stats(): ViewStats; tileBakes(): TileBake[]; timeFrames(n): number;
   bakeObject(id): Promise<((BakedImage & { rotation }) | null)[]>; // the hero tool's bake
+  bakeTopDown(x0, y0, x1, y1, { px?, tilt?, shadows? }?): Promise<TopDownImage | null>; // a rectangle from above, north up (D-155): RGBA in the day palette, and the baked indices
   onFrame(listener: (e: FrameEvent) => void): () => void;          // FrameEvent: the FrameClock, now, drawn
   serialize(): ViewState; restore(state: ViewState): void;         // camera, every layer's state, the controller's
   destroy(): void;
@@ -362,6 +363,8 @@ const { world, query, edits, stats } = await openWorld({ worldUrl, style, base?,
 stats()                               // { chunksLoaded, chunksTotal, chunksMB, chunksEvicted } (D-120)
 
 view.edits.remove([hit.index])        // take placed objects out (D-124): { op, objects } or null; restore(objects?), apply(op)
+view.edits.cells([{ x, y, surface?, water?, height? }])   // edit terrain cells (D-147): { op: "cells", cells } or null
+view.query.object(index)              // a placed object's data (footprint, real height, storeys, year…), or null
 view.edits.list()                     // the ops that changed something, to send and replay; removed(), isRemoved(i), version, onChange(f)
 ```
 
@@ -372,9 +375,10 @@ view.edits.list()                     // the ops that changed something, to send
 - **Road width:** the way's real width (D-050), else the style's for its class, as drawn.
 - **`pick`** follows the view ray down through the loaded ground and water and refines the hit by bisection. It works before anything is drawn and reads nothing back from the GPU. It goes through objects to the ground behind them.
 - **`pickObject`** (D-124) follows the same ray down from the highest object top to that ground, and answers the first placed object whose footprint (a landmark's plan, a tree's cell) and estimated height it passes through (`objectsAt` at each eighth of a step); an object without a `top` (a tree, a prop) is taken to reach 3 steps over its base at render scale 1. A roof drawn above its estimate (a spire) or a pitched roof's eaves can miss; the tiles keep no object ids to read back.
-- **Edits (`view.edits`, `openWorld(…).edits`, D-124):** placed objects taken out at runtime and put back, named by `ObjectHit.index` (the object's place in the objects file, stable for a package). `objectsAt`, `pickObject` and `landmarks` stop answering for a removed object at once. A view bakes again the tiles whose bake builds it (its anchor in their slice of cells and context margin, or its big footprint reaching into it: where its pixels, shadow and ambient occlusion fall), in the rotation shown first, each old image drawn until its new one is ready (`ready()` waits for them); in the other rotations they are let go, to bake when turned to. An edited tile is cached under the removed objects its bake leaves out, never the plain key, so putting them back finds the old tiles again. `list()` is the ops that changed something, each with only the objects it changed: `apply` them to another world to replay them; an op naming objects the world hasn't is ignored. Terrain (heights, surfaces, water, roads) can't be edited yet. Objects loaded by chunk (an `openWorld` on a package with `objectChunks`, D-123) can't be named yet: a chunk's file doesn't say an object's place in the whole, so their hits have `index` −1 and edits leave them.
+- **Edits (`view.edits`, `openWorld(…).edits`, D-124):** placed objects taken out at runtime and put back, named by `ObjectHit.index` (the object's place in the objects file, stable for a package). `objectsAt`, `pickObject` and `landmarks` stop answering for a removed object at once. A view bakes again the tiles whose bake builds it (its anchor in their slice of cells and context margin, or its big footprint reaching into it: where its pixels, shadow and ambient occlusion fall), in the rotation shown first, each old image drawn until its new one is ready (`ready()` waits for them); in the other rotations they are let go, to bake when turned to. An edited tile is cached under the removed objects its bake leaves out, never the plain key, so putting them back finds the old tiles again. `list()` is the ops that changed something, each with only the objects it changed: `apply` them to another world to replay them; an op naming objects the world hasn't is ignored. Objects loaded by chunk (an `openWorld` on a package with `objectChunks`, D-123) can't be named yet: a chunk's file doesn't say an object's place in the whole, so their hits have `index` −1 and edits leave them.
 - **Occupancy (`objectsAt`, M4):** the objects the style draws, indexed in 8-cell buckets on first use. A footprint occupies its polygon (edges included). A registry landmark drawn from its anchor (City Hall, Coit Tower, the Strat) occupies where its model stands, in plan: the voxel columns of the model the bake generates for it (seed, height, quarter turns), worked out the first time a query comes within 16 cells (D-073); City Hall's wings now block, 5.6 × 7.9 cells, where its anchor's cell did. Where the model can't be generated on the page, and for any other object without a footprint (a tree, a prop), it is the anchor's cell. `base` is where it is built (its lowest footprint corner, or its own base); `top` is estimated as the bake draws it: a crest where it has one (dams, bridge decks), else `base + 2 · hm · stretch / m` (its real height at the object voxel scale, D-010, and the level's height stretch, D-047), or null where the world gives no height (trees, props, city blocks). Empty with `objects: false`. The game blocks its car on buildings and landmarks other than bridges, and crashes its plane into a tower's top.
 - **Landmarks (`landmarks`, M4):** one entry per registry id at the middle of its parts' anchors, named by its largest part's group. Names are for people and stay in the registry (D-051); the game names them for its HUD.
+- **Terrain edits (`edits.cells`, D-147):** a cell's surface (by the world's surface names), water level (or null to drain it) and height (the ground levelled there, its neighbours sloping to meet it); a later edit of a cell keeps the fields it doesn't name, and an edit outside the world, of a surface it hasn't or not a number is left out. They are kept in the chunk store and stamped into each chunk as it loads, so `heightAt`, `surfaceAt`, the bake's slices and a server's `openWorld` agree, and a chunk the budget let go comes back edited; object bases follow the ground. A view bakes again the tiles whose slice (cells and context margin) an edit reaches, a height's neighbours too, as for objects; each tile is cached under the edits its slice holds, in the order stamped. A world without `micro.shores` draws water where the surface is `water`, not where a level stands, so set both there. Roads can't be edited yet, nor tile height ranges widened by a raised cell.
 - **The fog as a number (`fogSampler(world, query)`, D-125):** the style's fog at a point, a height and a time (`at(x, y, h, seconds, night?)`, 0–1), as the fog layer draws it then (its areas, ceiling, drift and patches), or null where the style has none; on a server through `openWorld`, for a game in which fog hides things.
 
 ### 7.6.1 Cells for games (D-125)
@@ -386,13 +390,29 @@ findPath(cells, from, to, { cost?, minCost?, maxClimb? })   // A*, eight ways, s
 lineClear(cells, a, b, opts); canStep(cells, ax, ay, bx, by, opts); walkable(cells, cx, cy, opts); nearestWalkable(…)
 lineOfSight(cells, eye, point)        // nothing on the cells between (`top`) above the line; heights absolute (steps)
 viewshed(cells, eye, radius, out, { targetHeight?, reach? })   // each cell seen: its distance to the nearest eye, into `out`
-setRemoved(cells, isRemoved, objects?); followEdits(cells, view.edits)   // cells open and tops drop as objects go
+setRemoved(cells, isRemoved, objects?); followEdits(cells, view.edits, query?)   // cells open and tops drop as objects go; read again under terrain edits
 ```
 
 - **What it is:** a rectangle of a level read once from its queries, as plain arrays (index `(cy − y0) · w + cx − x0`), for what a game works out over cells many times a tick: paths, places, sight. A server keeps a copy per room and applies its own match's edits (`setRemoved`) without the world they share; a page follows its view's (`followEdits`).
 - **Walls and tops:** an object walls the cells it stands on unless it is trees or a prop (`wall`, `trees` to choose otherwise); each cell keeps its objects (`objects`) and its highest top (an object's, or its base and `defaultHeight` where the world gives none, 3 steps), which lines of sight pass over. One reads out of and into the cells the eye and the point stand on, so woods hide what is behind them but not their edge.
 - **Paths:** `cost(i)` is the game's (its roads, woods and own buildings; Infinity where nothing may stand), `minCost` the least it gives (A*'s guess), `maxClimb` the steepest step between neighbours.
-- **Not yet:** shadow casting for many eyes (a ray a cell is O(r³) an eye), cells that follow terrain edits.
+- **Terrain edits (D-147):** given the queries, `followEdits` reads again the cells an edit changed (an object taken out stays on its cell's list, so putting it back finds it).
+- **Not yet:** shadow casting for many eyes (a ray a cell is O(r³) an eye).
+
+### 7.6.2 Boards at any resolution (D-148)
+
+```ts
+const boards = new Boards(view)       // or an openWorld; keeps every board to the world's edits
+const b = await boards.add({ x0, y0, w: 16, h: 16, cell: 0.5, samples? })   // board cells of half a world cell
+b.flags, b.height, b.top, b.surface, b.roadClass, b.objects   // Cells, in board coordinates: findPath(b, …), lineOfSight(b, …), viewshed(b, …)
+b.water[i]; b.object[i]; b.cover[i]; b.origin; b.cell; b.metersPerCell
+toBoard(b, x, y); toWorld(b, p); boardCellAt(b, x, y); boardRect(b, i); boardCellsUnder(b, area)
+boards.onChange((board, cells) => …); boards.at(x, y)
+cutBoard(query, world, spec)          // one board, not kept to edits
+```
+
+- **Sampling:** each board cell is sampled `samples`² times (two a world cell by default, 1–8): its mean ground, the most common surface and road class, water and walls where they cover most of it, trees where any stand, and the object that stands tallest on most of its points (`object`, `cover`). At one sample a world cell it is `readCells`'s grid.
+- **Several on one map:** `Boards` samples again the cells of every board an op reaches (objects taken out or put back, terrain edited), whichever game made it; `add` loads the ground round a board as far as a building standing on it may reach, so its tops are known.
 
 ### 7.7 What moved where
 

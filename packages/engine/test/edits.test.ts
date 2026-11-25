@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EditLog, TileEdits } from "../src/edits";
 import { ObjectIndex } from "../src/objects";
 import { createQuery, type QuerySource } from "../src/queries";
-import { objectTiles, tileCacheKey, type LoadedWorld } from "../src/world";
+import { objectTiles, tileCacheKey, tileCells, type LoadedWorld } from "../src/world";
 
 /**
  * Runtime world edits (D-124): the op log, the queries leaving out removed
@@ -140,6 +140,34 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect(objectTiles(w, 9)).toEqual([]);
   });
 
+  it("cuts down objects per rotation (D-159): a tile's cuts in one rotation leave the others' alone", () => {
+    const tiles = new TileEdits((i) => objectTiles(w, i));
+    const touched = tiles.setCuts(new Map([[1, 4.5]]), [2]);
+    expect(touched.map(([r, ts]) => [r, sorted(ts)])).toEqual([[2, ["1,1", "1,2", "2,1", "2,2"]]]);
+    expect(tiles.cutFor(1, 2, 2)).toBe("1:4.5");
+    expect(tiles.cutFor(1, 2, 0)).toBe("");
+    // all four at once; then the same again touches nothing
+    tiles.setCuts(new Map([[1, 4.5], [3, 2]]));
+    expect([0, 1, 2, 3].map((r) => tiles.cutFor(1, 0, r))).toEqual(["3:2", "3:2", "3:2", "3:2"]);
+    expect(tiles.setCuts(new Map([[1, 4.5], [3, 2]])).every(([, ts]) => ts.length === 0)).toBe(true);
+    // none in one rotation
+    tiles.setCuts(new Map(), [1]);
+    expect([tiles.cutFor(2, 2, 1), tiles.cutFor(2, 2, 3)]).toEqual(["", "1:4.5"]);
+  });
+
+  it("keeps the cuts made always apart from the cutaway's (D-167, D-168): the plain tile has the first, the cutaway both", () => {
+    const tiles = new TileEdits((i) => objectTiles(w, i));
+    tiles.setCuts(new Map([[1, 4.5]]), [0]);
+    tiles.setCuts(new Map([[1, 0.1], [3, 2]]), [0], true);
+    expect(tiles.cutFor(1, 1, 0, false)).toBe("1:0.1");
+    expect(tiles.cutFor(1, 1, 0)).toBe("1:0.1"); // the lower where both cut
+    expect([tiles.cutFor(2, 0, 0, false), tiles.cutFor(2, 0, 0)]).toEqual(["3:2", "3:2"]);
+    expect([tiles.hasCuts(1, 1, 0), tiles.hasCuts(2, 0, 0)]).toEqual([true, false]);
+    // replacing one set leaves the other
+    tiles.setCuts(new Map(), [0], true);
+    expect([tiles.cutFor(1, 1, 0, false), tiles.cutFor(1, 1, 0)]).toEqual(["", "1:4.5"]);
+  });
+
   it("each tile knows the removed objects its bake reaches", () => {
     const tiles = new TileEdits((i) => objectTiles(w, i));
     expect(sorted(tiles.apply({ op: "remove", objects: [2, 1] }))).toEqual(["0,2", "0,3", "1,1", "1,2", "1,3", "2,1", "2,2", "2,3", "3,2", "3,3"]);
@@ -158,5 +186,44 @@ describe("the tiles an edit bakes again (D-124)", () => {
     expect(key(t, [1, 2])).toMatch(/\|0:1,2\|edits:1,2$/);
     expect(key(t, [1, 2])).toBe(key(t, [1, 2]));
     expect(key(t, [1, 2])).not.toBe(key(t, [2]));
+  });
+});
+
+describe("terrain edits as the tiles see them (D-147)", () => {
+  // tiles 32 cells, a 16-cell context margin, a 128-cell world
+  const store = { editsIn: (x0: number, y0: number, x1: number, y1: number) => `edits of ${x0},${y0}–${x1},${y1}` };
+  const w = { tileSize: 32, margin: 16, manifest: { cellsX: 128, cellsY: 128 }, store } as unknown as LoadedWorld;
+  const sorted = (t: [number, number][]) => t.map(([x, y]) => `${x},${y}`).sort();
+
+  it("the log takes cell ops through the world's editor, and a bad one changes nothing", () => {
+    const applied: unknown[] = [];
+    const log = new EditLog(5, (cells) => {
+      applied.push(cells);
+      return cells.filter((c) => c.x >= 0);
+    });
+    expect(log.cells([{ x: 3, y: 4, surface: "rock" }, { x: -1, y: 0, water: 2 }])).toEqual({ op: "cells", cells: [{ x: 3, y: 4, surface: "rock" }] });
+    expect(log.cells([{ x: -2, y: 0, height: 1 }])).toBeNull();
+    expect(log.apply({ op: "cells", cells: "no" } as never)).toBeNull();
+    expect(log.version).toBe(1);
+    expect(log.list()).toEqual([{ op: "cells", cells: [{ x: 3, y: 4, surface: "rock" }] }]);
+    // a world without an editor has no terrain to edit
+    expect(new EditLog(5).cells([{ x: 1, y: 1, surface: "rock" }])).toBeNull();
+  });
+
+  it("an op bakes again the tiles whose slice it reaches, a height's neighbours too, and each tile knows the edits it holds", () => {
+    const tiles = new TileEdits(() => [], tileCells(w));
+    // a surface at 40,10 is in tiles 0,0 and 1,0's slices (0–48 and 16–80 across)
+    expect(sorted(tiles.apply({ op: "cells", cells: [{ x: 40, y: 10, surface: "rock" }] }))).toEqual(["0,0", "1,0"]);
+    // a height at 47,10 moves corners of 48,10 too: tile 2,0's slice starts at 48
+    expect(sorted(tiles.apply({ op: "cells", cells: [{ x: 47, y: 10, height: 3 }] }))).toEqual(["0,0", "1,0", "2,0"]);
+    expect(tiles.cellsFor(1, 0)).toBe("edits of 16,0–80,48");
+  });
+
+  it("an edited tile is cached under its edits themselves", () => {
+    const key = tileCacheKey({ ...w, manifest: { id: "sf", packageHash: "p1" }, styleJson: {}, renderScale: 1 } as unknown as LoadedWorld, [], "c0de");
+    const t = { rotation: 0, tx: 1, ty: 2 } as const;
+    expect(key(t, [], "")).toBe(key(t));
+    expect(key(t, [3], "40,10,1,,")).toMatch(/\|0:1,2\|edits:3\|cells:40,10,1,,$/);
+    expect(key(t, [], "40,10,1,,")).not.toBe(key(t, [], "40,10,2,,"));
   });
 });

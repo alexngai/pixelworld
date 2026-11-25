@@ -1,4 +1,4 @@
-import type { BakeScene, BakedImage } from "@pixelworlds/bake";
+import type { BakeScene } from "@pixelworlds/bake";
 import {
   buildBoxesMesh,
   generateModel,
@@ -292,17 +292,4 @@ export function previewScene(model: VoxelModel, groundRamp: number | null): Bake
   return { meshes, batches: [] };
 }
 
-/** A baked image in a palette's colours (RGBA); empty pixels stay transparent. */
-export function paletteImage(image: BakedImage, palette: Palette): Uint8ClampedArray<ArrayBuffer> {
-  const out = new Uint8ClampedArray(image.width * image.height * 4);
-  const src = image.pixels;
-  for (let i = 0; i < out.length; i += 4) {
-    if (src[i + 3] === 0) continue;
-    const p = src[i]! * 4;
-    out[i] = palette.rgba[p]!;
-    out[i + 1] = palette.rgba[p + 1]!;
-    out[i + 2] = palette.rgba[p + 2]!;
-    out[i + 3] = 255;
-  }
-  return out;
-}
+export { paletteImage } from "@pixelworlds/engine";

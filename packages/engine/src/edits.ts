@@ -1,17 +1,24 @@
-import type { WorldEdit, WorldEdits } from "./types";
+import type { CellEdit, WorldEdit, WorldEdits } from "./types";
 
 /**
  * A world's runtime edits (D-124): placed objects taken out and put back, by
- * their index in the objects file, as a log of the ops that changed
- * something. The queries read `isRemoved`; a view also keeps `TileEdits`.
+ * their index in the objects file, and terrain cells edited (D-147), as a log
+ * of the ops that changed something. The queries read `isRemoved` and the
+ * edited chunks; a view also keeps `TileEdits`.
  */
 export class EditLog implements WorldEdits {
   private readonly gone = new Set<number>();
   private readonly ops: WorldEdit[] = [];
   private readonly listeners = new Set<(e: WorldEdit) => void>();
 
-  /** @param count The world's placed objects: indices outside them are left out. */
-  constructor(private readonly count: number) {}
+  /**
+   * @param count The world's placed objects: indices outside them are left out.
+   * @param editCells Applies cell edits to the world's terrain, returning those that applied (`cellEditor`); without it there are none.
+   */
+  constructor(
+    private readonly count: number,
+    private readonly editCells: ((cells: CellEdit[]) => CellEdit[]) | null = null,
+  ) {}
 
   get version(): number {
     return this.ops.length;
@@ -25,8 +32,16 @@ export class EditLog implements WorldEdits {
     return this.apply({ op: "restore", objects: [...objects] });
   }
 
+  cells(cells: Iterable<CellEdit>): WorldEdit | null {
+    return this.apply({ op: "cells", cells: [...cells] });
+  }
+
   apply(edit: WorldEdit): WorldEdit | null {
     // ops come from the network too: a bad one changes nothing
+    if (edit?.op === "cells") {
+      const done = Array.isArray(edit.cells) && this.editCells ? this.editCells(edit.cells) : [];
+      return done.length ? this.record({ op: "cells", cells: done }) : null;
+    }
     if ((edit?.op !== "remove" && edit?.op !== "restore") || !Array.isArray(edit.objects)) return null;
     const remove = edit.op === "remove";
     const changed: number[] = [];
@@ -37,10 +52,14 @@ export class EditLog implements WorldEdits {
       changed.push(i);
     }
     if (!changed.length) return null;
-    const done: WorldEdit = { op: edit.op, objects: changed };
+    return this.record({ op: edit.op, objects: changed });
+  }
+
+  /** Log an op that changed something and tell the listeners: each gets its own copy. */
+  private record(done: WorldEdit): WorldEdit {
     this.ops.push(done);
-    for (const f of [...this.listeners]) f({ op: done.op, objects: [...changed] });
-    return { op: done.op, objects: [...changed] };
+    for (const f of [...this.listeners]) f(copy(done));
+    return copy(done);
   }
 
   isRemoved(object: number): boolean {
@@ -52,7 +71,7 @@ export class EditLog implements WorldEdits {
   }
 
   list(): WorldEdit[] {
-    return this.ops.map((o) => ({ op: o.op, objects: [...o.objects] }));
+    return this.ops.map(copy);
   }
 
   onChange(listener: (edit: WorldEdit) => void): () => void {
@@ -61,19 +80,52 @@ export class EditLog implements WorldEdits {
   }
 }
 
+const copy = (e: WorldEdit): WorldEdit => (e.op === "cells" ? { op: e.op, cells: e.cells.map((c) => ({ ...c })) } : { op: e.op, objects: [...e.objects] });
+
+/** The cells an edit of these changes, half-open [x0, y0, x1, y1]: a height's neighbours too (they share its corners). */
+export function cellsArea(cells: readonly CellEdit[]): [number, number, number, number] | null {
+  if (!cells.length) return null;
+  const a: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const c of cells) {
+    const r = c.height !== undefined ? 1 : 0;
+    a[0] = Math.min(a[0], c.x - r);
+    a[1] = Math.min(a[1], c.y - r);
+    a[2] = Math.max(a[2], c.x + 1 + r);
+    a[3] = Math.max(a[3], c.y + 1 + r);
+  }
+  return a;
+}
+
+/** Terrain edits as a view's tiles see them (D-147): the tiles whose slice an area reaches, and a tile's edits (`ChunkStore.editsIn`). */
+export interface TileCells {
+  tiles(area: [number, number, number, number]): [number, number][];
+  key(tx: number, ty: number): string;
+}
+
 /**
- * Which removed objects each bake tile's bake reaches (D-124): what it leaves
- * out, what its kept scene and cache key are made from, and which tiles an op
+ * Which removed objects each bake tile's bake reaches (D-124), and which
+ * terrain edits its slice holds (D-147): what it leaves out and is made from,
+ * what its kept scene and cache key are made from, and which tiles an op
  * makes out of date.
  */
 export class TileEdits {
   private readonly byTile = new Map<string, Set<number>>();
 
-  /** @param tilesOf The tiles whose bake builds an object (`objectInSlice`), as [tx, ty]. */
-  constructor(private readonly tilesOf: (object: number) => [number, number][]) {}
+  /**
+   * @param tilesOf The tiles whose bake builds an object (`objectInSlice`), as [tx, ty].
+   * @param terrain The tiles terrain edits reach, and each one's edits.
+   */
+  constructor(
+    private readonly tilesOf: (object: number) => [number, number][],
+    private readonly terrain: TileCells | null = null,
+  ) {}
 
   /** Note an op that changed something; the tiles it touches. */
   apply(e: WorldEdit): [number, number][] {
+    if (e.op === "cells") {
+      const area = cellsArea(e.cells);
+      return area && this.terrain ? this.terrain.tiles(area) : [];
+    }
     const touched = new Map<string, [number, number]>();
     for (const i of e.objects)
       for (const t of this.tilesOf(i)) {
@@ -95,5 +147,67 @@ export class TileEdits {
   removedFor(tx: number, ty: number): number[] {
     const set = this.byTile.get(`${tx},${ty}`);
     return set ? [...set].sort((a, b) => a - b) : [];
+  }
+
+  /** The terrain edits a tile's slice holds (D-147), or "" for none. */
+  cellsFor(tx: number, ty: number): string {
+    return this.terrain?.key(tx, ty) ?? "";
+  }
+
+  /**
+   * Buildings cut down (D-159), for each rotation of the view (what hides a
+   * place depends on the side it's seen from): object → height (world steps),
+   * and the objects whose bake reaches each tile. Two sets: those cut always
+   * (D-168), and the cutaway's own (D-167), drawn only in its variant.
+   */
+  private readonly cuts: Map<number, number>[][] = [0, 1].map(() => [0, 1, 2, 3].map(() => new Map()));
+  private readonly cutByTile: Map<string, Set<number>>[][] = [0, 1].map(() => [0, 1, 2, 3].map(() => new Map()));
+
+  /** Cut these objects down (or none) in these rotations, always or in the cutaway; the tiles whose images change, by rotation. */
+  setCuts(cuts: ReadonlyMap<number, number>, rotations: readonly number[] = [0, 1, 2, 3], always = false): [number, [number, number][]][] {
+    const layer = always ? 0 : 1;
+    return rotations.map((r) => {
+      const was = this.cuts[layer]![r]!;
+      const byTile = this.cutByTile[layer]![r]!;
+      const touched = new Map<string, [number, number]>();
+      const changed = new Set<number>();
+      for (const [i, h] of cuts) if (was.get(i) !== h) changed.add(i);
+      for (const i of was.keys()) if (!cuts.has(i)) changed.add(i);
+      for (const i of changed)
+        for (const t of this.tilesOf(i)) {
+          const at = `${t[0]},${t[1]}`;
+          touched.set(at, t);
+          let set = byTile.get(at);
+          if (cuts.has(i)) {
+            if (!set) byTile.set(at, (set = new Set()));
+            set.add(i);
+          } else if (set) {
+            set.delete(i);
+            if (!set.size) byTile.delete(at);
+          }
+        }
+      this.cuts[layer]![r] = new Map(cuts);
+      return [r, [...touched.values()]] as [number, [number, number][]];
+    });
+  }
+
+  /** Whether the cutaway's own cuts reach a tile's bake in a rotation: it has a cutaway variant (cheap: asked every frame). */
+  hasCuts(tx: number, ty: number, rotation: number): boolean {
+    return !!this.cutByTile[1]![rotation]?.has(`${tx},${ty}`);
+  }
+
+  /** The cuts a tile's bake reaches in a rotation, "index:height,…" in order, or "" for none: those cut always, and in the cutaway its own (the lower where both cut one). */
+  cutFor(tx: number, ty: number, rotation: number, cutaway = true): string {
+    const at = `${tx},${ty}`;
+    const out = new Map<number, number>();
+    for (const layer of cutaway ? [0, 1] : [0])
+      for (const i of this.cutByTile[layer]![rotation]?.get(at) ?? []) {
+        const h = this.cuts[layer]![rotation]!.get(i)!;
+        out.set(i, Math.min(h, out.get(i) ?? Infinity));
+      }
+    return [...out]
+      .sort((a, b) => a[0] - b[0])
+      .map(([i, h]) => `${i}:${h}`)
+      .join(",");
   }
 }

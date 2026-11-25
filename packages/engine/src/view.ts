@@ -1,4 +1,4 @@
-import type { BakedImage } from "@pixelworlds/bake";
+import { topDownProjection, type BakedImage } from "@pixelworlds/bake";
 import { footprintBounds, generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworlds/generators";
 import { project, type Rotation } from "@pixelworlds/grid";
 import {
@@ -7,6 +7,8 @@ import {
   Compositor,
   StartTiles,
   TileCache,
+  MAX_REVEALS,
+  objectInSlice,
   revealRect,
   tileKey,
   worldDepthRange,
@@ -19,7 +21,7 @@ import {
   type TileKey,
   type TileRequest,
 } from "@pixelworlds/runtime";
-import { buildPalette } from "@pixelworlds/style";
+import { buildPalette, type Palette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
 import { GameClock } from "./clock";
 import { Controllers } from "./controller";
@@ -29,6 +31,8 @@ import { Layers } from "./layers";
 import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
 import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
+  TopDownImage,
+  TopDownSprite,
   ControllerHost,
   EntityList,
   FrameEvent,
@@ -58,6 +62,8 @@ import {
   worldInfo,
   worldQuery,
   type LoadedWorld,
+  cellEditor,
+  tileCells,
 } from "./world";
 
 const GPU_BUDGET_BYTES = 192 * 1024 * 1024; // baked tile textures kept on the GPU
@@ -85,6 +91,8 @@ interface TileEntry {
   bare?: boolean;
   /** The ground alone, drawn until the whole tile is baked. */
   ground?: boolean;
+  /** The tile with its cuts (D-167), drawn in its place while the cutaway shows. */
+  cutaway?: boolean;
 }
 
 /** Bake workers by default: the cores less one for the page, at most 4 (each keeps its own copy of the world's objects). */
@@ -122,18 +130,23 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
   cacheKeyReady.catch(() => {}); // awaited below
-  // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them
-  const edits = new EditLog(w.objects?.instances.length ?? 0);
-  const tileEdits = new TileEdits((i) => objectTiles(w, i));
+  // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them;
+  // terrain edited (D-147): each tile's slice holds the edits it reaches, and is kept under those
+  const edits = new EditLog(w.objects?.instances.length ?? 0, cellEditor(w));
+  const tileEdits = new TileEdits((i) => objectTiles(w, i), tileCells(w));
   const prepare = async (t: TileRequest): Promise<PreparedTile> => {
     const removed = tileEdits.removedFor(t.tx, t.ty);
+    // buildings cut down (D-159): those cut always (D-168), and the cutaway's own in its variant (D-167); none on the ground alone or the bare variant
+    const cut = t.ground || t.bare ? "" : tileEdits.cutFor(t.tx, t.ty, t.rotation, !!t.cutaway);
     if (keyed) {
       // a ground request is answered with the whole tile where that is kept
-      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed);
+      const cells = tileEdits.cellsFor(t.tx, t.ty);
+      const key = (await cacheKeyReady)(t.ground ? { rotation: t.rotation, tx: t.tx, ty: t.ty } : t, removed, cells, cut);
       const hit = (await (await start)?.get(key)) ?? (await cache?.get(key));
-      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed };
+      if (hit) return { cached: hit, ...(t.ground ? { whole: true } : {}), removed, ...(cells ? { cells } : {}), ...(cut ? { cut } : {}) };
     }
-    return { slice: await tileSlice(w, t), removed };
+    const { slice, cells } = await tileSlice(w, t);
+    return { slice, removed, ...(cells ? { cells } : {}), ...(cut ? { cut } : {}) };
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
@@ -168,6 +181,8 @@ class View implements WorldView {
   private readonly rs: number;
   private readonly tiles: TileGrid;
   private readonly gpu = new Map<TileKey, TileEntry>();
+  /** The tiles cuts reach drawn as their cutaway variants (D-167). */
+  private cutawayOn = true;
   private gpuBytes = 0;
   private readonly depthRange: [number, number];
   private night = false;
@@ -176,6 +191,9 @@ class View implements WorldView {
   private ratio = 1;
   private resizeObserver: ResizeObserver | null = null;
   private readonly onWindowResize = () => this.fitCanvas();
+  private readonly onVisible = () => {
+    if (document.visibilityState === "visible") this.dirty = true;
+  };
 
   // the frame loop
   private dirty = true;
@@ -211,8 +229,8 @@ class View implements WorldView {
   private readonly idleAsked = new Set<TileKey>();
   private readonly idleDone = new Set<TileKey>();
   private readonly prefetches = new Prefetches();
-  /** Where a revealing entity cleared the world last frame (absolute screen px), or null. */
-  private revealBox: ScreenBox | null = null;
+  /** Where the revealing entities cleared the world last frame (absolute screen px). */
+  private revealBoxes: ScreenBox[] = [];
   /** Tile images on the GPU from before an edit that touches them (D-124): drawn until their new bake is ready. */
   private readonly stale = new Set<TileKey>();
 
@@ -222,7 +240,7 @@ class View implements WorldView {
     private readonly compositor: Compositor,
     private readonly service: BakeService,
     private readonly cache: TileStore | null,
-    private readonly cacheKey: (t: TileRequest, removed?: readonly number[]) => string,
+    private readonly cacheKey: (t: TileRequest, removed?: readonly number[], cells?: string, cut?: string) => string,
     editLog: EditLog,
     private readonly tileEdits: TileEdits,
   ) {
@@ -303,18 +321,28 @@ class View implements WorldView {
         const { meshMs, bakeMs, vertices } = res.stats;
         this.bakes.push({ rotation: res.rotation, tx: res.tx, ty: res.ty, meshMs, bakeMs, vertices });
       }
-      const at = { rotation: res.rotation, tx: res.tx, ty: res.ty, ...(res.bare ? { bare: true } : res.ground ? { ground: true } : {}) };
-      const whole = !res.bare && !res.ground;
+      const at = {
+        rotation: res.rotation,
+        tx: res.tx,
+        ty: res.ty,
+        ...(res.bare ? { bare: true } : res.ground ? { ground: true } : res.cutaway ? { cutaway: true } : {}),
+      };
+      const whole = !res.bare && !res.ground && !res.cutaway;
       // the ground came after the whole tile: not needed
       if (res.ground && this.gpu.has(tileKey(res.rotation, res.tx, res.ty))) return void this.service.forget(res.key);
       // made before an edit that touches it (D-124): asked for again, and drawn only where nothing newer is
       // (a tile that failed to prepare or bake made nothing: it isn't asked for again)
       const failed = !res.fromCache && !res.stats;
-      const outdated = !res.ground && !failed && (res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",");
+      const outdated =
+        !res.ground &&
+        !failed &&
+        ((res.removed ?? []).join(",") !== this.tileEdits.removedFor(res.tx, res.ty).join(",") ||
+          (res.cells ?? "") !== this.tileEdits.cellsFor(res.tx, res.ty) ||
+          (res.cut ?? "") !== (res.bare ? "" : this.tileEdits.cutFor(res.tx, res.ty, res.rotation, !!res.cutaway)));
       if (outdated) this.service.forget(res.key);
       // kept under the objects it was made without, so it is right for the cache whenever it was made
       const put = (img: typeof res.image) => {
-        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed), img);
+        if (img && !res.fromCache && !res.modelsFailed && !res.ground) void this.cache?.put(this.cacheKey(res, res.removed, res.cells, res.cut), img);
       };
       // baked while idle, for later (another rotation, around the view): into the cache, not onto the GPU
       if (this.idleAsked.delete(res.key) && !(res.rotation === this.cam.rotation && this.near.some((t) => t.tx === res.tx && t.ty === res.ty))) {
@@ -351,6 +379,7 @@ class View implements WorldView {
     else {
       this.fitCanvas();
       window.addEventListener("resize", this.onWindowResize);
+      document.addEventListener("visibilitychange", this.onVisible);
       if (typeof ResizeObserver !== "undefined") {
         this.resizeObserver = new ResizeObserver(() => this.fitCanvas());
         this.resizeObserver.observe(this.canvas);
@@ -429,25 +458,30 @@ class View implements WorldView {
   }
 
   /**
-   * Objects taken out or put back (D-124): the tiles whose bake reaches them
-   * bake again. In the rotation shown, each image stays on screen until its
+   * Objects taken out or put back (D-124), or terrain edited (D-147): the
+   * tiles whose bake reaches them bake again. In the rotation shown, each image stays on screen until its
    * new one is ready; in the others, and kept in the cache, they are let go.
    */
-  private edited(tiles: [number, number][]): void {
+  private edited(
+    tiles: [number, number][],
+    rotations: readonly Rotation[] = [0, 1, 2, 3],
+    variants: readonly ("plain" | "bare" | "cutaway")[] = ["plain", "bare", "cutaway"],
+  ): void {
     const r = this.cam.rotation;
     for (const [tx, ty] of tiles)
-      for (const rot of [0, 1, 2, 3] as const)
-        for (const bare of [false, true]) {
-          const key = tileKey(rot, tx, ty, bare);
+      for (const rot of rotations)
+        for (const v of variants) {
+          const key = tileKey(rot, tx, ty, v === "bare", false, v === "cutaway");
           this.idleDone.delete(key);
-          if (rot === r && this.gpu.has(key)) {
+          // (a cutaway no cut reaches any more is let go)
+          if (rot === r && this.gpu.has(key) && (v !== "cutaway" || this.tileEdits.hasCuts(tx, ty, rot))) {
             this.stale.add(key);
             this.service.forget(key);
           } else {
             this.drop(key);
             this.service.forget(key);
             // a ground request answered with the whole tile is done too: its ground shows first again
-            if (!bare) {
+            if (v === "plain") {
               this.service.forget(tileKey(rot, tx, ty, false, true));
               this.baked.set(rot, tx, ty, false);
             }
@@ -530,6 +564,8 @@ class View implements WorldView {
 
   /** Follow the canvas's size on the page. */
   private fitCanvas(): void {
+    // the page may have dropped the canvas's pixels (a pane hidden and shown, a screenshot's resize): draw again
+    this.dirty = true;
     if (this.fixedSize) return;
     const dpr = window.devicePixelRatio || 1;
     const w = Math.round((this.canvas.clientWidth || window.innerWidth) * dpr);
@@ -583,19 +619,21 @@ class View implements WorldView {
     const ground = this.groundFirst
       ? order.filter((t) => t.visible && !this.gpu.has(tileKey(r, t.tx, t.ty))).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, ground: true }))
       : [];
-    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, this.bareWanted(r, order), ground);
+    // the cutaway variants of the tiles cuts reach (D-167), shown or not: ready when the cutaway is turned on
+    const cutaway = order.filter((t) => this.tileEdits.hasCuts(t.tx, t.ty, r)).map((t) => ({ rotation: r, tx: t.tx, ty: t.ty, cutaway: true }));
+    this.wanted = bakeOrder(order, this.aheadTiles(r, info), asked, [...this.bareWanted(r, order), ...cutaway], ground);
     // a tile baked while idle and wanted now: asked for again, the cache has it
     if (this.idleDone.size)
       for (const t of this.wanted) {
-        const k = tileKey(t.rotation, t.tx, t.ty);
+        const k = tileKey(t.rotation, t.tx, t.ty, false, false, t.cutaway);
         if (!t.bare && this.idleDone.delete(k)) this.service.forget(k);
       }
     // nothing else waiting and the camera still: one tile at a time for later (another rotation, around
     // the view); while it moves, the look-ahead has the tiles that matter
     const still = Math.hypot(this.motion.vx, this.motion.vy) < IDLE_SPEED;
-    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground)));
+    const busy = !still || this.wanted.some((t) => !this.has(tileKey(t.rotation, t.tx, t.ty, t.bare, t.ground, t.cutaway)));
     const idle = this.idleBake && !busy ? this.nextIdle(r, info) : null;
-    if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty));
+    if (idle) this.idleAsked.add(tileKey(idle.rotation, idle.tx, idle.ty, false, false, idle.cutaway));
     this.service.want(idle ? [...this.wanted, idle] : this.wanted);
     if (this.prefetches.size) this.prefetches.settle((t) => this.has(tileKey(t.rotation, t.tx, t.ty)));
 
@@ -606,10 +644,13 @@ class View implements WorldView {
     let missingTiles = 0;
     for (const t of order) {
       const entry = this.gpu.get(tileKey(r, t.tx, t.ty));
-      if (entry) {
-        entry.lastDrawn = this.frameNo;
-        if (entry.img) drawTiles.push(entry.img);
-      } else if (t.visible) {
+      // its cutaway in its place while that shows (D-167); both kept as drawn, so switching is at once
+      const cut = this.tileEdits.hasCuts(t.tx, t.ty, r) ? this.gpu.get(tileKey(r, t.tx, t.ty, false, false, true)) : undefined;
+      if (cut) cut.lastDrawn = this.frameNo;
+      const shown = this.cutawayOn && cut ? cut : entry;
+      if (shown?.img) drawTiles.push(shown.img);
+      if (entry) entry.lastDrawn = this.frameNo;
+      else if (t.visible) {
         complete = false;
         missingTiles++;
       }
@@ -659,10 +700,17 @@ class View implements WorldView {
       const ents = this.entityList.draws(r, info.project, info.isDrawn);
       if (!ents.complete) complete = false;
       for (const d of ents.list) sprites.push(d);
-      // a revealing entity: the bare tiles under it, once all of them are baked (asked for from the next frame)
-      const rv = ents.list.find((s) => s.reveal);
-      this.revealBox = rv ? revealRect(rv) : null;
-      const bare = this.revealBox ? this.bareTiles(r, order, this.revealBox) : [];
+      // revealing entities: the bare tiles under each (asked for from the next frame); each sees through once all of
+      // its own are baked, the others wait, so one moving somewhere new doesn't switch the rest off
+      const revealing = ents.list.filter((s) => s.reveal).slice(0, MAX_REVEALS);
+      this.revealBoxes = revealing.map((s) => revealRect(s)!);
+      const bareSet = new Set<GpuImage>();
+      revealing.forEach((s, i) => {
+        const under = this.bareTiles(r, order, this.revealBoxes[i]!);
+        if (under) for (const b of under) bareSet.add(b);
+        else s.reveal = null; // this frame's draw only; the entity keeps its reveal
+      });
+      const bare = [...bareSet];
       if (this.replacing && !complete) {
         // hold: the view being replaced keeps the canvas until this one has a whole frame
         drawn = false;
@@ -680,7 +728,8 @@ class View implements WorldView {
           zoom: cam.zoom,
           depthRange: this.depthRange,
         };
-        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds);
+        const lone = this.loneList.length ? this.loneFor(r) : [];
+        this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds, lone);
         this.redrawLast();
         this.renderMs = performance.now() - t0;
         this.dirty = !complete; // keep redrawing while tiles stream in
@@ -710,37 +759,49 @@ class View implements WorldView {
    */
   private nextIdle(r: Rotation, info: FrameInfo): TileRequest | null {
     const fresh = (t: TileRequest) => {
-      const k = tileKey(t.rotation, t.tx, t.ty);
+      const k = tileKey(t.rotation, t.tx, t.ty, false, false, t.cutaway);
       return !this.idleDone.has(k) && !this.gpu.has(k);
     };
+    // the tile, then its cutaway where cuts reach it (D-167)
+    const next = (q: TileRequest): TileRequest | null => {
+      if (fresh(q)) return q;
+      const c = { ...q, cutaway: true };
+      return this.tileEdits.hasCuts(q.tx, q.ty, q.rotation) && fresh(c) ? c : null;
+    };
     const at = { x: info.focus.x, y: info.focus.y };
-    for (let k = 1; k < 4; k++) for (const q of this.prefetchTiles(((r + k) % 4) as Rotation, at)) if (fresh(q)) return q;
-    for (const q of this.tiles.around(r, at.x, at.y, IDLE_RADIUS)) if (fresh(q)) return q;
+    for (let k = 1; k < 4; k++)
+      for (const q of this.prefetchTiles(((r + k) % 4) as Rotation, at)) {
+        const n = next(q);
+        if (n) return n;
+      }
+    for (const q of this.tiles.around(r, at.x, at.y, IDLE_RADIUS)) {
+      const n = next(q);
+      if (n) return n;
+    }
     return null;
   }
 
-  /** Bare variants of the tiles drawn under last frame's reveal, and a little around it (it moves). */
+  /** Bare variants of the tiles drawn under last frame's reveals, and a little around them (they move). */
   private bareWanted(r: Rotation, order: readonly TileInView[]): TileRequest[] {
-    const box = this.revealBox;
-    if (!box) return [];
+    if (!this.revealBoxes.length) return [];
     const g = REVEAL_AHEAD_PX;
-    const grown = { left: box.left - g, top: box.top - g, right: box.right + g, bottom: box.bottom + g };
+    const grown = this.revealBoxes.map((b) => ({ left: b.left - g, top: b.top - g, right: b.right + g, bottom: b.bottom + g }));
     const out: TileRequest[] = [];
     for (const t of order) {
       const img = this.gpu.get(tileKey(r, t.tx, t.ty))?.img;
-      if (img && overlaps(img.image, grown)) out.push({ rotation: r, tx: t.tx, ty: t.ty, bare: true });
+      if (img && grown.some((b) => overlaps(img.image, b))) out.push({ rotation: r, tx: t.tx, ty: t.ty, bare: true });
     }
     return out;
   }
 
-  /** The bare tiles under a reveal, or none until every one of them is baked. */
-  private bareTiles(r: Rotation, order: readonly TileInView[], box: ScreenBox): GpuImage[] {
+  /** The bare tiles under a reveal, or null until every one of them is baked. */
+  private bareTiles(r: Rotation, order: readonly TileInView[], box: ScreenBox): GpuImage[] | null {
     const out: GpuImage[] = [];
     for (const t of order) {
       const img = this.gpu.get(tileKey(r, t.tx, t.ty))?.img;
       if (!img || !overlaps(img.image, box)) continue;
       const bare = this.gpu.get(tileKey(r, t.tx, t.ty, true));
-      if (!bare) return [];
+      if (!bare) return null;
       bare.lastDrawn = this.frameNo;
       if (bare.img) out.push(bare.img);
     }
@@ -769,7 +830,7 @@ class View implements WorldView {
       this.gpuBytes -= e.bytes;
       this.gpu.delete(key);
       this.stale.delete(key);
-      if (!e.bare && !e.ground) {
+      if (!e.bare && !e.ground && !e.cutaway) {
         this.baked.set(e.rotation, e.tx, e.ty, false);
         this.service.forget(tileKey(e.rotation, e.tx, e.ty, false, true));
       }
@@ -880,6 +941,140 @@ class View implements WorldView {
     return out;
   }
 
+  /** Objects drawn on their own over the frame (D-162), as listed, and their images by object and rotation (null: nothing there). */
+  private loneList: readonly { object: number; alpha: number }[] = [];
+  private readonly loneImages = new Map<string, GpuImage | null>();
+  private readonly loneBaking = new Set<string>();
+
+  setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void {
+    this.loneList = list ?? [];
+    this.dirty = true;
+  }
+
+  /** This rotation's images of the listed objects that are baked, as listed; the others asked for. */
+  private loneFor(r: Rotation): { image: GpuImage; alpha: number }[] {
+    const out: { image: GpuImage; alpha: number }[] = [];
+    for (const { object, alpha } of this.loneList) {
+      if (alpha <= 0 || this.edits.isRemoved(object)) continue;
+      const key = `${object}:${r}`;
+      const img = this.loneImages.get(key);
+      if (img) out.push({ image: img, alpha });
+      else if (img === undefined && !this.loneBaking.has(key)) void this.bakeLone(object, r, key);
+    }
+    return out;
+  }
+
+  /** One object on its own, on its ground (a slice round it, as `bakeObject` takes), in a rotation. */
+  private async bakeLone(object: number, r: Rotation, key: string): Promise<void> {
+    this.loneBaking.add(key);
+    const o = this.w.objects?.instances[object];
+    let img: GpuImage | null = null;
+    if (o) {
+      const { manifest, store } = this.w;
+      const pts = o.fp ?? [[o.x, o.y] as [number, number]];
+      const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0]))) - 2);
+      const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1]))) - 2);
+      const x1 = Math.min(manifest.cellsX, Math.ceil(Math.max(...pts.map((p) => p[0]))) + 3);
+      const y1 = Math.min(manifest.cellsY, Math.ceil(Math.max(...pts.map((p) => p[1]))) + 3);
+      await store.ensureRect(x0, y0, x1, y1);
+      const s = store.slice(x0, y0, x1, y1);
+      const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+      const baked = await this.service.bakeLone(r, [object], slice);
+      if (baked && !this.stopped) img = this.compositor.upload(baked);
+    }
+    this.loneBaking.delete(key);
+    this.loneImages.set(key, img);
+    this.dirty = true;
+  }
+
+
+  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts: { always?: boolean } = {}): void {
+    const always = !!opts.always;
+    for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation], always))
+      // the cutaway's own change only its variants (D-167); those cut always, the plain tiles too (D-168)
+      this.edited(tiles, [r as Rotation], always ? ["plain", "cutaway"] : ["cutaway"]);
+  }
+
+  get cutaway(): boolean {
+    return this.cutawayOn;
+  }
+
+  set cutaway(on: boolean) {
+    if (on === this.cutawayOn) return;
+    this.cutawayOn = on;
+    this.invalidate();
+  }
+
+  async bakeTopDown(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts: { px?: number; tilt?: number; shadows?: boolean; cache?: boolean; sun?: [number, number, number] } = {},
+  ): Promise<TopDownImage | null> {
+    const { manifest, store } = this.w;
+    const px = opts.px ?? 8;
+    const owned = { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
+    // a margin of context: what casts shadows in, scatter the same as the tiles', and with a tilt, the tall buildings south of it that lean in
+    // ponytail: towers taken as at most 150 steps above the ground; a taller one south of a tilted bake leans in cut off
+    const m = 4 + Math.ceil(((opts.tilt ?? 0) * 150) / px);
+    const sx0 = Math.max(0, owned.x0 - m);
+    const sy0 = Math.max(0, owned.y0 - m);
+    const sx1 = Math.min(manifest.cellsX, owned.x1 + m);
+    const sy1 = Math.min(manifest.cellsY, owned.y1 + m);
+    await store.ensureRect(sx0, sy0, sx1, sy1);
+    const s = store.slice(sx0, sy0, sx1, sy1);
+    const slice = { x0: s.x0, y0: s.y0, width: s.grid.width, height: s.grid.height, layers: s.grid.layers(), micro: s.grid.micro };
+    const rs = this.rs;
+    // the objects taken out that this slice holds (an edit elsewhere doesn't change its image)
+    const instances = this.w.objects?.instances;
+    const removed = this.edits.removed().filter((i) => {
+      const o = instances?.[i];
+      return o ? objectInSlice(o, sx0, sy0, sx1, sy1) : false;
+    });
+    const tilt = opts.tilt ?? 0;
+    const shadows = opts.shadows ?? true;
+    // kept with the tiles (D-158): the tile key's world, style and bake code (all but its last part, the tile's own), the
+    // area's, and the edits its slice holds: objects taken out, terrain edited (D-147)
+    const cells = store.editsIn(sx0, sy0, sx1, sy1);
+    const key = opts.cache && this.cache ? [this.cacheKey({ rotation: 0, tx: 0, ty: 0 }).split("|").slice(0, -1).join("|"), `top:${owned.x0},${owned.y0},${owned.x1},${owned.y1}:${px}:${tilt}:${shadows ? 1 : 0}${opts.sun ? `:${opts.sun.join("/")}` : ""}`, ...(removed.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : [])].join("|") : null;
+    const kept = key ? await this.cache!.get(key) : null;
+    if (kept) return { width: kept.width, height: kept.height, rgba: paletteImage(kept, this.w.palette), image: kept, px, x: owned.x0, y: owned.y0 };
+    // the whole slice drawn (an object anchored in the margin reaches into the rectangle too), then cut to the rectangle
+    const whole = await this.service.bakeArea({
+      owned: { x0: sx0, y0: sy0, x1: sx1, y1: sy1 },
+      slice,
+      ...(removed.length ? { removed: [...removed] } : {}),
+      // in render units: px per render cell, and per render step
+      projection: topDownProjection(px / rs, tilt / rs),
+      shadows,
+      ...(opts.sun ? { sun: opts.sun } : {}),
+    });
+    if (!whole) return null;
+    // screen x = px·x and y = px·y on the ground (h = 0): the rectangle's pixels of the image
+    const left = Math.round(owned.x0 * px);
+    const top = Math.round(owned.y0 * px);
+    const width = Math.round(owned.x1 * px) - left;
+    const height = Math.round(owned.y1 * px) - top;
+    const pixels = new Uint8Array(width * height * 4);
+    for (let j = 0; j < height; j++) {
+      const sj = top + j - whole.top;
+      if (sj < 0 || sj >= whole.height) continue;
+      const i0 = Math.max(0, whole.left - left);
+      const i1 = Math.min(width, whole.left + whole.width - left);
+      if (i1 > i0) pixels.set(whole.pixels.subarray((sj * whole.width + left + i0 - whole.left) * 4, (sj * whole.width + left + i1 - whole.left) * 4), (j * width + i0) * 4);
+    }
+    const image = { left, top, width, height, depthBase: whole.depthBase, pixels };
+    if (key) void this.cache!.put(key, image);
+    return { width, height, rgba: paletteImage(image, this.w.palette), image, px, x: owned.x0, y: owned.y0 };
+  }
+
+  async bakeSpriteTopDown(boxes: Box[], opts: { px?: number; sun?: [number, number, number] } = {}): Promise<TopDownSprite | null> {
+    const px = opts.px ?? 8;
+    const img = await this.service.bakeSprite(0, boxes, { projection: topDownProjection(px), ...(opts.sun ? { sun: opts.sun } : {}) });
+    return img ? { width: img.width, height: img.height, rgba: paletteImage(img, this.w.palette), left: img.left, top: img.top } : null;
+  }
+
   serialize(): ViewState {
     const c = this.camera;
     const state: ViewState = {
@@ -910,12 +1105,15 @@ class View implements WorldView {
     // a view still waiting to take over from another leaves it as it is: its owner keeps it
     this.replacing = null;
     window.removeEventListener("resize", this.onWindowResize);
+    document.removeEventListener("visibilitychange", this.onVisible);
     this.resizeObserver?.disconnect();
     void this.controllerHost.use(null);
     this.layerList.dispose();
     this.service.dispose();
     for (const e of this.gpu.values()) if (e.img) this.compositor.release(e.img);
     this.gpu.clear();
+    for (const img of this.loneImages.values()) if (img) this.compositor.release(img);
+    this.loneImages.clear();
     this.gpuBytes = 0;
     this.entityList.dispose();
     this.compositor.dispose();
@@ -924,4 +1122,19 @@ class View implements WorldView {
     this.baked.clear();
     this.prefetches.clear();
   }
+}
+
+/** A baked image in a palette's colours (RGBA); empty pixels stay transparent. */
+export function paletteImage(image: BakedImage, palette: Palette): Uint8ClampedArray<ArrayBuffer> {
+  const out = new Uint8ClampedArray(image.width * image.height * 4);
+  const src = image.pixels;
+  for (let i = 0; i < out.length; i += 4) {
+    if (src[i + 3] === 0) continue;
+    const p = src[i]! * 4;
+    out[i] = palette.rgba[p]!;
+    out[i + 1] = palette.rgba[p + 1]!;
+    out[i + 2] = palette.rgba[p + 2]!;
+    out[i + 3] = 255;
+  }
+  return out;
 }
