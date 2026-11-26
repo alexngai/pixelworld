@@ -197,6 +197,7 @@ Status values:
 | D-187 | Joint finales: two squads on one board, one rig at a time, fought in the room | Accepted |
 | D-188 | After the first live playtest: the play server's missing cities, taps, the city map's ground, the choosing clock everywhere, runs kept across reloads | Accepted |
 | D-190 | The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district | Accepted |
+| D-191 | What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving | Accepted |
 
 ---
 
@@ -2639,4 +2640,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Rooftop boards** read less clearly than street ones: which roofs are the board's cells is hard to see at a glance.
   - **A reload mid-fight** makes that block's fight anew, so a hard fight can be dodged by reloading.
   - From D-188: any loss counts as a block lost, every lost block costs the same trust, and one browser's two pages share its kept run.
+
+### D-191: What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving (accepted)
+- **Why:** the owner asked for each tile's characteristics to be more apparent, and each action's: a preview, and animation of what will be destroyed and how much damage done, so the actions and their consequences are easier to understand. A cell's details were in a tooltip on hover, and a strike pointed at showed its arrows, the invaders' aims from where it would leave them, and words over what it hit ("−2", "−120 people"), but not the round they'd make, and nothing moved.
+- **What:**
+  - **Every building standing on the board** is labelled where it stands: its hit points (■ each, □ lost) and the people in it ("1.8k people"), or "empty" once evacuated; red when the invaders strike it this round, red and breathing when the strike pointed at hurts it.
+  - **A strike pointed at** (or tapped once, D-190) says what it does, in the line over the buttons: each unit it hurts, downs, drowns or pushes ("Crawler 3→2 hp"), each building it hurts or brings down and the people lost there ("tower glass 3→2 hp, 590 people lost"); and then the round played out from there, the invaders striking where they'd aim, against the round without it: "If nothing else acts, the round ends with 605 people lost (15 without it)." A strike that costs more than it saves reads so at once. It's worked out once a strike (rig, weapon, target), not at every move of the pointer.
+  - **It moves:** a ghost of each unit the strike would push or lift slides from its cell to where it'd land, again and again; each building it'd hurt glows red and breathes; its words over the board breathe.
+  - **A weapon chosen** says what it does in the prompt ("ram: 2 damage, pushes, next cell").
+- **Checked:** in the browser on a New York block: the buildings labelled (red where struck this round); a pumper's shot at a tower ("tower glass 3→2 hp, 590 people lost… 605 people lost (15 without it)"), the tower red and breathing; a crane's drop pushing a crawler, its ghost sliding along the arrow; a strike on a crawler ("Crawler 3→2 hp… 15 people lost, as without it").
+- **Not yet:** labels crowd where small buildings stand close; the words don't say where a push leaves a unit; the round's end counts people only (not rigs hurt or invaders down).
 

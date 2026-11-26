@@ -709,3 +709,33 @@ kbd {
     font-size: 11px;
   }
 }
+
+/* each building's hit points and people on the board (D-191) */
+.label.building {
+  font-size: 10px;
+  color: #d9e6f2;
+  opacity: 0.85;
+}
+.label.building.threat {
+  color: var(--enemy);
+  opacity: 1;
+}
+.label.building.empty {
+  opacity: 0.5;
+}
+.label.building.hurt {
+  color: #ff5a50;
+  opacity: 1;
+}
+/* what a strike looked at would do (D-191): its words breathe */
+.label.preview {
+  animation: preview-breathe 0.9s ease-in-out infinite alternate;
+}
+@keyframes preview-breathe {
+  from {
+    scale: 1;
+  }
+  to {
+    scale: 1.18;
+  }
+}
