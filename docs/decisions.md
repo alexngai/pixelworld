@@ -199,6 +199,7 @@ Status values:
 | D-190 | The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district | Accepted |
 | D-191 | What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving | Accepted |
 | D-192 | Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint | Accepted |
+| D-193 | The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size | Accepted |
 
 ---
 
@@ -2668,4 +2669,14 @@ The point is more room for visual interest; both halves are wanted.
   - **Kyoto:** a brute's slam a short flat arrow into one cell of a temple, that cell's column red and striped, the rest outlined faintly; the hint's moves straight, the crane's drop a high arc onto a marked cell under the brute.
   - **San Francisco:** a flyer's spit a low arc onto the pumper's cell, marked; a brute's slam into one cell of a building.
 - **Not yet:** the board map (top right) draws every arrow alike.
+
+### D-193: The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size (accepted)
+- **Why:** the owner asked for the arrows to be styled in the game's flatter pixel art (keeping their animation); they needn't sit volumetrically in the scene. They were smooth canvas strokes with soft glows over a pixel-art city.
+- **What:** `PixelLayer` (`apps/tactics/src/pixels.ts`) draws into a small buffer, pixel by pixel, with no antialiasing: Bresenham lines and pixel squares, scanline-filled polygons, a dithered (checkerboard) fill. Its pixel is the world's on screen (the camera's zoom, 2 to 4 screen pixels), and it's laid over the screen scaled up without smoothing.
+  - **Arrows:** a 2-pixel line in the arrow's colour inside a 4-pixel dark outline, with a pixel triangle for a head. A white pixel runs along every sixth step toward the head. Each takes its style as in D-192 (flat, low arc, high arc, straight path).
+  - **Where an arc lands:** the cell dither-filled in the arrow's colour, its edge blinking between that colour and white.
+  - **A push's ghost:** a pixel diamond sliding along the push's path, easing in, again and again.
+  - **A shot in flight:** a pixel ball with a short pixel trail.
+  - The cell fills, stripes, building outlines and the grid stay as they were.
+- **Checked:** in the browser on a San Francisco block: the hint's moves, drop and shot and the invaders' aims as pixel lines with dark outlines and pixel heads, the white dash marching; landing cells dithered and blinking; at the default zoom the indicators' pixels match the city's; a ram's push on the pumper, its ghost sliding; no errors.
 

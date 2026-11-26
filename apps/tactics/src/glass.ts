@@ -1,5 +1,6 @@
 import { toWorld, type Board, type WorldView } from "@pixelworlds/engine";
 import { planeAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { PixelLayer, rgba } from "./pixels";
 
 /**
  * The board over the city view in the screen's own pixels (D-156). Every cell
@@ -80,9 +81,24 @@ const FLASH_MS = 450;
 const ARROW: Partial<Record<Mark["kind"], string>> = { attack: "235,70,60", move: "150,210,255", info: "242,193,78" };
 const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, info: 0.16, select: 0.12 };
 
+/** The pixel indicators' outline, highlight and ghost (D-193). */
+const DARK = rgba(14, 12, 26);
+const WHITE = rgba(255, 255, 255);
+const GHOST = rgba(150, 210, 255);
+/** "r,g,b" as the pixel layer's colour. */
+const pixelColour = (rgb: string) => {
+  const [r, g, b] = rgb.split(",").map(Number) as [number, number, number];
+  return rgba(r, g, b);
+};
+/** A pixel diamond (|dx| + |dy| ≤ r) centred on a pixel. */
+const diamond = (px: PixelLayer, x: number, y: number, r: number, c: number) => {
+  for (let j = -r; j <= r; j++) for (let i = -(r - Math.abs(j)); i <= r - Math.abs(j); i++) px.set(x + i, y + j, c);
+};
+
 export class BoardGlass {
   readonly el: HTMLCanvasElement;
   private s: GlassState | null = null;
+  private readonly px = new PixelLayer();
 
   constructor(
     parent: HTMLElement,
@@ -310,11 +326,17 @@ export class BoardGlass {
       }
       g.restore();
     }
-    // arrows: an outline, the colour, a dash running along it, and a head
+    // the action indicators as pixel art (D-193): arrows, where a strike lands, a push's ghost, a shot; drawn pixel by pixel at the
+    // world's own pixel size, flat over the screen, and laid on unsmoothed
+    const P = Math.min(4, Math.max(2, Math.round(camera.zoom)));
+    const px = this.px;
+    px.begin(Math.ceil(W / P), Math.ceil(H / P));
+    const lo = ([x, y]: [number, number]): [number, number] => [x / P, y / P];
+    const beat = Math.floor(now / 70);
     for (const ar of s.arrows) {
       const ka = ar.from[1] * a.w + ar.from[0];
       const kb = ar.to[1] * a.w + ar.to[0];
-      const rgb = ARROW[ar.kind] ?? COLOUR[ar.kind];
+      const colour = pixelColour(ARROW[ar.kind] ?? COLOUR[ar.kind]);
       // its style (D-192): a ranged strike arcs onto the cell's plane; a blow is short and level, from the striker into the face of
       // the cell it hits; a move or a push runs straight from cell to cell
       const style = ar.style ?? (ar.kind === "move" ? "path" : "arc");
@@ -324,107 +346,68 @@ export class BoardGlass {
           : style === "flat"
             ? toward(ka, kb, 0.12, 0.62, planeAt(c, ka) + 0.7, planeAt(c, ka) + 0.7)
             : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
-      // where an arc comes down: the cell marked, so which one it is reads at once
+      // where an arc comes down: the cell marked (dithered, its edge blinking), so which one it is reads at once
       if (style === "arc" || style === "shot") {
-        g.save();
-        path(quad(kb, planeAt(c, kb) + lift, 0.14));
-        g.fillStyle = `rgba(${rgb},0.16)`;
-        g.fill();
-        g.strokeStyle = `rgba(${rgb},0.95)`;
-        g.lineWidth = 2;
-        g.shadowColor = `rgba(${rgb},0.8)`;
-        g.shadowBlur = 6;
-        g.stroke();
-        g.restore();
+        const q = quad(kb, planeAt(c, kb) + lift, 0.14).map(lo);
+        px.fill(q, colour, true);
+        const edge = PixelLayer.path([...q, q[0]!]);
+        for (const [x, y] of edge) px.dot(x, y, 3, DARK);
+        const blink = Math.floor(now / 380) % 2 ? colour : WHITE;
+        for (const [x, y] of edge) px.set(x, y, blink);
       }
       const pts: [number, number][] = [];
-      for (let n = 0; n <= 32; n++) pts.push(at(n / 32));
-      // the shaft stops where the head begins
+      for (let n = 0; n <= 24; n++) pts.push(lo(at(n / 24)));
+      // the shaft stops where the head begins, its head a pixel triangle along its last stretch
       const tip = pts[pts.length - 1]!;
       let back = pts.length - 1;
-      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 13) back--;
-      const shaft = pts.slice(0, back + 1);
-      const base = shaft[shaft.length - 1]!;
+      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 3.5) back--;
+      const shaft = PixelLayer.path(pts.slice(0, back + 1));
+      const base = pts[back]!;
       const len = Math.hypot(tip[0] - base[0], tip[1] - base[1]) || 1;
       const [dx, dy] = [(tip[0] - base[0]) / len, (tip[1] - base[1]) / len];
-      const head: [number, number][] = [tip, [base[0] - dy * 7, base[1] + dx * 7], [base[0] + dy * 7, base[1] - dx * 7]];
-      g.save();
-      g.lineCap = "round";
-      g.lineJoin = "round";
-      const line = () => {
-        g.beginPath();
-        shaft.forEach(([x, y], n) => (n ? g.lineTo(x, y) : g.moveTo(x, y)));
-      };
-      line();
-      g.strokeStyle = "rgba(12,12,24,0.6)";
-      g.lineWidth = 7;
-      g.stroke();
-      path(head);
-      g.lineWidth = 4;
-      g.stroke();
-      line();
-      g.strokeStyle = `rgba(${rgb},0.95)`;
-      g.lineWidth = 4;
-      g.shadowColor = `rgba(${rgb},0.7)`;
-      g.shadowBlur = 6;
-      g.stroke();
-      path(head);
-      g.fillStyle = `rgba(${rgb},1)`;
-      g.fill();
-      g.shadowBlur = 0;
-      line();
-      g.setLineDash([5, 11]);
-      g.lineDashOffset = -(now / 30) % 16;
-      g.strokeStyle = "rgba(255,255,255,0.6)";
-      g.lineWidth = 1.6;
-      g.stroke();
-      g.restore();
+      const head = (grow: number): [number, number][] => [
+        [tip[0] + dx * grow, tip[1] + dy * grow],
+        [base[0] - dy * (2.6 + grow) - dx * grow, base[1] + dx * (2.6 + grow) - dy * grow],
+        [base[0] + dy * (2.6 + grow) - dx * grow, base[1] - dx * (2.6 + grow) - dy * grow],
+      ];
+      for (const [x, y] of shaft) px.dot(x, y, 4, DARK);
+      px.fill(head(1.2), DARK);
+      for (const [x, y] of shaft) px.dot(x, y, 2, colour);
+      px.fill(head(0), colour);
+      // a dash running along it toward the head
+      shaft.forEach(([x, y], i) => {
+        if ((((i - beat) % 6) + 6) % 6 === 0) px.set(x, y, WHITE);
+      });
     }
     // units the strike looked at would move (D-191): a ghost of each sliding along its arrow, easing in, again and again
     for (const sl of s.slides ?? []) {
-      const at = arc(sl.from, sl.to, false);
+      const at = toward(sl.from, sl.to, 0, 1, planeAt(c, sl.from) + 0.4, planeAt(c, sl.to) + 0.4);
       const t = (now / 1100) % 1;
-      const f = t < 0.8 ? 1 - (1 - t / 0.8) ** 3 : 1;
-      const [x, y] = at(f);
-      g.save();
-      g.globalAlpha = t < 0.8 ? 0.9 : 0.9 * (1 - (t - 0.8) / 0.2);
-      g.beginPath();
-      g.arc(x, y, 8, 0, 2 * Math.PI);
-      g.fillStyle = "rgba(150,210,255,0.35)";
-      g.shadowColor = "rgba(150,210,255,0.9)";
-      g.shadowBlur = 12;
-      g.fill();
-      g.lineWidth = 2;
-      g.strokeStyle = "rgba(255,255,255,0.9)";
-      g.stroke();
-      g.restore();
+      if (t > 0.85) continue;
+      const [x, y] = lo(at(1 - (1 - Math.min(1, t / 0.7)) ** 3));
+      diamond(px, x, y, 4, DARK);
+      diamond(px, x, y, 3, GHOST);
+      px.set(x, y, WHITE);
     }
-    // shots in flight: a glowing ball along the arrow's arc, a short trail behind
+    // shots in flight: a bright pixel ball along the arc, a short trail behind
     for (const sh of s.shots) {
       const f = (now - sh.t0) / sh.ms;
       if (f < 0 || f > 1) continue;
       const at = arc(sh.from, sh.to, true);
-      const rgb = ARROW[sh.kind] ?? COLOUR[sh.kind];
-      g.save();
-      g.lineCap = "round";
-      g.beginPath();
-      for (let n = 0; n <= 6; n++) {
-        const [x, y] = at(Math.max(0, f - 0.18 * (1 - n / 6)));
-        if (n) g.lineTo(x, y);
-        else g.moveTo(x, y);
+      const colour = pixelColour(ARROW[sh.kind] ?? COLOUR[sh.kind]);
+      for (let n = 3; n >= 1; n--) {
+        const [x, y] = lo(at(Math.max(0, f - 0.05 * n)));
+        px.dot(x, y, 2, colour);
       }
-      g.strokeStyle = `rgba(${rgb},0.65)`;
-      g.lineWidth = 5;
-      g.stroke();
-      const [x, y] = at(f);
-      g.shadowColor = `rgba(${rgb},1)`;
-      g.shadowBlur = 14;
-      g.fillStyle = "rgba(255,250,235,1)";
-      g.beginPath();
-      g.arc(x, y, 6, 0, Math.PI * 2);
-      g.fill();
-      g.restore();
+      const [x, y] = lo(at(f));
+      px.dot(x, y, 4, colour);
+      px.dot(x, y, 2, WHITE);
     }
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(px.end(), 0, 0, px.w * P * dpr, px.h * P * dpr);
+    g.restore();
     // what could be struck from where the rig would go
     g.save();
     g.setLineDash([3, 2]);
