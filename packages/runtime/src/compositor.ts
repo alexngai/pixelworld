@@ -1,4 +1,5 @@
 import { INDEX_SILHOUETTE } from "@pixelworlds/style";
+import { ISO_PROJECTION, sumUV, type Projection } from "@pixelworlds/grid";
 import {
   Uniforms,
   compileProgram,
@@ -146,6 +147,7 @@ uniform int uRevealCount;
 uniform vec4 uReveal[${MAX_REVEALS}];       // each reveal's ellipse: centre, radii (absolute art px)
 uniform float uRevealS[${MAX_REVEALS}];     // its sprite's u + v
 uniform float uRevealDensity[${MAX_REVEALS}];
+uniform vec3 uSumUV;        // a surface's u + v from its screen point and depth (D-195)
 out vec4 o;
 
 const float BAYER[16] = float[16](
@@ -165,8 +167,8 @@ void main() {
   float d = uDepthBase + local;
   float z = clamp(1.0 - (d - uDepthRange.x) / (uDepthRange.y - uDepthRange.x), 0.0, 1.0);
   if (uRevealOn == 1 || uMode == 2) {
-    // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3: the surface's u + v from sy and depth
-    float s = art.y / 32.0 + 0.75 * d;
+    // the surface's u + v from its screen point and depth (2:1: sy / 32 + 0.75 depth)
+    float s = dot(uSumUV, vec3(art, d));
     ivec2 ap = ivec2(floor(art));
     float dither = (BAYER[(ap.y & 3) * 4 + (ap.x & 3)] + 0.5) / 16.0;
     bool inside = false;
@@ -266,6 +268,8 @@ export interface FrameParams {
   fracY: number;
   zoom: number;
   depthRange: [number, number];
+  /** How the view lays the world out (D-195); the 2:1 view if absent. */
+  projection?: Projection;
 }
 
 export class Compositor {
@@ -457,11 +461,13 @@ export class Compositor {
       const ellipses = new Float32Array(4 * MAX_REVEALS);
       const fronts = new Float32Array(MAX_REVEALS);
       const densities = new Float32Array(MAX_REVEALS);
+      const uv = sumUV(frame.projection ?? ISO_PROJECTION);
+      gl.uniform3fv(u.loc("uSumUV"), uv);
       reveals.forEach((rv, i) => {
         // the ellipse in absolute art px; the sprite's u + v, as the shader works it out
         const b = revealRect(rv)!;
         ellipses.set([(b.left + b.right) / 2, (b.top + b.bottom) / 2, (b.right - b.left) / 2, (b.bottom - b.top) / 2], 4 * i);
-        fronts[i] = rv.sy / 32 + 0.75 * rv.depth;
+        fronts[i] = uv[0] * rv.sx + uv[1] * rv.sy + uv[2] * rv.depth;
         densities[i] = Math.min(1, Math.max(0, rv.reveal!.density));
       });
       gl.uniform4fv(u.loc("uReveal"), ellipses);
@@ -506,8 +512,9 @@ export class Compositor {
       }
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fogFb[turn]!);
       gl.viewport(0, 0, w, h);
-      if ("steam" in item) (this.steamPass ??= new SteamPass(gl)).draw(item.steam, shown, [ox, oy], k, frame.depthRange);
-      else fog!.draw(item.frame, shown, [ox, oy], k, frame.depthRange);
+      const projection = frame.projection ?? ISO_PROJECTION;
+      if ("steam" in item) (this.steamPass ??= new SteamPass(gl)).draw({ ...item.steam, projection }, shown, [ox, oy], k, frame.depthRange);
+      else fog!.draw({ ...item.frame, projection }, shown, [ox, oy], k, frame.depthRange);
       shown = t.fogColor[turn]!;
       turn = 1 - turn;
     }

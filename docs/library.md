@@ -44,7 +44,7 @@ M4's gameplay (the car, the plane, building mode) would be built on that public 
 | Package | Contents | Today |
 |---|---|---|
 | `@pixelworlds/format` | the world package spec (manifest, chunks, objects, routes, optional layers); codecs; JSON Schemas; version policy | `world-format` |
-| `@pixelworlds/grid` | projection, rotations, cells, heights | `grid` |
+| `@pixelworlds/grid` | projections (2:1 and the higher 4:3, D-195), rotations, cells, heights | `grid` |
 | `@pixelworlds/style` | the style pack schema, loader, palettes, night and atmosphere | `style` |
 | `@pixelworlds/generators` | the voxel model API, the generator registry and plugin API, built-in generators (terrain, trees, buildings, landmarks, vehicles) | `generators` |
 | `@pixelworlds/bake` | the WebGL2 tile and sprite baker (worker) | `bake` |
@@ -230,6 +230,7 @@ interface WorldViewOptions {
   objects?: boolean; scatter?: boolean; heroes?: boolean;
   chunkBudgetMB?: number;                             // decoded terrain kept at most, least recently used let go (D-120); default unlimited
   palette?: "day" | "night";
+  projection?: Projection;                            // ISO_PROJECTION (2:1, default) or STEEP_PROJECTION (4:3, a higher camera, D-195); fixed for the view's life
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
   layers?: Layer[];
   controller?: Controller;
@@ -262,6 +263,7 @@ interface FrameClock { dt; realDt; time; started; paused }  // what controllers,
 interface ViewCamera {
   x; y; h;                       // focus, cells and steps
   rotation: Rotation; zoom: number; autoZoom: boolean; internalWidth; internalHeight;
+  readonly projection: Projection; // how the view lays the world out (D-195)
   setFocus(x, y, h): void;
   lookAt({ x, y, h? } | { lon, lat, h? }): Promise<boolean>;
   pan(dx, dy): void; rotate(±1): void; screenDirToGrid(dx, dy): [number, number];
@@ -272,6 +274,14 @@ interface ViewCamera {
 - **Start-up:** load the package, style and bake worker; size the canvas; put the camera on the world's start; attach the controller (the rover puts the camera on itself); apply `camera` (a missing coordinate keeps where the controller put it); initialize the layers in order; then start the loop. No frame is drawn before the view is set up, so no tile is baked in the wrong place.
 - **The loop** is the app's, unchanged: controller update, entity sprite requests, layer updates, tiles wanted, and a redraw only when something changed. It runs from the start, before `ready()`. `ready()` resolves once a frame is drawn with every visible tile and sprite and nothing in or around the view is left to bake (tiles baked ahead aren't waited for).
 - **Game time (D-073):** the `dt` controllers, layers and `onFrame` listeners get is game seconds: the wall-clock time since the last frame (at most 0.1 s) × `timeScale`, and 0 until the view's first complete frame (`started`) and while it is `paused`. Their updates still run every frame, so a controller can keep the camera on something, and the `FrameClock` they get as well carries `realDt` (wall-clock), `time` (game seconds since the start), `started` and `paused`. A game that moves things by `dt` can't run ahead of the first frame, nor during a pause, and traffic, fog and entities stop with it; a game that also waits for its whole first view awaits `ready()`.
+- **Projections (D-195):** `projection` lays the view's world out; the default is `ISO_PROJECTION` (2:1 tiles, 30° down). `STEEP_PROJECTION` is a higher camera: 4:3 tiles, about 49° down, heights still 8 px a step, so a facade's window rows stay whole.
+  - **Custom projections:** a `Projection` is three rows, `x`, `y` and `d` (screen x, screen y and depth), each over the rotated (u, v) and h. Its x and y numbers must be whole, or tiles show seams, and depth must grow toward the camera along every view ray.
+  - **Fixed for the view's life:** read it from `camera.projection`, and layers get it as `FrameInfo.projection`.
+  - **What follows it:** the tiles, sprites, picking, the depth range, the see-through around a player, fog, steam and the minimap's outline of the view, in all four rotations. Its tiles are cached apart from the 2:1 view's.
+  - **Painted-over hero landmarks** (D-053) are painted for the 2:1 view, and another projection resamples them (D-196). Each pixel of a tile gives its point in the world, and where the hero's 2:1 bake shows that same point, its paint there is taken. A surface the 2:1 view never saw stays unpainted, and a one-pixel detail on a surface the other view stretches may come out two pixels thick.
+  - **What stays 2:1:** start tiles (`tools/prebake.mjs`) don't match another projection, so its first view bakes; and the minimap still draws its map as a 2:1 diamond.
+  - **Cost:** the 4:3 view's tiles cover half again as many pixels for the same ground, so they bake longer and hold more GPU memory.
+  - **The grid's own functions** take a projection as their last argument, 2:1 when it is left out: `project`, `projectView`, `unprojectAtHeight` and `unprojectView`. `projectionInverse` and `groundInverse` invert a projection (column-major, for shaders), `sumUV` gives a point's u + v from its screen position and depth, and `tileAspect` gives a tile's height over its width. App code that calls them for a view should pass `camera.projection`.
 - **World → canvas:** `camera.project(x, y, h?)` is where a place is drawn, in CSS pixels from the canvas's top-left (`(render px − the view's origin) × zoom / pixelRatio`), with `onScreen`; without a height, on the ground (null where it isn't loaded). `pick(project(…))` is the place again: HUD labels, off-screen arrows, click targets.
 - **Baking ahead (D-073):** each frame wants the visible tiles nearest first, then the tiles a view `lookAhead` seconds along the camera's motion would show (its velocity, eased over a quarter second; faster than 30 cells/s is a jump, not motion), then `prefetch` requests, then the ring around the view. `prefetch(x, y, radius?)` bakes the tiles within a radius (cells), or those a view centred there would show, and resolves once they are baked in the current rotation (or when the view is destroyed). `isDrawn(x, y)` says whether the ground under a place is baked, `stats().tilesPending` how many wanted tiles aren't.
 - **Nothing over the void:** a sprite isn't drawn where the ground under it isn't baked yet: entities skip themselves, and layers get `frame.isDrawn(x, y)` (traffic skips such vehicles, still baking their sprites). A sprite whose bake failed is left out instead of holding up `ready()`.
@@ -292,14 +302,14 @@ interface Layer {
   serialize?(): unknown; restore?(state): void; dispose?(): void; // dispose: the layer leaves its view
 }
 interface LayerContext { view; bakeSprite(rotation, boxes): Promise<Sprite | null>; releaseSprite(s); frame(): FrameInfo; invalidate(): void }
-interface FrameInfo { rotation; focus: { x, y, h }; zoom; view: { left, top, width, height }; night; renderScale; project(x, y, h); isDrawn(x, y) }
+interface FrameInfo { rotation; projection; focus: { x, y, h }; zoom; view: { left, top, width, height }; night; renderScale; project(x, y, h); isDrawn(x, y) }
 view.layers: list(), get(id), add(layer), remove(id), enable(id, on?, sublayer?)
 ```
 
 - **Order:** layers' sprites are drawn in the order the layers were added, then the entities'. Each layer's screen pass runs in turn, in the layers' order, each on what the last made (D-125).
 - **One view at a time (D-073):** a layer may move to another view, as at a level switch. Adding it to a view takes it out of the view it is in (calling its `dispose`) before `init` with the new view's context, so the old view stops drawing it and destroying the old view later leaves it alone. `dispose` drops what belongs to the view (its sprites; bakes still in flight, which resolve null once that view is destroyed); `init` starts that state afresh. Traffic's layer keeps its switches and, until `init`, its simulation (`serialize` after leaving a view works); `init` starts a new simulation on the new world's routes (or the `routes` it was built with), and `restore` puts a saved one back.
-- **`fogLayer({ enabled, time, paused })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level. `set({ time })` puts its clock where a game's is (a server's, D-125).
-- **`steamLayer({ enabled, time, paused })`** (engine): plumes over the placed objects the style's `atmosphere.steam` names (D-138), rising on the layer's clock; left out where the style has no steam or the world no such objects. `set({ time, paused })` as the fog's.
+- **`fogLayer({ enabled, time, paused, followProjection })`** (engine): the style's atmosphere (D-063); left out where the style has no fog over the world and level. `set({ time })` puts its clock where a game's is (a server's, D-125). With `followProjection`, the fog thins as the view's camera looks more steeply down (D-195): a line of sight crosses less of a flat layer, so the 4:3 view sees it two thirds as thick. By default it is as thick in every projection.
+- **`steamLayer({ enabled, time, paused })`** (engine): plumes over the placed objects the style's `atmosphere.steam` names (D-138), rising on the layer's clock; left out where the style has no steam or the world no such objects. `set({ time, paused })` as the fog's. A plume's width, rise and foot follow the view's projection (D-195).
 - **`veilLayer({ ramp, shade?, levels?, id? })`** (engine, D-125): a veil over cells a game sets, `set(rect, values)` (0–255 a cell, row by row; beyond the rectangle as at its edge), dithered into the frame as the fog is, pixel by pixel from where each stands, toward the ramp's shade: a fog of war, an area picked out.
 - **`trafficLayer({ seed, density, enabled, paused, time, sublayers, routes })`** (sim): D-060; left out without routes. Sublayers road, rail and ferry. Its state is the simulation's JSON with its switches.
 

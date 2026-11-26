@@ -3,6 +3,7 @@ import {
   fogLayer,
   Minimap,
   roverController,
+  STEEP_PROJECTION,
   steamLayer,
   type RoverOptions,
   type TileBake,
@@ -169,7 +170,8 @@ async function main() {
           sublayers: only === null ? undefined : (only.split(",").filter((l) => (TRAFFIC_SUBLAYERS as string[]).includes(l)) as TrafficSublayer[]),
         });
   // Fog (an atmosphere layer): where the style has fog over this world and level; fog=0 starts it off
-  const fog = fogLayer({ enabled: params.get("fog") !== "0", time: num("fogTime", 0), paused: params.get("fogPause") === "1" });
+  // fogFollow=1: thinner fog from the higher camera (D-195)
+  const fog = fogLayer({ enabled: params.get("fog") !== "0", time: num("fogTime", 0), paused: params.get("fogPause") === "1", followProjection: params.get("fogFollow") === "1" });
   // Steam (D-138): plumes over the objects the style says steam; steam=0 starts it off
   const steam = steamLayer({ enabled: params.get("steam") !== "0", time: num("steamTime", 0), paused: params.get("steamPause") === "1" });
 
@@ -187,6 +189,8 @@ async function main() {
     objects: params.get("objects") !== "0",
     scatter: params.get("scatter") !== "0",
     heroes: params.get("paint") !== "0",
+    // projection=steep: the higher camera (D-195), 4:3 tiles
+    ...(params.get("projection") === "steep" ? { projection: STEEP_PROJECTION } : {}),
     chunkBudgetMB: maybeNum("chunkBudget"), // decoded terrain kept at most (MB, D-120)
     palette: params.get("palette") === "night" ? "night" : "day",
     camera: {

@@ -739,3 +739,16 @@ kbd {
     scale: 1.18;
   }
 }
+/* the damage an invader's strike will do, on the cell it lands on (D-194) */
+.label.badge {
+  min-width: 14px;
+  padding: 0 3px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+  background: #c83a32;
+  border: 2px solid #14121f;
+  border-radius: 0;
+  box-shadow: 1px 1px 0 #14121f;
+}

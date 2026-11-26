@@ -33,7 +33,16 @@ export interface Arrow {
   from: [number, number];
   to: [number, number];
   kind: MarkKind;
+  /**
+   * How it's drawn (D-192): `arc`, high over what's between, for a lob or a lift; `shot`, a low arc, for a shot along a line; `flat`,
+   * short and level into the next cell, for a blow; `path`, straight from cell to cell, for a move or a push. Unset: `path` for a move,
+   * else `arc`.
+   */
+  style?: "arc" | "shot" | "flat" | "path";
 }
+
+/** An arrow's style for a weapon's kind (D-192): a blow or a charge flat, a shot a low arc, a lob or a lift a high one. */
+export const arrowStyle = (kind: string): "arc" | "shot" | "flat" => (kind === "melee" || kind === "charge" || kind === "evacuate" ? "flat" : kind === "shot" ? "shot" : "arc");
 
 export interface BoardOverlayOptions {
   /** The layer's id (default `board-overlay`; give each board's its own). */

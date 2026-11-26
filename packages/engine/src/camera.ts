@@ -1,4 +1,4 @@
-import { project, type Rotation } from "@pixelworlds/grid";
+import { project, type Projection, type Rotation } from "@pixelworlds/grid";
 import type { Camera } from "@pixelworlds/runtime";
 import type { CanvasPoint, ViewCamera } from "./types";
 
@@ -41,6 +41,10 @@ export class ViewCameraImpl implements ViewCamera {
 
   get rotation(): Rotation {
     return this.cam.rotation;
+  }
+
+  get projection(): Projection {
+    return this.cam.projection;
   }
 
   set rotation(r: Rotation) {
@@ -134,7 +138,7 @@ export class ViewCameraImpl implements ViewCamera {
     if (z === null) return null;
     const c = this.cam;
     const rs = this.rs;
-    const p = project(x * rs, y * rs, z * rs, c.rotation);
+    const p = project(x * rs, y * rs, z * rs, c.rotation, c.projection);
     // render px → device px → CSS px, the inverse of query.pick: the view's
     // top-left is the camera's origin, whole pixels plus the sub-pixel shift
     const [left, top] = c.origin();

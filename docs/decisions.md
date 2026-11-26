@@ -198,6 +198,11 @@ Status values:
 | D-188 | After the first live playtest: the play server's missing cities, taps, the city map's ground, the choosing clock everywhere, runs kept across reloads | Accepted |
 | D-190 | The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district | Accepted |
 | D-191 | What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving | Accepted |
+| D-192 | Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint | Accepted |
+| D-193 | The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size | Accepted |
+| D-194 | After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck | Accepted |
+| D-195 | A higher camera: a view's projection as an option, 4:3 tiles for the fights | Accepted |
+| D-196 | Hero landmarks in other projections: the 2:1 paint resampled at run time | Accepted |
 
 ---
 
@@ -2651,3 +2656,91 @@ The point is more room for visual interest; both halves are wanted.
 - **Checked:** in the browser on a New York block: the buildings labelled (red where struck this round); a pumper's shot at a tower ("tower glass 3→2 hp, 590 people lost… 605 people lost (15 without it)"), the tower red and breathing; a crane's drop pushing a crawler, its ghost sliding along the arrow; a strike on a crawler ("Crawler 3→2 hp… 15 people lost, as without it").
 - **Not yet:** labels crowd where small buildings stand close; the words don't say where a push leaves a unit; the round's end counts people only (not rigs hurt or invaders down).
 
+### D-192: Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint (accepted)
+- **Why:** the owner asked for the arrows to differ by action (a ranged attack's arc, a close one a short flat arrow), because the arcs were confusing as to which cell they pointed at (some came down on a roof, some on the ground), and for a building under attack to be red only where it's struck, the cell at risk, with something of the whole building still shown.
+- **What:**
+  - **Arrows have a style** (`Arrow.style`, `arrowStyle` by weapon kind, in `@pixelworlds/tactics`):
+    - `flat`, for a blow or a charge: short and level from the striker into the face of the next cell, at the striker's height.
+    - `shot`: a low arc.
+    - `arc`, for a lob or a lift: a high arc.
+    - `path`, for a move or a push: straight from cell to cell.
+  - The invaders' aims, the hint's strikes and a strike looked at's pushes and lifts each take theirs.
+  - **An arc comes down on its cell's own plane** (the roof where a building stands, else the ground), and that cell is marked in the arrow's colour, so where it lands reads at once.
+  - **A building the invaders strike** is red on the cell struck only: that cell's column, from the ground to the roof, filled and outlined, its roof striped. The rest of the building is outlined faintly, so it still reads as the one building whose hit points they take.
+  - The cells marked in danger are each strike's own: a building hurt by being struck, pushed into or fallen on is marked on the cell nearest the blow, no longer on every cell it has.
+- **Checked:** in the browser:
+  - **Kyoto:** a brute's slam a short flat arrow into one cell of a temple, that cell's column red and striped, the rest outlined faintly; the hint's moves straight, the crane's drop a high arc onto a marked cell under the brute.
+  - **San Francisco:** a flyer's spit a low arc onto the pumper's cell, marked; a brute's slam into one cell of a building.
+- **Not yet:** the board map (top right) draws every arrow alike.
+
+### D-193: The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size (accepted)
+- **Why:** the owner asked for the arrows to be styled in the game's flatter pixel art (keeping their animation); they needn't sit volumetrically in the scene. They were smooth canvas strokes with soft glows over a pixel-art city.
+- **What:** `PixelLayer` (`apps/tactics/src/pixels.ts`) draws into a small buffer, pixel by pixel, with no antialiasing: Bresenham lines and pixel squares, scanline-filled polygons, a dithered (checkerboard) fill. Its pixel is the world's on screen: a render pixel is `zoom` device pixels (not CSS pixels: on a screen of 2 device pixels a CSS pixel, a first cut drew the indicators' pixels twice the size of the city's and the units', which the owner found jarring), so the layer is the world's internal resolution (512 × 320 at 1280 × 800, zoom 5, on such a screen), laid over the screen scaled up without smoothing.
+  - **Arrows:** a 1-pixel line in the arrow's colour inside a 1-pixel dark outline, with a small pixel triangle for a head. (A first cut drew 2 pixels inside 4; the owner found it too prominent.) A white pixel runs along every sixth step toward the head. Each takes its style as in D-192 (flat, low arc, high arc, straight path).
+  - **Where an arc lands:** the cell sparsely dithered in the arrow's colour (one pixel in four), its one-pixel edge blinking between that colour and white.
+  - **A push's ghost:** a pixel diamond sliding along the push's path, easing in, again and again.
+  - **A shot in flight:** a pixel ball with a short pixel trail.
+  - The cell fills, stripes, building outlines and the grid stay as they were.
+- **Checked:** in the browser on a San Francisco block: the pixel layer 512 × 320, the world's internal size, 5 device pixels a pixel as the world's; the hint's moves, drop and shot and the invaders' aims as pixel lines with dark outlines and pixel heads, the white dash marching; landing cells dithered and blinking; at the default zoom the indicators' pixels match the city's; a ram's push on the pumper, its ghost sliding; no errors.
+
+### D-194: After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck (accepted)
+- **Why:** the owner showed a screenshot of Into the Breach, whose actions read clearly, and asked whether that comes of a mixture of techniques. Read from it:
+  - the indicators lie on the cells' plane, so the cell meant is never in doubt;
+  - a shot or a lob is a dotted trail, light over busy ground;
+  - the damage sits in a box on the cell it lands on;
+  - each colour means one thing;
+  - everything is pixel art with dark outlines (D-193).
+
+  Asked to adopt the three that differed most.
+- **What:**
+  - **A blow** (an invader's, the hint's): a thick arrow lying on the striker's own plane, from its cell across the edge into the cell it hits, dark-outlined, nudging forward and back.
+  - **A shot, a lob or a lift:** dots along its flight, evenly spaced on screen, outlined dark, the arrow's colour and a pale cream by turns, drifting toward where it lands; it still lands on the cell marked for it (D-192).
+  - **A move or a push** keeps its line and head.
+  - **Each cell the invaders will hit** has a badge: a red box with the hit points it will cost there (a unit's, or a building's on the cell struck), worked out with the cells in danger (`intents`, once a paint).
+- **Checked:** in the browser on a San Francisco block: two flyers' spits as dotted trails, a brute's slam as an arrow on its cell, badges ("1", "1", "2") on the cells struck.
+
+### D-195: A higher camera: a view's projection as an option, 4:3 tiles for the fights (accepted)
+- **Why:** the owner noticed that Into the Breach's boards are seen from higher up than ours and asked whether the library supports that angle. Its tiles are 56×42 (the fan-made mod loader's tile picking uses half-sizes 28×21): a 4:3 diamond, about 49° down, where ours are 2:1, 30° down. Things on its board also stand at most about a tile tall. Baked at 4:3 with the bake's existing projection parameter (D-155), a San Francisco block showed more street between its buildings. At 8 px a height step the facades' window rows stayed whole; at 6 px they began to merge, and at 4 px they were lost.
+- **What:**
+  - **`Projection`** (`grid`, the bake's since D-155): screen x, screen y and depth, each linear in a point's rotated (u, v) and height. `ISO_PROJECTION` is the 2:1 view: sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3. `STEEP_PROJECTION` is 4:3: sy = 12(u + v) − 8h, with the same x and depth. Depth still grows toward the camera along every view ray.
+  - **The grid's projection functions** (`project`, `projectView`, `unprojectAtHeight`, the new `unprojectView`) take one, 2:1 by default. `projectionInverse`, `groundInverse` and `sumUV` give the inverses the shaders need.
+  - **A view's projection** is `createWorldView({ projection })`, fixed for its life, and readable on `camera.projection` and `FrameInfo.projection`. The runtime camera, the tile grid's screen rectangles, the depth range, picking, fog's ground under the view, the minimap's outline of the view and every bake follow it. The bake worker learns it in its init message.
+  - **The see-through around a player (D-154), fog (D-063) and steam (D-138)** worked out a pixel's surface from 2:1 constants. They take the inverse as uniforms instead: unchanged in the 2:1 view.
+  - **Another projection's tiles are kept apart:** the tile's part of the cache key carries the projection, and a top-down bake's key leaves that part out as before. Painted-over hero landmarks (D-053) were left out at first, as they are painted for the 2:1 view; D-196 resamples them. Lighting and shadows are worked out in the world, so they don't change.
+  - **The tactics game:** its views (game and survey gallery) use `STEEP_PROJECTION`. The fight's view rays rise by the projection's slope, two steps a world cell across each way at 2:1 and three at 4:3 (`rayRise`). Those rays decide what to cut down, which cell a pick on a roof means, and which way the camera is. `hiddenFrom` takes the rise, 2 by default. The survey's ratings (`boards.json`) stay as worked out for 2:1, which counts more cells hidden than the fights now see.
+  - **The web viewer and the example game take `?projection=steep`**, to show any world from the higher camera. The viewer's `fogFollow=1` also thins the fog for it.
+  - **Effects:**
+    - A steam plume's width and rise take the projection's cell width and step. Its foot, the near half of a ground circle below the vent, takes the tile's height over its width (`tileAspect`), which was 0.5 at 2:1.
+    - Fog's `followProjection` option thins the fog for a steeper camera, by the 2:1 tile's aspect over the view's: two thirds at 4:3. A line of sight through a flat layer is that much shorter. It is off by default, so fog is as thick in every projection.
+    - The plane game's camera height takes the projection's step.
+- **Checked:**
+  - **Unit tests:**
+    - projecting and unprojecting round-trip in both projections and all four rotations;
+    - the inverses undo the projection, and depth grows along a ray;
+    - the 2:1 reveal sum is the old sy / 32 + 0.75 depth.
+  - **Fog at 2:1:** the Golden Gate golden image still matches pixel for pixel, so the inverted fog pass draws as before.
+  - **New e2e tests:**
+    - at 4:3, fog drawn through the Golden Gate, and thinner with `fogFollow=1`;
+    - Old Faithful's plume, in both projections;
+    - the car seen through the casino tower, near it and nowhere else, in both projections.
+  - **In the browser:** a San Francisco fight at 4:3, where a pick lands on the cell projected at 25 of 25 points; the web viewer at 4:3 with traffic on its roads.
+- **Hero landmarks in other projections** (decided in D-196: resampled at run time). Their paints are images of the 2:1 view, made for the Southwest's three landmarks; no city in the tactics game has any. The options were:
+  - **Paint again per projection:** `tools/hero-bake.mjs` bakes in the projection, and the manifest lists paints per projection. The artist's pixels stay exact, at the cost of another set of paints.
+  - **Reproject at run time:** for each pixel of a tile in the other projection, its world point (from its depth), projected into the 2:1 hero bake. Where that bake shows the same surface, the paint there is taken. This needs no new art, but the paint is resampled: a roof stretches by half, and one-pixel details may double or break.
+  - **Paint into the model:** the painted colours are carried onto the landmark's voxels once, so every projection and rotation draws them. This is the most general, but painted indices would then be shaded, and paint beyond the silhouette (a beacon) has no surface to land on.
+- **Not done:** the 4:3 view's tiles cover half again as many pixels for the same ground, so its bakes take longer and hold more GPU memory. Lower heights for the fights (less vertical exaggeration in the world build) are left until the steeper view has been played.
+
+### D-196: Hero landmarks in other projections: the 2:1 paint resampled at run time (accepted)
+- **Why:** the owner asked for the hand-painted landmarks to show in the higher camera (D-195) too. Of the three options weighed there, resampling needs no new art and no change to the models. Painting again per projection is still open where resampling looks poor.
+- **What:** `applyHeroPaintReprojected` (runtime) stamps the paint into every tile baked in another projection, as `applyHeroPaint` does in the 2:1 view. Views in any projection load the heroes again.
+  - **On the silhouette:** each of the tile's pixels gives a point in the world: its screen position and depth, the projection inverted. That point is projected into the 2:1 view. Where the hero's offline bake shows the same surface, its paint there is taken: the bake covers the pixel, and its depth is within 26/256 of the point's. A surface's depth changes by up to ±1/16 across one 2:1 pixel of a roof or a wall, so the 2:1 view's 3/256 would miss resampled points.
+  - **What it leaves:** anything in front of the landmark hides the paint, since its points are elsewhere. A surface the 2:1 view never saw has no paint, and the plain bake shows there.
+  - **Beyond the silhouette** (an outline, a beacon): each painted pixel is placed at the depth of the silhouette pixel nearest it, within 4 px, and lands where `applyHeroPaint` would land it: on background, or on what lies behind the landmark's farthest point.
+  - **Each hero is placed in the projection once:** its silhouette's screen rectangle there, its farthest depth, and its paint beyond the silhouette.
+- **Checked:**
+  - **Unit tests:** a roof painted on one half at 2:1 and drawn at 4:3 is painted on that half and only there; something in front of it is never painted; in the 2:1 view the result equals `applyHeroPaint`'s; paint beyond the silhouette lands as before.
+  - **In headless Chromium:**
+    - Hoover Dam: its lift joints stay horizontal bands across the face, 1,220 pixels changed at 4:3 against 960 at 2:1.
+    - The Strat: its shaft outline and pod band, 954 pixels against 927.
+    - A few one-pixel joints on surfaces the 4:3 view stretches come out two pixels thick.
+  - **e2e:** the dam's paint at 4:3 changes 200 to 5,000 pixels, the dam only.

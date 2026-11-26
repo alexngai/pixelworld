@@ -482,10 +482,11 @@ export function planeAt(c: Combat, k: number): number {
  * The cells of an arena its own buildings hide from one side of the city
  * view (D-169), as they stand: down each cell's view ray, from where a unit
  * there would stand toward the camera (`toward`: the diagonal the view looks
- * along, a world cell across each way rising two steps), the first cell of
- * another of its buildings whose roof is above the ray.
+ * along, a world cell across each way rising `rise` steps: two in the 2:1
+ * view, three in the higher one, D-195), the first cell of another of its
+ * buildings whose roof is above the ray.
  */
-export function hiddenFrom(b: Board, a: Arena, toward: readonly [number, number]): Uint8Array {
+export function hiddenFrom(b: Board, a: Arena, toward: readonly [number, number], rise = 2): Uint8Array {
   const out = new Uint8Array(a.w * a.h);
   for (let k = 0; k < a.w * a.h; k++) {
     const p = toWorld(b, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
@@ -493,7 +494,7 @@ export function hiddenFrom(b: Board, a: Arena, toward: readonly [number, number]
     for (let t = 0.25; ; t += 0.25) {
       const q = boardCellAt(b, p.x + t * toward[0], p.y + t * toward[1]);
       if (q < 0) break;
-      if (a.struct[q]! >= 0 && a.struct[q] !== a.struct[k] && a.roof[q]! > h + 2 * t) {
+      if (a.struct[q]! >= 0 && a.struct[q] !== a.struct[k] && a.roof[q]! > h + rise * t) {
         out[k] = 1;
         break;
       }

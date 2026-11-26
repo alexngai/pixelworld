@@ -1,5 +1,5 @@
 import { BAKE_CODE } from "@pixelworlds/bake";
-import { NO_WATER } from "@pixelworlds/grid";
+import { ISO_PROJECTION, NO_WATER, projectionKey, type Projection } from "@pixelworlds/grid";
 import { footprintBounds, resolveAsset, type ObjectInstance } from "@pixelworlds/generators";
 import {
   ChunkStore,
@@ -458,7 +458,12 @@ export async function openTileCache(option: WorldViewOptions["cache"], code = BA
  * objects (D-124) is kept under them as well (the list itself, not a hash:
  * one tile's is short, and two lists must never share a key).
  */
-export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE_CODE): (t: TileRequest, removed?: readonly number[], cells?: string, cut?: string) => string {
+export function tileCacheKey(
+  w: LoadedWorld,
+  plugins: string[] = [],
+  code = BAKE_CODE,
+  projection: Projection = ISO_PROJECTION,
+): (t: TileRequest, removed?: readonly number[], cells?: string, cut?: string) => string {
   // Atmosphere layers (fog) are drawn over the tiles, never into them, so they stay out of the key.
   const styleHash = hashString(JSON.stringify({ ...w.styleJson, atmosphere: undefined }));
   const parts = [
@@ -470,7 +475,9 @@ export function tileCacheKey(w: LoadedWorld, plugins: string[] = [], code = BAKE
     ...(w.scaleOverridden ? [`rs${w.renderScale}`] : []),
     ...plugins,
   ];
+  // another projection's tiles (D-195) apart, in the tile's own part (a top-down bake's key leaves that part out)
+  const proj = projectionKey(projection);
   // and one whose slice holds terrain edits (D-147) under them: the edits themselves, in the order stamped
   return (t, removed, cells, cut) =>
-    [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare), ...(removed?.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : []), ...(cut ? [`cut:${cut}`] : [])].join("|");
+    [...parts, tileKey(t.rotation, t.tx, t.ty, t.bare) + (proj ? `@${proj}` : ""), ...(removed?.length ? [`edits:${removed.join(",")}`] : []), ...(cells ? [`cells:${cells}`] : []), ...(cut ? [`cut:${cut}`] : [])].join("|");
 }

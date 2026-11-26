@@ -1,6 +1,6 @@
 import { TerrainGrid } from "@pixelworlds/grid";
-import { Baker, type BakeScene } from "@pixelworlds/bake";
-import { applyHeroPaint } from "./heroPaint";
+import { Baker, type BakeScene, type Projection } from "@pixelworlds/bake";
+import { applyHeroPaint, applyHeroPaintReprojected } from "./heroPaint";
 import {
   buildBoxesMesh,
   buildObjects,
@@ -73,7 +73,7 @@ export class BakeHost {
           });
           const scene = { meshes: [built.merged, built.lines], batches: built.batches };
           const meshMs = performance.now() - t0;
-          const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
+          const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true, ...this.projection() });
           this.baker.releaseScene(scene);
           this.reply(msg.id, res, meshMs, built.merged.vertexCount, built.failures);
           break;
@@ -88,7 +88,7 @@ export class BakeHost {
           const t0 = performance.now();
           const mesh = buildBoxesMesh(msg.boxes);
           const meshMs = performance.now() - t0;
-          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: true, ...(msg.projection ? { projection: msg.projection } : {}), ...(msg.sun ? { sun: msg.sun } : {}) });
+          const res = this.baker.bake(mesh, msg.rotation, "all", { shadows: true, ...(msg.projection ? { projection: msg.projection } : this.projection()), ...(msg.sun ? { sun: msg.sun } : {}) });
           this.baker.releaseScene(mesh);
           this.reply(msg.id, res, meshMs, mesh.vertexCount);
           break;
@@ -133,9 +133,13 @@ export class BakeHost {
     // ponytail: a bare variant whose scene left the cache meshes the tile again; bake both together if that shows
     const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
     const cut = msg.cut && !msg.bare && !msg.ground ? this.cutMask(init, msg.cut) : null;
-    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...(objects ? { hide: new Set(objects) } : {}), ...(cut ? { cut } : {}) });
-    // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there)
-    if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) applyHeroPaint(res.image, msg.rotation, init.heroes);
+    const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...this.projection(), ...(objects ? { hide: new Set(objects) } : {}), ...(cut ? { cut } : {}) });
+    // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there);
+    // in another projection, resampled from the 2:1 view they are painted for (D-196)
+    if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) {
+      if (init.projection) applyHeroPaintReprojected(res.image, msg.rotation, init.heroes, init.projection);
+      else applyHeroPaint(res.image, msg.rotation, init.heroes);
+    }
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
@@ -237,9 +241,15 @@ export class BakeHost {
       }
     }
     const meshMs = performance.now() - t0;
-    const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true });
+    const res = this.baker.bake(scene, msg.rotation, "all", { shadows: true, ...this.projection() });
     this.baker.releaseScene(scene);
     this.reply(msg.id, res, meshMs, built.merged.vertexCount, built.failures);
+  }
+
+  /** The view's projection (D-195) as bake options: none for the 2:1 view. */
+  private projection(): { projection?: Projection } {
+    const p = this.init?.projection;
+    return p ? { projection: p } : {};
   }
 
   /** A rectangle in another projection (D-155): meshed, baked once in rotation 0 and let go. */

@@ -10,6 +10,7 @@ import type {
   WorldInfo,
   WorldQuery,
 } from "@pixelworlds/engine";
+import { ISO_PROJECTION } from "@pixelworlds/engine";
 
 /**
  * A small world for the game's tests, through the engine's public types
@@ -160,6 +161,7 @@ export function fakeView(world: FakeWorld, opts: { metersPerCell?: number; level
       return focus.h;
     },
     rotation: 0,
+    projection: ISO_PROJECTION,
     zoom: 2,
     autoZoom: false,
     internalWidth: 640,

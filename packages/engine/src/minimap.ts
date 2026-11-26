@@ -1,4 +1,4 @@
-import { project, unprojectAtHeight, type Rotation } from "@pixelworlds/grid";
+import { project, unprojectAtHeight, type Projection, type Rotation } from "@pixelworlds/grid";
 import type { ViewCamera } from "./types";
 
 /**
@@ -28,7 +28,7 @@ export interface MinimapRoads {
 
 /** What a minimap reads of a view (a `WorldView` is one). */
 export interface MinimapView {
-  readonly camera: Pick<ViewCamera, "x" | "y" | "rotation" | "internalWidth" | "internalHeight">;
+  readonly camera: Pick<ViewCamera, "x" | "y" | "rotation" | "internalWidth" | "internalHeight"> & { readonly projection?: Projection };
   readonly world: { readonly renderScale: number };
 }
 
@@ -46,7 +46,7 @@ const CLASS_COLOUR: Record<string, string> = {
 
 /** The ground a view shows, as cells: its four corners at the focus height, clockwise from the top left. */
 export function viewOnGround(view: MinimapView): [number, number][] {
-  const { x, y, rotation, internalWidth: w, internalHeight: h } = view.camera;
+  const { x, y, rotation, projection, internalWidth: w, internalHeight: h } = view.camera;
   const rs = view.world.renderScale;
   return [
     [-w / 2, -h / 2],
@@ -54,7 +54,7 @@ export function viewOnGround(view: MinimapView): [number, number][] {
     [w / 2, h / 2],
     [-w / 2, h / 2],
   ].map(([sx, sy]) => {
-    const [dx, dy] = unprojectAtHeight(sx!, sy!, 0, rotation);
+    const [dx, dy] = unprojectAtHeight(sx!, sy!, 0, rotation, projection);
     return [x + dx / rs, y + dy / rs];
   });
 }

@@ -95,6 +95,7 @@ This is exactly a standard orthographic camera at **45° yaw and 30° pitch**, p
 
 - **View rotations:** r ∈ {0, 1, 2, 3}. World (x, y) is rotated by r·90° before projection. Each rotation is a separate bake.
 - **Lighting is view-relative:** the sun always comes from the same screen direction, as in classic isometric games, so all 4 rotations look equally good.
+- **Other projections (D-195):** a view may lay the world out with another linear projection (`Projection`: screen x, screen y and depth, each from the rotated (u, v) and h). `STEEP_PROJECTION` is a higher camera with 4:3 tiles: `screen_y = 12 · (x + y) − 8 · h`, about 49° down, heights still 8 px a step. A projection's x and y coefficients must be whole numbers, so tiles meet without seams, and its depth must grow toward the camera along every view ray. Everything that draws or picks follows the view's projection: the bake, the tile layout, picking, and the compositor's passes (the see-through around a player, fog, steam), which invert it. Lighting and shadows are worked out in the world, so they don't change.
 
 ### 3.5 Scale levels (D-046, D-047, D-048)
 

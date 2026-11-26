@@ -38,7 +38,7 @@ Arrows drive the rover, WASD or a drag pans, Q/E rotate, 1–6 zoom. The view al
 | `pixelworld/engine` | `createWorldView` and the engine: camera, layers, entities, controllers, queries, `roverController`, `fogLayer` |
 | `pixelworld/traffic` | ambient traffic: `trafficLayer()` for a view, and the deterministic simulation |
 | `pixelworld/format` | the world package format: manifest, chunk and objects codecs, the geo grid |
-| `pixelworld/grid` | the isometric projection, rotations, cells and heights |
+| `pixelworld/grid` | the isometric projections (2:1, and a higher camera's 4:3), rotations, cells and heights |
 | `pixelworld/style` | style packs: validation, palettes, night and atmosphere |
 | `pixelworld/generators` | voxel models, meshing, and the generators that draw trees, buildings, landmarks and vehicles |
 

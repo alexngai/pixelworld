@@ -1,13 +1,13 @@
 [
   {
-    "name": "pixelworld/engine: createWorldView, as an app bundles it (85.1 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground, ground surfaces per pixel and one-pixel lines; 90.4 KB as of D-139's arch and balanced-rock shapes; 90.9 KB with D-138's steam pass; 93.2 KB with D-147's terrain edits; 95.5 KB with D-154–D-159's reveals, top-down bakes and cut-down buildings)",
+    "name": "pixelworld/engine: createWorldView, as an app bundles it (85.1 KB with the bake pool, start tiles, faster object meshes, water planes, natural ground, ground surfaces per pixel and one-pixel lines; 90.4 KB as of D-139's arch and balanced-rock shapes; 90.9 KB with D-138's steam pass; 93.2 KB with D-147's terrain edits; 95.5 KB with D-154–D-159's reveals, top-down bakes and cut-down buildings; 98.4 KB with D-195's projections; 99.3 KB with D-196's resampled hero paint)",
     "path": "dist/engine.js",
     "import": "{ createWorldView }",
     "gzip": true,
-    "limit": "98 KB"
+    "limit": "100 KB"
   },
   {
-    "name": "pixelworld/engine and pixelworld/traffic: a view with traffic (93.2 KB, as above; 100.3 KB with D-138's steam pass and D-139's arch and balanced-rock shapes; 102.6 KB with D-154's several reveals and D-155's top-down bakes; 103.8 KB with D-159's cut-down buildings)",
+    "name": "pixelworld/engine and pixelworld/traffic: a view with traffic (93.2 KB, as above; 100.3 KB with D-138's steam pass and D-139's arch and balanced-rock shapes; 102.6 KB with D-154's several reveals and D-155's top-down bakes; 103.8 KB with D-159's cut-down buildings; 107.7 KB with D-195–D-196's projections and resampled hero paint)",
     "path": [
       "dist/engine.js",
       "dist/traffic.js"
@@ -17,7 +17,7 @@
       "dist/traffic.js": "{ trafficLayer }"
     },
     "gzip": true,
-    "limit": "107 KB"
+    "limit": "108 KB"
   },
   {
     "name": "every entry point, all of it, nothing tree-shaken (D3: about 89 KB; 96 KB with D-072/073/075's validation, failures and game API; 100.2 KB with D-082/097's centre lines and rail corridors and D-098/099's one-pixel lines; 106.5 KB with D-094–D-096's water and ground; 111.8 KB with D-124's runtime edits and D-125's cells for games, fog sampler and veil layer; 113.5 KB with D-120/D-123's big worlds merged in; 115.0 KB as of D-139's arch and balanced-rock shapes; 116.8 KB with D-138's steam layer and pass and hot pools; 119.2 KB with D-146's minimap; 121.8 KB with D-147's terrain edits and D-148's boards; 122.8 KB with D-154's several reveals and D-155's top-down bakes; 123.6 KB with D-158's top-down tiles; 126.1 KB with D-159–D-164's cutaways, lone buildings and top-down sprites)",
@@ -53,10 +53,10 @@
     "limit": "60 KB"
   },
   {
-    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it (D3: 145 KB)",
+    "name": "bake worker (dist/bake.worker.js), as a bundler minifies it (D3: 145 KB; 162.2 KB with D-195–D-196's projections and resampled hero paint)",
     "path": "dist/bake.worker.js",
     "gzip": false,
     "brotli": false,
-    "limit": "160 KB"
+    "limit": "163 KB"
   }
 ]

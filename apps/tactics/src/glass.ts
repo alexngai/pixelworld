@@ -1,5 +1,6 @@
 import { toWorld, type Board, type WorldView } from "@pixelworlds/engine";
 import { planeAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { PixelLayer, rgba } from "./pixels";
 
 /**
  * The board over the city view in the screen's own pixels (D-156). Every cell
@@ -71,16 +72,35 @@ interface Whole {
 const GLASS: Whole = { edge: 0.5, glow: 6, width: 1.2, corner: 0.2, pane: 0.012, roof: 0.03 };
 const GLASS_LIT: Whole = { edge: 0.95, glow: 10, width: 1.8, corner: 0.55, pane: 0.08, roof: 0.14 };
 /** A building the invaders will strike (D-170): outlined, barely filled (its roof is striped). */
-const THREAT: Whole = { edge: 0.95, glow: 8, width: 2, corner: 0.75, pane: 0.015, roof: 0 };
+const THREAT: Whole = { edge: 1, glow: 10, width: 2.2, corner: 0.85, pane: 0.14, roof: 0.22 };
+/** The rest of a building struck (D-192): outlined faintly. */
+const THREAT_FAINT: Whole = { edge: 0.35, glow: 3, width: 1, corner: 0.15, pane: 0, roof: 0 };
 /** A building struck (D-171): white, fading. */
 const FLASH_MS = 450;
 /** Arrows' colours by what they mean: an invader's aim red, a push or a move blue, a hint's strike yellow. */
 const ARROW: Partial<Record<Mark["kind"], string>> = { attack: "235,70,60", move: "150,210,255", info: "242,193,78" };
 const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, info: 0.16, select: 0.12 };
 
+/** The pixel indicators' outline, highlight and ghost (D-193). */
+const DARK = rgba(14, 12, 26);
+const WHITE = rgba(255, 255, 255);
+const GHOST = rgba(150, 210, 255);
+/** A dotted flight's second colour, by turns with the arrow's (D-194). */
+const DOT2 = rgba(255, 240, 200);
+/** "r,g,b" as the pixel layer's colour. */
+const pixelColour = (rgb: string) => {
+  const [r, g, b] = rgb.split(",").map(Number) as [number, number, number];
+  return rgba(r, g, b);
+};
+/** A pixel diamond (|dx| + |dy| ≤ r) centred on a pixel. */
+const diamond = (px: PixelLayer, x: number, y: number, r: number, c: number) => {
+  for (let j = -r; j <= r; j++) for (let i = -(r - Math.abs(j)); i <= r - Math.abs(j); i++) px.set(x + i, y + j, c);
+};
+
 export class BoardGlass {
   readonly el: HTMLCanvasElement;
   private s: GlassState | null = null;
+  private readonly px = new PixelLayer();
 
   constructor(
     parent: HTMLElement,
@@ -134,15 +154,32 @@ export class BoardGlass {
     const centre = (k: number) => toWorld(this.board, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
     // an arrow's or a shot's path (D-171): from above where a unit stands to the cell struck, arcing over what's between when it's a
     // shot, low when it's a push or a move
-    const arc = (ka: number, kb: number, high: boolean) => {
+    const arc = (ka: number, kb: number, high: boolean, low = false) => {
       const pa = centre(ka);
       const pb = centre(kb);
       const ha = planeAt(c, ka) + 1;
-      const hb = planeAt(c, kb) + 0.3;
+      // the arc comes down on the cell's own plane, where its marker is (D-192)
+      const hb = planeAt(c, kb) + 0.1;
       const len = Math.hypot(pb.x - pa.x, pb.y - pa.y);
-      const up = high ? Math.max(1.5, len * 0.8) + Math.abs(hb - ha) * 0.3 : 0.5 + Math.abs(hb - ha) * 0.3;
+      const up = high ? (low ? Math.max(0.8, len * 0.3) : Math.max(1.5, len * 0.8)) + Math.abs(hb - ha) * 0.3 : 0.5 + Math.abs(hb - ha) * 0.3;
       return (f: number) => {
         const q = camera.project(pa.x + (pb.x - pa.x) * f, pa.y + (pb.y - pa.y) * f, ha + (hb - ha) * f + up * 4 * f * (1 - f));
+        return [q.x, q.y] as [number, number];
+      };
+    };
+    // a point of the board (cells, continuous) at a height, on screen
+    const plane = (x: number, y: number, h: number): [number, number] => {
+      const p = toWorld(this.board, { x, y });
+      const q = camera.project(p.x, p.y, h);
+      return [q.x, q.y];
+    };
+    // a straight run from part of the way from one cell's middle toward another's to further along it, rising from one height to another
+    const toward = (ka: number, kb: number, f0: number, f1: number, ha: number, hb: number) => {
+      const pa = centre(ka);
+      const pb = centre(kb);
+      return (f: number) => {
+        const e = f0 + (f1 - f0) * f;
+        const q = camera.project(pa.x + (pb.x - pa.x) * e, pa.y + (pb.y - pa.y) * e, ha + (hb - ha) * f);
         return [q.x, q.y] as [number, number];
       };
     };
@@ -172,11 +209,12 @@ export class BoardGlass {
     g.setLineDash([]);
     // a building of the fight whole, from its foot to its roof: the roof faintly filled, its outer sides as faint panes, the roof's
     // edge plainly, its corners down faintly
-    const building = (id: number, rgb: string, w: Whole, foot: (k: number) => number) => {
+    // `only`: just these of its cells, each a column from its foot to its roof (D-192)
+    const building = (id: number, rgb: string, w: Whole, foot: (k: number) => number, only?: ReadonlySet<number>) => {
       const st = a.structures[id];
       if (!st || c.structHp[id]! <= 0) return;
-      const mine = new Set(st.cells);
-      for (const k of st.cells) {
+      const mine = new Set(only ? st.cells.filter((k) => only.has(k)) : st.cells);
+      for (const k of mine) {
         const i = k % a.w;
         const j = Math.floor(k / a.w);
         const roof = quad(k, standAt(c, k));
@@ -214,7 +252,13 @@ export class BoardGlass {
     const threatened = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => a.struct[m.j * a.w + m.i]!).filter((id) => id >= 0));
     g.save();
     for (const id of s.ghosts) if (!threatened.has(id)) building(id, "170,215,255", id === focused ? GLASS_LIT : GLASS, (k) => a.height[k]! + s.stump);
-    for (const id of threatened) building(id, COLOUR.danger, THREAT, (k) => a.height[k]!);
+    // a building the invaders strike (D-192): the cells struck red, each its column from the ground to the roof; the rest of the
+    // building outlined faintly, so it still reads as the one building whose hit points they take
+    const struck = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => m.j * a.w + m.i));
+    for (const id of threatened) {
+      building(id, COLOUR.danger, THREAT_FAINT, (k) => a.height[k]!);
+      building(id, COLOUR.danger, THREAT, (k) => a.height[k]!, struck);
+    }
     g.restore();
     // marked cells: see-through fills, glowing edges
     for (const m of s.marks) {
@@ -290,100 +334,128 @@ export class BoardGlass {
       }
       g.restore();
     }
-    // arrows: an outline, the colour, a dash running along it, and a head
+    // the action indicators as pixel art (D-193): arrows, where a strike lands, a push's ghost, a shot; drawn pixel by pixel at the
+    // world's own pixel size (a render pixel is `zoom` device pixels, as the city and the units are drawn), flat over the screen, and
+    // laid on unsmoothed
+    const P = Math.max(1, Math.round(camera.zoom));
+    const px = this.px;
+    px.begin(Math.ceil((W * dpr) / P), Math.ceil((H * dpr) / P));
+    const lo = ([x, y]: [number, number]): [number, number] => [(x * dpr) / P, (y * dpr) / P];
+    const beat = Math.floor(now / 70);
     for (const ar of s.arrows) {
       const ka = ar.from[1] * a.w + ar.from[0];
       const kb = ar.to[1] * a.w + ar.to[0];
-      const rgb = ARROW[ar.kind] ?? COLOUR[ar.kind];
-      const at = arc(ka, kb, ar.kind !== "move");
+      const colour = pixelColour(ARROW[ar.kind] ?? COLOUR[ar.kind]);
+      // its style (D-192): a ranged strike arcs onto the cell's plane; a blow is short and level, from the striker into the face of
+      // the cell it hits; a move or a push runs straight from cell to cell
+      const style = ar.style ?? (ar.kind === "move" ? "path" : "arc");
+      // a blow (D-194): a thick arrow lying on the striker's own plane, from its cell across the edge into the cell it hits, nudging
+      // forward and back
+      if (style === "flat") {
+        const h = planeAt(c, ka) + lift;
+        const [ai, aj, bi, bj] = [ka % a.w, Math.floor(ka / a.w), kb % a.w, Math.floor(kb / a.w)];
+        const [ux, uy] = [Math.sign(bi - ai), Math.sign(bj - aj)];
+        const nudge = 0.05 * Math.sin(now / 180);
+        // along the blow from the striker's middle (0) to the target's (1), across it either way
+        const on = (along: number, across: number) => lo(plane(ai + 0.5 + ux * (along + nudge) - uy * across, aj + 0.5 + uy * (along + nudge) + ux * across, h));
+        const shape = (grow: number): [number, number][] => [
+          on(0.12 - grow, -0.11 - grow),
+          on(0.46, -0.11 - grow),
+          on(0.46 - grow * 0.5, -0.27 - grow),
+          on(0.82 + grow * 1.6, 0),
+          on(0.46 - grow * 0.5, 0.27 + grow),
+          on(0.46, 0.11 + grow),
+          on(0.12 - grow, 0.11 + grow),
+        ];
+        px.fill(shape(0.05), DARK);
+        px.fill(shape(0), colour);
+        continue;
+      }
+      const at = style === "arc" || style === "shot" ? arc(ka, kb, true, style === "shot") : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
+      // where an arc comes down: the cell marked (sparsely dithered, a one-pixel edge blinking), so which one it is reads at once
+      if (style === "arc" || style === "shot") {
+        const q = quad(kb, planeAt(c, kb) + lift, 0.14).map(lo);
+        px.fill(q, colour, 4);
+        const blink = Math.floor(now / 380) % 2 ? colour : WHITE;
+        for (const [x, y] of PixelLayer.path([...q, q[0]!])) px.set(x, y, blink);
+      }
       const pts: [number, number][] = [];
-      for (let n = 0; n <= 32; n++) pts.push(at(n / 32));
-      // the shaft stops where the head begins
+      for (let n = 0; n <= 24; n++) pts.push(lo(at(n / 24)));
+      // a shot, a lob or a lift (D-194): dots along its flight, evenly spaced on screen, two colours by turns, drifting toward where it lands
+      if (style === "arc" || style === "shot") {
+        const fine: [number, number][] = [];
+        for (let n = 0; n <= 96; n++) fine.push(lo(at(n / 96)));
+        const gap = 5;
+        const drift = (now / 90) % (gap * 2);
+        let run = 0;
+        for (let n = 1; n < fine.length; n++) {
+          const [x0, y0] = fine[n - 1]!;
+          const [x1, y1] = fine[n]!;
+          const d = Math.hypot(x1 - x0, y1 - y0);
+          // each dot where the distance run passes the next mark
+          for (let m = Math.ceil((run - drift) / gap); m * gap + drift <= run + d; m++) {
+            const f = (m * gap + drift - run) / (d || 1);
+            if (f < 0 || f > 1) continue;
+            const [x, y] = [Math.round(x0 + (x1 - x0) * f), Math.round(y0 + (y1 - y0) * f)];
+            px.dot(x, y, 4, DARK);
+            px.dot(x, y, 2, m % 2 ? colour : DOT2);
+          }
+          run += d;
+        }
+        continue;
+      }
+      // the shaft stops where the head begins, its head a pixel triangle along its last stretch
       const tip = pts[pts.length - 1]!;
       let back = pts.length - 1;
-      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 13) back--;
-      const shaft = pts.slice(0, back + 1);
-      const base = shaft[shaft.length - 1]!;
+      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 2.5) back--;
+      const shaft = PixelLayer.path(pts.slice(0, back + 1));
+      const base = pts[back]!;
       const len = Math.hypot(tip[0] - base[0], tip[1] - base[1]) || 1;
       const [dx, dy] = [(tip[0] - base[0]) / len, (tip[1] - base[1]) / len];
-      const head: [number, number][] = [tip, [base[0] - dy * 7, base[1] + dx * 7], [base[0] + dy * 7, base[1] - dx * 7]];
-      g.save();
-      g.lineCap = "round";
-      g.lineJoin = "round";
-      const line = () => {
-        g.beginPath();
-        shaft.forEach(([x, y], n) => (n ? g.lineTo(x, y) : g.moveTo(x, y)));
-      };
-      line();
-      g.strokeStyle = "rgba(12,12,24,0.6)";
-      g.lineWidth = 7;
-      g.stroke();
-      path(head);
-      g.lineWidth = 4;
-      g.stroke();
-      line();
-      g.strokeStyle = `rgba(${rgb},0.95)`;
-      g.lineWidth = 4;
-      g.shadowColor = `rgba(${rgb},0.7)`;
-      g.shadowBlur = 6;
-      g.stroke();
-      path(head);
-      g.fillStyle = `rgba(${rgb},1)`;
-      g.fill();
-      g.shadowBlur = 0;
-      line();
-      g.setLineDash([5, 11]);
-      g.lineDashOffset = -(now / 30) % 16;
-      g.strokeStyle = "rgba(255,255,255,0.6)";
-      g.lineWidth = 1.6;
-      g.stroke();
-      g.restore();
+      const head = (grow: number): [number, number][] => [
+        [tip[0] + dx * grow, tip[1] + dy * grow],
+        [base[0] - dy * (1.8 + grow) - dx * grow, base[1] + dx * (1.8 + grow) - dy * grow],
+        [base[0] + dy * (1.8 + grow) - dx * grow, base[1] - dx * (1.8 + grow) - dy * grow],
+      ];
+      // a one-pixel line inside a one-pixel outline
+      for (const [x, y] of shaft) px.dot(x, y, 3, DARK);
+      px.fill(head(0.9), DARK);
+      for (const [x, y] of shaft) px.set(x, y, colour);
+      px.fill(head(0), colour);
+      // a dash running along it toward the head
+      shaft.forEach(([x, y], i) => {
+        if ((((i - beat) % 6) + 6) % 6 === 0) px.set(x, y, WHITE);
+      });
     }
     // units the strike looked at would move (D-191): a ghost of each sliding along its arrow, easing in, again and again
     for (const sl of s.slides ?? []) {
-      const at = arc(sl.from, sl.to, false);
+      const at = toward(sl.from, sl.to, 0, 1, planeAt(c, sl.from) + 0.4, planeAt(c, sl.to) + 0.4);
       const t = (now / 1100) % 1;
-      const f = t < 0.8 ? 1 - (1 - t / 0.8) ** 3 : 1;
-      const [x, y] = at(f);
-      g.save();
-      g.globalAlpha = t < 0.8 ? 0.9 : 0.9 * (1 - (t - 0.8) / 0.2);
-      g.beginPath();
-      g.arc(x, y, 8, 0, 2 * Math.PI);
-      g.fillStyle = "rgba(150,210,255,0.35)";
-      g.shadowColor = "rgba(150,210,255,0.9)";
-      g.shadowBlur = 12;
-      g.fill();
-      g.lineWidth = 2;
-      g.strokeStyle = "rgba(255,255,255,0.9)";
-      g.stroke();
-      g.restore();
+      if (t > 0.85) continue;
+      const [x, y] = lo(at(1 - (1 - Math.min(1, t / 0.7)) ** 3));
+      diamond(px, x, y, 3, DARK);
+      diamond(px, x, y, 2, GHOST);
+      px.set(x, y, WHITE);
     }
-    // shots in flight: a glowing ball along the arrow's arc, a short trail behind
+    // shots in flight: a bright pixel ball along the arc, a short trail behind
     for (const sh of s.shots) {
       const f = (now - sh.t0) / sh.ms;
       if (f < 0 || f > 1) continue;
       const at = arc(sh.from, sh.to, true);
-      const rgb = ARROW[sh.kind] ?? COLOUR[sh.kind];
-      g.save();
-      g.lineCap = "round";
-      g.beginPath();
-      for (let n = 0; n <= 6; n++) {
-        const [x, y] = at(Math.max(0, f - 0.18 * (1 - n / 6)));
-        if (n) g.lineTo(x, y);
-        else g.moveTo(x, y);
+      const colour = pixelColour(ARROW[sh.kind] ?? COLOUR[sh.kind]);
+      for (let n = 3; n >= 1; n--) {
+        const [x, y] = lo(at(Math.max(0, f - 0.05 * n)));
+        px.set(x, y, colour);
       }
-      g.strokeStyle = `rgba(${rgb},0.65)`;
-      g.lineWidth = 5;
-      g.stroke();
-      const [x, y] = at(f);
-      g.shadowColor = `rgba(${rgb},1)`;
-      g.shadowBlur = 14;
-      g.fillStyle = "rgba(255,250,235,1)";
-      g.beginPath();
-      g.arc(x, y, 6, 0, Math.PI * 2);
-      g.fill();
-      g.restore();
+      const [x, y] = lo(at(f));
+      px.dot(x, y, 3, colour);
+      px.set(x, y, WHITE);
     }
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(px.end(), 0, 0, px.w * P, px.h * P);
+    g.restore();
     // what could be struck from where the rig would go
     g.save();
     g.setLineDash([3, 2]);

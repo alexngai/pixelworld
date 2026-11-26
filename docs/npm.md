@@ -65,7 +65,7 @@ Working projects, each built and run against the packed packages in CI: [example
 | `pixelworld/engine` | `createWorldView`; the camera, layers, entities, controllers and queries; `roverController`, `fogLayer`, `steamLayer`, `listenTo`, `Minimap` | 75 KB for `createWorldView` |
 | `pixelworld/traffic` | `trafficLayer()` and the deterministic simulation (D-060) | +8 KB beside the engine |
 | `pixelworld/format` | the world package format: manifest, chunk and objects codecs, the geo grid, PNG decoding | 3 KB for `parseManifest` and `decodeChunk` |
-| `pixelworld/grid` | the projection, rotations, cells, corner heights, road and rail bits | 0.2 KB for `project` |
+| `pixelworld/grid` | the projections (2:1, and a higher camera's 4:3, D-195), rotations, cells, corner heights, road and rail bits | 0.2 KB for `project` |
 | `pixelworld/style` | style packs: validation, palettes, materials, night and atmosphere | |
 | `pixelworld/generators` | voxel models, meshing, terrain fields, object building and the generators | |
 | `pixelworld/bake.worker.js` | the bake worker script, for copying it (§5) | 46 KB (129 KB minified) bundled; 61 KB as shipped (§7) |

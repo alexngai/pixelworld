@@ -22,6 +22,7 @@ import {
   planInvaders,
   rampsFor,
   resolveInvaders,
+  arrowStyle,
   planeAt,
   standAt,
   strike,
@@ -158,7 +159,13 @@ interface Side {
 const angle = (dir: number) => Math.atan2(DIRS[dir]![1], DIRS[dir]![0]);
 const pips = (hp: number, max: number) => "■".repeat(Math.max(0, hp)) + "□".repeat(Math.max(0, max - hp));
 
-/** Which way the camera is from a side of the view, over the ground: a world cell across each way (two steps up) stays on one screen point. */
+/** Steps a view ray rises a world cell across each way toward the camera: two in the 2:1 view, three in the higher one (D-195). */
+export function rayRise(view: WorldView): number {
+  const p = view.camera.projection;
+  return (p.y[0] + p.y[1]) / -p.y[2];
+}
+
+/** Which way the camera is from a side of the view, over the ground: a world cell across each way lands straight below on screen (in any projection, D-195). */
 export function towardCamera(view: WorldView, r: number): readonly [number, number] {
   const { camera } = view;
   const was = camera.rotation;
@@ -166,8 +173,8 @@ export function towardCamera(view: WorldView, r: number): readonly [number, numb
   const at = camera.project(camera.x, camera.y, 0);
   const d =
     DIAGONALS.find(([dx, dy]) => {
-      const q = camera.project(camera.x + dx, camera.y + dy, 2);
-      return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
+      const q = camera.project(camera.x + dx, camera.y + dy, 0);
+      return Math.abs(q.x - at.x) < 0.01 && q.y > at.y;
     }) ?? ([1, 1] as const);
   camera.rotation = was;
   return d;
@@ -416,9 +423,10 @@ export class Fight {
     const out = new Set<number>();
     const { query } = this.view;
     const [dx, dy] = toward;
-    // a cell across each way, two steps up; to the tallest tower (about 150 steps)
-    for (let t = 0.25; t < 80; t += 0.35) {
-      const z = h + 2 * t;
+    // a cell across each way, `rise` steps up; to the tallest tower (about 150 steps)
+    const rise = rayRise(this.view);
+    for (let t = 0.25; t < 160 / rise; t += 0.35) {
+      const z = h + rise * t;
       for (const o of query.objectsAt(x + dx * t, y + dy * t))
         if (o.base !== null && z >= o.base && z <= (o.top ?? o.base + 3) && !o.group.startsWith("tree")) out.add(o.index);
     }
@@ -954,23 +962,43 @@ export class Fight {
     for (let u = 0; u < s.roster.length; u++) {
       if (teamOf(s, u) !== INVADERS || s.hp[u]! <= 0 || s.aim[u]! < 0 || this.struck.has(u)) continue;
       const t = strikeCell(s, u, aimOf(s, u));
-      if (t >= 0) out.push({ from: this.ij(s.pos[u]!), to: this.ij(t), kind: "attack" });
+      if (t >= 0) out.push({ from: this.ij(s.pos[u]!), to: this.ij(t), kind: "attack", style: arrowStyle(weaponsOf(s, u)[0]!.kind) });
     }
     return out;
   }
 
   /** The cells a state's round would harm: struck, crushed, buildings hit. */
-  private harm(s: Combat): Set<number> {
-    const log: CombatEvent[] = [];
+  /**
+   * What the invaders will do this round (D-192, D-194): the cells their strikes hurt (a building on the cell struck), and on each,
+   * the damage a badge shows: hit points off a unit or a building.
+   */
+  private intents(s: Combat): { cells: Set<number>; hits: Map<number, number> } {
+    // each invader's strike in turn; a building it hurts marked on the cell struck (D-192), not the whole of it
     const r = cloneCombat(s);
-    for (let u = 0; u < r.roster.length; u++) if (teamOf(r, u) === INVADERS && r.hp[u]! > 0 && r.aim[u]! >= 0) strike(r, u, aimOf(r, u), log);
     const cells = new Set<number>();
-    for (const e of log) {
-      if (e.t === "crush") cells.add(e.at);
-      if (e.t === "structure") for (const k of s.arena.structures[e.id]!.cells) cells.add(k);
-      if (e.t === "damage") cells.add(r.pos[e.unit]!);
+    const hits = new Map<number, number>();
+    const hit = (k: number, n: number) => hits.set(k, (hits.get(k) ?? 0) + n);
+    const w = s.arena.w;
+    for (let u = 0; u < r.roster.length; u++) {
+      if (teamOf(r, u) !== INVADERS || r.hp[u]! <= 0 || r.aim[u]! < 0) continue;
+      const t = strikeCell(r, u, aimOf(r, u));
+      const log: CombatEvent[] = [];
+      strike(r, u, aimOf(r, u), log);
+      for (const e of log) {
+        if (e.t === "crush") cells.add(e.at);
+        if (e.t === "damage") {
+          cells.add(r.pos[e.unit]!);
+          hit(r.pos[e.unit]!, e.amount);
+        }
+        if (e.t !== "structure") continue;
+        const own = s.arena.structures[e.id]!.cells;
+        // the cell struck if it's this building's, else (pushed into it, fallen on) its cell nearest the strike
+        const near = t >= 0 && own.includes(t) ? t : own.reduce((a, b) => (t < 0 || Math.hypot((b % w) - (t % w), Math.floor(b / w) - Math.floor(t / w)) < Math.hypot((a % w) - (t % w), Math.floor(a / w) - Math.floor(t / w)) ? b : a));
+        cells.add(near);
+        hit(near, e.amount);
+      }
     }
-    return cells;
+    return { cells, hits };
   }
 
   private targets(u: number): Map<number, Strike> {
@@ -1006,7 +1034,8 @@ export class Fight {
     const shown = this.preview?.state ?? c;
     const byCell = new Map<number, Mark["kind"]>();
     const mark = (k: number, kind: Mark["kind"]) => byCell.set(k, kind);
-    const danger = this.phase !== "busy" && this.phase !== "over" ? this.harm(shown) : new Set<number>();
+    const plan = this.phase !== "busy" && this.phase !== "over" ? this.intents(shown) : null;
+    const danger = plan?.cells ?? new Set<number>();
     for (const k of danger) mark(k, "danger");
     for (const { at } of arriving(shown)) mark(at, "info");
     for (let u = 0; u < shown.roster.length; u++) {
@@ -1098,6 +1127,13 @@ export class Fight {
         const cls = this.preview?.hurt.includes(id) ? "building hurt preview" : st.cells.some((k) => danger.has(k)) ? "building threat" : shown.evacuated[id] ? "building empty" : "building";
         this.label(bid, at, `${pips(shown.structHp[id]!, st.hp)} ${people}`, cls, 8);
       });
+    // each cell the invaders will hit (D-194): a badge with the damage, where it lands
+    if (plan)
+      for (const [k, n] of plan.hits) {
+        const hid = `hit-${k}`;
+        keep.add(hid);
+        this.label(hid, k, `${n}`, "badge", -4);
+      }
     for (const [id, l] of this.labels)
       if (l.until === undefined && !keep.has(id)) {
         l.el.remove();
@@ -1426,7 +1462,7 @@ export class Fight {
     const slides: { from: number; to: number }[] = [];
     for (const e of log) {
       if (e.t === "push" || e.t === "hoist") slides.push({ from: e.from, to: e.to });
-      if (e.t === "push" || e.t === "hoist") arrows.push({ from: this.ij(e.from), to: this.ij(e.to), kind: "move" });
+      if (e.t === "push" || e.t === "hoist") arrows.push({ from: this.ij(e.from), to: this.ij(e.to), kind: "move", style: e.t === "hoist" ? "arc" : "path" });
       if (e.t === "damage") tags.push({ k: d.pos[e.unit]!, text: `−${e.amount}`, cls: "hurt" });
       if (e.t === "down") tags.push({ k: e.at, text: e.drowned ? "drowns" : "down", cls: "hurt" });
       if (e.t === "fall") tags.push({ k: d.pos[e.unit]!, text: "falls", cls: "hurt" });
@@ -1488,9 +1524,10 @@ export class Fight {
       const [tx, ty] = towardCamera(this.view, this.view.camera.rotation);
       let top = h;
       for (let q = 0; q < c.arena.w * c.arena.h; q++) top = Math.max(top, planeAt(c, q));
-      for (let t = (top - h) / 2; t > 0; t -= 0.05) {
+      const rise = rayRise(this.view);
+      for (let t = (top - h) / rise; t > 0; t -= 0.05) {
         const q = boardCellAt(this.board, x + t * tx, y + t * ty);
-        if (q >= 0 && h + 2 * t <= planeAt(c, q)) {
+        if (q >= 0 && h + rise * t <= planeAt(c, q)) {
           k = q;
           break;
         }
@@ -1671,7 +1708,7 @@ export class Fight {
           if (x.dest !== d.pos[x.unit]) this.hint.push({ from: this.ij(d.pos[x.unit]!), to: this.ij(x.dest), kind: "move" });
           moveUnit(d, x.unit, x.dest);
           const t = x.strike ? strikeCell(d, x.unit, x.strike) : -1;
-          if (t >= 0) this.hint.push({ from: this.ij(x.dest), to: this.ij(x.strike?.to ?? t), kind: "info" });
+          if (t >= 0) this.hint.push({ from: this.ij(x.dest), to: this.ij(x.strike?.to ?? t), kind: "info", style: arrowStyle(weaponsOf(d, x.unit)[x.strike!.weapon]!.kind) });
           words.push(`${f.name}: ${x.strike ? weaponsOf(d, x.unit)[x.strike.weapon]!.name : "stand"}`);
           if (x.strike) strike(d, x.unit, x.strike);
         }

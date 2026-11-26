@@ -1,4 +1,4 @@
-import { DEPTH_PER_STEP, HALF_H, HALF_W, STEP_PX, STEP_WORLD, rotateXY, type Rotation } from "@pixelworlds/grid";
+import { DEPTH_PER_STEP, ISO_PROJECTION, STEP_WORLD, rotateXY, type Projection, type Rotation } from "@pixelworlds/grid";
 import { forEachFieldPoint, type CellRect, type InstancedBatch, type MeshData, type TerrainField } from "@pixelworlds/generators";
 
 /**
@@ -58,22 +58,8 @@ function owns(owned: Ownership, cx: number, cy: number): boolean {
   return owned === "all" || (cx >= owned.x0 && cx < owned.x1 && cy >= owned.y0 && cy < owned.y1);
 }
 
-/**
- * How a bake lays the world out (D-155): screen x, screen y and depth (larger
- * nearer) as linear in a point's rotated (u, v) and height h (steps).
- */
-export interface Projection {
-  x: readonly [number, number, number];
-  y: readonly [number, number, number];
-  d: readonly [number, number, number];
-}
-
-/** The world's 2:1 view: sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3. */
-export const ISO_PROJECTION: Projection = {
-  x: [HALF_W, -HALF_W, 0],
-  y: [HALF_H, HALF_H, -STEP_PX],
-  d: [1, 1, DEPTH_PER_STEP],
-};
+/** How a bake lays the world out (D-155): the grid's projections (D-195). */
+export { ISO_PROJECTION, type Projection };
 
 /**
  * From above (D-155): `px` screen px per render cell, north up, the roofs
