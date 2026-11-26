@@ -28,10 +28,10 @@ export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.met
  * here the library is unminified and the worker minified but for whitespace, see build.mjs).
  */
 export const BUDGETS = {
-  tarball: 820 * 1024, // gzipped .tgz, with source maps (769.3 KB with the national parks, D-136–D-141; 803.4 KB with D-147–D-158's edits, boards and top-down bakes)
+  tarball: 850 * 1024, // gzipped .tgz, with source maps (769.3 KB with the national parks, D-136–D-141; 803.4 KB with D-147–D-158's edits, boards and top-down bakes; 836.0 KB with D-195–D-196's projections)
   unpacked: 3 * 1024 * 1024, // everything, as installed (2870.5 KB with D-147/D-148's terrain edits and boards; 2970 KB with D-155–D-164's top-down bakes, cutaways, lone buildings and top-down sprites)
-  js: 790 * 1024, // dist/*.js without maps: the library chunks and the worker (702.8 KB with D-124/D-125's edits, cells and veil; 754.6 KB with D-147/D-148's terrain edits and boards; 773.1 KB with D-154–D-159's reveals, top-down bakes and cut-down buildings)
-  worker: 210 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB)
+  js: 815 * 1024, // dist/*.js without maps: the library chunks and the worker (702.8 KB with D-124/D-125's edits, cells and veil; 754.6 KB with D-147/D-148's terrain edits and boards; 773.1 KB with D-154–D-159's reveals, top-down bakes and cut-down buildings; 801.0 KB with D-195–D-196's projections)
+  worker: 215 * 1024, // dist/bake.worker.js (Vite and webpack minify it to ~145 KB; 211.3 KB with D-195–D-196's projections)
 };
 
 /** JSON Schemas shipped for editors (D-075), each exported as `./<file>`. */
