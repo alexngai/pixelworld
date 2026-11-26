@@ -327,11 +327,12 @@ export class BoardGlass {
       g.restore();
     }
     // the action indicators as pixel art (D-193): arrows, where a strike lands, a push's ghost, a shot; drawn pixel by pixel at the
-    // world's own pixel size, flat over the screen, and laid on unsmoothed
-    const P = Math.min(3, Math.max(2, Math.round(camera.zoom)));
+    // world's own pixel size (a render pixel is `zoom` device pixels, as the city and the units are drawn), flat over the screen, and
+    // laid on unsmoothed
+    const P = Math.max(1, Math.round(camera.zoom));
     const px = this.px;
-    px.begin(Math.ceil(W / P), Math.ceil(H / P));
-    const lo = ([x, y]: [number, number]): [number, number] => [x / P, y / P];
+    px.begin(Math.ceil((W * dpr) / P), Math.ceil((H * dpr) / P));
+    const lo = ([x, y]: [number, number]): [number, number] => [(x * dpr) / P, (y * dpr) / P];
     const beat = Math.floor(now / 70);
     for (const ar of s.arrows) {
       const ka = ar.from[1] * a.w + ar.from[0];
@@ -405,7 +406,7 @@ export class BoardGlass {
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.imageSmoothingEnabled = false;
-    g.drawImage(px.end(), 0, 0, px.w * P * dpr, px.h * P * dpr);
+    g.drawImage(px.end(), 0, 0, px.w * P, px.h * P);
     g.restore();
     // what could be struck from where the rig would go
     g.save();
