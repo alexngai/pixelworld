@@ -70,8 +70,8 @@ export class PixelLayer {
     return out;
   }
 
-  /** A polygon filled (even-odd scanlines); `dither` fills every other pixel, a checkerboard, for something seen through. */
-  fill(pts: readonly [number, number][], c: number, dither = false): void {
+  /** A polygon filled (even-odd scanlines); `dither` fills only some pixels, for something seen through: 2 a checkerboard, 4 one in four. */
+  fill(pts: readonly [number, number][], c: number, dither: 0 | 2 | 4 = 0): void {
     const ys = pts.map((p) => p[1]);
     const y0 = Math.max(0, Math.floor(Math.min(...ys)));
     const y1 = Math.min(this.h - 1, Math.ceil(Math.max(...ys)));
@@ -84,7 +84,8 @@ export class PixelLayer {
       }
       xs.sort((p, q) => p - q);
       for (let n = 0; n + 1 < xs.length; n += 2)
-        for (let x = Math.ceil(xs[n]! - 0.5); x <= Math.floor(xs[n + 1]! - 0.5); x++) if (!dither || (x + y) % 2 === 0) this.set(x, y, c);
+        for (let x = Math.ceil(xs[n]! - 0.5); x <= Math.floor(xs[n + 1]! - 0.5); x++)
+          if (!dither || (dither === 2 ? (x + y) % 2 === 0 : x % 2 === 0 && y % 2 === 0)) this.set(x, y, c);
     }
   }
 

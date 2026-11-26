@@ -328,7 +328,7 @@ export class BoardGlass {
     }
     // the action indicators as pixel art (D-193): arrows, where a strike lands, a push's ghost, a shot; drawn pixel by pixel at the
     // world's own pixel size, flat over the screen, and laid on unsmoothed
-    const P = Math.min(4, Math.max(2, Math.round(camera.zoom)));
+    const P = Math.min(3, Math.max(2, Math.round(camera.zoom)));
     const px = this.px;
     px.begin(Math.ceil(W / P), Math.ceil(H / P));
     const lo = ([x, y]: [number, number]): [number, number] => [x / P, y / P];
@@ -346,33 +346,32 @@ export class BoardGlass {
           : style === "flat"
             ? toward(ka, kb, 0.12, 0.62, planeAt(c, ka) + 0.7, planeAt(c, ka) + 0.7)
             : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
-      // where an arc comes down: the cell marked (dithered, its edge blinking), so which one it is reads at once
+      // where an arc comes down: the cell marked (sparsely dithered, a one-pixel edge blinking), so which one it is reads at once
       if (style === "arc" || style === "shot") {
         const q = quad(kb, planeAt(c, kb) + lift, 0.14).map(lo);
-        px.fill(q, colour, true);
-        const edge = PixelLayer.path([...q, q[0]!]);
-        for (const [x, y] of edge) px.dot(x, y, 3, DARK);
+        px.fill(q, colour, 4);
         const blink = Math.floor(now / 380) % 2 ? colour : WHITE;
-        for (const [x, y] of edge) px.set(x, y, blink);
+        for (const [x, y] of PixelLayer.path([...q, q[0]!])) px.set(x, y, blink);
       }
       const pts: [number, number][] = [];
       for (let n = 0; n <= 24; n++) pts.push(lo(at(n / 24)));
       // the shaft stops where the head begins, its head a pixel triangle along its last stretch
       const tip = pts[pts.length - 1]!;
       let back = pts.length - 1;
-      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 3.5) back--;
+      while (back > 0 && Math.hypot(pts[back]![0] - tip[0], pts[back]![1] - tip[1]) < 2.5) back--;
       const shaft = PixelLayer.path(pts.slice(0, back + 1));
       const base = pts[back]!;
       const len = Math.hypot(tip[0] - base[0], tip[1] - base[1]) || 1;
       const [dx, dy] = [(tip[0] - base[0]) / len, (tip[1] - base[1]) / len];
       const head = (grow: number): [number, number][] => [
         [tip[0] + dx * grow, tip[1] + dy * grow],
-        [base[0] - dy * (2.6 + grow) - dx * grow, base[1] + dx * (2.6 + grow) - dy * grow],
-        [base[0] + dy * (2.6 + grow) - dx * grow, base[1] - dx * (2.6 + grow) - dy * grow],
+        [base[0] - dy * (1.8 + grow) - dx * grow, base[1] + dx * (1.8 + grow) - dy * grow],
+        [base[0] + dy * (1.8 + grow) - dx * grow, base[1] - dx * (1.8 + grow) - dy * grow],
       ];
-      for (const [x, y] of shaft) px.dot(x, y, 4, DARK);
-      px.fill(head(1.2), DARK);
-      for (const [x, y] of shaft) px.dot(x, y, 2, colour);
+      // a one-pixel line inside a one-pixel outline
+      for (const [x, y] of shaft) px.dot(x, y, 3, DARK);
+      px.fill(head(0.9), DARK);
+      for (const [x, y] of shaft) px.set(x, y, colour);
       px.fill(head(0), colour);
       // a dash running along it toward the head
       shaft.forEach(([x, y], i) => {
@@ -385,8 +384,8 @@ export class BoardGlass {
       const t = (now / 1100) % 1;
       if (t > 0.85) continue;
       const [x, y] = lo(at(1 - (1 - Math.min(1, t / 0.7)) ** 3));
-      diamond(px, x, y, 4, DARK);
-      diamond(px, x, y, 3, GHOST);
+      diamond(px, x, y, 3, DARK);
+      diamond(px, x, y, 2, GHOST);
       px.set(x, y, WHITE);
     }
     // shots in flight: a bright pixel ball along the arc, a short trail behind
@@ -397,11 +396,11 @@ export class BoardGlass {
       const colour = pixelColour(ARROW[sh.kind] ?? COLOUR[sh.kind]);
       for (let n = 3; n >= 1; n--) {
         const [x, y] = lo(at(Math.max(0, f - 0.05 * n)));
-        px.dot(x, y, 2, colour);
+        px.set(x, y, colour);
       }
       const [x, y] = lo(at(f));
-      px.dot(x, y, 4, colour);
-      px.dot(x, y, 2, WHITE);
+      px.dot(x, y, 3, colour);
+      px.set(x, y, WHITE);
     }
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
