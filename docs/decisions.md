@@ -198,6 +198,7 @@ Status values:
 | D-188 | After the first live playtest: the play server's missing cities, taps, the city map's ground, the choosing clock everywhere, runs kept across reloads | Accepted |
 | D-190 | The second playtest, on the live site: the fight on a phone, strikes tapped twice, moves out of reach said, a run's blocks named by district | Accepted |
 | D-191 | What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving | Accepted |
+| D-192 | Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint | Accepted |
 
 ---
 
@@ -2650,4 +2651,21 @@ The point is more room for visual interest; both halves are wanted.
   - **A weapon chosen** says what it does in the prompt ("ram: 2 damage, pushes, next cell").
 - **Checked:** in the browser on a New York block: the buildings labelled (red where struck this round); a pumper's shot at a tower ("tower glass 3→2 hp, 590 people lost… 605 people lost (15 without it)"), the tower red and breathing; a crane's drop pushing a crawler, its ghost sliding along the arrow; a strike on a crawler ("Crawler 3→2 hp… 15 people lost, as without it").
 - **Not yet:** labels crowd where small buildings stand close; the words don't say where a push leaves a unit; the round's end counts people only (not rigs hurt or invaders down).
+
+### D-192: Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint (accepted)
+- **Why:** the owner asked for the arrows to differ by action (a ranged attack's arc, a close one a short flat arrow), because the arcs were confusing as to which cell they pointed at (some came down on a roof, some on the ground), and for a building under attack to be red only where it's struck, the cell at risk, with something of the whole building still shown.
+- **What:**
+  - **Arrows have a style** (`Arrow.style`, `arrowStyle` by weapon kind, in `@pixelworlds/tactics`):
+    - `flat`, for a blow or a charge: short and level from the striker into the face of the next cell, at the striker's height.
+    - `shot`: a low arc.
+    - `arc`, for a lob or a lift: a high arc.
+    - `path`, for a move or a push: straight from cell to cell.
+  - The invaders' aims, the hint's strikes and a strike looked at's pushes and lifts each take theirs.
+  - **An arc comes down on its cell's own plane** (the roof where a building stands, else the ground), and that cell is marked in the arrow's colour, so where it lands reads at once.
+  - **A building the invaders strike** is red on the cell struck only: that cell's column, from the ground to the roof, filled and outlined, its roof striped. The rest of the building is outlined faintly, so it still reads as the one building whose hit points they take.
+  - The cells marked in danger are each strike's own: a building hurt by being struck, pushed into or fallen on is marked on the cell nearest the blow, no longer on every cell it has.
+- **Checked:** in the browser:
+  - **Kyoto:** a brute's slam a short flat arrow into one cell of a temple, that cell's column red and striped, the rest outlined faintly; the hint's moves straight, the crane's drop a high arc onto a marked cell under the brute.
+  - **San Francisco:** a flyer's spit a low arc onto the pumper's cell, marked; a brute's slam into one cell of a building.
+- **Not yet:** the board map (top right) draws every arrow alike.
 

@@ -22,6 +22,7 @@ import {
   planInvaders,
   rampsFor,
   resolveInvaders,
+  arrowStyle,
   planeAt,
   standAt,
   strike,
@@ -954,21 +955,31 @@ export class Fight {
     for (let u = 0; u < s.roster.length; u++) {
       if (teamOf(s, u) !== INVADERS || s.hp[u]! <= 0 || s.aim[u]! < 0 || this.struck.has(u)) continue;
       const t = strikeCell(s, u, aimOf(s, u));
-      if (t >= 0) out.push({ from: this.ij(s.pos[u]!), to: this.ij(t), kind: "attack" });
+      if (t >= 0) out.push({ from: this.ij(s.pos[u]!), to: this.ij(t), kind: "attack", style: arrowStyle(weaponsOf(s, u)[0]!.kind) });
     }
     return out;
   }
 
   /** The cells a state's round would harm: struck, crushed, buildings hit. */
   private harm(s: Combat): Set<number> {
-    const log: CombatEvent[] = [];
+    // each invader's strike in turn; a building it hurts marked on the cell struck (D-192), not the whole of it
     const r = cloneCombat(s);
-    for (let u = 0; u < r.roster.length; u++) if (teamOf(r, u) === INVADERS && r.hp[u]! > 0 && r.aim[u]! >= 0) strike(r, u, aimOf(r, u), log);
     const cells = new Set<number>();
-    for (const e of log) {
-      if (e.t === "crush") cells.add(e.at);
-      if (e.t === "structure") for (const k of s.arena.structures[e.id]!.cells) cells.add(k);
-      if (e.t === "damage") cells.add(r.pos[e.unit]!);
+    const w = s.arena.w;
+    for (let u = 0; u < r.roster.length; u++) {
+      if (teamOf(r, u) !== INVADERS || r.hp[u]! <= 0 || r.aim[u]! < 0) continue;
+      const t = strikeCell(r, u, aimOf(r, u));
+      const log: CombatEvent[] = [];
+      strike(r, u, aimOf(r, u), log);
+      for (const e of log) {
+        if (e.t === "crush") cells.add(e.at);
+        if (e.t === "damage") cells.add(r.pos[e.unit]!);
+        if (e.t !== "structure") continue;
+        const own = s.arena.structures[e.id]!.cells;
+        // the cell struck if it's this building's, else (pushed into it, fallen on) its cell nearest the strike
+        const near = t >= 0 && own.includes(t) ? t : own.reduce((a, b) => (t < 0 || Math.hypot((b % w) - (t % w), Math.floor(b / w) - Math.floor(t / w)) < Math.hypot((a % w) - (t % w), Math.floor(a / w) - Math.floor(t / w)) ? b : a));
+        cells.add(near);
+      }
     }
     return cells;
   }
@@ -1426,7 +1437,7 @@ export class Fight {
     const slides: { from: number; to: number }[] = [];
     for (const e of log) {
       if (e.t === "push" || e.t === "hoist") slides.push({ from: e.from, to: e.to });
-      if (e.t === "push" || e.t === "hoist") arrows.push({ from: this.ij(e.from), to: this.ij(e.to), kind: "move" });
+      if (e.t === "push" || e.t === "hoist") arrows.push({ from: this.ij(e.from), to: this.ij(e.to), kind: "move", style: e.t === "hoist" ? "arc" : "path" });
       if (e.t === "damage") tags.push({ k: d.pos[e.unit]!, text: `−${e.amount}`, cls: "hurt" });
       if (e.t === "down") tags.push({ k: e.at, text: e.drowned ? "drowns" : "down", cls: "hurt" });
       if (e.t === "fall") tags.push({ k: d.pos[e.unit]!, text: "falls", cls: "hurt" });
@@ -1671,7 +1682,7 @@ export class Fight {
           if (x.dest !== d.pos[x.unit]) this.hint.push({ from: this.ij(d.pos[x.unit]!), to: this.ij(x.dest), kind: "move" });
           moveUnit(d, x.unit, x.dest);
           const t = x.strike ? strikeCell(d, x.unit, x.strike) : -1;
-          if (t >= 0) this.hint.push({ from: this.ij(x.dest), to: this.ij(x.strike?.to ?? t), kind: "info" });
+          if (t >= 0) this.hint.push({ from: this.ij(x.dest), to: this.ij(x.strike?.to ?? t), kind: "info", style: arrowStyle(weaponsOf(d, x.unit)[x.strike!.weapon]!.kind) });
           words.push(`${f.name}: ${x.strike ? weaponsOf(d, x.unit)[x.strike.weapon]!.name : "stand"}`);
           if (x.strike) strike(d, x.unit, x.strike);
         }

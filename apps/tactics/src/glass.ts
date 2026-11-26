@@ -71,7 +71,9 @@ interface Whole {
 const GLASS: Whole = { edge: 0.5, glow: 6, width: 1.2, corner: 0.2, pane: 0.012, roof: 0.03 };
 const GLASS_LIT: Whole = { edge: 0.95, glow: 10, width: 1.8, corner: 0.55, pane: 0.08, roof: 0.14 };
 /** A building the invaders will strike (D-170): outlined, barely filled (its roof is striped). */
-const THREAT: Whole = { edge: 0.95, glow: 8, width: 2, corner: 0.75, pane: 0.015, roof: 0 };
+const THREAT: Whole = { edge: 1, glow: 10, width: 2.2, corner: 0.85, pane: 0.14, roof: 0.22 };
+/** The rest of a building struck (D-192): outlined faintly. */
+const THREAT_FAINT: Whole = { edge: 0.35, glow: 3, width: 1, corner: 0.15, pane: 0, roof: 0 };
 /** A building struck (D-171): white, fading. */
 const FLASH_MS = 450;
 /** Arrows' colours by what they mean: an invader's aim red, a push or a move blue, a hint's strike yellow. */
@@ -134,15 +136,26 @@ export class BoardGlass {
     const centre = (k: number) => toWorld(this.board, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
     // an arrow's or a shot's path (D-171): from above where a unit stands to the cell struck, arcing over what's between when it's a
     // shot, low when it's a push or a move
-    const arc = (ka: number, kb: number, high: boolean) => {
+    const arc = (ka: number, kb: number, high: boolean, low = false) => {
       const pa = centre(ka);
       const pb = centre(kb);
       const ha = planeAt(c, ka) + 1;
-      const hb = planeAt(c, kb) + 0.3;
+      // the arc comes down on the cell's own plane, where its marker is (D-192)
+      const hb = planeAt(c, kb) + 0.1;
       const len = Math.hypot(pb.x - pa.x, pb.y - pa.y);
-      const up = high ? Math.max(1.5, len * 0.8) + Math.abs(hb - ha) * 0.3 : 0.5 + Math.abs(hb - ha) * 0.3;
+      const up = high ? (low ? Math.max(0.8, len * 0.3) : Math.max(1.5, len * 0.8)) + Math.abs(hb - ha) * 0.3 : 0.5 + Math.abs(hb - ha) * 0.3;
       return (f: number) => {
         const q = camera.project(pa.x + (pb.x - pa.x) * f, pa.y + (pb.y - pa.y) * f, ha + (hb - ha) * f + up * 4 * f * (1 - f));
+        return [q.x, q.y] as [number, number];
+      };
+    };
+    // a straight run from part of the way from one cell's middle toward another's to further along it, rising from one height to another
+    const toward = (ka: number, kb: number, f0: number, f1: number, ha: number, hb: number) => {
+      const pa = centre(ka);
+      const pb = centre(kb);
+      return (f: number) => {
+        const e = f0 + (f1 - f0) * f;
+        const q = camera.project(pa.x + (pb.x - pa.x) * e, pa.y + (pb.y - pa.y) * e, ha + (hb - ha) * f);
         return [q.x, q.y] as [number, number];
       };
     };
@@ -172,11 +185,12 @@ export class BoardGlass {
     g.setLineDash([]);
     // a building of the fight whole, from its foot to its roof: the roof faintly filled, its outer sides as faint panes, the roof's
     // edge plainly, its corners down faintly
-    const building = (id: number, rgb: string, w: Whole, foot: (k: number) => number) => {
+    // `only`: just these of its cells, each a column from its foot to its roof (D-192)
+    const building = (id: number, rgb: string, w: Whole, foot: (k: number) => number, only?: ReadonlySet<number>) => {
       const st = a.structures[id];
       if (!st || c.structHp[id]! <= 0) return;
-      const mine = new Set(st.cells);
-      for (const k of st.cells) {
+      const mine = new Set(only ? st.cells.filter((k) => only.has(k)) : st.cells);
+      for (const k of mine) {
         const i = k % a.w;
         const j = Math.floor(k / a.w);
         const roof = quad(k, standAt(c, k));
@@ -214,7 +228,13 @@ export class BoardGlass {
     const threatened = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => a.struct[m.j * a.w + m.i]!).filter((id) => id >= 0));
     g.save();
     for (const id of s.ghosts) if (!threatened.has(id)) building(id, "170,215,255", id === focused ? GLASS_LIT : GLASS, (k) => a.height[k]! + s.stump);
-    for (const id of threatened) building(id, COLOUR.danger, THREAT, (k) => a.height[k]!);
+    // a building the invaders strike (D-192): the cells struck red, each its column from the ground to the roof; the rest of the
+    // building outlined faintly, so it still reads as the one building whose hit points they take
+    const struck = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => m.j * a.w + m.i));
+    for (const id of threatened) {
+      building(id, COLOUR.danger, THREAT_FAINT, (k) => a.height[k]!);
+      building(id, COLOUR.danger, THREAT, (k) => a.height[k]!, struck);
+    }
     g.restore();
     // marked cells: see-through fills, glowing edges
     for (const m of s.marks) {
@@ -295,7 +315,28 @@ export class BoardGlass {
       const ka = ar.from[1] * a.w + ar.from[0];
       const kb = ar.to[1] * a.w + ar.to[0];
       const rgb = ARROW[ar.kind] ?? COLOUR[ar.kind];
-      const at = arc(ka, kb, ar.kind !== "move");
+      // its style (D-192): a ranged strike arcs onto the cell's plane; a blow is short and level, from the striker into the face of
+      // the cell it hits; a move or a push runs straight from cell to cell
+      const style = ar.style ?? (ar.kind === "move" ? "path" : "arc");
+      const at =
+        style === "arc" || style === "shot"
+          ? arc(ka, kb, true, style === "shot")
+          : style === "flat"
+            ? toward(ka, kb, 0.12, 0.62, planeAt(c, ka) + 0.7, planeAt(c, ka) + 0.7)
+            : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
+      // where an arc comes down: the cell marked, so which one it is reads at once
+      if (style === "arc" || style === "shot") {
+        g.save();
+        path(quad(kb, planeAt(c, kb) + lift, 0.14));
+        g.fillStyle = `rgba(${rgb},0.16)`;
+        g.fill();
+        g.strokeStyle = `rgba(${rgb},0.95)`;
+        g.lineWidth = 2;
+        g.shadowColor = `rgba(${rgb},0.8)`;
+        g.shadowBlur = 6;
+        g.stroke();
+        g.restore();
+      }
       const pts: [number, number][] = [];
       for (let n = 0; n <= 32; n++) pts.push(at(n / 32));
       // the shaft stops where the head begins
