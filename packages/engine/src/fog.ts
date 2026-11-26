@@ -1,4 +1,4 @@
-import { unprojectAtHeight, type Projection, type Rotation } from "@pixelworlds/grid";
+import { ISO_PROJECTION, tileAspect, unprojectAtHeight, type Projection, type Rotation } from "@pixelworlds/grid";
 import { fogInView, fogNoise, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
 import type { FrameInfo, Layer, LayerContext, ScreenPass, WorldInfo, WorldQuery } from "./types";
 
@@ -19,6 +19,12 @@ export interface FogLayerOptions {
   time?: number;
   /** Hold the drift. */
   paused?: boolean;
+  /**
+   * Thin the fog as the view's camera looks more steeply down (D-195): a line
+   * of sight crosses less of a flat layer, so the higher camera (4:3) sees it
+   * two thirds as thick. Default false: as thick in every projection.
+   */
+  followProjection?: boolean;
 }
 
 export class FogLayer implements Layer {
@@ -33,11 +39,13 @@ export class FogLayer implements Layer {
   private ctx: LayerContext | null = null;
   private renderScale = 1;
   private floor = 0;
+  private readonly follow: boolean;
 
   constructor(opts: FogLayerOptions = {}) {
     this.on = opts.enabled ?? true;
     this.clock = opts.time ?? 0;
     this.hold = opts.paused ?? false;
+    this.follow = opts.followProjection ?? false;
   }
 
   get enabled(): boolean {
@@ -111,7 +119,8 @@ export class FogLayer implements Layer {
   ): FogFrame | null {
     const s = this.setup!;
     const rs = this.renderScale;
-    const strength = s.strength * (night ? s.nightStrength : 1);
+    const thinner = this.follow ? tileAspect(ISO_PROJECTION) / tileAspect(projection) : 1;
+    const strength = s.strength * (night ? s.nightStrength : 1) * thinner;
     this.inView =
       this.on &&
       strength > 0 &&

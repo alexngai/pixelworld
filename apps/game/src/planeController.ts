@@ -348,8 +348,8 @@ export class PlaneController implements Controller {
     const mid = ((ground ?? s.h) + s.h) / 2;
     const view = this.view;
     if (!view) return mid;
-    // internal pixels per height step: the grid's STEP_PX (8) at the render scale
-    return Math.max(mid, s.h - (view.camera.internalHeight * PLANE.camAbove) / (8 * view.world.renderScale));
+    // internal pixels per height step at the render scale: 8 in the 2:1 view (D-195: the view's projection's)
+    return Math.max(mid, s.h - (view.camera.internalHeight * PLANE.camAbove) / (-view.camera.projection.y[2] * view.world.renderScale));
   }
 
   update(dt: number): void {

@@ -106,6 +106,13 @@ export const STEEP_PROJECTION: Projection = {
   d: [1, 1, DEPTH_PER_STEP],
 };
 
+/**
+ * A tile's height over its width on screen: 0.5 for the 2:1 view, 0.75 for
+ * the higher camera. For a camera turned 45°, the sine of how far it looks
+ * down; how much shorter a line of sight through a flat layer is (D-195).
+ */
+export const tileAspect = (p: Projection): number => (p.y[0] + p.y[1]) / (p.x[0] - p.x[1]);
+
 /** Whether two projections lay the world out the same. */
 export const sameProjection = (a: Projection, b: Projection): boolean =>
   [0, 1, 2].every((i) => a.x[i] === b.x[i] && a.y[i] === b.y[i] && a.d[i] === b.d[i]);

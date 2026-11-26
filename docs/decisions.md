@@ -2707,9 +2707,24 @@ The point is more room for visual interest; both halves are wanted.
   - **The see-through around a player (D-154), fog (D-063) and steam (D-138)** worked out a pixel's surface from 2:1 constants. They take the inverse as uniforms instead: unchanged in the 2:1 view.
   - **Another projection's tiles are kept apart:** the tile's part of the cache key carries the projection, and a top-down bake's key leaves that part out as before. Painted-over hero landmarks (D-053) are left out, as they are painted for the 2:1 view; the landmark's own bake shows. Lighting and shadows are worked out in the world, so they don't change.
   - **The tactics game:** its views (game and survey gallery) use `STEEP_PROJECTION`. The fight's view rays rise by the projection's slope, two steps a world cell across each way at 2:1 and three at 4:3 (`rayRise`). Those rays decide what to cut down, which cell a pick on a roof means, and which way the camera is. `hiddenFrom` takes the rise, 2 by default. The survey's ratings (`boards.json`) stay as worked out for 2:1, which counts more cells hidden than the fights now see.
-  - **The web viewer's `?projection=steep`** shows any world from the higher camera.
+  - **The web viewer and the example game take `?projection=steep`**, to show any world from the higher camera. The viewer's `fogFollow=1` also thins the fog for it.
+  - **Effects:**
+    - A steam plume's width and rise take the projection's cell width and step. Its foot, the near half of a ground circle below the vent, takes the tile's height over its width (`tileAspect`), which was 0.5 at 2:1.
+    - Fog's `followProjection` option thins the fog for a steeper camera, by the 2:1 tile's aspect over the view's: two thirds at 4:3. A line of sight through a flat layer is that much shorter. It is off by default, so fog is as thick in every projection.
+    - The plane game's camera height takes the projection's step.
 - **Checked:**
-  - **Tests:** projecting and unprojecting round-trip in both projections and all four rotations; the inverses undo the projection; depth grows along a ray; the 2:1 reveal sum is the old sy / 32 + 0.75 depth.
+  - **Unit tests:**
+    - projecting and unprojecting round-trip in both projections and all four rotations;
+    - the inverses undo the projection, and depth grows along a ray;
+    - the 2:1 reveal sum is the old sy / 32 + 0.75 depth.
+  - **Fog at 2:1:** the Golden Gate golden image still matches pixel for pixel, so the inverted fog pass draws as before.
+  - **New e2e tests:**
+    - at 4:3, fog drawn through the Golden Gate, and thinner with `fogFollow=1`;
+    - Old Faithful's plume, in both projections;
+    - the car seen through the casino tower, near it and nowhere else, in both projections.
   - **In the browser:** a San Francisco fight at 4:3, where a pick lands on the cell projected at 25 of 25 points; the web viewer at 4:3 with traffic on its roads.
-  - **Not seen on screen:** fog and steam at 4:3, since none was in view.
+- **Left for decision: hero landmarks in other projections.** Their paints are images of the 2:1 view, made for the Southwest's three landmarks; no city in the tactics game has any. The options:
+  - **Paint again per projection:** `tools/hero-bake.mjs` bakes in the projection, and the manifest lists paints per projection. The artist's pixels stay exact, at the cost of another set of paints.
+  - **Reproject at run time:** for each pixel of a tile in the other projection, its world point (from its depth), projected into the 2:1 hero bake. Where that bake shows the same surface, the paint there is taken. This needs no new art, but the paint is resampled: a roof stretches by half, and one-pixel details may double or break.
+  - **Paint into the model:** the painted colours are carried onto the landmark's voxels once, so every projection and rotation draws them. This is the most general, but painted indices would then be shaded, and paint beyond the silhouette (a beacon) has no surface to land on.
 - **Not done:** the 4:3 view's tiles cover half again as many pixels for the same ground, so its bakes take longer and hold more GPU memory. Lower heights for the fights (less vertical exaggeration in the world build) are left until the steeper view has been played.

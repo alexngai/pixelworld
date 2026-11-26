@@ -166,6 +166,7 @@ export class SteamLayer implements Layer {
     const bearing = ((steam.wind?.toward ?? 0) * Math.PI) / 180;
     const lean = (Math.min(1, (steam.wind?.speed ?? 0) / 6) * 0.8) / (this.stepsPerMeter * this.metersPerCell);
     const v = frame.view;
+    const across = Math.hypot(frame.projection.x[0], frame.projection.x[1]);
     const cx = v.left + v.width / 2;
     const cy = v.top + v.height / 2;
     const seen: { d: number; vals: number[] }[] = [];
@@ -176,8 +177,8 @@ export class SteamLayer implements Layer {
       const base = frame.project(p.x, p.y, h);
       const reach = p.height * lean;
       const top = frame.project(p.x + Math.sin(bearing) * reach, p.y - Math.cos(bearing) * reach, h + p.height);
-      // a circle of radius r cells is 16√2 r render px across its widest, from its middle
-      const r = 16 * Math.SQRT2 * p.radius * rs;
+      // a circle of radius r cells is 16√2 r render px across its widest, from its middle (the projection's cell width × √2)
+      const r = across * p.radius * rs;
       const height = base.sy - top.sy;
       const shift = top.sx - base.sx;
       const left = Math.min(base.sx, base.sx + shift) - 2 * r;
@@ -194,7 +195,7 @@ export class SteamLayer implements Layer {
     }
     this.inView = count > 0;
     if (!count) return null;
-    const pxPerStep = 8 * rs;
+    const pxPerStep = -frame.projection.y[2] * rs;
     const params: SteamFrame = {
       a: this.a,
       b: this.b,

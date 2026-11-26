@@ -11,6 +11,7 @@ import {
   projectionKey,
   rotateXY,
   sumUV,
+  tileAspect,
   unprojectAtHeight,
   unprojectView,
   unrotateXY,
@@ -117,6 +118,11 @@ describe("projections (D-195)", () => {
     expect(project(1, 0, 0, 0, STEEP_PROJECTION)).toMatchObject({ sx: 16, sy: 12 });
     expect(project(0, 1, 0, 0, STEEP_PROJECTION)).toMatchObject({ sx: -16, sy: 12 });
     expect(project(0, 0, 1, 0, STEEP_PROJECTION)).toMatchObject({ sx: 0, sy: -8 });
+  });
+
+  it("a tile's height over its width is 1/2 at 2:1 and 3/4 at 4:3", () => {
+    expect(tileAspect(ISO_PROJECTION)).toBe(0.5);
+    expect(tileAspect(STEEP_PROJECTION)).toBe(0.75);
   });
 
   for (const [name, p] of PROJECTIONS) {

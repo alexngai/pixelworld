@@ -1,4 +1,4 @@
-import { ISO_PROJECTION, type Projection } from "@pixelworlds/grid";
+import { ISO_PROJECTION, tileAspect, type Projection } from "@pixelworlds/grid";
 import { Uniforms, compileProgram, createTexture, type GL } from "@pixelworlds/bake";
 import { FOG_NOISE_PERIOD, FOG_NOISE_TEXELS, fogNoiseTile, type FogLut } from "./fog";
 
@@ -38,6 +38,7 @@ uniform vec2 uOrigin;       // absolute screen (art) px of the target's top-left
 uniform float uZoom;        // target px per art px
 uniform vec2 uDepthRange;
 uniform vec2 uDepthPx;      // depth per px up a vertical, and per px across (D-195)
+uniform float uFoot;        // a tile's height over its width: the near half of a plume's foot, below its vent, is this × its radius
 uniform vec4 uA[${MAX_PLUMES}];  // vent: sx, sy (absolute art px), depth, radius (px)
 uniform vec4 uB[${MAX_PLUMES}];  // height (px), density, seed, lean of its top (px)
 uniform int uCount;
@@ -68,7 +69,7 @@ void main() {
     vec4 a = uA[i];
     vec4 b = uB[i];
     float up = a.y - s.y;  // px above the vent
-    if (up < -0.5 * a.w || up > b.x) continue;
+    if (up < -uFoot * a.w || up > b.x) continue;
     float t = clamp(up / b.x, 0.0, 1.0);
     float r = a.w * (0.6 + 1.6 * t);
     float ax = a.x + b.w * t * t;
@@ -77,7 +78,7 @@ void main() {
     // the plume's depth rises as it climbs and reaches nearer across its width: what stands nearer the eye hides it
     if (d > a.z + max(up, 0.0) * uDepthPx.x + r * uDepthPx.y) continue;
     // thickest along its axis and low down, thinning to its edges and top
-    float body = pow(1.0 - dx * dx, 0.7) * pow(1.0 - t, 0.8) * smoothstep(-0.5 * a.w, 0.3 * a.w, up);
+    float body = pow(1.0 - dx * dx, 0.7) * pow(1.0 - t, 0.8) * smoothstep(-uFoot * a.w, 0.3 * a.w, up);
     vec2 q = vec2(s.x - ax, up - uRise) / (0.6 * a.w) + b.z;
     float n = 0.65 * texture(uNoise, q / ${FOG_NOISE_PERIOD}.0).r + 0.35 * texture(uNoise, (2.3 * q + 17.0) / ${FOG_NOISE_PERIOD}.0).r;
     // puffs: thicker and thinner, with the odd gap
@@ -161,6 +162,7 @@ export class SteamPass {
     // 2:1: depth u + v + h/3 with h a step per 8 px up gives 1/24; a cell across is 16 px, 1/16
     const p = steam.projection ?? ISO_PROJECTION;
     gl.uniform2f(u.loc("uDepthPx"), p.d[2] / -p.y[2], p.d[0] / p.x[0]);
+    gl.uniform1f(u.loc("uFoot"), tileAspect(p));
     const count = Math.min(steam.count, MAX_PLUMES);
     if (count > 0) {
       gl.uniform4fv(u.loc("uA"), steam.a.subarray(0, count * 4));

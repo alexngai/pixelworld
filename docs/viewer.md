@@ -38,6 +38,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&ground
 | `at` | | `lon,lat`: start at a place (worlds with a geo grid); outside this level the rover starts at the world's start and the HUD says so. Level switching (L) uses it |
 | `fx`, `fy` | | Focus cell: the camera looks there and doesn't follow the rover |
 | `rot` | `0` | View rotation, 0–3 quarter turns |
+| `projection=steep` | 2:1 | The higher camera (D-195): 4:3 tiles, about 49° down, heights as in the 2:1 view. Painted-over hero landmarks are left out |
 | `zoom` | auto | Integer upscale; auto is about one baked pixel per 640 canvas pixels |
 | `w`, `h` | the window | A fixed canvas size in pixels, one canvas pixel per CSS pixel (tests, the bench) |
 
@@ -74,6 +75,7 @@ Every parameter is optional. The e2e tests open views with `hud=0&cache=0&ground
 | `fog=0` | on | Start with fog off |
 | `fogTime` | `0` | The fog's clock in seconds of play (its drift is a function of time) |
 | `fogPause=1` | drifting | Don't let it drift |
+| `fogFollow=1` | off | Thinner fog from a steeper camera (`fogLayer`'s `followProjection`, D-195) |
 
 **Tools**
 

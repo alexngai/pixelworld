@@ -1,4 +1,4 @@
-import type { PluginDescriptor } from "@pixelworlds/engine";
+import { STEEP_PROJECTION, type PluginDescriptor } from "@pixelworlds/engine";
 import { cityPlugin as hongKong } from "@pixelworlds/city-hongkong";
 import { cityPlugin as kyoto } from "@pixelworlds/city-kyoto";
 import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
@@ -22,7 +22,7 @@ import { driveFixed, flyFixed, routeTo, scriptedRun, type RunReport, type Sample
  *
  * URL parameters: `world` (a package, default the Southwest's driving level),
  * `start=lon,lat`, `fly=1` (start in the air), `traffic=0`, `trafficSeed`, `trafficPause=1`, `fog=0`,
- * `cache=0`, `startTiles=0` (bake the first view too), `workers` (bake workers), `ground=0` (no ground while tiles bake), `idle=0` (no baking ahead while idle), `w`/`h` (a fixed canvas), `zoom`, `rot`, `hud=0`, `run=1` (the
+ * `cache=0`, `startTiles=0` (bake the first view too), `workers` (bake workers), `ground=0` (no ground while tiles bake), `idle=0` (no baking ahead while idle), `w`/`h` (a fixed canvas), `zoom`, `rot`, `projection=steep` (the higher camera, D-195), `hud=0`, `run=1` (the
  * scripted run in real time, then its frame times). The dogfight is a demo of @pixelworlds/multiplayer
  * (packages/multiplayer/src/demos/dogfight), on this game's plane.
  */
@@ -118,6 +118,8 @@ async function main() {
     rotation: num("rot", 0) & 3,
     hud: params.get("hud") === "0" ? null : ui,
     fly: params.get("fly") === "1",
+    // projection=steep: the higher camera (D-195), 4:3 tiles
+    ...(params.get("projection") === "steep" ? { projection: STEEP_PROJECTION } : {}),
   });
 
   window.addEventListener("keydown", (e) => game.keyDown(e));

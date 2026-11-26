@@ -553,6 +553,21 @@ test.describe("Fog (an atmosphere layer)", () => {
     expect(changed(foggy, plain)).toBeGreaterThan(foggy.data.length / 4 / 3);
   });
 
+  test("fog in the higher camera (D-195): drawn through the Golden Gate, thinner with followProjection", async ({ page }) => {
+    const steep = GATE + "&projection=steep";
+    await open(page, steep + "&fog=1&fogTime=30&fogPause=1");
+    expect(await fog(page)).toEqual({ enabled: true, paused: true, time: 30, drawn: true });
+    const foggy = await pixels(page);
+    await open(page, steep); // fog=0
+    const plain = await pixels(page);
+    expect(changed(foggy, plain)).toBeGreaterThan(foggy.data.length / 4 / 3);
+    // a steeper line of sight crosses less of the layer: nearer the plain frame
+    await open(page, steep + "&fog=1&fogTime=30&fogPause=1&fogFollow=1");
+    const thinner = await pixels(page);
+    const distance = (a: { data: number[] }, b: { data: number[] }) => a.data.reduce((sum, v, i) => sum + (i % 4 === 3 ? 0 : Math.abs(v - b.data[i]!)), 0);
+    expect(distance(thinner, plain)).toBeLessThan(0.9 * distance(foggy, plain));
+  });
+
   test("no fog on the walking level, nor where the style's areas don't reach", async ({ page }) => {
     await open(page, "world=/sf-walk/&marker=0&zoom=3&rot=0&at=-122.4327,37.7760&fog=1");
     expect(await fog(page)).toBeNull(); // the bay-area pack turns fog off when walking
@@ -564,6 +579,33 @@ test.describe("Fog (an atmosphere layer)", () => {
     await open(page, "zoom=2&rot=0&fog=1");
     expect(await fog(page)).toBeNull();
   });
+});
+
+test.describe("Steam (D-138)", () => {
+  // Old Faithful's cone, its plume held still
+  const GEYSER = "world=/yellowstone-walk/&marker=0&zoom=2&rot=0&at=-110.8281,44.4605";
+  for (const [name, q] of [
+    ["the 2:1 view", ""],
+    ["the higher camera (D-195)", "&projection=steep"],
+  ] as const)
+    test(`a plume rises from the cone in ${name}`, async ({ page }) => {
+      await open(page, GEYSER + q + "&steamTime=20&steamPause=1");
+      const steam = await pixels(page);
+      await open(page, GEYSER + q + "&steam=0");
+      const plain = await pixels(page);
+      let n = 0;
+      let far = 0;
+      for (let i = 0; i < steam.data.length; i += 4) {
+        if (hex(steam.data, i) === hex(plain.data, i)) continue;
+        n++;
+        const x = (i / 4) % steam.width;
+        const y = Math.floor(i / 4 / steam.width);
+        // the plume stands over the middle of the view, where the cone is
+        if (Math.abs(x - steam.width / 2) > 160 || Math.abs(y - steam.height / 2) > 160) far++;
+      }
+      expect(n).toBeGreaterThan(200);
+      expect(far).toBe(0);
+    });
 });
 
 test.describe("Failures (D-072)", () => {

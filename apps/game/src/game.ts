@@ -3,6 +3,7 @@ import {
   fogLayer,
   type Controller,
   type PluginDescriptor,
+  type Projection,
   type StyleSource,
   type WorldManifest,
   type WorldView,
@@ -58,6 +59,8 @@ export interface GameOptions {
   hud?: HTMLElement | null;
   /** Start in the air (any level). */
   fly?: boolean;
+  /** How the views lay the world out (D-195); default the 2:1 view. */
+  projection?: Projection;
 }
 
 export type Mode = "car" | "plane";
@@ -223,6 +226,7 @@ export class Game {
       ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
       ...(opts.groundFirst === false ? { groundFirst: false } : {}),
       ...(opts.idleBake === false ? { idleBake: false } : {}),
+      ...(opts.projection ? { projection: opts.projection } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
         : { rotation: opts.rotation ?? 0, zoom: opts.zoom ?? "auto" },
