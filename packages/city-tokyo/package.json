@@ -1,6 +1,6 @@
 {
   "name": "@pixelworlds/city-tokyo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Tokyo's city pack for pixelworld: the zakkyo, mansion and kodate generators its style pack names, its landmarks and utility poles",
   "license": "MIT OR Apache-2.0",
   "type": "module",
