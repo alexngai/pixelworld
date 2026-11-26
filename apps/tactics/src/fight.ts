@@ -961,10 +961,16 @@ export class Fight {
   }
 
   /** The cells a state's round would harm: struck, crushed, buildings hit. */
-  private harm(s: Combat): Set<number> {
+  /**
+   * What the invaders will do this round (D-192, D-194): the cells their strikes hurt (a building on the cell struck), and on each,
+   * the damage a badge shows: hit points off a unit or a building.
+   */
+  private intents(s: Combat): { cells: Set<number>; hits: Map<number, number> } {
     // each invader's strike in turn; a building it hurts marked on the cell struck (D-192), not the whole of it
     const r = cloneCombat(s);
     const cells = new Set<number>();
+    const hits = new Map<number, number>();
+    const hit = (k: number, n: number) => hits.set(k, (hits.get(k) ?? 0) + n);
     const w = s.arena.w;
     for (let u = 0; u < r.roster.length; u++) {
       if (teamOf(r, u) !== INVADERS || r.hp[u]! <= 0 || r.aim[u]! < 0) continue;
@@ -973,15 +979,19 @@ export class Fight {
       strike(r, u, aimOf(r, u), log);
       for (const e of log) {
         if (e.t === "crush") cells.add(e.at);
-        if (e.t === "damage") cells.add(r.pos[e.unit]!);
+        if (e.t === "damage") {
+          cells.add(r.pos[e.unit]!);
+          hit(r.pos[e.unit]!, e.amount);
+        }
         if (e.t !== "structure") continue;
         const own = s.arena.structures[e.id]!.cells;
         // the cell struck if it's this building's, else (pushed into it, fallen on) its cell nearest the strike
         const near = t >= 0 && own.includes(t) ? t : own.reduce((a, b) => (t < 0 || Math.hypot((b % w) - (t % w), Math.floor(b / w) - Math.floor(t / w)) < Math.hypot((a % w) - (t % w), Math.floor(a / w) - Math.floor(t / w)) ? b : a));
         cells.add(near);
+        hit(near, e.amount);
       }
     }
-    return cells;
+    return { cells, hits };
   }
 
   private targets(u: number): Map<number, Strike> {
@@ -1017,7 +1027,8 @@ export class Fight {
     const shown = this.preview?.state ?? c;
     const byCell = new Map<number, Mark["kind"]>();
     const mark = (k: number, kind: Mark["kind"]) => byCell.set(k, kind);
-    const danger = this.phase !== "busy" && this.phase !== "over" ? this.harm(shown) : new Set<number>();
+    const plan = this.phase !== "busy" && this.phase !== "over" ? this.intents(shown) : null;
+    const danger = plan?.cells ?? new Set<number>();
     for (const k of danger) mark(k, "danger");
     for (const { at } of arriving(shown)) mark(at, "info");
     for (let u = 0; u < shown.roster.length; u++) {
@@ -1109,6 +1120,13 @@ export class Fight {
         const cls = this.preview?.hurt.includes(id) ? "building hurt preview" : st.cells.some((k) => danger.has(k)) ? "building threat" : shown.evacuated[id] ? "building empty" : "building";
         this.label(bid, at, `${pips(shown.structHp[id]!, st.hp)} ${people}`, cls, 8);
       });
+    // each cell the invaders will hit (D-194): a badge with the damage, where it lands
+    if (plan)
+      for (const [k, n] of plan.hits) {
+        const hid = `hit-${k}`;
+        keep.add(hid);
+        this.label(hid, k, `${n}`, "badge", -4);
+      }
     for (const [id, l] of this.labels)
       if (l.until === undefined && !keep.has(id)) {
         l.el.remove();

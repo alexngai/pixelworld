@@ -200,6 +200,7 @@ Status values:
 | D-191 | What a cell holds and what a strike does, on the board: buildings' hit points and people, a strike's consequences in words, its pushes and hurt buildings moving | Accepted |
 | D-192 | Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint | Accepted |
 | D-193 | The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size | Accepted |
+| D-194 | After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck | Accepted |
 
 ---
 
@@ -2679,4 +2680,20 @@ The point is more room for visual interest; both halves are wanted.
   - **A shot in flight:** a pixel ball with a short pixel trail.
   - The cell fills, stripes, building outlines and the grid stay as they were.
 - **Checked:** in the browser on a San Francisco block: the pixel layer 512 × 320, the world's internal size, 5 device pixels a pixel as the world's; the hint's moves, drop and shot and the invaders' aims as pixel lines with dark outlines and pixel heads, the white dash marching; landing cells dithered and blinking; at the default zoom the indicators' pixels match the city's; a ram's push on the pumper, its ghost sliding; no errors.
+
+### D-194: After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck (accepted)
+- **Why:** the owner showed a screenshot of Into the Breach, whose actions read clearly, and asked whether that comes of a mixture of techniques. Read from it:
+  - the indicators lie on the cells' plane, so the cell meant is never in doubt;
+  - a shot or a lob is a dotted trail, light over busy ground;
+  - the damage sits in a box on the cell it lands on;
+  - each colour means one thing;
+  - everything is pixel art with dark outlines (D-193).
+
+  Asked to adopt the three that differed most.
+- **What:**
+  - **A blow** (an invader's, the hint's): a thick arrow lying on the striker's own plane, from its cell across the edge into the cell it hits, dark-outlined, nudging forward and back.
+  - **A shot, a lob or a lift:** dots along its flight, evenly spaced on screen, outlined dark, the arrow's colour and a pale cream by turns, drifting toward where it lands; it still lands on the cell marked for it (D-192).
+  - **A move or a push** keeps its line and head.
+  - **Each cell the invaders will hit** has a badge: a red box with the hit points it will cost there (a unit's, or a building's on the cell struck), worked out with the cells in danger (`intents`, once a paint).
+- **Checked:** in the browser on a San Francisco block: two flyers' spits as dotted trails, a brute's slam as an arrow on its cell, badges ("1", "1", "2") on the cells struck.
 

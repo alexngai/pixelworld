@@ -85,6 +85,8 @@ const FILL: Partial<Record<Mark["kind"], number>> = { move: 0.26, attack: 0.34, 
 const DARK = rgba(14, 12, 26);
 const WHITE = rgba(255, 255, 255);
 const GHOST = rgba(150, 210, 255);
+/** A dotted flight's second colour, by turns with the arrow's (D-194). */
+const DOT2 = rgba(255, 240, 200);
 /** "r,g,b" as the pixel layer's colour. */
 const pixelColour = (rgb: string) => {
   const [r, g, b] = rgb.split(",").map(Number) as [number, number, number];
@@ -164,6 +166,12 @@ export class BoardGlass {
         const q = camera.project(pa.x + (pb.x - pa.x) * f, pa.y + (pb.y - pa.y) * f, ha + (hb - ha) * f + up * 4 * f * (1 - f));
         return [q.x, q.y] as [number, number];
       };
+    };
+    // a point of the board (cells, continuous) at a height, on screen
+    const plane = (x: number, y: number, h: number): [number, number] => {
+      const p = toWorld(this.board, { x, y });
+      const q = camera.project(p.x, p.y, h);
+      return [q.x, q.y];
     };
     // a straight run from part of the way from one cell's middle toward another's to further along it, rising from one height to another
     const toward = (ka: number, kb: number, f0: number, f1: number, ha: number, hb: number) => {
@@ -341,12 +349,29 @@ export class BoardGlass {
       // its style (D-192): a ranged strike arcs onto the cell's plane; a blow is short and level, from the striker into the face of
       // the cell it hits; a move or a push runs straight from cell to cell
       const style = ar.style ?? (ar.kind === "move" ? "path" : "arc");
-      const at =
-        style === "arc" || style === "shot"
-          ? arc(ka, kb, true, style === "shot")
-          : style === "flat"
-            ? toward(ka, kb, 0.12, 0.62, planeAt(c, ka) + 0.7, planeAt(c, ka) + 0.7)
-            : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
+      // a blow (D-194): a thick arrow lying on the striker's own plane, from its cell across the edge into the cell it hits, nudging
+      // forward and back
+      if (style === "flat") {
+        const h = planeAt(c, ka) + lift;
+        const [ai, aj, bi, bj] = [ka % a.w, Math.floor(ka / a.w), kb % a.w, Math.floor(kb / a.w)];
+        const [ux, uy] = [Math.sign(bi - ai), Math.sign(bj - aj)];
+        const nudge = 0.05 * Math.sin(now / 180);
+        // along the blow from the striker's middle (0) to the target's (1), across it either way
+        const on = (along: number, across: number) => lo(plane(ai + 0.5 + ux * (along + nudge) - uy * across, aj + 0.5 + uy * (along + nudge) + ux * across, h));
+        const shape = (grow: number): [number, number][] => [
+          on(0.12 - grow, -0.11 - grow),
+          on(0.46, -0.11 - grow),
+          on(0.46 - grow * 0.5, -0.27 - grow),
+          on(0.82 + grow * 1.6, 0),
+          on(0.46 - grow * 0.5, 0.27 + grow),
+          on(0.46, 0.11 + grow),
+          on(0.12 - grow, 0.11 + grow),
+        ];
+        px.fill(shape(0.05), DARK);
+        px.fill(shape(0), colour);
+        continue;
+      }
+      const at = style === "arc" || style === "shot" ? arc(ka, kb, true, style === "shot") : toward(ka, kb, 0, 1, planeAt(c, ka) + 0.4, planeAt(c, kb) + 0.4);
       // where an arc comes down: the cell marked (sparsely dithered, a one-pixel edge blinking), so which one it is reads at once
       if (style === "arc" || style === "shot") {
         const q = quad(kb, planeAt(c, kb) + lift, 0.14).map(lo);
@@ -356,6 +381,29 @@ export class BoardGlass {
       }
       const pts: [number, number][] = [];
       for (let n = 0; n <= 24; n++) pts.push(lo(at(n / 24)));
+      // a shot, a lob or a lift (D-194): dots along its flight, evenly spaced on screen, two colours by turns, drifting toward where it lands
+      if (style === "arc" || style === "shot") {
+        const fine: [number, number][] = [];
+        for (let n = 0; n <= 96; n++) fine.push(lo(at(n / 96)));
+        const gap = 5;
+        const drift = (now / 90) % (gap * 2);
+        let run = 0;
+        for (let n = 1; n < fine.length; n++) {
+          const [x0, y0] = fine[n - 1]!;
+          const [x1, y1] = fine[n]!;
+          const d = Math.hypot(x1 - x0, y1 - y0);
+          // each dot where the distance run passes the next mark
+          for (let m = Math.ceil((run - drift) / gap); m * gap + drift <= run + d; m++) {
+            const f = (m * gap + drift - run) / (d || 1);
+            if (f < 0 || f > 1) continue;
+            const [x, y] = [Math.round(x0 + (x1 - x0) * f), Math.round(y0 + (y1 - y0) * f)];
+            px.dot(x, y, 4, DARK);
+            px.dot(x, y, 2, m % 2 ? colour : DOT2);
+          }
+          run += d;
+        }
+        continue;
+      }
       // the shaft stops where the head begins, its head a pixel triangle along its last stretch
       const tip = pts[pts.length - 1]!;
       let back = pts.length - 1;
