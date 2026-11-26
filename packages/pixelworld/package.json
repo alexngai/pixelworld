@@ -1,6 +1,6 @@
 {
   "name": "pixelworld",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Pixel-art isometric worlds from open data: a browser engine, the world format, generators and traffic.",
   "license": "MIT OR Apache-2.0",
   "type": "module",

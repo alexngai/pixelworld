@@ -1,5 +1,21 @@
 # @pixelworlds/city-sf
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [6fd56b2]
+- Updated dependencies [db8e3b8]
+- Updated dependencies [ad4621c]
+- Updated dependencies [7d72957]
+- Updated dependencies [6883769]
+- Updated dependencies [94553bd]
+- Updated dependencies [c6e4eb7]
+- Updated dependencies [9454a31]
+- Updated dependencies [17ef100]
+- Updated dependencies [57a7a12]
+  - pixelworld@0.3.0
+
 ## 0.1.1
 
 ### Patch Changes

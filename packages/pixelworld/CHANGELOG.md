@@ -1,5 +1,22 @@
 # pixelworld
 
+## 0.3.0
+
+### Minor Changes
+
+- 6fd56b2: Engine: `view.cutDown(Map<object, height>)` draws placed objects cut down to a height, as a cutaway (D-159): what's above isn't drawn and the inside of their far walls shows dark, as solid; only the drawing changes, and the tiles they reach bake again without meshing again; cuts can be given per rotation of the view (`cutDown(cuts, rotation)`), so the tiles of the other rotations, baked while idle, keep theirs. `BakeOptions.cut` in the bake.
+- db8e3b8: Engine: `cutDown`'s cuts are baked into a cutaway variant of each tile they reach, kept beside the plain tile, and `view.cutaway` (default true) says which shows, so turning the cutaway on and off is immediate (D-167). Runtime: `TileRequest.cutaway`.
+  
+  `cutDown(cuts, rotation, { always: true })` keeps a second set of cuts, made in the plain tiles as well, whether the cutaway shows or not (D-168).
+- ad4621c: Engine: an entity's `outline` (`[r, g, b]`, or null) draws a coloured outline round its sprite, a few pixels wide at any zoom, over everything, a building in front of it too (D-170).
+- 7d72957: Engine: `view.setLoneGhosts([{ object, alpha }])` draws placed objects on their own over the finished frame, each at its opacity, far to near, where it stands in front of what's drawn (D-162): with `cutDown`, the buildings cut away shown faintly as themselves. Each is baked alone (`BakeService.bakeLone`) once a rotation.
+- 6883769: Engine: up to twelve entities see through what stands in front of them at once (`reveal`, D-079), each clearing its own ellipse, the first twelve drawn (was the first one only); at `density: 1` the cut is clean, without a dithered edge (D-154).
+- 94553bd: Engine: terrain edits and boards at any resolution (D-147, D-148). `edits.cells([{ x, y, surface?, water?, height? }])` edits terrain cells as `remove` and `restore` edit objects: the queries answer with them at once, a server's `openWorld` too, and a view bakes the tiles they reach again, caching each under its edits. `WorldEdit` is now a union of the object ops and `{ op: "cells", cells }`. `query.object(index)` gives a placed object's data. `cutBoard` and `Boards` cut `Cells` from a world at any cell size and keep several to its edits; `followEdits` takes the queries to read cells again under terrain edits.
+- c6e4eb7: Engine: `view.bakeTopDown(x0, y0, x1, y1, { px?, tilt?, shadows? })` bakes a rectangle of the world from above, north up, once (D-155): its terrain, roads and placed objects (but those the edits removed), shaded and outlined as the tiles are, as RGBA in the day palette and as the baked indices. `paletteImage(image, palette)` colours any baked image. The bake's projection is now a parameter (`BakeOptions.projection`, `ISO_PROJECTION`, `topDownProjection`).
+- 9454a31: Engine: `view.bakeSpriteTopDown(boxes, { px, sun })` bakes an entity model from above (D-164); `bakeTopDown` and the bake take a light direction of their own (`sun`, `BakeOptions.sun`), for short shadows from above.
+- 17ef100: Engine: `TopDownMap` bakes the whole world from above in square tiles on demand (`tiles(x0, y0, x1, y1)`, `onChange`, `forget(rect)`), nearest first and a couple at a time, for maps that pan over a world (D-158); `bakeTopDown`'s `cache` option keeps its images with the view's tiles.
+- 57a7a12: Engine: `createWorldView({ projection })` lays the world out with another projection (D-195), fixed for the view's life: `ISO_PROJECTION` (2:1, the default) or `STEEP_PROJECTION`, a higher camera with 4:3 tiles. `camera.projection` and `FrameInfo.projection` give it. Tiles, sprites, picking, the see-through around a player, fog, steam and the minimap's outline of the view follow it; its tiles are cached apart from the 2:1 view's; painted-over hero landmarks are resampled from their 2:1 paint (`applyHeroPaintReprojected`). `fogLayer({ followProjection })` thins the fog for a steeper camera. Grid: `Projection` and its presets, `project`, `projectView` and `unprojectAtHeight` take one (2:1 by default), `unprojectView`, `projectionInverse`, `groundInverse`, `sumUV` and `tileAspect`.
+
 ## 0.2.0
 
 ### Minor Changes
