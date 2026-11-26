@@ -1,13 +1,4 @@
-import {
-  DEPTH_PER_STEP,
-  HALF_H,
-  HALF_W,
-  STEP_PX,
-  project,
-  rotateXY,
-  unprojectAtHeight,
-  type Rotation,
-} from "@pixelworlds/grid";
+import { ISO_PROJECTION, project, rotateXY, unprojectAtHeight, unprojectView, type Projection, type Rotation } from "@pixelworlds/grid";
 
 /**
  * Pixel-snapped isometric camera. The view is drawn at integer internal
@@ -25,6 +16,8 @@ export class Camera {
   constructor(
     public canvasWidth: number,
     public canvasHeight: number,
+    /** How the view lays the world out (D-195). */
+    readonly projection: Projection = ISO_PROJECTION,
   ) {}
 
   get internalWidth(): number {
@@ -37,7 +30,7 @@ export class Camera {
 
   /** Top-left of the view in screen pixels (float). */
   origin(): [number, number] {
-    const c = project(this.fx, this.fy, this.fh, this.rotation);
+    const c = project(this.fx, this.fy, this.fh, this.rotation, this.projection);
     return [c.sx - this.internalWidth / 2, c.sy - this.internalHeight / 2];
   }
 
@@ -51,19 +44,16 @@ export class Camera {
 
   /** Pan by screen pixels (internal resolution), keeping the focus height. */
   panPixels(dx: number, dy: number): void {
-    const c = project(this.fx, this.fy, this.fh, this.rotation);
-    const [x, y] = unprojectAtHeight(c.sx + dx, c.sy + dy, this.fh, this.rotation);
+    const c = project(this.fx, this.fy, this.fh, this.rotation, this.projection);
+    const [x, y] = unprojectAtHeight(c.sx + dx, c.sy + dy, this.fh, this.rotation, this.projection);
     this.fx = x;
     this.fy = y;
   }
 
   /** Grid-space direction for a screen direction (unit length in cells). */
   screenDirToGrid(dx: number, dy: number): [number, number] {
-    // screen (dx, dy) → view (du, dv): dx = 16(du − dv), dy = 8(du + dv)
-    const a = dx / HALF_W;
-    const b = dy / HALF_H;
-    const du = (a + b) / 2;
-    const dv = (b - a) / 2;
+    // screen (dx, dy) → view (du, dv) on the ground
+    const [du, dv] = unprojectView(dx, dy, 0, this.projection);
     // undo the view rotation (rotate by the inverse)
     const inv: Rotation = ((4 - this.rotation) % 4) as Rotation;
     const [gx, gy] = rotateXY(du, dv, inv);
@@ -83,6 +73,7 @@ export function worldDepthRange(
   minH: number,
   maxH: number,
   headroomSteps = 32,
+  p: Projection = ISO_PROJECTION,
 ): [number, number] {
   let lo = Infinity;
   let hi = -Infinity;
@@ -93,9 +84,11 @@ export function worldDepthRange(
       [0, cellsY],
       [cellsX, cellsY],
     ] as const) {
-      const [u, v] = rotateXY(x, y, r);
-      lo = Math.min(lo, u + v + (minH - 4) * DEPTH_PER_STEP);
-      hi = Math.max(hi, u + v + (maxH + headroomSteps) * DEPTH_PER_STEP);
+      for (const h of [minH - 4, maxH + headroomSteps]) {
+        const d = project(x, y, h, r, p).depth;
+        lo = Math.min(lo, d);
+        hi = Math.max(hi, d);
+      }
     }
   }
   return [lo - 1, hi + 1];
@@ -110,6 +103,7 @@ export function cellsScreenRect(
   minH: number,
   maxH: number,
   r: Rotation,
+  p: Projection = ISO_PROJECTION,
 ): { left: number; top: number; right: number; bottom: number } {
   let left = Infinity;
   let right = -Infinity;
@@ -121,13 +115,13 @@ export function cellsScreenRect(
     [x0, y1],
     [x1, y1],
   ] as const) {
-    const [u, v] = rotateXY(x, y, r);
-    const sx = HALF_W * (u - v);
-    const syBase = HALF_H * (u + v);
-    left = Math.min(left, sx);
-    right = Math.max(right, sx);
-    top = Math.min(top, syBase - STEP_PX * maxH);
-    bottom = Math.max(bottom, syBase - STEP_PX * minH);
+    for (const h of [minH, maxH]) {
+      const s = project(x, y, h, r, p);
+      left = Math.min(left, s.sx);
+      right = Math.max(right, s.sx);
+      top = Math.min(top, s.sy);
+      bottom = Math.max(bottom, s.sy);
+    }
   }
   return { left, top, right, bottom };
 }

@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  ISO_PROJECTION,
   ROTATIONS,
+  STEEP_PROJECTION,
   STEP_WORLD,
   SUN_DIR,
   project,
+  projectView,
+  projectionInverse,
+  projectionKey,
   rotateXY,
+  sumUV,
   unprojectAtHeight,
+  unprojectView,
   unrotateXY,
 } from "../src/index";
 
@@ -87,5 +94,80 @@ describe("integer projection", () => {
     expect(left).toBeGreaterThan(right);
     expect(right).toBeGreaterThan(0);
     expect(top - left).toBeCloseTo(left - right, 1);
+  });
+});
+
+describe("projections (D-195)", () => {
+  const PROJECTIONS = [
+    ["2:1", ISO_PROJECTION],
+    ["4:3", STEEP_PROJECTION],
+  ] as const;
+
+  it("the 2:1 projection is the default", () => {
+    for (const [x, y, h, r] of [
+      [3, -2, 5, 0],
+      [-4, 7, 1, 3],
+    ] as const)
+      expect(project(x, y, h, r, ISO_PROJECTION)).toEqual(project(x, y, h, r));
+    expect(projectionKey(ISO_PROJECTION)).toBe("");
+    expect(projectionKey(STEEP_PROJECTION)).not.toBe("");
+  });
+
+  it("the higher camera's tiles are 4:3 and its steps 8 px, in whole pixels", () => {
+    expect(project(1, 0, 0, 0, STEEP_PROJECTION)).toMatchObject({ sx: 16, sy: 12 });
+    expect(project(0, 1, 0, 0, STEEP_PROJECTION)).toMatchObject({ sx: -16, sy: 12 });
+    expect(project(0, 0, 1, 0, STEEP_PROJECTION)).toMatchObject({ sx: 0, sy: -8 });
+  });
+
+  for (const [name, p] of PROJECTIONS) {
+    it(`${name}: unprojecting at a height undoes projecting, in every rotation`, () => {
+      for (const r of ROTATIONS)
+        for (const [x, y, h] of [
+          [2.5, -1.25, 3],
+          [-7, 4, -2],
+          [0.3, 0.9, 11],
+        ] as const) {
+          const s = project(x, y, h, r, p);
+          const [gx, gy] = unprojectAtHeight(s.sx, s.sy, h, r, p);
+          expect(gx).toBeCloseTo(x, 9);
+          expect(gy).toBeCloseTo(y, 9);
+        }
+    });
+
+    it(`${name}: the inverse turns a screen point and depth back into (u, v, h)`, () => {
+      const m = projectionInverse(p);
+      const k = sumUV(p);
+      for (const [u, v, h] of [
+        [1, 2, 3],
+        [-5, 0.5, 7],
+      ] as const) {
+        const s = projectView(u, v, h, p);
+        const at = [0, 1, 2].map((row) => m[row]! * s.sx + m[3 + row]! * s.sy + m[6 + row]! * s.depth);
+        expect(at[0]).toBeCloseTo(u, 9);
+        expect(at[1]).toBeCloseTo(v, 9);
+        expect(at[2]).toBeCloseTo(h, 9);
+        expect(k[0] * s.sx + k[1] * s.sy + k[2] * s.depth).toBeCloseTo(u + v, 9);
+        const [gu, gv] = unprojectView(s.sx, s.sy, h, p);
+        expect(gu).toBeCloseTo(u, 9);
+        expect(gv).toBeCloseTo(v, 9);
+      }
+    });
+
+    it(`${name}: depth grows toward the camera along a view ray`, () => {
+      // a ray: a cell nearer each way and as many steps up as keep it on one screen point
+      const rise = (p.y[0] + p.y[1]) / -p.y[2];
+      const a = projectView(0, 0, 0, p);
+      const b = projectView(1, 1, rise, p);
+      expect(b.sx).toBeCloseTo(a.sx, 9);
+      expect(b.sy).toBeCloseTo(a.sy, 9);
+      expect(b.depth).toBeGreaterThan(a.depth);
+    });
+  }
+
+  it("the 2:1 reveal sum is the old sy / 32 + 0.75 depth", () => {
+    const [a, b, c] = sumUV(ISO_PROJECTION);
+    expect(a).toBeCloseTo(0, 12);
+    expect(b).toBeCloseTo(1 / 32, 12);
+    expect(c).toBeCloseTo(0.75, 12);
   });
 });

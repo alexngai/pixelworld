@@ -24,6 +24,8 @@ export interface InitMessage {
   objects?: WorldObjects;
   /** Painted-over hero landmarks (M3, D-053), stamped into every tile bake. */
   heroes?: HeroPaint[];
+  /** How the view lays the world out (D-195), for its tiles and sprites; the 2:1 view if absent. */
+  projection?: Projection;
 }
 
 export interface WorldObjects {

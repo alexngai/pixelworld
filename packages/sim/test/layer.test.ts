@@ -1,4 +1,4 @@
-import type { FrameInfo, LayerContext, Rotation, Sprite, WorldView } from "@pixelworlds/engine";
+import { ISO_PROJECTION, type FrameInfo, type LayerContext, type Rotation, type Sprite, type WorldView } from "@pixelworlds/engine";
 import { describe, expect, it } from "vitest";
 import { RouteNetwork, parseRoutes, trafficLayer, type RoutesFile } from "../src";
 
@@ -54,6 +54,7 @@ function context(rotation: Rotation = 0) {
     zoom: 2,
     view: { left: -320, top: -180, width: 640, height: 360 },
     night: false,
+    projection: ISO_PROJECTION,
     renderScale: 1,
     project: (x, y, h) => project(x, y, h, rotation),
     isDrawn: (x, y) => ground.drawn(x, y),

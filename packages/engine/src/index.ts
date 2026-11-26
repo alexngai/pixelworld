@@ -14,6 +14,8 @@
  * (D-111): for a game server or a bot that must agree with the views.
  */
 export { createWorldView, paletteImage } from "./view";
+// how a view lays the world out (D-195): the 2:1 view, and a higher camera
+export { ISO_PROJECTION, STEEP_PROJECTION } from "@pixelworlds/grid";
 export { openWorld } from "./world";
 export { DRAW_ONLY_LAYERS, type DroppableLayer } from "@pixelworlds/world-format";
 export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";

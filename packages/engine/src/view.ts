@@ -1,6 +1,6 @@
 import { topDownProjection, type BakedImage } from "@pixelworlds/bake";
 import { footprintBounds, generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworlds/generators";
-import { project, type Rotation } from "@pixelworlds/grid";
+import { ISO_PROJECTION, project, sameProjection, type Rotation } from "@pixelworlds/grid";
 import {
   BakeService,
   Camera,
@@ -126,9 +126,12 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
     ? Promise.resolve(null)
     : StartTiles.load(opts.startTiles === true ? new URL("start-tiles.bin", withSlash(w.base)) : opts.startTiles);
   const keyed = cache !== null || !!opts.startTiles;
-  const heroes = opts.heroes === false ? [] : await loadHeroes(w);
+  // another projection (D-195): its tiles kept apart, and no hero landmarks (they are painted for the 2:1 view)
+  const projection = opts.projection ?? ISO_PROJECTION;
+  const iso = sameProjection(projection, ISO_PROJECTION);
+  const heroes = opts.heroes === false || !iso ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
-  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : []));
+  const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : [], undefined, projection));
   cacheKeyReady.catch(() => {}); // awaited below
   // objects taken out at runtime (D-124): each tile's bake leaves out those it reaches, and is kept under them;
   // terrain edited (D-147): each tile's slice holds the edits it reaches, and is kept under those
@@ -150,7 +153,7 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
   };
   const { workerUrl } = opts;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
-  const service = await BakeService.create(bakeInit(w, heroes, opts.scatter !== false), prepare, workerFactory, {
+  const service = await BakeService.create({ ...bakeInit(w, heroes, opts.scatter !== false), ...(iso ? {} : { projection }) }, prepare, workerFactory, {
     plugins: plugins.refs,
     workers: opts.bakeWorkers ?? defaultBakeWorkers(),
   });
@@ -173,7 +176,7 @@ class View implements WorldView {
   readonly layers: LayerRegistry;
   readonly controllers: ControllerHost;
   readonly edits: WorldEdits;
-  private readonly cam = new Camera(1, 1);
+  private readonly cam: Camera;
   private readonly viewCamera: ViewCameraImpl;
   private readonly entityList: Entities;
   private readonly layerList: Layers;
@@ -245,6 +248,7 @@ class View implements WorldView {
     private readonly tileEdits: TileEdits,
   ) {
     this.canvas = opts.canvas;
+    this.cam = new Camera(1, 1, opts.projection ?? ISO_PROJECTION);
     this.world = worldInfo(w);
     this.rs = w.renderScale;
     this.fixedSize = opts.size ?? null;
@@ -260,7 +264,7 @@ class View implements WorldView {
       w,
       () => {
         const snap = this.cam.snapped();
-        return { rotation: this.cam.rotation, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
+        return { rotation: this.cam.rotation, projection: this.cam.projection, ...snap, zoom: this.cam.zoom, pixelRatio: this.ratio };
       },
       editLog,
     );
@@ -291,8 +295,15 @@ class View implements WorldView {
     this.controllerHost = new Controllers(this);
     this.controllers = this.controllerHost;
 
-    this.tiles = new TileGrid(manifest.cellsX, manifest.cellsY, w.tileSize, this.rs, w.floor, !!w.objects, (x0, y0, x1, y1) =>
-      store.heightRangeFor(x0, y0, x1, y1),
+    this.tiles = new TileGrid(
+      manifest.cellsX,
+      manifest.cellsY,
+      w.tileSize,
+      this.rs,
+      w.floor,
+      !!w.objects,
+      (x0, y0, x1, y1) => store.heightRangeFor(x0, y0, x1, y1),
+      this.cam.projection,
     );
     // tall objects: their tiles count as in view as far up as they reach, and the depth range holds their tops
     if (w.objects) {
@@ -312,6 +323,8 @@ class View implements WorldView {
       manifest.cellsY * this.rs,
       w.floor * this.rs,
       Math.max(w.heightRange[1], this.tiles.maxTop) * this.rs,
+      undefined,
+      this.cam.projection,
     );
     this.night = opts.palette === "night" && !!w.style.night;
     this.applyPalette();
@@ -531,7 +544,7 @@ class View implements WorldView {
     if (area.radius !== undefined) return this.tiles.around(r, area.x, area.y, area.radius);
     const rs = this.rs;
     const h = this.query.heightAt(area.x, area.y) ?? this.camera.h;
-    const c = project(area.x * rs, area.y * rs, h * rs, r);
+    const c = project(area.x * rs, area.y * rs, h * rs, r, this.cam.projection);
     const width = this.cam.internalWidth;
     const height = this.cam.internalHeight;
     return this.tiles.visibleFrom(r, { left: Math.floor(c.sx - width / 2), top: Math.floor(c.sy - height / 2), width, height });
@@ -542,13 +555,13 @@ class View implements WorldView {
     if (this.lookAhead <= 0) return [];
     const rs = this.rs;
     const f = info.focus;
-    const a = project(f.x * rs, f.y * rs, f.h * rs, r);
+    const a = project(f.x * rs, f.y * rs, f.h * rs, r, this.cam.projection);
     // then twice and four times as far, nearest first: the faster it goes, the further ahead
     const out: TileRequest[] = [];
     for (const k of AHEAD_STEPS) {
       const [dx, dy] = this.motion.ahead(this.lookAhead * k);
       if (Math.hypot(dx, dy) < 0.5) break;
-      const b = project((f.x + dx) * rs, (f.y + dy) * rs, f.h * rs, r);
+      const b = project((f.x + dx) * rs, (f.y + dy) * rs, f.h * rs, r, this.cam.projection);
       out.push(...this.tiles.visibleFrom(r, shiftView(info.view, b.sx - a.sx, b.sy - a.sy)));
     }
     return out;
@@ -587,7 +600,8 @@ class View implements WorldView {
       view: { left: snap.left, top: snap.top, width: cam.internalWidth, height: cam.internalHeight },
       night: this.night,
       renderScale: rs,
-      project: (x, y, h) => project(x * rs, y * rs, h * rs, r),
+      projection: cam.projection,
+      project: (x, y, h) => project(x * rs, y * rs, h * rs, r, cam.projection),
       isDrawn: (x, y) => this.baked.at(r, x, y),
     };
   }
@@ -727,6 +741,7 @@ class View implements WorldView {
           fracY: snap.fracY,
           zoom: cam.zoom,
           depthRange: this.depthRange,
+          projection: cam.projection,
         };
         const lone = this.loneList.length ? this.loneFor(r) : [];
         this.redrawLast = () => this.compositor.render(frameParams, drawTiles, sprites, fog, bare, grounds, lone);

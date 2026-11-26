@@ -6,6 +6,7 @@ import {
   ROAD_DIRS,
   roadConnects,
   unprojectAtHeight,
+  type Projection,
   type Rotation,
   type TerrainGrid,
 } from "@pixelworlds/grid";
@@ -35,6 +36,8 @@ export interface GeoSource {
 /** Where the view stands, for picking: canvas pixels to render pixels. */
 export interface PickView {
   rotation: Rotation;
+  /** How the view lays the world out (D-195); the 2:1 view if absent. */
+  projection?: Projection;
   /** Whole-pixel top-left of the view (render px) and the sub-pixel remainder. */
   left: number;
   top: number;
@@ -103,7 +106,7 @@ export function createQuery(
     const sx = v.left + (screenX * v.pixelRatio) / v.zoom + v.fracX;
     const sy = v.top + (screenY * v.pixelRatio) / v.zoom + v.fracY;
     return (h: number): [number, number] => {
-      const [ux, uy] = unprojectAtHeight(sx, sy, h * rs, v.rotation);
+      const [ux, uy] = unprojectAtHeight(sx, sy, h * rs, v.rotation, v.projection);
       return [ux / rs, uy / rs];
     };
   };

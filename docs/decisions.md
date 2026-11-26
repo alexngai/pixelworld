@@ -201,6 +201,7 @@ Status values:
 | D-192 | Arrows by kind of strike, each ending on its cell; a building struck red on the cell struck, the rest of it faint | Accepted |
 | D-193 | The action indicators as pixel art: arrows, landing cells, a push's ghost and shots drawn pixel by pixel, flat, at the world's pixel size | Accepted |
 | D-194 | After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck | Accepted |
+| D-195 | A higher camera: a view's projection as an option, 4:3 tiles for the fights | Accepted |
 
 ---
 
@@ -2697,3 +2698,18 @@ The point is more room for visual interest; both halves are wanted.
   - **Each cell the invaders will hit** has a badge: a red box with the hit points it will cost there (a unit's, or a building's on the cell struck), worked out with the cells in danger (`intents`, once a paint).
 - **Checked:** in the browser on a San Francisco block: two flyers' spits as dotted trails, a brute's slam as an arrow on its cell, badges ("1", "1", "2") on the cells struck.
 
+### D-195: A higher camera: a view's projection as an option, 4:3 tiles for the fights (accepted)
+- **Why:** the owner noticed that Into the Breach's boards are seen from higher up than ours and asked whether the library supports that angle. Its tiles are 56×42 (the fan-made mod loader's tile picking uses half-sizes 28×21): a 4:3 diamond, about 49° down, where ours are 2:1, 30° down. Things on its board also stand at most about a tile tall. Baked at 4:3 with the bake's existing projection parameter (D-155), a San Francisco block showed more street between its buildings. At 8 px a height step the facades' window rows stayed whole; at 6 px they began to merge, and at 4 px they were lost.
+- **What:**
+  - **`Projection`** (`grid`, the bake's since D-155): screen x, screen y and depth, each linear in a point's rotated (u, v) and height. `ISO_PROJECTION` is the 2:1 view: sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3. `STEEP_PROJECTION` is 4:3: sy = 12(u + v) − 8h, with the same x and depth. Depth still grows toward the camera along every view ray.
+  - **The grid's projection functions** (`project`, `projectView`, `unprojectAtHeight`, the new `unprojectView`) take one, 2:1 by default. `projectionInverse`, `groundInverse` and `sumUV` give the inverses the shaders need.
+  - **A view's projection** is `createWorldView({ projection })`, fixed for its life, and readable on `camera.projection` and `FrameInfo.projection`. The runtime camera, the tile grid's screen rectangles, the depth range, picking, fog's ground under the view, the minimap's outline of the view and every bake follow it. The bake worker learns it in its init message.
+  - **The see-through around a player (D-154), fog (D-063) and steam (D-138)** worked out a pixel's surface from 2:1 constants. They take the inverse as uniforms instead: unchanged in the 2:1 view.
+  - **Another projection's tiles are kept apart:** the tile's part of the cache key carries the projection, and a top-down bake's key leaves that part out as before. Painted-over hero landmarks (D-053) are left out, as they are painted for the 2:1 view; the landmark's own bake shows. Lighting and shadows are worked out in the world, so they don't change.
+  - **The tactics game:** its views (game and survey gallery) use `STEEP_PROJECTION`. The fight's view rays rise by the projection's slope, two steps a world cell across each way at 2:1 and three at 4:3 (`rayRise`). Those rays decide what to cut down, which cell a pick on a roof means, and which way the camera is. `hiddenFrom` takes the rise, 2 by default. The survey's ratings (`boards.json`) stay as worked out for 2:1, which counts more cells hidden than the fights now see.
+  - **The web viewer's `?projection=steep`** shows any world from the higher camera.
+- **Checked:**
+  - **Tests:** projecting and unprojecting round-trip in both projections and all four rotations; the inverses undo the projection; depth grows along a ray; the 2:1 reveal sum is the old sy / 32 + 0.75 depth.
+  - **In the browser:** a San Francisco fight at 4:3, where a pick lands on the cell projected at 25 of 25 points; the web viewer at 4:3 with traffic on its roads.
+  - **Not seen on screen:** fog and steam at 4:3, since none was in view.
+- **Not done:** the 4:3 view's tiles cover half again as many pixels for the same ground, so its bakes take longer and hold more GPU memory. Lower heights for the fights (less vertical exaggeration in the world build) are left until the steeper view has been played.

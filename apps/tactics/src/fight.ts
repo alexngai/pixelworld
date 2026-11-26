@@ -159,7 +159,13 @@ interface Side {
 const angle = (dir: number) => Math.atan2(DIRS[dir]![1], DIRS[dir]![0]);
 const pips = (hp: number, max: number) => "■".repeat(Math.max(0, hp)) + "□".repeat(Math.max(0, max - hp));
 
-/** Which way the camera is from a side of the view, over the ground: a world cell across each way (two steps up) stays on one screen point. */
+/** Steps a view ray rises a world cell across each way toward the camera: two in the 2:1 view, three in the higher one (D-195). */
+export function rayRise(view: WorldView): number {
+  const p = view.camera.projection;
+  return (p.y[0] + p.y[1]) / -p.y[2];
+}
+
+/** Which way the camera is from a side of the view, over the ground: a world cell across each way lands straight below on screen (in any projection, D-195). */
 export function towardCamera(view: WorldView, r: number): readonly [number, number] {
   const { camera } = view;
   const was = camera.rotation;
@@ -167,8 +173,8 @@ export function towardCamera(view: WorldView, r: number): readonly [number, numb
   const at = camera.project(camera.x, camera.y, 0);
   const d =
     DIAGONALS.find(([dx, dy]) => {
-      const q = camera.project(camera.x + dx, camera.y + dy, 2);
-      return Math.abs(q.x - at.x) < 0.01 && Math.abs(q.y - at.y) < 0.01;
+      const q = camera.project(camera.x + dx, camera.y + dy, 0);
+      return Math.abs(q.x - at.x) < 0.01 && q.y > at.y;
     }) ?? ([1, 1] as const);
   camera.rotation = was;
   return d;
@@ -417,9 +423,10 @@ export class Fight {
     const out = new Set<number>();
     const { query } = this.view;
     const [dx, dy] = toward;
-    // a cell across each way, two steps up; to the tallest tower (about 150 steps)
-    for (let t = 0.25; t < 80; t += 0.35) {
-      const z = h + 2 * t;
+    // a cell across each way, `rise` steps up; to the tallest tower (about 150 steps)
+    const rise = rayRise(this.view);
+    for (let t = 0.25; t < 160 / rise; t += 0.35) {
+      const z = h + rise * t;
       for (const o of query.objectsAt(x + dx * t, y + dy * t))
         if (o.base !== null && z >= o.base && z <= (o.top ?? o.base + 3) && !o.group.startsWith("tree")) out.add(o.index);
     }
@@ -1517,9 +1524,10 @@ export class Fight {
       const [tx, ty] = towardCamera(this.view, this.view.camera.rotation);
       let top = h;
       for (let q = 0; q < c.arena.w * c.arena.h; q++) top = Math.max(top, planeAt(c, q));
-      for (let t = (top - h) / 2; t > 0; t -= 0.05) {
+      const rise = rayRise(this.view);
+      for (let t = (top - h) / rise; t > 0; t -= 0.05) {
         const q = boardCellAt(this.board, x + t * tx, y + t * ty);
-        if (q >= 0 && h + 2 * t <= planeAt(c, q)) {
+        if (q >= 0 && h + rise * t <= planeAt(c, q)) {
           k = q;
           break;
         }

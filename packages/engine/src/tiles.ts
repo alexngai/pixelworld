@@ -1,4 +1,4 @@
-import type { Rotation } from "@pixelworlds/grid";
+import { ISO_PROJECTION, type Projection, type Rotation } from "@pixelworlds/grid";
 import { cellsScreenRect, tileKey, type TileRequest } from "@pixelworlds/runtime";
 
 const PREFETCH_PX = 96; // bake tiles this far outside the view
@@ -41,6 +41,8 @@ export class TileGrid {
     /** Tall objects rise above the terrain: room for them in the estimates. */
     private readonly objects: boolean,
     heightRangeFor: (x0: number, y0: number, x1: number, y1: number) => [number, number],
+    /** How the view lays the world out (D-195). */
+    private readonly projection: Projection = ISO_PROJECTION,
   ) {
     this.tilesX = Math.ceil(cellsX / tileSize);
     this.tilesY = Math.ceil(cellsY / tileSize);
@@ -129,6 +131,7 @@ export class TileGrid {
           // objects rise ~96 px above the terrain, or to the top of the tallest one added
           Math.max(hi * RS + (this.objects ? 12 : 0), this.tops[i]! * RS),
           r,
+          this.projection,
         );
         const near =
           rect.right >= viewL - PREFETCH_PX &&

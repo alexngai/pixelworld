@@ -1,4 +1,4 @@
-import { rotationMat2, type Rotation } from "@pixelworlds/grid";
+import { ISO_PROJECTION, groundInverse, projectionInverse, rotationMat2, type Projection, type Rotation } from "@pixelworlds/grid";
 import { Uniforms, compileProgram, createTexture, type GL } from "@pixelworlds/bake";
 import { FOG_NOISE_PERIOD, FOG_NOISE_TEXELS, fogNoiseTile, type FogField, type FogLut } from "./fog";
 
@@ -41,6 +41,9 @@ uniform vec2 uOrigin;       // absolute screen (art) px of the target's top-left
 uniform float uZoom;        // target px per art px
 uniform vec2 uDepthRange;
 uniform mat2 uUnrotate;     // view (u, v) → grid (x, y)
+uniform mat3 uUnproject;    // screen (sx, sy) and depth → view (u, v, h) (D-195)
+uniform mat2 uGroundInv;    // screen (sx, sy) at h = 0 → view (u, v)
+uniform vec2 uProjH;        // screen px per step of height
 uniform float uRS;          // render units per cell
 uniform vec2 uFieldSize;    // field extent in cells
 uniform vec2 uFieldOrigin;  // the cell the field starts at
@@ -57,8 +60,8 @@ const float BAYER[16] = float[16](
    3.0, 11.0,  1.0,  9.0,
   15.0,  7.0, 13.0,  5.0);
 
-// grid cell of the view point with u − v = a and u + v = b (render units)
-vec2 toGrid(float a, float b) { return uUnrotate * (vec2(b + a, b - a) * 0.5) / uRS; }
+// grid cell of a view point (u, v) (render units)
+vec2 toGrid(vec2 uv) { return uUnrotate * uv / uRS; }
 
 void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
@@ -70,14 +73,15 @@ void main() {
   float d = uDepthRange.x + (1.0 - z) * (uDepthRange.y - uDepthRange.x);
   ivec2 ap = ivec2(floor(uOrigin + (vec2(p) + 0.5) / uZoom));
   vec2 s = vec2(ap) + 0.5;
-  // sx = 16(u − v), sy = 8(u + v) − 8h, depth = u + v + h/3
-  float h = 0.75 * (d - s.y / 8.0);
+  // the surface drawn here: the projection is invertible, so screen point and depth give (u, v, h)
+  vec3 at = uUnproject * vec3(s, d);
+  float h = at.z;
   float vertical = clamp((uVertical.x - h) / uVertical.y, 0.0, 1.0);
   if (vertical <= 0.0) return;
-  float a = s.x / 16.0;
-  float area = texture(uField, (toGrid(a, s.y / 8.0 + h) - uFieldOrigin) / uFieldSize).r;
+  float area = texture(uField, (toGrid(at.xy) - uFieldOrigin) / uFieldSize).r;
   if (area <= 0.0) return;
-  vec2 q = toGrid(a, s.y / 8.0 + uVertical.z) / uPatch.x - uPatch.yz;
+  // where the view ray crosses the plane the patches float in
+  vec2 q = toGrid(uGroundInv * (s - uVertical.z * uProjH)) / uPatch.x - uPatch.yz;
   float n = texture(uNoise, q / ${FOG_NOISE_PERIOD}.0).r;
   float patchiness = mix(1.0, smoothstep(0.25, 0.75, n), uPatch.w);
   float f = area * vertical * patchiness * uStrength;
@@ -92,6 +96,8 @@ void main() {
 /** What the fog pass needs each frame (all heights in render units). */
 export interface FogFrame {
   rotation: Rotation;
+  /** How the view lays the world out (D-195); the 2:1 view if absent. */
+  projection?: Projection;
   renderScale: number;
   ceiling: number;
   fade: number;
@@ -187,6 +193,10 @@ export class FogPass {
     gl.uniform2fv(u.loc("uDepthRange"), depthRange);
     // inverse of the view rotation: view (u, v) → grid (x, y)
     gl.uniformMatrix2fv(u.loc("uUnrotate"), false, rotationMat2(((4 - fog.rotation) % 4) as Rotation));
+    const proj = fog.projection ?? ISO_PROJECTION;
+    gl.uniformMatrix3fv(u.loc("uUnproject"), false, projectionInverse(proj));
+    gl.uniformMatrix2fv(u.loc("uGroundInv"), false, groundInverse(proj));
+    gl.uniform2f(u.loc("uProjH"), proj.x[2], proj.y[2]);
     gl.uniform1f(u.loc("uRS"), fog.renderScale);
     gl.uniform2fv(u.loc("uFieldSize"), this.fieldSize);
     gl.uniform2fv(u.loc("uFieldOrigin"), this.fieldOrigin);

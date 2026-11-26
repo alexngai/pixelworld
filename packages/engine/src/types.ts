@@ -1,6 +1,6 @@
 import type { BakedImage } from "@pixelworlds/bake";
 import type { Box, ObjectInstance, PluginDescriptor } from "@pixelworlds/generators";
-import type { Rotation } from "@pixelworlds/grid";
+import type { Projection, Rotation } from "@pixelworlds/grid";
 import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "@pixelworlds/runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
 import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
@@ -11,7 +11,7 @@ import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/wor
  * steps, screen positions in internal (render) pixels before the zoom.
  */
 
-export type { Box, ObjectInstance, PluginDescriptor, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+export type { Box, ObjectInstance, PluginDescriptor, Projection, Rotation, BakedImage, StylePack, Palette, WorldManifest };
 
 /** A baked sprite on the GPU (from `LayerContext.bakeSprite`); opaque to layers. */
 export type Sprite = GpuImage;
@@ -189,6 +189,13 @@ export interface WorldViewOptions {
   heroes?: boolean;
   /** Start with the night palette where the style has one (default "day"). */
   palette?: "day" | "night";
+  /**
+   * How the view lays the world out (D-195): the 2:1 view (`ISO_PROJECTION`,
+   * default) or another, such as `STEEP_PROJECTION`'s higher camera. Fixed
+   * for the view's life; its tiles are kept apart from other projections'.
+   * Painted-over hero landmarks are left out in any but the 2:1 view.
+   */
+  projection?: Projection;
   camera?: CameraOptions;
   /** Runtime layers, initialized in order; a layer with nothing to show in this world is left out. */
   layers?: Layer[];
@@ -279,6 +286,8 @@ export interface ViewCamera {
   readonly h: number;
   /** Quarter turns, 0–3. */
   rotation: Rotation;
+  /** How the view lays the world out (D-195): the 2:1 view unless `WorldViewOptions.projection` set another. */
+  readonly projection: Projection;
   /** Integer upscale; setting it fixes the zoom (no longer "auto"). */
   zoom: number;
   readonly autoZoom: boolean;
@@ -770,6 +779,8 @@ export interface FrameInfo {
   view: { left: number; top: number; width: number; height: number };
   night: boolean;
   renderScale: number;
+  /** How the view lays the world out (D-195). */
+  projection: Projection;
   /** Screen position (render px) and depth of a point (cells, steps) in this rotation. */
   project(x: number, y: number, h: number): { sx: number; sy: number; depth: number };
   /**

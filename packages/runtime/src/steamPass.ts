@@ -1,3 +1,4 @@
+import { ISO_PROJECTION, type Projection } from "@pixelworlds/grid";
 import { Uniforms, compileProgram, createTexture, type GL } from "@pixelworlds/bake";
 import { FOG_NOISE_PERIOD, FOG_NOISE_TEXELS, fogNoiseTile, type FogLut } from "./fog";
 
@@ -36,6 +37,7 @@ uniform sampler2D uLut;     // 256 × rows: veiled index per index and level
 uniform vec2 uOrigin;       // absolute screen (art) px of the target's top-left
 uniform float uZoom;        // target px per art px
 uniform vec2 uDepthRange;
+uniform vec2 uDepthPx;      // depth per px up a vertical, and per px across (D-195)
 uniform vec4 uA[${MAX_PLUMES}];  // vent: sx, sy (absolute art px), depth, radius (px)
 uniform vec4 uB[${MAX_PLUMES}];  // height (px), density, seed, lean of its top (px)
 uniform int uCount;
@@ -72,8 +74,8 @@ void main() {
     float ax = a.x + b.w * t * t;
     float dx = (s.x - ax) / r;
     if (abs(dx) >= 1.0) continue;
-    // depth is u + v + h/3, and h rises a render unit per 8 px: what stands nearer the eye hides it
-    if (d > a.z + max(up, 0.0) / 24.0 + r / 16.0) continue;
+    // the plume's depth rises as it climbs and reaches nearer across its width: what stands nearer the eye hides it
+    if (d > a.z + max(up, 0.0) * uDepthPx.x + r * uDepthPx.y) continue;
     // thickest along its axis and low down, thinning to its edges and top
     float body = pow(1.0 - dx * dx, 0.7) * pow(1.0 - t, 0.8) * smoothstep(-0.5 * a.w, 0.3 * a.w, up);
     vec2 q = vec2(s.x - ax, up - uRise) / (0.6 * a.w) + b.z;
@@ -103,6 +105,8 @@ export interface SteamFrame {
   strength: number;
   lut: FogLut;
   night: boolean;
+  /** How the view lays the world out (D-195); the 2:1 view if absent. */
+  projection?: Projection;
 }
 
 export class SteamPass {
@@ -154,6 +158,9 @@ export class SteamPass {
     gl.uniform2f(u.loc("uOrigin"), origin[0], origin[1]);
     gl.uniform1f(u.loc("uZoom"), zoom);
     gl.uniform2fv(u.loc("uDepthRange"), depthRange);
+    // 2:1: depth u + v + h/3 with h a step per 8 px up gives 1/24; a cell across is 16 px, 1/16
+    const p = steam.projection ?? ISO_PROJECTION;
+    gl.uniform2f(u.loc("uDepthPx"), p.d[2] / -p.y[2], p.d[0] / p.x[0]);
     const count = Math.min(steam.count, MAX_PLUMES);
     if (count > 0) {
       gl.uniform4fv(u.loc("uA"), steam.a.subarray(0, count * 4));

@@ -4,7 +4,7 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { Boards, createWorldView, roverController, type Board, type Rotation, type WorldView } from "@pixelworlds/engine";
+import { Boards, STEEP_PROJECTION, createWorldView, roverController, type Board, type Rotation, type WorldView } from "@pixelworlds/engine";
 import { BoardOverlay } from "@pixelworlds/tactics";
 import "./gallery.css";
 import { CITIES } from "./sites";
@@ -85,21 +85,23 @@ const view: WorldView = await createWorldView({
   worldUrl: `/${world}/`,
   style,
   plugins: PACKS.filter((p) => style.plugins?.includes(p.name)),
+  // as the game draws its fights (D-195)
+  projection: STEEP_PROJECTION,
   // its keys only while the view has the focus: the page's own are 1–3, J, K, N
   controller: roverController({ follow: false, visible: false, listen: { keys: canvas, pointer: canvas } }),
 });
 const boards = new Boards(view);
 let board: Board | null = null;
 
-/** The rotation whose camera looks from a diagonal (a world cell across each way stays on one screen point, two steps up). */
+/** The rotation whose camera looks from a diagonal (a world cell across each way lands straight below on screen). */
 function rotationFor([tx, ty]: readonly [number, number]): Rotation {
   const cam = view.camera;
   const was = cam.rotation;
   for (let r = 0; r < 4; r++) {
     cam.rotation = r as Rotation;
     const a = cam.project(cam.x, cam.y, 0);
-    const b = cam.project(cam.x + tx, cam.y + ty, 2);
-    if (Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) < 0.01) {
+    const b = cam.project(cam.x + tx, cam.y + ty, 0);
+    if (Math.abs(a.x - b.x) < 0.01 && b.y > a.y) {
       cam.rotation = was;
       return r as Rotation;
     }

@@ -3,6 +3,7 @@ import {
   fogLayer,
   Minimap,
   roverController,
+  STEEP_PROJECTION,
   steamLayer,
   type RoverOptions,
   type TileBake,
@@ -187,6 +188,8 @@ async function main() {
     objects: params.get("objects") !== "0",
     scatter: params.get("scatter") !== "0",
     heroes: params.get("paint") !== "0",
+    // projection=steep: the higher camera (D-195), 4:3 tiles
+    ...(params.get("projection") === "steep" ? { projection: STEEP_PROJECTION } : {}),
     chunkBudgetMB: maybeNum("chunkBudget"), // decoded terrain kept at most (MB, D-120)
     palette: params.get("palette") === "night" ? "night" : "day",
     camera: {

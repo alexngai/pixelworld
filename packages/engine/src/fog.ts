@@ -1,4 +1,4 @@
-import { unprojectAtHeight, type Rotation } from "@pixelworlds/grid";
+import { unprojectAtHeight, type Projection, type Rotation } from "@pixelworlds/grid";
 import { fogInView, fogNoise, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
 import type { FrameInfo, Layer, LayerContext, ScreenPass, WorldInfo, WorldQuery } from "./types";
 
@@ -93,7 +93,7 @@ export class FogLayer implements Layer {
     if (!this.setup) return null;
     // fog over the target (one pixel wider than the view, for the sub-pixel offset)
     const v = frame.view;
-    const params = this.frameParams(frame.rotation, frame.night, {
+    const params = this.frameParams(frame.rotation, frame.projection, frame.night, {
       left: v.left,
       top: v.top,
       width: v.width + 1,
@@ -105,6 +105,7 @@ export class FogLayer implements Layer {
   /** The fog pass's parameters for a view (render px), or null when no fog is drawn there. */
   private frameParams(
     rotation: Rotation,
+    projection: Projection,
     night: boolean,
     view: { left: number; top: number; width: number; height: number },
   ): FogFrame | null {
@@ -119,7 +120,7 @@ export class FogLayer implements Layer {
         s.field,
         view,
         (sx, sy, h) => {
-          const [x, y] = unprojectAtHeight(sx, sy, h, rotation);
+          const [x, y] = unprojectAtHeight(sx, sy, h, rotation, projection);
           return [x / rs, y / rs];
         },
         [this.floor * rs, s.ceiling * rs],
@@ -127,6 +128,7 @@ export class FogLayer implements Layer {
     if (!this.inView) return null;
     return {
       rotation,
+      projection,
       renderScale: rs,
       ceiling: s.ceiling * rs,
       fade: s.fade * rs,

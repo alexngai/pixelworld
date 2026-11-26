@@ -230,6 +230,7 @@ interface WorldViewOptions {
   objects?: boolean; scatter?: boolean; heroes?: boolean;
   chunkBudgetMB?: number;                             // decoded terrain kept at most, least recently used let go (D-120); default unlimited
   palette?: "day" | "night";
+  projection?: Projection;                            // ISO_PROJECTION (2:1, default) or STEEP_PROJECTION (4:3, a higher camera, D-195); fixed for the view's life
   camera?: { x?: number; y?: number; h?: number; rotation?: number; zoom?: number | "auto" };
   layers?: Layer[];
   controller?: Controller;
@@ -262,6 +263,7 @@ interface FrameClock { dt; realDt; time; started; paused }  // what controllers,
 interface ViewCamera {
   x; y; h;                       // focus, cells and steps
   rotation: Rotation; zoom: number; autoZoom: boolean; internalWidth; internalHeight;
+  readonly projection: Projection; // how the view lays the world out (D-195)
   setFocus(x, y, h): void;
   lookAt({ x, y, h? } | { lon, lat, h? }): Promise<boolean>;
   pan(dx, dy): void; rotate(±1): void; screenDirToGrid(dx, dy): [number, number];
