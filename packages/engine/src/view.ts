@@ -126,10 +126,10 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
     ? Promise.resolve(null)
     : StartTiles.load(opts.startTiles === true ? new URL("start-tiles.bin", withSlash(w.base)) : opts.startTiles);
   const keyed = cache !== null || !!opts.startTiles;
-  // another projection (D-195): its tiles kept apart, and no hero landmarks (they are painted for the 2:1 view)
+  // another projection (D-195): its tiles kept apart, its hero landmarks resampled from the 2:1 view they are painted for (D-196)
   const projection = opts.projection ?? ISO_PROJECTION;
   const iso = sameProjection(projection, ISO_PROJECTION);
-  const heroes = opts.heroes === false || !iso ? [] : await loadHeroes(w);
+  const heroes = opts.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : [], undefined, projection));
   cacheKeyReady.catch(() => {}); // awaited below

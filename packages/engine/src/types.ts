@@ -193,7 +193,7 @@ export interface WorldViewOptions {
    * How the view lays the world out (D-195): the 2:1 view (`ISO_PROJECTION`,
    * default) or another, such as `STEEP_PROJECTION`'s higher camera. Fixed
    * for the view's life; its tiles are kept apart from other projections'.
-   * Painted-over hero landmarks are left out in any but the 2:1 view.
+   * Painted-over hero landmarks are resampled from their 2:1 paint (D-196).
    */
   projection?: Projection;
   camera?: CameraOptions;

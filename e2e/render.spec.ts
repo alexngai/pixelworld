@@ -322,6 +322,18 @@ test.describe("Hero landmarks (D-053)", () => {
     for (let i = 0; i < fresh.pixels.length; i++) if (fresh.pixels[i] === stored.data[i]) same++;
     expect(same / fresh.pixels.length).toBeGreaterThan(0.999);
   });
+
+  test("in the higher camera, the paint is resampled onto the dam (D-196)", async ({ page }) => {
+    await openDam(page, "&projection=steep");
+    const painted = await pixels(page);
+    await openDam(page, "&projection=steep&paint=0");
+    const plain = await pixels(page);
+    let changed = 0;
+    for (let i = 0; i < painted.data.length; i += 4)
+      if (painted.data.slice(i, i + 3).some((v, k) => v !== plain.data[i + k])) changed++;
+    expect(changed).toBeGreaterThan(200);
+    expect(changed).toBeLessThan(5000); // the dam only
+  });
 });
 
 test.describe("New York (D-078, D-080, D-081)", () => {

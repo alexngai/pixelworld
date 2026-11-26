@@ -1,6 +1,6 @@
 import { TerrainGrid } from "@pixelworlds/grid";
 import { Baker, type BakeScene, type Projection } from "@pixelworlds/bake";
-import { applyHeroPaint } from "./heroPaint";
+import { applyHeroPaint, applyHeroPaintReprojected } from "./heroPaint";
 import {
   buildBoxesMesh,
   buildObjects,
@@ -134,9 +134,12 @@ export class BakeHost {
     const objects = msg.bare ? this.sceneObjects.get(scene) : undefined;
     const cut = msg.cut && !msg.bare && !msg.ground ? this.cutMask(init, msg.cut) : null;
     const res = this.baker.bake(scene, msg.rotation, owned, { shadows: true, ...this.projection(), ...(objects ? { hide: new Set(objects) } : {}), ...(cut ? { cut } : {}) });
-    // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there;
-    // nor in another projection, D-195: they are painted for the 2:1 view)
-    if (res?.image && init.heroes?.length && !msg.bare && !msg.ground && !init.projection) applyHeroPaint(res.image, msg.rotation, init.heroes);
+    // painted-over hero landmarks go on after every bake, so they survive re-bakes (not on bare tiles: no landmarks there);
+    // in another projection, resampled from the 2:1 view they are painted for (D-196)
+    if (res?.image && init.heroes?.length && !msg.bare && !msg.ground) {
+      if (init.projection) applyHeroPaintReprojected(res.image, msg.rotation, init.heroes, init.projection);
+      else applyHeroPaint(res.image, msg.rotation, init.heroes);
+    }
     const vertices =
       scene.meshes.reduce((n, m) => n + m.vertexCount, 0) +
       scene.batches.reduce((n, b) => n + (b.mesh.vertexCount * b.offsets.length) / 3, 0) +
