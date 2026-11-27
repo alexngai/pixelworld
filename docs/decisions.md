@@ -203,6 +203,7 @@ Status values:
 | D-194 | After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck | Accepted |
 | D-195 | A higher camera: a view's projection as an option, 4:3 tiles for the fights | Accepted |
 | D-196 | Hero landmarks in other projections: the 2:1 paint resampled at run time | Accepted |
+| D-197 | The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer | Accepted |
 
 ---
 
@@ -2744,3 +2745,20 @@ The point is more room for visual interest; both halves are wanted.
     - The Strat: its shaft outline and pod band, 954 pixels against 927.
     - A few one-pixel joints on surfaces the 4:3 view stretches come out two pixels thick.
   - **e2e:** the dam's paint at 4:3 changes 200 to 5,000 pixels, the dam only.
+
+### D-197: The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer (accepted)
+- **Why:** after the move to 4:3 tiles (D-195), the owner asked to tune the fight view. Ten fights in six cities at 1280×800 showed three problems:
+  - **The board was small.** The 4:3 board is half again as tall on screen, so the old fit (70% of the width, 60% of the height, zoom rounded down) dropped a one-cell board from zoom 3 to 2. That left it about a fifth of the screen, partly under the panels.
+  - **The board didn't stand out** from the city around it.
+  - **Building labels (D-191) piled up** on each other and on the strike markers.
+- **What:**
+  - **Framing (`frameBoard`):** the board goes in the space the panels leave, measured from the panels themselves. Panels across the screen's middle row close it at the sides; panels across its middle column close it at the top and bottom; corner panels (the invaders' list, the map) don't. The zoom is the largest whole one at which the board's plane fits that space; its side corners may reach a tenth under the side panels. The board's middle sits in the middle of the space. On a phone, the space is the band between the top panels and the squad panel.
+  - **Re-framing:** it runs again once the panels are drawn. Turning the view frames the board again without changing the zoom, since the camera turns about its focus and the board's middle is panned off it.
+  - **The city around the board dimmed:** a veil (D-125, the `asphalt` ramp at one level, 0.45) lies over the city but the board and a cell around it, thickening from the second cell out, so the board reads as the fight's ground, as Into the Breach's slab does. It goes when the fight does.
+  - **The grid** is a little brighter (0.2, and 0.28 dashed through a building).
+  - **Labels:** each label's size is measured when its text or kind changes. Every frame, a building's plain label that would cover another label is hidden; the pointer's tip still names the building, its hit points and its people. Units', strikes', arrivals' and threatened or hurt buildings' labels always show, and the plain ones nearest the viewer go first.
+- **Checked:** in headless Chromium at 1280×800:
+  - **Ten fights** across New York, San Francisco, Kyoto, Hong Kong, Paris and Tokyo: one-cell boards at zoom 3 where they were at 2, two-cell boards at 1, every board's middle in the free space, no building labels overlapping.
+  - **Phone (390×844):** San Francisco and Kyoto, with the board between the top panels and the squad panel.
+  - **Turning:** four quarter-turns with E keep the board's middle where it was. Lint, typecheck and the unit tests pass.
+- **Not done:** rooftop boards (Mong Kok) still read busily, as the veil can't tell the roofs from the towers under them; lower building heights for the fights are still left for later.

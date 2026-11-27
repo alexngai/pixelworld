@@ -1,4 +1,4 @@
-import { boardCellAt, toWorld, type Board, type Entity, type Rotation, type WorldView } from "@pixelworlds/engine";
+import { boardCellAt, toWorld, veilLayer, type Board, type Entity, type Rotation, type VeilLayer, type WorldView } from "@pixelworlds/engine";
 import {
   A_BURNS,
   A_WATER,
@@ -121,6 +121,16 @@ interface Label {
   /** Floating labels rise and fade, then go. */
   until?: number;
   born?: number;
+  /** What it says and how it's drawn, and its size on screen then (CSS px). */
+  text?: string;
+  cls?: string;
+  w?: number;
+  hgt?: number;
+  /** A building's plain label: left to the pointer where it would cover another (D-197). */
+  minor?: boolean;
+  /** Where it stands on screen this frame: its anchor, the middle of its foot. */
+  sx?: number;
+  sy?: number;
 }
 
 type Phase = "pick" | "move" | "strike" | "busy" | "over";
@@ -327,6 +337,14 @@ export class Fight {
     this.offFrame = this.view.onFrame((e) => this.frame(e.now));
     this.checkOutlook();
     this.paint();
+    // again, now the panels are drawn: the board in the space they leave
+    this.frameBoard();
+    // the city around the board dimmed (D-197): the board reads as the fight's ground, as Into the Breach's slab does
+    this.veil = veilLayer({ id: "fight-veil", label: "Around the board", ramp: "asphalt", shade: 1, levels: [0.45] });
+    void this.view.layers
+      .add(this.veil)
+      .then(() => this.veilAround())
+      .catch(() => {});
     const f = s.puzzle.fight;
     const traps = f && f.firstTurns > f.safeFirstTurns ? ` Careful: ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
     this.say(`Hold the block for ${this.rounds} rounds. Click a rig to move it.${traps}`);
@@ -334,6 +352,10 @@ export class Fight {
 
   /** The board baked from above for the map (D-155), again when what stands on it changes; the latest asked wins. */
   private artToken = 0;
+  /** The rotation the board was framed in: turning the view frames it again (D-197). */
+  private framedRotation = -1;
+  /** The city around the board dimmed (D-197). */
+  private readonly veil: VeilLayer;
   private refreshArt(): void {
     const token = ++this.artToken;
     const a = this.c.arena;
@@ -542,19 +564,73 @@ export class Fight {
     this.primed = false;
   }
 
-  /** The camera on the board's middle, zoomed in as far as the board still fits about two thirds of the screen. */
-  private frameBoard(): void {
+  /**
+   * The camera on the board, in the space the panels leave (D-197): with `fit`, zoomed in as far as the board's plane fits that
+   * space (its side corners may reach a little under the side panels); its middle in the middle of the space. Turning the view
+   * frames it again, without the zoom.
+   */
+  private frameBoard(fit = true): void {
     const { camera, query, canvas } = this.view;
     const a = this.c.arena;
     const middle = toWorld(this.board, { x: a.w / 2, y: a.h / 2 });
     // a rooftop board's plane is its floor (D-180), not the street
     const at = (x: number, y: number) => Math.max(a.floor ?? -Infinity, query.heightAt(x, y) ?? 0);
     camera.setFocus(middle.x, middle.y, at(middle.x, middle.y));
-    const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, at(p.x, p.y)));
-    const xs = points.map((p) => p.x);
-    const ys = points.map((p) => p.y);
-    const fit = Math.min((0.7 * canvas.clientWidth) / (Math.max(...xs) - Math.min(...xs)), (0.6 * canvas.clientHeight) / (Math.max(...ys) - Math.min(...ys)));
-    camera.zoom = Math.min(6, Math.max(1, Math.floor(camera.zoom * fit)));
+    this.framedRotation = camera.rotation;
+    const free = this.freeSpace(canvas.clientWidth, canvas.clientHeight);
+    if (fit) {
+      const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, at(p.x, p.y)));
+      const xs = points.map((p) => p.x);
+      const ys = points.map((p) => p.y);
+      // the board's size on screen grows with the zoom: the largest whole zoom it fits at
+      const [w, h, z0] = [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), camera.zoom];
+      let z = 1;
+      for (let n = 6; n > 1; n--)
+        if ((w * n) / z0 <= 1.1 * (free.right - free.left) && (h * n) / z0 <= free.bottom - free.top) {
+          z = n;
+          break;
+        }
+      camera.zoom = z;
+    }
+    // its middle to the middle of the space (panning moves the view the other way, in art pixels)
+    const c = camera.project(middle.x, middle.y, at(middle.x, middle.y));
+    const k = (window.devicePixelRatio || 1) / camera.zoom;
+    camera.pan((c.x - (free.left + free.right) / 2) * k, (c.y - (free.top + free.bottom) / 2) * k);
+  }
+
+  /**
+   * The part of the canvas the panels leave (CSS px): those across its middle row close it at the sides, those across its
+   * middle column at the top and the bottom; one in a corner (the invaders' list, the map) doesn't.
+   */
+  private freeSpace(W: number, H: number): { left: number; right: number; top: number; bottom: number } {
+    const box = this.view.canvas.getBoundingClientRect();
+    let [left, right, top, bottom] = [0, W, 0, H];
+    for (const el of [...this.hud.children, this.map.el]) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const [x0, x1, y0, y1] = [r.left - box.left, r.right - box.left, r.top - box.top, r.bottom - box.top];
+      if (y0 < H / 2 && y1 > H / 2) {
+        if (x1 < W / 2) left = Math.max(left, x1);
+        else if (x0 > W / 2) right = Math.min(right, x0);
+      } else if (x0 < W / 2 && x1 > W / 2) {
+        if (y1 < H / 2) top = Math.max(top, y1);
+        else if (y0 > H / 2) bottom = Math.min(bottom, y0);
+      }
+    }
+    return { left: left + 8, right: right - 8, top: top + 8, bottom: bottom - 8 };
+  }
+
+  /** The veil over the city but the board and a cell round it, thickest from two cells out (D-197). */
+  private veilAround(): void {
+    const a = this.c.arena;
+    const p0 = toWorld(this.board, { x: 0, y: 0 });
+    const p1 = toWorld(this.board, { x: a.w, y: a.h });
+    const [x0, y0] = [Math.floor(Math.min(p0.x, p1.x)) - 2, Math.floor(Math.min(p0.y, p1.y)) - 2];
+    const [x1, y1] = [Math.ceil(Math.max(p0.x, p1.x)) + 2, Math.ceil(Math.max(p0.y, p1.y)) + 2];
+    const [w, h] = [x1 - x0, y1 - y0];
+    const values = new Uint8Array(w * h).fill(255);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) values[y * w + x] = 0;
+    this.veil.set({ x0, y0, w, h }, values);
   }
 
   // ---------------------------------------------------------------- the world: entities, effects, labels
@@ -607,8 +683,11 @@ export class Fight {
       l = { el, x: p.x, y: p.y, h: 0, dy };
       this.labels.set(id ?? `float-${Math.random()}`, l);
     }
-    l.el.className = `label ${cls}${id ? "" : " rise"}`;
-    l.el.textContent = text;
+    if (l.text !== text || l.cls !== cls) {
+      l.el.className = `label ${cls}${id ? "" : " rise"}`;
+      l.el.textContent = text;
+      Object.assign(l, { text, cls, w: l.el.offsetWidth, hgt: l.el.offsetHeight, minor: cls === "building" || cls === "building empty" });
+    }
     Object.assign(l, { x: p.x, y: p.y, h: h ?? planeAt(this.c, k), dy });
     if (!id) Object.assign(l, { born: this.now, until: this.now + 1100 });
   }
@@ -683,6 +762,7 @@ export class Fight {
 
   private frame(now: number): void {
     this.now = now;
+    if (this.view.camera.rotation !== this.framedRotation) this.frameBoard(false);
     this.clearView();
     this.glass.frame();
     if (!this.tip.hidden && this.tipAt >= 0) {
@@ -740,8 +820,28 @@ export class Fight {
       }
       const p = this.view.camera.project(l.x, l.y, l.h);
       const rise = l.born !== undefined ? ((now - l.born) / 1100) * 18 : 0;
-      l.el.style.transform = `translate(${p.x}px, ${p.y - l.dy - rise}px)`;
+      [l.sx, l.sy] = [p.x, p.y - l.dy - rise];
+      l.el.style.transform = `translate(${l.sx}px, ${l.sy}px)`;
       if (l.until !== undefined) l.el.style.opacity = String(Math.min(1, (l.until - now) / 400));
+    }
+    this.declutter();
+  }
+
+  /**
+   * A building's plain label that would cover another label is hidden (D-197): the pointer's tip still names the building, its
+   * hit points and people. Units', strikes', arrivals' and threatened buildings' labels always show; plain ones nearest the
+   * viewer first.
+   */
+  private declutter(): void {
+    const box = (l: Label) => [l.sx! - l.w! / 2, l.sy! - l.hgt!, l.sx! + l.w! / 2, l.sy!] as const;
+    const meets = (p: readonly number[], q: readonly number[]) => p[0]! < q[2]! && q[0]! < p[2]! && p[1]! < q[3]! && q[1]! < p[3]!;
+    const all = [...this.labels.values()].filter((l) => l.sx !== undefined && l.w !== undefined);
+    const placed = all.filter((l) => !l.minor).map(box);
+    for (const l of all.filter((l) => l.minor).sort((p, q) => q.sy! - p.sy!)) {
+      const b = box(l);
+      const hide = placed.some((q) => meets(b, q));
+      l.el.style.visibility = hide ? "hidden" : "";
+      if (!hide) placed.push(b);
     }
   }
 
@@ -1874,6 +1974,7 @@ export class Fight {
     this.view.cutDown(null);
     this.view.cutaway = true;
     this.view.setLoneGhosts(null);
+    this.view.layers.remove(this.veil.id);
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();
     this.hud.remove();

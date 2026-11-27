@@ -198,12 +198,12 @@ export class BoardGlass {
         g.fill();
       }
     };
-    // the grid: faint, dashed through a building
+    // the grid: light, dashed through a building (a little brighter over the veiled city, D-197)
     g.lineWidth = 1;
     for (let k = 0; k < a.w * a.h; k++) {
       path(quad(k, planeAt(c, k) + lift));
       g.setLineDash(s.hidden[k] ? [3, 3] : []);
-      g.strokeStyle = s.hidden[k] ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)";
+      g.strokeStyle = s.hidden[k] ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.2)";
       g.stroke();
     }
     g.setLineDash([]);
