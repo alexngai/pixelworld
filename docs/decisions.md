@@ -204,6 +204,7 @@ Status values:
 | D-195 | A higher camera: a view's projection as an option, 4:3 tiles for the fights | Accepted |
 | D-196 | Hero landmarks in other projections: the 2:1 paint resampled at run time | Accepted |
 | D-197 | The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer | Accepted |
+| D-198 | Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height | Accepted |
 
 ---
 
@@ -2762,3 +2763,15 @@ The point is more room for visual interest; both halves are wanted.
   - **Phone (390×844):** San Francisco and Kyoto, with the board between the top panels and the squad panel.
   - **Turning:** four quarter-turns with E keep the board's middle where it was. Lint, typecheck and the unit tests pass.
 - **Not done:** rooftop boards (Mong Kok) still read busily, as the veil can't tell the roofs from the towers under them; lower building heights for the fights are still left for later.
+
+### D-198: Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height (accepted)
+- **Why:** D-197's veil dims the city around the board at every height, so on a rooftop board (D-180) the towers' faces under the roofs and the street in the chasms stay as bright as the roofs played on. Mong Kok's rooftops still read busily.
+- **What:**
+  - **`veilLayer({ below })`** (engine): the veil covers only what lies below a height (steps), fading in over a step: the fog pass's ceiling and fade, which the veil had set to every height.
+  - **The fight on a rooftop board** adds a second veil, `fight-under`. It lies over the board and a cell round it, below the board's floor less half a step, so roofs at the floor and above stay clear. It goes when the fight does.
+- **Checked:**
+  - **Unit test:** the veil's ceiling and fade are in render units.
+  - **Mong Kok's rooftops in headless Chromium,** with the new veil off and then on in the same fight: the towers' faces below the roofs dim (104,000 pixels change at 1280×800), and the roofs and units don't.
+- **Considered and not done:**
+  - **Lower building heights for the fights:** drawing fewer pixels a height step loses the facades' window rows (D-195's test bakes), and building the cities with less height exaggeration would change every app's levels. The veils and the framing (D-197, D-198) are what make the board read instead.
+  - **A zoom between whole steps** for two-cell boards on a 1× screen: the views zoom in whole device pixels so the pixel art stays crisp. Such boards fit at 1, and at 1.5 CSS px a pixel on a 2× screen.

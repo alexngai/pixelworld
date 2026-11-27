@@ -21,6 +21,12 @@ export interface VeilLayerOptions {
   shade?: number;
   /** How far each level moves a colour toward the ramp's (0–1, increasing), thinnest first (default [0.35, 0.6, 0.8]). */
   levels?: number[];
+  /**
+   * Veil only what lies below this height (steps), fading in over a step
+   * (D-198): the street and the towers' faces under a rooftop board, its roofs
+   * clear. Default every height.
+   */
+  below?: number;
   enabled?: boolean;
 }
 
@@ -81,9 +87,9 @@ export class VeilLayer implements Layer {
     const params: FogFrame = {
       rotation: frame.rotation,
       renderScale: rs,
-      // over every height, even, still
-      ceiling: 1e9,
-      fade: 1,
+      // over every height, or below the one asked for (D-198); even, still
+      ceiling: this.opts.below !== undefined ? this.opts.below * rs : 1e9,
+      fade: this.opts.below !== undefined ? rs : 1,
       patchHeight: 0,
       patchCells: 1,
       patchOffset: [0, 0],

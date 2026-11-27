@@ -36,6 +36,17 @@ describe("veilLayer", () => {
     expect(veil.screenPass(frame)).toBeNull();
   });
 
+  it("veils below a height when asked (D-198), in render units", () => {
+    const veil = veilLayer({ ramp: "asphalt", below: 12 });
+    veil.init({ ...ctx, view: { world: { palette, style, renderScale: 2 } } } as unknown as LayerContext);
+    veil.set({ x0: 0, y0: 0, w: 1, h: 1 }, new Uint8Array([255]));
+    expect(veil.screenPass(frame)!.frame).toMatchObject({ ceiling: 24, fade: 2 });
+    const everywhere = veilLayer({ ramp: "asphalt" });
+    everywhere.init(ctx);
+    everywhere.set({ x0: 0, y0: 0, w: 1, h: 1 }, new Uint8Array([255]));
+    expect(everywhere.screenPass(frame)!.frame.ceiling).toBeGreaterThan(1e8);
+  });
+
   it("refuses a field of the wrong size, and a ramp the style hasn't", () => {
     const veil = veilLayer({ ramp: "asphalt" });
     veil.init(ctx);

@@ -345,6 +345,14 @@ export class Fight {
       .add(this.veil)
       .then(() => this.veilAround())
       .catch(() => {});
+    // a rooftop board (D-180): what lies below its roofs dimmed too, over the board, so the roofs stand out of the towers
+    const floor = this.c.arena.floor;
+    this.under = floor === undefined ? null : veilLayer({ id: "fight-under", label: "Under the roofs", ramp: "asphalt", shade: 1, levels: [0.45], below: floor - 0.5 });
+    if (this.under)
+      void this.view.layers
+        .add(this.under)
+        .then(() => this.veilUnder())
+        .catch(() => {});
     const f = s.puzzle.fight;
     const traps = f && f.firstTurns > f.safeFirstTurns ? ` Careful: ${f.firstTurns - f.safeFirstTurns} of the ${f.firstTurns} first turns that lose nobody lose a later round.` : "";
     this.say(`Hold the block for ${this.rounds} rounds. Click a rig to move it.${traps}`);
@@ -354,8 +362,9 @@ export class Fight {
   private artToken = 0;
   /** The rotation the board was framed in: turning the view frames it again (D-197). */
   private framedRotation = -1;
-  /** The city around the board dimmed (D-197). */
+  /** The city around the board dimmed (D-197); under a rooftop board, the street and the towers' faces too (D-198). */
   private readonly veil: VeilLayer;
+  private readonly under: VeilLayer | null;
   private refreshArt(): void {
     const token = ++this.artToken;
     const a = this.c.arena;
@@ -620,14 +629,27 @@ export class Fight {
     return { left: left + 8, right: right - 8, top: top + 8, bottom: bottom - 8 };
   }
 
-  /** The veil over the city but the board and a cell round it, thickest from two cells out (D-197). */
-  private veilAround(): void {
+  /** Under a rooftop board's roofs: the board and a cell round it, nothing from two cells out, where the veil around it lies (D-198). */
+  private veilUnder(): void {
+    const [x0, y0, w, h] = this.aroundBoard();
+    const values = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) values[y * w + x] = 255;
+    this.under!.set({ x0, y0, w, h }, values);
+  }
+
+  /** The board's world cells and two more each way: x0, y0, width, height. */
+  private aroundBoard(): [number, number, number, number] {
     const a = this.c.arena;
     const p0 = toWorld(this.board, { x: 0, y: 0 });
     const p1 = toWorld(this.board, { x: a.w, y: a.h });
     const [x0, y0] = [Math.floor(Math.min(p0.x, p1.x)) - 2, Math.floor(Math.min(p0.y, p1.y)) - 2];
     const [x1, y1] = [Math.ceil(Math.max(p0.x, p1.x)) + 2, Math.ceil(Math.max(p0.y, p1.y)) + 2];
-    const [w, h] = [x1 - x0, y1 - y0];
+    return [x0, y0, x1 - x0, y1 - y0];
+  }
+
+  /** The veil over the city but the board and a cell round it, thickest from two cells out (D-197). */
+  private veilAround(): void {
+    const [x0, y0, w, h] = this.aroundBoard();
     const values = new Uint8Array(w * h).fill(255);
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) values[y * w + x] = 0;
     this.veil.set({ x0, y0, w, h }, values);
@@ -1975,6 +1997,7 @@ export class Fight {
     this.view.cutaway = true;
     this.view.setLoneGhosts(null);
     this.view.layers.remove(this.veil.id);
+    if (this.under) this.view.layers.remove(this.under.id);
     for (const l of this.labels.values()) l.el.remove();
     this.labels.clear();
     this.hud.remove();
