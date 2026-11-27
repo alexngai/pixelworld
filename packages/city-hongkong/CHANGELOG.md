@@ -1,5 +1,13 @@
 # @pixelworlds/city-hongkong
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [eb60b63]
+- Updated dependencies [d431055]
+  - pixelworld@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes
