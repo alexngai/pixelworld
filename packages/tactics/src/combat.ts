@@ -468,8 +468,8 @@ export function standAt(c: Combat, k: number): number {
   return structureAt(c, k) >= 0 ? c.arena.roof[k]! : c.arena.height[k]!;
 }
 
-/** How far a cell's roof stands above the ground under it (metres): a building's height, 0 off one. */
-export const riseAt = (c: Combat, k: number): number => (standAt(c, k) - c.arena.height[k]!) * c.arena.metersPerStep;
+/** How far a cell's roof stands above the ground under it (metres; on a rooftop arena, above its floor): a building's height, 0 off one. */
+export const riseAt = (c: Combat, k: number): number => Math.max(0, standAt(c, k) - (c.arena.floor ?? c.arena.height[k]!)) * c.arena.metersPerStep;
 
 /**
  * Where a cell of the board is drawn (steps): where one stands, but a rooftop
@@ -506,13 +506,13 @@ export function hiddenFrom(b: Board, a: Arena, toward: readonly [number, number]
   return out;
 }
 
-/** Whether a unit could move from a cell onto a neighbour: no water for one that walks, and a climb within its reach. */
-function enterable(c: Combat, u: number, from: number, k: number): boolean {
+/** Whether a unit could move from a cell onto a neighbour: no water for one that walks, and a climb within its reach (or `climb` metres). */
+function enterable(c: Combat, u: number, from: number, k: number, climb = FIGHTERS[c.roster[u]!].climb): boolean {
   const f = FIGHTERS[c.roster[u]!];
   if (f.flying) return true;
   if (c.arena.flags[k]! & A_WATER && structureAt(c, k) < 0) return false;
   if (chasmAt(c, k)) return false;
-  return Math.abs(standAt(c, k) - standAt(c, from)) * c.arena.metersPerStep <= f.climb;
+  return Math.abs(standAt(c, k) - standAt(c, from)) * c.arena.metersPerStep <= climb;
 }
 
 /**
@@ -522,6 +522,29 @@ function enterable(c: Combat, u: number, from: number, k: number): boolean {
  */
 export function movesOf(c: Combat, u: number): number[] {
   return search(c, u, c.pos[u]!).out;
+}
+
+/**
+ * The cells a unit's move would reach if it climbed any height, that its
+ * climb keeps it from (empty ones): each with the climb onto it, in metres,
+ * from the nearest cell it does reach; Infinity when the climb is on the way
+ * there instead (none beside it that it reaches is too low). What the board
+ * shows as out of reach by height.
+ */
+export function climbBlocked(c: Combat, u: number): Map<number, number> {
+  const ok = new Set(movesOf(c, u));
+  const a = c.arena;
+  const out = new Map<number, number>();
+  for (const k of search(c, u, c.pos[u]!, Infinity).out) {
+    if (ok.has(k) || c.occ[k]! >= 0) continue;
+    let m = Infinity;
+    for (let d = 0; d < 4; d++) {
+      const nk = step(a, k, d);
+      if (nk >= 0 && ok.has(nk)) m = Math.min(m, Math.abs(standAt(c, k) - standAt(c, nk)) * a.metersPerStep);
+    }
+    out.set(k, m > FIGHTERS[c.roster[u]!].climb ? m : Infinity);
+  }
+  return out;
 }
 
 /**
@@ -539,7 +562,7 @@ export function movePath(c: Combat, u: number, from: number, to: number): number
 }
 
 /** The moves out from a cell: the cells a unit could stop on, and each reached cell's cell before. */
-function search(c: Combat, u: number, start: number): { out: number[]; prev: Int16Array } {
+function search(c: Combat, u: number, start: number, climb = FIGHTERS[c.roster[u]!].climb): { out: number[]; prev: Int16Array } {
   const a = c.arena;
   const dist = new Int8Array(a.w * a.h).fill(-1);
   const prev = new Int16Array(a.w * a.h).fill(-1);
@@ -567,7 +590,7 @@ function search(c: Combat, u: number, start: number): { out: number[]; prev: Int
     const k = queue[q]!;
     for (let d = 0; d < 4; d++) {
       const nk = step(a, k, d);
-      if (nk >= 0 && enterable(c, u, k, nk)) reach(k, nk, 1);
+      if (nk >= 0 && enterable(c, u, k, nk, climb)) reach(k, nk, 1);
       if ((f.leaps || a.floor !== undefined) && !f.flying) {
         const far = nk >= 0 ? step(a, nk, d) : -1;
         if (far >= 0 && leapable(c, k, nk, far)) reach(k, far, 2);

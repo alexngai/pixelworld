@@ -207,6 +207,7 @@ Status values:
 | D-198 | Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height | Accepted |
 | D-199 | Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation | Accepted |
 | D-200 | Fixes from the first playtest: rooftop arrivals land, the strike list names what's hit, no block without a fight, a routed fight ends, the pointer picks what's drawn, buildings' heights shown above their ground | Accepted |
+| D-201 | The board made legible: heights on the board, what the rig in hand can't climb, lines of fire, the map showing all of it | Accepted |
 
 ---
 
@@ -2834,3 +2835,36 @@ The point is more room for visual interest; both halves are wanted.
   - A cell lying under a glass roof is picked as the roof unless the rig in hand can use the cell. The arrow keys reach every cell.
   - **Heights in the rules aren't real heights:** the rules turn steps into metres with the terrain's step (2.72 m in New York and Tokyo, 2.04 m in San Francisco). A building's height in steps is set at 5 m a step, so the rules count a building at 0.54–0.57 of its real height. A 27 m building counts as 15 m, which rigs climb. This is short of D-151's real heights, and needs the climbing thresholds in steps or a building's own height in the rules.
   - **Buildings on slopes stand on their lowest corner (D-010):** on a slope or a riverbank, a building is sunk on its uphill side, its roof near the street there. The board's rules follow the drawing, so changing this means changing placement.
+
+### D-201: The board made legible: heights on the board, what the rig in hand can't climb, lines of fire, the map showing all of it (accepted)
+- **Why:** the first playtest (D-200) found the puzzles' answers hard to see. They turn on facts the city view doesn't show: how high each roof is, which roofs a rig can get onto, and where a shot stops. Its first ask was a legible board. The owner chose to show these on the board and on the map, rather than add a separate top-down mode: the map already is one, and should get better instead.
+- **What:**
+  - **Heights (A):**
+    - Each building's roof edge is drawn on the board in its height's colour, the map's bands (D-163): ≤6 m, ≤15 m (rigs climb), ≤40 m, taller.
+    - Each building's label gains its height ("251 people · 11 m").
+    - The heights are `riseAt`'s: the roof above the ground under it, or above the floor on a rooftop board, in the rules' metres. On a rooftop board the cell tooltip no longer says whether rigs climb onto the roof, since every walker leaps there.
+  - **What the rig in hand can't reach (B):**
+    - `climbBlocked` (the rules package) gives the cells its move would reach if it could climb any height, each with the climb from the nearest cell it does reach. A cell beside one it reaches at a height it could climb is out of range only because the short way there crosses a climb, so it is marked "behind a climb" with no number.
+    - In the move phase these cells are outlined dashed orange on the board with that climb, rounded up ("↑31m"), and the same on the map.
+    - The cell tooltip says "out of reach for the wrecker: 31 m up from where it gets to; it climbs 15 m". A click there says why too.
+  - **Lines of fire (C):** each shot and charge of the rig in hand is drawn as a dotted line. In the strike phase it's drawn for the weapon chosen, from where the rig stands. In the move phase it's drawn for every weapon, from the cell pointed at. A line runs level at the rig's height to what stops it:
+    - a unit, in yellow, to its middle;
+    - a building taller than the rig, in white, to its face, with a bar across the end;
+    - nothing: a faint line off the board's edge.
+  - **The map:**
+    - It shows the same cues: the cells the rig could strike from the cell pointed at, the cells out of reach with their climb, and the lines of fire.
+    - It also shows the invaders' damage on each cell they hit, as a red badge, as on the board (D-194).
+    - A building the strike looked at would hurt is outlined red, and one a bonus names gold.
+    - Building heights now show on the small map too, without the "m".
+    - On a rooftop board the street between the roofs is dark, so the roofs read as the floor.
+- **Tested:**
+  - A unit test: a wrecker on the street beside 30 m towers gets them as out of reach, 30 m up (27 from a house's roof beside one), and the houses as moves.
+  - In the browser on the Hong Kong Peninsula board:
+    - the 31–32 m towers marked out of reach for the wrecker, on the board and the map;
+    - the pumper's cannon lines in the strike phase;
+    - the heights on the labels, the roof edges and both maps.
+- **Not done:**
+  - Heights are in the rules' metres, about 0.55 of a building's real height (D-200), until the rules use real heights.
+  - Where a push or a hoist would carry a unit still shows only for the strike pointed at (D-191).
+  - A cell's tooltip can still cover the board near it.
+

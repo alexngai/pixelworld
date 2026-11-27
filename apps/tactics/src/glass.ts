@@ -1,5 +1,6 @@
 import { toWorld, type Board, type WorldView } from "@pixelworlds/engine";
-import { planeAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { planeAt, riseAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { band } from "./map";
 import { PixelLayer, rgba } from "./pixels";
 
 /**
@@ -43,6 +44,17 @@ export interface GlassState {
   slides?: readonly { from: number; to: number }[];
   /** Buildings a bonus objective names (D-199), outlined gold until it's met. */
   goals?: readonly number[];
+  /** Cells the rig in hand would reach but for a climb (D-201): each with the climb onto it (m), Infinity when none is beside. */
+  blocked?: ReadonlyMap<number, number>;
+  /** Lines of fire (D-201): a shot's or a charge's, from the rig to what it strikes first or the board's edge. */
+  lines?: readonly FireLine[];
+}
+
+/** A line of fire: from a cell to the one it ends on, and what it ends at. */
+export interface FireLine {
+  from: number;
+  to: number;
+  ends: "unit" | "wall" | "edge";
 }
 
 export interface Shot {
@@ -211,6 +223,23 @@ export class BoardGlass {
       g.stroke();
     }
     g.setLineDash([]);
+    // each building's roof edge in its height's colour (D-201, as the map's, D-163): what a rig climbs onto reads on the board too
+    g.lineWidth = 1.5;
+    for (let k = 0; k < a.w * a.h; k++) {
+      const sid = a.struct[k]!;
+      if (sid < 0 || c.structHp[sid]! <= 0) continue;
+      const i = k % a.w;
+      const j = Math.floor(k / a.w);
+      const roof = quad(k, standAt(c, k) + lift);
+      g.strokeStyle = `${band(riseAt(c, k)).colour}${s.hidden[k] ? "66" : "b3"}`;
+      ([[i, j - 1, 0, 1], [i + 1, j, 1, 2], [i, j + 1, 2, 3], [i - 1, j, 3, 0]] as const).forEach(([ni, nj, p, q]) => {
+        if (ni >= 0 && nj >= 0 && ni < a.w && nj < a.h && a.struct[nj * a.w + ni] === sid) return;
+        g.beginPath();
+        g.moveTo(...roof[p]!);
+        g.lineTo(...roof[q]!);
+        g.stroke();
+      });
+    }
     // a building of the fight whole, from its foot to its roof: the roof faintly filled, its outer sides as faint panes, the roof's
     // edge plainly, its corners down faintly
     // `only`: just these of its cells, each a column from its foot to its roof (D-192)
@@ -457,6 +486,37 @@ export class BoardGlass {
       px.dot(x, y, 3, colour);
       px.set(x, y, WHITE);
     }
+    // lines of fire (D-201): level at the rig's height, from it to what stops the shot (a unit: yellow, to its middle; a building:
+    // white, to its face, with a bar) or out to the board's edge (faint)
+    for (const ln of s.lines ?? []) {
+      const ha = standAt(c, ln.from) + 0.6;
+      const [fi, fj, ti, tj] = [ln.from % a.w, Math.floor(ln.from / a.w), ln.to % a.w, Math.floor(ln.to / a.w)];
+      const len = Math.max(Math.abs(ti - fi), Math.abs(tj - fj)) || 1;
+      const stop = ln.ends === "wall" ? 1 - 0.5 / len : ln.ends === "edge" ? 1 + 0.5 / len : 1;
+      const at = (f: number) => lo(plane(fi + 0.5 + (ti - fi) * f, fj + 0.5 + (tj - fj) * f, ln.ends === "unit" ? ha + (planeAt(c, ln.to) + 0.6 - ha) * f : ha));
+      const colour = ln.ends === "unit" ? pixelColour("242,193,78") : ln.ends === "wall" ? WHITE : rgba(190, 190, 205);
+      // dashes as thick as a shot's dots (D-194); off the board, sparser
+      const pts = PixelLayer.path([at(0.3 / len), at(stop)]);
+      pts.forEach(([x, y], n) => {
+        if (n % 6 < (ln.ends === "edge" ? 2 : 4)) px.dot(x, y, 4, DARK);
+      });
+      pts.forEach(([x, y], n) => {
+        if (n % 6 < (ln.ends === "edge" ? 2 : 4)) px.dot(x, y, 2, colour);
+      });
+      if (ln.ends !== "edge") {
+        // a bar across its end: where it stops
+        const [x1, y1] = at(stop);
+        const [x0, y0] = at(stop - 0.2 / len);
+        const d = Math.hypot(x1 - x0, y1 - y0) || 1;
+        const [nx, ny] = [-(y1 - y0) / d, (x1 - x0) / d];
+        const bar = PixelLayer.path([
+          [x1 - nx * 4, y1 - ny * 4],
+          [x1 + nx * 4, y1 + ny * 4],
+        ]);
+        for (const [x, y] of bar) px.dot(x, y, 4, DARK);
+        for (const [x, y] of bar) px.dot(x, y, 2, colour);
+      }
+    }
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.imageSmoothingEnabled = false;
@@ -472,6 +532,31 @@ export class BoardGlass {
       g.stroke();
     }
     g.restore();
+    // out of reach by a climb (D-201): outlined dashed orange, with how far up
+    if (s.blocked?.size) {
+      g.save();
+      g.font = "bold 10px ui-monospace, Menlo, monospace";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      for (const [k, up] of s.blocked) {
+        const h = planeAt(c, k) + lift;
+        g.setLineDash([3, 3]);
+        g.lineWidth = 1.2;
+        g.strokeStyle = "rgba(255,150,80,0.75)";
+        path(quad(k, h, 0.12));
+        g.stroke();
+        if (!Number.isFinite(up)) continue;
+        const p = centre(k);
+        const q = camera.project(p.x, p.y, h);
+        const text = `↑${Math.ceil(up)}m`;
+        const tw = g.measureText(text).width + 6;
+        g.fillStyle = "rgba(14,12,26,0.8)";
+        g.fillRect(q.x - tw / 2, q.y - 7, tw, 14);
+        g.fillStyle = "rgb(255,170,110)";
+        g.fillText(text, q.x, q.y + 0.5);
+      }
+      g.restore();
+    }
     // the pointer's and the keyboard's cells; down to the ground from a roof
     for (const [k, rgb, w] of [
       [s.hover, "255,255,255", 1.5],

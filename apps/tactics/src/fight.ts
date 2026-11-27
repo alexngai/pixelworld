@@ -33,6 +33,8 @@ import {
   strikeCell,
   strikeTarget,
   riseAt,
+  climbBlocked,
+  step,
   strikesOf,
   structureAt,
   teamOf,
@@ -48,7 +50,7 @@ import {
   type Weapon,
 } from "@pixelworlds/tactics";
 import type { Brain, } from "./brain";
-import { BoardGlass, type Shot } from "./glass";
+import { BoardGlass, type FireLine, type Shot } from "./glass";
 import { TacticalMap, mapAxis } from "./map";
 import type { Outlook } from "./worker";
 
@@ -281,6 +283,8 @@ export class Fight {
   private ghosts: number[] = [];
   /** The cutaway showing now (D-167): while a rig is chosen, a move plays out, or a unit or a hidden cell is looked at; else the board's buildings whole (what's in front of the board is gone either way, D-168). */
   private cutting = false;
+  /** In the move phase, the cells the rig in hand would reach but for a climb: each with the climb onto it (m). */
+  private blockedNow = new Map<number, number>();
   /** V: the cutaway always. */
   private pinned = false;
   /** Till when the cutaway stays after what called for it ended (ms), or 0. */
@@ -1194,6 +1198,9 @@ export class Fight {
     this.cutting = this.cutawayWanted(shown, focus);
     this.view.cutaway = this.cutting;
     const reach: number[] = [];
+    // lines of fire: the shots and charges the rig in hand has, from where it stands in the strike phase (its weapon chosen), from the cell
+    // pointed at in the move phase (every weapon's)
+    const lines: FireLine[] = [];
     if (this.phase === "move" && focus >= 0 && movesOf(c, this.selected).includes(focus)) {
       const d = cloneCombat(c);
       moveUnit(d, this.selected, focus);
@@ -1201,7 +1208,10 @@ export class Fight {
         const t = strikeCell(d, this.selected, st);
         if (t >= 0 && t !== focus && !reach.includes(t)) reach.push(t);
       }
+      lines.push(...this.fireLines(d, this.selected));
     }
+    if (this.phase === "strike" && this.selected >= 0 && this.lift < 0) lines.push(...this.fireLines(c, this.selected, this.weapon));
+    this.blockedNow = this.phase === "move" && this.selected >= 0 ? climbBlocked(c, this.selected) : new Map();
     // units outlined (D-170): green the rig chosen; yellow what it could strike, or what the move or strike pointed at would reach or
     // affect; red what the invaders will hurt
     const aimed = new Set<number>();
@@ -1217,6 +1227,7 @@ export class Fight {
     // the fight's buildings cut away, each drawn as itself over the cut (D-162), far to near: solid, but faint where in the way (D-166)
     const alphas = this.ghostAlphas(shown, focus);
     this.view.setLoneGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
+    const goals = (this.puzzle.objectives ?? []).flatMap((ob) => (ob.kind === "evacuate" && objectiveState(ob, this.start, shown, false) === "open" ? [ob.structure] : []));
     this.glass.set({
       state: shown,
       marks,
@@ -1233,11 +1244,13 @@ export class Fight {
       shots: this.shots,
       hurt: this.preview?.hurt ?? [],
       slides: this.preview?.slides ?? [],
-      goals: (this.puzzle.objectives ?? []).flatMap((ob) => (ob.kind === "evacuate" && objectiveState(ob, this.start, shown, false) === "open" ? [ob.structure] : [])),
+      goals,
+      blocked: this.blockedNow,
+      lines,
     });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
-    this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown), cursor: this.cursor });
+    this.map.draw({ state: shown, marks, arrows, acted: this.acted, striking: this.striking, order: this.order(shown), cursor: this.cursor, reach, blocked: this.blockedNow, lines, hits: plan?.hits, hurt: this.preview?.hurt, goals });
 
     // labels: hit points over every unit, the invaders' order, arrivals, what a hovered strike would do
     const keep = new Set<string>();
@@ -1268,7 +1281,7 @@ export class Fight {
         const at = this.middleCell(st.cells);
         const people = shown.evacuated[id] ? "empty" : `${st.people >= 1000 ? `${(st.people / 1000).toFixed(1)}k` : st.people} people`;
         const cls = this.preview?.hurt.includes(id) ? "building hurt preview" : st.cells.some((k) => danger.has(k)) ? "building threat" : shown.evacuated[id] ? "building empty" : "building";
-        this.label(bid, at, `${pips(shown.structHp[id]!, st.hp)} ${people}`, cls, 8);
+        this.label(bid, at, `${pips(shown.structHp[id]!, st.hp)} ${people} · ${Math.round(riseAt(shown, at))} m`, cls, 8);
       });
     // each cell the invaders will hit (D-194): a badge with the damage, where it lands
     if (plan)
@@ -1283,6 +1296,31 @@ export class Fight {
         this.labels.delete(id);
       }
     this.panels();
+  }
+
+  /**
+   * A rig's lines of fire (C): each shot's and charge's, a weapon's or all of
+   * them, from where it stands, to what it strikes first or the board's edge.
+   */
+  private fireLines(c: Combat, u: number, only?: number): FireLine[] {
+    const out: FireLine[] = [];
+    const from = c.pos[u]!;
+    weaponsOf(c, u).forEach((w, weapon) => {
+      if ((only !== undefined && weapon !== only) || (w.kind !== "shot" && w.kind !== "charge")) return;
+      for (let dir = 0; dir < 4; dir++) {
+        const t = strikeCell(c, u, { weapon, dir, range: 1 });
+        if (t >= 0) {
+          out.push({ from, to: t, ends: c.occ[t]! >= 0 ? "unit" : "wall" });
+          continue;
+        }
+        // a charge with nothing to strike doesn't go; a shot flies off the board
+        if (w.kind === "charge") continue;
+        let k = from;
+        for (let n = step(c.arena, k, dir); n >= 0; n = step(c.arena, k, dir)) k = n;
+        if (k !== from) out.push({ from, to: k, ends: "edge" });
+      }
+    });
+    return out;
   }
 
   /** The cell of a building nearest its middle: where its label stands. */
@@ -1541,12 +1579,18 @@ export class Fight {
       else {
         lines.push(`<b>${st.name.replace(/^building\./, "").replace(/\./g, " ")}</b> · ${m} m tall`);
         lines.push(`${c.evacuated[sid] ? "empty" : `${st.people} people`} · ${c.structHp[sid]} hp${st.topple ? ` · topples ${st.topple} cells` : ""}${st.flammable ? " · burns" : ""}`);
-        lines.push(m <= 15 ? "rigs can climb onto it" : "too tall for the rigs to climb; crawlers can");
+        if (a.floor === undefined) lines.push(m <= 15 ? "rigs can climb onto it" : "too tall for the rigs to climb; crawlers can");
       }
     } else if (a.flags[k]! & A_WATER) lines.push("<b>water</b>: a unit pushed in drowns (not flyers)");
     if (isBurning(c, k)) lines.push(`<b>burning</b>: hurts who stands here; spreads to the trees and grass beside it at the round's end${c.fire[k] === 2 ? ", then burns out" : ""}`);
     else if (c.fire[k] === FIRE_ASH) lines.push("<b>burnt out</b>: won't burn again");
     else if (a.flags[k]! & A_BURNS && sid < 0) lines.push("trees or grass: burns, and fire spreads through it");
+    // out of the rig in hand's reach by a climb (B)
+    const up = this.blockedNow.get(k);
+    if (up !== undefined && this.selected >= 0) {
+      const f = FIGHTERS[c.roster[this.selected]!];
+      lines.push(`<b>out of reach</b> for the ${f.name.toLowerCase()}: ${Number.isFinite(up) ? `${Math.ceil(up)} m up from where it gets to` : "behind a climb"}; it climbs ${f.climb} m`);
+    }
     const arrival = arriving(c).find((x) => x.at === k);
     if (arrival) lines.push(`▼ a ${FIGHTERS[arrival.kind].name} lands here at the round's end: stand here to block it (1 damage)`);
     if (!lines.length) {
@@ -1750,7 +1794,9 @@ export class Fight {
     // a cell it can't reach (D-190): said, not passed over in silence
     if (this.phase === "move") {
       const f = FIGHTERS[c.roster[this.selected]!];
-      this.say(`Out of reach: the ${f.name.toLowerCase()} moves ${f.move} and climbs ${f.climb} m. Click a green cell, or right-click to cancel.`);
+      const up = this.blockedNow.get(k);
+      const why = up !== undefined && Number.isFinite(up) ? `${Math.ceil(up)} m up, and the ${f.name.toLowerCase()} climbs ${f.climb} m` : `the ${f.name.toLowerCase()} moves ${f.move} and climbs ${f.climb} m`;
+      this.say(`Out of reach: ${why}. Click a green cell, or right-click to cancel.`);
       return this.paint();
     }
     if (this.phase !== "strike") return;

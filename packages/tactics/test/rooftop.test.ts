@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { A_CHASM, act, endRound, movesOf, newCombat, rooftop, rooftopFloor, strike, strikeTarget, type Arena, type CombatEvent, type FighterKind } from "../src";
+import { A_CHASM, act, climbBlocked, endRound, movesOf, riseAt, newCombat, rooftop, rooftopFloor, strike, strikeTarget, type Arena, type CombatEvent, type FighterKind } from "../src";
 
 /**
  * Rooftop maps (D-180): towers in capitals (their roofs 10 steps, 30 m up), a
@@ -100,5 +100,19 @@ describe("rooftop maps", () => {
     expect(strikeTarget(c, 0, { weapon: 0, dir: WEST, range: 1 })).toEqual({ unit: -1, structure: 0 }); // 30 m up from the street
     expect(strikeTarget(c, 2, { weapon: 0, dir: SOUTH, range: 1 })).toEqual({ unit: 3, structure: -1 }); // roof to roof
     expect(strikeTarget(c, 2, { weapon: 0, dir: EAST, range: 1 })).toEqual({ unit: -1, structure: -1 }); // the street, empty
+  });
+
+  it("tells the cells a rig can't climb onto (D-201): each with the climb from where it gets to", () => {
+    const c = newCombat(city(ROWS), [{ kind: "wrecker", at: at(2, 1) }]);
+    const blocked = climbBlocked(c, 0);
+    // the towers, 30 m up from the street (27 from the house's roof beside one); the wrecker climbs 15 m
+    expect(blocked.get(at(1, 1))).toBe(27);
+    expect(blocked.get(at(3, 1))).toBe(30);
+    // the houses, 3 m: it climbs onto them
+    expect(blocked.has(at(1, 2))).toBe(false);
+    expect(movesOf(c, 0)).toContain(at(1, 2));
+    for (const k of blocked.keys()) expect(movesOf(c, 0)).not.toContain(k);
+    expect(riseAt(c, at(0, 0))).toBe(30);
+    expect(riseAt(c, at(2, 0))).toBe(0);
   });
 });
