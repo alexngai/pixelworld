@@ -1,13 +1,12 @@
 import {
   createWorldView,
   fogLayer,
-  Minimap,
   roverController,
-  STEEP_PROJECTION,
   steamLayer,
   type RoverOptions,
   type TileBake,
 } from "@pixelworlds/engine";
+import { Minimap } from "@pixelworlds/engine/maps";
 import { loadRoutes, TRAFFIC_SUBLAYERS, trafficLayer, type DrawnVehicle, type TrafficSublayer } from "@pixelworlds/sim";
 import { stylePack } from "./styles";
 import { verticalExaggeration, type WorldManifest } from "@pixelworlds/world-format";
@@ -183,15 +182,8 @@ async function main() {
     // ?style=<id> draws the world with another pack, merged with its parents first
     style: params.has("style") ? await stylePack(params.get("style")!) : stylePack,
     size,
-    cache: params.get("cache") !== "0",
-    groundFirst: params.get("ground") !== "0", // ground=0: no ground-only bake before a tile's own
-    startTiles: params.get("startTiles") !== "0", // the world's start-tiles.bin, where prebake.mjs built one
-    objects: params.get("objects") !== "0",
-    scatter: params.get("scatter") !== "0",
-    heroes: params.get("paint") !== "0",
     // projection=steep: the higher camera (D-195), 4:3 tiles
-    ...(params.get("projection") === "steep" ? { projection: STEEP_PROJECTION } : {}),
-    chunkBudgetMB: maybeNum("chunkBudget"), // decoded terrain kept at most (MB, D-120)
+    ...(params.get("projection") === "steep" ? { projection: "steep" as const } : {}),
     palette: params.get("palette") === "night" ? "night" : "day",
     camera: {
       rotation: num("rot", 0) & 3,
@@ -204,8 +196,19 @@ async function main() {
     // the city packs the world's style pack names, from the viewer's list (src/plugins.ts);
     // plugins=0 loads none, to see a style's models fail as markers (e2e, D-072)
     plugins: (names) => (params.get("plugins") === "0" ? [] : viewerPlugins(names)),
-    // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
-    recordBakes: params.get("bench") === "1",
+    render: {
+      objects: params.get("objects") !== "0",
+      scatter: params.get("scatter") !== "0",
+      heroes: params.get("paint") !== "0",
+    },
+    baking: {
+      cache: params.get("cache") !== "0",
+      groundFirst: params.get("ground") !== "0", // ground=0: no ground-only bake before a tile's own
+      startTiles: params.get("startTiles") !== "0", // the world's start-tiles.bin, where prebake.mjs built one
+      chunkBudgetMB: maybeNum("chunkBudget"), // decoded terrain kept at most (MB, D-120)
+      // bench=1 (the benchmark page, apps/web/bench.html): every baked tile's timings, for its report
+      recordBakes: params.get("bench") === "1",
+    },
     onError: (m) => {
       console.error(m);
       hud.textContent = `bake error: ${m}`;
@@ -443,7 +446,7 @@ async function main() {
     lonLat: () => view.query.cellToLonLat(rover.rover.x, rover.rover.y),
     switchLevel,
     bakeHero: async (id) =>
-      (await view.bakeObject(id)).map((img) => (img ? { ...img, pixels: Array.from(img.pixels) } : null)),
+      (await view.tools.bakeObject(id)).map((img) => (img ? { ...img, pixels: Array.from(img.pixels) } : null)),
     palette: () => Array.from(view.world.palette.rgba),
     traffic: () =>
       trafficOn
@@ -478,12 +481,12 @@ async function main() {
       syncLayers();
       view.invalidate();
     },
-    timeFrames: (n) => view.timeFrames(n),
+    timeFrames: (n) => view.tools.timeFrames(n),
     setZoom: (zoom) => {
       view.camera.zoom = zoom;
       view.invalidate();
     },
-    tileBakes: () => view.tileBakes(),
+    tileBakes: () => view.tools.tileBakes(),
     inspect,
   };
 }

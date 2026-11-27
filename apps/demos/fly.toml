@@ -1,0 +1,38 @@
+# The three multiplayer demos on Fly.io at play.pixelworld.site (D-143). From
+# the repository's root, once:
+#
+#   fly launch --no-deploy --copy-config --name pixelworld-play --config apps/demos/fly.toml
+#   fly certs add play.pixelworld.site --config apps/demos/fly.toml
+#
+# and in Cloudflare's DNS, a CNAME `play` to pixelworld-play.fly.dev, DNS only
+# (grey cloud: Fly issues the certificate). Every push to main deploys it
+# (.github/workflows/site.yml's `play` job, with the FLY_API_TOKEN secret, D-144);
+# to deploy by hand:
+#
+#   fly deploy . --ha=false --config apps/demos/fly.toml --dockerfile apps/demos/Dockerfile
+#
+# Rooms live in the server's memory: run exactly one machine (--ha=false;
+# `fly scale count 1` fixes it). It stops when idle and wakes on the next
+# visit in a few seconds: the page's own request wakes it.
+
+app = "pixelworld-play"
+primary_region = "sjc"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 100
+    hard_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

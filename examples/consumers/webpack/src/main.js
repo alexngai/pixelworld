@@ -1,4 +1,4 @@
-import { createWorldView, roverController } from "pixelworld/engine";
+import { createWorldView, roverController } from "pixelworld";
 import { cityPlugin } from "@pixelworlds/city-sf";
 
 /**
@@ -10,9 +10,6 @@ import { cityPlugin } from "@pixelworlds/city-sf";
  * city pack.
  */
 
-// The city packs this app can load, by name: the view loads those the world's style pack names.
-const PLUGINS = { [cityPlugin.name]: cityPlugin };
-
 async function main() {
   const canvas = document.querySelector("#world");
   const status = document.querySelector("#status");
@@ -22,7 +19,7 @@ async function main() {
     canvas,
     worldUrl: `/worlds/${world}/`,
     style: (id) => fetch(`/styles/${id}/style.json`).then((r) => r.json()),
-    plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
+    plugins: [cityPlugin],
     camera: { rotation: 1 },
     controller: roverController({ listen: { keys: window, pointer: canvas } }),
   });

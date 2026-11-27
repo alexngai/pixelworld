@@ -1,10 +1,9 @@
 import { roverBoxes } from "@pixelworlds/generators";
-import { listenTo } from "./controller";
-import type { Controller, ControllerView, Entity, KeyInput, PointerInput } from "./types";
+import { CameraController, type CameraControllerOptions } from "./cameraController";
+import type { ControllerView, Entity, KeyInput } from "./types";
 
 /**
- * The rover and the free camera, the viewer's interaction mode and the first
- * controller:
+ * The rover and the free camera, the viewer's interaction mode:
  *
  * - **Arrows** drive the rover across the ground: it stays on land, climbs
  *   gentle slopes and slides along what stops it.
@@ -13,22 +12,19 @@ import type { Controller, ControllerView, Entity, KeyInput, PointerInput } from 
  * - **Q/E** rotate the view and **1–6** set the zoom.
  */
 
-const PAN_SPEED = 220; // internal px / s
 const DRIVE_SPEED = 3; // cells / s
 // Steepest grade the rover can drive, in height steps per cell travelled. Gentle
 // slopes (1 step per cell, up to 1.41 across a diagonal fold) are drivable;
 // steep slope tiles and cliffs are not.
 const MAX_GRADE = 2;
 
-export interface RoverOptions {
+export interface RoverOptions extends Pick<CameraControllerOptions, "listen" | "panSpeed"> {
   /** Where the rover starts: a cell, or a lon/lat (worlds with a geo grid). Default, or outside the world: the world's start. */
   start?: { x?: number; y?: number } | { lon: number; lat: number };
   /** The camera follows the rover (default true); without, it stays where the view put it. */
   follow?: boolean;
   /** Draw the rover (default true). */
   visible?: boolean;
-  /** Listen for keys and drags here; without, the app forwards input (`keyDown`, `pointerMove`, …). */
-  listen?: { keys?: EventTarget | null; pointer?: EventTarget | null };
 }
 
 /** The rover controller's state (`serialize`): the rover's place and the switches. */
@@ -40,19 +36,24 @@ export interface RoverState {
   noclip: boolean;
 }
 
-export class RoverController implements Controller {
-  readonly id = "rover";
+export class RoverController extends CameraController {
+  override readonly id = "rover";
   /** The camera follows the rover. */
   follow: boolean;
   /** Drive through water and up cliffs. */
   noclip = false;
-  private view: ControllerView | null = null;
   private entity: Entity | null = null;
-  private readonly keys = new Set<string>();
-  private drag: { x: number; y: number } | null = null;
-  private unlisten: (() => void) | null = null;
+  private readonly roverOpts: RoverOptions;
 
-  constructor(private readonly opts: RoverOptions = {}) {
+  constructor(opts: RoverOptions = {}) {
+    super({
+      listen: opts.listen,
+      panSpeed: opts.panSpeed,
+      onPan: () => {
+        this.follow = false;
+      },
+    });
+    this.roverOpts = opts;
     this.follow = opts.follow ?? true;
   }
 
@@ -62,12 +63,12 @@ export class RoverController implements Controller {
     return this.entity;
   }
 
-  async attach(view: ControllerView): Promise<void> {
+  override async attach(view: ControllerView): Promise<void> {
     const m = view.world.manifest;
     const home = m.start ?? { x: Math.floor(m.cellsX / 2), y: Math.floor(m.cellsY / 2) };
     let x = home.x + 0.5;
     let y = home.y + 0.5;
-    const s = this.opts.start;
+    const s = this.roverOpts.start;
     if (s && "lon" in s) {
       const cell = view.query.lonLatToCell(s.lon, s.lat);
       if (cell) [x, y] = cell;
@@ -87,22 +88,17 @@ export class RoverController implements Controller {
       y,
       h,
       silhouette: true,
-      visible: this.opts.visible ?? true,
+      visible: this.roverOpts.visible ?? true,
     });
     // the camera starts on the rover; without following, the view may move it elsewhere
     view.camera.setFocus(x, y, h);
-    this.view = view;
-    if (this.opts.listen) this.unlisten = listenTo(this, this.opts.listen);
+    super.attach(view);
   }
 
-  detach(): void {
-    this.unlisten?.();
-    this.unlisten = null;
+  override detach(): void {
     this.entity?.remove();
     this.entity = null;
-    this.view = null;
-    this.keys.clear();
-    this.drag = null;
+    super.detach();
   }
 
   /** Put the rover at a place (cells), on the ground there where it is loaded. */
@@ -124,23 +120,13 @@ export class RoverController implements Controller {
     if (this.follow) this.view?.camera.setFocus(s.x, s.y, s.h);
   }
 
-  update(dt: number): void {
+  override update(dt: number): void {
     const view = this.view;
     const rover = this.entity;
     if (!view || !rover) return;
+    super.update(dt);
     const keys = this.keys;
     const camera = view.camera;
-    let px = 0;
-    let py = 0;
-    if (keys.has("a")) px -= 1;
-    if (keys.has("d")) px += 1;
-    if (keys.has("w")) py -= 1;
-    if (keys.has("s")) py += 1;
-    if (px || py) {
-      const len = Math.hypot(px, py);
-      camera.pan((px / len) * PAN_SPEED * dt, (py / len) * PAN_SPEED * dt);
-      this.follow = false;
-    }
     let mx = 0;
     let my = 0;
     if (keys.has("arrowleft")) mx -= 2;
@@ -171,46 +157,26 @@ export class RoverController implements Controller {
     if (this.follow) camera.setFocus(rover.x, rover.y, rover.h);
   }
 
-  keyDown(e: KeyInput): boolean {
+  override keyDown(e: KeyInput): boolean {
     const view = this.view;
     if (!view) return false;
     const k = e.key.toLowerCase();
-    this.keys.add(k);
-    let mine = true;
-    if (k === "q") view.camera.rotate(-1);
-    else if (k === "e") view.camera.rotate(1);
-    else if (k === "f") this.follow = !this.follow;
-    else if (k === "n") this.noclip = !this.noclip;
-    else if (k >= "1" && k <= "6" && k.length === 1) view.camera.zoom = Number(k);
-    else if (k.startsWith("arrow")) e.preventDefault?.();
-    else mine = "wasd".includes(k) && k.length === 1;
-    return mine;
-  }
-
-  keyUp(e: KeyInput): void {
-    this.keys.delete(e.key.toLowerCase());
-  }
-
-  blur(): void {
-    this.keys.clear();
-  }
-
-  pointerDown(e: PointerInput): void {
-    this.drag = { x: e.clientX, y: e.clientY };
-    if (e.pointerId !== undefined) this.view?.canvas.setPointerCapture?.(e.pointerId);
-  }
-
-  pointerMove(e: PointerInput): void {
-    const view = this.view;
-    if (!this.drag || !view) return;
-    const scale = view.pixelRatio / view.camera.zoom;
-    view.camera.pan(-(e.clientX - this.drag.x) * scale, -(e.clientY - this.drag.y) * scale);
-    this.drag = { x: e.clientX, y: e.clientY };
-    this.follow = false;
-  }
-
-  pointerUp(): void {
-    this.drag = null;
+    if (k === "f") {
+      this.keys.add(k);
+      this.follow = !this.follow;
+      return true;
+    }
+    if (k === "n") {
+      this.keys.add(k);
+      this.noclip = !this.noclip;
+      return true;
+    }
+    if (k.startsWith("arrow")) {
+      this.keys.add(k);
+      e.preventDefault?.();
+      return true;
+    }
+    return super.keyDown(e);
   }
 }
 

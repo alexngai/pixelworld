@@ -18,7 +18,7 @@ import {
   type InitMessage,
   type TerrainSlice,
   type TileRequest,
-} from "@pixelworlds/runtime";
+} from "./runtime";
 import {
   StyleError,
   buildPalette,
@@ -43,7 +43,7 @@ import {
 import { EditLog, type TileCells } from "./edits";
 import { ChunkedObjects, landmarkPlan, ObjectIndex } from "./objects";
 import { createQuery, type PickView } from "./queries";
-import type { CellEdit, OpenWorldOptions, OpenedWorld, StyleSource, TileStore, WorldInfo, WorldQuery, WorldStats, WorldViewOptions } from "./types";
+import type { CellEdit, OpenWorldOptions, OpenedWorld, StyleSource, TileStore, ViewQuery, WorldInfo, WorldQuery, WorldStats } from "./types";
 
 /**
  * Loading a world package for a view: its manifest, geo grid and objects, the
@@ -118,19 +118,22 @@ export async function resolveStyle(source: StyleSource, id: string): Promise<obj
   return pack;
 }
 
-export async function loadWorld(
-  opts: Pick<WorldViewOptions, "worldUrl" | "style" | "renderScale" | "objects" | "chunkBudgetMB"> & {
-    dropLayers?: readonly DroppableLayer[];
-    /**
-     * `openWorld`'s (D-123): objects by chunk where the package has them (the
-     * landmarks whole, the rest with their terrain), and its coarse heights.
-     * A view's bake needs the objects whole.
-     */
-    headless?: boolean;
-    /** How the package's files are fetched (D-123; default `fetch`). */
-    fetch?: WorldFetch;
-  },
-): Promise<LoadedWorld> {
+export async function loadWorld(opts: {
+  worldUrl: string;
+  style: StyleSource;
+  renderScale?: number;
+  objects?: boolean;
+  chunkBudgetMB?: number;
+  dropLayers?: readonly DroppableLayer[];
+  /**
+   * `openWorld`'s (D-123): objects by chunk where the package has them (the
+   * landmarks whole, the rest with their terrain), and its coarse heights.
+   * A view's bake needs the objects whole.
+   */
+  headless?: boolean;
+  /** How the package's files are fetched (D-123; default `fetch`). */
+  fetch?: WorldFetch;
+}): Promise<LoadedWorld> {
   const url = opts.worldUrl;
   const manifest = await loadManifest(url, opts.fetch);
   const store = new ChunkStore(manifest, url, opts.fetch ? chunkFetcher(opts.fetch) : undefined);
@@ -202,8 +205,10 @@ export function worldInfo(w: LoadedWorld): WorldInfo {
   };
 }
 
-/** A loaded world's queries: a view's (`view` places its picks) or `openWorld`'s (none: `pick` throws); `edits` takes objects out (D-124). */
-export function worldQuery(w: LoadedWorld, view: (() => PickView) | null, edits: EditLog | null = null): WorldQuery {
+/** A loaded world's queries: a view's (`ViewQuery`, with picking) or `openWorld`'s (`WorldQuery`, headless); `edits` takes objects out (D-124). */
+export function worldQuery(w: LoadedWorld, view: null, edits?: EditLog | null): WorldQuery;
+export function worldQuery(w: LoadedWorld, view: () => PickView, edits?: EditLog | null): ViewQuery;
+export function worldQuery(w: LoadedWorld, view: (() => PickView) | null, edits: EditLog | null = null): WorldQuery | ViewQuery {
   const { manifest } = w;
   const heightStretch = manifest.depiction?.heightStretch ?? w.style.objects?.heightStretch ?? 1;
   // placed objects for occupancy queries: the ones the style draws, as the bake does
@@ -227,10 +232,7 @@ export function worldQuery(w: LoadedWorld, view: (() => PickView) | null, edits:
       named,
     );
   const objects = !w.objects || !assets ? null : w.chunkedObjects ? new ChunkedObjects(index(w.objects.instances), (x, y) => w.store.objectsIn(x, y), index) : index(w.objects.instances, true);
-  const noView = (): PickView => {
-    throw new Error("pick needs a world view: openWorld's queries have no screen");
-  };
-  const query = createQuery(w.store, w, w.geo, view ?? noView, objects, w.coarse);
+  const query: WorldQuery | ViewQuery = view ? createQuery(w.store, w, w.geo, view, objects, w.coarse) : createQuery(w.store, w, w.geo, null, objects, w.coarse);
   return query;
 }
 
@@ -437,7 +439,7 @@ export function objectTiles(w: LoadedWorld, object: number): [number, number][] 
  * where the bake code's identity is known (BAKE_CODE, D-072): without it a
  * code change couldn't make old tiles unreachable, so none are kept.
  */
-export async function openTileCache(option: WorldViewOptions["cache"], code = BAKE_CODE): Promise<TileStore | null> {
+export async function openTileCache(option: boolean | TileStore | undefined, code = BAKE_CODE): Promise<TileStore | null> {
   if (option === false) return null;
   if (option !== true && option !== undefined) return option; // the app's own store
   if (code === null) {

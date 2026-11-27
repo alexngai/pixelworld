@@ -1,4 +1,5 @@
-import { toWorld, type Board, type WorldView } from "@pixelworlds/engine";
+import type { WorldView } from "@pixelworlds/engine";
+import { toWorld, type Board } from "@pixelworlds/engine/boards";
 import { planeAt, riseAt, standAt, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 import { band } from "./map";
 import { PixelLayer, rgba } from "./pixels";

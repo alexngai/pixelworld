@@ -1,6 +1,5 @@
-import { fogLut, type FogField, type FogFrame, type FogLut } from "@pixelworlds/runtime";
-import type { CellRect } from "./cells";
-import type { FrameInfo, Layer, LayerContext, ScreenPass } from "./types";
+import { fogLut, type FogField, type FogLut } from "./runtime";
+import type { CellRect, FogPassFrame, FrameInfo, Layer, LayerContext, ScreenPass } from "./types";
 
 /**
  * A veil over cells (D-125): a game sets how thick it lies on each cell of
@@ -24,9 +23,9 @@ export interface VeilLayerOptions {
   /**
    * Veil only what lies below this height (steps), fading in over a step
    * (D-198): the street and the towers' faces under a rooftop board, its roofs
-   * clear. Default every height.
+   * clear. Default every height (`null`).
    */
-  below?: number;
+  below?: number | null;
   enabled?: boolean;
 }
 
@@ -34,6 +33,7 @@ export class VeilLayer implements Layer {
   readonly id: string;
   readonly label: string;
   private on: boolean;
+  private ceilingSteps: number | null;
   private field: FogField | null = null;
   private lut: FogLut | null = null;
   private ctx: LayerContext | null = null;
@@ -43,6 +43,7 @@ export class VeilLayer implements Layer {
     this.id = opts.id ?? "veil";
     this.label = opts.label ?? "Veil";
     this.on = opts.enabled ?? true;
+    this.ceilingSteps = opts.below ?? null;
   }
 
   get enabled(): boolean {
@@ -51,6 +52,17 @@ export class VeilLayer implements Layer {
 
   setEnabled(on: boolean): void {
     this.on = on;
+    this.ctx?.invalidate();
+  }
+
+  /** Veil only what lies below this height (steps), or `null` for every height. */
+  get below(): number | null {
+    return this.ceilingSteps;
+  }
+
+  set below(steps: number | null) {
+    if (steps === this.ceilingSteps) return;
+    this.ceilingSteps = steps;
     this.ctx?.invalidate();
   }
 
@@ -69,9 +81,10 @@ export class VeilLayer implements Layer {
    * (0–255 for 0–1), row by row. Beyond the rectangle it lies as on its
    * nearest edge. Between cells' middles it blends.
    */
-  set(rect: CellRect, values: Uint8Array): void {
+  set(rect: CellRect, values: Uint8Array, opts?: { below?: number | null }): void {
     if (values.length !== rect.w * rect.h) throw new Error(`veil: ${values.length} values for ${rect.w} × ${rect.h} cells`);
     this.field = { width: rect.w, height: rect.h, cellsPerTexel: 1, data: values, x0: rect.x0, y0: rect.y0 };
+    if (opts && "below" in opts) this.ceilingSteps = opts.below ?? null;
     this.ctx?.invalidate();
   }
 
@@ -81,22 +94,19 @@ export class VeilLayer implements Layer {
     this.ctx?.invalidate();
   }
 
-  screenPass(frame: FrameInfo): Extract<ScreenPass, { type: "fog" }> | null {
+  screenPass(_frame: FrameInfo): Extract<ScreenPass, { type: "fog" }> | null {
     if (!this.on || !this.field || !this.lut) return null;
     const rs = this.renderScale;
-    const params: FogFrame = {
-      rotation: frame.rotation,
-      renderScale: rs,
+    const params: FogPassFrame = {
       // over every height, or below the one asked for (D-198); even, still
-      ceiling: this.opts.below !== undefined ? this.opts.below * rs : 1e9,
-      fade: this.opts.below !== undefined ? rs : 1,
+      ceiling: this.ceilingSteps !== null ? this.ceilingSteps * rs : 1e9,
+      fade: this.ceilingSteps !== null ? rs : 1,
       patchHeight: 0,
       patchCells: 1,
       patchOffset: [0, 0],
       contrast: 0,
       strength: 1,
       lut: this.lut,
-      night: frame.night,
     };
     return { type: "fog", field: this.field, frame: params };
   }

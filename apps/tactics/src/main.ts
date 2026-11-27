@@ -4,7 +4,8 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { Boards, STEEP_PROJECTION, createWorldView, roverController, type Board, type WorldView } from "@pixelworlds/engine";
+import { cameraController, createWorldView, type WorldView } from "@pixelworlds/engine";
+import { Boards, type Board } from "@pixelworlds/engine/boards";
 import { OVERRUN, SQUAD, SQUADS, arenaFromBoard, cloneCombat, rooftop, teamOf, toWire, fromWire, type Combat, type Loadout, type Puzzle, type Squad, type Threat } from "@pixelworlds/tactics";
 import { Brain } from "./brain";
 import { loadRoutes } from "@pixelworlds/sim";
@@ -101,18 +102,16 @@ async function title(pools: Record<string, Block[]>, kept: SavedRun | null): Pro
 }
 
 async function openCity(city: City): Promise<WorldView> {
-  const manifest = (await (await fetch(`/${city.world}/manifest.json`)).json()) as { style: string };
-  const style = (await STYLES[manifest.style]!()).default as { plugins?: string[] };
   const canvas = document.getElementById("view") as HTMLCanvasElement;
   const view = await createWorldView({
     canvas,
     worldUrl: `/${city.world}/`,
-    style,
-    plugins: PACKS.filter((p) => style.plugins?.includes(p.name)),
+    style: async (id) => (await STYLES[id]!()).default,
+    plugins: PACKS,
     // the higher camera (D-195): 4:3 tiles, more of the board between the buildings
-    projection: STEEP_PROJECTION,
+    projection: "steep",
     // a free camera: WASD and drags pan, Q/E rotate, 1–6 zoom
-    controller: roverController({ follow: false, visible: false, listen: { keys: window, pointer: canvas } }),
+    controller: cameraController({ listen: { keys: window, pointer: canvas } }),
   });
   view.camera.zoom = 3;
   return view;

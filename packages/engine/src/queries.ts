@@ -13,7 +13,7 @@ import {
 import type { StylePack } from "@pixelworlds/style";
 import type { WorldManifest } from "@pixelworlds/world-format";
 import type { ObjectInstance } from "@pixelworlds/generators";
-import type { LandmarkInfo, ObjectHit, PickResult, RoadInfo, SurfaceInfo, WorldQuery } from "./types";
+import type { LandmarkInfo, ObjectHit, PickResult, RoadInfo, SurfaceInfo, ViewQuery, WorldQuery } from "./types";
 
 /** The loaded terrain the queries read (a ChunkStore). */
 export interface QuerySource {
@@ -74,10 +74,26 @@ export function createQuery(
   src: QuerySource,
   world: QueryWorld,
   geo: GeoSource | null,
+  view: null,
+  objects?: ObjectSource | null,
+  coarse?: { at(x: number, y: number): { lo: number; hi: number } | null } | null,
+): WorldQuery;
+export function createQuery(
+  src: QuerySource,
+  world: QueryWorld,
+  geo: GeoSource | null,
   view: () => PickView,
+  objects?: ObjectSource | null,
+  coarse?: { at(x: number, y: number): { lo: number; hi: number } | null } | null,
+): ViewQuery;
+export function createQuery(
+  src: QuerySource,
+  world: QueryWorld,
+  geo: GeoSource | null,
+  view: (() => PickView) | null,
   objects: ObjectSource | null = null,
   coarse: { at(x: number, y: number): { lo: number; hi: number } | null } | null = null,
-): WorldQuery {
+): WorldQuery | ViewQuery {
   const rs = world.renderScale;
   const { metersPerStep, elevationDatumMeters } = world.manifest.scale;
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < src.cellsX && y < src.cellsY;
@@ -101,7 +117,7 @@ export function createQuery(
 
   /** The view ray through a canvas point (CSS px): where it is (cells) at a height (steps). */
   const ray = (screenX: number, screenY: number) => {
-    const v = view();
+    const v = view!();
     // canvas CSS px → device px → render px (the palette pass: floor(device / zoom + frac))
     const sx = v.left + (screenX * v.pixelRatio) / v.zoom + v.fracX;
     const sy = v.top + (screenY * v.pixelRatio) / v.zoom + v.fracY;
@@ -141,7 +157,7 @@ export function createQuery(
     return null;
   };
 
-  return {
+  const base: WorldQuery = {
     heightAt,
 
     surfaceAt(x, y): SurfaceInfo | null {
@@ -179,20 +195,6 @@ export function createQuery(
       };
     },
 
-    pick: (screenX, screenY) => pickGround(ray(screenX, screenY)),
-
-    pickObject(screenX, screenY): ObjectHit | null {
-      const at = ray(screenX, screenY);
-      const ground = pickGround(at);
-      if (!ground || !objects) return null;
-      // March down the view ray from the highest object top to the ground: the first object it is inside is drawn there.
-      for (let h = objects.highest(world.heightRange[1]); h >= ground.h; h -= PICK_STEP) {
-        const [x, y] = at(h);
-        for (const o of objects.at(x, y)) if (o.base !== null && h >= o.base && h <= (o.top ?? o.base + POINT_TOP / rs)) return o;
-      }
-      return null;
-    },
-
     lonLatToCell: (lon, lat) => (geo ? geo.lonLatToCell(lon, lat) : null),
     cellToLonLat: (x, y) => (geo ? geo.cellToLonLat(x, y) : null),
 
@@ -211,5 +213,22 @@ export function createQuery(
     objectsAt: (x, y) => (objects ? objects.at(x, y) : []),
     landmarks: () => (objects ? objects.landmarks() : []),
     object: (index) => (objects ? objects.instance(index) : null),
+  };
+
+  if (!view) return base;
+  return {
+    ...base,
+    pick: (screenX, screenY) => pickGround(ray(screenX, screenY)),
+    pickObject(screenX, screenY): ObjectHit | null {
+      const at = ray(screenX, screenY);
+      const ground = pickGround(at);
+      if (!ground || !objects) return null;
+      // March down the view ray from the highest object top to the ground: the first object it is inside is drawn there.
+      for (let h = objects.highest(world.heightRange[1]); h >= ground.h; h -= PICK_STEP) {
+        const [x, y] = at(h);
+        for (const o of objects.at(x, y)) if (o.base !== null && h >= o.base && h <= (o.top ?? o.base + POINT_TOP / rs)) return o;
+      }
+      return null;
+    },
   };
 }

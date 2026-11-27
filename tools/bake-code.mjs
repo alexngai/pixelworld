@@ -34,9 +34,9 @@ export const TOKEN = "__PIXELWORLD_BAKE_CODE__";
 export const CODE_FILE = "packages/bake/src/code.ts";
 
 /** Module graphs that make up the bake: followed through their imports. */
-export const ROOTS = ["packages/runtime/src/bake.worker.ts", "packages/world-format/src/index.ts"];
+export const ROOTS = ["packages/engine/src/runtime/bake.worker.ts", "packages/world-format/src/index.ts"];
 /** Main-thread modules that shape a bake's input: hashed, not followed (they import the rest of the engine). */
-export const FILES = ["packages/engine/src/world.ts", "packages/runtime/src/chunkStore.ts"];
+export const FILES = ["packages/engine/src/world.ts", "packages/engine/src/runtime/chunkStore.ts"];
 
 const posix = (p) => p.split(sep).join("/");
 const isFile = (f) => existsSync(f) && statSync(f).isFile();

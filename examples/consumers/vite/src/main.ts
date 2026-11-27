@@ -1,4 +1,4 @@
-import { createWorldView, roverController, type PluginDescriptor } from "pixelworld/engine";
+import { createWorldView, roverController } from "pixelworld";
 import { cityPlugin } from "@pixelworlds/city-sf";
 
 /**
@@ -8,11 +8,6 @@ import { cityPlugin } from "@pixelworlds/city-sf";
  * default; ?world=sf-fly draws San Francisco with its city pack.
  * Arrows drive, WASD or a drag pans, Q/E rotate, 1–6 zoom.
  */
-
-// The city packs this app can load, by name. A world's style pack names the plugins its
-// generators come from (bay-area names @pixelworlds/city-sf), and the view loads those;
-// the Southwest's pack names none, so the Grand Canyon loads nothing.
-const PLUGINS: Record<string, PluginDescriptor> = { [cityPlugin.name]: cityPlugin };
 
 async function main() {
   const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
@@ -24,7 +19,7 @@ async function main() {
     worldUrl: `/worlds/${world}/`,
     // the manifest names its style pack ("desert-southwest", "bay-area"); fetch it from where you host packs
     style: (id) => fetch(`/styles/${id}/style.json`).then((r) => r.json()),
-    plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
+    plugins: [cityPlugin],
     camera: { rotation: 1 },
     controller: roverController({ listen: { keys: window, pointer: canvas } }),
   });

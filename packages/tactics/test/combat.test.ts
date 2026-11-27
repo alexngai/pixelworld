@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { Boards, openWorld, type Board } from "@pixelworlds/engine";
+import { openWorld } from "@pixelworlds/engine";
+import { Boards, type Board } from "@pixelworlds/engine/boards";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   A_BURNS,

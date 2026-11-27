@@ -1,4 +1,5 @@
-import { boardCellAt, toWorld, veilLayer, type Board, type Entity, type Rotation, type VeilLayer, type WorldView } from "@pixelworlds/engine";
+import { veilLayer, type Entity, type Rotation, type VeilLayer, type WorldView } from "@pixelworlds/engine";
+import { boardCellAt, toWorld, type Board } from "@pixelworlds/engine/boards";
 import {
   A_BURNS,
   A_WATER,
@@ -145,7 +146,6 @@ interface Label {
 
 type Phase = "pick" | "move" | "strike" | "busy" | "over";
 
-const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 /** How much of a building cut down still shows, where it stood in front (D-160). */
 const GHOST = 0.3;
 /** The sun for bakes from above (D-164): where the world's is, but high, for short shadows. */
@@ -187,17 +187,8 @@ export function rayRise(view: WorldView): number {
 
 /** Which way the camera is from a side of the view, over the ground: a world cell across each way lands straight below on screen (in any projection, D-195). */
 export function towardCamera(view: WorldView, r: number): readonly [number, number] {
-  const { camera } = view;
-  const was = camera.rotation;
-  camera.rotation = r as Rotation;
-  const at = camera.project(camera.x, camera.y, 0);
-  const d =
-    DIAGONALS.find(([dx, dy]) => {
-      const q = camera.project(camera.x + dx, camera.y + dy, 0);
-      return Math.abs(q.x - at.x) < 0.01 && q.y > at.y;
-    }) ?? ([1, 1] as const);
-  camera.rotation = was;
-  return d;
+  const [gx, gy] = view.camera.screenDirToGrid(0, 1, r as Rotation);
+  return [Math.sign(gx) || 1, Math.sign(gy) || 1] as const;
 }
 
 export class Fight {
@@ -506,8 +497,8 @@ export class Fight {
     const side = this.side(r);
     if (this.sent[r] === side.key) return;
     this.sent[r] = side.key;
-    this.view.cutDown(side.clear.size ? side.clear : null, r as Rotation, { always: true });
-    this.view.cutDown(side.cuts.size ? side.cuts : null, r as Rotation);
+    this.view.cutaway.set(side.clear.size ? side.clear : null, r as Rotation, { always: true });
+    this.view.cutaway.set(side.cuts.size ? side.cuts : null, r as Rotation);
   }
 
   /** What one side of the view needs cut, outlined and dashed, worked out once (again when a building falls). */
@@ -1196,7 +1187,7 @@ export class Fight {
     // in the move phase, what the rig could strike from the cell pointed at
     const focus = this.focus();
     this.cutting = this.cutawayWanted(shown, focus);
-    this.view.cutaway = this.cutting;
+    this.view.cutaway.enabled = this.cutting;
     const reach: number[] = [];
     // lines of fire: the shots and charges the rig in hand has, from where it stands in the strike phase (its weapon chosen), from the cell
     // pointed at in the move phase (every weapon's)
@@ -1226,7 +1217,7 @@ export class Fight {
     }
     // the fight's buildings cut away, each drawn as itself over the cut (D-162), far to near: solid, but faint where in the way (D-166)
     const alphas = this.ghostAlphas(shown, focus);
-    this.view.setLoneGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
+    this.view.cutaway.setGhosts(this.cutting ? this.ghosts.map((id, n) => ({ object: c.arena.structures[id]!.object, alpha: alphas[n] ?? GHOST })) : null);
     const goals = (this.puzzle.objectives ?? []).flatMap((ob) => (ob.kind === "evacuate" && objectiveState(ob, this.start, shown, false) === "open" ? [ob.structure] : []));
     this.glass.set({
       state: shown,
@@ -2101,10 +2092,7 @@ export class Fight {
     for (const e of this.entities) e?.remove();
     for (const f of this.fx) for (const e of f.entities) e.remove();
     this.fx.clear();
-    this.view.cutDown(null, undefined, { always: true });
-    this.view.cutDown(null);
-    this.view.cutaway = true;
-    this.view.setLoneGhosts(null);
+    this.view.cutaway.clear();
     this.view.layers.remove(this.veil.id);
     if (this.under) this.view.layers.remove(this.under.id);
     for (const l of this.labels.values()) l.el.remove();

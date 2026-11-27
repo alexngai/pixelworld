@@ -1,4 +1,5 @@
-import { CELL_TREES, CELL_WALL, CELL_WATER, boardCellAt, toWorld, type Board, type WorldQuery } from "@pixelworlds/engine";
+import type { WorldQuery } from "@pixelworlds/engine";
+import { CELL_TREES, CELL_WALL, CELL_WATER, boardCellAt, toWorld, type Board } from "@pixelworlds/engine/boards";
 import { objectInfo } from "./buildings";
 
 /**

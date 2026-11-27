@@ -39,6 +39,36 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@24.19.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))
 
+  apps/demos:
+    dependencies:
+      '@pixelworlds/city-hongkong':
+        specifier: workspace:*
+        version: link:../../packages/city-hongkong
+      '@pixelworlds/city-kyoto':
+        specifier: workspace:*
+        version: link:../../packages/city-kyoto
+      '@pixelworlds/city-nyc':
+        specifier: workspace:*
+        version: link:../../packages/city-nyc
+      '@pixelworlds/city-paris':
+        specifier: workspace:*
+        version: link:../../packages/city-paris
+      '@pixelworlds/city-sf':
+        specifier: workspace:*
+        version: link:../../packages/city-sf
+      '@pixelworlds/city-tokyo':
+        specifier: workspace:*
+        version: link:../../packages/city-tokyo
+      '@pixelworlds/game':
+        specifier: workspace:*
+        version: link:../game
+      '@pixelworlds/multiplayer':
+        specifier: workspace:*
+        version: link:../../packages/multiplayer
+      pixelworld:
+        specifier: workspace:*
+        version: link:../../packages/pixelworld
+
   apps/editor: {}
 
   apps/game:
@@ -252,9 +282,6 @@ importers:
       '@pixelworlds/grid':
         specifier: workspace:*
         version: link:../grid
-      '@pixelworlds/runtime':
-        specifier: workspace:*
-        version: link:../runtime
       '@pixelworlds/style':
         specifier: workspace:*
         version: link:../style
@@ -279,24 +306,6 @@ importers:
         specifier: 8.18.3
         version: 8.18.3
     devDependencies:
-      '@pixelworlds/city-hongkong':
-        specifier: workspace:*
-        version: link:../city-hongkong
-      '@pixelworlds/city-kyoto':
-        specifier: workspace:*
-        version: link:../city-kyoto
-      '@pixelworlds/city-nyc':
-        specifier: workspace:*
-        version: link:../city-nyc
-      '@pixelworlds/city-sf':
-        specifier: workspace:*
-        version: link:../city-sf
-      '@pixelworlds/city-tokyo':
-        specifier: workspace:*
-        version: link:../city-tokyo
-      '@pixelworlds/game':
-        specifier: workspace:*
-        version: link:../../apps/game
       '@types/ws':
         specifier: 8.18.1
         version: 8.18.1
@@ -339,24 +348,6 @@ importers:
       typedoc:
         specifier: 0.28.20
         version: 0.28.20(typescript@6.0.3)
-
-  packages/runtime:
-    dependencies:
-      '@pixelworlds/bake':
-        specifier: workspace:*
-        version: link:../bake
-      '@pixelworlds/generators':
-        specifier: workspace:*
-        version: link:../generators
-      '@pixelworlds/grid':
-        specifier: workspace:*
-        version: link:../grid
-      '@pixelworlds/style':
-        specifier: workspace:*
-        version: link:../style
-      '@pixelworlds/world-format':
-        specifier: workspace:*
-        version: link:../world-format
 
   packages/sim:
     dependencies:

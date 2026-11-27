@@ -1,5 +1,5 @@
 import type { RouteNetwork } from "@pixelworlds/sim";
-import { Minimap } from "@pixelworlds/engine";
+import { Minimap } from "@pixelworlds/engine/maps";
 
 /**
  * The game's HUD: speed, level and place (top left), a hint line (bottom),

@@ -20,7 +20,7 @@ import { gunzipSync } from "node:zlib";
 const REPO = fileURLToPath(new URL("..", import.meta.url));
 
 /** The subpath exports, each with ESM and declarations. */
-export const SUBPATHS = ["engine", "format", "grid", "style", "generators", "traffic"];
+export const SUBPATHS = ["engine", "boards", "maps", "format", "grid", "style", "generators", "traffic"];
 export const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })';
 
 /**
@@ -83,6 +83,18 @@ export function checkPackage(files, { licences = null } = {}) {
     if (pkg[field] && Object.keys(pkg[field]).length) problems.push(`"${field}" isn't empty: the build bundles everything`);
   if (JSON.stringify(pkg).includes("workspace:")) problems.push("package.json still has workspace: ranges");
   if (pkg.publishConfig?.exports) problems.push("publishConfig.exports wasn't applied (pack with pnpm)");
+
+  const rootExp = pkg.exports?.["."];
+  if (!rootExp || typeof rootExp !== "object") problems.push('no root export "."');
+  else {
+    if (Object.keys(rootExp)[0] !== "types") problems.push('".": "types" must come first');
+    for (const cond of ["types", "import"]) {
+      const target = rootExp[cond]?.replace(/^\.\//, "");
+      if (!target) problems.push(`"." has no "${cond}"`);
+      else if (!has(target)) problems.push(`"." ${cond} → ${target}, which isn't in the tarball`);
+    }
+    if (has("dist/index.js") && !has("dist/index.js.map")) problems.push("dist/index.js has no source map");
+  }
 
   for (const sub of SUBPATHS) {
     const exp = pkg.exports?.[`./${sub}`];

@@ -1,6 +1,6 @@
 import { ISO_PROJECTION, tileAspect, unprojectAtHeight, type Projection, type Rotation } from "@pixelworlds/grid";
-import { fogInView, fogNoise, fogPatchOffset, setupFog, type FogFrame, type FogSetup } from "@pixelworlds/runtime";
-import type { FrameInfo, Layer, LayerContext, ScreenPass, WorldInfo, WorldQuery } from "./types";
+import { fogInView, fogNoise, fogPatchOffset, setupFog, type FogSetup } from "./runtime";
+import type { FogPassFrame, FrameInfo, Layer, LayerContext, ScreenPass, WorldInfo, WorldQuery } from "./types";
 
 /**
  * Fog (D-063), an atmosphere layer: where the style pack has fog over the
@@ -116,7 +116,7 @@ export class FogLayer implements Layer {
     projection: Projection,
     night: boolean,
     view: { left: number; top: number; width: number; height: number },
-  ): FogFrame | null {
+  ): FogPassFrame | null {
     const s = this.setup!;
     const rs = this.renderScale;
     const thinner = this.follow ? tileAspect(ISO_PROJECTION) / tileAspect(projection) : 1;
@@ -136,9 +136,6 @@ export class FogLayer implements Layer {
       );
     if (!this.inView) return null;
     return {
-      rotation,
-      projection,
-      renderScale: rs,
       ceiling: s.ceiling * rs,
       fade: s.fade * rs,
       // patches float at the top of the thick fog
@@ -148,7 +145,6 @@ export class FogLayer implements Layer {
       contrast: s.contrast,
       strength,
       lut: s.lut,
-      night,
     };
   }
 

@@ -1,4 +1,4 @@
-import { CELL_ROAD, CELL_WATER, cellsOf, settleCell, type CellObject, type CellPoint, type Cells, type ReadCellsOptions } from "./cells";
+import { CELL_ROAD, CELL_WATER, cellsOf, isTree, isWall, settleCell, type CellObject, type CellPoint, type Cells, type ReadCellsOptions } from "./cells";
 import { cellsArea } from "./edits";
 import type { ObjectHit, WorldEdits, WorldInfo, WorldQuery } from "./types";
 
@@ -83,9 +83,6 @@ export function boardBounds(b: Board): [number, number, number, number] {
 
 /** Cells round a board whose ground `Boards.add` loads too: as far as the object index files a landmark from its anchor. */
 const REACH = 16;
-
-const isTree = (o: ObjectHit) => o.group === "tree" || o.group.startsWith("tree.");
-const isWall = (o: ObjectHit) => !isTree(o) && !o.group.startsWith("prop.");
 
 /**
  * Cut a board from a world's queries (the terrain and objects under it

@@ -29,10 +29,10 @@ const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const ROOT = here("../../");
 const DIST = here("./dist/");
 
-/** The subpath exports: `pixelworld/<name>` is built from src/<name>.ts. */
-const ENTRIES = ["engine", "format", "grid", "style", "generators", "traffic"];
+/** The entry points: `pixelworld` (index) and `pixelworld/<name>` built from src/<name>.ts. */
+const ENTRIES = ["index", "engine", "boards", "maps", "format", "grid", "style", "generators", "traffic"];
 const entry = Object.fromEntries(ENTRIES.map((e) => [e, here(`src/${e}.ts`)]));
-const WORKER_ENTRY = here("../runtime/src/bake.worker.ts");
+const WORKER_ENTRY = here("../engine/src/runtime/bake.worker.ts");
 const WORKER_SRC = /new URL\(\s*(["'])\.\/bake\.worker\.ts\1\s*,\s*import\.meta\.url\s*\)/g;
 const WORKER_LITERAL = 'new Worker(new URL("./bake.worker.js", import.meta.url), { type: "module" })';
 const PRIVATE_IMPORT = /(?:from|import)\s*\(?\s*["']@pixelworlds\//;
@@ -43,7 +43,7 @@ const DYNAMIC_IMPORT = /(?<![\w$.])import\s*\(((?:\s|\/\*[\s\S]*?\*\/)*)(["'`])?
 const workerUrlPlugin = {
   name: "pixelworld-worker-url",
   setup(b) {
-    b.onLoad({ filter: /[\\/]runtime[\\/]src[\\/]bakeService\.ts$/ }, async (args) => {
+    b.onLoad({ filter: /[\\/]engine[\\/]src[\\/]runtime[\\/]bakeService\.ts$/ }, async (args) => {
       const src = await readFile(args.path, "utf8");
       const out = src.replace(WORKER_SRC, 'new URL("./bake.worker.js", import.meta.url)');
       if (out === src) throw new Error(`${args.path}: no new URL("./bake.worker.ts", import.meta.url) to rewrite`);

@@ -3,9 +3,10 @@ import { SCHEMAS, SUBPATHS, WORKER_LITERAL, checkPackage, sizes } from "./pack-c
 
 /** A tarball's files as pnpm would pack a good build of packages/pixelworld. */
 function goodPackage() {
-  const exports = Object.fromEntries(
-    SUBPATHS.map((s) => [`./${s}`, { types: `./dist/${s}.d.ts`, import: `./dist/${s}.js` }]),
-  );
+  const exports = {
+    ".": { types: "./dist/index.d.ts", import: "./dist/index.js" },
+    ...Object.fromEntries(SUBPATHS.map((s) => [`./${s}`, { types: `./dist/${s}.d.ts`, import: `./dist/${s}.js` }])),
+  };
   exports["./bake.worker.js"] = { types: "./dist/bake.worker.d.ts", default: "./dist/bake.worker.js" };
   for (const f of SCHEMAS) exports[`./${f}`] = `./dist/${f}`;
   const pkg = {
@@ -30,6 +31,9 @@ function goodPackage() {
     ["dist/chunk-ABC.js", Buffer.from(`export const x = 1;`)],
   ]);
   for (const f of SCHEMAS) files.set(`dist/${f}`, Buffer.from("{}"));
+  files.set("dist/index.js", Buffer.from(`export * from "./engine.js";`));
+  files.set("dist/index.js.map", Buffer.from("{}"));
+  files.set("dist/index.d.ts", Buffer.from("export {};"));
   for (const s of SUBPATHS) {
     const body = s === "engine" ? `export function make() { return ${WORKER_LITERAL}; }` : `export * from "./chunk-ABC.js";`;
     files.set(`dist/${s}.js`, Buffer.from(body));

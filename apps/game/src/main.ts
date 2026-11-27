@@ -194,7 +194,7 @@ async function main() {
       }),
     frames: () => game.frames.summary(),
     resetFrames: () => game.frames.reset(),
-    timeFrames: (n) => game.view.timeFrames(n),
+    timeFrames: (n) => game.view.tools.timeFrames(n),
     stats: () => game.view.stats(),
   };
 

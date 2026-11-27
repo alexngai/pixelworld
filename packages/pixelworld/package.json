@@ -27,7 +27,10 @@
     "./dist/bake.worker.js"
   ],
   "exports": {
+    ".": "./src/index.ts",
     "./engine": "./src/engine.ts",
+    "./boards": "./src/boards.ts",
+    "./maps": "./src/maps.ts",
     "./format": "./src/format.ts",
     "./grid": "./src/grid.ts",
     "./style": "./src/style.ts",
@@ -38,9 +41,21 @@
   "publishConfig": {
     "access": "public",
     "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
       "./engine": {
         "types": "./dist/engine.d.ts",
         "import": "./dist/engine.js"
+      },
+      "./boards": {
+        "types": "./dist/boards.d.ts",
+        "import": "./dist/boards.js"
+      },
+      "./maps": {
+        "types": "./dist/maps.d.ts",
+        "import": "./dist/maps.js"
       },
       "./format": {
         "types": "./dist/format.d.ts",

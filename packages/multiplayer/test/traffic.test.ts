@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { stylePack } from "@pixelworlds/game/src/styles";
 import { openWorld } from "pixelworld/engine";
 import { TrafficSim, loadRoutes, type Pose, type RouteNetwork } from "pixelworld/traffic";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -12,6 +11,7 @@ import { RemoteTraffic, ServerClock, vehiclesNet } from "../src/index";
  */
 
 const ROOT = new URL("../../../", import.meta.url);
+const stylePack = (id: string) => JSON.parse(readFileSync(new URL(`worlds/_styles/${id}/style.json`, ROOT), "utf8")) as object;
 /** The Presidio, from Baker Beach to Crissy Field (Fogfront's map). */
 const AREA = { x0: 118, y0: 140, w: 144, h: 110 };
 

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { Boards, openWorld } from "@pixelworlds/engine";
+import { openWorld } from "@pixelworlds/engine";
+import { Boards } from "@pixelworlds/engine/boards";
 import { it, vi } from "vitest";
 import { FIGHTERS, SQUAD, SQUADS, arenaFromBoard, cloneCombat, generatePuzzle, loadoutOf, solveFight, solveTurn, teamOf, type Combat, type Squad } from "../src/index";
 

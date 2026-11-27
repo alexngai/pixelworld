@@ -49,7 +49,9 @@ describe("openWorld: a world's queries without a view (D-111)", () => {
     await query.ensure(dam.x - 1, dam.y - 1, dam.x + 1, dam.y + 1);
     expect(query.objectsAt(dam.x, dam.y).map((o) => o.id)).toContain("hoover-dam");
 
-    expect(() => query.pick(0, 0)).toThrow("pick needs a world view");
+    // headless WorldQuery omits screen-picking methods at both type and runtime level
+    expect("pick" in query).toBe(false);
+    expect("pickObject" in query).toBe(false);
   });
 
   it("takes a Presidio building out of San Francisco's level, freeing its cells, and puts it back (D-124)", async () => {

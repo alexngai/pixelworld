@@ -6,6 +6,8 @@
     // the private workspace packages, by source, so their declarations are
     // bundled into dist/*.d.ts rather than imported (they aren't published)
     "paths": {
+      "@pixelworlds/engine/boards": ["../engine/src/boardsIndex.ts"],
+      "@pixelworlds/engine/maps": ["../engine/src/mapsIndex.ts"],
       "@pixelworlds/*": ["../*/src/index.ts"]
     }
   },

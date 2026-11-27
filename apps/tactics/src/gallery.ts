@@ -4,7 +4,8 @@ import { cityPlugin as newYork } from "@pixelworlds/city-nyc";
 import { cityPlugin as paris } from "@pixelworlds/city-paris";
 import { cityPlugin as sanFrancisco } from "@pixelworlds/city-sf";
 import { cityPlugin as tokyo } from "@pixelworlds/city-tokyo";
-import { Boards, STEEP_PROJECTION, createWorldView, roverController, type Board, type Rotation, type WorldView } from "@pixelworlds/engine";
+import { cameraController, createWorldView, type Rotation, type WorldView } from "@pixelworlds/engine";
+import { Boards, type Board } from "@pixelworlds/engine/boards";
 import { BoardOverlay } from "@pixelworlds/tactics";
 import "./gallery.css";
 import { CITIES } from "./sites";
@@ -77,18 +78,16 @@ const list = (show === "samples" ? data.samples : show === "unrated" ? all.filte
 let at = Math.min(list.length - 1, Math.max(0, Number(params.get("at") ?? 0)));
 
 // ---------------------------------------------------------------- the city view
-const manifest = (await (await fetch(`/${world}/manifest.json`)).json()) as { style: string };
-const style = (await STYLES[manifest.style]!()).default as { plugins?: string[] };
 const canvas = $("view") as HTMLCanvasElement;
 const view: WorldView = await createWorldView({
   canvas,
   worldUrl: `/${world}/`,
-  style,
-  plugins: PACKS.filter((p) => style.plugins?.includes(p.name)),
+  style: async (id) => (await STYLES[id]!()).default,
+  plugins: PACKS,
   // as the game draws its fights (D-195)
-  projection: STEEP_PROJECTION,
+  projection: "steep",
   // its keys only while the view has the focus: the page's own are 1–3, J, K, N
-  controller: roverController({ follow: false, visible: false, listen: { keys: canvas, pointer: canvas } }),
+  controller: cameraController({ listen: { keys: canvas, pointer: canvas } }),
 });
 const boards = new Boards(view);
 let board: Board | null = null;
@@ -115,13 +114,13 @@ async function lookAt(s: Site): Promise<void> {
   const r = rotationFor(s.toward);
   cam.rotation = r;
   // what the game cuts away in front, from this side (D-168)
-  view.cutDown(null, undefined, { always: true });
+  view.cutaway.set(null, undefined, { always: true });
   const cuts = new Map<number, number>();
   for (const o of s.cutObjects) {
     const inst = view.query.object(o);
     if (inst) cuts.set(o, (view.query.heightAt(inst.x, inst.y) ?? 0) + 0.05);
   }
-  view.cutDown(cuts.size ? cuts : null, r, { always: true });
+  view.cutaway.set(cuts.size ? cuts : null, r, { always: true });
   if (board) {
     view.layers.remove("survey-board");
     boards.remove(board);

@@ -1,5 +1,5 @@
 import { ISO_PROJECTION, type Projection, type Rotation } from "@pixelworlds/grid";
-import { cellsScreenRect, tileKey, type TileRequest } from "@pixelworlds/runtime";
+import { cellsScreenRect, tileKey, type TileRequest } from "./runtime";
 
 const PREFETCH_PX = 96; // bake tiles this far outside the view
 

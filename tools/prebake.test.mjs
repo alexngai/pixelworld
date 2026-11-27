@@ -1,6 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { StartTiles } from "../packages/runtime/src/tileCache";
+import { StartTiles } from "../packages/engine/src/runtime/tileCache";
 import { decodePackKeys, encodePack } from "./prebake.mjs";
 
 describe("start tiles (tools/prebake.mjs)", () => {

@@ -1,5 +1,5 @@
 import { KNOWN_PLUGIN_GENERATORS, getGenerator, listGenerators, loadPlugin, registerPlugin, type PluginDescriptor } from "@pixelworlds/generators";
-import { hashString, type PluginRef } from "@pixelworlds/runtime";
+import { hashString, type PluginRef } from "./runtime";
 import { generatorIssues, styleIssuesError, type StylePack } from "@pixelworlds/style";
 import type { WorldViewOptions } from "./types";
 
@@ -24,13 +24,24 @@ export interface ViewPlugins {
 }
 
 /**
- * The plugins to load: the option as given, or what its function returns for
- * the names the style pack asks for. A name the style asks for that isn't
- * among them is warned about: its generators won't be there.
+ * The plugins to load: when given an array of descriptors, automatically
+ * selects only those the style pack names in `plugins` (so callers can pass
+ * all available city packs without loading unused ones into workers). A
+ * function may still be passed for lazy/custom resolution. A name the style
+ * asks for that isn't among them is warned about: its generators won't be
+ * there.
  */
 export function viewPlugins(option: WorldViewOptions["plugins"], styleJson: object, styleId: string): ViewPlugins {
   const wanted = stylePlugins(styleJson);
-  const descriptors = (typeof option === "function" ? option(wanted) : option) ?? [];
+  const descriptors =
+    typeof option === "function"
+      ? option(wanted)
+      : option
+        ? wanted.flatMap((name) => {
+            const found = option.find((d) => d.name === name);
+            return found ? [found] : [];
+          })
+        : [];
   const missing = wanted.filter((n) => !descriptors.some((d) => d.name === n));
   if (missing.length)
     console.warn(

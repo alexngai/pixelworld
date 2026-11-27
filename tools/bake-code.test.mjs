@@ -26,10 +26,10 @@ describe("the bake code's identity", () => {
       "packages/generators/src/assets.ts",
       "packages/grid/src/terrain.ts",
       "packages/style/src/index.ts",
-      "packages/runtime/src/bake.worker.ts",
-      "packages/runtime/src/bakeHost.ts",
-      "packages/runtime/src/heroPaint.ts",
-      "packages/runtime/src/chunkStore.ts",
+      "packages/engine/src/runtime/bake.worker.ts",
+      "packages/engine/src/runtime/bakeHost.ts",
+      "packages/engine/src/runtime/heroPaint.ts",
+      "packages/engine/src/runtime/chunkStore.ts",
       "packages/world-format/src/chunk.ts",
       "packages/engine/src/world.ts",
       CODE_FILE,
@@ -37,9 +37,9 @@ describe("the bake code's identity", () => {
       expect(files, f).toContain(f);
     // what draws the baked tiles, or never reaches a bake
     for (const f of [
-      "packages/runtime/src/compositor.ts",
-      "packages/runtime/src/camera.ts",
-      "packages/runtime/src/tileCache.ts",
+      "packages/engine/src/runtime/compositor.ts",
+      "packages/engine/src/runtime/camera.ts",
+      "packages/engine/src/runtime/tileCache.ts",
       "packages/engine/src/view.ts",
       "packages/engine/src/camera.ts",
       "packages/engine/src/rover.ts",
@@ -61,7 +61,7 @@ describe("the bake code's identity", () => {
       "packages/generators/src/voxel.ts",
       "packages/bake/src/baker.ts",
       "packages/bake/src/shaders.ts",
-      "packages/runtime/src/bakeHost.ts",
+      "packages/engine/src/runtime/bakeHost.ts",
       "packages/engine/src/world.ts",
       "packages/world-format/src/chunk.ts",
     ])
@@ -69,14 +69,14 @@ describe("the bake code's identity", () => {
   });
 
   it("stays the same when code outside the bake changes", () => {
-    for (const f of ["packages/runtime/src/compositor.ts", "packages/engine/src/view.ts", "packages/engine/src/rover.ts"])
+    for (const f of ["packages/engine/src/runtime/compositor.ts", "packages/engine/src/view.ts", "packages/engine/src/rover.ts"])
       expect(bakeCodeHash(REPO, editing(f)), f).toBe(hash);
   });
 
   it("follows a new import into the bake", () => {
     // builtins.ts importing the compositor brings it into the bake's code
-    const read = editing("packages/generators/src/builtins.ts", (t) => `import "../../runtime/src/compositor";\n${t}`);
-    expect(bakeCodeIdentity(REPO, read).files).toContain("packages/runtime/src/compositor.ts");
+    const read = editing("packages/generators/src/builtins.ts", (t) => `import "../../engine/src/runtime/compositor";\n${t}`);
+    expect(bakeCodeIdentity(REPO, read).files).toContain("packages/engine/src/runtime/compositor.ts");
   });
 });
 
@@ -97,6 +97,6 @@ describe("the Vite plugin", () => {
     plugin.transform(`export const c = ${TOKEN};`, join(REPO, CODE_FILE)); // what it hashed then
     const hot = (file) => plugin.hotUpdate.call(context, { file, modules: [edited] });
     expect(hot(join(REPO, "packages/generators/src/builtins.ts"))).toEqual([edited, codeModule]);
-    expect(hot(join(REPO, "packages/runtime/src/compositor.ts"))).toBeUndefined();
+    expect(hot(join(REPO, "packages/engine/src/runtime/compositor.ts"))).toBeUndefined();
   });
 });

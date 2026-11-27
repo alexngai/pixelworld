@@ -54,7 +54,7 @@
           style: (id) => fetch(`./styles/${id}/style.json`).then((r) => r.json()),
           camera: { rotation: 1 },
           controller: roverController({ listen: { keys: window, pointer: canvas } }),
-          workerUrl,
+          baking: { workerUrl },
         });
         await view.ready();
         const { bakeMode, tilesBaked } = view.stats();

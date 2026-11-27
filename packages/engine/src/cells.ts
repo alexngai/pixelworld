@@ -1,5 +1,6 @@
 import { cellsArea } from "./edits";
-import type { ObjectHit, WorldEdits, WorldQuery } from "./types";
+import type { CellRect, ObjectHit, WorldEdits, WorldQuery } from "./types";
+export type { CellRect };
 
 /**
  * A rectangle of a world's cells read once from its queries, for games
@@ -20,14 +21,6 @@ export const CELL_WALL = 2;
 export const CELL_ROAD = 4;
 /** Trees stand there. */
 export const CELL_TREES = 8;
-
-export interface CellRect {
-  /** The top-left cell (the world's), and the size in cells. */
-  x0: number;
-  y0: number;
-  w: number;
-  h: number;
-}
 
 export interface CellPoint {
   x: number;
@@ -74,8 +67,8 @@ export interface ReadCellsOptions {
   onObject?: (o: ObjectHit, cell: number) => void;
 }
 
-const isTree = (o: ObjectHit) => o.group === "tree" || o.group.startsWith("tree.");
-const isWall = (o: ObjectHit) => !isTree(o) && !o.group.startsWith("prop.");
+export const isTree = (o: ObjectHit) => o.group === "tree" || o.group.startsWith("tree.");
+export const isWall = (o: ObjectHit) => !isTree(o) && !o.group.startsWith("prop.");
 
 /**
  * Read a rectangle's cells from a world's queries, at each cell's middle

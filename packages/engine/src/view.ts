@@ -1,6 +1,6 @@
 import { topDownProjection, type BakedImage } from "@pixelworlds/bake";
 import { footprintBounds, generateModel, modelBoxes, resolveAsset, type Box } from "@pixelworlds/generators";
-import { ISO_PROJECTION, project, sameProjection, type Rotation } from "@pixelworlds/grid";
+import { ISO_PROJECTION, project, resolveProjection, sameProjection, type Projection, type Rotation } from "@pixelworlds/grid";
 import {
   BakeService,
   Camera,
@@ -20,7 +20,7 @@ import {
   type SpriteInstance,
   type TileKey,
   type TileRequest,
-} from "@pixelworlds/runtime";
+} from "./runtime";
 import { buildPalette, type Palette } from "@pixelworlds/style";
 import { ViewCameraImpl } from "./camera";
 import { GameClock } from "./clock";
@@ -31,6 +31,7 @@ import { Layers } from "./layers";
 import { checkGenerators, pluginsKey, registerOnMainThread, viewPlugins } from "./plugins";
 import { BakedTiles, CameraMotion, Prefetches, TileGrid, bakeOrder, shiftView, type PrefetchArea, type TileInView } from "./tiles";
 import type {
+  CutawayHost,
   TopDownImage,
   TopDownSprite,
   ControllerHost,
@@ -42,11 +43,12 @@ import type {
   TileBake,
   TileStore,
   ViewCamera,
+  ViewQuery,
   ViewState,
   ViewStats,
+  ViewTools,
   WorldEdits,
   WorldInfo,
-  WorldQuery,
   WorldView,
   WorldViewOptions,
 } from "./types";
@@ -114,22 +116,30 @@ const overlaps = (img: BakedImage, b: ScreenBox): boolean =>
  * entities in a frame loop that redraws only when something changed.
  */
 export async function createWorldView(opts: WorldViewOptions): Promise<WorldView> {
-  const w = await loadWorld(opts);
+  const render = opts.render ?? {};
+  const baking = opts.baking ?? {};
+  const w = await loadWorld({
+    worldUrl: opts.worldUrl,
+    style: opts.style,
+    renderScale: render.scale,
+    objects: render.objects,
+    chunkBudgetMB: baking.chunkBudgetMB,
+  });
   // plugins with generators (D-071): registered here, and in the bake worker before its first bake
   const plugins = viewPlugins(opts.plugins, w.styleJson, w.style.id);
   const mainThread = registerOnMainThread(plugins).then(() => checkGenerators(w.style, w.styleJson, plugins));
   mainThread.catch(() => {}); // awaited below
   const compositor = new Compositor(opts.canvas);
-  const cache = await openTileCache(opts.cache);
+  const cache = await openTileCache(baking.cache);
   // the first view's tiles baked ahead, read before the cache (tools/prebake.mjs)
-  const start = !opts.startTiles
+  const start = !baking.startTiles
     ? Promise.resolve(null)
-    : StartTiles.load(opts.startTiles === true ? new URL("start-tiles.bin", withSlash(w.base)) : opts.startTiles);
-  const keyed = cache !== null || !!opts.startTiles;
+    : StartTiles.load(baking.startTiles === true ? new URL("start-tiles.bin", withSlash(w.base)) : baking.startTiles);
+  const keyed = cache !== null || !!baking.startTiles;
   // another projection (D-195): its tiles kept apart, its hero landmarks resampled from the 2:1 view they are painted for (D-196)
-  const projection = opts.projection ?? ISO_PROJECTION;
+  const projection = resolveProjection(opts.projection);
   const iso = sameProjection(projection, ISO_PROJECTION);
-  const heroes = opts.heroes === false ? [] : await loadHeroes(w);
+  const heroes = render.heroes === false ? [] : await loadHeroes(w);
   // keyed by the package, style, bake code and the plugins' code, once they are registered here (D-072)
   const cacheKeyReady = mainThread.then(async () => tileCacheKey(w, keyed ? await pluginsKey(plugins.descriptors) : [], undefined, projection));
   cacheKeyReady.catch(() => {}); // awaited below
@@ -151,18 +161,18 @@ export async function createWorldView(opts: WorldViewOptions): Promise<WorldView
     const { slice, cells } = await tileSlice(w, t);
     return { slice, removed, ...(cells ? { cells } : {}), ...(cut ? { cut } : {}) };
   };
-  const { workerUrl } = opts;
+  const { workerUrl } = baking;
   const workerFactory = workerUrl ? () => new Worker(workerUrl, { type: "module" }) : undefined;
-  const service = await BakeService.create({ ...bakeInit(w, heroes, opts.scatter !== false), ...(iso ? {} : { projection }) }, prepare, workerFactory, {
+  const service = await BakeService.create({ ...bakeInit(w, heroes, render.scatter !== false), ...(iso ? {} : { projection }) }, prepare, workerFactory, {
     plugins: plugins.refs,
-    workers: opts.bakeWorkers ?? defaultBakeWorkers(),
+    workers: baking.workers ?? defaultBakeWorkers(),
   });
   service.failures.unloaded = plugins.missing; // named in failures of generators nobody registered (D-072)
   await mainThread.catch((e: unknown) => {
     service.dispose();
     throw e;
   });
-  const view = new View(opts, w, compositor, service, cache, await cacheKeyReady, edits, tileEdits);
+  const view = new View(opts, projection, w, compositor, service, cache, await cacheKeyReady, edits, tileEdits);
   await view.start(opts);
   return view;
 }
@@ -171,11 +181,13 @@ class View implements WorldView {
   readonly canvas: HTMLCanvasElement;
   readonly world: WorldInfo;
   readonly camera: ViewCamera;
-  readonly query: WorldQuery;
+  readonly query: ViewQuery;
   readonly entities: EntityList;
   readonly layers: LayerRegistry;
   readonly controllers: ControllerHost;
   readonly edits: WorldEdits;
+  readonly cutaway: CutawayHost;
+  readonly tools: ViewTools;
   private readonly cam: Camera;
   private readonly viewCamera: ViewCameraImpl;
   private readonly entityList: Entities;
@@ -239,6 +251,7 @@ class View implements WorldView {
 
   constructor(
     opts: WorldViewOptions,
+    projection: Projection,
     private readonly w: LoadedWorld,
     private readonly compositor: Compositor,
     private readonly service: BakeService,
@@ -247,16 +260,17 @@ class View implements WorldView {
     editLog: EditLog,
     private readonly tileEdits: TileEdits,
   ) {
+    const baking = opts.baking ?? {};
     this.canvas = opts.canvas;
-    this.cam = new Camera(1, 1, opts.projection ?? ISO_PROJECTION);
+    this.cam = new Camera(1, 1, projection);
     this.world = worldInfo(w);
     this.rs = w.renderScale;
     this.fixedSize = opts.size ?? null;
-    this.bakes = opts.recordBakes ? [] : null;
+    this.bakes = baking.recordBakes ? [] : null;
     this.replacing = opts.replace ?? null;
-    this.lookAhead = Math.max(0, opts.lookAhead ?? LOOK_AHEAD_S);
-    this.groundFirst = opts.groundFirst !== false;
-    this.idleBake = opts.idleBake !== false && cache !== null; // only worth it where tiles are kept
+    this.lookAhead = Math.max(0, baking.lookAhead ?? LOOK_AHEAD_S);
+    this.groundFirst = baking.groundFirst !== false;
+    this.idleBake = baking.idleBake !== false && cache !== null; // only worth it where tiles are kept
     const { manifest, store } = w;
     const invalidate = () => this.invalidate();
 
@@ -269,6 +283,33 @@ class View implements WorldView {
       editLog,
     );
     this.edits = editLog;
+    const getCutaway = () => this.cutawayOn;
+    const setCutaway = (on: boolean) => {
+      if (on === this.cutawayOn) return;
+      this.cutawayOn = on;
+      this.invalidate();
+    };
+    this.cutaway = {
+      get enabled() {
+        return getCutaway();
+      },
+      set enabled(on: boolean) {
+        setCutaway(on);
+      },
+      set: (cuts, rotation, cutOpts) => this.cutDown(cuts, rotation, cutOpts),
+      setGhosts: (list) => this.setLoneGhosts(list),
+      clear: () => {
+        this.cutDown(null, undefined, { always: true });
+        this.cutDown(null);
+        this.setLoneGhosts(null);
+        setCutaway(true);
+      },
+    };
+    this.tools = {
+      bakeObject: (id) => this.bakeObject(id),
+      tileBakes: () => (this.bakes ? this.bakes.slice() : []),
+      timeFrames: (n) => this.timeFrames(n),
+    };
     editLog.onChange((e) => this.edited(this.tileEdits.apply(e)));
     this.viewCamera = new ViewCameraImpl(this.cam, this.rs, invalidate, {
       ensure: (x, y) => store.ensureRect(Math.floor(x), Math.floor(y), Math.floor(x) + 1, Math.floor(y) + 1),
@@ -690,20 +731,24 @@ class View implements WorldView {
         if (!s.complete) complete = false;
       }
       const t0 = performance.now();
-      // every layer's pass in the layers' order (the style's fog, a game's veil: D-125)
+      // every layer's pass in the layers' order (the style's fog, a game's veil: D-125);
+      // the view supplies rotation, projection, renderScale and night so layers never duplicate or omit them
       const fog: (FogDraw | SteamDraw)[] = [];
       for (const layer of layers) {
         const pass = layer.screenPass?.(info);
         if (!pass) continue;
         if (pass.type === "steam") {
-          fog.push({ id: layer.id, steam: pass.frame });
+          fog.push({ id: layer.id, steam: { ...pass.frame, projection: info.projection, night: info.night } });
           continue;
         }
         if (pass.field !== this.fogFields.get(layer.id)) {
           this.compositor.setFogField(pass.field, layer.id);
           this.fogFields.set(layer.id, pass.field);
         }
-        fog.push({ id: layer.id, frame: pass.frame });
+        fog.push({
+          id: layer.id,
+          frame: { ...pass.frame, rotation: info.rotation, projection: info.projection, renderScale: info.renderScale, night: info.night },
+        });
       }
       // a layer taken out of the view: its pass goes with it
       for (const id of [...this.fogFields.keys()])
@@ -916,11 +961,7 @@ class View implements WorldView {
     };
   }
 
-  tileBakes(): TileBake[] {
-    return this.bakes ? this.bakes.slice() : [];
-  }
-
-  timeFrames(n: number): number {
+  private timeFrames(n: number): number {
     const redraw = this.redrawLast;
     if (!redraw) return NaN;
     const gl = this.compositor.gl;
@@ -934,7 +975,7 @@ class View implements WorldView {
     return (performance.now() - t0) / n;
   }
 
-  async bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]> {
+  private async bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]> {
     const { manifest, store } = this.w;
     // the object and its parts (a dam's intake towers)
     const insts = this.w.objects?.instances.filter((o) => o.id === id) ?? [];
@@ -961,7 +1002,7 @@ class View implements WorldView {
   private readonly loneImages = new Map<string, GpuImage | null>();
   private readonly loneBaking = new Set<string>();
 
-  setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void {
+  private setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void {
     this.loneList = list ?? [];
     this.dirty = true;
   }
@@ -1003,21 +1044,11 @@ class View implements WorldView {
   }
 
 
-  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts: { always?: boolean } = {}): void {
+  private cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts: { always?: boolean } = {}): void {
     const always = !!opts.always;
     for (const [r, tiles] of this.tileEdits.setCuts(cuts ?? new Map(), rotation === undefined ? [0, 1, 2, 3] : [rotation], always))
       // the cutaway's own change only its variants (D-167); those cut always, the plain tiles too (D-168)
       this.edited(tiles, [r as Rotation], always ? ["plain", "cutaway"] : ["cutaway"]);
-  }
-
-  get cutaway(): boolean {
-    return this.cutawayOn;
-  }
-
-  set cutaway(on: boolean) {
-    if (on === this.cutawayOn) return;
-    this.cutawayOn = on;
-    this.invalidate();
   }
 
   async bakeTopDown(
