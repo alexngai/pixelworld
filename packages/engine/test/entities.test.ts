@@ -1,6 +1,6 @@
 import { buildBoxesMesh, type Box } from "@pixelworlds/generators";
 import { project, type Rotation } from "@pixelworlds/grid";
-import { Camera, type GpuImage } from "@pixelworlds/runtime";
+import { Camera, type GpuImage } from "../src/runtime";
 import { describe, expect, it } from "vitest";
 import { ViewCameraImpl } from "../src/camera";
 import { Entities, headingIndex, turnBoxes } from "../src/entities";

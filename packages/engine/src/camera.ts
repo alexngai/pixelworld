@@ -1,5 +1,5 @@
 import { project, type Projection, type Rotation } from "@pixelworlds/grid";
-import type { Camera } from "@pixelworlds/runtime";
+import type { Camera } from "./runtime";
 import type { CanvasPoint, ViewCamera } from "./types";
 
 /** About one internal pixel per this many canvas pixels, when the zoom is "auto". */
@@ -127,8 +127,8 @@ export class ViewCameraImpl implements ViewCamera {
     this.changed();
   }
 
-  screenDirToGrid(dx: number, dy: number): [number, number] {
-    return this.cam.screenDirToGrid(dx, dy);
+  screenDirToGrid(dx: number, dy: number, rotation?: Rotation): [number, number] {
+    return this.cam.screenDirToGrid(dx, dy, rotation);
   }
 
   project(x: number, y: number, h: number): CanvasPoint;

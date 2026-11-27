@@ -1,4 +1,5 @@
-import { CELL_WALL, boardBounds, boardRect, type Board, type Box, type FrameInfo, type Layer, type LayerContext, type Rotation, type Sprite, type SpriteDraw, type WorldQuery } from "@pixelworlds/engine";
+import type { Box, FrameInfo, Layer, LayerContext, Rotation, Sprite, SpriteDraw, WorldQuery } from "@pixelworlds/engine";
+import { CELL_WALL, boardBounds, boardRect, type Board } from "@pixelworlds/engine/boards";
 import { rampsFor, type Role } from "./models";
 
 /**

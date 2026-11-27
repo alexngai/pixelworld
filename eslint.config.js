@@ -13,6 +13,7 @@ export default tseslint.config(
       "test-results/**",
       "playwright-report/**",
       "_site/**", // pnpm site:build
+      "tools/.*", // local scratch scripts
     ],
   },
   js.configs.recommended,

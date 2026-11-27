@@ -92,8 +92,8 @@ export interface Front {
 
 export type FrontMessage =
   | { k: "claim"; threat: number }
-  /** No fight could be made on its site: another in the district instead. */
-  | { k: "swap"; threat: number }
+  /** No fight could be made on its site (`site`, when given: refused if the threat has moved since): another in the district instead. */
+  | { k: "swap"; threat: number; site?: number }
   | { k: "report"; threat: number; held: boolean; lost: number; razed: number[] }
   /** The squad sits this wave out (D-182): it takes no block, and the wave needn't wait for it. */
   | { k: "pass" }
@@ -380,8 +380,11 @@ export function frontAct(f: Front, sites: readonly FrontSite[], players: readonl
     t.joint = false;
     return null;
   }
-  if (t.by !== by || t.result) return "that block isn't yours to fight";
+  // a threat nobody has taken may be swapped too: no fight could be made on its block, made ahead (D-185)
+  if ((t.by !== by && !(m.k === "swap" && !t.by)) || t.result) return "that block isn't yours to fight";
   if (m.k === "swap") {
+    // two pages that made no fight on it, or one behind the room: swapped once
+    if (m.site !== undefined && m.site !== t.site) return "that threat has moved";
     f.spent.push(t.site);
     const s = drawSite(f, sites, t.district);
     if (s >= 0) t.site = s;
@@ -405,7 +408,8 @@ export function frontMessage(m: unknown): FrontMessage | null {
   if (o && typeof o === "object" && o.k === "pass") return { k: "pass" };
   if (!o || typeof o !== "object" || !Number.isInteger(o.threat)) return null;
   const threat = o.threat as number;
-  if (o.k === "claim" || o.k === "swap" || o.k === "alone") return { k: o.k, threat };
+  if (o.k === "swap") return Number.isInteger(o.site) ? { k: "swap", threat, site: o.site as number } : { k: "swap", threat };
+  if (o.k === "claim" || o.k === "alone") return { k: o.k, threat };
   if (o.k !== "report" || typeof o.held !== "boolean" || typeof o.lost !== "number" || !Number.isFinite(o.lost)) return null;
   const razed = Array.isArray(o.razed) ? o.razed.filter((x): x is number => Number.isInteger(x) && x >= 0).slice(0, 400) : [];
   return { k: "report", threat, held: o.held, lost: Math.max(0, o.lost), razed };

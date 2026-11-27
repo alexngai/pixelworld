@@ -1,0 +1,41 @@
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import { fileURLToPath } from "node:url";
+import { defineConfig, type Plugin } from "vite";
+import { bakeCode } from "../../../../tools/bake-code.mjs";
+
+/**
+ * The race demo's dev server (D-119): `pnpm --filter @pixelworlds/multiplayer demo:race`
+ * serves the page with the race's rooms and lobby on the same port
+ * (ws://…/race?room=, /race/api). The production build is the three demos'
+ * together (../vite.config.ts, D-143).
+ */
+
+/**
+ * The rooms on the dev server, loaded through Vite's module runner once it
+ * listens (the config loader leaves workspace packages to Node, which can't
+ * load their TypeScript). An edit to the server takes a restart.
+ * RACE_LAG=ms holds every message back that long each way.
+ */
+const rooms: Plugin = {
+  name: "race-rooms",
+  configureServer(s) {
+    const http = s.httpServer as Server | null;
+    let lobby: ((req: IncomingMessage, res: ServerResponse) => boolean) | null = null;
+    s.middlewares.use((req, res, next) => void (lobby?.(req, res) || next()));
+    http?.once("listening", async () => {
+      const { attachRace, raceLobby } = (await s.ssrLoadModule("/server.ts")) as typeof import("./server");
+      lobby = raceLobby(attachRace(http, { lag: Number(process.env.RACE_LAG ?? 0) }));
+    });
+  },
+};
+
+const FIXTURES = fileURLToPath(new URL("../../../../fixtures", import.meta.url));
+
+export default defineConfig({
+  root: fileURLToPath(new URL(".", import.meta.url)),
+  // the committed world packages, served as static files by the dev server (/southwest/ and the rest)
+  publicDir: FIXTURES,
+  server: { port: 5254, strictPort: true },
+  worker: { format: "es" },
+  plugins: [bakeCode(), rooms], // the bake code's identity keys the tile cache (D-072)
+});

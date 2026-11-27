@@ -7,8 +7,8 @@ import type {
   RoadInfo,
   SurfaceInfo,
   ViewCamera,
+  ViewQuery,
   WorldInfo,
-  WorldQuery,
 } from "@pixelworlds/engine";
 import { ISO_PROJECTION } from "@pixelworlds/engine";
 
@@ -60,7 +60,7 @@ export class FakeWorld {
     }
   }
 
-  query(): WorldQuery {
+  query(): ViewQuery {
     const roadAt = (x: number, y: number): RoadInfo | null => {
       const c = this.cell(x, y);
       if (!c?.road) return null;

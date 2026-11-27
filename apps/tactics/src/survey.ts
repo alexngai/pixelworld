@@ -1,4 +1,5 @@
-import { Boards, CELL_TREES, CELL_WATER, readCells, type Board, type OpenedWorld } from "@pixelworlds/engine";
+import type { OpenedWorld } from "@pixelworlds/engine";
+import { Boards, CELL_TREES, CELL_WATER, readCells, type Board } from "@pixelworlds/engine/boards";
 import { arenaFromBoard, hiddenFrom, rooftop, rooftopFloor, type Arena } from "@pixelworlds/tactics";
 import weights from "../survey/weights.json";
 

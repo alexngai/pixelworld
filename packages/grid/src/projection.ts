@@ -106,6 +106,34 @@ export const STEEP_PROJECTION: Projection = {
   d: [1, 1, DEPTH_PER_STEP],
 };
 
+/** Named presets for `createWorldView({ projection })` (D-195). */
+export type ProjectionPreset = "iso" | "steep";
+
+/** Resolve a preset name or explicit projection to a `Projection` (default 2:1 `ISO_PROJECTION`). */
+export function resolveProjection(p?: ProjectionPreset | Projection): Projection {
+  if (!p || p === "iso") return ISO_PROJECTION;
+  if (p === "steep") return STEEP_PROJECTION;
+  return p;
+}
+
+/**
+ * Steps a view ray rises per world cell toward the camera: 2 in the 2:1 view,
+ * 3 in the steeper 4:3 view (D-195).
+ */
+export const rayRise = (p: Projection = ISO_PROJECTION): number => (p.y[0] + p.y[1]) / -p.y[2];
+
+/**
+ * Grid-space unit direction for a screen direction `(dx, dy)` in rotation `r`
+ * and projection `p`.
+ */
+export function screenDirToGrid(dx: number, dy: number, r: Rotation, p: Projection = ISO_PROJECTION): [number, number] {
+  const [du, dv] = unprojectView(dx, dy, 0, p);
+  const inv: Rotation = ((4 - r) % 4) as Rotation;
+  const [gx, gy] = rotateXY(du, dv, inv);
+  const len = Math.hypot(gx, gy) || 1;
+  return [gx / len, gy / len];
+}
+
 /**
  * A tile's height over its width on screen: 0.5 for the 2:1 view, 0.75 for
  * the higher camera. For a camera turned 45°, the sine of how far it looks

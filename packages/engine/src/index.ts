@@ -15,18 +15,15 @@
  */
 export { createWorldView, paletteImage } from "./view";
 // how a view lays the world out (D-195): the 2:1 view, and a higher camera
-export { ISO_PROJECTION, STEEP_PROJECTION } from "@pixelworlds/grid";
+export { ISO_PROJECTION, STEEP_PROJECTION, rayRise, resolveProjection } from "@pixelworlds/grid";
 export { openWorld } from "./world";
 export { DRAW_ONLY_LAYERS, type DroppableLayer } from "@pixelworlds/world-format";
+export { cameraController, CameraController, type CameraControllerOptions } from "./cameraController";
 export { roverController, RoverController, type RoverOptions, type RoverState } from "./rover";
 export { fogLayer, FogLayer, fogSampler, type FogLayerOptions, type FogSampler } from "./fog";
 export { steamLayer, SteamLayer, steamPlumes, type Plume, type SteamLayerOptions } from "./steam";
 export { listenTo } from "./controller";
 export { headingIndex, turnBoxes, DEFAULT_HEADINGS } from "./entities";
 export { AUTO_ZOOM_PX } from "./camera";
-export { Minimap, viewOnGround, type MinimapOptions, type MinimapRoads, type MinimapView } from "./minimap";
-export { TopDownMap, type TopDownTile } from "./topdown";
-export * from "./cells";
-export * from "./boards";
 export { veilLayer, VeilLayer, type VeilLayerOptions } from "./veil";
 export type * from "./types";

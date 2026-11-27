@@ -1,4 +1,5 @@
-import { CELL_WALL, type Board, type WorldQuery } from "@pixelworlds/engine";
+import type { WorldQuery } from "@pixelworlds/engine";
+import { CELL_WALL, type Board } from "@pixelworlds/engine/boards";
 import { describe, expect, it } from "vitest";
 import { BoardOverlay, FX_KINDS, UNIT_KINDS, entityModel, fxBoxes, objectInfo, rampsFor, unitBoxes } from "../src/index";
 

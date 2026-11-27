@@ -129,6 +129,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy . --remote-only --ha=false --config packages/multiplayer/src/demos/fly.toml --dockerfile packages/multiplayer/src/demos/Dockerfile
+      - run: flyctl deploy . --remote-only --ha=false --config apps/demos/fly.toml --dockerfile apps/demos/Dockerfile
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

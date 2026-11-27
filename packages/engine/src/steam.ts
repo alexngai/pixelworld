@@ -1,7 +1,7 @@
 import type { ObjectInstance } from "@pixelworlds/generators";
-import { MAX_PLUMES, fogLut, loadObjects, type FogLut, type SteamFrame } from "@pixelworlds/runtime";
+import { MAX_PLUMES, fogLut, loadObjects, type FogLut } from "./runtime";
 import type { SteamStyle } from "@pixelworlds/style";
-import type { FrameInfo, Layer, LayerContext, ScreenPass } from "./types";
+import type { FrameInfo, Layer, LayerContext, ScreenPass, SteamPassFrame } from "./types";
 
 /**
  * Steam (D-138), an atmosphere layer: a plume over every placed object of
@@ -196,14 +196,13 @@ export class SteamLayer implements Layer {
     this.inView = count > 0;
     if (!count) return null;
     const pxPerStep = -frame.projection.y[2] * rs;
-    const params: SteamFrame = {
+    const params: SteamPassFrame = {
       a: this.a,
       b: this.b,
       count,
       rise: this.clock * RISE_MPS * this.stepsPerMeter * pxPerStep,
       strength,
       lut: this.lut,
-      night: frame.night,
     };
     return { type: "steam", frame: params };
   }

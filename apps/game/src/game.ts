@@ -221,11 +221,6 @@ export class Game {
       worldUrl,
       style: opts.style,
       size: opts.size,
-      cache: opts.cache ?? true,
-      startTiles: opts.startTiles !== false,
-      ...(opts.bakeWorkers ? { bakeWorkers: opts.bakeWorkers } : {}),
-      ...(opts.groundFirst === false ? { groundFirst: false } : {}),
-      ...(opts.idleBake === false ? { idleBake: false } : {}),
       ...(opts.projection ? { projection: opts.projection } : {}),
       camera: old
         ? { rotation: old.camera.rotation, zoom: old.camera.autoZoom ? "auto" : old.camera.zoom }
@@ -234,6 +229,13 @@ export class Game {
       controller,
       plugins: opts.plugins,
       replace: old,
+      baking: {
+        cache: opts.cache ?? true,
+        startTiles: opts.startTiles !== false,
+        ...(opts.bakeWorkers ? { workers: opts.bakeWorkers } : {}),
+        ...(opts.groundFirst === false ? { groundFirst: false } : {}),
+        ...(opts.idleBake === false ? { idleBake: false } : {}),
+      },
     });
     if (same) await view.controllers.use(controller);
     else if (old?.paused) view.paused = true; // still paused on the other level

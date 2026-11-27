@@ -1,5 +1,5 @@
 import { project } from "@pixelworlds/grid";
-import type { TileRequest } from "@pixelworlds/runtime";
+import type { TileRequest } from "../src/runtime";
 import { describe, expect, it } from "vitest";
 import { BakedTiles, CameraMotion, MAX_CAMERA_SPEED, Prefetches, TileGrid, bakeOrder, shiftView, type TileInView } from "../src/tiles";
 

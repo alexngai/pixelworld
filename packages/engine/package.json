@@ -5,13 +5,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./boards": "./src/boardsIndex.ts",
+    "./maps": "./src/mapsIndex.ts"
   },
   "dependencies": {
     "@pixelworlds/bake": "workspace:*",
     "@pixelworlds/generators": "workspace:*",
     "@pixelworlds/grid": "workspace:*",
-    "@pixelworlds/runtime": "workspace:*",
     "@pixelworlds/style": "workspace:*",
     "@pixelworlds/world-format": "workspace:*"
   }

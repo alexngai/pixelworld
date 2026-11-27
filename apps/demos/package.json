@@ -1,0 +1,26 @@
+{
+  "name": "@pixelworlds/demos",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "Hosted multiplayer demos (dogfight, race, Fogfront RTS) and production Fly.io server",
+  "type": "module",
+  "scripts": {
+    "demo:dogfight": "vite --config src/dogfight/vite.config.ts",
+    "demo:race": "vite --config src/race/vite.config.ts",
+    "demo:rts": "vite --config src/rts/vite.config.ts",
+    "build": "vite build && vite build ../tactics --config ../tactics/vite.config.ts --mode play --base /tactics/ --outDir ../demos/dist/client/tactics --emptyOutDir && vite build --ssr serve.ts",
+    "start": "node dist/server/serve.js"
+  },
+  "dependencies": {
+    "@pixelworlds/city-hongkong": "workspace:*",
+    "@pixelworlds/city-kyoto": "workspace:*",
+    "@pixelworlds/city-nyc": "workspace:*",
+    "@pixelworlds/city-paris": "workspace:*",
+    "@pixelworlds/city-sf": "workspace:*",
+    "@pixelworlds/city-tokyo": "workspace:*",
+    "@pixelworlds/game": "workspace:*",
+    "@pixelworlds/multiplayer": "workspace:*",
+    "pixelworld": "workspace:*"
+  }
+}

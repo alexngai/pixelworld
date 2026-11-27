@@ -2,7 +2,10 @@
   "$schema": "https://typedoc.org/schema.json",
   "name": "pixelworld",
   "entryPoints": [
+    "src/index.ts",
     "src/engine.ts",
+    "src/boards.ts",
+    "src/maps.ts",
     "src/traffic.ts",
     "src/format.ts",
     "src/grid.ts",

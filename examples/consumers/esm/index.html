@@ -39,6 +39,7 @@
     <script type="importmap">
       {
         "imports": {
+          "pixelworld": "./node_modules/pixelworld/dist/index.js",
           "pixelworld/engine": "./node_modules/pixelworld/dist/engine.js",
           "pixelworld/generators": "./node_modules/pixelworld/dist/generators.js",
           "pixelworld/traffic": "./node_modules/pixelworld/dist/traffic.js",
@@ -51,11 +52,8 @@
     <canvas id="world"></canvas>
     <div id="status">loading…</div>
     <script type="module">
-      import { createWorldView, roverController } from "pixelworld/engine";
+      import { createWorldView, roverController } from "pixelworld";
       import { cityPlugin } from "@pixelworlds/city-sf";
-
-      // The city packs this page can load, by name: the view loads those the world's style pack names.
-      const PLUGINS = { [cityPlugin.name]: cityPlugin };
 
       const canvas = document.querySelector("#world");
       const status = document.querySelector("#status");
@@ -70,10 +68,10 @@
           canvas,
           worldUrl: `./worlds/${world}/`,
           style: (id) => fetch(`./styles/${id}/style.json`).then((r) => r.json()),
-          plugins: (names) => names.flatMap((name) => PLUGINS[name] ?? []),
+          plugins: [cityPlugin],
           camera: { rotation: 1 },
           controller: roverController({ listen: { keys: window, pointer: canvas } }),
-          workerUrl,
+          baking: { workerUrl },
         });
         await view.ready();
         const { bakeMode, tilesBaked } = view.stats();

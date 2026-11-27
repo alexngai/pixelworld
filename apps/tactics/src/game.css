@@ -134,6 +134,11 @@ kbd {
   border-radius: 5px;
   padding: 6px 10px;
 }
+/* the top bars hold nothing to click: the pointer goes through to the roofs under them */
+.fight .top,
+.fight .bonus {
+  pointer-events: none;
+}
 .fight .top {
   top: 8px;
   left: 50%;
@@ -142,6 +147,37 @@ kbd {
   display: flex;
   gap: 10px;
   align-items: baseline;
+}
+/* the bonus objectives (D-199): under the top bar, each with where it stands */
+.fight .bonus {
+  top: 46px;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 13px;
+}
+.fight .bonus .head {
+  color: var(--warn);
+  font-weight: bold;
+}
+.fight .bonus .goal.met {
+  color: var(--good);
+}
+.fight .bonus .goal.failed {
+  color: var(--enemy);
+  text-decoration: line-through;
+}
+.fight .bonus .pay {
+  color: var(--dim);
+}
+.screen .bonuses .good {
+  color: var(--good);
+}
+.screen .bonuses .bad {
+  color: var(--enemy);
 }
 .fight .outlook {
   color: var(--dim);
@@ -671,8 +707,18 @@ kbd {
   .fight .weapon small {
     display: none;
   }
-  .fight .threats {
+  .fight .bonus {
     top: 84px;
+    left: 4px;
+    right: 4px;
+    translate: none;
+    font-size: 10px;
+    white-space: normal;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+  .fight .threats {
+    top: 112px;
     right: 4px;
     width: auto;
     max-width: 48vw;
@@ -697,7 +743,7 @@ kbd {
     font-size: 11px;
   }
   .map:not(.big) {
-    top: 84px;
+    top: 112px;
     left: 4px;
     right: auto;
     bottom: auto;

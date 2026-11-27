@@ -1,4 +1,5 @@
-import { A_WATER, DIRS, FIGHTERS, FIRE_ASH, isBurning, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import type { FireLine } from "./glass";
+import { A_CHASM, A_WATER, DIRS, FIGHTERS, FIRE_ASH, isBurning, INVADERS, riseAt, SQUAD, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
  * The board from above (D-154, D-155): the city baked straight down
@@ -18,6 +19,14 @@ export interface MapState {
   order: ReadonlyMap<number, number>;
   /** The keyboard's cell, or −1. */
   cursor: number;
+  /** What the rig in hand could strike from the cell pointed at; the cells it would reach but for a climb (and the climb, m); its lines of fire (D-201). */
+  reach?: readonly number[];
+  blocked?: ReadonlyMap<number, number>;
+  lines?: readonly FireLine[];
+  /** The damage the invaders' strikes do on each cell they hit (D-194), the buildings the strike looked at hurts (D-191), those a bonus names (D-199). */
+  hits?: ReadonlyMap<number, number>;
+  hurt?: readonly number[];
+  goals?: readonly number[];
 }
 
 const FILL: Partial<Record<Mark["kind"], string>> = { move: "rgba(89,195,106,0.45)", attack: "rgba(242,193,78,0.55)", danger: "rgba(229,72,77,0.42)", info: "rgba(242,193,78,0.22)" };
@@ -211,10 +220,18 @@ export class TacticalMap {
       if (this.art && !razed) continue;
       rect(k);
       if (razed) g.fillStyle = this.art ? "rgba(93,79,67,0.85)" : "#5d4f43";
-      else if (sid >= 0) g.fillStyle = `hsl(230, 8%, ${34 + Math.round(40 * Math.min(1, standAt(c, k) / 30))}%)`;
+      else if (sid >= 0) g.fillStyle = `hsl(230, 8%, ${34 + Math.round(40 * Math.min(1, riseAt(c, k) / 80))}%)`;
       else g.fillStyle = a.flags[k]! & A_WATER ? "#2d5b8a" : "#2c2b36";
       g.fill();
     }
+    // a rooftop board (D-180): the street between the roofs is the chasm, dark, so the roofs read as the floor
+    if (a.floor !== undefined)
+      for (let k = 0; k < a.w * a.h; k++) {
+        if (!(a.flags[k]! & A_CHASM) || (a.struct[k]! >= 0 && c.structHp[a.struct[k]!]! > 0)) continue;
+        rect(k);
+        g.fillStyle = "rgba(8,7,14,0.62)";
+        g.fill();
+      }
     // the grid, and each building's outline
     g.strokeStyle = this.art ? "rgba(255,255,255,0.16)" : "rgba(232,220,188,0.1)";
     g.lineWidth = 1;
@@ -227,7 +244,7 @@ export class TacticalMap {
       const sid = a.struct[k]!;
       if (sid < 0 || c.structHp[sid]! <= 0) continue;
       // each building outlined in its height's colour (D-163): what can climb onto it reads at a glance
-      g.strokeStyle = band(standAt(c, k) * a.metersPerStep).colour;
+      g.strokeStyle = band(riseAt(c, k)).colour;
       const r = this.cellRect(k);
       const bi = k % a.w;
       const bj = Math.floor(k / a.w);
@@ -245,9 +262,28 @@ export class TacticalMap {
         g.stroke();
       }
     }
-    // how tall each building stands, on the large map (the small one has the colours)
-    if (this.big) {
-      g.font = "bold 11px ui-monospace, Menlo, monospace";
+    // a building a bonus names: gold; one the strike looked at would hurt: red (D-201, as on the board)
+    for (const [ids, colour] of [
+      [s.goals ?? [], "#ffd166"],
+      [s.hurt ?? [], "#ff5a50"],
+    ] as const)
+      for (const id of ids) {
+        const st = a.structures[id];
+        if (!st || c.structHp[id]! <= 0) continue;
+        g.save();
+        g.strokeStyle = colour;
+        g.lineWidth = this.big ? 3 : 2;
+        g.shadowColor = colour;
+        g.shadowBlur = 6;
+        for (const k of st.cells) {
+          rect(k, 0.04);
+          g.stroke();
+        }
+        g.restore();
+      }
+    // how tall each building stands (D-201: on the small map too, without the "m")
+    {
+      g.font = `bold ${this.big ? 11 : 9}px ui-monospace, Menlo, monospace`;
       g.textAlign = "left";
       g.textBaseline = "top";
       const done = new Set<number>();
@@ -255,13 +291,13 @@ export class TacticalMap {
         const sid = a.struct[k]!;
         if (sid < 0 || done.has(sid) || c.structHp[sid]! <= 0) continue;
         done.add(sid);
-        const m = Math.round(standAt(c, k) * a.metersPerStep);
+        const m = Math.round(riseAt(c, k));
         const r = this.cellRect(k);
-        const text = `${m} m`;
+        const text = this.big ? `${m} m` : `${m}`;
         g.fillStyle = "rgba(14,13,22,0.78)";
-        g.fillRect(r.x + 2, r.y + 2, g.measureText(text).width + 6, 15);
+        g.fillRect(r.x + 2, r.y + 2, g.measureText(text).width + (this.big ? 6 : 4), this.big ? 15 : 12);
         g.fillStyle = band(m).colour;
-        g.fillText(text, r.x + 5, r.y + 4);
+        g.fillText(text, r.x + (this.big ? 5 : 4), r.y + (this.big ? 4 : 3.5));
       }
     }
     // fire, and ash where it burnt out
@@ -293,6 +329,53 @@ export class TacticalMap {
         g.fill();
       }
     }
+    // what the rig could strike from the cell pointed at (dashed yellow); out of reach by a climb (dashed orange, how far up)
+    g.save();
+    g.lineWidth = 1.5;
+    g.setLineDash([3, 2]);
+    g.strokeStyle = "rgba(242,193,78,0.9)";
+    for (const k of s.reach ?? []) {
+      rect(k, 0.16);
+      g.stroke();
+    }
+    g.strokeStyle = "rgba(255,150,80,0.85)";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.font = `bold ${this.big ? 11 : 9}px ui-monospace, Menlo, monospace`;
+    for (const [k, up] of s.blocked ?? []) {
+      rect(k, 0.1);
+      g.stroke();
+      if (!Number.isFinite(up)) continue;
+      const r = this.cellRect(k);
+      g.fillStyle = "rgb(255,170,110)";
+      g.fillText(`↑${Math.ceil(up)}`, r.cx, r.cy);
+    }
+    g.restore();
+    // lines of fire: dotted, from the rig to what stops it (a bar across) or off the board
+    g.save();
+    g.lineWidth = this.big ? 2 : 1.5;
+    g.setLineDash([3, 3]);
+    for (const ln of s.lines ?? []) {
+      const p = this.cellRect(ln.from);
+      const q = this.cellRect(ln.to);
+      const len = Math.hypot(q.cx - p.cx, q.cy - p.cy) || 1;
+      const [ux, uy] = [(q.cx - p.cx) / len, (q.cy - p.cy) / len];
+      const back = ln.ends === "wall" ? cs / 2 : ln.ends === "edge" ? -cs / 2 : 0;
+      const [ex, ey] = [q.cx - ux * back, q.cy - uy * back];
+      g.strokeStyle = ln.ends === "unit" ? "rgba(242,193,78,0.95)" : ln.ends === "wall" ? "rgba(255,255,255,0.9)" : "rgba(200,200,215,0.55)";
+      g.beginPath();
+      g.moveTo(p.cx + ux * cs * 0.3, p.cy + uy * cs * 0.3);
+      g.lineTo(ex, ey);
+      g.stroke();
+      if (ln.ends === "edge") continue;
+      g.setLineDash([]);
+      g.beginPath();
+      g.moveTo(ex - uy * cs * 0.2, ey + ux * cs * 0.2);
+      g.lineTo(ex + uy * cs * 0.2, ey - ux * cs * 0.2);
+      g.stroke();
+      g.setLineDash([3, 3]);
+    }
+    g.restore();
     for (const [k, col] of [
       [this.hover, "rgba(255,255,255,0.75)"],
       [s.cursor, "#ffd166"],
@@ -325,6 +408,18 @@ export class TacticalMap {
     }
     // arrivals and units
     const font = (px: number) => `bold ${Math.round(px)}px ui-monospace, Menlo, monospace`;
+    // the damage each cell the invaders hit takes (D-194): a red badge in its corner
+    for (const [k, n] of s.hits ?? []) {
+      const r = this.cellRect(k);
+      const b = this.big ? 16 : 12;
+      g.fillStyle = "#e5484d";
+      g.fillRect(r.x + r.s - b - 1, r.y + r.s - b - 1, b, b);
+      g.fillStyle = "#ffffff";
+      g.font = font(b * 0.8);
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(String(n), r.x + r.s - b / 2 - 1, r.y + r.s - b / 2 - 0.5);
+    }
     g.textAlign = "center";
     g.textBaseline = "middle";
     for (const { at: k } of c.schedule[c.round] ?? []) {
@@ -375,7 +470,7 @@ export class TacticalMap {
       }
       // on a roof: how high, in its height's colour
       if (a.struct[c.pos[u]!]! >= 0 && c.structHp[a.struct[c.pos[u]!]!]! > 0) {
-        const m = Math.round(standAt(c, c.pos[u]!) * a.metersPerStep);
+        const m = Math.round(riseAt(c, c.pos[u]!));
         g.font = font(this.big ? 11 : 9);
         const text = `▲${m}`;
         const tw = g.measureText(text).width + 4;
@@ -426,5 +521,6 @@ const BANDS = [
   { upTo: 40, colour: "#9fb2ff", name: "≤40 m" },
   { upTo: Infinity, colour: "#d39cff", name: "taller" },
 ] as const;
-const band = (m: number) => BANDS.find((b) => m <= b.upTo)!;
+/** A height's band (D-163), by the metres a roof stands above its ground (`riseAt`). */
+export const band = (m: number) => BANDS.find((b) => m <= b.upTo)!;
 const LEGEND = 22;

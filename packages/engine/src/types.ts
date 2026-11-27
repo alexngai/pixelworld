@@ -1,7 +1,7 @@
 import type { BakedImage } from "@pixelworlds/bake";
 import type { Box, ObjectInstance, PluginDescriptor } from "@pixelworlds/generators";
-import type { Projection, Rotation } from "@pixelworlds/grid";
-import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "@pixelworlds/runtime";
+import type { Projection, ProjectionPreset, Rotation } from "@pixelworlds/grid";
+import type { FogField, FogFrame, GpuImage, SpriteInstance, SteamFrame } from "./runtime";
 import type { Palette, StylePack } from "@pixelworlds/style";
 import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/world-format";
 
@@ -11,7 +11,16 @@ import type { DroppableLayer, WorldFetch, WorldManifest } from "@pixelworlds/wor
  * steps, screen positions in internal (render) pixels before the zoom.
  */
 
-export type { Box, ObjectInstance, PluginDescriptor, Projection, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+export type { Box, ObjectInstance, PluginDescriptor, Projection, ProjectionPreset, Rotation, BakedImage, StylePack, Palette, WorldManifest };
+
+/** A rectangle of world cells (`VeilLayer.set`, `readCells`). */
+export interface CellRect {
+  /** The top-left cell (the world's), and the size in cells. */
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+}
 
 /** A baked sprite on the GPU (from `LayerContext.bakeSprite`); opaque to layers. */
 export type Sprite = GpuImage;
@@ -75,7 +84,7 @@ export interface OpenWorldOptions {
   fetch?: WorldFetch;
 }
 
-/** `openWorld`'s result: the same `world` and `query` a view has (`pick` throws: there is no screen). */
+/** `openWorld`'s result: the same `world` and headless `query` a view has (without screen picking). */
 export interface OpenedWorld {
   readonly world: WorldInfo;
   readonly query: WorldQuery;
@@ -152,20 +161,20 @@ export interface WorldStats {
   chunksEvicted: number;
 }
 
-export interface WorldViewOptions {
-  /** The canvas to draw into (WebGL2). */
-  canvas: HTMLCanvasElement;
-  /** Base URL of a world package (a directory with `manifest.json`). */
-  worldUrl: string;
-  /** The style pack (JSON), or a resolver for the id in the world's manifest. */
-  style: StyleSource;
-  /**
-   * The canvas's drawing size in device pixels. Default: follow its size on
-   * the page (CSS pixels × devicePixelRatio).
-   */
-  size?: { width: number; height: number };
+/** Advanced rendering toggles for `createWorldView`. */
+export interface RenderOptions {
   /** Render units per cell; default the world's (`manifest.render.scale`). */
-  renderScale?: number;
+  scale?: number;
+  /** Draw the world's placed objects (default true). */
+  objects?: boolean;
+  /** Decorative scatter where the level asks for it (default true). */
+  scatter?: boolean;
+  /** Stamp painted-over hero landmarks into tiles (default true). */
+  heroes?: boolean;
+}
+
+/** Tile baking, caching, and worker pool tuning for `createWorldView`. */
+export interface BakingOptions {
   /** Keep baked tiles: true for IndexedDB (default), false for none, or your own store. */
   cache?: boolean | TileStore;
   /**
@@ -175,44 +184,12 @@ export interface WorldViewOptions {
    * the file would log its 404.
    */
   startTiles?: boolean | string | URL;
-  /** Draw the world's placed objects (default true). */
-  objects?: boolean;
   /**
    * Megabytes of decoded terrain chunks to keep (D-120; default unlimited):
    * past it, the least recently used go, to load again when something
    * `ensure`s them. About 0.5 MB a 64-cell chunk with micro-terrain.
    */
   chunkBudgetMB?: number;
-  /** Decorative scatter where the level asks for it (default true). */
-  scatter?: boolean;
-  /** Stamp painted-over hero landmarks into tiles (default true). */
-  heroes?: boolean;
-  /** Start with the night palette where the style has one (default "day"). */
-  palette?: "day" | "night";
-  /**
-   * How the view lays the world out (D-195): the 2:1 view (`ISO_PROJECTION`,
-   * default) or another, such as `STEEP_PROJECTION`'s higher camera. Fixed
-   * for the view's life; its tiles are kept apart from other projections'.
-   * Painted-over hero landmarks are resampled from their 2:1 paint (D-196).
-   */
-  projection?: Projection;
-  camera?: CameraOptions;
-  /** Runtime layers, initialized in order; a layer with nothing to show in this world is left out. */
-  layers?: Layer[];
-  /** The interaction mode; attached before the first frame. */
-  controller?: Controller;
-  /** Keep every tile bake's timings (`WorldView.tileBakes`), for benchmarks. */
-  recordBakes?: boolean;
-  /**
-   * A view on the same canvas to take over from (another level, another
-   * world), without a flash: it keeps drawing while this view loads and
-   * bakes, and this view draws nothing until its first frame is complete
-   * (every visible tile and sprite baked). It then destroys the old view and
-   * draws in its place, in the same animation frame.
-   */
-  replace?: WorldView;
-  /** Bake errors (default: console.error). */
-  onError?: (message: string) => void;
   /**
    * Bake ahead of the camera's motion (seconds, default 1.5; 0 for none):
    * while the camera moves, the tiles a view this far along its path would
@@ -220,14 +197,6 @@ export interface WorldViewOptions {
    * for a place explicitly).
    */
   lookAhead?: number;
-  /**
-   * Where to load the bake worker from, for setups that can't serve it beside
-   * the engine: a module worker script, such as a copy of the package's
-   * `bake.worker.js` on your own origin (or a `blob:` URL). Default: the
-   * worker shipped with the engine, `new URL("./bake.worker.js", import.meta.url)`,
-   * which Vite, webpack 5 and plain ESM resolve themselves (docs/npm.md).
-   */
-  workerUrl?: string | URL;
   /**
    * Bake the ground of visible tiles first (default true): quick, so the view
    * shows the ground at once and buildings appear as their tiles finish.
@@ -244,15 +213,66 @@ export interface WorldViewOptions {
    * times faster where tiles take long. Default: the CPU's cores less one, at
    * most 4 (each holds its own copy of the world's objects).
    */
-  bakeWorkers?: number;
+  workers?: number;
+  /**
+   * Where to load the bake worker from, for setups that can't serve it beside
+   * the engine: a module worker script, such as a copy of the package's
+   * `bake.worker.js` on your own origin (or a `blob:` URL). Default: the
+   * worker shipped with the engine, `new URL("./bake.worker.js", import.meta.url)`,
+   * which Vite, webpack 5 and plain ESM resolve themselves (docs/npm.md).
+   */
+  workerUrl?: string | URL;
+  /** Keep every tile bake's timings (`WorldView.tools.tileBakes()`), for benchmarks. */
+  recordBakes?: boolean;
+}
+
+export interface WorldViewOptions {
+  /** The canvas to draw into (WebGL2). */
+  canvas: HTMLCanvasElement;
+  /** Base URL of a world package (a directory with `manifest.json`). */
+  worldUrl: string;
+  /** The style pack (JSON), or a resolver for the id in the world's manifest. */
+  style: StyleSource;
+  /**
+   * The canvas's drawing size in device pixels. Default: follow its size on
+   * the page (CSS pixels × devicePixelRatio).
+   */
+  size?: { width: number; height: number };
+  /** Start with the night palette where the style has one (default "day"). */
+  palette?: "day" | "night";
+  /**
+   * How the view lays the world out (D-195): `"iso"` (2:1, default), `"steep"`
+   * (4:3 higher camera), or an explicit `Projection`. Fixed for the view's
+   * life; its tiles are kept apart from other projections'. Painted-over hero
+   * landmarks are resampled from their 2:1 paint (D-196).
+   */
+  projection?: ProjectionPreset | Projection;
+  camera?: CameraOptions;
+  /** Runtime layers, initialized in order; a layer with nothing to show in this world is left out. */
+  layers?: Layer[];
+  /** The interaction mode; attached before the first frame. */
+  controller?: Controller;
+  /**
+   * A view on the same canvas to take over from (another level, another
+   * world), without a flash: it keeps drawing while this view loads and
+   * bakes, and this view draws nothing until its first frame is complete
+   * (every visible tile and sprite baked). It then destroys the old view and
+   * draws in its place, in the same animation frame.
+   */
+  replace?: WorldView;
+  /** Bake errors (default: console.error). */
+  onError?: (message: string) => void;
   /**
    * Plugins with generators the world's style uses (D-071), such as the city
-   * pack @pixelworlds/city-sf's `cityPlugin`: loaded in the bake worker and on
-   * the main thread before the first bake. Or a function given the plugins the
-   * style pack names (its `plugins`) that returns the ones to load. A plugin the
-   * style names but the view doesn't load is warned about.
+   * pack `@pixelworlds/city-sf`'s `cityPlugin`. When given an array, the view
+   * automatically loads only those the world's style pack names in `plugins`.
+   * Or pass a function `(names) => PluginDescriptor[]` for custom resolution.
    */
   plugins?: PluginDescriptor[] | ((names: string[]) => PluginDescriptor[]);
+  /** Advanced rendering toggles (`scale`, `objects`, `scatter`, `heroes`). */
+  render?: RenderOptions;
+  /** Tile baking, caching, and worker pool options. */
+  baking?: BakingOptions;
 }
 
 /** What the view knows about its world (read-only). */
@@ -305,8 +325,8 @@ export interface ViewCamera {
   /** Pan by internal pixels, keeping the focus height. */
   pan(dx: number, dy: number): void;
   rotate(delta: 1 | -1): void;
-  /** The unit grid direction of a screen direction in this rotation. */
-  screenDirToGrid(dx: number, dy: number): [number, number];
+  /** The unit grid direction of a screen direction in `rotation` (default the camera's current). */
+  screenDirToGrid(dx: number, dy: number, rotation?: Rotation): [number, number];
   /**
    * Where a place (cells, steps) is drawn on the canvas, in CSS pixels from
    * its top-left: the inverse of `query.pick`, for HUD labels and markers.
@@ -410,10 +430,50 @@ export interface ViewState {
   controller?: { id: string; state: unknown };
 }
 
+/** Visual cutaway overrides for placed buildings (D-159, D-162, D-167, D-168). */
+export interface CutawayHost {
+  /**
+   * Whether toggleable cuts show (default true). Off, the city stands whole
+   * (except cuts set with `{ always: true }`); cutaway tiles stay cached so
+   * toggling is instant.
+   */
+  enabled: boolean;
+  /**
+   * Draw placed objects cut down to a height (world steps), leaving out what
+   * is above and darkening interior far walls. Only drawing changes (queries
+   * still answer with the whole building). Replaces previous cuts for one
+   * rotation or all four; null for none. With `{ always: true }`, maintains
+   * a second set cut in plain tiles as well.
+   */
+  set(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts?: { always?: boolean }): void;
+  /**
+   * Placed objects drawn faintly on their own over the finished frame, each at
+   * its opacity (0–1), far to near as listed, where it stands in front of
+   * what's drawn. Null for none.
+   */
+  setGhosts(list: readonly { object: number; alpha: number }[] | null): void;
+  /** Clear all toggleable cuts, `always` cuts, and lone ghosts, and re-enable cutaways. */
+  clear(): void;
+}
+
+/** Tooling and benchmark helpers on a view (not needed for normal gameplay). */
+export interface ViewTools {
+  /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
+  bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
+  /** Every tile bake so far with its timings (only with `baking.recordBakes`). */
+  tileBakes(): TileBake[];
+  /** Redraw the last frame n times, waiting for the GPU each time: mean milliseconds per frame. */
+  timeFrames(n: number): number;
+}
+
 export interface WorldView extends ControllerView {
   readonly layers: LayerRegistry;
   /** Placed objects taken out and put back at runtime (D-124): the queries agree at once, the tiles they touch bake again. */
   readonly edits: WorldEdits;
+  /** Building cutaway and ghost overrides (D-159, D-162, D-167, D-168). */
+  readonly cutaway: CutawayHost;
+  /** Offline hero baking and frame/tile benchmark hooks. */
+  readonly tools: ViewTools;
   readonly controllers: ControllerHost;
   /** "day" or "night" (where the style has a night palette). */
   palette: "day" | "night";
@@ -452,39 +512,6 @@ export interface WorldView extends ControllerView {
   /** Set the drawing size (device pixels); with `size` omitted the view follows the canvas instead. */
   resize(width: number, height: number): void;
   stats(): ViewStats;
-  /** Every tile bake so far with its timings (only with `recordBakes`). */
-  tileBakes(): TileBake[];
-  /** Redraw the last frame n times, waiting for the GPU each time: mean milliseconds per frame. */
-  timeFrames(n: number): number;
-  /** Bake a placed object (and its parts, by id) alone on its terrain in all four rotations: the hero tool (D-053). */
-  bakeObject(id: string): Promise<((BakedImage & { rotation: Rotation }) | null)[]>;
-  /**
-   * Draw placed objects cut down (D-159): each object (its index, as
-   * `WorldEdits` names them) up to a height (world steps), what's above left
-   * out of the image and the inside of its far walls dark, as a cutaway. Only
-   * the drawing changes (the queries still answer with the whole building);
-   * the tiles they reach bake a cutaway variant (D-167), without meshing
-   * again, kept beside the plain tile. Replaces the previous cuts, in one
-   * rotation of the view (what hides a place depends on the side it's seen
-   * from; the tiles of the others, baked while idle, keep theirs) or all
-   * four; null for none. With `always`, a second set, replaced on its own:
-   * cut in the plain tiles as well, whether the cutaway shows or not (D-168).
-   */
-  cutDown(cuts: ReadonlyMap<number, number> | null, rotation?: Rotation, opts?: { always?: boolean }): void;
-  /**
-   * Whether the cuts show (default true). Off, the city stands whole; the
-   * cutaway tiles are still baked and kept, so turning it on again shows
-   * them at once (D-167).
-   */
-  cutaway: boolean;
-  /**
-   * Placed objects drawn on their own over the finished frame (D-162), each
-   * at its opacity (0–1), far to near as listed, where it stands in front of
-   * what's drawn: with `cutDown`, the buildings cut away shown faintly as
-   * themselves, nothing of the buildings around them mixed in. Each is baked
-   * alone the first time it's listed in a rotation. Null for none.
-   */
-  setLoneGhosts(list: readonly { object: number; alpha: number }[] | null): void;
   /**
    * A rectangle of the world drawn from above, north up (D-155): its terrain,
    * roads and placed objects (but those the edits removed), shaded and
@@ -552,24 +579,13 @@ export interface PickResult {
   cellY: number;
 }
 
-/** Gameplay queries over the loaded world. Positions are cells; a query where nothing is loaded answers null. */
+/** Headless gameplay queries over the loaded world. Positions are cells; a query where nothing is loaded answers null. */
 export interface WorldQuery {
   /** Height of the drawn ground (steps): micro-terrain or cell corners, as the mesh draws it. */
   heightAt(x: number, y: number): number | null;
   surfaceAt(x: number, y: number): SurfaceInfo | null;
   /** The road through a cell, or null for none. */
   roadAt(x: number, y: number): RoadInfo | null;
-  /** The ground under a canvas point (CSS pixels from the canvas's top-left). */
-  pick(screenX: number, screenY: number): PickResult | null;
-  /**
-   * The placed object drawn under a canvas point, or null where the view ray
-   * meets the ground first (D-124): the first whose footprint (a landmark's
-   * plan, a tree's cell) and estimated height the ray passes through, from
-   * above. An object without an estimated top (trees, props) is taken to
-   * reach 3 steps over its base at render scale 1. Removed objects aren't
-   * there.
-   */
-  pickObject(screenX: number, screenY: number): ObjectHit | null;
   /**
    * A placed object's data (footprint, real height, storeys, year, facade…)
    * by its index (`ObjectHit.index`), removed or not (`edits.isRemoved` says
@@ -598,12 +614,27 @@ export interface WorldQuery {
    * Placed objects standing at a point (occupancy): those whose footprint
    * contains it; landmarks drawn from an anchor (City Hall, a tower) where
    * their model stands, in plan; and other footprint-less objects (trees,
-   * props) in their anchor's cell. Empty without objects (`objects: false`)
+   * props) in their anchor's cell. Empty without objects (`render.objects: false`)
    * or outside the world.
    */
   objectsAt(x: number, y: number): ObjectHit[];
   /** The world's registry landmarks (objects with an id), one per id. */
   landmarks(): LandmarkInfo[];
+}
+
+/** Screen-aware queries on a `WorldView`: extends `WorldQuery` with canvas picking. */
+export interface ViewQuery extends WorldQuery {
+  /** The ground under a canvas point (CSS pixels from the canvas's top-left). */
+  pick(screenX: number, screenY: number): PickResult | null;
+  /**
+   * The placed object drawn under a canvas point, or null where the view ray
+   * meets the ground first (D-124): the first whose footprint (a landmark's
+   * plan, a tree's cell) and estimated height the ray passes through, from
+   * above. An object without an estimated top (trees, props) is taken to
+   * reach 3 steps over its base at render scale 1. Removed objects aren't
+   * there.
+   */
+  pickObject(screenX: number, screenY: number): ObjectHit | null;
 }
 
 /** A placed object at a point (`WorldQuery.objectsAt`). */
@@ -791,8 +822,14 @@ export interface FrameInfo {
   isDrawn(x: number, y: number): boolean;
 }
 
-/** A pass over the drawn frame before the palette: fog's (D-063), or steam's (D-138). */
-export type ScreenPass = { type: "fog"; field: FogField; frame: FogFrame } | { type: "steam"; frame: SteamFrame };
+/** Per-pass parameters for a fog/veil pass; the view supplies `rotation`, `projection`, `renderScale`, and `night`. */
+export type FogPassFrame = Omit<FogFrame, "rotation" | "projection" | "renderScale" | "night">;
+
+/** Per-pass parameters for a steam pass; the view supplies `projection` and `night`. */
+export type SteamPassFrame = Omit<SteamFrame, "projection" | "night">;
+
+/** A pass over the drawn frame before the palette: fog/veil's (D-063, D-125), or steam's (D-138). */
+export type ScreenPass = { type: "fog"; field: FogField; frame: FogPassFrame } | { type: "steam"; frame: SteamPassFrame };
 
 /** What a layer gets when it joins a view. */
 export interface LayerContext {
@@ -878,7 +915,7 @@ export interface ControllerView {
   readonly world: WorldInfo;
   readonly camera: ViewCamera;
   readonly entities: EntityList;
-  readonly query: WorldQuery;
+  readonly query: ViewQuery;
   /** Device pixels per CSS pixel of the canvas, as the view sized it. */
   readonly pixelRatio: number;
 }

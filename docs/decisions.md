@@ -203,6 +203,11 @@ Status values:
 | D-194 | After Into the Breach: blows as arrows lying on the striker's cell, flights as dotted trails, the damage on the cell struck | Accepted |
 | D-195 | A higher camera: a view's projection as an option, 4:3 tiles for the fights | Accepted |
 | D-196 | Hero landmarks in other projections: the 2:1 paint resampled at run time | Accepted |
+| D-197 | The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer | Accepted |
+| D-198 | Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height | Accepted |
+| D-199 | Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation | Accepted |
+| D-200 | Fixes from the first playtest: rooftop arrivals land, the strike list names what's hit, no block without a fight, a routed fight ends, the pointer picks what's drawn, buildings' heights shown above their ground | Accepted |
+| D-201 | The board made legible: heights on the board, what the rig in hand can't climb, lines of fire, the map showing all of it | Accepted |
 
 ---
 
@@ -2744,3 +2749,122 @@ The point is more room for visual interest; both halves are wanted.
     - The Strat: its shaft outline and pod band, 954 pixels against 927.
     - A few one-pixel joints on surfaces the 4:3 view stretches come out two pixels thick.
   - **e2e:** the dam's paint at 4:3 changes 200 to 5,000 pixels, the dam only.
+
+### D-197: The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer (accepted)
+- **Why:** after the move to 4:3 tiles (D-195), the owner asked to tune the fight view. Ten fights in six cities at 1280×800 showed three problems:
+  - **The board was small.** The 4:3 board is half again as tall on screen, so the old fit (70% of the width, 60% of the height, zoom rounded down) dropped a one-cell board from zoom 3 to 2. That left it about a fifth of the screen, partly under the panels.
+  - **The board didn't stand out** from the city around it.
+  - **Building labels (D-191) piled up** on each other and on the strike markers.
+- **What:**
+  - **Framing (`frameBoard`):** the board goes in the space the panels leave, measured from the panels themselves. Panels across the screen's middle row close it at the sides; panels across its middle column close it at the top and bottom; corner panels (the invaders' list, the map) don't. The zoom is the largest whole one at which the board's plane fits that space; its side corners may reach a tenth under the side panels. The board's middle sits in the middle of the space. On a phone, the space is the band between the top panels and the squad panel.
+  - **Re-framing:** it runs again once the panels are drawn. Turning the view frames the board again without changing the zoom, since the camera turns about its focus and the board's middle is panned off it.
+  - **The city around the board dimmed:** a veil (D-125, the `asphalt` ramp at one level, 0.45) lies over the city but the board and a cell around it, thickening from the second cell out, so the board reads as the fight's ground, as Into the Breach's slab does. It goes when the fight does.
+  - **The grid** is a little brighter (0.2, and 0.28 dashed through a building).
+  - **Labels:** each label's size is measured when its text or kind changes. Every frame, a building's plain label that would cover another label is hidden; the pointer's tip still names the building, its hit points and its people. Units', strikes', arrivals' and threatened or hurt buildings' labels always show, and the plain ones nearest the viewer go first.
+- **Checked:** in headless Chromium at 1280×800:
+  - **Ten fights** across New York, San Francisco, Kyoto, Hong Kong, Paris and Tokyo: one-cell boards at zoom 3 where they were at 2, two-cell boards at 1, every board's middle in the free space, no building labels overlapping.
+  - **Phone (390×844):** San Francisco and Kyoto, with the board between the top panels and the squad panel.
+  - **Turning:** four quarter-turns with E keep the board's middle where it was. Lint, typecheck and the unit tests pass.
+- **Not done:** rooftop boards (Mong Kok) still read busily, as the veil can't tell the roofs from the towers under them; lower building heights for the fights are still left for later.
+
+### D-198: Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height (accepted)
+- **Why:** D-197's veil dims the city around the board at every height, so on a rooftop board (D-180) the towers' faces under the roofs and the street in the chasms stay as bright as the roofs played on. Mong Kok's rooftops still read busily.
+- **What:**
+  - **`veilLayer({ below })`** (engine): the veil covers only what lies below a height (steps), fading in over a step: the fog pass's ceiling and fade, which the veil had set to every height.
+  - **The fight on a rooftop board** adds a second veil, `fight-under`. It lies over the board and a cell round it, below the board's floor less half a step, so roofs at the floor and above stay clear. It goes when the fight does.
+- **Checked:**
+  - **Unit test:** the veil's ceiling and fade are in render units.
+  - **Mong Kok's rooftops in headless Chromium,** with the new veil off and then on in the same fight: the towers' faces below the roofs dim (104,000 pixels change at 1280×800), and the roofs and units don't.
+- **Considered and not done:**
+  - **Lower building heights for the fights:** drawing fewer pixels a height step loses the facades' window rows (D-195's test bakes), and building the cities with less height exaggeration would change every app's levels. The veils and the framing (D-197, D-198) are what make the board read instead.
+  - **A zoom between whole steps** for two-cell boards on a 1× screen: the views zoom in whole device pixels so the pixel art stays crisp. Such boards fit at 1, and at 1.5 CSS px a pixel on a 2× screen.
+
+### D-199: Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation (accepted)
+- **Why:** every fight's goal was "hold the block", which made fights alike. The owner chose bonus objectives on top of it, as Into the Breach adds them to its missions, over a different main goal for some fights: winnability, the city's front and the co-op room's judging stay as they are.
+- **Which:** holding the block already keeps every occupied building whole, since a hit on one costs its people. So "protect the landmark" would ask nothing more, and the bonuses ask for what holding doesn't:
+  - **No fire left burning:** the board's own, where ground burns and a flyer, now or arriving, can set it alight.
+  - **Evacuate the tower:** the board's own, its fullest tower that can topple, emptied by the end. It costs a rig's action, and the tower is outlined gold until it's done.
+  - **No rig damaged.**
+  - **No building damaged:** empty ones too.
+  - **Every invader down:** those still to arrive too.
+- **What:**
+  - **`objectives.ts`** (the rules package): the objectives, what each says, and where each stands from the fight's start to now: open, met, or failed. A rig scratched or a building hit fails at once; a tower emptied is met at once. Each is judged from the fight's states alone, so the room's replay (D-186) could judge them as the page does.
+  - **`solveFight`'s `goal`:** a line counts only if its last state passes. `pickObjectives` tries one of the board's own first, then those any board can have, then the board's others, each order shuffled by the puzzle's seed. It keeps up to two that the solver can hold the fight and meet, one search each, so every bonus offered is reachable along with holding the block. Each alone, not all together: choosing between them is the point.
+  - **`generatePuzzle`'s `objectives` option:** the game asks for two. The puzzles are made in the worker, ahead of the fight (D-185).
+  - **On screen:**
+    - a bonus line under the top bar, each objective with ○, ✓ or ✗ as the fight goes, and what each pays;
+    - the tower to evacuate outlined gold;
+    - on the result screen, each met or missed.
+  - **Reward:** ★ 2 reputation for each bonus met, only for a block held. `FightOutcome.bonuses` carries them.
+- **Checked:**
+  - **Unit tests:** each objective's states; the candidates a board offers; the solver with and without a goal; a generated puzzle's objectives each reachable with the fight held.
+  - **In headless Chromium:**
+    - Four fights each offered two objectives that suit their boards: San Francisco no fire and no building damaged; Kyoto no fire and no rig damaged; Hong Kong evacuate the commercial tower (outlined gold) and no fire; Paris no fire and every invader down.
+    - A Hong Kong fight played along the solver's line: the bonus line stayed open through round 1, and the result screen showed both met, paying ★ 9 (3 rounds, 2 for the block held, 2 for each bonus).
+- **Not done:**
+  - **A joint finale's** objectives are checked before the second squad and the room's reinforcements (D-187) join, so they may not be reachable there.
+  - **Bonuses don't touch the city's trust:** they pay the squad only.
+  - **Hold the crossing and bring a tower down on them** wait for a marked edge on the board and for the solver to plan toppling.
+
+### D-200: Fixes from the first playtest: rooftop arrivals land, the strike list names what's hit, no block without a fight, a routed fight ends, the pointer picks what's drawn, buildings' heights shown above their ground (accepted)
+- **Why:** a playtest of a whole operation and six more boards (all six cities, all three squads) found these bugs. Its design findings (legibility, stakes, pacing) are for later decisions.
+- **What:**
+  - **Rooftop arrivals (D-180, D-153):** `endRound` landed an arrival only where no structure stands, and on a rooftop arena every cell is a roof or the chasm. So the board showed "▼ Brute arrives" and nothing came, and the fight ended early with "Every invader down" met for free. An arrival now lands on a standing roof there; on the street, as before, where no building stands.
+  - **What a strike hits (`strikeTarget`):** a strike lands on the unit at its cell if it reaches it (a melee blow only so far up or down), else on the building there. `strike` and the fight's strike list and tooltip now share it. The list had named the building under a flyer on a roof while the spit hit the flyer.
+  - **No block without a fight:** a fight made ahead (D-185) that finds none sends its threat to another block of the district before the squad picks it. The front now lets anyone swap a threat nobody has taken, as well as their own. A swap names the block it was for and is refused once the threat has moved, so two pages that made no fight there move it only once. A block the squad is waiting on gets a second, longer look (15 s). If that finds nothing too, the screen says the invaders turned to the new block, by name, instead of "No fight could be made".
+  - **A routed fight ends:** with every invader down and none to arrive, the prompt says so and the first Enter ends the fight, idle rigs or not. They may still act first, to douse a fire or empty a tower for a bonus (D-199).
+  - **The pointer picks what's drawn:**
+    - With the cutaway on, a building cut to a stump is glass: the pick meets it only at its roof and sees through its walls.
+    - Of the cells drawn under the pointer, it takes a cell the move or strike in hand can take first, then a unit other than the rig in hand, then a unit's silhouette behind what's in front, then the nearest.
+    - The top bars let the pointer through to the roofs under them.
+    - A board is framed with its units at their heads, so one on a tall roof isn't under a bar.
+  - **Buildings' heights as shown:** the cell tooltip and the map gave a roof's height above sea level as the building's height. The tooltip judged "rigs can climb onto it" from that figure, and so did the map's height bands, its "N m" labels and a unit's "▲N" mark. On a board on a hill, a one-storey shop read "17 m tall · too tall for the rigs to climb". They now use `riseAt`, the roof's height above the ground under it. The roofs themselves were right: an audit of New York's, Tokyo's and San Francisco's boards found every building with its height, and each arena roof on the drawn one.
+  - **Smaller fixes:**
+    - The run's end announces every squad unlocked during the run. Before, it compared against the squads open at the run's end, just before the city held was counted, so only a squad unlocked by holding the city was announced. The Fire Brigade, unlocked by three blocks held, went unannounced.
+    - Tab cycles the rigs while one is selected, too.
+    - **A rig moved twice:** clicking the rig in hand after its move chose it again from where it had moved to, so it could move again. A co-op room then refused the fight's replay, since a move is checked from where the rig started. Now the rig goes back to where it started and its move is taken again.
+- **Tested:**
+  - Unit tests: a rooftop arrival lands on a roof, not in the chasm or on a fallen tower; `strikeTarget` names a unit on a roof and a wall out of a blow's reach; an open threat can be swapped by anyone, another squad's can't.
+  - In the browser, every cell's drawn top pointed at:
+    - **Hong Kong rooftop board:** units picked 6 of 6, 3 of 6 before. The arrival landed on its roof at round 1's end.
+    - **Paris:** 63 of 64 cells with the cutaway on. The one missed lies under a glass roof, and goes to the roof with no rig selected.
+    - **Hong Kong Peninsula:** 60 of 64 cells, units 6 of 6. The missed cells lie under the hotel's glass roof.
+  - With every invader down, one Enter ended a Paris fight with three rigs idle.
+- **Not done:**
+  - **The co-op room's server** must be deployed with the page: an older one refuses the swap of a threat nobody has taken, and replays a rooftop fight without its arrivals.
+  - A cell lying under a glass roof is picked as the roof unless the rig in hand can use the cell. The arrow keys reach every cell.
+  - **Heights in the rules aren't real heights:** the rules turn steps into metres with the terrain's step (2.72 m in New York and Tokyo, 2.04 m in San Francisco). A building's height in steps is set at 5 m a step, so the rules count a building at 0.54–0.57 of its real height. A 27 m building counts as 15 m, which rigs climb. This is short of D-151's real heights, and needs the climbing thresholds in steps or a building's own height in the rules.
+  - **Buildings on slopes stand on their lowest corner (D-010):** on a slope or a riverbank, a building is sunk on its uphill side, its roof near the street there. The board's rules follow the drawing, so changing this means changing placement.
+
+### D-201: The board made legible: heights on the board, what the rig in hand can't climb, lines of fire, the map showing all of it (accepted)
+- **Why:** the first playtest (D-200) found the puzzles' answers hard to see. They turn on facts the city view doesn't show: how high each roof is, which roofs a rig can get onto, and where a shot stops. Its first ask was a legible board. The owner chose to show these on the board and on the map, rather than add a separate top-down mode: the map already is one, and should get better instead.
+- **What:**
+  - **Heights (A):**
+    - Each building's roof edge is drawn on the board in its height's colour, the map's bands (D-163): ≤6 m, ≤15 m (rigs climb), ≤40 m, taller.
+    - Each building's label gains its height ("251 people · 11 m").
+    - The heights are `riseAt`'s: the roof above the ground under it, or above the floor on a rooftop board, in the rules' metres. On a rooftop board the cell tooltip no longer says whether rigs climb onto the roof, since every walker leaps there.
+  - **What the rig in hand can't reach (B):**
+    - `climbBlocked` (the rules package) gives the cells its move would reach if it could climb any height, each with the climb from the nearest cell it does reach. A cell beside one it reaches at a height it could climb is out of range only because the short way there crosses a climb, so it is marked "behind a climb" with no number.
+    - In the move phase these cells are outlined dashed orange on the board with that climb, rounded up ("↑31m"), and the same on the map.
+    - The cell tooltip says "out of reach for the wrecker: 31 m up from where it gets to; it climbs 15 m". A click there says why too.
+  - **Lines of fire (C):** each shot and charge of the rig in hand is drawn as a dotted line. In the strike phase it's drawn for the weapon chosen, from where the rig stands. In the move phase it's drawn for every weapon, from the cell pointed at. A line runs level at the rig's height to what stops it:
+    - a unit, in yellow, to its middle;
+    - a building taller than the rig, in white, to its face, with a bar across the end;
+    - nothing: a faint line off the board's edge.
+  - **The map:**
+    - It shows the same cues: the cells the rig could strike from the cell pointed at, the cells out of reach with their climb, and the lines of fire.
+    - It also shows the invaders' damage on each cell they hit, as a red badge, as on the board (D-194).
+    - A building the strike looked at would hurt is outlined red, and one a bonus names gold.
+    - Building heights now show on the small map too, without the "m".
+    - On a rooftop board the street between the roofs is dark, so the roofs read as the floor.
+- **Tested:**
+  - A unit test: a wrecker on the street beside 30 m towers gets them as out of reach, 30 m up (27 from a house's roof beside one), and the houses as moves.
+  - In the browser on the Hong Kong Peninsula board:
+    - the 31–32 m towers marked out of reach for the wrecker, on the board and the map;
+    - the pumper's cannon lines in the strike phase;
+    - the heights on the labels, the roof edges and both maps.
+- **Not done:**
+  - Heights are in the rules' metres, about 0.55 of a building's real height (D-200), until the rules use real heights.
+  - Where a push or a hoist would carry a unit still shows only for the strike pointed at (D-191).
+  - A cell's tooltip can still cover the board near it.
+

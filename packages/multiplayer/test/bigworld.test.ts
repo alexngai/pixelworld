@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { stylePack } from "@pixelworlds/game/src/styles";
 import { DRAW_ONLY_LAYERS, openWorld, type Entity, type EntityList, type EntitySpec } from "pixelworld/engine";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RemotePlayers, TickClient, type TickEvent, type TickMessage, type TickShared } from "../src/index";
@@ -15,6 +14,7 @@ import { loopback } from "../src/testing";
  */
 
 const ROOT = new URL("../../../", import.meta.url);
+const stylePack = (id: string) => JSON.parse(readFileSync(new URL(`worlds/_styles/${id}/style.json`, ROOT), "utf8")) as object;
 beforeAll(() => {
   vi.stubGlobal("fetch", async (url: string | URL) => {
     try {

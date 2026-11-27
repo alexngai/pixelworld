@@ -20,13 +20,11 @@ describe("a view's plugins", () => {
     expect(stylePlugins({ plugins: ["a", 3, null] })).toEqual(["a"]);
   });
 
-  it("loads what it is given, with absolute URLs for the worker", () => {
+  it("filters an array of descriptors to only the plugins the style names, with absolute URLs", () => {
     const p = viewPlugins([city, extra], bayArea, "bay-area");
-    expect(p.descriptors).toEqual([city, extra]);
-    expect(p.refs).toEqual([
-      { name: "@pixelworlds/city-sf", url: "https://pixelworld.test/assets/worker-sf.js" },
-      { name: "my-props", url: "https://cdn.example.test/props.js" },
-    ]);
+    expect(p.descriptors).toEqual([city]);
+    expect(p.refs).toEqual([{ name: "@pixelworlds/city-sf", url: "https://pixelworld.test/assets/worker-sf.js" }]);
+    expect(viewPlugins([city, extra], { id: "desert-southwest" }, "desert-southwest").descriptors).toEqual([]);
     expect(warn).not.toHaveBeenCalled();
   });
 

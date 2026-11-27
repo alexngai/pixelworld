@@ -1,3 +1,4 @@
+import { objectiveCandidates, objectiveMet, type Objective } from "./objectives";
 import {
   A_CHASM,
   A_WATER,
@@ -263,6 +264,8 @@ export interface FightOptions {
    * the real boards measured it never made a lost fight winnable.
    */
   evacuate?: boolean;
+  /** Hold the fight and end it so (D-199): a line counts only if its last state passes. */
+  goal?: (end: Combat) => boolean;
 }
 
 export interface FightResult {
@@ -318,7 +321,7 @@ export function solveFight(start: Combat, opts: FightOptions): FightResult {
   };
   /** A line that holds the rest of the fight from a state at the start of a round, or null. */
   const hold = (c: Combat, roundsLeft: number): Action[][] | null => {
-    if (!invadersLeft(c) || roundsLeft <= 0) return [];
+    if (!invadersLeft(c) || roundsLeft <= 0) return !opts.goal || opts.goal(c) ? [] : null;
     const key = hashCombat(c) * 8 + Math.min(roundsLeft, 7);
     if (lost.has(key)) return null;
     if (res.nodes >= max) {
@@ -449,6 +452,8 @@ export interface Puzzle {
    * perfect first turns, how many keep it winnable (the rest are traps).
    */
   fight?: { rounds: number; line: Action[][]; firstTurns: number; safeFirstTurns: number };
+  /** Bonus objectives (D-199): each reachable along with holding the fight. */
+  objectives?: Objective[];
   /**
    * How hard (bits): log2 of how many end states the search met for each
    * that loses nobody, 1.5 for each strike beyond one a perfect turn needs,
@@ -486,6 +491,8 @@ export interface PuzzleOptions {
   fightNodes?: number;
   /** Invaders arriving at the end of each round but the last, when there are several (default 1). */
   arrivals?: number;
+  /** Bonus objectives to give a fight over several rounds (D-199; default none). */
+  objectives?: number;
 }
 
 function mulberry(seed: number): () => number {
@@ -601,6 +608,29 @@ export async function generatePuzzle(a: Arena, opts: PuzzleOptions = {}): Promis
     if (best && best.difficulty >= target && (!wantClever || best.mechanics.some((m) => CLEVER[m] > 0))) break;
     await new Promise((r) => setTimeout(r, 0)); // let the page draw
   }
+  if (best?.fight && opts.objectives) best.objectives = pickObjectives(best.combat, best.fight.rounds, rand, opts.objectives, opts.fightNodes ?? 200_000);
   if (best) best.stats.ms = performance.now() - t0;
   return best;
+}
+
+/**
+ * Up to `count` bonus objectives for a fight (D-199): one of the board's own
+ * first (its fires, its towers), then those any fight can have, then the
+ * board's others, in an order the seed shuffles within each, each kept only
+ * if the solver finds a line that holds the fight and meets it. Each is
+ * reachable alone, not all of them together: choosing between them is the
+ * point.
+ */
+export function pickObjectives(c: Combat, rounds: number, rand: () => number, count: number, maxNodes = 200_000): Objective[] {
+  const all = objectiveCandidates(c);
+  const shuffle = (list: Objective[]) => list.map((o) => ({ o, r: rand() })).sort((p, q) => p.r - q.r).map(({ o }) => o);
+  const own = shuffle(all.filter((o) => o.kind === "fires" || o.kind === "evacuate"));
+  const any = shuffle(all.filter((o) => o.kind !== "fires" && o.kind !== "evacuate"));
+  const out: Objective[] = [];
+  for (const o of [...own.slice(0, 1), ...any, ...own.slice(1)]) {
+    if (out.length >= count) break;
+    const f = solveFight(c, { rounds, maxNodes, evacuate: o.kind === "evacuate", goal: (end) => objectiveMet(o, c, end) });
+    if (f.winnable) out.push(o);
+  }
+  return out;
 }

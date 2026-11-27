@@ -52,8 +52,8 @@
     "LICENSE-APACHE"
   ],
   "scripts": {
-    "build": "node build.mjs",
-    "prepack": "node build.mjs"
+    "build": "node ../../tools/build-city-pack.mjs",
+    "prepack": "node ../../tools/build-city-pack.mjs"
   },
   "peerDependencies": {
     "pixelworld": "workspace:^"

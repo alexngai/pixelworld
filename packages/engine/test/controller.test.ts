@@ -1,5 +1,5 @@
 import { TerrainGrid, project } from "@pixelworlds/grid";
-import { Camera } from "@pixelworlds/runtime";
+import { Camera } from "../src/runtime";
 import { describe, expect, it } from "vitest";
 import { ViewCameraImpl } from "../src/camera";
 import { Controllers, listenTo } from "../src/controller";

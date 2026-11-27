@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { openWorld, type OpenedWorld } from "../src/index";
 import {
   Boards,
   CELL_WALL,
@@ -9,13 +10,11 @@ import {
   findPath,
   followEdits,
   lineOfSight,
-  openWorld,
   readCells,
   toBoard,
   toWorld,
   type Board,
-  type OpenedWorld,
-} from "../src/index";
+} from "../src/boardsIndex";
 
 /**
  * Terrain edits (D-147) and boards at any resolution (D-148) on Manhattan's

@@ -1,4 +1,5 @@
-import { TopDownMap, viewOnGround, type MinimapRoads, type WorldView } from "@pixelworlds/engine";
+import type { WorldView } from "@pixelworlds/engine";
+import { TopDownMap, viewOnGround, type MinimapRoads } from "@pixelworlds/engine/maps";
 
 /**
  * The city from above (D-158): the world in top-down tiles (`TopDownMap`),
