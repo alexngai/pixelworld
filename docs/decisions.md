@@ -205,6 +205,7 @@ Status values:
 | D-196 | Hero landmarks in other projections: the 2:1 paint resampled at run time | Accepted |
 | D-197 | The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer | Accepted |
 | D-198 | Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height | Accepted |
+| D-199 | Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation | Accepted |
 
 ---
 
@@ -2775,3 +2776,30 @@ The point is more room for visual interest; both halves are wanted.
 - **Considered and not done:**
   - **Lower building heights for the fights:** drawing fewer pixels a height step loses the facades' window rows (D-195's test bakes), and building the cities with less height exaggeration would change every app's levels. The veils and the framing (D-197, D-198) are what make the board read instead.
   - **A zoom between whole steps** for two-cell boards on a 1× screen: the views zoom in whole device pixels so the pixel art stays crisp. Such boards fit at 1, and at 1.5 CSS px a pixel on a 2× screen.
+
+### D-199: Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation (accepted)
+- **Why:** every fight's goal was "hold the block", which made fights alike. The owner chose bonus objectives on top of it, as Into the Breach adds them to its missions, over a different main goal for some fights: winnability, the city's front and the co-op room's judging stay as they are.
+- **Which:** holding the block already keeps every occupied building whole, since a hit on one costs its people. So "protect the landmark" would ask nothing more, and the bonuses ask for what holding doesn't:
+  - **No fire left burning:** the board's own, where ground burns and a flyer, now or arriving, can set it alight.
+  - **Evacuate the tower:** the board's own, its fullest tower that can topple, emptied by the end. It costs a rig's action, and the tower is outlined gold until it's done.
+  - **No rig damaged.**
+  - **No building damaged:** empty ones too.
+  - **Every invader down:** those still to arrive too.
+- **What:**
+  - **`objectives.ts`** (the rules package): the objectives, what each says, and where each stands from the fight's start to now: open, met, or failed. A rig scratched or a building hit fails at once; a tower emptied is met at once. Each is judged from the fight's states alone, so the room's replay (D-186) could judge them as the page does.
+  - **`solveFight`'s `goal`:** a line counts only if its last state passes. `pickObjectives` tries one of the board's own first, then those any board can have, then the board's others, each order shuffled by the puzzle's seed. It keeps up to two that the solver can hold the fight and meet, one search each, so every bonus offered is reachable along with holding the block. Each alone, not all together: choosing between them is the point.
+  - **`generatePuzzle`'s `objectives` option:** the game asks for two. The puzzles are made in the worker, ahead of the fight (D-185).
+  - **On screen:**
+    - a bonus line under the top bar, each objective with ○, ✓ or ✗ as the fight goes, and what each pays;
+    - the tower to evacuate outlined gold;
+    - on the result screen, each met or missed.
+  - **Reward:** ★ 2 reputation for each bonus met, only for a block held. `FightOutcome.bonuses` carries them.
+- **Checked:**
+  - **Unit tests:** each objective's states; the candidates a board offers; the solver with and without a goal; a generated puzzle's objectives each reachable with the fight held.
+  - **In headless Chromium:**
+    - Four fights each offered two objectives that suit their boards: San Francisco no fire and no building damaged; Kyoto no fire and no rig damaged; Hong Kong evacuate the commercial tower (outlined gold) and no fire; Paris no fire and every invader down.
+    - A Hong Kong fight played along the solver's line: the bonus line stayed open through round 1, and the result screen showed both met, paying ★ 9 (3 rounds, 2 for the block held, 2 for each bonus).
+- **Not done:**
+  - **A joint finale's** objectives are checked before the second squad and the room's reinforcements (D-187) join, so they may not be reachable there.
+  - **Bonuses don't touch the city's trust:** they pay the squad only.
+  - **Hold the crossing and bring a tower down on them** wait for a marked edge on the board and for the solver to plan toppling.

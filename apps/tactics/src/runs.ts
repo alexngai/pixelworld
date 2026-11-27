@@ -1,4 +1,4 @@
-import { FIGHTERS, SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type FighterKind, type Loadout, type Squad, type WeaponId } from "@pixelworlds/tactics";
+import { BONUS_REPUTATION, FIGHTERS, SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type FighterKind, type Loadout, type Squad, type WeaponId } from "@pixelworlds/tactics";
 import type { Front } from "@pixelworlds/tactics";
 import { weaponShort, weaponWhat } from "./fight";
 import type { Block } from "./sites";
@@ -75,8 +75,9 @@ export function loadouts(run: Run): Loadout[] {
 }
 
 /** What a block pays: a point of reputation a round held without loss, two more for the block held; a core when every round was. */
-export function reward(o: { held: boolean; roundsHeld: number; rounds: number }): { reputation: number; cores: number } {
-  return { reputation: o.roundsHeld + (o.held ? 2 : 0), cores: o.held && o.roundsHeld === o.rounds ? 1 : 0 };
+export function reward(o: { held: boolean; roundsHeld: number; rounds: number; bonuses?: readonly { met: boolean }[] }): { reputation: number; cores: number } {
+  const bonuses = o.held ? (o.bonuses ?? []).filter((b) => b.met).length : 0;
+  return { reputation: o.roundsHeld + (o.held ? 2 : 0) + BONUS_REPUTATION * bonuses, cores: o.held && o.roundsHeld === o.rounds ? 1 : 0 };
 }
 
 /** Pick a squad among those unlocked; the locked ones shown with what unlocks them. */

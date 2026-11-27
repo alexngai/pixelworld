@@ -41,6 +41,8 @@ export interface GlassState {
   /** A strike looked at (D-191): the buildings it hurts (pulsing red), and the units it moves (a ghost sliding from cell to cell, again and again). */
   hurt?: readonly number[];
   slides?: readonly { from: number; to: number }[];
+  /** Buildings a bonus objective names (D-199), outlined gold until it's met. */
+  goals?: readonly number[];
 }
 
 export interface Shot {
@@ -75,6 +77,8 @@ const GLASS_LIT: Whole = { edge: 0.95, glow: 10, width: 1.8, corner: 0.55, pane:
 const THREAT: Whole = { edge: 1, glow: 10, width: 2.2, corner: 0.85, pane: 0.14, roof: 0.22 };
 /** The rest of a building struck (D-192): outlined faintly. */
 const THREAT_FAINT: Whole = { edge: 0.35, glow: 3, width: 1, corner: 0.15, pane: 0, roof: 0 };
+/** A building a bonus objective names (D-199). */
+const GOAL: Whole = { edge: 0.8, glow: 8, width: 1.6, corner: 0.5, pane: 0.04, roof: 0.1 };
 /** A building struck (D-171): white, fading. */
 const FLASH_MS = 450;
 /** Arrows' colours by what they mean: an invader's aim red, a push or a move blue, a hint's strike yellow. */
@@ -255,6 +259,8 @@ export class BoardGlass {
     // a building the invaders strike (D-192): the cells struck red, each its column from the ground to the roof; the rest of the
     // building outlined faintly, so it still reads as the one building whose hit points they take
     const struck = new Set(s.marks.filter((m) => m.kind === "danger").map((m) => m.j * a.w + m.i));
+    // a building a bonus objective names (D-199): gold, whole, under the red of a strike on it
+    for (const id of s.goals ?? []) building(id, "255,209,102", GOAL, (k) => a.height[k]!);
     for (const id of threatened) {
       building(id, COLOUR.danger, THREAT_FAINT, (k) => a.height[k]!);
       building(id, COLOUR.danger, THREAT, (k) => a.height[k]!, struck);

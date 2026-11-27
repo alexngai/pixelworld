@@ -8,8 +8,9 @@ export { BoardOverlay, arrowStyle, boardOverlay, type Arrow, type BoardOverlayOp
 export { FX_KINDS, UNIT_KINDS, entityModel, fxBoxes, rampsFor, unitBoxes, type FxKind, type ModelOptions, type Role, type UnitKind } from "./models";
 export { AREA_PER_PERSON, GROUP_RULES, MATERIALS, objectInfo, type GroupRules, type Material, type MaterialProps, type ObjectInfo, type ObjectInfoOptions, type Use } from "./buildings";
 export * from "./combat";
-export { actionsOf, describePlan, generatePuzzle, greedyTurn, mechanicsOf, playOut, solveFight, solveTurn, type Action, type FightOptions, type FightResult, type Mechanic, type Puzzle, type PuzzleOptions, type Solution, type SolveOptions, type SolveResult } from "./solver";
+export { actionsOf, describePlan, generatePuzzle, greedyTurn, mechanicsOf, pickObjectives, playOut, solveFight, solveTurn, type Action, type FightOptions, type FightResult, type Mechanic, type Puzzle, type PuzzleOptions, type Solution, type SolveOptions, type SolveResult } from "./solver";
 export { SQUADS, WEAPONS, WEAPON_IDS, armed, loadoutOf, type Armed, type Squad, type SquadRig, type Upgrade, type WeaponDef, type WeaponId } from "./squads";
 export * from "./front";
 export * from "./replay";
 export * from "./joint";
+export * from "./objectives";

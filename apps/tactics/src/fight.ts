@@ -18,6 +18,10 @@ import {
   movePath,
   movesOf,
   moveUnit,
+  BONUS_REPUTATION,
+  objectiveMet,
+  objectiveState,
+  objectiveText,
   outcome,
   planInvaders,
   rampsFor,
@@ -75,7 +79,7 @@ export interface FightSetup {
   view: WorldView;
   board: Board;
   /** The position (a joint finale's has no solution of its own). */
-  puzzle: Pick<Puzzle, "combat" | "fight">;
+  puzzle: Pick<Puzzle, "combat" | "fight" | "objectives">;
   /** Fought with another squad (D-187). */
   joint?: JointLink;
   brain: Brain;
@@ -91,6 +95,8 @@ export interface FightSetup {
 export interface FightOutcome {
   /** Nobody lost and the squad standing through every round. */
   held: boolean;
+  /** The bonus objectives (D-199), each with whether the fight met it. */
+  bonuses: { text: string; met: boolean }[];
   lost: number;
   /** People in the board's buildings when it began. */
   atStake: number;
@@ -196,7 +202,7 @@ export class Fight {
   private readonly view: WorldView;
   private readonly board: Board;
   private readonly brain: Brain;
-  private readonly puzzle: Pick<Puzzle, "combat" | "fight">;
+  private readonly puzzle: Pick<Puzzle, "combat" | "fight" | "objectives">;
   /** A joint finale's link (D-187), whether the other squad is acting, and whether this page has ended the turn and waits on it. */
   private readonly joint: JointLink | null;
   private partnerActing = false;
@@ -1213,6 +1219,7 @@ export class Fight {
       shots: this.shots,
       hurt: this.preview?.hurt ?? [],
       slides: this.preview?.slides ?? [],
+      goals: (this.puzzle.objectives ?? []).flatMap((ob) => (ob.kind === "evacuate" && objectiveState(ob, this.start, shown, false) === "open" ? [ob.structure] : [])),
     });
     this.inspect(shown, focus);
     const arrows = [...this.aims(shown), ...(this.preview?.arrows ?? []), ...this.hint];
@@ -1325,8 +1332,19 @@ export class Fight {
           }[this.outlook]
         }</div>`;
     const round = Math.min(this.rounds, c.round + 1);
+    // the bonus objectives (D-199): each with where it stands
+    const ICON = { met: "✓", failed: "✗", open: "○" } as const;
+    const bonus = this.puzzle.objectives?.length
+      ? `<div class="bonus"><span class="head">Bonus</span>${this.puzzle.objectives
+          .map((ob) => {
+            const st = objectiveState(ob, this.start, c, this.phase === "over");
+            return `<span class="goal ${st}">${ICON[st]} ${objectiveText(ob, this.start)}</span>`;
+          })
+          .join("")}<span class="pay">★ ${BONUS_REPUTATION} each</span></div>`
+      : "";
     this.hud.innerHTML = `
       <div class="top"><b>${this.title}</b> · round ${round} of ${this.rounds} · ${Math.round(o.lost)} people lost${outlook}</div>
+      ${bonus}
       <div class="squad">${rigs}<div class="keys">Click a rig, a cell, a target. <kbd>←↑→↓</kbd> cursor · <kbd>Space</kbd> act there · <kbd>Tab</kbd> next rig / weapon · <kbd>X</kbd> hold fire · right-click, <kbd>Esc</kbd> back · <kbd>WASD</kbd>/drag pan · <kbd>Q</kbd>/<kbd>E</kbd> turn · <kbd>1</kbd>–<kbd>6</kbd> zoom · <kbd>M</kbd> larger map · <kbd>C</kbd> the city · <kbd>V</kbd> cutaway always</div></div>
       <div class="threats"><div class="head">Invaders strike in order</div>${threats || "<div class=threat>none aiming</div>"}${arrivals}</div>
       <div class="bar">
@@ -1972,6 +1990,7 @@ export class Fight {
     const o = outcome(this.start, this.c);
     const result: FightOutcome = {
       held: squad && o.lost <= 0.5 && o.rigsDown === 0,
+      bonuses: (this.puzzle.objectives ?? []).map((ob) => ({ text: objectiveText(ob, this.start), met: objectiveMet(ob, this.start, this.c) })),
       lost: o.lost,
       atStake: this.start.arena.structures.reduce((n, s) => n + s.people, 0),
       squadDown: !squad,
@@ -2007,7 +2026,7 @@ export class Fight {
   }
 
   /** The puzzle, for a retry. */
-  get source(): Pick<Puzzle, "combat" | "fight"> {
+  get source(): Pick<Puzzle, "combat" | "fight" | "objectives"> {
     return this.puzzle;
   }
 }

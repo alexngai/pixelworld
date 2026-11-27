@@ -135,7 +135,7 @@ async function fightOn(
   const board = await boards.add({ x0: block.x0, y0: block.y0, w: SIZE, h: SIZE, cell: block.cell });
   const flat = arenaFromBoard(board, view.query, view.world.manifest.surfaces, { metersPerCell: mpc });
   const arena = block.floor === undefined ? flat : rooftop(flat, block.floor);
-  const puzzle = await brain.generate(arena, { seed, timeMs, attempts: 400, rounds: ROUNDS, arrivals: 1, squad }, progress);
+  const puzzle = await brain.generate(arena, { seed, timeMs, attempts: 400, rounds: ROUNDS, arrivals: 1, squad, objectives: 2 }, progress);
   if (puzzle) return { board, puzzle };
   boards.remove(board);
   return null;
@@ -152,6 +152,14 @@ interface Played {
 const placeOf = (p: Played) => (!p.where || p.site.name.includes(p.where) ? p.site.name : p.where.startsWith(p.site.name) ? p.where : `${p.site.name} (${p.where})`);
 
 /** A puzzle fought with the squad's weapons as they are now (the depot may have changed them since it was made). */
+/** The bonus objectives on a result screen (D-199): each met or missed, and what they paid (only for a block held). */
+function bonusLine(o: FightOutcome): string {
+  if (!o.bonuses.length) return "";
+  const items = o.bonuses.map((b) => `<span class="${b.met ? "good" : "bad"}">${b.met ? "✓" : "✗"} ${b.text}</span>`).join(" · ");
+  const met = o.bonuses.filter((b) => b.met).length;
+  return `<p class="bonuses">Bonus: ${items}${met && !o.held ? " (paid only for a block held)" : ""}</p>`;
+}
+
 function armedNow(p: Puzzle, run: Run): Puzzle {
   const c = cloneCombat(p.combat);
   const arms = loadouts(run);
@@ -327,6 +335,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       const go = await screen(
         `<h2>${o.held ? "Block held" : o.squadDown ? "Squad down" : "Block lost"}</h2>
          <p>${site.name}: ${o.held ? "nobody lost" : `${Math.round(o.lost)} of ${Math.round(o.atStake)} people lost`} · ${o.invadersDown} invader${o.invadersDown === 1 ? "" : "s"} down · ${o.roundsHeld} of ${o.rounds} round${o.rounds === 1 ? "" : "s"} without loss${o.razed.length ? ` · ${o.razed.length} building${o.razed.length === 1 ? "" : "s"} down` : ""}</p>
+         ${bonusLine(o)}
          <p class="wallet">Moving on pays <b>★ ${pay.reputation}</b> reputation${pay.cores ? ` and <b>◆ ${pay.cores}</b> core` : ""}.</p>
          <button data-go="retry">Retry this block</button>
          <button data-go="next">${campaign ? "Back to the city" : "End the operation"}</button>`,
@@ -432,6 +441,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
     await screen(
       `<h2>${o.held ? "Finale held" : o.squadDown ? "Squads down" : "Finale lost"}</h2>
        <p>${site.name}, with ${partner}: ${o.held ? "nobody lost" : `${Math.round(o.lost)} of ${Math.round(o.atStake)} people lost`} · ${o.invadersDown} invader${o.invadersDown === 1 ? "" : "s"} down · ${o.roundsHeld} of ${o.rounds} round${o.rounds === 1 ? "" : "s"} without loss</p>
+       ${bonusLine(o)}
        <p class="wallet">It pays <b>★ ${pay.reputation}</b> reputation${pay.cores ? ` and <b>◆ ${pay.cores}</b> core` : ""}.</p>
        <button data-go="next">Back to the city</button>`,
       o.held ? "won" : "lost",
