@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { A_CHASM, act, movesOf, newCombat, rooftop, rooftopFloor, strike, type Arena, type CombatEvent, type FighterKind } from "../src";
+import { A_CHASM, act, endRound, movesOf, newCombat, rooftop, rooftopFloor, strike, strikeTarget, type Arena, type CombatEvent, type FighterKind } from "../src";
 
 /**
  * Rooftop maps (D-180): towers in capitals (their roofs 10 steps, 30 m up), a
@@ -78,5 +78,27 @@ describe("rooftop maps", () => {
     act(c, 0, at(3, 1), { weapon: 0, dir: SOUTH, range: 1 });
     expect(c.structHp[2]).toBe(0);
     expect(c.hp[1]).toBe(0);
+  });
+
+  it("lands arrivals on the roofs, none in the chasm or on a tower brought down", () => {
+    const r = rooftop(city(ROWS), 10);
+    const c = newCombat(r, [{ kind: "wrecker", at: at(0, 0) }], [[{ kind: "brute", at: at(4, 0) }, { kind: "crawler", at: at(2, 3) }, { kind: "flyer", at: at(4, 2) }]]);
+    c.structHp[2] = 0; // C fell
+    endRound(c);
+    expect(c.roster).toEqual(["wrecker", "brute"]);
+    expect(c.pos[1]).toBe(at(4, 0));
+  });
+
+  it("names what a strike lands on as the rules do: a unit on a roof, or the wall under it past a melee blow's reach", () => {
+    const c = newCombat(city(ROWS), [
+      { kind: "wrecker", at: at(2, 0) },
+      { kind: "crawler", at: at(1, 0) },
+      { kind: "wrecker", at: at(4, 0) },
+      { kind: "brute", at: at(4, 1) },
+    ]);
+    const WEST = 3;
+    expect(strikeTarget(c, 0, { weapon: 0, dir: WEST, range: 1 })).toEqual({ unit: -1, structure: 0 }); // 30 m up from the street
+    expect(strikeTarget(c, 2, { weapon: 0, dir: SOUTH, range: 1 })).toEqual({ unit: 3, structure: -1 }); // roof to roof
+    expect(strikeTarget(c, 2, { weapon: 0, dir: EAST, range: 1 })).toEqual({ unit: -1, structure: -1 }); // the street, empty
   });
 });

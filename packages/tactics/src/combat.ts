@@ -468,6 +468,9 @@ export function standAt(c: Combat, k: number): number {
   return structureAt(c, k) >= 0 ? c.arena.roof[k]! : c.arena.height[k]!;
 }
 
+/** How far a cell's roof stands above the ground under it (metres): a building's height, 0 off one. */
+export const riseAt = (c: Combat, k: number): number => (standAt(c, k) - c.arena.height[k]!) * c.arena.metersPerStep;
+
 /**
  * Where a cell of the board is drawn (steps): where one stands, but a rooftop
  * arena's chasm at its floor (D-180), so the board is a plane at the roofs
@@ -639,6 +642,20 @@ export function strikeCell(c: Combat, u: number, s: Strike): number {
   return w.kind === "shot" ? shotStop(c, from, s.dir, standAt(c, from)) : step(c.arena, from, s.dir, w.kind === "lob" ? s.range : 1);
 }
 
+/**
+ * What a strike lands on at its cell: the unit standing there if it reaches
+ * it (a melee blow only so far up or down: past that, it strikes the wall of
+ * the building under it), else the building standing there; −1 for none.
+ */
+export function strikeTarget(c: Combat, u: number, s: Strike, k = strikeCell(c, u, s)): { unit: number; structure: number } {
+  if (k < 0) return { unit: -1, structure: -1 };
+  const w = weaponsOf(c, u)[s.weapon]!;
+  const v = c.occ[k]!;
+  const from = w.kind === "charge" ? chargeEnd(c, u, s.dir)[0] : c.pos[u]!;
+  if (v >= 0 && ((w.kind !== "melee" && w.kind !== "charge") || Math.abs(standAt(c, k) - standAt(c, from)) <= c.arena.reach)) return { unit: v, structure: -1 };
+  return { unit: -1, structure: structureAt(c, k) };
+}
+
 /** Where a charge stops (the last cell it drives onto, or where it stands) and the unit it strikes (or −1: nothing in its way it can reach). */
 function chargeEnd(c: Combat, u: number, dir: number): [number, number] {
   let at = c.pos[u]!;
@@ -788,18 +805,13 @@ export function strike(c: Combat, u: number, s: Strike, log?: Log): void {
     c.fire[k] = 0;
     log?.push({ t: "douse", at: k });
   }
-  const v = c.occ[k]!;
-  // a melee strike reaches a unit only so far up or down: past that, it strikes the wall of the building under it
-  const reaches = v >= 0 && ((w.kind !== "melee" && w.kind !== "charge") || Math.abs(standAt(c, k) - standAt(c, from)) <= a.reach);
-  if (reaches) {
+  const { unit: v, structure: sid } = strikeTarget(c, u, s, k);
+  if (v >= 0) {
     // from high ground, a point more
     const above = w.damage > 0 && (standAt(c, from) - standAt(c, k)) * a.metersPerStep >= HIGH_GROUND_M;
     hurt(c, v, w.damage + (above ? 1 : 0), log);
     if (w.kind !== "lob" && w.push && c.hp[v]! > 0) push(c, k, s.dir, log);
-  } else {
-    const sid = structureAt(c, k);
-    if (sid >= 0 && w.damage > 0) hurtStructure(c, sid, w.damage, s.dir, k, log);
-  }
+  } else if (sid >= 0 && w.damage > 0) hurtStructure(c, sid, w.damage, s.dir, k, log);
   if (w.kind === "lob" && w.push)
     for (let d = 0; d < 4; d++) {
       const nk = step(a, k, d);
@@ -825,7 +837,8 @@ export function resolveInvaders(c: Combat, log?: Log): void {
 /**
  * The round's end: fire burns who stands in it and the wooden buildings
  * beside it; buildings being evacuated are empty; the round's invaders
- * arrive, but where a unit stands, which takes a point for blocking it.
+ * arrive (on a rooftop arena, on the roofs), but where a unit stands, which
+ * takes a point for blocking it.
  */
 export function endRound(c: Combat, log?: Log): void {
   const a = c.arena;
@@ -862,7 +875,8 @@ export function endRound(c: Combat, log?: Log): void {
     if (u >= 0) {
       log?.push({ t: "blocked", unit: u, at });
       hurt(c, u, 1, log);
-    } else if (structureAt(c, at) < 0 && !chasmAt(c, at)) {
+    } else if (!chasmAt(c, at) && (a.floor !== undefined || structureAt(c, at) < 0)) {
+      // on the street where no building stands; on a rooftop arena (D-180), on a roof still standing
       const v = addUnit(c, kind, at); // not inside the log's push: with no log, `?.` would skip it
       log?.push({ t: "arrive", unit: v, at });
     }

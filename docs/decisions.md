@@ -206,6 +206,7 @@ Status values:
 | D-197 | The fight framed for the higher camera: the board in the space the panels leave, the city around it dimmed, building labels that would overlap left to the pointer | Accepted |
 | D-198 | Under a rooftop board, the street and the towers' faces dimmed too: a veil below a height | Accepted |
 | D-199 | Bonus objectives, after Into the Breach: one or two a fight, drawn from its board, each reachable with the block held, paying reputation | Accepted |
+| D-200 | Fixes from the first playtest: rooftop arrivals land, the strike list names what's hit, no block without a fight, a routed fight ends, the pointer picks what's drawn, buildings' heights shown above their ground | Accepted |
 
 ---
 
@@ -2803,3 +2804,33 @@ The point is more room for visual interest; both halves are wanted.
   - **A joint finale's** objectives are checked before the second squad and the room's reinforcements (D-187) join, so they may not be reachable there.
   - **Bonuses don't touch the city's trust:** they pay the squad only.
   - **Hold the crossing and bring a tower down on them** wait for a marked edge on the board and for the solver to plan toppling.
+
+### D-200: Fixes from the first playtest: rooftop arrivals land, the strike list names what's hit, no block without a fight, a routed fight ends, the pointer picks what's drawn, buildings' heights shown above their ground (accepted)
+- **Why:** a playtest of a whole operation and six more boards (all six cities, all three squads) found these bugs. Its design findings (legibility, stakes, pacing) are for later decisions.
+- **What:**
+  - **Rooftop arrivals (D-180, D-153):** `endRound` landed an arrival only where no structure stands, and on a rooftop arena every cell is a roof or the chasm. So the board showed "▼ Brute arrives" and nothing came, and the fight ended early with "Every invader down" met for free. An arrival now lands on a standing roof there; on the street, as before, where no building stands.
+  - **What a strike hits (`strikeTarget`):** a strike lands on the unit at its cell if it reaches it (a melee blow only so far up or down), else on the building there. `strike` and the fight's strike list and tooltip now share it. The list had named the building under a flyer on a roof while the spit hit the flyer.
+  - **No block without a fight:** a fight made ahead (D-185) that finds none sends its threat to another block of the district before the squad picks it. The front now lets anyone swap a threat nobody has taken, as well as their own. A swap names the block it was for and is refused once the threat has moved, so two pages that made no fight there move it only once. A block the squad is waiting on gets a second, longer look (15 s). If that finds nothing too, the screen says the invaders turned to the new block, by name, instead of "No fight could be made".
+  - **A routed fight ends:** with every invader down and none to arrive, the prompt says so and the first Enter ends the fight, idle rigs or not. They may still act first, to douse a fire or empty a tower for a bonus (D-199).
+  - **The pointer picks what's drawn:**
+    - With the cutaway on, a building cut to a stump is glass: the pick meets it only at its roof and sees through its walls.
+    - Of the cells drawn under the pointer, it takes a cell the move or strike in hand can take first, then a unit other than the rig in hand, then a unit's silhouette behind what's in front, then the nearest.
+    - The top bars let the pointer through to the roofs under them.
+    - A board is framed with its units at their heads, so one on a tall roof isn't under a bar.
+  - **Buildings' heights as shown:** the cell tooltip and the map gave a roof's height above sea level as the building's height. The tooltip judged "rigs can climb onto it" from that figure, and so did the map's height bands, its "N m" labels and a unit's "▲N" mark. On a board on a hill, a one-storey shop read "17 m tall · too tall for the rigs to climb". They now use `riseAt`, the roof's height above the ground under it. The roofs themselves were right: an audit of New York's, Tokyo's and San Francisco's boards found every building with its height, and each arena roof on the drawn one.
+  - **Smaller fixes:**
+    - The run's end announces every squad unlocked during the run. Before, it compared against the squads open at the run's end, just before the city held was counted, so only a squad unlocked by holding the city was announced. The Fire Brigade, unlocked by three blocks held, went unannounced.
+    - Tab cycles the rigs while one is selected, too.
+    - **A rig moved twice:** clicking the rig in hand after its move chose it again from where it had moved to, so it could move again. A co-op room then refused the fight's replay, since a move is checked from where the rig started. Now the rig goes back to where it started and its move is taken again.
+- **Tested:**
+  - Unit tests: a rooftop arrival lands on a roof, not in the chasm or on a fallen tower; `strikeTarget` names a unit on a roof and a wall out of a blow's reach; an open threat can be swapped by anyone, another squad's can't.
+  - In the browser, every cell's drawn top pointed at:
+    - **Hong Kong rooftop board:** units picked 6 of 6, 3 of 6 before. The arrival landed on its roof at round 1's end.
+    - **Paris:** 63 of 64 cells with the cutaway on. The one missed lies under a glass roof, and goes to the roof with no rig selected.
+    - **Hong Kong Peninsula:** 60 of 64 cells, units 6 of 6. The missed cells lie under the hotel's glass roof.
+  - With every invader down, one Enter ended a Paris fight with three rigs idle.
+- **Not done:**
+  - **The co-op room's server** must be deployed with the page: an older one refuses the swap of a threat nobody has taken, and replays a rooftop fight without its arrivals.
+  - A cell lying under a glass roof is picked as the roof unless the rig in hand can use the cell. The arrow keys reach every cell.
+  - **Heights in the rules aren't real heights:** the rules turn steps into metres with the terrain's step (2.72 m in New York and Tokyo, 2.04 m in San Francisco). A building's height in steps is set at 5 m a step, so the rules count a building at 0.54–0.57 of its real height. A 27 m building counts as 15 m, which rigs climb. This is short of D-151's real heights, and needs the climbing thresholds in steps or a building's own height in the rules.
+  - **Buildings on slopes stand on their lowest corner (D-010):** on a slope or a riverbank, a building is sunk on its uphill side, its roof near the street there. The board's rules follow the drawing, so changing this means changing placement.

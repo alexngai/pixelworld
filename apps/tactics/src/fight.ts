@@ -31,6 +31,8 @@ import {
   standAt,
   strike,
   strikeCell,
+  strikeTarget,
+  riseAt,
   strikesOf,
   structureAt,
   teamOf,
@@ -593,12 +595,24 @@ export class Fight {
     camera.setFocus(middle.x, middle.y, at(middle.x, middle.y));
     this.framedRotation = camera.rotation;
     const free = this.freeSpace(canvas.clientWidth, canvas.clientHeight);
+    // on screen: its corners, and each unit at its head (one on a tower's roof stands far above the board's plane); roofs
+    // aren't fitted, or a block of tall buildings would be framed small (the bars over them let the pointer through)
+    const box = () => {
+      const corners = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, at(p.x, p.y)));
+      const heads = this.c.roster.flatMap((_, u) => {
+        const k = this.c.pos[u]!;
+        if (this.c.hp[u]! <= 0) return [];
+        const p = toWorld(this.board, { x: (k % a.w) + 0.5, y: Math.floor(k / a.w) + 0.5 });
+        return [camera.project(p.x, p.y, planeAt(this.c, k) + 2)];
+      });
+      const xs = [...corners, ...heads].map((p) => p.x);
+      const ys = [...corners, ...heads].map((p) => p.y);
+      return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    };
     if (fit) {
-      const points = [0, a.w].flatMap((i) => [0, a.h].map((j) => toWorld(this.board, { x: i, y: j }))).map((p) => camera.project(p.x, p.y, at(p.x, p.y)));
-      const xs = points.map((p) => p.x);
-      const ys = points.map((p) => p.y);
       // the board's size on screen grows with the zoom: the largest whole zoom it fits at
-      const [w, h, z0] = [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), camera.zoom];
+      const b = box();
+      const [w, h, z0] = [b.x1 - b.x0, b.y1 - b.y0, camera.zoom];
       let z = 1;
       for (let n = 6; n > 1; n--)
         if ((w * n) / z0 <= 1.1 * (free.right - free.left) && (h * n) / z0 <= free.bottom - free.top) {
@@ -608,9 +622,9 @@ export class Fight {
       camera.zoom = z;
     }
     // its middle to the middle of the space (panning moves the view the other way, in art pixels)
-    const c = camera.project(middle.x, middle.y, at(middle.x, middle.y));
+    const b = box();
     const k = (window.devicePixelRatio || 1) / camera.zoom;
-    camera.pan((c.x - (free.left + free.right) / 2) * k, (c.y - (free.top + free.bottom) / 2) * k);
+    camera.pan(((b.x0 + b.x1) / 2 - (free.left + free.right) / 2) * k, ((b.y0 + b.y1) / 2 - (free.top + free.bottom) / 2) * k);
   }
 
   /**
@@ -1306,13 +1320,12 @@ export class Fight {
     const threats = [...order.entries()]
       .map(([u, n]) => {
         const f = FIGHTERS[c.roster[u]!];
-        const t = strikeCell(c, u, aimOf(c, u));
-        const sid = t >= 0 ? structureAt(c, t) : -1;
+        const { unit: v, structure: sid } = strikeTarget(c, u, aimOf(c, u));
         const st = sid >= 0 ? a.structures[sid]! : null;
-        const at = st
-          ? `${st.name.replace(/^building\./, "").replace(/\./g, " ")} · ${c.evacuated[sid] ? "empty" : `${st.people} people`}${st.topple ? ` · topples ${st.topple}` : ""}`
-          : t >= 0 && c.occ[t]! >= 0
-            ? FIGHTERS[c.roster[c.occ[t]!]!].name
+        const at = v >= 0
+          ? FIGHTERS[c.roster[v]!].name
+          : st
+            ? `${st.name.replace(/^building\./, "").replace(/\./g, " ")} · ${c.evacuated[sid] ? "empty" : `${st.people} people`}${st.topple ? ` · topples ${st.topple}` : ""}`
             : "nothing";
         return `<div class="threat"><b>${n}</b> ${f.name} <span class="hp">${pips(c.hp[u]!, f.hp)}</span> → ${weaponsOf(c, u)[0]!.name} ${DIR_NAMES[c.aim[u]!]}: ${at}</div>`;
       })
@@ -1394,7 +1407,8 @@ export class Fight {
       this.say(!this.joint.mine.has(u) ? `That's ${this.joint.partner}'s rig.` : `${this.joint.partner} is acting: a moment.`);
       return this.paint();
     }
-    if (this.phase === "strike" && u !== this.selected) this.cancelMove();
+    // in the strike phase, the rig moved put back first (itself chosen again: its move taken again, from where it started)
+    if (this.phase === "strike") this.cancelMove();
     this.joint?.take(u);
     if (u !== this.selected) this.hopAt.set(u, this.now);
     this.selected = u;
@@ -1515,15 +1529,14 @@ export class Fight {
       for (const w of squad ? arms : arms.slice(0, 1)) lines.push(`· ${w.name}: ${weaponWhat(w)}`);
       if (arms.some((w) => w.damage > 0)) lines.push(`a point more striking from ${HIGH_GROUND_M} m above`);
       if (!squad && c.aim[u]! >= 0) {
-        const t = strikeCell(c, u, aimOf(c, u));
-        const sid = t >= 0 ? structureAt(c, t) : -1;
-        lines.push(`aims ${DIR_NAMES[c.aim[u]!]} at ${sid >= 0 ? `a building (${a.structures[sid]!.people} people)` : t >= 0 && c.occ[t]! >= 0 ? FIGHTERS[c.roster[c.occ[t]!]!].name : "nothing"}; strikes ${this.order(c).get(u) ?? "—"}${["st", "nd", "rd"][(this.order(c).get(u) ?? 4) - 1] ?? "th"}`);
+        const { unit: v, structure: sid } = strikeTarget(c, u, aimOf(c, u));
+        lines.push(`aims ${DIR_NAMES[c.aim[u]!]} at ${v >= 0 ? FIGHTERS[c.roster[v]!].name : sid >= 0 ? `a building (${a.structures[sid]!.people} people)` : "nothing"}; strikes ${this.order(c).get(u) ?? "—"}${["st", "nd", "rd"][(this.order(c).get(u) ?? 4) - 1] ?? "th"}`);
       }
     }
     const sid = a.struct[k]!;
     if (sid >= 0) {
       const st = a.structures[sid]!;
-      const m = Math.round(standAt(c, k) * a.metersPerStep);
+      const m = Math.round(riseAt(c, k));
       if (c.structHp[sid]! <= 0) lines.push("<b>rubble</b>");
       else {
         lines.push(`<b>${st.name.replace(/^building\./, "").replace(/\./g, " ")}</b> · ${m} m tall`);
@@ -1650,30 +1663,57 @@ export class Fight {
     return `${said.length ? `${said.join(" · ")}. ` : "It hits nothing. "}If nothing else acts, ${end}.`;
   }
 
-  /** The cell a click or hover means: the ground's, or for a building's face, the cell of it a strike lands on. */
   /**
-   * The board's cell under a picked point (the ground's, and its height): up
+   * The cell a click or hover means; for a building's face in the strike
+   * phase, the cell of it a strike lands on. The board's cell under a picked point (the ground's, and its height): up
    * the view ray from it, the first cell whose drawn top it meets, from the
    * camera's side: a roof, a rooftop board's floor over its chasm (D-180),
-   * else the ground. The pick sees only the ground, through buildings.
+   * else the ground. The pick sees only the ground, through buildings. As
+   * drawn: a building the cutaway cuts is glass, met only at its roof, what's
+   * behind it seen through; of what's seen there, a cell the move or strike in
+   * hand can take is picked first, then a unit, then a unit's silhouette behind.
    */
   private cellUnder(x: number, y: number, object?: number, h?: number): number {
     let k = boardCellAt(this.board, x, y);
+    const side = this.side(this.view.camera.rotation);
+    const glass = this.cutting ? side.cuts : null;
     if (h !== undefined) {
       const c = this.c;
       const [tx, ty] = towardCamera(this.view, this.view.camera.rotation);
+      const hidden = this.cutting ? side.hidden : side.hiddenRest;
+      const silhouette = (q: number) => c.occ[q]! >= 0 && !!hidden[q];
       let top = h;
       for (let q = 0; q < c.arena.w * c.arena.h; q++) top = Math.max(top, planeAt(c, q));
       const rise = rayRise(this.view);
+      // the cells drawn under the pointer, nearest first: what the ray meets, through glass what's behind it, the ground last
+      const seen: number[] = [];
+      const behind: number[] = [];
+      let opaque = false;
+      const meet = (q: number, isGlass: boolean) => {
+        if (seen.includes(q)) return;
+        if (opaque) {
+          if (silhouette(q) && !behind.includes(q)) behind.push(q);
+          return;
+        }
+        seen.push(q);
+        if (!isGlass) opaque = true;
+      };
       for (let t = (top - h) / rise; t > 0; t -= 0.05) {
         const q = boardCellAt(this.board, x + t * tx, y + t * ty);
-        if (q >= 0 && h + rise * t <= planeAt(c, q)) {
-          k = q;
-          break;
-        }
+        if (q < 0 || h + rise * t > planeAt(c, q)) continue;
+        const sid = structureAt(c, q);
+        const isGlass = !!glass && sid >= 0 && glass.has(c.arena.structures[sid]!.object);
+        // glass is met at its roof only
+        if (isGlass && boardCellAt(this.board, x + ((planeAt(c, q) - h) / rise) * tx, y + ((planeAt(c, q) - h) / rise) * ty) !== q) continue;
+        meet(q, isGlass);
       }
+      if (k >= 0) meet(k, false);
+      // a cell the move or strike in hand can take, else another unit drawn there, else one's silhouette behind, else the nearest
+      const usable = (q: number) =>
+        this.selected >= 0 && (this.phase === "move" ? movesOf(c, this.selected).includes(q) : this.phase === "strike" && this.targets(this.selected).has(q));
+      k = [...seen, ...behind].find(usable) ?? seen.find((q) => c.occ[q]! >= 0 && c.occ[q] !== this.selected) ?? behind[0] ?? seen[0] ?? k;
     }
-    if (this.phase === "strike" && object !== undefined)
+    if (this.phase === "strike" && object !== undefined && !glass?.has(object))
       for (const t of this.targets(this.selected).keys()) {
         const sid = this.c.arena.struct[t]!;
         if (sid >= 0 && this.c.arena.structures[sid]!.object === object) k = t;
@@ -1744,9 +1784,14 @@ export class Fight {
       this.phase = "pick";
       this.checkOutlook();
       const left = this.c.roster.some((_, v) => teamOf(this.c, v) === SQUAD && this.c.hp[v]! > 0 && !this.acted.has(v) && (!this.joint || this.joint.mine.has(v)));
-      this.say(left ? "Click another rig, or end the turn." : "Every rig has acted: end the turn.");
+      this.say(this.routed() ? "Every invader down: end the turn to finish the fight." : left ? "Click another rig, or end the turn." : "Every rig has acted: end the turn.");
       this.paint();
     });
+  }
+
+  /** Every invader down and none still to arrive: the next turn's end finishes the fight. */
+  private routed(): boolean {
+    return !this.c.roster.some((_, u) => teamOf(this.c, u) === INVADERS && this.c.hp[u]! > 0) && !this.c.schedule.slice(this.c.round).some((r) => r.length);
   }
 
   key(k: string): boolean {
@@ -1790,11 +1835,11 @@ export class Fight {
       this.click(p.x, p.y);
       return true;
     }
-    if (k === "tab" && this.phase === "pick") {
-      // the next rig still to act
-      const rigs = this.c.roster.map((_, u) => u).filter((u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u));
+    if (k === "tab" && (this.phase === "pick" || this.phase === "move")) {
+      // the next rig still to act, after the one selected (or under the cursor)
+      const rigs = this.c.roster.map((_, u) => u).filter((u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u) && (!this.joint || this.joint.mine.has(u)));
       if (!rigs.length) return true;
-      const at = rigs.find((u) => this.c.pos[u] === this.cursor);
+      const at = this.selected >= 0 ? this.selected : rigs.find((u) => this.c.pos[u] === this.cursor);
       const u = rigs[(at === undefined ? 0 : rigs.indexOf(at) + 1) % rigs.length]!;
       this.cursor = this.c.pos[u]!;
       this.select(u);
@@ -1877,7 +1922,7 @@ export class Fight {
     if (this.phase === "strike") await this.act(null);
     else if (this.phase === "move") this.cancelMove();
     const idle = this.c.roster.filter((_, u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0 && !this.acted.has(u) && (!this.joint || this.joint.mine.has(u))).length;
-    if (idle && !this.confirmEnd) {
+    if (idle && !this.confirmEnd && !this.routed()) {
       this.confirmEnd = true;
       this.say(`${idle === 1 ? "A rig hasn't" : `${idle} rigs haven't`} acted: Enter again to end the turn anyway.`);
       return this.paint();
@@ -1963,9 +2008,8 @@ export class Fight {
     this.sync();
     const o = outcome(before, this.c);
     if (o.perfect) this.roundsHeld++;
-    const invaders = this.c.roster.some((_, u) => teamOf(this.c, u) === INVADERS && this.c.hp[u]! > 0) || this.c.schedule.slice(this.c.round).some((r) => r.length);
     const squad = this.c.roster.some((_, u) => teamOf(this.c, u) === SQUAD && this.c.hp[u]! > 0);
-    if (!invaders || !squad || this.c.round >= this.rounds) return this.over(squad);
+    if (this.routed() || !squad || this.c.round >= this.rounds) return this.over(squad);
     // the invaders move and aim again
     const aiming = cloneCombat(this.c);
     planInvaders(this.c);

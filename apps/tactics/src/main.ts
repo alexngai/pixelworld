@@ -48,6 +48,8 @@ const SIZE = 8;
  */
 const MAKE_MS = 6000;
 const FIRST_MAKE_MS = 12000;
+/** A second look for a block the squad is waiting on, when the first found no fight (ms). */
+const RETRY_MAKE_MS = 15000;
 /** The surveyed boards by world (tools/survey-boards.mjs). */
 const POOLS = import("../survey/boards.json").then((m) => m.default as unknown as Record<string, Block[]>);
 const middle = (b: Block) => ({ x: b.x0 + (SIZE * b.cell) / 2, y: b.y0 + (SIZE * b.cell) / 2 });
@@ -175,6 +177,8 @@ function armedNow(p: Puzzle, run: Run): Puzzle {
  */
 async function operation(city: City, squad: Squad, cityPool: readonly Block[], opts: { board?: Block; room?: string; name?: string; resume?: SavedRun }): Promise<void> {
   const profile = loadProfile();
+  // the squads open before this run: blocks held during it unlock some as it goes, announced at its end
+  const before = SQUADS.filter((s) => isUnlocked(profile, s));
   const resume = opts.resume;
   if (!resume) profile.runs++;
   saveProfile(profile);
@@ -300,14 +304,25 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   // fights are made on a worker of their own (the fight's outlook and hints keep theirs); the first on a cold worker, given longer
   const maker = new Brain();
   let cold = true;
-  const make = (site: Block, progress: (tried: number) => void) => {
-    const timeMs = cold ? FIRST_MAKE_MS : MAKE_MS;
+  const make = (site: Block, progress: (tried: number) => void, longer = false) => {
+    const timeMs = longer ? RETRY_MAKE_MS : cold ? FIRST_MAKE_MS : MAKE_MS;
     cold = false;
     return fightOn(view, boards, maker, site, loadouts(run), seed++, timeMs, progress);
   };
   // the wave's open blocks made ahead while the squad isn't fighting (D-185): looking over the city, or at the depot
-  const ahead = campaign ? new Ahead<{ board: Board; puzzle: Puzzle }>((i, progress) => make(pool[i]!, progress), (f) => boards.remove(f.board)) : null;
   let fighting = false;
+  const ahead = campaign
+    ? new Ahead<{ board: Board; puzzle: Puzzle }>(
+        (i, progress) =>
+          make(pool[i]!, progress).then((f) => {
+            // no fight on a block made ahead: its invaders turn to another of the district's before the squad picks it (a fight going on handles its own)
+            const t = !f && !fighting ? campaign.front.threats.find((x) => x.site === i && !x.result && !x.by) : undefined;
+            if (t) campaign.send({ k: "swap", threat: t.id, site: i });
+            return f;
+          }),
+        (f) => boards.remove(f.board),
+      )
+    : null;
   const lookAhead = () => {
     if (!campaign || !ahead || fighting || campaign.front.over) return;
     ahead.want(campaign.front.threats.filter((t) => !t.result && (!t.by || t.by === campaign.me)).map((t) => t.site));
@@ -315,15 +330,14 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   campaign?.listen(lookAhead);
   lookAhead();
 
-  /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it. */
+  /** A block fought till the squad moves on (retried as often as asked), paid for; null when no fight could be made on it, even looking longer. */
   const play = async (site: Block, making: (progress: (tried: number) => void) => Promise<{ board: Board; puzzle: Puzzle } | null>, where?: string): Promise<{ o: FightOutcome; start: Combat } | null> => {
     const n = note(`<h2>${site.name}</h2><p>Scouting the block…</p>`);
-    const [found] = await Promise.all([making((tried) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`)), view.camera.lookAt(middle(site))]);
+    const progress = (tried: number) => n.set(`<h2>${site.name}</h2><p>Working out the invaders' landing… ${tried} positions tried</p>`);
+    const [first] = await Promise.all([making(progress), view.camera.lookAt(middle(site))]);
+    const found = first ?? (await make(site, progress, true));
     n.close();
-    if (!found) {
-      await screen(`<h2>${site.name}</h2><p>No fight could be made on this block.</p><button data-go="next">Move on</button>`);
-      return null;
-    }
+    if (!found) return null;
     board = found.board;
     const puzzle = armedNow(found.puzzle, run);
     for (;;) {
@@ -390,7 +404,7 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       found = await ahead!.take(t.site);
       if (!found) {
         n.close();
-        c.send({ k: "swap", threat: t.id });
+        c.send({ k: "swap", threat: t.id, site: t.site });
         return null;
       }
       c.joint({ k: "j-start", threat: t.id, start: toWire(armedNow(found.puzzle, run).combat) });
@@ -456,7 +470,9 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   };
 
   if (!campaign) {
-    played.push({ site: opts.board!, outcome: (await play(opts.board!, (progress) => make(opts.board!, progress)))?.o ?? null });
+    const r = await play(opts.board!, (progress) => make(opts.board!, progress));
+    if (!r) await screen(`<h2>${opts.board!.name}</h2><p>No fight could be made on this block.</p><button data-go="next">Move on</button>`);
+    played.push({ site: opts.board!, outcome: r?.o ?? null });
   } else {
     // the front: a block taken on the overworld each wave, fought, reported, then the depot
     for (;;) {
@@ -491,7 +507,14 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
       );
       fighting = false;
       if (!r) {
-        campaign.send({ k: "swap", threat: id });
+        // the invaders turn to another block of the district, the squad's this wave
+        campaign.send({ k: "swap", threat: id, site: pool.indexOf(site) });
+        // (alone the front is changed at once; in a room, once the room says so)
+        const next = campaign.front.threats.find((x) => x.id === id);
+        const to = next && pool[next.site] !== site ? pool[next.site]! : null;
+        await screen(
+          `<h2>${site.name}</h2><p>The invaders left before the squad got there${to ? `: they've turned to ${to.name}, nearby.` : "."}</p><button data-go="next">${to ? "Follow them" : "Back to the city"}</button>`,
+        );
         continue;
       }
       const o = r.o;
@@ -506,7 +529,6 @@ async function operation(city: City, squad: Squad, cityPool: readonly Block[], o
   // the run's end: a city held counts, and squads may unlock; the kept run is done with
   saveRun(null);
   const f = campaign?.front;
-  const before = SQUADS.filter((s) => isUnlocked(profile, s));
   if (f?.over === "held") profile.operationsHeld++;
   saveProfile(profile);
   const fresh = SQUADS.filter((s) => isUnlocked(profile, s) && !before.includes(s));

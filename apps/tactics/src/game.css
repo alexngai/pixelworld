@@ -134,6 +134,11 @@ kbd {
   border-radius: 5px;
   padding: 6px 10px;
 }
+/* the top bars hold nothing to click: the pointer goes through to the roofs under them */
+.fight .top,
+.fight .bonus {
+  pointer-events: none;
+}
 .fight .top {
   top: 8px;
   left: 50%;

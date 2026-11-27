@@ -1,4 +1,4 @@
-import { A_WATER, DIRS, FIGHTERS, FIRE_ASH, isBurning, INVADERS, SQUAD, standAt, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
+import { A_WATER, DIRS, FIGHTERS, FIRE_ASH, isBurning, INVADERS, riseAt, SQUAD, teamOf, type Arrow, type Combat, type Mark } from "@pixelworlds/tactics";
 
 /**
  * The board from above (D-154, D-155): the city baked straight down
@@ -211,7 +211,7 @@ export class TacticalMap {
       if (this.art && !razed) continue;
       rect(k);
       if (razed) g.fillStyle = this.art ? "rgba(93,79,67,0.85)" : "#5d4f43";
-      else if (sid >= 0) g.fillStyle = `hsl(230, 8%, ${34 + Math.round(40 * Math.min(1, standAt(c, k) / 30))}%)`;
+      else if (sid >= 0) g.fillStyle = `hsl(230, 8%, ${34 + Math.round(40 * Math.min(1, riseAt(c, k) / 80))}%)`;
       else g.fillStyle = a.flags[k]! & A_WATER ? "#2d5b8a" : "#2c2b36";
       g.fill();
     }
@@ -227,7 +227,7 @@ export class TacticalMap {
       const sid = a.struct[k]!;
       if (sid < 0 || c.structHp[sid]! <= 0) continue;
       // each building outlined in its height's colour (D-163): what can climb onto it reads at a glance
-      g.strokeStyle = band(standAt(c, k) * a.metersPerStep).colour;
+      g.strokeStyle = band(riseAt(c, k)).colour;
       const r = this.cellRect(k);
       const bi = k % a.w;
       const bj = Math.floor(k / a.w);
@@ -255,7 +255,7 @@ export class TacticalMap {
         const sid = a.struct[k]!;
         if (sid < 0 || done.has(sid) || c.structHp[sid]! <= 0) continue;
         done.add(sid);
-        const m = Math.round(standAt(c, k) * a.metersPerStep);
+        const m = Math.round(riseAt(c, k));
         const r = this.cellRect(k);
         const text = `${m} m`;
         g.fillStyle = "rgba(14,13,22,0.78)";
@@ -375,7 +375,7 @@ export class TacticalMap {
       }
       // on a roof: how high, in its height's colour
       if (a.struct[c.pos[u]!]! >= 0 && c.structHp[a.struct[c.pos[u]!]!]! > 0) {
-        const m = Math.round(standAt(c, c.pos[u]!) * a.metersPerStep);
+        const m = Math.round(riseAt(c, c.pos[u]!));
         g.font = font(this.big ? 11 : 9);
         const text = `▲${m}`;
         const tw = g.measureText(text).width + 4;

@@ -139,9 +139,26 @@ describe("the city's front (D-179)", () => {
     expect(f.over).toBe("held");
   });
 
+  it("swaps a block no fight could be made on, the squad's or one nobody has taken, not another squad's", () => {
+    const f = newFront(SITES, { seed: 5 });
+    const [mine, open] = f.threats;
+    const was = open!.site;
+    expect(frontAct(f, SITES, ["a", "b"], "a", { k: "swap", threat: open!.id, site: was })).toBeNull();
+    expect(open!.site).not.toBe(was);
+    // the other page that made no fight there, a moment later: swapped once
+    const now = open!.site;
+    expect(frontAct(f, SITES, ["a", "b"], "b", { k: "swap", threat: open!.id, site: was })).toMatch(/moved/);
+    expect(open!.site).toBe(now);
+    expect(SITES.map((_, i) => i).filter((i) => f.threats.some((t) => t.site === i)).length).toBe(f.threats.length);
+    frontAct(f, SITES, ["a", "b"], "b", { k: "claim", threat: mine!.id });
+    expect(frontAct(f, SITES, ["a", "b"], "a", { k: "swap", threat: mine!.id })).toMatch(/isn't yours/);
+  });
+
   it("checks what a page sends", () => {
     expect(frontMessage({ k: "claim", threat: 3 })).toEqual({ k: "claim", threat: 3 });
     expect(frontMessage({ k: "claim", threat: "3" })).toBeNull();
+    expect(frontMessage({ k: "swap", threat: 3, site: 7 })).toEqual({ k: "swap", threat: 3, site: 7 });
+    expect(frontMessage({ k: "swap", threat: 3, site: "7" })).toEqual({ k: "swap", threat: 3 });
     expect(frontMessage({ k: "report", threat: 1, held: true, lost: -2, razed: [1, -1, 2.5, "x", 4] })).toEqual({ k: "report", threat: 1, held: true, lost: 0, razed: [1, 4] });
     expect(frontMessage({ k: "nuke", threat: 1 })).toBeNull();
     expect(frontMessage({ k: "pass" })).toEqual({ k: "pass" });
