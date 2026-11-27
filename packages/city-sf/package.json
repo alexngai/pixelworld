@@ -1,6 +1,6 @@
 {
   "name": "@pixelworlds/city-sf",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "San Francisco's city pack for pixelworld: the facades, towers and Chinatown generators its style pack names",
   "license": "MIT OR Apache-2.0",
   "type": "module",
